@@ -42,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -100,7 +99,9 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_none
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -223,7 +224,7 @@ private fun RepoCard(
     var title by remember(row.draftTitle) { mutableStateOf(row.draftTitle) }
     var body by remember(row.draftBody) { mutableStateOf(row.draftBody) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // A NIP-34 repository by its announced name, opening its page in the app; any other by
             // owner/name, as GitHub shows it, opening its web page.
             val nostr = row.nostr
@@ -234,36 +235,43 @@ private fun RepoCard(
                 }
             val web = if (nostr == null) AgentWorkspaces.webUrl(status.repo.url) else null
             val uriHandler = LocalUriHandler.current
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (web != null || nostr != null) {
-                    val open = stringRes(Res.string.claude_code_pr_open_repo, label)
-                    HoverTooltip(open) {
-                        IconButton(onClick = { if (nostr != null) onOpenNostr(nostr) else web?.let(uriHandler::openUri) }, modifier = Modifier.size(32.dp)) {
-                            Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = open, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+            // The repository and its branch: one heading.
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    if (web != null || nostr != null) {
+                        val open = stringRes(Res.string.claude_code_pr_open_repo, label)
+                        HoverTooltip(open) {
+                            IconButton(onClick = { if (nostr != null) onOpenNostr(nostr) else web?.let(uriHandler::openUri) }, modifier = Modifier.size(32.dp)) {
+                                Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = open, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                            }
                         }
                     }
                 }
+                Text(
+                    stringRes(Res.string.claude_code_pr_branch, status.repo.branch, status.repo.baseBranch),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
             }
-            Text(
-                stringRes(Res.string.claude_code_pr_branch, status.repo.branch, status.repo.baseBranch),
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.grayText,
-            )
             val parts =
                 listOfNotNull(
                     status.ahead.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_pr_ahead, it, it) },
                     status.uncommitted.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_pr_uncommitted, it, it) },
                 )
-            Text(parts.joinToString(" · ").ifEmpty { stringRes(Res.string.claude_code_pr_nothing) }, style = MaterialTheme.typography.bodyMedium)
-            if (status.ahead > 0 || status.uncommitted > 0) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // This repository's diff, before proposing it.
-                    OutlinedButton(onClick = onChanges) { Text(stringRes(Res.string.claude_code_changes)) }
-                    if (status.uncommitted > 0) {
-                        OutlinedButton(onClick = onAskToCommit) { Text(stringRes(Res.string.claude_code_pr_ask_commit)) }
-                    }
+            // What it has to propose, with the quiet actions beside it: the diff, and asking for a commit.
+            FlowRow(verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    parts.joinToString(" · ").ifEmpty { stringRes(Res.string.claude_code_pr_nothing) },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+                if (status.ahead > 0 || status.uncommitted > 0) {
+                    TextButton(onClick = onChanges) { Text(stringRes(Res.string.claude_code_changes)) }
+                }
+                if (status.uncommitted > 0) {
+                    TextButton(onClick = onAskToCommit) { Text(stringRes(Res.string.claude_code_pr_ask_commit)) }
                 }
             }
             // A NIP-34 repository takes its changes as a proposal, signed and sent from the app.
@@ -280,8 +288,12 @@ private fun RepoCard(
                 if (row.viaFork && row.gitHub != null) {
                     Text(stringRes(Res.string.claude_code_pr_via_fork, row.gitHub ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                 }
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringRes(Res.string.claude_code_pr_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = body, onValueChange = { body = it }, label = { Text(stringRes(Res.string.claude_code_pr_body)) }, minLines = 3, maxLines = 10, modifier = Modifier.fillMaxWidth())
+                LabeledField(Res.string.claude_code_pr_title) {
+                    FormTextField(value = title, onValueChange = { title = it })
+                }
+                LabeledField(Res.string.claude_code_pr_body) {
+                    FormTextField(value = body, onValueChange = { body = it }, singleLine = false, minLines = 3, textStyle = MaterialTheme.typography.bodyMedium)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(enabled = canOpen && title.isNotBlank(), onClick = { onOpen(title, body, false) }) { Text(stringRes(Res.string.claude_code_pr_open)) }
                     OutlinedButton(enabled = canOpen && title.isNotBlank(), onClick = { onOpen(title, body, true) }) { Text(stringRes(Res.string.claude_code_pr_open_draft)) }

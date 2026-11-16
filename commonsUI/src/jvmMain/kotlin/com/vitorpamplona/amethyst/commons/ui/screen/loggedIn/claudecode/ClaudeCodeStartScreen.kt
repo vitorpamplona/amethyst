@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,10 +37,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -85,13 +82,14 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_error_not_a_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_first_message
 import com.vitorpamplona.amethyst.commons.resources.claude_code_folder
-import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_prompt_issue
 import com.vitorpamplona.amethyst.commons.resources.claude_code_prompt_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_use_folder
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
+import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
@@ -196,33 +194,23 @@ fun ClaudeCodeStartScreen(
                     onClone = { viewModel.clone(repo, cloneUrls, it) },
                 )
 
-                OutlinedTextField(
-                    value = branch,
-                    onValueChange = { branch = it },
-                    label = { Text(stringRes(Res.string.claude_code_branch)) },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                AgentPicker(installed, agent?.id) { agentId = it }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringRes(Res.string.claude_code_permissions), style = MaterialTheme.typography.labelLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        modes.forEach { option ->
-                            FilterChip(selected = option == mode, onClick = { mode = option }, label = { Text(modeLabel(option)) })
-                        }
-                    }
-                    Text(modeDescription(mode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                LabeledField(Res.string.claude_code_branch) {
+                    FormTextField(value = branch, onValueChange = { branch = it }, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace))
                 }
 
-                OutlinedTextField(
-                    value = prompt,
-                    onValueChange = { prompt = it },
-                    label = { Text(stringRes(Res.string.claude_code_first_message)) },
-                    minLines = 4,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
-                )
+                AgentPicker(installed, agent?.id) { agentId = it }
+                PermissionField(modes, mode) { mode = it }
+
+                LabeledField(Res.string.claude_code_first_message) {
+                    FormTextField(
+                        value = prompt,
+                        onValueChange = { prompt = it },
+                        singleLine = false,
+                        minLines = 4,
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.heightIn(max = 320.dp),
+                    )
+                }
 
                 error?.let {
                     Text(
@@ -298,14 +286,9 @@ private fun CheckoutSection(
             CheckoutState.Missing -> Note(stringRes(Res.string.claude_code_checkout_missing, repoName))
         }
         if (state is CheckoutState.Missing || editing) {
-            OutlinedTextField(
-                value = path,
-                onValueChange = { path = it },
-                label = { Text(stringRes(Res.string.claude_code_folder)) },
-                singleLine = true,
-                leadingIcon = { Icon(MaterialSymbols.Folder, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            LabeledField(Res.string.claude_code_folder) {
+                FormTextField(value = path, onValueChange = { path = it }, leadingIcon = MaterialSymbols.Folder, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = {
                     editing = false

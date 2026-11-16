@@ -9592,9 +9592,9 @@
     </plurals>
     <string name="claude_code_propose">Propose</string>
     <string name="claude_code_update_proposal">Update proposal</string>
-    <string name="claude_code_propose_desc">Publishes this branch as a proposal to the repository, signed by you, the way ngit does: the commits go to its GRASP servers and the proposal shows up on gitworkshop and in every NIP-34 client.</string>
-    <string name="claude_code_propose_desc_no_grasp">Publishes this branch as a proposal to the repository, signed by you. The proposal shows up on gitworkshop and in every NIP-34 client.</string>
-    <string name="claude_code_propose_update_desc">This branch is already a proposal. Publishing again makes its commits the proposal's new version.</string>
+    <string name="claude_code_propose_desc">Signed by you and sent to the repository’s servers, as ngit does.</string>
+    <string name="claude_code_propose_desc_no_grasp">Signed by you; its commits go to a remote you pick below.</string>
+    <string name="claude_code_propose_update_desc">Already a proposal: publishing again makes these commits its new version.</string>
     <string name="claude_code_propose_title">Title</string>
     <string name="claude_code_propose_description">Description</string>
     <string name="claude_code_draft_with_claude">Draft with Claude</string>
@@ -9692,11 +9692,11 @@
     <string name="claude_code_step_check">Run the checks</string>
     <string name="claude_code_step_confirm">Confirm</string>
     <string name="claude_code_browse">Choose a folder</string>
-    <string name="claude_code_where_folder">A folder on this computer</string>
+    <string name="claude_code_where_folder">Folder</string>
     <string name="claude_code_where_clones">Fresh clones</string>
     <string name="claude_code_where_clones_desc">The session gets its own clone of each repository, on a new branch, in %1$s. You open the pull requests.</string>
     <string name="claude_code_workspace_repos">Repositories</string>
-    <string name="claude_code_workspace_name">Name (optional)</string>
+    <string name="claude_code_workspace_name">Name</string>
     <string name="claude_code_workspace_cloning">Cloning the repositories…</string>
     <string name="claude_code_workspace_clone_failed">Couldn’t clone: %1$s</string>
     <string name="claude_code_pull_requests">Pull requests</string>
@@ -9774,6 +9774,16 @@
     <string name="claude_code_pr_send_proposal">Send proposal</string>
     <string name="claude_code_pr_nostr_hint">A Nostr repository: its changes go back as a proposal.</string>
     <string name="claude_code_pr_via_fork">You can’t push to %1$s: the branch goes to your fork, and the pull request opens from there.</string>
+    <string name="claude_code_where">Where it works</string>
+    <string name="claude_code_where_folder_desc">A folder already on this computer, as it is.</string>
+    <string name="claude_code_workspace_name_hint">Optional</string>
+    <string name="claude_code_workspace_remove_repo">Remove %1$s</string>
+    <string name="claude_code_repo_add">Add %1$s</string>
+    <string name="claude_code_mode_short_default">Ask</string>
+    <string name="claude_code_mode_short_accept_edits">Edits</string>
+    <string name="claude_code_mode_short_plan">Plan</string>
+    <string name="claude_code_mode_short_auto">Auto</string>
+    <string name="claude_code_propose_description_hint">What it changes, why, and how you tested it</string>
     <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">

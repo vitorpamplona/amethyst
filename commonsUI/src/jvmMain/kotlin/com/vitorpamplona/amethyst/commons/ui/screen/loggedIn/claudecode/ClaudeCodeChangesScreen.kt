@@ -25,7 +25,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,10 +37,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -81,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_scope_uncommitte
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted
 import com.vitorpamplona.amethyst.commons.resources.claude_code_untracked
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
@@ -178,18 +176,14 @@ private fun ScopePicker(
     onPick: (ChangesScope) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(
-                selected = scope == ChangesScope.Uncommitted,
-                onClick = { onPick(ChangesScope.Uncommitted) },
-                label = { Text(stringRes(Res.string.claude_code_scope_uncommitted)) },
-            )
-            FilterChip(
-                selected = scope == ChangesScope.Branch,
-                onClick = { onPick(ChangesScope.Branch) },
-                label = { Text(stringRes(Res.string.claude_code_scope_branch)) },
-            )
-        }
+        // A commit picked below leaves both segments unselected: it is a third way to look.
+        SegmentedChoice(
+            options = listOf<ChangesScope>(ChangesScope.Uncommitted, ChangesScope.Branch),
+            selected = scope,
+            label = { stringRes(if (it == ChangesScope.Uncommitted) Res.string.claude_code_scope_uncommitted else Res.string.claude_code_scope_branch) },
+            onSelect = onPick,
+            modifier = Modifier.widthIn(max = 420.dp),
+        )
         val commits = info?.commits.orEmpty()
         if (commits.isNotEmpty()) {
             SectionTitle(pluralStringRes(Res.plurals.claude_code_commits, commits.size, commits.size))
@@ -224,18 +218,20 @@ private fun AskAboutLineDialog(
 ) {
     var question by remember { mutableStateOf("") }
     AlertDialog(
+        containerColor = formDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.claude_code_ask_title)) },
         text = {
             Column(Modifier.widthIn(min = 420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(if (line != null) "$path:$line" else path, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                 CodeBlock(code, maxHeight = 120)
-                OutlinedTextField(
+                FormTextField(
                     value = question,
                     onValueChange = { question = it },
-                    placeholder = { Text(stringRes(Res.string.claude_code_ask_placeholder)) },
+                    placeholder = stringRes(Res.string.claude_code_ask_placeholder),
+                    singleLine = false,
                     minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyMedium,
                 )
             }
         },

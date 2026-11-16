@@ -42,13 +42,11 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -103,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc_no_grasp
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_description
+import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_description_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_update_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_publish
@@ -121,6 +120,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_step_confirm
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_describe
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
+import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -284,20 +285,20 @@ private fun ProposeForm(
             if (!isUpdate) {
                 ProposeStep(++step, stringRes(Res.string.claude_code_step_describe), done = title.isNotBlank()) {
                     val value = draft ?: ProposalDraft("", "")
-                    OutlinedTextField(
-                        value = value.title,
-                        onValueChange = { viewModel.setDraft(value.copy(title = it)) },
-                        label = { Text(stringRes(Res.string.claude_code_propose_title)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = value.description,
-                        onValueChange = { viewModel.setDraft(value.copy(description = it)) },
-                        label = { Text(stringRes(Res.string.claude_code_propose_description)) },
-                        minLines = 6,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                    )
+                    LabeledField(Res.string.claude_code_propose_title) {
+                        FormTextField(value = value.title, onValueChange = { viewModel.setDraft(value.copy(title = it)) })
+                    }
+                    LabeledField(Res.string.claude_code_propose_description) {
+                        FormTextField(
+                            value = value.description,
+                            onValueChange = { viewModel.setDraft(value.copy(description = it)) },
+                            placeholder = stringRes(Res.string.claude_code_propose_description_hint),
+                            singleLine = false,
+                            minLines = 6,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.heightIn(max = 360.dp),
+                        )
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(enabled = !drafting, onClick = { viewModel.draftWithClaude() }) {
                             if (drafting) {
@@ -336,9 +337,12 @@ private fun ProposeForm(
             }
 
             ProposeStep(++step, stringRes(Res.string.claude_code_step_confirm), done = readDiff && tested) {
-                Column {
-                    CheckRow(readDiff, stringRes(Res.string.claude_code_check_read_diff)) { readDiff = it }
-                    CheckRow(tested, stringRes(Res.string.claude_code_check_tested)) { tested = it }
+                // In a card like the checks above, each whole row a box to tick.
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        CheckRow(stringRes(Res.string.claude_code_check_read_diff), readDiff, { readDiff = it })
+                        CheckRow(stringRes(Res.string.claude_code_check_tested), tested, { tested = it })
+                    }
                 }
             }
         }
@@ -478,8 +482,9 @@ private fun PushSection(
     onSelect: (PushRemote) -> Unit,
     onCloneUrl: (String) -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // A darker card than the others: its field is filled with their tone.
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringRes(Res.string.claude_code_push_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             if (remotes.isEmpty()) {
                 Text(stringRes(Res.string.claude_code_push_no_remotes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -489,14 +494,9 @@ private fun PushSection(
                         FilterChip(selected = r == selected, onClick = { onSelect(r) }, label = { Text(r.name) })
                     }
                 }
-                OutlinedTextField(
-                    value = cloneUrl,
-                    onValueChange = onCloneUrl,
-                    label = { Text(stringRes(Res.string.claude_code_push_clone_url)) },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                LabeledField(Res.string.claude_code_push_clone_url) {
+                    FormTextField(value = cloneUrl, onValueChange = onCloneUrl, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace))
+                }
             }
         }
     }
@@ -582,18 +582,6 @@ private fun GateSection(
 
 private const val GATE_LINES_SHOWN = 12
 private const val FULL_LOG_SHOWN = 200_000
-
-@Composable
-private fun CheckRow(
-    checked: Boolean,
-    text: String,
-    onChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onChange)
-        Text(text, style = MaterialTheme.typography.bodyMedium)
-    }
-}
 
 /**
  * Who ngit signs as, by the name Amethyst knows for that key (its profile, loaded or cached), so

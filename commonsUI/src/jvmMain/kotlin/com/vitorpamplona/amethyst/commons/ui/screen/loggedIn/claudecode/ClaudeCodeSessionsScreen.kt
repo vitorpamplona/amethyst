@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,10 +48,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -62,6 +64,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -123,6 +126,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_add
 import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_github
 import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_local
 import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_nostr
@@ -139,9 +143,11 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_status_starting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_working
 import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_where
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder
+import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
@@ -153,6 +159,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_save_group
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
@@ -160,9 +168,13 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.ui.components.FormFieldShape
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
+import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
@@ -170,7 +182,6 @@ import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.claudecode.ClaudeBackend
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
@@ -572,6 +583,7 @@ private fun NewSessionDialog(
 ) {
     val error by viewModel.newChatError.collectAsStateWithLifecycle()
     val creating by viewModel.creating.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
     var worktree by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
@@ -591,7 +603,6 @@ private fun NewSessionDialog(
     val scope = rememberCoroutineScope()
     val browseTitle = stringRes(Res.string.claude_code_browse)
 
-    // What a click on Start clones: the rows, and a URL still in the field.
     val candidates by viewModel.repoCandidates.collectAsStateWithLifecycle()
     val searchingGitHub by viewModel.searchingGitHub.collectAsStateWithLifecycle()
     // Read once the user asks for clones: it lists mirrors and runs `gh`.
@@ -607,59 +618,71 @@ private fun NewSessionDialog(
         viewModel.clearNewChatError()
     }
 
+    val errorText = error?.let { newChatErrorText(it) }
+    val folderError = errorText.takeIf { !clones && error !is NewChatError.CloneFailed }
+    val cloneError = errorText.takeIf { clones && error is NewChatError.CloneFailed }
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = formDialogColor(),
         title = { Text(stringRes(Res.string.claude_code_new_session)) },
         text = {
             // Scrolls on a short window: the Start button must never be pushed off screen.
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(FormGap)) {
                 // Which agent works on it, when more than one is installed.
                 AgentPicker(installed, agent?.id) { agentId = it }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = !clones, onClick = { clones = false }, label = { Text(stringRes(Res.string.claude_code_where_folder)) })
-                    FilterChip(selected = clones, onClick = { clones = true }, label = { Text(stringRes(Res.string.claude_code_where_clones)) })
+                LabeledField(
+                    Res.string.claude_code_where,
+                    helper = if (clones) stringRes(Res.string.claude_code_where_clones_desc, viewModel.workspacesRoot) else stringRes(Res.string.claude_code_where_folder_desc),
+                ) {
+                    SegmentedChoice(
+                        options = listOf(false, true),
+                        selected = clones,
+                        label = { stringRes(if (it) Res.string.claude_code_where_clones else Res.string.claude_code_where_folder) },
+                        onSelect = {
+                            clones = it
+                            viewModel.clearNewChatError()
+                        },
+                    )
                 }
                 if (clones) {
-                    Text(stringRes(Res.string.claude_code_where_clones_desc, viewModel.workspacesRoot), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                    RepoGroupChips(
-                        groups = groups,
-                        current = repos.toList(),
-                        onPick = { group ->
-                            repos.clear()
-                            repos.addAll(group.urls)
-                            viewModel.clearNewChatError()
-                        },
-                        onForget = { viewModel.deleteGroup(it.name) },
-                    )
-                    RepoList(
-                        repos = repos,
-                        candidates = candidates,
-                        searchingGitHub = searchingGitHub,
-                        adding = adding,
-                        onAddingChange = {
-                            adding = it
-                            viewModel.searchRepos(it)
-                            viewModel.clearNewChatError()
-                        },
-                        onAdd = ::addTyped,
-                        onPick = { url ->
-                            if (url !in repos) repos.add(url)
-                            viewModel.clearNewChatError()
-                        },
-                        onRemove = { repos.remove(it) },
-                        isError = error != null,
-                        onSaveGroup = { name ->
-                            addTyped()
-                            viewModel.saveGroup(name, repos.toList())
-                        },
-                    )
-                    OutlinedTextField(
-                        value = workspaceName,
-                        onValueChange = { workspaceName = it },
-                        label = { Text(stringRes(Res.string.claude_code_workspace_name)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    LabeledField(Res.string.claude_code_workspace_repos, helper = cloneError, isError = cloneError != null) {
+                        RepoPicker(
+                            repos = repos,
+                            candidates = candidates,
+                            groups = groups,
+                            searchingGitHub = searchingGitHub,
+                            adding = adding,
+                            onAddingChange = {
+                                adding = it
+                                viewModel.searchRepos(it)
+                                viewModel.clearNewChatError()
+                            },
+                            onAdd = ::addTyped,
+                            onPick = { url ->
+                                if (url !in repos) repos.add(url)
+                                viewModel.clearNewChatError()
+                            },
+                            onRemove = { repos.remove(it) },
+                            onUseGroup = { group ->
+                                repos.clear()
+                                repos.addAll(group.urls)
+                                viewModel.clearNewChatError()
+                            },
+                            onForgetGroup = { viewModel.deleteGroup(it.name) },
+                            onSaveGroup = { name ->
+                                addTyped()
+                                viewModel.saveGroup(name, repos.toList())
+                            },
+                        )
+                    }
+                    LabeledField(Res.string.claude_code_workspace_name) {
+                        FormTextField(
+                            value = workspaceName,
+                            onValueChange = { workspaceName = it },
+                            placeholder = stringRes(Res.string.claude_code_workspace_name_hint),
+                        )
+                    }
                     if (creating) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -667,69 +690,52 @@ private fun NewSessionDialog(
                         }
                     }
                 } else {
-                    OutlinedTextField(
-                        value = folder,
-                        onValueChange = {
-                            folder = it
-                            viewModel.clearNewChatError()
-                        },
-                        label = { Text(stringRes(Res.string.claude_code_folder)) },
-                        trailingIcon = {
-                            HoverTooltip(browseTitle) {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        pickFolder(browseTitle, folder)?.let {
-                                            folder = it
-                                            viewModel.clearNewChatError()
+                    LabeledField(Res.string.claude_code_folder, helper = folderError, isError = folderError != null) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FormTextField(
+                                value = folder,
+                                onValueChange = {
+                                    folder = it
+                                    viewModel.clearNewChatError()
+                                },
+                                isError = folderError != null,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                                trailingIcon = {
+                                    HoverTooltip(browseTitle) {
+                                        IconButton(onClick = {
+                                            scope.launch {
+                                                pickFolder(browseTitle, folder)?.let {
+                                                    folder = it
+                                                    viewModel.clearNewChatError()
+                                                }
+                                            }
+                                        }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
+                                    }
+                                },
+                            )
+                            // The folders sessions ran in, one row that scrolls sideways. Its height is
+                            // kept while the list loads, so the dialog doesn't jump under the pointer.
+                            if (!loaded) {
+                                Spacer(Modifier.height(32.dp))
+                            } else if (suggestedFolders.size > 1) {
+                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    suggestedFolders.take(12).forEach { cwd ->
+                                        HoverTooltip(cwd) {
+                                            FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
                                         }
                                     }
-                                }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
-                            }
-                        },
-                        singleLine = true,
-                        isError = error != null,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (suggestedFolders.size > 1) {
-                        // One row that scrolls sideways: the dialog keeps its height however many there are.
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            suggestedFolders.take(12).forEach { cwd ->
-                                HoverTooltip(cwd) {
-                                    FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
                                 }
                             }
                         }
                     }
-                    Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable { worktree = !worktree }, verticalAlignment = Alignment.Top) {
-                        Checkbox(checked = worktree, onCheckedChange = { worktree = it })
-                        Column(Modifier.padding(top = 12.dp, end = 8.dp)) {
-                            Text(stringRes(Res.string.claude_code_worktree), style = MaterialTheme.typography.bodyMedium)
-                            Text(stringRes(Res.string.claude_code_worktree_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringRes(Res.string.claude_code_permissions), style = MaterialTheme.typography.labelLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        modes.forEach { option ->
-                            FilterChip(selected = option == mode, onClick = { mode = option }, label = { Text(modeLabel(option)) })
-                        }
-                    }
-                    Text(modeDescription(mode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
-                }
-                error?.let {
-                    Text(
-                        when (it) {
-                            NewChatError.NotAFolder -> stringRes(Res.string.claude_code_error_not_a_folder)
-                            NewChatError.NotARepository -> stringRes(Res.string.claude_code_error_not_a_repository)
-                            is NewChatError.WorktreeFailed -> stringRes(Res.string.claude_code_error_worktree, it.message ?: "")
-                            is NewChatError.CloneFailed -> stringRes(Res.string.claude_code_workspace_clone_failed, it.message ?: "")
-                        },
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                    ToggleRow(
+                        title = stringRes(Res.string.claude_code_worktree),
+                        description = stringRes(Res.string.claude_code_worktree_desc),
+                        checked = worktree,
+                        onChange = { worktree = it },
                     )
                 }
+                PermissionField(modes, mode) { mode = it }
             }
         },
         confirmButton = {
@@ -751,28 +757,171 @@ private fun NewSessionDialog(
     )
 }
 
+/** Why a new session didn't start, in the user's words. */
+@Composable
+private fun newChatErrorText(error: NewChatError): String =
+    when (error) {
+        NewChatError.NotAFolder -> stringRes(Res.string.claude_code_error_not_a_folder)
+        NewChatError.NotARepository -> stringRes(Res.string.claude_code_error_not_a_repository)
+        is NewChatError.WorktreeFailed -> stringRes(Res.string.claude_code_error_worktree, error.message ?: "")
+        is NewChatError.CloneFailed -> stringRes(Res.string.claude_code_workspace_clone_failed, error.message ?: "")
+    }
+
+/** The permission mode, as segments, with what the chosen one does under them. */
+@Composable
+internal fun PermissionField(
+    modes: List<PermissionMode>,
+    mode: PermissionMode,
+    onMode: (PermissionMode) -> Unit,
+) {
+    // The segment says the mode in a word; the line under it, what that means.
+    LabeledField(Res.string.claude_code_permissions, helper = modeDescription(mode)) {
+        SegmentedChoice(options = modes, selected = mode, label = { modeShortLabel(it) }, onSelect = onMode)
+    }
+}
+
 /** URLs typed or pasted into the field: one or many, split on spaces, commas and new lines. */
 private fun splitUrls(text: String): List<String> = text.split(Regex("[\\s,]+")).map { it.trim() }.filter { it.isNotEmpty() }
 
-/** The saved groups, to fill the list in one click: the last used first, then the named ones. */
+/**
+ * The repositories to clone: the chosen ones as chips (a tap removes one), the saved groups and
+ * "Save as group" as actions, a field to search or paste a URL, and what fits it as rows to add.
+ * With nothing typed, the rows are the repositories cloned here before, most used first.
+ */
 @Composable
-private fun RepoGroupChips(
+private fun RepoPicker(
+    repos: List<String>,
+    candidates: List<RepoCandidate>,
     groups: List<RepoGroup>,
-    current: List<String>,
-    onPick: (RepoGroup) -> Unit,
-    onForget: (RepoGroup) -> Unit,
+    searchingGitHub: Boolean,
+    adding: String,
+    onAddingChange: (String) -> Unit,
+    onAdd: () -> Unit,
+    onPick: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onUseGroup: (RepoGroup) -> Unit,
+    onForgetGroup: (RepoGroup) -> Unit,
+    onSaveGroup: (String) -> Unit,
 ) {
-    if (groups.isEmpty()) return
+    var naming by remember { mutableStateOf(false) }
+    var groupName by remember { mutableStateOf("") }
+    val chosen = remember(repos) { repos.map { NostrWorkspaces.normalize(it) }.toSet() }
+    // Names for the chips: the catalog knows them even when the search no longer shows them.
+    val names = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(candidates) { candidates.forEach { names[NostrWorkspaces.normalize(it.url)] = it.label } }
+    val offered = remember(candidates, chosen) { candidates.filter { NostrWorkspaces.normalize(it.url) !in chosen }.take(OFFERED_REPOS) }
+
+    fun saveGroup() {
+        if (groupName.isBlank()) return
+        onSaveGroup(groupName)
+        naming = false
+        groupName = ""
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (repos.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                repos.forEach { url ->
+                    val label = names[NostrWorkspaces.normalize(url)] ?: AgentWorkspaces.ownerAndName(url)
+                    val remove = stringRes(Res.string.claude_code_workspace_remove_repo, label)
+                    HoverTooltip(url) {
+                        InputChip(
+                            selected = true,
+                            onClick = { onRemove(url) },
+                            label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            leadingIcon = { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                            trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(50),
+                        )
+                    }
+                }
+            }
+        }
+        RepoGroupActions(
+            groups = groups,
+            canSave = repos.isNotEmpty() && !naming,
+            onUse = onUseGroup,
+            onForget = onForgetGroup,
+            onSave = { naming = true },
+        )
+        if (naming) {
+            // Typing goes to the name as soon as the field appears; Enter saves.
+            val focus = remember { FocusRequester() }
+            LaunchedEffect(Unit) { focus.requestFocus() }
+            FormTextField(
+                value = groupName,
+                onValueChange = { groupName = it },
+                placeholder = stringRes(Res.string.claude_code_workspace_group_name),
+                leadingIcon = MaterialSymbols.BookmarkAdd,
+                trailingIcon = { TextButton(enabled = groupName.isNotBlank(), onClick = ::saveGroup) { Text(stringRes(Res.string.save)) } },
+                modifier =
+                    Modifier.focusRequester(focus).onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && groupName.isNotBlank()) {
+                            saveGroup()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+            )
+        }
+        FormTextField(
+            value = adding,
+            onValueChange = onAddingChange,
+            placeholder = stringRes(Res.string.claude_code_workspace_add_repo),
+            leadingIcon = MaterialSymbols.Search,
+            // Only when it has something to show: an empty slot still takes the placeholder's room.
+            trailingIcon =
+                when {
+                    searchingGitHub -> {
+                        { CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) }
+                    }
+                    looksLikeUrl(adding) -> {
+                        { TextButton(onClick = onAdd) { Text(stringRes(Res.string.claude_code_workspace_add)) } }
+                    }
+                    else -> null
+                },
+            modifier =
+                Modifier.onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || event.key != Key.Enter || adding.isBlank()) return@onPreviewKeyEvent false
+                    // A URL is added as it is; a word adds its first match.
+                    if (looksLikeUrl(adding)) onAdd() else offered.firstOrNull()?.let { onPick(it.url) }
+                    true
+                },
+        )
+        if (offered.isNotEmpty()) {
+            Column {
+                offered.forEach { candidate -> RepoSuggestionRow(candidate) { onPick(candidate.url) } }
+            }
+        }
+    }
+}
+
+/** How many unchosen repositories the picker lists at once: past that, typing narrows it. */
+private const val OFFERED_REPOS = 6
+
+/**
+ * The saved groups as actions that fill the list ("Last used" first), then "Save as group":
+ * action chips with icons, not filters, since a tap replaces the list rather than marking a state.
+ */
+@Composable
+private fun RepoGroupActions(
+    groups: List<RepoGroup>,
+    canSave: Boolean,
+    onUse: (RepoGroup) -> Unit,
+    onForget: (RepoGroup) -> Unit,
+    onSave: () -> Unit,
+) {
+    if (groups.isEmpty() && !canSave) return
     val last = stringRes(Res.string.claude_code_workspace_last_used)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        // "Last used" leads; the named groups follow, the most recently saved first.
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         groups.sortedByDescending { it.name == ClaudeCodeService.LAST_GROUP }.forEach { group ->
             val isLast = group.name == ClaudeCodeService.LAST_GROUP
             HoverTooltip(group.urls.joinToString("\n") { AgentWorkspaces.ownerAndName(it) }) {
-                FilterChip(
-                    selected = group.urls == current,
-                    onClick = { onPick(group) },
+                AssistChip(
+                    onClick = { onUse(group) },
                     label = { Text(if (isLast) last else group.name, maxLines = 1) },
+                    leadingIcon = { Icon(if (isLast) MaterialSymbols.History else MaterialSymbols.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     trailingIcon =
                         if (isLast) {
                             null
@@ -782,102 +931,20 @@ private fun RepoGroupChips(
                                 Icon(MaterialSymbols.Close, contentDescription = forget, modifier = Modifier.size(16.dp).clip(CircleShape).clickable { onForget(group) })
                             }
                         },
+                    shape = RoundedCornerShape(50),
                 )
             }
         }
-    }
-}
-
-/**
- * The repositories to clone, as one list with checkboxes: the chosen ones first, then the ones
- * that fit what is typed (cloned here before, the user's GitHub ones, GitHub's search, NIP-34
- * ones). Enter adds a pasted URL, or checks the first match of a word. The chosen list can be
- * saved as a group.
- */
-@Composable
-private fun RepoList(
-    repos: List<String>,
-    candidates: List<RepoCandidate>,
-    searchingGitHub: Boolean,
-    adding: String,
-    onAddingChange: (String) -> Unit,
-    onAdd: () -> Unit,
-    onPick: (String) -> Unit,
-    onRemove: (String) -> Unit,
-    isError: Boolean,
-    onSaveGroup: (String) -> Unit,
-) {
-    var naming by remember { mutableStateOf(false) }
-    var groupName by remember { mutableStateOf("") }
-    val chosen = remember(repos) { repos.map { NostrWorkspaces.normalize(it) }.toSet() }
-    val known = remember(candidates) { candidates.associateBy { NostrWorkspaces.normalize(it.url) } }
-    val offered = remember(candidates, chosen) { candidates.filter { NostrWorkspaces.normalize(it.url) !in chosen }.take(OFFERED_REPOS) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringRes(Res.string.claude_code_workspace_repos), style = MaterialTheme.typography.labelLarge)
-        OutlinedTextField(
-            value = adding,
-            onValueChange = onAddingChange,
-            placeholder = { Text(stringRes(Res.string.claude_code_workspace_add_repo), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
-            singleLine = true,
-            isError = isError,
-            trailingIcon = {
-                when {
-                    searchingGitHub -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    looksLikeUrl(adding) -> TextButton(onClick = onAdd) { Text(stringRes(Res.string.claude_code_workspace_add)) }
-                }
-            },
-            modifier =
-                Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown || event.key != Key.Enter || adding.isBlank()) return@onPreviewKeyEvent false
-                    // A URL is added as it is; a word checks its first match.
-                    if (looksLikeUrl(adding)) onAdd() else offered.firstOrNull()?.let { onPick(it.url) }
-                    true
-                },
-        )
-        repos.forEach { url ->
-            val candidate = known[NostrWorkspaces.normalize(url)]
-            RepoCheckRow(candidate?.label ?: AgentWorkspaces.ownerAndName(url), candidate?.let { repoDetail(it) } ?: url, candidate?.nostr != null, checked = true) { onRemove(url) }
-        }
-        offered.forEach { candidate ->
-            RepoCheckRow(candidate.label, repoDetail(candidate), candidate.nostr != null, checked = false) { onPick(candidate.url) }
-        }
-        if (naming) {
-            // Typing goes to the name as soon as the field appears; Enter saves.
-            val focus = remember { FocusRequester() }
-            LaunchedEffect(Unit) { focus.requestFocus() }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = groupName,
-                    onValueChange = { groupName = it },
-                    label = { Text(stringRes(Res.string.claude_code_workspace_group_name)) },
-                    singleLine = true,
-                    modifier =
-                        Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && groupName.isNotBlank()) {
-                                onSaveGroup(groupName)
-                                naming = false
-                                groupName = ""
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                )
-                TextButton(enabled = groupName.isNotBlank(), onClick = {
-                    onSaveGroup(groupName)
-                    naming = false
-                    groupName = ""
-                }) { Text(stringRes(Res.string.save)) }
-            }
-        } else if (repos.isNotEmpty()) {
-            TextButton(onClick = { naming = true }) { Text(stringRes(Res.string.claude_code_workspace_save_group)) }
+        if (canSave) {
+            AssistChip(
+                onClick = onSave,
+                label = { Text(stringRes(Res.string.claude_code_workspace_save_group), maxLines = 1) },
+                leadingIcon = { Icon(MaterialSymbols.BookmarkAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(50),
+            )
         }
     }
 }
-
-/** How many unchosen repositories the picker lists at once: past that, typing narrows it. */
-private const val OFFERED_REPOS = 8
 
 /** Whether the field holds a repository URL (or several) rather than words to search for. */
 private fun looksLikeUrl(text: String): Boolean = splitUrls(text).let { parts -> parts.isNotEmpty() && parts.all { it.contains("://") || it.contains('@') || it.startsWith("/") || it.matches(Regex("^[A-Za-z]:\\\\.*")) } }
@@ -900,29 +967,28 @@ private fun repoDetail(candidate: RepoCandidate): String {
     return listOfNotNull(source, candidate.description).joinToString(" · ")
 }
 
-/** One repository of the picker: a checkbox, its name, and where it comes from. */
+/** A repository to add: its name, where it is known from, and a plus; the whole row adds it. */
 @Composable
-private fun RepoCheckRow(
-    label: String,
-    detail: String,
-    nostr: Boolean,
-    checked: Boolean,
-    onToggle: () -> Unit,
+private fun RepoSuggestionRow(
+    candidate: RepoCandidate,
+    onAdd: () -> Unit,
 ) {
+    val add = stringRes(Res.string.claude_code_repo_add, candidate.label)
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onToggle)
-            .padding(end = 8.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClickLabel = add, onClick = onAdd)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+        Icon(MaterialSymbols.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Text(candidate.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 // A NIP-34 repository: its changes can go back as a proposal.
-                if (nostr) {
+                if (candidate.nostr != null) {
                     Text(
                         stringRes(Res.string.claude_code_repo_source_nostr),
                         style = MaterialTheme.typography.labelSmall,
@@ -932,12 +998,12 @@ private fun RepoCheckRow(
                     )
                 }
             }
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(repoDetail(candidate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-/** Chips to pick the agent from the installed ones; nothing when there is only one. */
+/** The agent to work with, as segments; nothing when only one is installed. */
 @Composable
 internal fun AgentPicker(
     installed: List<AgentBackend>,
@@ -945,13 +1011,13 @@ internal fun AgentPicker(
     onPick: (String) -> Unit,
 ) {
     if (installed.size < 2) return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringRes(Res.string.claude_code_agent), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            installed.forEach { agent ->
-                FilterChip(selected = agent.id == selected, onClick = { onPick(agent.id) }, label = { Text(agent.displayName) })
-            }
-        }
+    LabeledField(Res.string.claude_code_agent) {
+        SegmentedChoice(
+            options = installed.map { it.id },
+            selected = selected ?: installed.first().id,
+            label = { id -> installed.firstOrNull { it.id == id }?.displayName ?: id },
+            onSelect = onPick,
+        )
     }
 }
 
@@ -967,12 +1033,16 @@ internal fun RenameDialog(
     LaunchedEffect(Unit) { focus.requestFocus() }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = formDialogColor(),
         title = { Text(stringRes(Res.string.claude_code_rename_title)) },
         text = {
+            // The form look's field, kept as a plain field for the selected text it starts with.
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
                 singleLine = true,
+                shape = FormFieldShape,
+                colors = formFieldColors(),
                 modifier =
                     Modifier.fillMaxWidth().focusRequester(focus).onPreviewKeyEvent { event ->
                         // Enter saves.
