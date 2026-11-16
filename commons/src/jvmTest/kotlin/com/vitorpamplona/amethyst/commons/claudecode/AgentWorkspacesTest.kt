@@ -416,6 +416,26 @@ class AgentWorkspacesTest {
         }
 
     @Test
+    fun ignoredFilesAreWorkButBuildOutputIsNot() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/y")
+            val dir = File(ws.dir, "app")
+            File(dir, ".gitignore").writeText("build/\n.env\n")
+            git(dir, "add", ".")
+            git(dir, "commit", "--quiet", "-m", "ignore")
+            git(dir, "push", "--quiet", "origin", "agent/y")
+            assertFalse(workspaces.hasUnsavedWork(ws))
+            // What a build makes again, and what the OS leaves: nothing lost.
+            File(dir, "build/classes").mkdirs()
+            File(dir, "build/classes/A.class").writeText("x")
+            File(dir, ".DS_Store").writeText("x")
+            assertFalse(workspaces.hasUnsavedWork(ws))
+            // A secret only this folder holds.
+            File(dir, ".env").writeText("TOKEN=x\n")
+            assertTrue(workspaces.hasUnsavedWork(ws))
+        }
+
+    @Test
     fun aWorkspacesSizeLeavesOutWhatItSharesWithTheMirror() {
         if ("unix" !in FileSystems.getDefault().supportedFileAttributeViews()) return
         val dir = File(tmp, "measured").apply { mkdirs() }

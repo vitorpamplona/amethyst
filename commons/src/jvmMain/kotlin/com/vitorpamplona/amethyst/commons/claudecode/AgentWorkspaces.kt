@@ -459,13 +459,22 @@ class AgentWorkspaces(
     /**
      * Whether removing [workspace] would lose work: a repository with files not committed, or
      * commits that are on no remote (the user's push, to the repository or a fork, puts them there).
+     *
+     * Ignored files count too (a `.env`, `local.properties`, notes): git leaves them out of a
+     * plain status, and nothing but this folder holds them. A directory ignored as a whole
+     * (`build/`, `node_modules/`) is taken for output a build makes again, and the clutter
+     * operating systems leave ([OS_CLUTTER]) never counts.
      */
     suspend fun hasUnsavedWork(workspace: AgentWorkspace): Boolean =
         withContext(Dispatchers.IO) {
             workspace.repos.any { repo ->
                 val dir = File(workspace.dir, repo.name)
                 if (!dir.isDirectory) return@any false
-                val uncommitted = GitWorkspace.git(dir, "status", "--porcelain")?.lines()?.any { it.isNotBlank() } ?: true
+                val uncommitted =
+                    GitWorkspace
+                        .git(dir, "status", "--porcelain", "--ignored")
+                        ?.lines()
+                        ?.any { line -> line.isNotBlank() && !isRebuildable(line) } ?: true
                 val unpushed =
                     GitWorkspace
                         .git(dir, "rev-list", "--count", "HEAD", "--not", "--remotes")
@@ -592,6 +601,21 @@ class AgentWorkspaces(
     companion object {
         private const val TAG = "AgentWorkspaces"
         private const val NETWORK_TIMEOUT = 900L
+
+        /** Files operating systems drop in folders: never anyone's work. */
+        private val OS_CLUTTER = setOf(".DS_Store", "Thumbs.db", "desktop.ini")
+
+        /**
+         * Whether a `git status --porcelain --ignored` [line] is something a build makes again or
+         * clutter: an ignored directory as a whole, or an OS file, ignored or not.
+         */
+        internal fun isRebuildable(line: String): Boolean {
+            val ignored = line.startsWith("!! ")
+            if (!ignored && !line.startsWith("?? ")) return false
+            val path = line.drop(3).trim('"')
+            return (ignored && path.endsWith("/")) || path.removeSuffix("/").substringAfterLast('/') in OS_CLUTTER
+        }
+
         private const val BRANCHES = "+refs/heads/*:refs/heads/*"
         private const val TAGS = "+refs/tags/*:refs/tags/*"
         private val json = Json { ignoreUnknownKeys = true }
