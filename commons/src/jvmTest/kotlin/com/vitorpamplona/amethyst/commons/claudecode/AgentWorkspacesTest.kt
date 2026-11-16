@@ -24,6 +24,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -353,5 +354,86 @@ class AgentWorkspacesTest {
         // `gh pr list` answers with an array.
         assertTrue(assertNotNull(GitHubPullRequests.parseState("""[{"isDraft":false,"state":"OPEN","url":"https://github.com/o/app/pull/9"}]""")).isOpen)
         assertEquals(null, GitHubPullRequests.parseState("[]"))
+    }
+
+    @Test
+    fun aWorkspaceIsFinishedWhenEveryPullRequestIsMergedOrClosed() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl, libUrl), null)
+            assertEquals(null, ws.finishedAt)
+            workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/1", "MERGED", isDraft = false))
+            // One repository has none yet: not finished.
+            assertEquals(null, workspaces.list().single().finishedAt)
+            workspaces.recordPullRequest(ws.id, "lib", PullRequestInfo("https://github.com/o/lib/pull/2", "OPEN", isDraft = false))
+            assertEquals(null, workspaces.list().single().finishedAt)
+            val closed = assertNotNull(workspaces.recordPullRequest(ws.id, "lib", PullRequestInfo("https://github.com/o/lib/pull/2", "CLOSED", isDraft = false)))
+            val finishedAt = assertNotNull(closed.finishedAt)
+            // A later check of the same closed pull request keeps when it closed.
+            Thread.sleep(5)
+            workspaces.recordPullRequest(ws.id, "lib", PullRequestInfo("https://github.com/o/lib/pull/2", "CLOSED", isDraft = false))
+            assertEquals(finishedAt, workspaces.list().single().finishedAt)
+            // Reopened, it is open work again.
+            workspaces.recordPullRequest(ws.id, "lib", PullRequestInfo("https://github.com/o/lib/pull/2", "OPEN", isDraft = false))
+            assertEquals(null, workspaces.list().single().finishedAt)
+        }
+
+    @Test
+    fun uncommittedOrUnpushedWorkIsUnsaved() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/x")
+            val dir = File(ws.dir, "app")
+            assertFalse(workspaces.hasUnsavedWork(ws))
+            File(dir, "new.txt").writeText("x\n")
+            assertTrue(workspaces.hasUnsavedWork(ws))
+            git(dir, "add", ".")
+            git(dir, "commit", "--quiet", "-m", "work")
+            // Committed but on no remote.
+            assertTrue(workspaces.hasUnsavedWork(ws))
+            git(dir, "push", "--quiet", "origin", "agent/x")
+            assertFalse(workspaces.hasUnsavedWork(ws))
+        }
+
+    @Test
+    fun aWorkspacesSizeLeavesOutWhatItSharesWithTheMirror() {
+        if ("unix" !in FileSystems.getDefault().supportedFileAttributeViews()) return
+        val dir = File(tmp, "measured").apply { mkdirs() }
+        File(dir, "own.bin").writeBytes(ByteArray(1_000))
+        val shared = File(tmp, "shared.bin").apply { writeBytes(ByteArray(5_000)) }
+        Files.createLink(File(dir, "linked.bin").toPath(), shared.toPath())
+        assertEquals(1_000, AgentWorkspaces.diskUse(dir))
+        assertEquals(6_000, AgentWorkspaces.diskUse(dir, countShared = true))
+        assertEquals(0, AgentWorkspaces.diskUse(File(tmp, "missing")))
+    }
+
+    @Test
+    fun mirrorsNoWorkspaceUsedForLongAreRemovedWhenTidying() =
+        runBlocking {
+            val kept = workspaces.create(listOf(appUrl), null)
+            val gone = workspaces.create(listOf(libUrl), null)
+            // Recently used: nothing to remove yet.
+            assertTrue(workspaces.unusedMirrors().isEmpty())
+            workspaces.delete(gone)
+            assertTrue(workspaces.unusedMirrors().isEmpty())
+            // The lib mirror's last use, long ago; app's workspace still uses its own.
+            val usage = File(tmp, "AmethystAgents/usage.json")
+            val old = System.currentTimeMillis() - 90 * 24 * 60 * 60_000L
+            usage.writeText("""{"$appUrl":{"count":1,"lastUsed":$old},"$libUrl":{"count":1,"lastUsed":$old}}""".replace("\\", "\\\\"))
+            assertEquals(listOf(workspaces.mirrorDir(libUrl).absolutePath), workspaces.unusedMirrors().map { it.absolutePath })
+            assertEquals(1, workspaces.tidyMirrors())
+            assertFalse(workspaces.mirrorDir(libUrl).exists())
+            // The other mirror was compacted, and still clones.
+            assertTrue(workspaces.mirrorDir(appUrl).isDirectory)
+            workspaces.delete(kept)
+            val again = workspaces.create(listOf(appUrl, libUrl), null)
+            assertEquals(listOf("app", "lib"), again.repos.map { it.name })
+        }
+
+    @Test
+    fun preferencesAreKept() {
+        assertTrue(workspaces.preferences().autoCleanup)
+        workspaces.updatePreferences { it.copy(autoCleanup = false, archivedSessions = setOf("s1")) }
+        val reread = AgentWorkspaces(File(tmp, "AmethystAgents")).preferences()
+        assertFalse(reread.autoCleanup)
+        assertEquals(setOf("s1"), reread.archivedSessions)
     }
 }

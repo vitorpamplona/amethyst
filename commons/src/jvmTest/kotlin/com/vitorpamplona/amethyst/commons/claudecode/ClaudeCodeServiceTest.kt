@@ -43,6 +43,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -308,5 +309,66 @@ class ClaudeCodeServiceTest {
                     .single { it.workspace?.id == ws.id }
                     .key,
             )
+        }
+
+    @Test
+    fun archivingASessionMovesItUnderArchivedAndBack() =
+        runBlocking {
+            service.refresh()
+            val row = assertNotNull(service.rows.value.firstOrNull { it.sessionId == id })
+            assertFalse(row.archived)
+            // Claude keeps no archive of its own: the app remembers it.
+            service.archive(row, true)
+            val archived = service.rows.value.single { it.sessionId == id }
+            assertTrue(archived.archived)
+            assertTrue(archived.userArchived)
+            assertEquals(setOf(id), service.agentWorkspaces.preferences().archivedSessions)
+            service.archive(archived, false)
+            assertFalse(
+                service.rows.value
+                    .single { it.sessionId == id }
+                    .archived,
+            )
+            assertTrue(
+                service.agentWorkspaces
+                    .preferences()
+                    .archivedSessions
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun cleaningUpKeepsAWorkspaceWithWorkNotPushed() =
+        runBlocking {
+            val remote = File(work, "remote.git")
+            val seed = File(work, "seed").apply { mkdirs() }
+
+            fun git(
+                dir: File,
+                vararg args: String,
+            ) = check(
+                ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
+                    .directory(dir)
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor() == 0,
+            ) { args.joinToString(" ") }
+            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
+            git(seed, "init", "--quiet", "--initial-branch=main")
+            File(seed, "README.md").writeText("app\n")
+            git(seed, "add", ".")
+            git(seed, "commit", "--quiet", "-m", "init")
+            git(seed, "push", "--quiet", remote.absolutePath, "main")
+            val clean = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Clean", agentId = "claude")
+            val dirty = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Dirty", agentId = "claude")
+            val repo = File(dirty.dir, dirty.repos.single().name)
+            File(repo, "work.txt").writeText("not pushed\n")
+            git(repo, "add", ".")
+            git(repo, "commit", "--quiet", "-m", "work")
+
+            val removed = service.cleanUp(listOf(clean, dirty))
+            assertEquals(listOf(clean.id), removed.map { it.id })
+            assertFalse(File(clean.dir).exists())
+            assertTrue(File(dirty.dir).exists())
         }
 }

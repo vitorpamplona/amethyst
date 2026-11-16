@@ -73,6 +73,7 @@ class CodexBackend(
             hostTools = false,
             modes = listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN),
             liveSessions = false,
+            archive = true,
         )
 
     override fun executable(): File? = findExecutable()
@@ -130,12 +131,16 @@ class CodexBackend(
 
     override fun listSessions(cwd: String?): List<AgentSessionInfo> =
         withServer { codex ->
-            val params =
-                buildJsonObject {
-                    put("limit", LIST_LIMIT)
-                    cwd?.let { put("cwd", it) }
-                }
-            (codex.call("thread/list", params)["data"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonObject)?.let(::info) }
+            // Codex lists archived threads apart: both, so archived ones stay in reach.
+            listOf(false, true).flatMap { archived ->
+                val params =
+                    buildJsonObject {
+                        put("limit", LIST_LIMIT)
+                        put("archived", archived)
+                        cwd?.let { put("cwd", it) }
+                    }
+                (codex.call("thread/list", params)["data"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonObject)?.let(::info)?.copy(archived = archived) }
+            }
         }.orEmpty()
 
     override fun session(sessionId: String): AgentSessionInfo? = withServer { codex -> (read(codex, sessionId, turns = false))?.let(::info) }
@@ -158,6 +163,11 @@ class CodexBackend(
     }
 
     override fun delete(sessionId: String): Boolean = withServer { codex -> codex.call("thread/delete", buildJsonObject { put("threadId", sessionId) }) } != null
+
+    override fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ): Boolean = withServer { codex -> codex.call(if (archived) "thread/archive" else "thread/unarchive", buildJsonObject { put("threadId", sessionId) }) } != null
 
     private suspend fun read(
         codex: CodexConnection,

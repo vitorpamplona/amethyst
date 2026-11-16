@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_agent
+import com.vitorpamplona.amethyst.commons.resources.claude_code_archive
 import com.vitorpamplona.amethyst.commons.resources.claude_code_browse
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete_body
@@ -142,8 +143,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_status_needs_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_ready
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_starting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_working
+import com.vitorpamplona.amethyst.commons.resources.claude_code_storage
 import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_unarchive
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones_desc
@@ -183,6 +186,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.claudecode.ClaudeBackend
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
@@ -211,6 +215,7 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
     var renaming by remember { mutableStateOf<ClaudeSessionRow?>(null) }
     var deleting by remember { mutableStateOf<ClaudeSessionRow?>(null) }
     var deletingWorkspace by remember { mutableStateOf<ClaudeSessionRow?>(null) }
+    var showStorage by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -220,6 +225,9 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
                         searching = !searching
                         if (!searching) viewModel.search("")
                     }) { Icon(MaterialSymbols.Search, contentDescription = stringRes(Res.string.claude_code_search_hint)) }
+                }
+                HoverTooltip(stringRes(Res.string.claude_code_storage)) {
+                    IconButton(onClick = { showStorage = true }) { Icon(MaterialSymbols.Storage, contentDescription = stringRes(Res.string.claude_code_storage)) }
                 }
                 HoverTooltip(stringRes(Res.string.refresh)) {
                     IconButton(onClick = { viewModel.refresh() }) { Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.refresh)) }
@@ -248,7 +256,7 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
                     !loaded -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     executable == null && rows.isEmpty() -> InstallState()
                     rows.isEmpty() -> EmptyState(stringRes(if (query.isBlank()) Res.string.claude_code_no_sessions else Res.string.claude_code_no_matches))
-                    else -> SessionList(rows, nav, onRename = { renaming = it }, onDelete = { deleting = it }, onDeleteWorkspace = { deletingWorkspace = it })
+                    else -> SessionList(rows, nav, onRename = { renaming = it }, onDelete = { deleting = it }, onDeleteWorkspace = { deletingWorkspace = it }, onArchive = viewModel::archive)
                 }
             }
         }
@@ -296,6 +304,8 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
         )
     }
 
+    if (showStorage) StorageDialog(onDismiss = { showStorage = false })
+
     deletingWorkspace?.let { row ->
         DeleteWorkspaceDialog(
             onDismiss = { deletingWorkspace = null },
@@ -331,6 +341,7 @@ private fun SessionList(
     onRename: (ClaudeSessionRow) -> Unit,
     onDelete: (ClaudeSessionRow) -> Unit,
     onDeleteWorkspace: (ClaudeSessionRow) -> Unit,
+    onArchive: (ClaudeSessionRow, Boolean) -> Unit,
 ) {
     // Sessions waiting on the user first; then the ones in workspaces of their own, newest first;
     // then a section per project, in the order of its newest session; sessions whose folder is
@@ -356,6 +367,7 @@ private fun SessionList(
             onRename = { onRename(row) },
             onDelete = { onDelete(row) },
             onDeleteWorkspace = { onDeleteWorkspace(row) },
+            onArchive = { onArchive(row, !row.userArchived) },
         )
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Gutter)) {
@@ -427,6 +439,7 @@ private fun SessionRow(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     onDeleteWorkspace: () -> Unit,
+    onArchive: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     val hover = remember { MutableInteractionSource() }
@@ -468,6 +481,10 @@ private fun SessionRow(
                     )
                 }
                 row.workspace?.let { PullRequestBadge(it) }
+                // What the workspace's clones take on disk, once measured.
+                row.workspaceSize?.let { size ->
+                    Text(" • " + formatFileSize(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
+                }
                 Text(
                     timeAgo(row.lastModified / 1000, prefix = if (where != null) " • " else ""),
                     style = MaterialTheme.typography.bodySmall,
@@ -490,6 +507,13 @@ private fun SessionRow(
                         MenuRow(stringRes(Res.string.rename)) {
                             menu = false
                             onRename()
+                        }
+                        // Archived sessions stay, under Archived; the agent keeps them too.
+                        if (row.sessionId != null) {
+                            MenuRow(stringRes(if (row.userArchived) Res.string.claude_code_unarchive else Res.string.claude_code_archive)) {
+                                menu = false
+                                onArchive()
+                            }
                         }
                         MenuRow(stringRes(Res.string.claude_code_delete)) {
                             menu = false

@@ -142,6 +142,20 @@ class ClaudeCodeSessionsViewModel(
         }
     }
 
+    /** Archives the row's session, or brings it back. */
+    fun archive(
+        row: ClaudeSessionRow,
+        archived: Boolean,
+    ) {
+        viewModelScope.launch {
+            try {
+                service.archive(row, archived)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not archive the session", e)
+            }
+        }
+    }
+
     fun delete(row: ClaudeSessionRow) {
         viewModelScope.launch {
             try {

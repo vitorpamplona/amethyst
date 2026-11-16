@@ -150,6 +150,33 @@ URLs (the last list is offered again).
   `fork` remote, and opens the PR with `--repo upstream --head user:branch`. The PR's state is
   looked up on the upstream by branch, so it works whether or not a fork was used.
 
+### Disk: archive, clean up, tidy
+
+A conversation is small (a JSONL file, a Codex thread); a workspace is whole clones. So space comes
+back by removing workspaces, and conversations are archived, not deleted.
+
+- **Archive:** a row's menu archives and unarchives a session. Codex's own archive is used
+  (`thread/archive`, `thread/unarchive`; the list asks `thread/list` for both); Claude keeps none,
+  so the app keeps the archived ids in `preferences.json`. Archived rows sit with the ones whose
+  folder is gone, under Archived.
+- **Finished:** a workspace is finished when every repository's pull request is merged or closed;
+  the record keeps when each first closed (`closedAt`), so later checks don't move the date.
+- **Sizes:** each workspace row shows what its clones take. Files hardlinked with the mirror are
+  left out (removing the workspace frees none of them); where the file system can't tell
+  (Windows), all count. Measured in the background, at most every ten minutes.
+- **Storage dialog** (the list's top bar): totals for workspaces and mirrors; the finished
+  workspaces with their sizes and "Clean up N · frees X"; "Tidy mirrors". A workspace with files
+  not committed or commits on no remote is never removed, by hand or on its own, and says why.
+- **On its own** (on by default, a toggle in the dialog): a day after a workspace is finished its
+  clones go, and mirrors no workspace used for 60 days go too. At most once an hour.
+- **Tidy mirrors:** `git gc --prune=now` on each mirror under its lock, and removes unused ones.
+  After a repack the clones' old packs are no longer shared, so their sizes grow to what they
+  really hold.
+- Checked in the app (1600×1000 and 480×900): a workspace finished three days ago was removed at
+  start; one with unpushed commits stayed, marked "Kept: work not pushed"; Clean up removed a
+  finished one and said what it freed; Tidy ran; a Codex thread archived and unarchived through
+  Codex, a Claude session through the app.
+
 ## Open
 
 - A pull request opened outside the app (the user's own `gh pr create`) shows once its branch is

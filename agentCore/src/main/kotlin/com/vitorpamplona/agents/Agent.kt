@@ -181,6 +181,8 @@ data class AgentSessionInfo(
     val gitBranch: String?,
     val createdAt: Long?,
     val lastModified: Long,
+    /** Put away by the user: kept, but out of the way. Only agents that archive say so. */
+    val archived: Boolean = false,
 )
 
 /** A session some other process of the agent has open right now (a terminal, an IDE, another app). */
@@ -202,6 +204,8 @@ data class AgentCapabilities(
     val modes: List<PermissionMode>,
     /** Which other processes hold a session, so a chat can stay read-only meanwhile. */
     val liveSessions: Boolean,
+    /** The agent keeps an archived flag of its own ([AgentBackend.archive]). */
+    val archive: Boolean = false,
 )
 
 /** One coding agent the user installed: its sessions, and how to start it. */
@@ -244,6 +248,15 @@ interface AgentBackend {
     )
 
     fun delete(sessionId: String): Boolean
+
+    /**
+     * Archives [sessionId] (or brings it back) where the agent keeps that itself; false when it
+     * doesn't ([AgentCapabilities.archive]), and the app keeps the flag instead.
+     */
+    fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ): Boolean = false
 
     /** Sessions other processes have open now, by id. */
     fun liveSessions(): Map<String, AgentLiveSession> = emptyMap()

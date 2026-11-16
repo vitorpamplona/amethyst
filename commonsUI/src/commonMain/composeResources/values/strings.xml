@@ -9666,8 +9666,8 @@
     <string name="claude_code_notify_finished">%1$s finished</string>
     <string name="claude_code_section_needs_you">Needs you</string>
     <plurals name="claude_code_section_archived">
-        <item quantity="one">Archived · %1$d session whose folder is gone</item>
-        <item quantity="other">Archived · %1$d sessions whose folders are gone</item>
+        <item quantity="one">Archived · %1$d session</item>
+        <item quantity="other">Archived · %1$d sessions</item>
     </plurals>
     <string name="claude_code_status_in_terminal">open in a terminal</string>
     <string name="claude_code_intro_title">New session in %1$s</string>
@@ -10243,4 +10243,41 @@
     <string name="nip_catalog_on_nostr">On Nostr</string>
     <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
     <string name="nip_catalog_empty">No NIPs match your search.</string>
+    <string name="claude_code_storage">Storage</string>
+    <plurals name="claude_code_storage_workspaces">
+        <item quantity="one">%1$d workspace · %2$s</item>
+        <item quantity="other">%1$d workspaces · %2$s</item>
+    </plurals>
+    <plurals name="claude_code_storage_mirrors">
+        <item quantity="one">%1$d mirror · %2$s</item>
+        <item quantity="other">%1$d mirrors · %2$s</item>
+    </plurals>
+    <plurals name="claude_code_storage_unused_mirrors">
+        <item quantity="one">%1$d not used in %2$d days</item>
+        <item quantity="other">%1$d not used in %2$d days</item>
+    </plurals>
+    <string name="claude_code_storage_auto">Clean up on its own</string>
+    <string name="claude_code_storage_auto_desc">A day after a workspace’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_finished">Finished workspaces</string>
+    <string name="claude_code_storage_none_finished">None yet: a workspace is finished when every repository’s pull request is merged or closed.</string>
+    <string name="claude_code_storage_unsaved">Kept: work not pushed</string>
+    <plurals name="claude_code_storage_clean_up">
+        <item quantity="one">Clean up %1$d · frees %2$s</item>
+        <item quantity="other">Clean up %1$d · frees %2$s</item>
+    </plurals>
+    <plurals name="claude_code_storage_cleaned">
+        <item quantity="one">Removed %1$d workspace, freed %2$s</item>
+        <item quantity="other">Removed %1$d workspaces, freed %2$s</item>
+    </plurals>
+    <plurals name="claude_code_storage_tidied">
+        <item quantity="one">Tidied the mirrors and removed %1$d unused one, freed %2$s</item>
+        <item quantity="other">Tidied the mirrors and removed %1$d unused ones, freed %2$s</item>
+    </plurals>
+    <string name="claude_code_storage_tidied_none">Tidied the mirrors, freed %1$s</string>
+    <string name="claude_code_storage_mirrors_title">Mirrors</string>
+    <string name="claude_code_storage_tidy">Tidy mirrors</string>
+    <string name="claude_code_storage_tidy_desc">New workspaces clone from these. Tidying repacks them and removes the ones no workspace has used in %1$d days.</string>
+    <string name="claude_code_storage_measuring">Measuring…</string>
+    <string name="claude_code_archive">Archive</string>
+    <string name="claude_code_unarchive">Unarchive</string>
 </resources>

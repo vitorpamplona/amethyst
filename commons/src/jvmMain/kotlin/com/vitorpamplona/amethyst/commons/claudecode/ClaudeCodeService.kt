@@ -78,6 +78,10 @@ data class ClaudeSessionRow(
     val archived: Boolean = false,
     /** The workspace of fresh clones the session works in, when it has one. */
     val workspace: AgentWorkspace? = null,
+    /** The user archived it (rather than its folder being gone): it can be brought back. */
+    val userArchived: Boolean = false,
+    /** The disk its workspace's clones use, once measured. */
+    val workspaceSize: Long? = null,
 )
 
 /** A chat that wants the user: it waits on an approval, or its turn ended. */
@@ -291,6 +295,112 @@ class ClaudeCodeService(
         if (agentWorkspaces.lastAgent != agent.id) agentWorkspaces.lastAgent = agent.id
     }
 
+    private val _preferences = MutableStateFlow(AgentPreferences())
+
+    /** The user's choices about workspaces, as last read or changed. */
+    val preferences: StateFlow<AgentPreferences> = _preferences.asStateFlow()
+
+    /** Turns the automatic cleanup of finished workspaces on or off. */
+    fun setAutoCleanup(on: Boolean) {
+        _preferences.value = agentWorkspaces.updatePreferences { it.copy(autoCleanup = on) }
+    }
+
+    /** The disk each workspace's clones use, by its id, and when that was measured. */
+    private val workspaceSizes = ConcurrentHashMap<String, Pair<Long, Long>>()
+
+    @Volatile
+    private var sizing: Job? = null
+
+    /** Measures the workspaces whose size is unknown or old, in the background, then shows it. */
+    private fun measureWorkspaces(force: Boolean = false) {
+        if (sizing?.isActive == true) return
+        val now = System.currentTimeMillis()
+        val due = knownWorkspaces.filter { force || now - (workspaceSizes[it.id]?.second ?: 0L) > SIZE_CHECK_MS }
+        if (due.isEmpty()) return
+        sizing =
+            scope.launch {
+                due.forEach { workspaceSizes[it.id] = agentWorkspaces.sizeOf(it) to System.currentTimeMillis() }
+                rebuildRows()
+            }
+    }
+
+    /** The disk [workspace]'s clones use, measured now. */
+    suspend fun measure(workspace: AgentWorkspace): Long = agentWorkspaces.sizeOf(workspace).also { workspaceSizes[workspace.id] = it to System.currentTimeMillis() }
+
+    /** The workspaces whose work is done: every pull request merged or closed. */
+    fun finishedWorkspaces(): List<AgentWorkspace> = knownWorkspaces.filter { it.finishedAt != null }
+
+    /** Whether a chat is busy in [workspace]: it must not be removed under the agent. */
+    private fun isBusy(workspace: AgentWorkspace): Boolean =
+        chats.value.values.any { chat ->
+            val path = File(chat.state.value.cwd).absoluteFile.normalize().path
+            (path == workspace.dir || path.startsWith(workspace.dir + File.separator)) && chat.state.value.isBusy
+        }
+
+    /**
+     * Removes the clones of [workspaces] that are safe to remove: no busy chat, nothing left
+     * uncommitted or unpushed. Their conversations stay, archived. Returns those removed.
+     */
+    suspend fun cleanUp(workspaces: List<AgentWorkspace>): List<AgentWorkspace> {
+        val removed = mutableListOf<AgentWorkspace>()
+        for (workspace in workspaces) {
+            if (isBusy(workspace) || agentWorkspaces.hasUnsavedWork(workspace)) continue
+            try {
+                deleteWorkspace(workspace)
+                workspaceSizes.remove(workspace.id)
+                removed.add(workspace)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not clean up ${workspace.dir}", e)
+            }
+        }
+        return removed
+    }
+
+    @Volatile
+    private var lastAutoCleanup = 0L
+
+    /**
+     * When the user lets it ([AgentPreferences.autoCleanup]): a day after a workspace's pull
+     * requests are all merged or closed, its clones go; and mirrors nobody used for long go too.
+     * At most once an hour.
+     */
+    private fun autoCleanup() {
+        val now = System.currentTimeMillis()
+        if (now - lastAutoCleanup < AUTO_CLEANUP_EVERY_MS) return
+        lastAutoCleanup = now
+        if (!preferences.value.autoCleanup) return
+        val due = knownWorkspaces.filter { ws -> ws.finishedAt?.let { now - it > CLEANUP_AFTER_MS } == true }
+        scope.launch {
+            if (due.isNotEmpty()) {
+                val removed = cleanUp(due)
+                if (removed.isNotEmpty()) Log.i(TAG) { "Cleaned up ${removed.size} finished workspaces" }
+            }
+            agentWorkspaces.unusedMirrors().forEach { mirror ->
+                if (!AgentWorkspaces.deleteTree(mirror)) Log.w(TAG) { "Could not remove the unused mirror $mirror" }
+            }
+        }
+    }
+
+    /**
+     * Archives the row's session, or brings it back: with the agent's own archive when it keeps
+     * one, else with the app's.
+     */
+    suspend fun archive(
+        row: ClaudeSessionRow,
+        archived: Boolean,
+    ) {
+        val sessionId = row.sessionId ?: return
+        val agent = backendOf(sessionId)
+        val native = agent.capabilities.archive && withContext(Dispatchers.IO) { agent.archive(sessionId, archived) }
+        if (!native) {
+            _preferences.value =
+                agentWorkspaces.updatePreferences { prefs ->
+                    prefs.copy(archivedSessions = if (archived) prefs.archivedSessions + sessionId else prefs.archivedSessions - sessionId)
+                }
+        }
+        refresh()
+    }
+
     private val _executable = MutableStateFlow<File?>(null)
 
     /** The `claude` the chats run, or null when it isn't installed (or not found yet). */
@@ -327,10 +437,13 @@ class ClaudeCodeService(
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value = liveSessions()
             knownWorkspaces = agentWorkspaces.list()
+            _preferences.value = agentWorkspaces.preferences()
         }
         _loaded.value = true
         rebuildRows()
         checkPullRequests()
+        measureWorkspaces()
+        autoCleanup()
     }
 
     fun refreshInBackground() {
@@ -703,6 +816,7 @@ class ClaudeCodeService(
                 }.toMap()
         val live = elsewhere.value
         val gone = goneFolders
+        val appArchived = preferences.value.archivedSessions
         // Walking the process tree reads every process on the machine: only when a session is
         // open elsewhere and the question is whether that is one of this app's own.
         val ownPids by lazy {
@@ -728,8 +842,10 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
-                    archived = info.cwd in gone,
+                    archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
+                    userArchived = info.archived || info.sessionId in appArchived,
                     workspace = workspaceOf(info.cwd),
+                    workspaceSize = workspaceOf(info.cwd)?.let { workspaceSizes[it.id]?.first },
                     agentId = backendOf(info.sessionId).id,
                     agentName = backendOf(info.sessionId).displayName,
                 )
@@ -758,6 +874,7 @@ class ClaudeCodeService(
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),
+                        workspaceSize = workspaceOf(state.cwd)?.let { workspaceSizes[it.id]?.first },
                         agentId = chat.backend.id,
                         agentName = chat.backend.displayName,
                     )
@@ -782,6 +899,7 @@ class ClaudeCodeService(
                         openElsewhere = null,
                         project = ws.title,
                         workspace = ws,
+                        workspaceSize = workspaceSizes[ws.id]?.first,
                         agentId = agent.id,
                         agentName = agent.displayName,
                     )
@@ -796,6 +914,11 @@ class ClaudeCodeService(
         const val LAST_GROUP = "Last used"
         private const val WORKTREES_SUFFIX = "-worktrees"
         private const val PR_CHECK_MS = 10 * 60_000L
+        private const val SIZE_CHECK_MS = 10 * 60_000L
+        private const val AUTO_CLEANUP_EVERY_MS = 60 * 60_000L
+
+        /** How long after its last pull request closes a workspace is kept: time to look back. */
+        const val CLEANUP_AFTER_MS = 24 * 60 * 60_000L
 
         /** The key of a workspace's row when no session works in it yet. */
         const val WORKSPACE_KEY = "workspace:"

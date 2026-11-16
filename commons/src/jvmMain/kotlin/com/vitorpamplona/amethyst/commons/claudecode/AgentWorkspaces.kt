@@ -31,6 +31,13 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
+import java.nio.file.FileSystems
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
@@ -67,6 +74,18 @@ data class AgentWorkspace(
 ) {
     /** The repositories, as the user knows them: `owner/name` from each URL. */
     val repoLabels: List<String> get() = repos.map { AgentWorkspaces.ownerAndName(it.url) }
+
+    /**
+     * When the workspace's work was done: every repository's pull request merged or closed, as
+     * of the last of them. Null while one is open, or a repository has none.
+     */
+    val finishedAt: Long?
+        get() {
+            if (repos.isEmpty()) return null
+            val prs = repos.map { pullRequests[it.name] ?: return null }
+            if (prs.any { it.isOpen }) return null
+            return prs.maxOf { it.closedAt ?: it.checkedAt }
+        }
 }
 
 /** A pull request as last seen, kept so the session list can show it without asking GitHub. */
@@ -77,10 +96,22 @@ data class SavedPullRequest(
     val state: String,
     val isDraft: Boolean = false,
     val checkedAt: Long = 0,
+    /** When it was first seen merged or closed. */
+    val closedAt: Long? = null,
 ) {
     val isOpen get() = state == "OPEN"
     val isMerged get() = state == "MERGED"
 }
+
+/** The user's choices about workspaces, kept with them. */
+@Immutable
+@Serializable
+data class AgentPreferences(
+    /** Removes a workspace's clones a day after its pull requests are all merged or closed. */
+    val autoCleanup: Boolean = true,
+    /** Sessions archived by the user, for agents that keep no archive of their own. */
+    val archivedSessions: Set<String> = emptySet(),
+)
 
 /** How often workspaces cloned a repository, and when last: what the repository picker leads with. */
 @Immutable
@@ -129,6 +160,7 @@ class AgentWorkspaces(
     private val groupsFile = File(root, "groups.json")
     private val lastAgentFile = File(metaDir, "last-agent.txt")
     private val usageFile = File(root, "usage.json")
+    private val preferencesFile = File(root, "preferences.json")
 
     /** One fetch at a time per mirror: fifteen sessions starting together share one. */
     private val mirrorLocks = ConcurrentHashMap<String, Mutex>()
@@ -262,9 +294,14 @@ class AgentWorkspaces(
             if (pr == null) {
                 workspace.pullRequests - repo
             } else {
-                workspace.pullRequests + (repo to SavedPullRequest(pr.url, pr.state, pr.isDraft, System.currentTimeMillis()))
+                // When it first closed: a later check of a merged one must not move the date.
+                val before = workspace.pullRequests[repo]
+                val now = System.currentTimeMillis()
+                val closedAt = if (pr.isOpen) null else before?.closedAt?.takeIf { before.url == pr.url } ?: now
+                workspace.pullRequests + (repo to SavedPullRequest(pr.url, pr.state, pr.isDraft, now, closedAt))
             }
-        if (next == workspace.pullRequests) return workspace
+        // A new check time alone is no change: the record is rewritten only when something moved.
+        if (next.mapValues { it.value.copy(checkedAt = 0) } == workspace.pullRequests.mapValues { it.value.copy(checkedAt = 0) }) return workspace
         val updated = workspace.copy(pullRequests = next)
         save(updated)
         return updated
@@ -344,6 +381,96 @@ class AgentWorkspaces(
         } catch (e: IOException) {
             Log.w(TAG, "Could not save $usageFile", e)
         }
+    }
+
+    /** The user's choices about workspaces. */
+    fun preferences(): AgentPreferences =
+        try {
+            if (preferencesFile.isFile) json.decodeFromString<AgentPreferences>(preferencesFile.readText()) else AgentPreferences()
+        } catch (e: SerializationException) {
+            Log.w(TAG, "Unreadable $preferencesFile", e)
+            AgentPreferences()
+        } catch (e: IOException) {
+            Log.w(TAG, "Unreadable $preferencesFile", e)
+            AgentPreferences()
+        }
+
+    /** Changes the preferences with [change], and saves them. */
+    @Synchronized
+    fun updatePreferences(change: (AgentPreferences) -> AgentPreferences): AgentPreferences {
+        val next = change(preferences())
+        try {
+            if (!root.mkdirs() && !root.isDirectory) throw IOException("Could not create $root")
+            preferencesFile.writeText(json.encodeToString(next))
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not save $preferencesFile", e)
+        }
+        return next
+    }
+
+    /**
+     * Whether removing [workspace] would lose work: a repository with files not committed, or
+     * commits that are on no remote (the user's push, to the repository or a fork, puts them there).
+     */
+    suspend fun hasUnsavedWork(workspace: AgentWorkspace): Boolean =
+        withContext(Dispatchers.IO) {
+            workspace.repos.any { repo ->
+                val dir = File(workspace.dir, repo.name)
+                if (!dir.isDirectory) return@any false
+                val uncommitted = GitWorkspace.git(dir, "status", "--porcelain")?.lines()?.any { it.isNotBlank() } ?: true
+                val unpushed =
+                    GitWorkspace
+                        .git(dir, "rev-list", "--count", "HEAD", "--not", "--remotes")
+                        ?.trim()
+                        ?.toIntOrNull()
+                        ?.let { it > 0 } ?: true
+                uncommitted || unpushed
+            }
+        }
+
+    /** The disk a workspace's clones use, without the objects they share with the mirrors. */
+    suspend fun sizeOf(workspace: AgentWorkspace): Long = withContext(Dispatchers.IO) { diskUse(File(workspace.dir)) }
+
+    /** The disk the mirrors use. */
+    suspend fun mirrorsSize(): Long = withContext(Dispatchers.IO) { diskUse(mirrorsDir, countShared = true) }
+
+    /**
+     * Mirrors no workspace uses and no session cloned in [days] days: they only take space. A
+     * mirror with no record of use counts from when it was last fetched.
+     */
+    fun unusedMirrors(days: Int = UNUSED_MIRROR_DAYS): List<File> {
+        val cutoff = System.currentTimeMillis() - days * DAY_MS
+        val usage = usage().mapKeys { mirrorDir(it.key).absolutePath }
+        val inUse = list().flatMap { ws -> ws.repos.map { mirrorDir(it.url).absolutePath } }.toSet()
+        return mirrorsDir
+            .listFiles { f -> f.isDirectory && f.name.endsWith(".git") }
+            .orEmpty()
+            .filter { mirror ->
+                val path = mirror.absolutePath
+                val lastUsed = usage[path]?.lastUsed ?: File(mirror, "FETCH_HEAD").takeIf { it.isFile }?.lastModified() ?: mirror.lastModified()
+                path !in inUse && lastUsed < cutoff
+            }
+    }
+
+    /**
+     * Compacts every mirror (`git gc`) and removes the unused ones; returns how many were
+     * removed. Under each mirror's lock: no session clones from one while it is repacked.
+     */
+    suspend fun tidyMirrors(): Int {
+        val unused = unusedMirrors().map { it.absolutePath }.toSet()
+        var removed = 0
+        mirrorsDir.listFiles { f -> f.isDirectory && f.name.endsWith(".git") }.orEmpty().forEach { mirror ->
+            mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
+                withContext(Dispatchers.IO) {
+                    if (mirror.absolutePath in unused) {
+                        if (deleteTree(mirror)) removed++ else Log.w(TAG) { "Could not remove $mirror" }
+                    } else {
+                        GitWorkspace.run(mirror, listOf("git", "-c", "gc.autoDetach=false", "gc", "--quiet", "--prune=now"), timeoutSeconds = NETWORK_TIMEOUT)
+                    }
+                }
+            }
+        }
+        return removed
     }
 
     /** The URL each mirror on this computer was made from. */
@@ -458,6 +585,46 @@ class AgentWorkspaces(
                 if (!file.canWrite() && !file.setWritable(true)) Log.w(TAG) { "Could not make $file writable" }
             }
             return dir.deleteRecursively()
+        }
+
+        private const val DAY_MS = 24 * 60 * 60 * 1000L
+        const val UNUSED_MIRROR_DAYS = 60
+
+        /**
+         * The bytes the files under [dir] take. A file hardlinked elsewhere (a clone's objects,
+         * shared with its mirror) is left out unless [countShared]: removing [dir] frees none of
+         * it. Where the file system can't say (Windows), every file counts.
+         */
+        fun diskUse(
+            dir: File,
+            countShared: Boolean = false,
+        ): Long {
+            if (!dir.exists()) return 0
+            val unix = !countShared && "unix" in FileSystems.getDefault().supportedFileAttributeViews()
+            var total = 0L
+            try {
+                Files.walkFileTree(
+                    dir.toPath(),
+                    object : SimpleFileVisitor<Path>() {
+                        override fun visitFile(
+                            file: Path,
+                            attrs: BasicFileAttributes,
+                        ): FileVisitResult {
+                            val shared = unix && attrs.isRegularFile && ((Files.getAttribute(file, "unix:nlink", LinkOption.NOFOLLOW_LINKS) as? Int) ?: 1) > 1
+                            if (attrs.isRegularFile && !shared) total += attrs.size()
+                            return FileVisitResult.CONTINUE
+                        }
+
+                        override fun visitFileFailed(
+                            file: Path,
+                            exc: IOException,
+                        ): FileVisitResult = FileVisitResult.CONTINUE
+                    },
+                )
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not measure $dir", e)
+            }
+            return total
         }
 
         fun defaultBranchName(): String = "agent/" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
