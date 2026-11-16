@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
@@ -505,6 +506,25 @@ class DesktopMediaUploader(
             throw e
         }
     }
+
+    override val videoTrim: Boolean get() = videoCompressor.available
+
+    override suspend fun videoDurationMs(uri: MediaUri): Long? = videoCompressor.durationMs(fileOf(uri))
+
+    override suspend fun trimVideo(
+        uri: MediaUri,
+        mimeType: String?,
+        trim: VideoTrim,
+    ): MediaCompressorResult? {
+        val file = videoCompressor.trim(fileOf(uri), trim.startMs, trim.endMs) ?: return null
+        return MediaCompressorResult(StringMediaUri(file.absolutePath), MP4_CONTENT_TYPE, file.length())
+    }
+
+    override suspend fun videoFrame(
+        uri: MediaUri,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = videoCompressor.frame(fileOf(uri), atMs, maxEdge)
 
     override suspend fun cropImage(
         uri: MediaUri,

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_marker_video
 import com.vitorpamplona.amethyst.commons.resources.media_post_nothing_posted
 import com.vitorpamplona.amethyst.commons.resources.media_post_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
@@ -169,6 +170,7 @@ fun AttachedMediaCard(
     onOpen: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
+    uploader: MediaUploader? = null,
 ) {
     val state by item.orchestrator.progressState.collectAsState()
     val progress by item.orchestrator.progress.collectAsState()
@@ -204,9 +206,14 @@ fun AttachedMediaCard(
                     modifier = Modifier.fillMaxSize(),
                 )
             media.isVideo() == true -> {
-                val frame = rememberVideoThumbnail(media)
+                // The first frame that will be sent, where the platform decodes frames (desktop has no thumbnail otherwise).
+                val sentFrame = if (uploader != null && uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, CARD_FRAME_EDGE) else null
+                val frame = if (sentFrame == null) rememberVideoThumbnail(media) else null
                 if (frame != null && frame.width > 0 && frame.height > 0) {
                     SideEffect { item.displayAspectRatio = frame.width.toFloat() / frame.height }
+                }
+                if (sentFrame != null) {
+                    CroppedImage(sentFrame, null, null, ContentScale.Crop, Modifier.fillMaxSize(), onAspect = { item.displayAspectRatio = it })
                 }
                 frame?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 if (state is UploadingState.Ready) {
@@ -256,6 +263,7 @@ fun AttachedMediaCard(
             }
             if (item.options.sensitive) Pill(stringRes(Res.string.media_cw_badge))
             if (media.isCompressible()) Pill(qualityName(item.options.quality))
+            item.options.trim?.let { Pill(formatLength(it.durationMs)) }
         }
 
         when (state) {
@@ -330,3 +338,5 @@ private fun Pill(
         modifier = modifier.clip(RoundedCornerShape(6.dp)).background(background).padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }
+
+private const val CARD_FRAME_EDGE = 720

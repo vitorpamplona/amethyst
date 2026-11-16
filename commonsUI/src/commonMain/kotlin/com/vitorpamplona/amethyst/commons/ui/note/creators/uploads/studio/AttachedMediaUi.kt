@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_studio_done
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MediaBlocks
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -84,14 +85,17 @@ fun AttachedMediaStudioDialogs(
 @Composable
 fun rememberAttachedMediaBlocks(
     state: AttachedMediaState,
+    /** Draws each video's first frame to be sent, where the platform can decode one. */
+    uploader: MediaUploader? = null,
     isUploading: () -> Boolean,
 ): MediaBlocks =
-    remember(state) {
+    remember(state, uploader) {
         MediaBlocks(aspectRatio = { id -> state.items[id]?.sentAspectRatio }) { id, selected, modifier ->
             val item = state.items[id]
             if (item != null) {
                 AttachedMediaCard(
                     item = item,
+                    uploader = uploader,
                     selected = selected,
                     locked = isUploading(),
                     onOpen = { state.reopened = item },

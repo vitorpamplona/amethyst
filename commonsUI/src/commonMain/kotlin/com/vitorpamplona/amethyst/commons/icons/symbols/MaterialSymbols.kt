@@ -50,6 +50,7 @@ object MaterialSymbols {
     val BookmarkRemove = MaterialSymbol("\uE59A")
     val BrightnessMedium = MaterialSymbol("\uE1AE")
     val Brush = MaterialSymbol("\uE3AE")
+    val ContentCut = MaterialSymbol("\uE14E")
     val Crop = MaterialSymbol("\uE3BE")
     val Forward10 = MaterialSymbol("\uE056")
     val Replay10 = MaterialSymbol("\uE059")

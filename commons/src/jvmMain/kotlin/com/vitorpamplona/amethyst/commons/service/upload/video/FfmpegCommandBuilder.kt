@@ -79,6 +79,62 @@ object FfmpegCommandBuilder {
             addAll(listOf("-progress", "pipe:1", output.path))
         }
 
+    /**
+     * Copies [durationMs] of the video and audio from [startMs] into a fresh MP4 with no metadata,
+     * as [remux] does. Stream copy cuts on packets, so the video starts at the key frame at or
+     * before [startMs]; `-avoid_negative_ts make_zero` starts the result's clock at zero.
+     */
+    fun trim(
+        ffmpeg: String,
+        input: File,
+        startMs: Long,
+        durationMs: Long,
+        output: File,
+    ): List<String> =
+        buildList {
+            addAll(listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-ss", seconds(startMs), "-i", input.absolutePath))
+            addAll(listOf("-t", seconds(durationMs)))
+            addAll(listOf("-map", "0:v", "-map", "0:a?", "-dn", "-sn", "-c", "copy"))
+            addAll(STRIP_METADATA)
+            addAll(listOf("-map_chapters", "-1", "-avoid_negative_ts", "make_zero", "-movflags", "+faststart"))
+            addAll(listOf("-progress", "pipe:1", output.path))
+        }
+
+    /** One frame near [atMs], upright and no larger than [maxEdge] on its long side, as a JPEG in [output]. */
+    fun frame(
+        ffmpeg: String,
+        input: File,
+        atMs: Long,
+        maxEdge: Int,
+        output: File,
+    ): List<String> =
+        listOf(
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-y",
+            "-ss",
+            seconds(atMs),
+            "-i",
+            input.absolutePath,
+            "-frames:v",
+            "1",
+            "-vf",
+            "scale=w='min($maxEdge,iw)':h='min($maxEdge,ih)':force_original_aspect_ratio=decrease",
+            "-q:v",
+            "4",
+            "-f",
+            "image2",
+            "-c:v",
+            "mjpeg",
+            output.path,
+        )
+
+    /** [ms] as ffmpeg's seconds, always with a dot. */
+    private fun seconds(ms: Long): String = "${ms / 1000}.${(ms % 1000).toString().padStart(3, '0')}"
+
     private val STRIP_METADATA = listOf("-map_metadata", "-1", "-map_metadata:s", "-1")
 
     private fun prefix(

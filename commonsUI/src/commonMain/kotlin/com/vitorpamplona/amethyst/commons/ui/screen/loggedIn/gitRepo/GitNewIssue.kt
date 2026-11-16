@@ -291,7 +291,7 @@ private fun DescriptionBox(
             val markers =
                 rememberMediaMarkerField(
                     viewModel.body,
-                    mediaBlocks = rememberAttachedMediaBlocks(viewModel.media) { viewModel.mediaUploadTracker.isUploading },
+                    mediaBlocks = rememberAttachedMediaBlocks(viewModel.media, accountViewModel.mediaUploader) { viewModel.mediaUploadTracker.isUploading },
                 )
             OutlinedThinPaddingTextField(
                 state = viewModel.body,

@@ -416,7 +416,7 @@ private fun MarkdownPostScreenBody(
                     val markers =
                         rememberMediaMarkerField(
                             postViewModel.message,
-                            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media) { postViewModel.mediaUploadTracker.isUploading },
+                            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media, accountViewModel.mediaUploader) { postViewModel.mediaUploadTracker.isUploading },
                         )
                     ThinPaddingTextField(
                         state = postViewModel.message,

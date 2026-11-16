@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UnavailableMediaUpload
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.forestPhoto
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.simulateQuality
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.sunsetPhoto
@@ -109,6 +110,17 @@ class MediaStudioRenderTest {
 
         override fun fileSize(uri: MediaUri): Long = 3_840_000
 
+        override val videoTrim: Boolean = true
+
+        override suspend fun videoDurationMs(uri: MediaUri): Long = 12_000
+
+        // Frames alternate between the two stand-ins, so the strip shows where each one falls.
+        override suspend fun videoFrame(
+            uri: MediaUri,
+            atMs: Long,
+            maxEdge: Int,
+        ): ByteArray = if ((atMs / 1_500) % 2 == 0L) sunset.readBytes() else forest.readBytes()
+
         override suspend fun cropImage(
             uri: MediaUri,
             mimeType: String?,
@@ -164,6 +176,14 @@ class MediaStudioRenderTest {
             media.get(0).displayAspectRatio = 4f / 3f
             media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0.1f, 1f, 0.9f))
             Studio(media)
+        }
+
+    @Test
+    fun trim() =
+        render("trim") {
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/clip.mp4"), "video/mp4")))
+            media.get(0).options = media.get(0).options.copy(trim = VideoTrim(2_500, 9_000))
+            Studio(media, tool = StudioTool.TRIM)
         }
 
     @Test

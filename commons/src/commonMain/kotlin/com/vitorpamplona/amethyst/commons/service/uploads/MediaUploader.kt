@@ -103,6 +103,30 @@ interface MediaUploader {
         crop: ImageCrop,
     ): MediaCompressorResult? = null
 
+    /** Whether [trimVideo] works here (desktop needs ffmpeg). The Studio hides its Trim tool otherwise. */
+    val videoTrim: Boolean get() = false
+
+    /** How long the video at [uri] runs, in milliseconds; null when unknown. */
+    suspend fun videoDurationMs(uri: MediaUri): Long? = null
+
+    /**
+     * Writes the [trim] of the video at [uri] to a new temp file without re-encoding: the tracks are
+     * copied, so the cut starts at the key frame at or before [VideoTrim.startMs]. No metadata is
+     * kept. Null when it could not be written. The caller owns the file.
+     */
+    suspend fun trimVideo(
+        uri: MediaUri,
+        mimeType: String?,
+        trim: VideoTrim,
+    ): MediaCompressorResult? = null
+
+    /** One frame of the video at [uri] near [atMs], as JPEG bytes no larger than [maxEdge] on its long side; null when unavailable. */
+    suspend fun videoFrame(
+        uri: MediaUri,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = null
+
     /**
      * Downloads the already-hosted file at [url] and computes its [FileHeader] (hash, size,
      * dimensions, preview hashes) for an `imeta` tag, guessing the MIME type from the URL's

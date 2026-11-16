@@ -36,4 +36,7 @@ enum class UploadError {
 
     /** The picture's crop could not be written ([MediaUploader.cropImage] returned null). */
     CROP_FAILED,
+
+    /** The video's trim could not be written ([MediaUploader.trimVideo] returned null). */
+    TRIM_FAILED,
 }

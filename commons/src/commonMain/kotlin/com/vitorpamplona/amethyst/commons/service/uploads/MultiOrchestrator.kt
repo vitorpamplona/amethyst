@@ -137,7 +137,7 @@ class MultiOrchestrator(
                     item.sentEncrypted = null
                     val p = plans.getValue(item)
                     launch(Dispatchers.IO) {
-                        item.withCrop(p.settings.crop, uploader) { uri, mimeType ->
+                        item.withEdits(p.settings.crop, p.settings.trim, uploader) { uri, mimeType ->
                             item.orchestrator.upload(
                                 uri,
                                 mimeType,
@@ -183,7 +183,7 @@ class MultiOrchestrator(
         return Planned(
             alt = o.altOrNull ?: altFallback?.ifBlank { null },
             contentWarningReason = o.contentWarningReason ?: contentWarningFallback,
-            settings = UploadSettings(o.quality, server, o.useH265, o.stripMetadata, o.convertGifToMp4, o.crop),
+            settings = UploadSettings(o.quality, server, o.useH265, o.stripMetadata, o.convertGifToMp4, o.crop, o.trim),
         )
     }
 
@@ -214,6 +214,7 @@ class MultiOrchestrator(
         val stripMetadata: Boolean,
         val convertGifToMp4: Boolean,
         val crop: ImageCrop? = null,
+        val trim: VideoTrim? = null,
     )
 
     internal class SentEncrypted(
@@ -284,7 +285,7 @@ class MultiOrchestrator(
                     .map { (item, cipher) ->
                         val p = plans.getValue(item)
                         async(Dispatchers.IO) {
-                            item.withCrop(p.settings.crop, uploader) { uri, mimeType ->
+                            item.withEdits(p.settings.crop, p.settings.trim, uploader) { uri, mimeType ->
                                 item.orchestrator.uploadEncrypted(
                                     uri,
                                     mimeType,
@@ -393,7 +394,7 @@ class MultiOrchestrator(
                         val options = item.options
                         async(Dispatchers.IO) {
                             options to
-                                item.withCrop(options.crop, uploader) { uri, mimeType ->
+                                item.withEdits(options.crop, options.trim, uploader) { uri, mimeType ->
                                     item.orchestrator.upload(
                                         uri,
                                         mimeType,
@@ -438,21 +439,27 @@ class MultiOrchestrator(
     }
 
     /**
-     * Runs [send] on the file to upload: a temp copy holding [crop] of the picture when there is one
-     * (deleted once [send] returns), else the picked file. A crop that cannot be written fails the
-     * file with [UploadError.CROP_FAILED] rather than sending the whole picture.
+     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture or [trim] of a
+     * video when there is one (deleted once [send] returns), else the picked file. An edit that
+     * cannot be written fails the file ([UploadError.CROP_FAILED], [UploadError.TRIM_FAILED])
+     * rather than sending all of it.
      */
-    private suspend fun SelectedMediaProcessing.withCrop(
+    private suspend fun SelectedMediaProcessing.withEdits(
         crop: ImageCrop?,
+        trim: VideoTrim?,
         uploader: MediaUploader,
         send: suspend (MediaUri, String?) -> UploadingState.UploadingFinalState,
     ): UploadingState.UploadingFinalState {
-        if (crop == null || !media.canCrop()) return send(media.uri, media.mimeType)
-        val cropped = uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)
+        val edited =
+            when {
+                crop != null && media.canCrop() -> uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)
+                trim != null && media.isVideo() == true -> uploader.trimVideo(media.uri, media.mimeType, trim) ?: return orchestrator.error(UploadError.TRIM_FAILED)
+                else -> return send(media.uri, media.mimeType)
+            }
         return try {
-            send(cropped.uri, cropped.contentType)
+            send(edited.uri, edited.contentType)
         } finally {
-            uploader.discardTempFile(cropped.uri)
+            uploader.discardTempFile(edited.uri)
         }
     }
 

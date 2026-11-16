@@ -74,6 +74,30 @@ GIF, SVG or AVIF).
   crop resends, GIFs skip, encrypted path), `ImageCropTest`, `MediaStudioRenderTest` (`crop`,
   `quality-cropped`).
 
+**Trim in the Studio.** Videos get a Trim tool where the platform can cut one
+(`MediaUploader.videoTrim`: always on Android, with ffmpeg on desktop).
+- The panel is a filmstrip of eight frames with the kept part framed. Drag an end to move it
+  (never under one second) or drag inside to slide the whole part; Reset keeps all of it.
+- The stage shows the frame at the edge being dragged, with its time. The label reads
+  `0:03.0 – 0:09.1 · 6.1 s`.
+- The trim is a per-file option, `MediaUploadOptions.trim` (`VideoTrim`, null when all of it is
+  kept). `MultiOrchestrator.withEdits` cuts it right before the upload, then compression and
+  stripping run on the cut as before. A trim that can't be written fails that file
+  (`UploadError.TRIM_FAILED`).
+- The cut is lossless: tracks are copied, so it starts on the key frame at or before the start.
+  - Desktop: ffmpeg stream copy (`FfmpegCommandBuilder.trim`).
+  - Android: `VideoTrimmer`, the platform's `MediaExtractor` and `MediaMuxer`, with the rotation
+    hint kept.
+- Frames come from `MediaUploader.videoFrame` (JPEG bytes, so commons stays headless).
+  - Desktop: ffmpeg.
+  - Android: `MediaMetadataRetriever`.
+  - That also gives desktop its first video frames: the Studio's video stage and the composer
+    card now show the first frame that will be sent, where they were blank before. The card also
+    shows the trimmed length.
+- Tests: `MultiOrchestratorUploadEachTest` (trim sent then deleted, failed trim sends nothing,
+  encrypted path), `DesktopVideoTrimTest` (real ffmpeg: the cut's length and tracks, upright
+  capped frames), `MediaStudioRenderTest` (`trim`).
+
 **Implemented (described for the note composer, `ShortNotePostScreen`):**
 
 1. **Studio after every pick.** Picking files opens `MediaStudioDialog`
@@ -122,7 +146,7 @@ AVIF sent as the original. Hooked in through `UploadOrchestrator(readMetadata = 
 real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get none.
 
 Not yet:
-- rotate and mirror in the crop, and video trim (step 3)
+- rotate and mirror in the crop; playing the trimmed part in the Studio (the stage shows frames, not playback)
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 

@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_alt
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_crop
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_privacy
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_quality
+import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_trim
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.resources.video_compression_needs_ffmpeg
@@ -215,12 +216,14 @@ fun MediaStudioDialog(
     }
 }
 
-enum class StudioTool { QUALITY, CROP, ALT, PRIVACY }
+enum class StudioTool { QUALITY, CROP, TRIM, ALT, PRIVACY }
 
 /** The tools that do something for [media] on a platform with [support]. */
 fun studioToolsFor(
     media: SelectedMedia,
     support: VideoCompressionSupport,
+    /** The platform can trim a video ([MediaUploader.videoTrim]). */
+    trim: Boolean = false,
 ): List<StudioTool> =
     buildList {
         val hasQuality =
@@ -231,6 +234,7 @@ fun studioToolsFor(
             }
         if (hasQuality) add(StudioTool.QUALITY)
         if (media.canCrop() && media.isCompressible()) add(StudioTool.CROP)
+        if (trim && media.isVideo() == true) add(StudioTool.TRIM)
         if (media.isImage() == true || media.isVideo() == true) add(StudioTool.ALT)
         add(StudioTool.PRIVACY)
     }
@@ -274,7 +278,8 @@ fun MediaStudio(
     val cropped = rememberCroppedSources(uploader, previews)
     // The shape each picture's crop is held to while this studio is open.
     val cropAspects = remember { mutableStateMapOf<SelectedMediaProcessing, CropAspect>() }
-    val tools = studioToolsFor(current.media, uploader.videoCompression)
+    val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim)
+    val trimSession = remember(current) { TrimSession() }
     var tool by remember(current) { mutableStateOf(if (initialTool in tools) initialTool else tools.first()) }
 
     // Opening Crop on a picture cropped earlier holds the shape that crop has, once, so a free drag
@@ -306,7 +311,9 @@ fun MediaStudio(
         )
 
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
-            if (tool == StudioTool.CROP) {
+            if (tool == StudioTool.TRIM) {
+                StudioTrimStage(current, uploader, trimSession)
+            } else if (tool == StudioTool.CROP) {
                 StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
             } else {
                 StudioPreview(current, previews, cropped, uploader, holdingOriginal)
@@ -346,6 +353,7 @@ fun MediaStudio(
                 Box(Modifier.fillMaxWidth().heightIn(min = 112.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     when (tool) {
                         StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
+                        StudioTool.TRIM -> TrimTool(current, uploader, trimSession, enabled = !isUploading)
                         StudioTool.CROP ->
                             CropTool(
                                 current,
@@ -604,8 +612,12 @@ private fun VideoPreview(
     uploader: MediaUploader,
 ) {
     val thumbnail = rememberVideoThumbnail(item.media)
+    // Where the platform can decode frames, the stage opens on the first frame that will be sent.
+    val frame = if (uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, 1280) else null
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (thumbnail != null) {
+        if (frame != null) {
+            AsyncImage(model = frame, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        } else if (thumbnail != null) {
             Image(thumbnail, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
         } else {
             Icon(MaterialSymbols.Movie, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
@@ -613,7 +625,12 @@ private fun VideoPreview(
         if (uploader.videoCompression == VideoCompressionSupport.Supported) {
             val info by produceState<VideoInfo?>(null, item.media) { value = uploader.probeVideo(item.media.uri) }
             val quality = item.options.quality
-            val label = listOfNotNull(levelName(quality.videoLevel), if (quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality.videoLevel, info) else null)
+            val label =
+                listOfNotNull(
+                    levelName(quality.videoLevel),
+                    if (quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality.videoLevel, info) else null,
+                    item.options.trim?.let { formatLength(it.durationMs) },
+                )
             MediaPill(label.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
         }
     }
@@ -728,6 +745,7 @@ private fun ToolTab(
         when (tool) {
             StudioTool.QUALITY -> MaterialSymbols.Tune to Res.string.media_studio_tool_quality
             StudioTool.CROP -> MaterialSymbols.Crop to Res.string.media_studio_tool_crop
+            StudioTool.TRIM -> MaterialSymbols.ContentCut to Res.string.media_studio_tool_trim
             StudioTool.ALT -> MaterialSymbols.EditNote to Res.string.media_studio_tool_alt
             StudioTool.PRIVACY -> MaterialSymbols.PrivacyTip to Res.string.media_studio_tool_privacy
         }

@@ -120,6 +120,15 @@ class MultiOrchestratorUploadEachTest {
             crop: ImageCrop,
         ): MediaCompressorResult? = if (uri.toString() in uncroppable) null else MediaCompressorResult(StringMediaUri("$uri.crop${crop.left}"), "image/jpeg", 1)
 
+        /** Paths whose trim cannot be written. */
+        var untrimmable: Set<String> = emptySet()
+
+        override suspend fun trimVideo(
+            uri: MediaUri,
+            mimeType: String?,
+            trim: VideoTrim,
+        ): MediaCompressorResult? = if (uri.toString() in untrimmable) null else MediaCompressorResult(StringMediaUri("$uri.trim${trim.startMs}-${trim.endMs}"), "video/mp4", 1)
+
         override fun discardTempFile(uri: MediaUri) {
             discarded += uri.toString()
         }
@@ -317,4 +326,49 @@ class MultiOrchestratorUploadEachTest {
             assertEquals(listOf("enc:/a.jpg.crop0.25"), uploader.sent.map { it.path })
             assertEquals(1, result.successful.size)
         }
+
+    @Test
+    fun aTrimmedVideoSendsItsTrimAndDeletesIt() =
+        runTest {
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/v.mp4"), "video/mp4"), SelectedMedia(StringMediaUri("/a.jpg"), "image/jpeg")))
+            media.get(0).options = media.get(0).options.copy(trim = VideoTrim(2_000, 9_500))
+            // A trim on a picture means nothing and is ignored.
+            media.get(1).options = media.get(1).options.copy(trim = VideoTrim(0, 1_000))
+            val uploader = RecordingUploader()
+
+            assertTrue(media.uploadEach(server, account, uploader).allGood)
+
+            assertEquals(setOf("/v.mp4.trim2000-9500", "/a.jpg"), uploader.sent.map { it.path }.toSet())
+            assertEquals(listOf("/v.mp4.trim2000-9500"), uploader.discarded.toList())
+        }
+
+    @Test
+    fun aTrimThatCannotBeWrittenSendsNothing() =
+        runTest {
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/v.mp4"), "video/mp4")))
+            media.get(0).options = media.get(0).options.copy(trim = VideoTrim(0, 3_000))
+            val uploader = RecordingUploader().apply { untrimmable = setOf("/v.mp4") }
+
+            val result = media.uploadEach(server, account, uploader)
+
+            assertEquals(UploadError.TRIM_FAILED, result.errors.single().error)
+            assertTrue(uploader.sent.isEmpty())
+        }
+
+    @Test
+    fun encryptedUploadsSendTheTrim() =
+        runTest {
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/v.mp4"), "video/mp4")))
+            media.get(0).options = media.get(0).options.copy(trim = VideoTrim(1_000, 4_000))
+            val uploader = RecordingUploader()
+
+            assertTrue(media.uploadEncryptedOwnOptions({ AESGCM() }, server, account, uploader).allGood)
+            assertEquals(listOf("enc:/v.mp4.trim1000-4000"), uploader.sent.map { it.path })
+        }
+
+    @Test
+    fun aWholeTrimIsNoTrim() {
+        assertEquals(null, VideoTrim(20, 9_990).orNullIfWhole(10_000))
+        assertEquals(VideoTrim(500, 10_000), VideoTrim(500, 10_000).orNullIfWhole(10_000))
+    }
 }

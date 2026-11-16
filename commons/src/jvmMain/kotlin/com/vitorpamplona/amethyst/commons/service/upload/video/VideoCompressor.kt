@@ -73,4 +73,21 @@ interface VideoCompressor {
 
     /** A remuxed copy of [source] with no metadata, chapters, subtitle or data tracks; null when unavailable or failed. */
     suspend fun strip(source: File): File?
+
+    /** [source] from [startMs] to [endMs], stream-copied into a temp MP4 without metadata; null when it could not be written. */
+    suspend fun trim(
+        source: File,
+        startMs: Long,
+        endMs: Long,
+    ): File? = null
+
+    /** A JPEG of the frame near [atMs], upright, at most [maxEdge] on its long side; null when unavailable. */
+    suspend fun frame(
+        source: File,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = null
+
+    /** How long [source] runs, in milliseconds; null when unknown. */
+    suspend fun durationMs(source: File): Long? = null
 }

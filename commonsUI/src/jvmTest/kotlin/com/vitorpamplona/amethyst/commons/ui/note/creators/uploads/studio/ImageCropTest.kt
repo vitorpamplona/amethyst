@@ -105,6 +105,14 @@ class ImageCropTest {
         assertEquals(ImageCrop(0.1f, 0f, 1f, 1f), ImageCrop(0.1f, 0f, 1f, 1f).orNullIfWhole())
     }
 
+    @Test
+    fun clockAndLengthLabels() {
+        assertEquals("0:02.5", formatClock(2_480))
+        assertEquals("1:05.0", formatClock(65_000))
+        assertEquals("6.5 s", formatLength(6_500))
+        assertEquals("1:05", formatLength(65_000))
+    }
+
     // ---- renders ----
 
     private val outDir = File("build/media-studio").apply { mkdirs() }

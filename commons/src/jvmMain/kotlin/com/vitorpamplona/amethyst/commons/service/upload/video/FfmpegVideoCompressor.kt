@@ -114,6 +114,51 @@ class FfmpegVideoCompressor(
         }
     }
 
+    override suspend fun trim(
+        source: File,
+        startMs: Long,
+        endMs: Long,
+    ): File? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        if (endMs <= startMs) return null
+        return gate.withPermit {
+            withTempOutput("trim of ${source.name}") { out ->
+                val outcome = runner.run(FfmpegCommandBuilder.trim(ffmpeg, source, startMs, endMs - startMs, out), {}, stallTimeoutMs)
+                if (outcome.exitCode == 0 && out.length() > 0) {
+                    out
+                } else {
+                    Log.w(TAG) { "Trim of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                    null
+                }
+            }
+        }
+    }
+
+    // Not under the gate: a frame is a short decode, and the trim tool asks for several while
+    // nothing else may be running, or while a compression preview holds the gate.
+    override suspend fun frame(
+        source: File,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        var out: File? = null
+        return try {
+            out = AmethystTempDir.createTempFile("amethyst_frame_", ".jpg")
+            val outcome = runner.run(FfmpegCommandBuilder.frame(ffmpeg, source, atMs.coerceAtLeast(0), maxEdge, out), {}, stallTimeoutMs)
+            if (outcome.exitCode == 0 && out.length() > 0) out.readBytes() else null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Frame of ${source.name} failed", e)
+            null
+        } finally {
+            withContext(NonCancellable) { out?.deleteOrWarn(TAG, "frame") }
+        }
+    }
+
+    override suspend fun durationMs(source: File): Long? = probed(source)?.durationSeconds?.let { (it * 1000).toLong() }
+
     /** What the probe says about [source], read once per file even when the slider asked first. */
     private suspend fun probed(source: File): ProbeResult? {
         val key = Triple(source.absolutePath, source.length(), source.lastModified())

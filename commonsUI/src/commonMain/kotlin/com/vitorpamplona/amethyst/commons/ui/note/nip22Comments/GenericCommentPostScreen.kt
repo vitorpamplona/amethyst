@@ -399,7 +399,7 @@ private fun GenericCommentPostBody(
                                 ),
                             )
                         },
-                        mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media) { postViewModel.mediaUploadTracker.isUploading },
+                        mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media, accountViewModel.mediaUploader) { postViewModel.mediaUploadTracker.isUploading },
                         refocusKey = postViewModel.media.attachCount.takeIf { it > 0 },
                     )
                 }
