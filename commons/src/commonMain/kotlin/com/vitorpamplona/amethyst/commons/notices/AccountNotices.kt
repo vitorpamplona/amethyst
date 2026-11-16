@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.notices
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
 /** Why the signer refused to sign or decrypt. */
 sealed interface SignerNotice : UserNotice {
@@ -36,6 +37,41 @@ sealed interface SignerNotice : UserNotice {
     data class Failed(
         val cause: Throwable,
     ) : SignerNotice
+}
+
+/**
+ * A post the signer did not sign, so it was not sent. The composer keeps its text so it can be
+ * sent again; [cause] is shown as details.
+ */
+data class PostNotSent(
+    val reason: Reason,
+    val cause: Throwable,
+) : UserNotice {
+    enum class Reason {
+        /** No answer in time: a NIP-46 bunker that is offline, or a signer left waiting. */
+        SignerTimedOut,
+
+        /** The signer, or the user in it, said no. */
+        SignerRefused,
+
+        /** The signer answered with an error. */
+        SignerFailed,
+    }
+
+    companion object {
+        fun of(e: SignerExceptions): PostNotSent =
+            PostNotSent(
+                reason =
+                    when (e) {
+                        is SignerExceptions.TimedOutException -> Reason.SignerTimedOut
+                        is SignerExceptions.ManuallyUnauthorizedException,
+                        is SignerExceptions.AutomaticallyUnauthorizedException,
+                        -> Reason.SignerRefused
+                        else -> Reason.SignerFailed
+                    },
+                cause = e,
+            )
+    }
 }
 
 /**
