@@ -38,8 +38,9 @@ object MediaMarkers {
     fun idsIn(text: CharSequence): List<Int> = if (!text.contains(PREFIX)) emptyList() else REGEX.findAll(text).map { it.groupValues[1].toInt() }.toList()
 
     /**
-     * What [text] reads like with each marker swapped for [replacement] of its id; a marker it maps
-     * to null goes away together with the line break that followed it, so no empty line is left.
+     * What [text] reads like with each marker swapped for [replacement] of its id, on a line of its
+     * own; a marker it maps to null goes away together with the line break that followed it, so no
+     * empty line is left.
      */
     fun replace(
         text: String,
@@ -53,7 +54,11 @@ object MediaMarkers {
             val url = replacement(match.groupValues[1].toInt())
             last = match.range.last + 1
             if (url != null) {
+                // A URL touching other text stops being one: keep it on a line of its own, even
+                // after the user deleted the line break around the marker.
+                if (out.isNotEmpty() && !out.last().isWhitespace()) out.append('\n')
                 out.append(url)
+                if (last < text.length && !text[last].isWhitespace()) out.append('\n')
             } else if (last < text.length && text[last] == '\n') {
                 last++
             }
@@ -61,6 +66,32 @@ object MediaMarkers {
         out.append(text, last, text.length)
         return out.toString()
     }
+
+    /** The id of the marker that starts or ends at [cursor] in [text]: the one the cursor sits against. */
+    fun markerAt(
+        text: CharSequence,
+        cursor: Int,
+    ): Int? {
+        if (!text.contains(PREFIX)) return null
+        return REGEX
+            .findAll(text)
+            .firstOrNull { cursor == it.range.first || cursor == it.range.last + 1 }
+            ?.groupValues
+            ?.get(1)
+            ?.toInt()
+    }
+
+    /** The id of the marker that starts at [rawStart] in [text]. */
+    fun idAt(
+        text: CharSequence,
+        rawStart: Int,
+    ): Int? =
+        REGEX
+            .find(text, rawStart)
+            ?.takeIf { it.range.first == rawStart }
+            ?.groupValues
+            ?.get(1)
+            ?.toInt()
 
     /** [text] without its markers: what a draft saves, since the picked files can't travel with it. */
     fun strip(text: String): String = replace(text) { null }

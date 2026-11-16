@@ -53,4 +53,20 @@ class MediaMarkersTest {
         assertEquals("\n[[media:1]]\n", MediaMarkers.insertion("Hello", 5, 1))
         assertEquals("[[media:1]]", MediaMarkers.insertion("Hello\n\nmore", 6, 1))
     }
+
+    @Test
+    fun markerAtFindsTheMarkerTheCursorTouches() {
+        val text = "a\n[[media:3]]\nb"
+        assertEquals(3, MediaMarkers.markerAt(text, 2))
+        assertEquals(3, MediaMarkers.markerAt(text, 13))
+        assertEquals(null, MediaMarkers.markerAt(text, 14))
+        assertEquals(3, MediaMarkers.idAt(text, 2))
+        assertEquals(null, MediaMarkers.idAt(text, 3))
+    }
+
+    @Test
+    fun aUrlNeverTouchesTheTextAroundIt() {
+        assertEquals("Look\nhttps://a.jpg\nWorth it", MediaMarkers.replace("Look[[media:1]]Worth it") { "https://a.jpg" })
+        assertEquals("https://a.jpg\nhttps://b.jpg", MediaMarkers.replace("[[media:1]][[media:2]]") { if (it == 1) "https://a.jpg" else "https://b.jpg" })
+    }
 }

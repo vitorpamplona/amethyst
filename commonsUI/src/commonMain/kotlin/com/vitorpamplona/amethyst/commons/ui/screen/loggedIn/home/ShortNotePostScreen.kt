@@ -135,6 +135,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceB
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceFlap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSheet
@@ -147,9 +148,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.ScheduleAt
 import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.roundUpToNextQuarterHour
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStrip
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaCard
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MediaStudioDialog
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberMediaMarkerChips
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MissingMediaCard
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -490,16 +492,31 @@ private fun NewPostScreenBody(
                                     ),
                                 )
                             },
-                            mediaChips = rememberMediaMarkerChips(remember(postViewModel) { { id: Int -> postViewModel.attachedMedia[id]?.media } }),
+                            refocusKey = postViewModel.attachCount.takeIf { it > 0 },
+                            mediaBlocks =
+                                remember(postViewModel) {
+                                    MediaBlocks(AttachedMediaHeight) { id, selected, modifier ->
+                                        val item = postViewModel.attachedMedia[id]
+                                        if (item != null) {
+                                            AttachedMediaCard(
+                                                item = item,
+                                                selected = selected,
+                                                locked = postViewModel.mediaUploadTracker.isUploading,
+                                                onOpen = { postViewModel.reopenedMedia = item },
+                                                onRemove = { postViewModel.removeAttachedMedia(item) },
+                                                modifier = modifier,
+                                            )
+                                        } else {
+                                            MissingMediaCard(onRemove = { postViewModel.removeMediaMarker(id) }, modifier = modifier)
+                                        }
+                                    }
+                                },
                         )
                     }
                 }
 
-                AttachedMediaStrip(
+                AttachedMediaFailureBanner(
                     items = postViewModel.attachedInOrder(),
-                    locked = postViewModel.mediaUploadTracker.isUploading,
-                    onOpen = { postViewModel.reopenedMedia = it },
-                    onRemove = postViewModel::removeAttachedMedia,
                     modifier = Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, bottom = Size10dp),
                 )
 
@@ -803,6 +820,9 @@ private fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationS
 
 /** Lines the wrapped tools up with the text: past the 10dp side padding and the 35dp avatar. */
 private val ComposerToolsStartPadding = 45.dp
+
+/** How tall a photo or video attached to the note is drawn inside the text. */
+private val AttachedMediaHeight = 220.dp
 
 @Composable
 private fun BottomRowActions(

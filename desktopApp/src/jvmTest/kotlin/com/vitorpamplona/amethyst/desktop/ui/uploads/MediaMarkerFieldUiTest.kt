@@ -72,7 +72,7 @@ class MediaMarkerFieldUiTest {
                 BasicTextField(
                     state = state,
                     inputTransformation = MentionPreservingInputTransformation,
-                    outputTransformation = rememberUrlUserTagOutputTransformation(mediaChips = chips),
+                    outputTransformation = rememberUrlUserTagOutputTransformation(mediaMarkers = chips),
                 )
             }
         }

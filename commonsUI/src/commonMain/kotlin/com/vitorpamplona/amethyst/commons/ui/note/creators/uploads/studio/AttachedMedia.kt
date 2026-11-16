@@ -24,7 +24,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessin
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 
@@ -119,35 +117,15 @@ fun rememberMediaMarkerChips(attached: (Int) -> SelectedMedia?): MediaMarkerChip
 }
 
 /**
- * The files attached to a post, in the order of their markers in the text and numbered like them.
- * Each tile shows what matters before Post: the picture, whether it has alt text, a content warning,
- * and, while Post runs, its upload. Tapping a tile reopens it in the media studio. When an upload
- * failed, a banner names the file and why; nothing was posted.
+ * When a file failed to upload on Post: names it and why. Nothing was posted; Post tries again.
+ * The failed file's card is outlined too.
  */
 @Composable
-fun AttachedMediaStrip(
+fun AttachedMediaFailureBanner(
     items: List<SelectedMediaProcessing>,
-    locked: Boolean,
-    onOpen: (SelectedMediaProcessing) -> Unit,
-    onRemove: (SelectedMediaProcessing) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FailedUploadBanner(items)
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items.forEachIndexed { index, item ->
-                key(item) { AttachedTile(item, index + 1, locked, { onOpen(item) }, { onRemove(item) }) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FailedUploadBanner(items: List<SelectedMediaProcessing>) {
     // Each file's state is a flow: collect them all, then find the first that failed.
     val states =
         items.map {
@@ -159,7 +137,7 @@ private fun FailedUploadBanner(items: List<SelectedMediaProcessing>) {
     if (index < 0) return
     val error = states[index] as UploadingState.Error
     val name = mediaLabel(items[index].media, index + 1)
-    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(12.dp), modifier = modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(MaterialSymbols.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
             Spacer(Modifier.width(10.dp))
@@ -176,36 +154,66 @@ private fun FailedUploadBanner(items: List<SelectedMediaProcessing>) {
     }
 }
 
+/**
+ * A file attached to a post, drawn inside the text where it will appear in the note. It shows
+ * what matters before Post: the picture, whether it has alt text (amber when missing: the nudge to
+ * describe it), a content warning, the quality it goes up at and, while Post runs, its upload.
+ * Tapping it reopens the file in the media studio. [selected]: the cursor sits against it, so
+ * Backspace removes it.
+ */
 @Composable
-private fun AttachedTile(
+fun AttachedMediaCard(
     item: SelectedMediaProcessing,
-    ordinal: Int,
+    selected: Boolean,
     locked: Boolean,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val state by item.orchestrator.progressState.collectAsState()
     val progress by item.orchestrator.progress.collectAsState()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
     val media = item.media
-    val label = mediaLabel(media, ordinal)
+    val failed = state is UploadingState.Error
+    val label = mediaLabel(media, 1)
     Box(
-        Modifier
-            .size(112.dp)
+        modifier
             .clip(shape)
-            .border(if (state is UploadingState.Error) 2.dp else 1.dp, if (state is UploadingState.Error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant, shape)
-            .clickable(enabled = !locked, onClick = onOpen)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .border(
+                width = if (failed || selected) 2.dp else 0.dp,
+                color =
+                    when {
+                        failed -> MaterialTheme.colorScheme.error
+                        selected -> MaterialTheme.colorScheme.primary
+                        else -> Color.Transparent
+                    },
+                shape = shape,
+            ).clickable(enabled = !locked, onClick = onOpen)
             .semantics { contentDescription = label },
     ) {
         when {
             media.isImage() == true -> AsyncImage(media.uri.toString(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            media.isVideo() == true ->
+            media.isVideo() == true -> {
                 rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                    ?: Icon(MaterialSymbols.Movie, contentDescription = null, modifier = Modifier.align(Alignment.Center))
-            else -> Icon(MaterialSymbols.AutoMirrored.InsertDriveFile, contentDescription = null, modifier = Modifier.align(Alignment.Center))
+                if (state is UploadingState.Ready) {
+                    Icon(
+                        MaterialSymbols.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        filled = true,
+                        modifier =
+                            Modifier
+                                .align(Alignment.Center)
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.5f))
+                                .padding(10.dp),
+                    )
+                }
+            }
+            else -> FileCardContent(item, Modifier.align(Alignment.Center))
         }
-
-        Pill(ordinal.toString(), Modifier.align(Alignment.TopStart).padding(6.dp))
 
         if (!locked && state !is UploadingState.Finished) {
             Icon(
@@ -215,18 +223,17 @@ private fun AttachedTile(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(26.dp)
+                        .padding(8.dp)
+                        .size(30.dp)
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.55f))
                         .clickable(onClick = onRemove)
-                        .padding(4.dp),
+                        .padding(5.dp),
             )
         }
 
-        Row(Modifier.align(Alignment.BottomStart).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.align(Alignment.BottomStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             if (media.isImage() == true || media.isVideo() == true) {
-                // Amber when missing: the nudge to describe it.
                 val hasAlt = item.options.altOrNull != null
                 Pill(
                     stringRes(Res.string.media_alt_badge),
@@ -235,17 +242,63 @@ private fun AttachedTile(
                 )
             }
             if (item.options.sensitive) Pill(stringRes(Res.string.media_cw_badge))
+            if (media.isCompressible()) Pill(qualityName(item.options.quality))
         }
 
         when (state) {
             is UploadingState.Ready, is UploadingState.Error -> Unit
             is UploadingState.Finished ->
-                Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(22.dp))
+                Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(24.dp))
             else ->
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(36.dp))
+                    CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(44.dp))
                 }
         }
+    }
+}
+
+/** A marker whose file is gone (an undo brought back the marker of a removed file): it is dropped at Post. */
+@Composable
+fun MissingMediaCard(
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(10.dp))
+        Text(stringRes(Res.string.media_marker_missing), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Icon(
+            MaterialSymbols.Close,
+            contentDescription = stringRes(Res.string.remove),
+            modifier =
+                Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onRemove)
+                    .padding(5.dp),
+        )
+    }
+}
+
+@Composable
+private fun FileCardContent(
+    item: SelectedMediaProcessing,
+    modifier: Modifier,
+) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            if (item.media.isAudio() == true) MaterialSymbols.AudioFile else MaterialSymbols.AutoMirrored.InsertDriveFile,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        item.media.mimeType?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
     }
 }
 

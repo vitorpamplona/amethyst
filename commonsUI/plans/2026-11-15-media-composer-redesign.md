@@ -20,11 +20,19 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
    - Tools: Quality, Alt text (on-device suggestion for every image), Privacy. A server chip.
 2. **Markers and upload on Post.** Add uploads nothing:
    - Each file leaves a `[[media:N]]` marker (`MediaMarkers`, commons) at the cursor, on its own
-     line, drawn as a chip ("Photo 1") by `UrlUserTagOutputTransformation`. It's one replacement
-     list with the mentions, so the spell checker stays aligned.
-   - `MentionPreservingInputTransformation` keeps markers whole against IME partial edits.
-   - `AttachedMediaStrip` under the text shows the files numbered like their chips, with an ALT
-     badge (amber when missing), CW, and remove. Tapping a tile reopens the Studio ("Done").
+     line. The field draws it as the media itself, inside the text where it will appear in the
+     note (design B):
+     - `UrlUserTagOutputTransformation` turns the marker into one invisible character on a line
+       as tall as the card. It's one replacement list with the mentions, so the spell checker
+       stays aligned.
+     - `ThinPaddingTextField.textOverlay` lets `MessageField` place an `AttachedMediaCard` in
+       that gap.
+     - The cursor against a card selects it: outline, no caret. Backspace removes it, and undo
+       brings it back with its settings.
+     - `MentionPreservingInputTransformation` keeps markers whole against IME partial edits.
+   - The card shows an ALT badge (amber when missing), CW, the quality and remove. Tapping it
+     reopens the Studio ("Done"). A chip style (`MediaMarkerChips`) remains for fields too small
+     for a card. The field takes the focus back after Add.
    - `sendPostSync()` now returns a Boolean. It first uploads every attached file with its own
      options (`MultiOrchestrator.uploadEach`), then swaps markers for URLs and records each
      file's `imeta`, and only then builds and signs the event. If any upload fails it returns
@@ -33,13 +41,14 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
    - Markers never leave the device. Drafts save the text without them (the picked files can't
      travel with a draft), and link previews ignore them. A marker whose file is gone is
      dropped at Post.
+   - At Post a URL always lands on a line of its own, even if the user deleted the line break
+     around its marker.
    - Tests: `MediaMarkersTest`, `MultiOrchestratorUploadEachTest` (commons);
      `MediaStudioRenderTest` (commonsUI); `MediaStudioUiTest`, `MediaMarkerFieldUiTest`
      (desktopApp, real clicks and keys).
 
 Not yet:
 - crop and trim (step 3)
-- inline blocks (B)
 - the other composers, which still use `ImageVideoDescription`
 - keeping attached files in a draft across app restarts
 

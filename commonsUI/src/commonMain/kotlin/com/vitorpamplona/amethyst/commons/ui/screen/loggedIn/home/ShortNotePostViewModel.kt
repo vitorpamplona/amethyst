@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -298,6 +299,9 @@ open class ShortNotePostViewModel :
 
     /** Where attached files go on Post: the server last chosen in the media studio. */
     var mediaServer by mutableStateOf<ServerName?>(null)
+
+    /** Bumped when files go into the text, so the field takes the focus back from the studio. */
+    var attachCount by mutableIntStateOf(0)
 
     /** A file of the post reopened in the media studio. */
     var reopenedMedia by mutableStateOf<SelectedMediaProcessing?>(null)
@@ -1607,12 +1611,17 @@ open class ShortNotePostViewModel :
             selection = TextRange(cursor)
         }
         multiOrchestrator = null
+        attachCount++
         draftTag.newVersion()
     }
 
     /** Takes [item] out of the post: its marker and the line it sat on. */
     fun removeAttachedMedia(item: SelectedMediaProcessing) {
-        val id = markerIdOf(item) ?: return
+        removeMediaMarker(markerIdOf(item) ?: return)
+    }
+
+    /** Takes the marker [id] and its file out of the post, with the line the marker sat on. */
+    fun removeMediaMarker(id: Int) {
         attachedMedia.remove(id)
         message.edit {
             val text = asCharSequence().toString()
