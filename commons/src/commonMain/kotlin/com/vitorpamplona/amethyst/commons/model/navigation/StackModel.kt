@@ -114,6 +114,10 @@ class StackModel(
         return true
     }
 
+    override fun adoptWindows(windows: List<NavStackEntry>) {
+        screenWindows.addAll(windows.filter { it !in screenWindows })
+    }
+
     /** Closes the moved-out composer [id]; a screen in the stack is popped, not closed. */
     override fun close(id: Long): Boolean = screenWindows.removeAll { it.id == id }
 

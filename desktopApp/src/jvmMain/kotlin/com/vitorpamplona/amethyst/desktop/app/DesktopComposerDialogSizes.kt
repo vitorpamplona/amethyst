@@ -21,49 +21,22 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialogSizes
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
-import com.vitorpamplona.quartz.utils.Log
-import java.io.File
-import java.util.Properties
 
-/** The composer dialog sizes the user dragged to, one per [ComposerSize], kept in [file] between runs. */
+/**
+ * The composer dialog sizes the user dragged to, one per [ComposerSize], kept between runs in a
+ * file of their own by the same store as the screen windows' sizes.
+ */
 class DesktopComposerDialogSizes(
-    private val file: File,
+    private val sizes: ScreenWindowSizes,
 ) : ComposerDialogSizes {
-    private val sizes: Properties by lazy {
-        Properties().apply {
-            if (file.exists()) {
-                runCatching { file.inputStream().use { load(it) } }.onFailure { Log.w(TAG, "Could not read $file", it) }
-            }
-        }
-    }
+    override fun load(size: ComposerSize): DpSize? = sizes.saved(size.name)
 
-    @Synchronized
-    override fun load(size: ComposerSize): DpSize? =
-        sizes
-            .getProperty(size.name)
-            ?.split(',')
-            ?.mapNotNull { it.toFloatOrNull() }
-            ?.takeIf { it.size == 2 && it.all { side -> side.isFinite() && side > 0f } }
-            ?.let { DpSize(it[0].dp, it[1].dp) }
-
-    @Synchronized
     override fun save(
         size: ComposerSize,
         picked: DpSize?,
     ) {
-        if (picked == null) {
-            if (sizes.remove(size.name) == null) return
-        } else {
-            if (!picked.width.value.isFinite() || !picked.height.value.isFinite()) return
-            sizes.setProperty(size.name, "${picked.width.value.toInt()},${picked.height.value.toInt()}")
-        }
-        runCatching { file.outputStream().use { sizes.store(it, null) } }.onFailure { Log.w(TAG, "Could not write $file", it) }
-    }
-
-    private companion object {
-        const val TAG = "ComposerDialogSizes"
+        if (picked == null) sizes.forget(size.name) else sizes.save(size.name, picked)
     }
 }

@@ -70,13 +70,15 @@ fun NavigationHost(
     // Every layout asks the destinations which routes are composers, before the first request.
     remember(nav.stacks, destinations) { nav.stacks.opensOver = destinations::isComposer }
     val windows = nav.stacks.windows()
+    val shown = nav.shownEntries()
     NavigationHost(
-        visible = nav.shownEntries(),
+        visible = shown,
         retained = nav.stacks.retained(),
         destinations = destinations,
         navFor = navFor,
-        // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
-        animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
+        // Switching tabs or sections swaps the screen at once; only a stack slides and fades. A
+        // composer open over a tab doesn't make the tabs a stack.
+        animated = !nav.stacks.isSingleScreen || shown.count { !nav.stacks.model.isOpenOver(it) } > 1,
         onBack = { nav.stacks.back() },
         modifier = modifier,
         composerDialogs = composerDialogs,

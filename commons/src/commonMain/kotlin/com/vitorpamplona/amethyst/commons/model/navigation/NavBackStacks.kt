@@ -108,11 +108,14 @@ class NavBackStacks private constructor(
      * Switches to [target]. Every switch goes through a stack: leaving the tabs keeps the active tab
      * and the tabs that opened it, leaving the windows keeps the main window's section. Entering the
      * tabs makes each screen of that stack a tab opened by the one below it; entering the windows
-     * keeps only its sections, in the main window.
+     * keeps only its sections, in the main window. Screens in windows of their own (a tab moved out,
+     * a composer popped out, a screen of the windows layout) stay in their windows.
      */
     fun changeArrangement(target: NavArrangement) {
         if (target == arrangement) return
         val stack = asStack()
+        // Screens in windows of their own stay open, a popped-out composer with its draft.
+        val windows = model.windows()
         model =
             when (target) {
                 NavArrangement.STACK -> StackModel(ids, stack)
@@ -120,6 +123,7 @@ class NavBackStacks private constructor(
                 NavArrangement.WINDOWS -> WindowsModel.fromStack(ids, stack)
             }
         model.opensOver = opensOver
+        model.adoptWindows(windows)
     }
 
     /** The current screens as a stack, Home at the bottom. */
@@ -127,7 +131,7 @@ class NavBackStacks private constructor(
         val entries =
             when (val current = model) {
                 is StackModel -> current.stack.toList()
-                is TabsModel -> current.chain(current.top).filter(current::isMainScreen) + current.overlays
+                is TabsModel -> current.chain(current.top).filter(current::isMainScreen) + current.overlaysOver(current.top)
                 is WindowsModel -> listOf(current.top)
             }
         return if (entries.firstOrNull()?.route == Route.Home) entries else listOf(ids.entry(Route.Home)) + entries

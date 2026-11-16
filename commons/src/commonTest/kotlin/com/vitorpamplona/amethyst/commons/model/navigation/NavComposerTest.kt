@@ -223,6 +223,83 @@ class NavComposerTest {
     }
 
     @Test
+    fun switchingLayoutsKeepsAPoppedOutComposerInItsWindow() {
+        val stacks = stacks()
+        stacks.push(profile)
+        stacks.push(note)
+        val composer = stacks.top
+        stacks.popOut(composer.id)
+
+        stacks.changeArrangement(NavArrangement.TABS)
+        assertEquals(listOf(composer), stacks.windows())
+        // Kept by the main host, so its window goes on with the same draft.
+        assertTrue(composer in stacks.retained())
+
+        stacks.changeArrangement(NavArrangement.STACK)
+        assertEquals(listOf(composer), stacks.windows())
+        assertTrue(composer in stacks.retained())
+    }
+
+    @Test
+    fun aTabOpenedFromElsewhereCoversTheComposerUntilItsTabIsBack() {
+        val stacks = stacks(NavArrangement.TABS)
+        val home = stacks.top
+        stacks.push(note, origin = home.id)
+        val composer = stacks.tabs.overlays.single()
+
+        // A notification or a deep link: no origin.
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Restart))
+        assertEquals(Route.Message, stacks.top.route)
+        assertFalse(composer in stacks.shown(wide = true))
+        // Still open, with its draft.
+        assertTrue(composer in stacks.retained())
+
+        // Back closes that tab, not the composer of another one, and the composer is back in view.
+        assertTrue(stacks.back())
+        assertEquals(home, stacks.top)
+        assertEquals(listOf(home, composer), stacks.shown(wide = true))
+    }
+
+    @Test
+    fun reopeningAClosedComposerShowsTheOneAlreadyOpen() {
+        val stacks = stacks(NavArrangement.TABS)
+        stacks.push(note)
+        stacks.back()
+        stacks.push(note)
+
+        assertTrue(stacks.tabs.reopenClosed())
+        assertEquals(1, stacks.tabs.overlays.size)
+    }
+
+    @Test
+    fun aPoppedOutComposerMovedBackIsNotATab() {
+        val stacks = stacks(NavArrangement.TABS)
+        stacks.push(note)
+        val composer = stacks.tabs.overlays.single()
+        stacks.popOut(composer.id)
+
+        stacks.tabs.setDetached(composer.id, false)
+
+        assertEquals(listOf(Route.Home), stacks.tabs.strip().map { it.route })
+        assertEquals(listOf(composer), stacks.tabs.overlays.toList())
+        assertTrue(stacks.windows().isEmpty())
+        assertEquals(listOf(stacks.top, composer), stacks.shown(wide = true))
+    }
+
+    @Test
+    fun aComposerAskedForFromAMovedOutTabOpensOverTheMainWindow() {
+        val stacks = stacks(NavArrangement.TABS)
+        stacks.push(profile)
+        val window = stacks.top
+        stacks.tabs.setDetached(window.id, true)
+
+        stacks.push(note, origin = window.id)
+
+        val composer = stacks.tabs.overlays.single()
+        assertEquals(listOf(stacks.top, composer), stacks.shown(wide = true))
+    }
+
+    @Test
     fun withoutDestinationsNothingIsAComposer() {
         val stacks = NavBackStacks().apply { changeArrangement(NavArrangement.TABS) }
         stacks.push(note)

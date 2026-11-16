@@ -35,9 +35,9 @@ class DesktopComposerDialogSizesTest {
     @Test
     fun aPickedSizeSurvivesARestartPerSize() {
         val file = tempFile()
-        DesktopComposerDialogSizes(file).save(ComposerSize.QUICK, DpSize(700.dp, 500.dp))
+        DesktopComposerDialogSizes(ScreenWindowSizes(file)).save(ComposerSize.QUICK, DpSize(700.dp, 500.dp))
 
-        val reopened = DesktopComposerDialogSizes(file)
+        val reopened = DesktopComposerDialogSizes(ScreenWindowSizes(file))
         assertEquals(DpSize(700.dp, 500.dp), reopened.load(ComposerSize.QUICK))
         assertNull(reopened.load(ComposerSize.FORM))
     }
@@ -45,11 +45,11 @@ class DesktopComposerDialogSizesTest {
     @Test
     fun resettingForgetsThePickedSize() {
         val file = tempFile()
-        val sizes = DesktopComposerDialogSizes(file)
+        val sizes = DesktopComposerDialogSizes(ScreenWindowSizes(file))
         sizes.save(ComposerSize.FORM, DpSize(900.dp, 700.dp))
         sizes.save(ComposerSize.FORM, null)
 
-        assertNull(DesktopComposerDialogSizes(file).load(ComposerSize.FORM))
+        assertNull(DesktopComposerDialogSizes(ScreenWindowSizes(file)).load(ComposerSize.FORM))
     }
 
     @Test
@@ -57,7 +57,7 @@ class DesktopComposerDialogSizesTest {
         val file = tempFile()
         file.writeText("QUICK=abc,12\nFORM=-5,300\n")
 
-        val sizes = DesktopComposerDialogSizes(file)
+        val sizes = DesktopComposerDialogSizes(ScreenWindowSizes(file))
         assertNull(sizes.load(ComposerSize.QUICK))
         assertNull(sizes.load(ComposerSize.FORM))
     }

@@ -130,6 +130,9 @@ sealed class NavModel(
     /** Closes the screen [id]: a tab, a screen window, a composer. Whether anything closed. */
     open fun close(id: Long): Boolean = false
 
+    /** Takes over the screen windows another layout had open, so switching layouts keeps them, drafts and all. */
+    internal open fun adoptWindows(windows: List<NavStackEntry>) {}
+
     /** Hands the screen [id] another route in place: the next step of a flow, not a new screen. */
     fun replace(
         id: Long,
@@ -200,9 +203,12 @@ sealed class SingleScreenModel(
     /** Opens the screen closed last again. */
     fun reopenClosed(): Boolean {
         val route = closed.removeLastOrNull() ?: return false
-        open(NavRequest(route, forceNew = entries.none { it.route == route }))
+        open(NavRequest(route, forceNew = !holds(route)))
         return true
     }
+
+    /** Whether a screen of [route] is open here. */
+    protected open fun holds(route: Route): Boolean = entries.any { it.route == route }
 
     /** Files a closing screen for [reopenClosed] and hands the screens it opened to its own opener. */
     protected fun forget(entry: NavStackEntry) {

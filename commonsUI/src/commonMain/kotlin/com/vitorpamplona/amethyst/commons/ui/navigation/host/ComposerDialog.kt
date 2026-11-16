@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -195,9 +194,11 @@ fun ComposerCard(
     val store = LocalAppPlatform.current.composerDialogSizes
     var picked by remember(size, store) { mutableStateOf(store.load(size)) }
 
-    BoxWithConstraints(Modifier.fillMaxSize().padding(DialogMargin), contentAlignment = Alignment.Center) {
-        val room = DpSize(maxWidth, maxHeight)
-        val default = DpSize(minOf(maxWidth, size.maxWidth), minOf(maxHeight * size.heightFraction, size.maxHeight))
+    // The handles sit in a ring just outside the card, inside its margin, so they never cover
+    // anything the composer draws.
+    BoxWithConstraints(Modifier.fillMaxSize().padding(DialogMargin - HandleThickness), contentAlignment = Alignment.Center) {
+        val room = DpSize(maxWidth - HandleThickness * 2, maxHeight - HandleThickness * 2)
+        val default = DpSize(minOf(room.width, size.maxWidth), minOf(room.height * size.heightFraction, size.maxHeight))
         val shown = (picked ?: default).fitIn(room)
 
         val resize =
@@ -214,10 +215,11 @@ fun ComposerCard(
         resize.current = shown
         resize.room = room
 
-        Box(Modifier.size(shown)) {
+        Box(Modifier.size(shown.width + HandleThickness * 2, shown.height + HandleThickness * 2)) {
             Surface(
                 modifier =
                     Modifier
+                        .padding(HandleThickness)
                         .fillMaxSize()
                         // The card sits clear of the status bar and cutouts: the composer's own bars skip them.
                         .consumeWindowInsets(WindowInsets.systemBars.union(WindowInsets.displayCutout)),
@@ -295,11 +297,10 @@ private fun BoxScope.ResizeHandles(resize: ComposerResize) {
         }
     }
 
-    // The sides and the bottom: thin strips across the border, half inside and half outside it.
+    // The sides and the bottom: strips in the ring around the card.
     Box(
         Modifier
             .align(Alignment.CenterStart)
-            .offset(x = -HandleThickness / 2)
             .width(HandleThickness)
             .fillMaxHeight(0.8f)
             .horizontalResizeCursor()
@@ -308,7 +309,6 @@ private fun BoxScope.ResizeHandles(resize: ComposerResize) {
     Box(
         Modifier
             .align(Alignment.CenterEnd)
-            .offset(x = HandleThickness / 2)
             .width(HandleThickness)
             .fillMaxHeight(0.8f)
             .horizontalResizeCursor()
@@ -317,14 +317,15 @@ private fun BoxScope.ResizeHandles(resize: ComposerResize) {
     Box(
         Modifier
             .align(Alignment.BottomCenter)
-            .offset(y = HandleThickness / 2)
             .height(HandleThickness)
             .fillMaxWidth(0.8f)
             .verticalResizeCursor()
             .dragging(horizontal = 0f, vertical = 1f),
     )
 
-    // The corner: a grip in the space the rounded corner leaves, which nothing in the card uses.
+    // The corner: the ring's corner and the part of the card's own corner its rounding leaves
+    // empty (within 8 dp of the corner, a 28 dp radius draws nothing), with the grip drawn there,
+    // outside the card's curve.
     val grip = MaterialTheme.colorScheme.outline
     Box(
         Modifier
@@ -335,10 +336,9 @@ private fun BoxScope.ResizeHandles(resize: ComposerResize) {
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 1.5.dp.toPx()
-            // Inside the card's rounded corner, which leaves this space free.
-            val inset = 9.dp.toPx()
+            val inset = 3.dp.toPx()
             for (step in 0..2) {
-                val reach = (3 + step * 4).dp.toPx()
+                val reach = (3 + step * 3).dp.toPx()
                 drawLine(
                     color = grip,
                     start = Offset(size.width - inset - reach, size.height - inset),
@@ -360,6 +360,6 @@ private fun DpSize.fitIn(room: DpSize) =
 
 private val MinCardSize = DpSize(360.dp, 320.dp)
 private val HandleThickness = 8.dp
-private val CornerSize = 24.dp
+private val CornerSize = HandleThickness + 8.dp
 
 private val DialogMargin = 24.dp

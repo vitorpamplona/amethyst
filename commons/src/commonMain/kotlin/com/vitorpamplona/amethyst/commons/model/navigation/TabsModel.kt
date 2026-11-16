@@ -38,9 +38,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
  * In a window too narrow for the strip the active tab shows on top of the tabs that opened it, so
  * back walks to them ([shown] with `wide` false).
  *
- * A composer ([opensOver]) is not a tab: it opens over the tabs ([overlays]), back closes it, and
- * [popOut] moves it to a window of its own. A link followed from one opens its tab in the
- * background, so the composer stays in front of the tab it was opened from.
+ * A composer ([opensOver]) is not a tab: it opens over the tab it was opened from ([overlays]),
+ * shows while that tab is the active one, back closes it, and [popOut] moves it to a window of its
+ * own. A link followed from one opens its tab in the background, so the composer stays in front;
+ * a tab activated from elsewhere (a notification, a deep link) covers it until its tab is back.
  */
 @Stable
 class TabsModel(
@@ -92,7 +93,16 @@ class TabsModel(
 
     override fun isOpenOver(entry: NavStackEntry): Boolean = entry in overlays
 
-    override fun shown(wide: Boolean): List<NavStackEntry> = (if (wide) listOf(top) else chain(top).filter(::isMainScreen)) + overlays
+    override fun shown(wide: Boolean): List<NavStackEntry> = (if (wide) listOf(top) else chain(top).filter(::isMainScreen)) + overlaysOver(top)
+
+    /** The composers open over [tab]: the ones opened from it, and any whose tab is no longer in the strip. */
+    fun overlaysOver(tab: NavStackEntry): List<NavStackEntry> =
+        overlays.filter { overlay ->
+            val opener = openers[overlay.id]
+            opener == tab.id || tabs.none { it.id == opener && isMainScreen(it) }
+        }
+
+    override fun holds(route: Route): Boolean = super.holds(route) || overlays.any { it.route == route }
 
     /** Every tab, the moved-out ones too: a window draws its tab with the state the main window kept, so moving it loses nothing. */
     override fun retained(): List<NavStackEntry> = tabs + overlays
@@ -161,18 +171,17 @@ class TabsModel(
         request: NavRequest,
         from: NavStackEntry?,
     ) {
+        // Over a tab in the strip: one moved out to a window has no composers of its own, they open
+        // over the main window's active tab, which comes forward.
+        val fromWindow = request.origin?.let { origin -> tabs.firstOrNull { it.id == origin } }?.let { !isMainScreen(it) } == true
+        val opener = from?.let { openers[it.id] } ?: request.origin?.takeIf { origin -> tabs.any { it.id == origin && isMainScreen(it) } } ?: activeId
         val open = if (request.forceNew) null else overlays.firstOrNull { it.route == request.route }
-        if (open != null) {
-            overlays.remove(open)
-            overlays.add(open)
-            return
-        }
-        val entry = ids.entry(request.route)
-        val opener = from?.let { openers[it.id] } ?: request.origin?.takeIf { origin -> tabs.any { it.id == origin } } ?: activeId
-        openers[entry.id] = opener
+        val entry = open ?: ids.entry(request.route)
+        // The one already open comes to the front of the tab that asked for it.
+        overlays.remove(entry)
         overlays.add(entry)
-        // A composer asked for from a moved-out tab still opens in the main window: bring it forward.
-        if (tabs.firstOrNull { it.id == opener }?.let(::isMainScreen) == false) raise(activeId)
+        openers[entry.id] = opener
+        if (fromWindow) raise(activeId)
     }
 
     /** The composer [overlay]'s flow goes on as [route] (a created group): a tab of its own, beside the one it was opened from. */
@@ -194,9 +203,9 @@ class TabsModel(
         return true
     }
 
-    /** Back closes the composer on top first, then the tab. */
+    /** Back closes the composer over the active tab first, then the tab. */
     override fun back(from: NavStackEntry?): Boolean {
-        val overlay = if (from == null) overlays.lastOrNull() else overlays.firstOrNull { it == from }
+        val overlay = if (from == null) overlaysOver(top).lastOrNull() else overlays.firstOrNull { it == from }
         if (overlay != null) return closeOverlay(overlay)
         return close((from ?: top).id)
     }
@@ -209,6 +218,14 @@ class TabsModel(
         detached[id] = true
         raise(id)
         return true
+    }
+
+    /** Carries screen windows over from another layout: each stays a window, as a tab moved out. */
+    override fun adoptWindows(windows: List<NavStackEntry>) {
+        windows.filter { window -> tabs.none { it.id == window.id } }.forEach { window ->
+            tabs.add(window)
+            detached[window.id] = true
+        }
     }
 
     override fun activate(id: Long) {
@@ -295,13 +312,24 @@ class TabsModel(
         open(NavRequest(entry.route, origin = id, forceNew = true))
     }
 
-    /** Moves the tab [id] out to a window of its own, or ([out] false) back into the strip. */
+    /**
+     * Moves the tab [id] out to a window of its own, or ([out] false) back into the strip. A composer
+     * moved out goes back over the active tab instead: it is never a tab.
+     */
     fun setDetached(
         id: Long,
         out: Boolean,
     ) {
         val entry = tabs.firstOrNull { it.id == id } ?: return
         if (!isMainScreen(entry) == out) return
+        if (!out && opensOver(entry.route)) {
+            tabs.remove(entry)
+            detached.remove(id)
+            openers[id] = activeId
+            overlays.add(entry)
+            raise(activeId)
+            return
+        }
         if (out && tabs.count(::isMainScreen) <= 1) {
             // The strip never empties: Home takes the moved tab's place.
             tabs.add(0, ids.entry(Route.Home, tabRoute = Route.Home).also { pinned[it.id] = true })
