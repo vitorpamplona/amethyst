@@ -29,6 +29,9 @@ enum class SearchResultKind {
     PUBLIC_CHATS,
     EPHEMERAL_CHATS,
     LIVE_ACTIVITIES,
+
+    /** Single custom emojis pulled out of the emoji packs a search found (see [EmojiSearch]). */
+    EMOJIS,
 }
 
 /**
@@ -58,6 +61,6 @@ enum class SearchScope {
         when (this) {
             ALL -> true
             PEOPLE -> kind == SearchResultKind.PEOPLE
-            NOTES -> kind == SearchResultKind.NOTES || kind == SearchResultKind.HASHTAGS
+            NOTES -> kind == SearchResultKind.NOTES || kind == SearchResultKind.HASHTAGS || kind == SearchResultKind.EMOJIS
         }
 }

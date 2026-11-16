@@ -44,7 +44,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -52,8 +51,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.geocaches.create.NewGeocacheViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_add_photo
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_description
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_difficulty
@@ -98,12 +94,14 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_photo_remove
 import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocationPreviewMap
@@ -166,28 +164,12 @@ fun NewGeocacheScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringRes(if (model.isEditing) Res.string.route_edit_geocache else Res.string.route_new_geocache))
-                },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(Res.string.back),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        enabled = model.isValid() && !model.isPublishing.value,
-                        onClick = {
-                            scope.launch { if (model.publish()) nav.popBack() }
-                        },
-                    ) { Text(stringRes(Res.string.geocache_new_publish)) }
-                },
+            ActionTopBar(
+                postRes = if (model.isEditing) Res.string.save else Res.string.geocache_new_publish,
+                titleRes = if (model.isEditing) Res.string.route_edit_geocache else Res.string.route_new_geocache,
+                isActive = { model.isValid() && !model.isPublishing.value },
+                onCancel = { nav.popBack() },
+                onPost = { scope.launch { if (model.publish()) nav.popBack() } },
             )
         },
     ) { pad ->
@@ -426,6 +408,8 @@ fun NewGeocacheScreen(
     if (pickingLocation) {
         GeohashLocationPickerDialog(
             initialGeohash = model.geohash.value.ifBlank { null },
+            // A cache is a point to walk up to, not an area: always the finest tag NIP-CC asks for.
+            precision = GeocacheGeohash.MAX_TAGGED,
             onDismiss = { pickingLocation = false },
             onConfirm = {
                 model.geohash.value = it

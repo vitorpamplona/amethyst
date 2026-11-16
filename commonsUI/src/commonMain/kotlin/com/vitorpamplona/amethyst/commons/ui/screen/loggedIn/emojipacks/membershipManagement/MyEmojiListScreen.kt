@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membershipManagement
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -35,7 +33,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -43,9 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -210,31 +205,24 @@ private fun SelectedEmojiPackCard(
             if (accountViewModel.isLoggedUser(packNote.author)) null else packNote.author?.toBestDisplayName()
         }
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        EmojiPackCard(
-            title = title,
-            emojiUrls = emojiUrls,
-            coverImage = image,
-            author = author,
-            onClick = onOpen,
-        )
-        // Remove button is on top-start so it doesn't clash with the cover badge (top-end).
-        IconButton(
-            onClick = onRemove,
-            modifier =
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(Res.string.remove_from_emoji_list),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
+    // The remove button sits in the card's footer, beside the title: over the emoji sheet it
+    // would cover the emojis, which fill the card's corners in a small pack.
+    EmojiPackCard(
+        title = title,
+        emojiUrls = emojiUrls,
+        coverImage = image,
+        author = author,
+        onClick = onOpen,
+        modifier = modifier,
+        action = {
+            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    symbol = MaterialSymbols.Delete,
+                    contentDescription = stringRes(Res.string.remove_from_emoji_list),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        },
+    )
 }

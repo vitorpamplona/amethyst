@@ -77,12 +77,14 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_summary
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_title
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_event
+import com.vitorpamplona.amethyst.commons.resources.publish
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -113,8 +115,11 @@ fun NewCalendarEventScreen(
 
     Scaffold(
         topBar = {
-            SavingTopBar(
+            ActionTopBar(
+                postRes = if (vm.isEditing) Res.string.save else Res.string.publish,
                 titleRes = if (vm.isEditing) Res.string.edit_calendar_event else Res.string.new_calendar_event,
+                // Not while the cover is still uploading (the event would go out without it) or a publish is running.
+                isActive = { vm.isValid() && vm.isEndAfterStart() && !vm.isUploadingImage.value && !vm.isPublishing.value },
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {

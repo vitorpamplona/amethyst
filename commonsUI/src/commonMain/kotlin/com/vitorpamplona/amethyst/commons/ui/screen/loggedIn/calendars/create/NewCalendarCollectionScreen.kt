@@ -66,13 +66,15 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_collection_no_event
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -89,8 +91,10 @@ fun NewCalendarCollectionScreen(
 
     Scaffold(
         topBar = {
-            SavingTopBar(
+            ActionTopBar(
+                postRes = if (editDTag == null) Res.string.create else Res.string.save,
                 titleRes = if (editDTag == null) Res.string.new_calendar_collection else Res.string.edit_calendar_collection,
+                isActive = { vm.isValid() && !vm.isPublishing.value },
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {

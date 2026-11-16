@@ -34,7 +34,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -117,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -171,21 +171,21 @@ fun CordnCreateGroupScreen(
 ) {
     val runtime = accountViewModel.account.cordnRuntime
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    if (nav.canPop()) {
-                        IconButton(onClick = { nav.popBack() }) {
-                            Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+    if (runtime == null) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        if (nav.canPop()) {
+                            IconButton(onClick = { nav.popBack() }) {
+                                Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                            }
                         }
-                    }
-                },
-                title = { Text(stringRes(Res.string.cordn_create_title)) },
-            )
-        },
-    ) { padding ->
-        if (runtime == null) {
+                    },
+                    title = { Text(stringRes(Res.string.cordn_create_title)) },
+                )
+            },
+        ) { padding ->
             // The app's own empty state, centred and titled, rather than a
             // sentence stranded in the top-left corner.
             EmptyState(
@@ -193,63 +193,140 @@ fun CordnCreateGroupScreen(
                 description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
-            return@Scaffold
+        }
+        return
+    }
+
+    val known by runtime.coordinators.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    val me = accountViewModel.account.signer.pubKey
+
+    // The draft outlives this screen: picking people is its own
+    // destination now, and a Navigation destination is disposed when you
+    // leave it, so `remember` here would lose a half-typed name on the way
+    // back from the draft.roster.
+    val draft = rememberCordnGroupDraft(accountViewModel)
+    var creation by remember { mutableStateOf<CordnGroupCreation?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val failureFallback = stringRes(Res.string.cordn_create_failed)
+    var busy by remember { mutableStateOf(false) }
+
+    // Coordinators this account has never used, from their CEP-6
+    // announcements. Not added to the account by looking: picking one here
+    // is what commits to it, and `createGroup` opens the session.
+    var discovering by remember { mutableStateOf(false) }
+    val discoverFailed = stringRes(Res.string.cordn_coordinators_discover_failed)
+
+    // Offers this account already holds are not offers; they are the choices
+    // above, and listing them twice would let the same coordinator be picked
+    // from two places with different relays.
+    val offers =
+        remember(draft.discovered, known) {
+            val knownKeys = known.mapTo(mutableSetOf()) { it.pubKey }
+            draft.discovered
+                ?.coordinators
+                ?.filter { it.pubKey !in knownKeys }
+                .orEmpty()
         }
 
-        val known by runtime.coordinators.collectAsStateWithLifecycle()
+    val choices = remember(known, offers) { known + offers.map { it.toConfig() } }
+
+    // A re-discovery can drop the coordinator that was picked -- it stopped
+    // announcing, or it is now in `known` and therefore not an offer. Left
+    // alone, `draft.selected` would name a coordinator no row shows: no radio
+    // checked, no exposure card, Create disabled, and nothing saying why.
+    // Falling back to the manual entry is the one state that explains itself,
+    // because its fields appear.
+    LaunchedEffect(choices) {
+        if (draft.selected != null && choices.none { it.pubKey == draft.selected }) draft.selected = null
+    }
+
+    val config = remember(draft.selected, draft.pubKeyInput, draft.relaysInput, choices) { resolve(choices, draft.selected, draft.pubKeyInput, draft.relaysInput) }
+
+    // Held, not read here: the coverage answers arrive one by one, and only the form below shows
+    // them. Reading them at this level would recompose the whole screen, top bar included, on each.
+    val coverageState = rememberCordnCoverage(runtime, draft.roster)
+
+    val canCreate = config != null && draft.name.isNotBlank()
+    val create: () -> Unit = create@{
+        val target = config ?: return@create
+        busy = true
+        error = null
+        scope.launch {
+            try {
+                // Only the people this coordinator can reach are
+                // attempted. An invitation is a Welcome left against
+                // a KeyPackage the invitee published *here*, so
+                // asking for one it does not hold is a call that can
+                // only fail -- and the draft.roster keeps them either way,
+                // for the link the outcome offers.
+                // takeIf(answered): an unanswered coordinator reports an
+                // EMPTY reachable set, so reading it directly would turn
+                // "we could not ask" into "invite nobody" and create the
+                // group silently empty. Unknown means attempt everyone
+                // and let each call say what went wrong.
+                val chosenCoverage = draft.selected?.let { coverageState.value[it] }
+                val reachable = chosenCoverage?.takeIf { it.answered }?.reachable
+                val invitees = draft.roster.filter { reachable == null || it in reachable }
+                val result =
+                    runtime.createGroupAndInvite(
+                        config = target,
+                        metadata =
+                            CordnGroupMetadata(
+                                name = draft.name.trim(),
+                                description = draft.description.trim(),
+                                adminPubkeys = draft.adminPubKeys(me),
+                            ),
+                        invitees = invitees,
+                    )
+                // Straight through when there is nothing to report:
+                // a dialog that only ever says "all five went out"
+                // is one nobody reads the sixth time.
+                if (result.failed.isEmpty() && invitees.size == draft.roster.size) {
+                    draft.clear()
+                    nav.nav(Route.CordnGroupChat(target.pubKey, result.gid))
+                } else {
+                    creation = result
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                val message = e.message ?: failureFallback
+                error = message
+                // The action is in the top bar and the error line is at the bottom of a long form,
+                // so the failure is also said where the reader is looking.
+                accountViewModel.toastManager.toast(Res.string.cordn_create_title, message, e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            ActionTopBar(
+                // How many will be asked, as the button said when it closed the form.
+                postLabel =
+                    if (draft.roster.isEmpty()) {
+                        stringRes(Res.string.cordn_create_action)
+                    } else {
+                        pluralStringRes(Res.plurals.cordn_create_action_invite, draft.roster.size, draft.roster.size)
+                    },
+                titleRes = Res.string.cordn_create_title,
+                isActive = { canCreate },
+                onCancel = { nav.popBack() },
+                onPost = create,
+                isBusy = { busy },
+            )
+        },
+    ) { padding ->
         // Collected, not read as `.value` below: the exposure card counts the
         // groups this coordinator already carries, and reading the flow inside
         // composition would leave that count frozen at whatever it was when the
         // screen opened — the one number on the card that can change while you
         // are looking at it, since creating a group is what changes it.
         val rooms by runtime.groups.all.collectAsStateWithLifecycle()
-        val scope = rememberCoroutineScope()
-
-        val me = accountViewModel.account.signer.pubKey
-
-        // The draft outlives this screen: picking people is its own
-        // destination now, and a Navigation destination is disposed when you
-        // leave it, so `remember` here would lose a half-typed name on the way
-        // back from the draft.roster.
-        val draft = rememberCordnGroupDraft(accountViewModel)
-        var creation by remember { mutableStateOf<CordnGroupCreation?>(null) }
-        var error by remember { mutableStateOf<String?>(null) }
-        val failureFallback = stringRes(Res.string.cordn_create_failed)
-        var busy by remember { mutableStateOf(false) }
-
-        // Coordinators this account has never used, from their CEP-6
-        // announcements. Not added to the account by looking: picking one here
-        // is what commits to it, and `createGroup` opens the session.
-        var discovering by remember { mutableStateOf(false) }
-        val discoverFailed = stringRes(Res.string.cordn_coordinators_discover_failed)
-
-        // Offers this account already holds are not offers; they are the choices
-        // above, and listing them twice would let the same coordinator be picked
-        // from two places with different relays.
-        val offers =
-            remember(draft.discovered, known) {
-                val knownKeys = known.mapTo(mutableSetOf()) { it.pubKey }
-                draft.discovered
-                    ?.coordinators
-                    ?.filter { it.pubKey !in knownKeys }
-                    .orEmpty()
-            }
-
-        val choices = remember(known, offers) { known + offers.map { it.toConfig() } }
-
-        // A re-discovery can drop the coordinator that was picked -- it stopped
-        // announcing, or it is now in `known` and therefore not an offer. Left
-        // alone, `draft.selected` would name a coordinator no row shows: no radio
-        // checked, no exposure card, Create disabled, and nothing saying why.
-        // Falling back to the manual entry is the one state that explains itself,
-        // because its fields appear.
-        LaunchedEffect(choices) {
-            if (draft.selected != null && choices.none { it.pubKey == draft.selected }) draft.selected = null
-        }
-
-        val config = remember(draft.selected, draft.pubKeyInput, draft.relaysInput, choices) { resolve(choices, draft.selected, draft.pubKeyInput, draft.relaysInput) }
-
-        val coverage by rememberCordnCoverage(runtime, draft.roster)
+        val coverage by coverageState
 
         // The best-covering coordinator is offered, not imposed: the moment the
         // user picks one themselves it stops moving under them, even if the
@@ -558,66 +635,6 @@ fun CordnCreateGroupScreen(
 
             error?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
-
-            Button(
-                onClick = {
-                    val target = config ?: return@Button
-                    busy = true
-                    error = null
-                    scope.launch {
-                        try {
-                            // Only the people this coordinator can reach are
-                            // attempted. An invitation is a Welcome left against
-                            // a KeyPackage the invitee published *here*, so
-                            // asking for one it does not hold is a call that can
-                            // only fail -- and the draft.roster keeps them either way,
-                            // for the link the outcome offers.
-                            // takeIf(answered): an unanswered coordinator reports an
-                            // EMPTY reachable set, so reading it directly would turn
-                            // "we could not ask" into "invite nobody" and create the
-                            // group silently empty. Unknown means attempt everyone
-                            // and let each call say what went wrong.
-                            val reachable = chosenCoverage?.takeIf { it.answered }?.reachable
-                            val invitees = draft.roster.filter { reachable == null || it in reachable }
-                            val result =
-                                runtime.createGroupAndInvite(
-                                    config = target,
-                                    metadata =
-                                        CordnGroupMetadata(
-                                            name = draft.name.trim(),
-                                            description = draft.description.trim(),
-                                            adminPubkeys = draft.adminPubKeys(me),
-                                        ),
-                                    invitees = invitees,
-                                )
-                            // Straight through when there is nothing to report:
-                            // a dialog that only ever says "all five went out"
-                            // is one nobody reads the sixth time.
-                            if (result.failed.isEmpty() && invitees.size == draft.roster.size) {
-                                draft.clear()
-                                nav.nav(Route.CordnGroupChat(target.pubKey, result.gid))
-                            } else {
-                                creation = result
-                            }
-                        } catch (e: Exception) {
-                            currentCoroutineContext().ensureActive()
-                            error = e.message ?: failureFallback
-                        } finally {
-                            busy = false
-                        }
-                    }
-                },
-                enabled = !busy && config != null && draft.name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    if (draft.roster.isEmpty()) {
-                        stringRes(Res.string.cordn_create_action)
-                    } else {
-                        pluralStringRes(Res.plurals.cordn_create_action_invite, draft.roster.size, draft.roster.size)
-                    },
-                )
             }
         }
 

@@ -875,7 +875,7 @@
     <string name="new_community_description">Description</string>
     <string name="new_community_rules">Rules (optional)</string>
     <string name="new_community_pick_cover">Add a cover image</string>
-    <string name="new_community_pick_cover_hint">Tap to pick a photo — it will be uploaded to your media server.</string>
+    <string name="new_community_pick_cover_hint">Choose a photo. It will be uploaded to your media server.</string>
     <string name="new_community_moderators_hint">Moderators can approve posts. You are always a moderator.</string>
     <string name="new_community_add_moderator">Add a moderator</string>
     <string name="new_community_add_moderator_placeholder">Name, npub, or NIP-05</string>
@@ -886,7 +886,7 @@
     <string name="new_community_relay_marker_requests">Requests</string>
     <string name="new_community_relay_marker_approvals">Approvals</string>
     <string name="new_community_rules_hint">Publishes a machine-readable rules document (NIP-9B) alongside the community. Clients that support it block posts that don't match before sending.</string>
-    <string name="new_community_rules_kinds_hint">Tap to allow a kind. Long-press a kind to set per-event size or daily-post limits.</string>
+    <string name="new_community_rules_kinds_hint">Select a kind to allow it. Press and hold a kind to set per-event size or daily-post limits.</string>
     <string name="new_community_rules_kind_custom_label">Custom kind</string>
     <string name="new_community_rules_kind_add">Add kind</string>
     <string name="new_community_rules_limits_title">Limits for kind %1$d</string>
@@ -1475,7 +1475,7 @@
     <string name="podcast_untitled">Untitled</string>
     <string name="podcast_no_episodes_yet">No episodes yet. Tap New episode to publish your first one.</string>
     <string name="podcast_create_your_show">Create your podcast</string>
-    <string name="podcast_tap_to_edit_show">Tap to edit show details</string>
+    <string name="podcast_tap_to_edit_show">Select to edit show details</string>
     <string name="podcast_create_show_hint">Set up your show's title, art, and details</string>
     <string name="podcast_value_editor_hint">Add recipients to split incoming sats by weight. Listeners boost or stream value to these destinations.</string>
     <string name="podcast_value_add_address">Add address manually</string>
@@ -2025,6 +2025,8 @@
     <string name="relay_group_location_manual">Enter a geohash manually</string>
     <string name="location_picker_title">Choose location</string>
     <string name="location_picker_hint">Move the map, search for a place, or use your current location.</string>
+    <string name="location_picker_hint_map_only">Drag the map to put the pin on the place, or press and hold a spot to jump there.</string>
+    <string name="location_picker_zoom_in">Zoom in closer to put the pin on the exact spot.</string>
     <string name="location_picker_search_hint">Search for a city or address</string>
     <string name="location_picker_search_empty">No matching place found.</string>
     <string name="location_picker_use_mine">Use my current location</string>
@@ -2177,10 +2179,10 @@
     <string name="media_compression_video_target_example">1080p video → %1$dp, %2$s Mbps</string>
     <string name="media_compression_preview_compressed">Compressed</string>
     <string name="media_compression_preview_original">Original</string>
-    <string name="media_compression_preview_tap_original">Tap the image to see the original</string>
-    <string name="media_compression_preview_tap_compressed">Showing the original. Tap to see the compressed image</string>
+    <string name="media_compression_preview_tap_original">Select the image to see the original</string>
+    <string name="media_compression_preview_tap_compressed">Showing the original. Select it to see the compressed image</string>
     <string name="media_compression_preview_uncompressed">Uploading the original file, without compression</string>
-    <string name="media_compression_preview_tap_zoom">Tap the image to zoom in and compare it with the original</string>
+    <string name="media_compression_preview_tap_zoom">Select the image to zoom in and compare it with the original</string>
     <string name="media_compression_preview_zoom_hint">Pinch, scroll or double-tap to zoom</string>
     <string name="video_compression_failed_title">Video compression failed</string>
     <string name="video_compression_failed_message">The original file is being uploaded instead.</string>
@@ -2686,6 +2688,8 @@
     <string name="buzz_forum_new_title">New forum topic</string>
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
+    <string name="buzz_forum_invalid_relay">This channel's relay address isn't valid, so the topic can't be posted there.</string>
+    <string name="buzz_forum_post_failed">Couldn't post the topic: %1$s</string>
     <string name="buzz_forum_thread_title">Forum thread</string>
     <string name="buzz_forum_no_replies">No replies yet. Be the first to respond.</string>
     <string name="buzz_dm_title">Direct Messages</string>
@@ -3563,6 +3567,21 @@
     <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
     <string name="no_emoji_packs">You don't have any emoji packs yet</string>
     <string name="emoji_pack_count">%1$d emojis</string>
+    <string name="emoji_copy_shortcode">Copy</string>
+    <string name="emoji_list_not_loaded_title">Emoji list not loaded yet</string>
+    <string name="emoji_list_not_loaded_description">Your emoji list has not arrived from your relays, and adding a pack now could replace it. Try again once your relays connect.</string>
+    <string name="emoji_from_pack">From %1$s</string>
+    <string name="emoji_pack_add">Add pack</string>
+    <string name="emoji_pack_added">Added</string>
+    <string name="search_emojis_header">Emojis</string>
+    <plurals name="search_emojis_show_all">
+        <item quantity="one">Show %1$d emoji</item>
+        <item quantity="other">Show all %1$d emojis</item>
+    </plurals>
+    <plurals name="emoji_pack_emoji_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojis</item>
+    </plurals>
     <string name="my_emoji_list_title">My Emoji List</string>
     <string name="my_emoji_list_explainer">Emoji packs you've added to your selection (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">You haven't added any emoji packs to your list yet</string>
@@ -4024,6 +4043,7 @@
     <string name="autoplay_videos_description">Automatically play videos when visible on screen</string>
     <string name="avif_metadata_strip_failed">Cannot strip metadata from AVIF: %1$s</string>
     <string name="award_badge">Award Badge</string>
+    <string name="award_badge_action">Award</string>
     <string name="back">Back</string>
     <string name="backup_keys">Backup Keys</string>
     <string name="backup_keys_search_keywords" translatable="false">nsec, private key, seed, mnemonic, export, keyring, keychain, password, credential manager, secret service, kwallet, unlock</string>
@@ -4481,6 +4501,7 @@
     <string name="edit_emoji_pack">Edit emoji pack</string>
     <string name="edit_message">Edit</string>
     <string name="edit_music_playlist">Edit playlist</string>
+    <string name="edit_music_track">Edit track</string>
     <string name="edit_post">Edit Post</string>
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and ":" autocomplete just like public ones.</string>
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and ":" autocomplete picker when this pack is in your emoji list.</string>
@@ -5109,7 +5130,7 @@
     </plurals>
     <string name="music_playlist_uploading_banner">Uploading cover and publishing. This will keep going even if you leave the screen.</string>
     <string name="music_track_audio_upload_cta">Upload an audio file</string>
-    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
+    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server along with the track.</string>
     <string name="music_track_cover_upload_cta">Upload a cover image</string>
     <string name="music_track_cover_upload_hint">Pick a square image to be the artwork for this track.</string>
     <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
@@ -5697,6 +5718,7 @@
     <string name="poll_deadline_passed">That time has already passed. Pick a later one.</string>
     <string name="polls">Polls</string>
     <string name="post">Post</string>
+    <string name="publish">Publish</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">This post has more than %1$d hashtag</item>
         <item quantity="other">This post has more than %1$d hashtags</item>
@@ -7151,7 +7173,7 @@
     <string name="cordn_create_outcome_waiting">Waiting for them</string>
     <string name="cordn_create_people_done">Done</string>
     <string name="cordn_create_people_empty">Nobody added yet. A group can be created empty and invitations sent later, but naming people now is what shows which coordinator can reach them.</string>
-    <string name="cordn_create_people_none">Nobody yet &#8212; tap to add people</string>
+    <string name="cordn_create_people_none">Nobody yet. Select to add people</string>
     <string name="cordn_create_people_note">Naming people now is what tells us which coordinator can reach them. Each one gets a Welcome left on that coordinator, which they pick up next time they open their app.</string>
     <plurals name="cordn_create_reach_count">
         <item quantity="one">Reachable on %1$d coordinator</item>
@@ -8678,20 +8700,8 @@
     <string name="devtools_event_unparseable">Could not read an event: %1$s</string>
     <string name="devtools_event_valid">Valid event</string>
     <string name="devtools_event_invalid">Invalid event</string>
-    <string name="devtools_event_id_ok">The id matches the content</string>
     <string name="devtools_event_id_mismatch">The id does not match the content. Computed id: %1$s</string>
-    <string name="devtools_event_sig_ok">The signature verifies</string>
     <string name="devtools_event_sig_bad">The signature does not verify</string>
-    <string name="devtools_event_future">created_at is in the future</string>
-    <string name="devtools_event_unknown_kind">Kind %1$d is not in Amethyst's kind registry</string>
-    <string name="devtools_event_source_relay">Unwrapped from a relay EVENT frame</string>
-    <string name="devtools_event_source_command">Unwrapped from a client EVENT command</string>
-    <string name="devtools_event_source_nembed">Unwrapped from an nembed</string>
-    <string name="devtools_event_created_at">Created at</string>
-    <string name="devtools_event_tags">Tags (%1$d)</string>
-    <string name="devtools_event_content">Content</string>
-    <string name="devtools_event_json">JSON</string>
-    <string name="devtools_event_kind_nip">%1$s, NIP-%2$s</string>
     <string name="devtools_event_find_on_relays">Find on relays</string>
     <string name="devtools_kinds_search">Search by number, name or NIP</string>
     <plurals name="devtools_kinds_count">
@@ -9111,6 +9121,13 @@
     <string name="geohash_level_building">Building</string>
     <string name="geohash_level_region">Region</string>
     <string name="geohash_level_block">Block</string>
+    <string name="geohash_area_continent">~5000 km</string>
+    <string name="geohash_area_region">~1250 km</string>
+    <string name="geohash_area_province">~39 km</string>
+    <string name="geohash_area_city">~5 km</string>
+    <string name="geohash_area_neighborhood">~1.2 km</string>
+    <string name="geohash_area_block">~150 m</string>
+    <string name="geohash_area_building">~38 m</string>
     <string name="geohash_chats_intro_title">Chat by location</string>
     <string name="geohash_chats_intro_description">Anonymous, ephemeral rooms shared with everyone in the same map cell. Interoperable with Bitchat.</string>
     <string name="geohash_chats_empty_title">No location channels yet</string>

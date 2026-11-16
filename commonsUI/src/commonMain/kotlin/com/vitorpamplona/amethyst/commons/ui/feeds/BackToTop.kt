@@ -28,6 +28,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -119,6 +120,17 @@ fun ReportToBackToTop(
 @Composable
 fun ReportToBackToTop(
     gridState: LazyGridState,
+    sendToTop: () -> Unit,
+) = ReportToBackToTop(
+    key = gridState,
+    isScrolledAway = { gridState.firstVisibleItemIndex >= SCROLLED_AWAY_AFTER_GRID_CELLS },
+    isScrollInProgress = { gridState.isScrollInProgress },
+    sendToTop = sendToTop,
+)
+
+@Composable
+fun ReportToBackToTop(
+    gridState: LazyStaggeredGridState,
     sendToTop: () -> Unit,
 ) = ReportToBackToTop(
     key = gridState,

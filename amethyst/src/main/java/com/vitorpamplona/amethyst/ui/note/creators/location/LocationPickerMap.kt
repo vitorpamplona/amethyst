@@ -65,6 +65,7 @@ import org.osmdroid.views.overlay.Polygon
  * - [recenter] animates the map to a new point when its value changes (e.g. after
  *   a place search or a "use my location" tap). Passing the same value twice is a
  *   no-op, so it is safe to hoist in state.
+ * - [onZoomChanged] fires with the new zoom level whenever the map zooms.
  * - [onUserInteraction] fires when a finger first lands on the map. [onCenterChanged]
  *   alone cannot tell a user pan from osmdroid's own layout-time scroll (which the
  *   MapView emits at the opening center with pixel-quantized coordinates), so callers
@@ -84,6 +85,7 @@ fun LocationPickerMap(
     highlight: BoundingBox? = null,
     highlightColor: Int = 0,
     onCenterChanged: ((Double, Double) -> Unit)? = null,
+    onZoomChanged: ((Double) -> Unit)? = null,
     onUserInteraction: (() -> Unit)? = null,
     onPick: (Double, Double) -> Unit,
 ) {
@@ -91,6 +93,7 @@ fun LocationPickerMap(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnPick by rememberUpdatedState(onPick)
     val currentOnCenterChanged by rememberUpdatedState(onCenterChanged)
+    val currentOnZoomChanged by rememberUpdatedState(onZoomChanged)
     val currentOnUserInteraction by rememberUpdatedState(onUserInteraction)
     val darkTheme = !MaterialTheme.colorScheme.isLight
 
@@ -155,6 +158,7 @@ fun LocationPickerMap(
 
                         override fun onZoom(event: ZoomEvent?): Boolean {
                             mapCenter.let { currentOnCenterChanged?.invoke(it.latitude, it.longitude) }
+                            currentOnZoomChanged?.invoke(zoomLevelDouble)
                             return false
                         }
                     },

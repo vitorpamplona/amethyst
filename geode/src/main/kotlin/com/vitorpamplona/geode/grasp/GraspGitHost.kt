@@ -217,7 +217,7 @@ class GraspGitHost(
 
     private fun ensureRepository(directory: File): File {
         if (File(directory, "HEAD").exists()) return directory
-        if (!directory.mkdirs() && !directory.isDirectory) throw IllegalStateException("cannot create $directory")
+        check(directory.mkdirs() || directory.isDirectory) { "cannot create $directory" }
         run(directory, "init", "--bare", "-q")
         run(directory, "config", "http.receivepack", "true")
         run(directory, "config", "uploadpack.allowFilter", "true")
@@ -231,7 +231,7 @@ class GraspGitHost(
     ) {
         val process = ProcessBuilder(listOf(git) + args).directory(directory).redirectErrorStream(true).start()
         val out = process.inputStream.readBytes().decodeToString()
-        if (!process.waitFor(30, TimeUnit.SECONDS) || process.exitValue() != 0) throw IllegalStateException("git ${args.joinToString(" ")}: $out")
+        check(process.waitFor(30, TimeUnit.SECONDS) && process.exitValue() == 0) { "git ${args.joinToString(" ")}: $out" }
     }
 
     private fun runBackend(

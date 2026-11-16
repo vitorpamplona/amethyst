@@ -212,4 +212,14 @@
     <string name="napplet_cap_fs">Arquivos</string>
     <string name="napplet_cap_common">Ações sociais</string>
     <string name="napplet_cap_intent">Abrir outros apps</string>
+    <string name="front_page_print_channel_name">The Observer, imprimindo</string>
+    <string name="front_page_print_channel_description">Mostra o The Observer enquanto ele é impresso, para que termine depois que você sair do app.</string>
+    <string name="front_page_print_cancel">Cancelar</string>
+    <string name="front_page_print_title">Imprimindo o The Observer</string>
+    <string name="front_page_print_step_probe">Verificando sua classificação</string>
+    <string name="front_page_print_step_pull">Lendo as editorias · %1$d de %2$d</string>
+    <string name="front_page_print_step_write">Escrevendo</string>
+    <string name="front_page_print_step_fix">Corrigindo a página</string>
+    <string name="front_page_print_step_check">Verificando citações, imagens e links</string>
+    <string name="front_page_print_step_publish">Publicando seu The Observer</string>
 </resources>

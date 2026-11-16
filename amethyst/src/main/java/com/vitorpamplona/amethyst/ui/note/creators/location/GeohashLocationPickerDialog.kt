@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -96,7 +97,14 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_search_empty
 import com.vitorpamplona.amethyst.commons.resources.location_picker_search_hint
 import com.vitorpamplona.amethyst.commons.resources.location_picker_title
 import com.vitorpamplona.amethyst.commons.resources.location_picker_use_mine
+import com.vitorpamplona.amethyst.commons.resources.location_picker_zoom_in
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LAT
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LON
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_ZOOM
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.zoomForGeohashLength
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.areaSize
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.label
@@ -107,6 +115,7 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -115,37 +124,6 @@ import org.osmdroid.util.GeoPoint
 
 /** Zoom the map animates to after a search hit or a "use my location" tap. */
 private const val RECENTER_ZOOM = 14.0
-
-/** How far out to start when the picker opens with nothing selected yet. */
-private const val WORLD_ZOOM = 2.5
-
-/**
- * A starting zoom so a seeded geohash cell roughly fills the view: a coarse cell
- * (few chars → large area) opens zoomed out, a fine cell zoomed in. Without this a
- * region-level seed would open uselessly tight and a building-level seed too loose.
- */
-private fun zoomForGeohashLength(length: Int): Double =
-    when {
-        length <= 1 -> 2.0
-        length == 2 -> 4.0
-        length == 3 -> 6.5
-        length == 4 -> 9.0
-        length == 5 -> 12.0
-        length == 6 -> 14.0
-        length == 7 -> 16.0
-        else -> 17.5
-    }
-
-/**
- * Neutral starting center when the picker opens with no seed: a genuinely unnamed
- * point in the mid-Atlantic, framing the Americas, Europe and Africa at [WORLD_ZOOM].
- *
- * Deliberately NOT 20N/0E — that is inland Mali (it reverse-geocodes to Tessalit) and
- * sits exactly on the prime meridian, where a sub-kilometre pan flips the geohash
- * between the `e…` and `s…` halves of the world and looks like a broken readout.
- */
-private const val WORLD_CENTER_LAT = 20.0
-private const val WORLD_CENTER_LON = -30.0
 
 /** Give up waiting for a GPS fix after this long so the button never spins forever. */
 private const val GPS_FIX_TIMEOUT_MS = 20_000L
@@ -163,6 +141,7 @@ fun GeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+    precision: Int? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -176,6 +155,7 @@ fun GeohashLocationPickerDialog(
                     confirmLabel = stringRes(Res.string.location_picker_confirm),
                     onConfirm = onConfirm,
                     modifier = Modifier.fillMaxWidth().weight(1f),
+                    precision = precision,
                 )
             }
         }
@@ -204,22 +184,32 @@ fun GeohashLocationPickerContent(
     confirmLabel: String,
     onConfirm: (String) -> Unit,
     modifier: Modifier = Modifier,
+    precision: Int? = null,
 ) {
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val locationManager = LocalAppServices.current.deviceLocation
 
-    val seed = remember(initialGeohash) { initialGeohash?.takeIf { it.isNotBlank() }?.let { GeoHash.decode(it) } }
-    val seedLen = initialGeohash?.trim()?.length ?: 0
+    // A geohash is lowercase; an uppercase or otherwise invalid seed decodes to nothing.
+    val seedText = remember(initialGeohash) { initialGeohash?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } }
+    val seed = remember(seedText) { seedText?.let { GeoHash.decode(it) } }
+    val seedLen = if (seed != null) seedText?.length ?: 0 else 0
+    // A seed that matches no level exactly (3 characters, or a geocache's 9) shows the nearest one.
+    val seedLevel = remember(seed) { if (seed != null) GeohashPickerDefaults.nearestLevel(seedLen) else null }
 
     // The map opens centered here. Without a seed there is no real selection yet.
     val initialLat = seed?.centerLat ?: WORLD_CENTER_LAT
     val initialLon = seed?.centerLon ?: WORLD_CENTER_LON
 
-    var pickedLat by remember { mutableStateOf(seed?.centerLat) }
-    var pickedLon by remember { mutableStateOf(seed?.centerLon) }
-    var hasSelection by remember { mutableStateOf(seed != null) }
+    var pickedLat by remember(seed) { mutableStateOf(seed?.centerLat) }
+    var pickedLon by remember(seed) { mutableStateOf(seed?.centerLon) }
+    var hasSelection by remember(seed) { mutableStateOf(seed != null) }
+
+    val openingZoom = if (seed != null) zoomForGeohashLength(seedLen) else WORLD_ZOOM
+    var mapZoom by remember(seed) { mutableStateOf(openingZoom) }
+    // A search hit or a GPS fix flies in close enough to place a fixed-precision pin.
+    val recenterZoom = if (precision != null) maxOf(RECENTER_ZOOM, zoomForGeohashLength(precision)) else RECENTER_ZOOM
 
     // osmdroid emits a scroll event when the MapView is first laid out, reporting a
     // pixel-quantized version of the opening center — at world zoom a single pixel is
@@ -228,17 +218,26 @@ fun GeohashLocationPickerContent(
     // enabled Confirm with nothing chosen. Only map movement that follows a real finger
     // down on the map counts, so an automatic scroll can never become a selection.
     var mapTouched by remember { mutableStateOf(false) }
-    var level by remember {
-        mutableStateOf(GeohashChannelLevel.forChars(seedLen) ?: GeohashChannelLevel.CITY)
-    }
+    var level by remember(seed) { mutableStateOf(seedLevel ?: GeohashChannelLevel.CITY) }
     var recenter by remember { mutableStateOf<GeoPoint?>(null) }
 
+    // The pin moved once the picked point is no longer the seed's centre (or, unseeded, once anything
+    // was picked).
+    val moved = hasSelection && !(seed != null && pickedLat == seed.centerLat && pickedLon == seed.centerLon)
     val cell =
-        remember(pickedLat, pickedLon, level, hasSelection) {
-            val lat = pickedLat
-            val lon = pickedLon
-            if (hasSelection && lat != null && lon != null) GeoHash.encode(lat, lon, level.chars).toString() else null
+        remember(seedText, seedLevel, pickedLat, pickedLon, level, moved, precision, mapZoom) {
+            GeohashPickerDefaults.pickedCell(
+                seedText = if (seed != null) seedText else null,
+                seedLevel = seedLevel,
+                level = level,
+                precision = precision,
+                moved = moved,
+                lat = pickedLat,
+                lon = pickedLon,
+                zoom = mapZoom,
+            )
         }
+    val needsZoomIn = GeohashPickerDefaults.needsZoomIn(precision, moved, mapZoom)
 
     // Debounce the reverse-geocode: panning changes [cell] constantly, and we don't
     // want to hammer the Geocoder — only resolve a place name once the map settles.
@@ -255,8 +254,12 @@ fun GeohashLocationPickerContent(
     // When the area-size level changes (only after a real selection), zoom the map so the
     // new cell is comfortably framed.
     var zoomTo by remember { mutableStateOf<Double?>(null) }
-    LaunchedEffect(level) {
-        if (hasSelection) zoomTo = zoomForGeohashLength(level.chars)
+    // Not on open: a seed already opened at its own zoom, which a level that only approximates it
+    // (a 3-character seed shown as Region) would otherwise override.
+    LaunchedEffect(seed) {
+        snapshotFlow { level }.drop(1).collect { newLevel ->
+            if (hasSelection) zoomTo = zoomForGeohashLength(newLevel.chars)
+        }
     }
 
     // Lift the center pin briefly whenever the target point moves, for tactile feedback.
@@ -359,12 +362,13 @@ fun GeohashLocationPickerContent(
                 longitude = initialLon,
                 pickedLatitude = null,
                 pickedLongitude = null,
-                zoom = if (seed != null) zoomForGeohashLength(seedLen) else WORLD_ZOOM,
+                zoom = openingZoom,
                 recenter = recenter,
-                recenterZoom = RECENTER_ZOOM,
+                recenterZoom = recenterZoom,
                 zoomTo = zoomTo,
                 highlight = highlight,
                 highlightColor = highlightColor,
+                onZoomChanged = { mapZoom = it },
                 onUserInteraction = { mapTouched = true },
                 onCenterChanged = { lat, lon ->
                     // Only a movement the user drove counts as their first real pick.
@@ -425,6 +429,8 @@ fun GeohashLocationPickerContent(
             cell = cell,
             settledCell = settledCell,
             level = level,
+            showLevels = precision == null,
+            needsZoomIn = needsZoomIn,
             confirmLabel = confirmLabel,
             onLevel = { level = it },
             onConfirm = { cell?.let(onConfirm) },
@@ -638,6 +644,8 @@ private fun PickerBottomBar(
     cell: String?,
     settledCell: String?,
     level: GeohashChannelLevel,
+    showLevels: Boolean,
+    needsZoomIn: Boolean,
     confirmLabel: String,
     onLevel: (GeohashChannelLevel) -> Unit,
     onConfirm: () -> Unit,
@@ -656,32 +664,35 @@ private fun PickerBottomBar(
                 .imePaddingSafe()
                 .padding(16.dp),
         ) {
-            Text(
-                text = stringRes(Res.string.location_picker_area),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Drop the 48dp minimum touch-target so wrapped chip rows sit 8dp apart
-            // (matching the horizontal gap) instead of ~24dp apart.
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    GeohashChannelLevel.ordered.forEach { lvl ->
-                        FilterChip(
-                            selected = lvl == level,
-                            onClick = { onLevel(lvl) },
-                            label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
-                        )
+            // A caller that fixes the precision (a geocache) picks a point, not an area.
+            if (showLevels) {
+                Text(
+                    text = stringRes(Res.string.location_picker_area),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Drop the 48dp minimum touch-target so wrapped chip rows sit 8dp apart
+                // (matching the horizontal gap) instead of ~24dp apart.
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        GeohashChannelLevel.ordered.forEach { lvl ->
+                            FilterChip(
+                                selected = lvl == level,
+                                onClick = { onLevel(lvl) },
+                                label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
+                            )
+                        }
                     }
                 }
             }
 
             if (cell == null) {
                 Text(
-                    text = stringRes(Res.string.location_picker_hint),
+                    text = stringRes(if (needsZoomIn) Res.string.location_picker_zoom_in else Res.string.location_picker_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -774,15 +785,3 @@ private fun geohashBounds(geohash: String): BoundingBox? {
         gh.centerLon - lonWidth / 2,
     )
 }
-
-/** A rough physical size for a geohash cell at this precision, for the chip subtitle. */
-private fun GeohashChannelLevel.areaSize(): String =
-    when (this) {
-        GeohashChannelLevel.CONTINENT -> "~5000 km"
-        GeohashChannelLevel.REGION -> "~1250 km"
-        GeohashChannelLevel.PROVINCE -> "~39 km"
-        GeohashChannelLevel.CITY -> "~5 km"
-        GeohashChannelLevel.NEIGHBORHOOD -> "~1.2 km"
-        GeohashChannelLevel.BLOCK -> "~150 m"
-        GeohashChannelLevel.BUILDING -> "~38 m"
-    }

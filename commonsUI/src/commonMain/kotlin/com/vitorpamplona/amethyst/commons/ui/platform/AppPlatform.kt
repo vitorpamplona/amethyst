@@ -106,6 +106,13 @@ interface AppPlatform {
     val supportsRemoteSignerLogin: Boolean get() = false
 
     /**
+     * Whether a mouse or trackpad is the main pointer (the desktop), so dense controls need not be
+     * padded out to Material's 48dp touch target. False wherever a finger is the pointer, including
+     * Android tablets on the wide layouts.
+     */
+    val hasFinePointer: Boolean get() = false
+
+    /**
      * The signer apps that take a `nostrconnect://` address, for the login dialog to let the user
      * pick one when there are several. Empty where the platform picks the app itself (Desktop's
      * registered handler) or none is installed.
@@ -212,12 +219,17 @@ interface AppPlatform {
     @Composable
     fun SpeakNameButton(name: String) {}
 
-    /** A full-screen dialog to pick a place (map, search, "use my location"), as a geohash. */
+    /**
+     * A dialog to pick a place (map, search, "use my location"), as a geohash. The reader picks how
+     * big an area it names, unless [precision] fixes its length: then the picker picks a point at
+     * exactly that many characters (a geocache needs 9) and offers no area sizes.
+     */
     @Composable
     fun GeohashLocationPickerDialog(
         initialGeohash: String?,
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
+        precision: Int?,
     ) {}
 
     /** The picker's body, for screens that host it in their own scaffold. */
@@ -418,7 +430,8 @@ fun GeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm)
+    precision: Int? = null,
+) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
 
 @Composable
 fun GeohashLocationPickerContent(

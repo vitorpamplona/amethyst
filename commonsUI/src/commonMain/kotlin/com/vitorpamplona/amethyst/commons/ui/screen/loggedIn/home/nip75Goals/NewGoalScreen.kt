@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PublishingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -100,7 +100,7 @@ fun NewGoalScreen(
 
     Scaffold(
         topBar = {
-            PostingTopBar(
+            PublishingTopBar(
                 titleRes = Res.string.new_goal,
                 isActive = goalViewModel::canPost,
                 onCancel = {

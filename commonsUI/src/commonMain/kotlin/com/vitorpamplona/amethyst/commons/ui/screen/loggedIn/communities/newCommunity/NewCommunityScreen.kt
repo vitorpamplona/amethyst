@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.commons.ui.components.BannerImageTileMaxWidth
+import com.vitorpamplona.amethyst.commons.ui.components.FormImageTile
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -314,30 +316,32 @@ private fun CommunityImagePicker(
     accountViewModel: AccountViewModel,
     onPickImage: () -> Unit,
 ) {
-    val existingUrl = model.existingImageUrl
-    when {
-        model.hasPickedImage() -> {
-            model.multiOrchestrator?.let {
-                Box(modifier = Modifier.clickable(onClick = onPickImage)) {
-                    ShowImageUploadGallery(
-                        list = it,
-                        onDelete = { model.setPickedMedia(persistentListOf()) },
-                        accountViewModel = accountViewModel,
-                    )
+    FormImageTile(maxWidth = BannerImageTileMaxWidth) {
+        val existingUrl = model.existingImageUrl
+        when {
+            model.hasPickedImage() -> {
+                model.multiOrchestrator?.let {
+                    Box(modifier = Modifier.clickable(onClick = onPickImage)) {
+                        ShowImageUploadGallery(
+                            list = it,
+                            onDelete = { model.setPickedMedia(persistentListOf()) },
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
-        }
 
-        !existingUrl.isNullOrBlank() -> {
-            ExistingCommunityCover(
-                url = existingUrl,
-                onClick = onPickImage,
-                onClear = { model.existingImageUrl = null },
-            )
-        }
+            !existingUrl.isNullOrBlank() -> {
+                ExistingCommunityCover(
+                    url = existingUrl,
+                    onClick = onPickImage,
+                    onClear = { model.existingImageUrl = null },
+                )
+            }
 
-        else -> {
-            CommunityImagePlaceholder(onClick = onPickImage)
+            else -> {
+                CommunityImagePlaceholder(onClick = onPickImage)
+            }
         }
     }
 }

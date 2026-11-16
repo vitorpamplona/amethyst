@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -102,7 +102,7 @@ private fun ChannelMetadataScaffold(
 ) {
     Scaffold(
         topBar = {
-            PostingTopBar(
+            CreatingTopBar(
                 titleRes = Res.string.relay_chat,
                 isActive = postViewModel::canPost,
                 onCancel = {

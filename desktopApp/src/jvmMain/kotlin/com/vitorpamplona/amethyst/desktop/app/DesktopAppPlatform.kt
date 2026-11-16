@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
+import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeohashLocationPickerContent
+import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -112,6 +114,8 @@ class DesktopAppPlatform(
 
     // Desktop has no signer app to hand keys to; a NIP-46 remote signer plays that role.
     override val supportsRemoteSignerLogin: Boolean get() = true
+
+    override val hasFinePointer: Boolean get() = true
 
     // Only the addresses the login screen makes: never a scheme a page or note could slip in.
     override fun openNostrConnect(
@@ -227,6 +231,23 @@ class DesktopAppPlatform(
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = DesktopGeocacheMapTab(feedContentState, accountViewModel, nav)
+
+    // The tile map with a pin at its centre; no place search or GPS, which need what the desktop lacks.
+    @Composable
+    override fun GeohashLocationPickerDialog(
+        initialGeohash: String?,
+        onDismiss: () -> Unit,
+        onConfirm: (String) -> Unit,
+        precision: Int?,
+    ) = DesktopGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
+
+    @Composable
+    override fun GeohashLocationPickerContent(
+        initialGeohash: String?,
+        confirmLabel: String,
+        onConfirm: (String) -> Unit,
+        modifier: Modifier,
+    ) = DesktopGeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
 
     @Composable
     override fun platformScreenTitle(route: Route): String? {

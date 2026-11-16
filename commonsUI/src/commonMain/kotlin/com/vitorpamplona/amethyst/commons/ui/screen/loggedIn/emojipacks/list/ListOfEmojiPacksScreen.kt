@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -240,25 +239,23 @@ private fun OwnedEmojiPackCard(
             (pack.publicEmojis + pack.privateEmojis).map { it.url }
         }
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Owned packs omit the cover badge: the top-right corner is reserved for the
-        // edit/delete overflow menu, which the user needs more than a reminder of the
-        // cover they themselves uploaded.
-        EmojiPackCard(
-            title = pack.title,
-            emojiUrls = emojiUrls,
-            coverImage = null,
-            onClick = onClick,
-        )
-        Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+    // The edit/delete menu sits in the card's footer, beside the title: over the emoji sheet it
+    // would cover the emojis, which fill the card's corners in a small pack.
+    EmojiPackCard(
+        title = pack.title,
+        emojiUrls = emojiUrls,
+        coverImage = null,
+        onClick = onClick,
+        modifier = modifier,
+        action = {
             EmojiPackOptionsButton(
                 pack = pack,
                 onEdit = onEdit,
                 onDelete = onDelete,
                 accountViewModel = accountViewModel,
             )
-        }
-    }
+        },
+    )
 }
 
 @Composable

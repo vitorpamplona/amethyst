@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,35 +92,32 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.canCaptureFromCamera
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
-import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDateButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker
-import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.NewPostInvoiceRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinkedImageMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
-import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerPostOptionTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.EncryptedUploadErrorDialog
@@ -179,7 +175,7 @@ fun NewGroupDMScreen(
 
     Scaffold(
         topBar = {
-            PostingTopBar(
+            SendingTopBar(
                 titleRes = Res.string.private_message,
                 isActive = postViewModel::canPost,
                 onCancel = {
@@ -226,7 +222,7 @@ fun GroupDMScreenContent(
     val scrollState = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).then(composerBody())) {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true),
                 verticalArrangement = spacedBy(Size10dp),
@@ -279,7 +275,7 @@ fun GroupDMScreenContent(
                     }
                 }
 
-                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
+                if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     ZapRaiserRequest(
                         stringRes(id = Res.string.zapraiser),
                         postViewModel,
@@ -396,15 +392,7 @@ private fun BottomRowActions(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
+    ComposerToolbar { _ ->
         val room by postViewModel.room.collectAsStateWithLifecycle()
 
         if (room != null) {
@@ -442,7 +430,7 @@ private fun BottomRowActions(
             TakePictureButton(
                 onPictureTaken = { postViewModel.pickedMedia(it) },
             )
-        } else {
+        } else if (canCaptureFromCamera) {
             IconButton(
                 onClick = {
                     accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
@@ -461,7 +449,7 @@ private fun BottomRowActions(
             TakeVideoButton(
                 onVideoTaken = { postViewModel.pickedMedia(it) },
             )
-        } else {
+        } else if (canCaptureFromCamera) {
             IconButton(
                 onClick = {
                     accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
@@ -496,37 +484,7 @@ private fun BottomRowActions(
             }
         }
 
-        ForwardZapToButton(postViewModel.wantsForwardZapTo) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
-        }
-
-        if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapraiser) {
-                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
-            }
-        }
-
-        MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
-            postViewModel.toggleMarkAsSensitive()
-        }
-
-        ExpirationDateButton(postViewModel.wantsExpirationDate) {
-            postViewModel.toggleExpirationDate()
-        }
-
-        AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
-            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-        }
-
-        AddSecretEmojiButton(postViewModel.wantsSecretEmoji) {
-            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
-        }
-
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
-        }
+        ComposerPostOptionTools(postViewModel)
     }
 }
 

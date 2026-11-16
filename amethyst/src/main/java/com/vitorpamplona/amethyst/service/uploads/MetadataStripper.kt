@@ -93,6 +93,7 @@ fun interface AvifExifReader {
  */
 object MetadataStripper {
     private const val TAG = "MetadataStripper"
+    private const val TEMP_FILE_LABEL = "temp file"
 
     private val SENSITIVE_EXIF_TAGS =
         arrayOf(
@@ -196,7 +197,7 @@ object MetadataStripper {
             val inputStream =
                 context.contentResolver.openInputStream(uri)
                     ?: run {
-                        tempFile.deleteOrWarn(TAG, "temp file")
+                        tempFile.deleteOrWarn(TAG, TEMP_FILE_LABEL)
                         return StrippingResult(uri, false)
                     }
             inputStream.use { input ->
@@ -215,7 +216,7 @@ object MetadataStripper {
             StrippingResult(tempFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            tempFile?.deleteOrWarn(TAG, "temp file")
+            tempFile?.deleteOrWarn(TAG, TEMP_FILE_LABEL)
             Log.d(TAG) { "Failed to strip image metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
@@ -279,7 +280,7 @@ object MetadataStripper {
             Log.d(TAG) { "Stripped metadata from $kind" }
             StrippingResult(output.toUri(), true)
         } catch (e: Exception) {
-            tempFile?.deleteOrWarn(TAG, "temp file")
+            tempFile?.deleteOrWarn(TAG, TEMP_FILE_LABEL)
             if (e is CancellationException) throw e
             // An interrupted remux surfaces as InterruptedIOException, which runInterruptible does
             // not turn into a cancellation: a cancelled upload stops here instead of asking the user.
@@ -301,7 +302,7 @@ object MetadataStripper {
                     input.copyTo(output)
                 }
             } ?: run {
-                tempInputFile.deleteOrWarn(TAG, "temp file")
+                tempInputFile.deleteOrWarn(TAG, TEMP_FILE_LABEL)
                 return StrippingResult(uri, false)
             }
 
@@ -342,7 +343,7 @@ object MetadataStripper {
             }
 
             if (startOffset == 0L && endOffset == fileSize) {
-                tempInputFile.deleteOrWarn(TAG, "temp file")
+                tempInputFile.deleteOrWarn(TAG, TEMP_FILE_LABEL)
                 tempInputFile = null
                 return StrippingResult(uri, true) // no tags found, already clean
             }
@@ -362,14 +363,14 @@ object MetadataStripper {
                     }
                 }
             }
-            tempInputFile.deleteOrWarn(TAG, "temp file")
+            tempInputFile.deleteOrWarn(TAG, TEMP_FILE_LABEL)
             tempInputFile = null
 
             Log.d(TAG, "Stripped ID3 tags from MP3")
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            tempInputFile?.deleteOrWarn(TAG, "temp file")
+            tempInputFile?.deleteOrWarn(TAG, TEMP_FILE_LABEL)
             Log.d(TAG) { "Failed to strip MP3 metadata: ${e.message}" }
             StrippingResult(uri, false)
         }

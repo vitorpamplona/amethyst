@@ -25,11 +25,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,11 +41,14 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_body_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_invalid_relay
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_new_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_action
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_failed
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
@@ -77,10 +77,60 @@ fun BuzzForumPostScreen(
     var body by remember { mutableStateOf("") }
     var isPosting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val invalidRelayText = stringRes(Res.string.buzz_forum_invalid_relay)
     val scope = rememberCoroutineScope()
 
+    val post: () -> Unit = post@{
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+        if (relay == null) {
+            error = invalidRelayText
+            return@post
+        }
+        isPosting = true
+        error = null
+        // Publish on IO, then pop back on the composition's main scope.
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    // Resolve any `@`/`nostr:` mention in the body into a `nostr:` ref and
+                    // collect the cited users as `p` tags, so naming a member both notifies
+                    // them and renders as a link — matching the chat/reply composers.
+                    val tagger =
+                        NewMessageTagger(
+                            message = body,
+                            pTags = emptyList(),
+                            eTags = emptyList(),
+                            dao = accountViewModel,
+                        )
+                    tagger.run()
+                    accountViewModel.account.signAndSendPrivatelyOrBroadcast(
+                        ForumPostEvent.build(
+                            channelId,
+                            tagger.message.trim(),
+                            mentions = tagger.pTags?.map { it.pubkeyHex }.orEmpty(),
+                        ),
+                    ) { listOf(relay) }
+                }
+                nav.popBack()
+            } catch (e: Exception) {
+                isPosting = false
+                currentCoroutineContext().ensureActive()
+                error = loadStringRes(Res.string.buzz_forum_post_failed, e.message ?: e::class.simpleName)
+            }
+        }
+    }
+
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_forum_new_title), nav) },
+        topBar = {
+            ActionTopBar(
+                postRes = Res.string.buzz_forum_post_action,
+                titleRes = Res.string.buzz_forum_new_title,
+                isActive = { body.isNotBlank() },
+                onCancel = { nav.popBack() },
+                onPost = post,
+                isBusy = { isPosting },
+            )
+        },
     ) { padding ->
         Column(
             modifier =
@@ -109,56 +159,6 @@ fun BuzzForumPostScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-            }
-
-            Button(
-                onClick = {
-                    val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
-                    if (relay == null) {
-                        error = "Invalid relay url"
-                        return@Button
-                    }
-                    isPosting = true
-                    error = null
-                    // Publish on IO, then pop back on the composition's main scope.
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                // Resolve any `@`/`nostr:` mention in the body into a `nostr:` ref and
-                                // collect the cited users as `p` tags, so naming a member both notifies
-                                // them and renders as a link — matching the chat/reply composers.
-                                val tagger =
-                                    NewMessageTagger(
-                                        message = body,
-                                        pTags = emptyList(),
-                                        eTags = emptyList(),
-                                        dao = accountViewModel,
-                                    )
-                                tagger.run()
-                                accountViewModel.account.signAndSendPrivatelyOrBroadcast(
-                                    ForumPostEvent.build(
-                                        channelId,
-                                        tagger.message.trim(),
-                                        mentions = tagger.pTags?.map { it.pubkeyHex }.orEmpty(),
-                                    ),
-                                ) { listOf(relay) }
-                            }
-                            nav.popBack()
-                        } catch (e: Exception) {
-                            isPosting = false
-                            currentCoroutineContext().ensureActive()
-                            error = "Failed to post: ${e.message ?: e::class.simpleName}"
-                        }
-                    }
-                },
-                enabled = body.isNotBlank() && !isPosting,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (isPosting) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(stringRes(Res.string.buzz_forum_post_action))
-                }
             }
         }
     }

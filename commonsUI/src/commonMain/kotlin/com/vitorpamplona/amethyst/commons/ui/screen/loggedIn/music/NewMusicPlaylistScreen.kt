@@ -90,6 +90,8 @@ import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_uploading_banner
 import com.vitorpamplona.amethyst.commons.resources.new_music_playlist
+import com.vitorpamplona.amethyst.commons.resources.publish
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
@@ -98,7 +100,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -146,12 +148,13 @@ fun NewMusicPlaylistScreen(
 
     Scaffold(
         topBar = {
-            SendingTopBar(
+            ActionTopBar(
+                postRes = if (vm.isEditing) Res.string.save else Res.string.publish,
                 titleRes = if (vm.isEditing) Res.string.edit_music_playlist else Res.string.new_music_playlist,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SendingTopBar
+                    if (!vm.isValid() || isBusy) return@ActionTopBar
                     vm.saveAndPublish(
                         accountViewModel = accountViewModel,
                     )
