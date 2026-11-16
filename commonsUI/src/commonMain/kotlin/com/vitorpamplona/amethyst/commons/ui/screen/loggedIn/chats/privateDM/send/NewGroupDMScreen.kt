@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawing_open
+import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
@@ -118,7 +119,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinke
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -129,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.sen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.EncryptedUploadErrorDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.RecipientMissingRelaysWarning
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -289,24 +290,24 @@ fun GroupDMScreenContent(
                 }
 
                 postViewModel.uploadState?.let { uploading ->
-                    uploading.multiOrchestrator?.let { selectedFiles ->
-                        ImageVideoDescription(
-                            selectedFiles,
-                            accountViewModel.account.settings.defaultFileServer,
-                            isUploading = uploading.mediaUploadTracker.isUploading,
-                            onAdd = { _, server, _, _, _, _, _ ->
-                                postViewModel.uploadAndHold(
-                                    accountViewModel.toastManager::toast,
-                                    accountViewModel.mediaUploader,
-                                    onceUploaded = { },
-                                )
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            },
-                            onDelete = { postViewModel.uploadState?.deleteMediaToUpload(it) },
-                            onCancel = uploading::reset,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
+                    // Attached to the message, which goes out with Send: each file keeps its own choices.
+                    ChatFileUploadDialog(
+                        state = uploading,
+                        title = {},
+                        upload = {
+                            postViewModel.uploadAndHold(
+                                accountViewModel.toastManager::toast,
+                                accountViewModel.mediaUploader,
+                                onceUploaded = { },
+                            )
+                            if (uploading.lockedServer == null) accountViewModel.account.settings.changeDefaultFileServer(uploading.selectedServer)
+                        },
+                        onCancel = {},
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        isNip17 = true,
+                        confirmLabel = Res.string.media_studio_add,
+                    )
                 }
 
                 postViewModel.encryptedUploadErrorTitle?.let { title ->

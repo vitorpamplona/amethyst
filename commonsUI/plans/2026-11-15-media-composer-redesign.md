@@ -14,8 +14,21 @@ reopen, upload on Post, draft stripping), with `AttachedMediaStudioDialogs`,
 `rememberAttachedMediaBlocks` and `rememberMediaMarkerField` for any text field. It runs in the
 note composer, comments (NIP-22), public messages, long-form (Markdown body), edit post and git
 issues. Classifieds use the Studio with Add uploading at once, since their photos are listing
-images rather than links in the text. Chats (including the new group DM screen), picture and
-video posts, and avatar/banner/icon uploads still use their old flows.
+images rather than links in the text.
+
+**Chats** keep their send-the-files flow, now in the Studio. `ChatFileUploadDialog` is a wrapper
+over `MediaStudioDialog` with a Send button (Add on the new group DM screen, where files wait for
+the message). It covers DMs, public channels, Concord, Marmot, cordn, minichat, nests and the new
+group DM screen.
+- Each file goes with its own quality, metadata strip and content warning.
+- Its alt text is the description the message carries; it used to be one "caption" for every file.
+- NIP-17 chats keep the encrypt switch (in Privacy), cordn has no sensitive switch, and a Buzz
+  workspace's locked server is the only one offered.
+- `MultiOrchestrator.uploadOwnOptions` / `uploadEncryptedOwnOptions` carry the per-file options
+  through the encrypted path and its plaintext retry; their results name the file.
+- The old card (`ImageVideoDescription`) is deleted.
+
+Still on their old flows: picture and video posts, and avatar/banner/icon uploads.
 
 **Implemented (described for the note composer, `ShortNotePostScreen`):**
 
@@ -66,7 +79,7 @@ real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get n
 
 Not yet:
 - crop and trim (step 3)
-- chats, picture/video posts and avatar/banner/icon uploads
+- picture/video posts and avatar/banner/icon uploads
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 

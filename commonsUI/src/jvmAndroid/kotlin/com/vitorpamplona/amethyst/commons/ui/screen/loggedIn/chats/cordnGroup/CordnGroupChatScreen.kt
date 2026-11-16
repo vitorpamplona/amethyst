@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_voice_record
 import com.vitorpamplona.amethyst.commons.resources.cordn_voice_stop
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
@@ -1066,7 +1065,7 @@ private suspend fun sendAttachment(
     state.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
     try {
-        // The media-quality slider.
+        // The file's quality, chosen in the media studio.
         //
         // Off the main thread, like the strip and the read below it:
         // `sendAttachment` is called from the composition's scope, so it
@@ -1077,16 +1076,16 @@ private suspend fun sendAttachment(
                 item.orchestrator.compressIfNeeded(
                     uri = uri,
                     mimeType = declaredMime,
-                    compressionQuality = CompressorQuality.fromSlider(state.mediaQualitySlider),
+                    compressionQuality = item.options.quality,
                     uploader = uploader,
                 )
             }
         val mime = compressed.contentType ?: declaredMime
 
-        // The strip-metadata switch. A file type the stripper does not handle comes back
+        // The file's strip-metadata switch. A file type the stripper does not handle comes back
         // untouched and says so, which is not a failure — there was nothing to strip.
         val finalUri =
-            if (state.stripMetadata) {
+            if (item.options.stripMetadata) {
                 uploader.stripMetadata(compressed.uri, mime)
             } else {
                 compressed.uri
@@ -1112,9 +1111,9 @@ private suspend fun sendAttachment(
             // attachment of your own echoes back as an Echo and would otherwise be
             // invisible to the person who sent it.
             //
-            // The dialog's description is the message's own content, so an attachment with
+            // The file's description (its alt text in the studio) is the message's own content, so an attachment with
             // something written about it is one message rather than two.
-            room.add(session.manager.send(room.gid, content = state.caption.trim(), tags = arrayOf(tag)))
+            room.add(session.manager.send(room.gid, content = (item.options.altOrNull ?: state.caption).trim(), tags = arrayOf(tag)))
         } finally {
             // Compressing and stripping each write a new file, and both hold the
             // attachment in the clear. Leaving them in the cache would keep plaintext

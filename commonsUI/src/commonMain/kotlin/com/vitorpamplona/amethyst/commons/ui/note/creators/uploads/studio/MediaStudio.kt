@@ -29,6 +29,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -99,7 +100,6 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
-import com.vitorpamplona.amethyst.commons.resources.media_post_nothing_posted
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
 import com.vitorpamplona.amethyst.commons.resources.media_studio_position
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location_description
+import com.vitorpamplona.amethyst.commons.resources.media_studio_retry
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_alt
@@ -172,9 +173,14 @@ fun MediaStudioDialog(
     initial: SelectedMediaProcessing? = null,
     confirmLabel: StringResource = Res.string.media_studio_add,
     canCancel: Boolean = true,
+    showSensitive: Boolean = true,
+    lockedServer: ServerName? = null,
+    privacyExtras: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    val servers by accountViewModel.account.blossomServers.hostNameFlow
+    val accountServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
+    // A chat that must upload to one server (a Buzz workspace's) offers no other.
+    val servers = lockedServer?.let { listOf(it) } ?: accountServers
     val appServices = LocalAppServices.current
     val suggester = remember(appServices) { appServices.createAltTextSuggester() }
     DisposableEffect(suggester) { onDispose { suggester?.close() } }
@@ -196,6 +202,8 @@ fun MediaStudioDialog(
             initial = initial,
             confirmLabel = confirmLabel,
             canCancel = canCancel,
+            showSensitive = showSensitive,
+            privacyExtras = privacyExtras,
         )
     }
 }
@@ -235,6 +243,10 @@ fun MediaStudio(
     initial: SelectedMediaProcessing? = null,
     confirmLabel: StringResource = Res.string.media_studio_add,
     canCancel: Boolean = true,
+    /** False where nothing carries a content warning (a cordn blob). */
+    showSensitive: Boolean = true,
+    /** Switches a screen adds to Privacy, e.g. a NIP-17 chat's file encryption. */
+    privacyExtras: (@Composable ColumnScope.() -> Unit)? = null,
     initialTool: StudioTool = StudioTool.QUALITY,
     holdingOriginal: Boolean = false,
 ) {
@@ -277,7 +289,7 @@ fun MediaStudio(
             UploadOverlay(current)
         }
 
-        UploadErrorBanner(current)
+        UploadErrorBanner(current, confirmLabel)
 
         if (items.size > 1) {
             Row(
@@ -298,7 +310,7 @@ fun MediaStudio(
                     when (tool) {
                         StudioTool.QUALITY -> QualityTool(current, previews, uploader)
                         StudioTool.ALT -> AltTool(current)
-                        StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression)
+                        StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression, showSensitive, privacyExtras)
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -556,7 +568,10 @@ private fun UploadOverlay(item: SelectedMediaProcessing) {
 }
 
 @Composable
-private fun UploadErrorBanner(item: SelectedMediaProcessing) {
+private fun UploadErrorBanner(
+    item: SelectedMediaProcessing,
+    confirmLabel: StringResource,
+) {
     val state by item.orchestrator.progressState.collectAsState()
     val error = state as? UploadingState.Error ?: return
     Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
@@ -565,7 +580,7 @@ private fun UploadErrorBanner(item: SelectedMediaProcessing) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(stringRes(error.errorResource, *error.params), color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
-                Text(stringRes(Res.string.media_post_nothing_posted), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                Text(stringRes(Res.string.media_studio_retry, stringRes(confirmLabel)), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -863,25 +878,30 @@ private fun AltTool(item: SelectedMediaProcessing) {
 private fun PrivacyTool(
     item: SelectedMediaProcessing,
     support: VideoCompressionSupport,
+    showSensitive: Boolean,
+    extras: (@Composable ColumnScope.() -> Unit)?,
 ) {
     val media = item.media
     // A video that will really be re-encoded loses its metadata anyway; the choice still reaches the
     // uploader (the encode can fall back to the original), so only the switch is hidden.
     val videoReencoded = media.isVideo() == true && support == VideoCompressionSupport.Supported && item.options.quality != CompressorQuality.UNCOMPRESSED
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SwitchRow(stringRes(Res.string.media_studio_sensitive), stringRes(Res.string.media_studio_sensitive_description), item.options.sensitive) {
-            item.options = item.options.copy(sensitive = it)
+        if (showSensitive) {
+            SwitchRow(stringRes(Res.string.media_studio_sensitive), stringRes(Res.string.media_studio_sensitive_description), item.options.sensitive) {
+                item.options = item.options.copy(sensitive = it)
+            }
         }
         if (!media.isNotMedia() && !videoReencoded) {
             SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(Res.string.media_studio_remove_location_description), item.options.stripMetadata) {
                 item.options = item.options.copy(stripMetadata = it)
             }
         }
+        extras?.invoke(this)
     }
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     title: String,
     subtitle: String?,
     checked: Boolean,

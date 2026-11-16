@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.captionIn
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.contentWarningIn
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
@@ -69,7 +70,6 @@ class MarmotFileUploader(
         viewState.mediaUploadTracker.startUpload(multiOrchestrator.hasNonMedia())
 
         val results = mutableListOf<MarmotUploadResult>()
-        val quality = CompressorQuality.fromSlider(viewState.mediaQualitySlider)
 
         val count = multiOrchestrator.size()
         for (i in 0 until count) {
@@ -105,14 +105,14 @@ class MarmotFileUploader(
             item.orchestrator.uploadEncrypted(
                 uri = media.uri,
                 mimeType = mimeType,
-                alt = viewState.caption.ifEmpty { null },
-                contentWarningReason = viewState.contentWarningReason,
-                compressionQuality = quality,
+                alt = item.captionIn(viewState),
+                contentWarningReason = item.contentWarningIn(viewState),
+                compressionQuality = item.options.quality,
                 encrypt = cipher,
                 server = viewState.selectedServer,
                 account = account,
                 uploader = uploader,
-                stripMetadata = viewState.stripMetadata,
+                stripMetadata = item.options.stripMetadata,
             )
 
             val state = item.orchestrator.progressState.value
@@ -139,7 +139,7 @@ class MarmotFileUploader(
                 results.add(
                     MarmotUploadResult(
                         reference = reference,
-                        caption = viewState.caption.ifEmpty { null },
+                        caption = item.captionIn(viewState),
                     ),
                 )
             } else {

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -87,7 +88,13 @@ class MultiOrchestratorUploadEachTest {
             onStrippingFailed: suspend () -> Boolean,
             convertGifToMp4: Boolean,
             forcedSigner: NostrSigner?,
-        ): UploadingState.UploadingFinalState = error("not used")
+        ): UploadingState.UploadingFinalState {
+            sent += Sent("enc:$uri", alt, contentWarningReason, compressionQuality, stripMetadata, server.name)
+            if (uri.toString() in failing) return progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, "refused")
+            return progress.finish(
+                UploadOrchestrator.OrchestratorResult.ServerResult(FileHeader(mimeType, uri.toString(), 1, null, null), "https://blossom.example/enc$uri", null, null, mimeType, null),
+            )
+        }
 
         override suspend fun compressIfNeeded(
             progress: UploadOrchestrator,
@@ -173,4 +180,61 @@ class MultiOrchestratorUploadEachTest {
         val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/doc.pdf"), "application/pdf")))
         assertEquals(CompressorQuality.UNCOMPRESSED, media.get(0).options.quality)
     }
+
+    @Test
+    fun encryptedChatUploadsUseEachFilesOptionsAndTheCaptionAsFallbackAlt() =
+        runTest {
+            val media = files("/a.jpg", "/b.jpg")
+            media.get(0).options = media.get(0).options.copy(alt = "a boat", quality = CompressorQuality.LOW)
+            media.get(1).options = media.get(1).options.copy(sensitive = true)
+            val uploader = RecordingUploader()
+
+            val result = media.uploadEncryptedOwnOptions({ AESGCM() }, server, account, uploader, altFallback = "my caption")
+
+            assertTrue(result.allGood)
+            val byPath = uploader.sent.associateBy { it.path }
+            assertEquals("a boat", byPath["enc:/a.jpg"]!!.alt)
+            assertEquals(CompressorQuality.LOW, byPath["enc:/a.jpg"]!!.quality)
+            assertEquals("my caption", byPath["enc:/b.jpg"]!!.alt)
+            assertEquals("", byPath["enc:/b.jpg"]!!.contentWarning)
+            // Each result says which file it is, so a chat can read that file's options.
+            assertEquals(
+                listOf("/a.jpg", "/b.jpg"),
+                result.successful.map {
+                    it.item!!
+                        .media.uri
+                        .toString()
+                },
+            )
+        }
+
+    @Test
+    fun aPlaintextRetryKeepsWhatAlreadyWentUpEncrypted() =
+        runTest {
+            val media = files("/a.jpg", "/b.jpg")
+            val uploader = RecordingUploader(failing = setOf("/b.jpg"))
+            assertFalse(media.uploadEncryptedOwnOptions({ AESGCM() }, server, account, uploader).allGood)
+
+            uploader.failing = emptySet()
+            uploader.sent.clear()
+            val retry = media.uploadOwnOptions(server, account, uploader, keepEncrypted = true)
+
+            assertTrue(retry.allGood)
+            assertEquals(listOf("/b.jpg"), uploader.sent.map { it.path })
+            assertEquals(
+                listOf("/a.jpg"),
+                retry.keptEncrypted.map {
+                    it.item!!
+                        .media.uri
+                        .toString()
+                },
+            )
+            assertEquals(
+                listOf("/b.jpg"),
+                retry.uploaded.map {
+                    it.item.media.uri
+                        .toString()
+                },
+            )
+        }
 }

@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
@@ -55,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.captionIn
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.contentWarningIn
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -357,23 +358,21 @@ open class NestNewMessageViewModel :
             uploadState.mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
-                myMultiOrchestrator.upload(
-                    uploadState.caption,
-                    uploadState.contentWarningReason,
-                    CompressorQuality.fromSlider(uploadState.mediaQualitySlider),
+                myMultiOrchestrator.uploadOwnOptions(
                     uploadState.selectedServer,
                     account,
                     uploader,
-                    stripMetadata = uploadState.stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    altFallback = uploadState.caption,
+                    contentWarningFallback = uploadState.contentWarningReason,
                 )
 
             if (results.allGood) {
                 val urls =
-                    results.successful.mapNotNull { upload ->
-                        val uploaded = upload.result
+                    results.uploaded.mapNotNull { done ->
+                        val uploaded = done.finished.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            iMetaAttachments.add(uploaded, uploadState.caption, uploadState.contentWarningReason)
+                            iMetaAttachments.add(uploaded, done.item.captionIn(uploadState), done.item.contentWarningIn(uploadState))
 
                             uploaded.url
                         } else {

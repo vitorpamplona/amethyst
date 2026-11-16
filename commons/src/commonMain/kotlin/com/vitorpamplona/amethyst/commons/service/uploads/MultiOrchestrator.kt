@@ -52,6 +52,8 @@ class MultiOrchestrator(
         val successful: List<UploadingState.Finished>,
         val errors: List<UploadingState.Error>,
         val keptEncrypted: List<EncryptedUpload> = emptyList(),
+        /** [successful], each with the file it came from, for a caller that reads per-file options. */
+        val uploaded: List<Uploaded> = emptyList(),
     )
 
     fun first() = list.first()
@@ -97,28 +99,57 @@ class MultiOrchestrator(
         forcedSigner: NostrSigner? = null,
         keepEncrypted: Boolean = false,
     ): Result {
-        val settings = UploadSettings(mediaQuality, server, useH265, stripMetadata, convertGifToMp4)
-        val kept = if (keepEncrypted) list.mapNotNull { item -> item.reusableEncrypted(settings)?.let { item to it } }.toMap() else emptyMap()
-        val toSend = list.filter { it !in kept }
+        val same = Planned(alt, contentWarningReason, UploadSettings(mediaQuality, server, useH265, stripMetadata, convertGifToMp4))
+        return uploadPlanned(account, uploader, onStrippingFailed, forcedSigner, keepEncrypted) { same }
+    }
+
+    /**
+     * [upload] with every file's own [SelectedMediaProcessing.options]. A file with no alt text
+     * takes [altFallback] (a chat's caption) and one not marked sensitive [contentWarningFallback].
+     */
+    suspend fun uploadOwnOptions(
+        server: ServerName,
+        account: Account,
+        uploader: MediaUploader,
+        onStrippingFailed: suspend () -> Boolean = { true },
+        forcedSigner: NostrSigner? = null,
+        keepEncrypted: Boolean = false,
+        altFallback: String? = null,
+        contentWarningFallback: String? = null,
+    ): Result = uploadPlanned(account, uploader, onStrippingFailed, forcedSigner, keepEncrypted) { it.plan(server, altFallback, contentWarningFallback) }
+
+    private suspend fun uploadPlanned(
+        account: Account,
+        uploader: MediaUploader,
+        onStrippingFailed: suspend () -> Boolean,
+        forcedSigner: NostrSigner?,
+        keepEncrypted: Boolean,
+        plan: (SelectedMediaProcessing) -> Planned,
+    ): Result {
+        val items = list
+        val plans = items.associateWith(plan)
+        val kept = if (keepEncrypted) items.mapNotNull { item -> item.reusableEncrypted(plans.getValue(item).settings)?.let { item to it } }.toMap() else emptyMap()
+        val toSend = items.filter { it !in kept }
         coroutineScope {
             val jobs =
                 toSend.map { item ->
                     // Sent again in plaintext, so its encrypted blob is no longer the one in use.
                     item.sentEncrypted = null
+                    val p = plans.getValue(item)
                     launch(Dispatchers.IO) {
                         item.orchestrator.upload(
                             item.media.uri,
                             item.media.mimeType,
-                            alt,
-                            contentWarningReason,
-                            mediaQuality,
-                            server,
+                            p.alt,
+                            p.contentWarningReason,
+                            p.settings.mediaQuality,
+                            p.settings.server,
                             account,
                             uploader,
-                            useH265,
-                            stripMetadata,
+                            p.settings.useH265,
+                            p.settings.stripMetadata,
                             onStrippingFailed,
-                            convertGifToMp4 = convertGifToMp4,
+                            convertGifToMp4 = p.settings.convertGifToMp4,
                             forcedSigner = forcedSigner,
                         )
                     }
@@ -128,8 +159,30 @@ class MultiOrchestrator(
         }
 
         // A file removed from the gallery while the upload ran is left out.
-        val sent = computeFinalResults(toSend.filter { it in list })
-        return Result(sent.allGood, sent.successful, sent.errors, list.mapNotNull { kept[it] })
+        val sentItems = toSend.filter { it in list }
+        val sent = computeFinalResults(sentItems)
+        val uploaded = sentItems.mapNotNull { item -> (item.orchestrator.progressState.value as? UploadingState.Finished)?.let { Uploaded(item, it) } }
+        return Result(sent.allGood, sent.successful, sent.errors, list.mapNotNull { kept[it] }, uploaded)
+    }
+
+    /** What one file goes up with in a batch: its alt text, content warning and the settings that shape its blob. */
+    private class Planned(
+        val alt: String?,
+        val contentWarningReason: String?,
+        val settings: UploadSettings,
+    )
+
+    private fun SelectedMediaProcessing.plan(
+        server: ServerName,
+        altFallback: String?,
+        contentWarningFallback: String?,
+    ): Planned {
+        val o = options
+        return Planned(
+            alt = o.altOrNull ?: altFallback?.ifBlank { null },
+            contentWarningReason = o.contentWarningReason ?: contentWarningFallback,
+            settings = UploadSettings(o.quality, server, o.useH265, o.stripMetadata, o.convertGifToMp4),
+        )
     }
 
     /** A file [uploadEncrypted] sent, with the cipher that sealed it: the receiver needs that cipher's key and nonce. */
@@ -137,6 +190,8 @@ class MultiOrchestrator(
     class EncryptedUpload(
         val finished: UploadingState.Finished,
         val cipher: AESGCM,
+        /** The file it came from, for a caller that reads per-file options. */
+        val item: SelectedMediaProcessing? = null,
     )
 
     @Stable
@@ -191,30 +246,55 @@ class MultiOrchestrator(
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
     ): EncryptedResult {
-        val settings = UploadSettings(mediaQuality, server, useH265, stripMetadata, convertGifToMp4)
+        val same = Planned(alt, contentWarningReason, UploadSettings(mediaQuality, server, useH265, stripMetadata, convertGifToMp4))
+        return uploadEncryptedPlanned(newCipher, account, uploader, onStrippingFailed, forcedSigner) { same }
+    }
+
+    /** [uploadEncrypted] with every file's own [SelectedMediaProcessing.options]; fallbacks as in [uploadOwnOptions]. */
+    suspend fun uploadEncryptedOwnOptions(
+        newCipher: () -> AESGCM,
+        server: ServerName,
+        account: Account,
+        uploader: MediaUploader,
+        onStrippingFailed: suspend () -> Boolean = { true },
+        forcedSigner: NostrSigner? = null,
+        altFallback: String? = null,
+        contentWarningFallback: String? = null,
+    ): EncryptedResult = uploadEncryptedPlanned(newCipher, account, uploader, onStrippingFailed, forcedSigner) { it.plan(server, altFallback, contentWarningFallback) }
+
+    private suspend fun uploadEncryptedPlanned(
+        newCipher: () -> AESGCM,
+        account: Account,
+        uploader: MediaUploader,
+        onStrippingFailed: suspend () -> Boolean,
+        forcedSigner: NostrSigner?,
+        plan: (SelectedMediaProcessing) -> Planned,
+    ): EncryptedResult {
         val items = list
-        val reused = items.mapNotNull { item -> item.reusableEncrypted(settings)?.let { item to it } }.toMap()
+        val plans = items.associateWith(plan)
+        val reused = items.mapNotNull { item -> item.reusableEncrypted(plans.getValue(item).settings)?.let { item to it } }.toMap()
         // Made before anything goes up, so a cipher that cannot be made fails the batch up front.
         val pending = items.filter { it !in reused }.map { it to newCipher() }
         val sent =
             coroutineScope {
                 pending
                     .map { (item, cipher) ->
+                        val p = plans.getValue(item)
                         async(Dispatchers.IO) {
                             item.orchestrator.uploadEncrypted(
                                 item.media.uri,
                                 item.media.mimeType,
-                                alt,
-                                contentWarningReason,
-                                mediaQuality,
+                                p.alt,
+                                p.contentWarningReason,
+                                p.settings.mediaQuality,
                                 cipher,
-                                server,
+                                p.settings.server,
                                 account,
                                 uploader,
-                                useH265,
-                                stripMetadata,
+                                p.settings.useH265,
+                                p.settings.stripMetadata,
                                 onStrippingFailed,
-                                convertGifToMp4 = convertGifToMp4,
+                                convertGifToMp4 = p.settings.convertGifToMp4,
                                 forcedSigner = forcedSigner,
                             )
                         }
@@ -226,7 +306,7 @@ class MultiOrchestrator(
         pending.forEachIndexed { index, (item, cipher) ->
             when (val state = sent[index]) {
                 is UploadingState.Finished -> {
-                    uploads[item] = EncryptedUpload(state, cipher).also { item.sentEncrypted = SentEncrypted(settings, it) }
+                    uploads[item] = EncryptedUpload(state, cipher, item).also { item.sentEncrypted = SentEncrypted(plans.getValue(item).settings, it) }
                 }
 
                 is UploadingState.Error -> {
