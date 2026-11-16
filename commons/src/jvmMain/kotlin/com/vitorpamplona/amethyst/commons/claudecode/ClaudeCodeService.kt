@@ -234,7 +234,7 @@ class ClaudeCodeService(
                         // A branch never pushed has no pull request to look for.
                         val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
                         if (pushed && saved?.isOpen != false) {
-                            val pr = GitHubPullRequests.state(dir, repo.branch, gh)
+                            val pr = GitHubPullRequests.state(dir, repo.branch, gh, GitHubPullRequests.gitHubRepo(repo.url))
                             // No answer is not "no pull request": gh may be offline. Keep what was seen.
                             if (pr != null && (saved?.state != pr.state || saved.url != pr.url || saved.isDraft != pr.isDraft)) {
                                 recordPullRequest(workspace.id, repo.name, pr, notify = false)
@@ -392,7 +392,9 @@ class ClaudeCodeService(
         permissionMode: PermissionMode,
         agent: AgentBackend = backend,
     ): ClaudeChat {
-        val workspace = agentWorkspaces.create(urls, title, agentId = agent.id)
+        // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
+        val nostrRepos = urls.mapNotNull { url -> RepoCatalog.nostrRepoOf(url)?.let { url.trim() to it } }.toMap()
+        val workspace = agentWorkspaces.create(urls, title, agentId = agent.id, nostrRepos = nostrRepos)
         agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
         knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
         return newChat(File(workspace.dir), permissionMode, title = workspace.title, agent = agent)

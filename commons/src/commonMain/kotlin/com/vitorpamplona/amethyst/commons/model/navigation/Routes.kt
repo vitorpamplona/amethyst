@@ -771,6 +771,8 @@ sealed class Route {
     /** Publishes a Claude Code chat's branch as a NIP-34 proposal, or a new version of one. */
     @Serializable data class ClaudeCodePropose(
         val key: String,
+        /** A repository's folder in the chat's workspace of several, or null for the chat's own folder. */
+        val repo: String? = null,
     ) : Route()
 
     /** A workspace session's repositories: their branches, and the GitHub pull requests the user opens. */

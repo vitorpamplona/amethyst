@@ -28,6 +28,7 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -186,6 +187,59 @@ class ClaudeCodeSessionsViewModel(
         savedGroups.value = service.agentWorkspaces.groups()
     }
 
+    private val repoQuery = MutableStateFlow("")
+    private val localRepos = MutableStateFlow<List<RepoCandidate>>(emptyList())
+    private val myGitHubRepos = MutableStateFlow<List<RepoCandidate>>(emptyList())
+    private val foundGitHubRepos = MutableStateFlow<List<RepoCandidate>>(emptyList())
+    private val nostrRepos = MutableStateFlow<List<RepoCandidate>>(emptyList())
+    private var searchJob: Job? = null
+
+    private val _searchingGitHub = MutableStateFlow(false)
+
+    /** Whether GitHub is being searched for what was typed. */
+    val searchingGitHub: StateFlow<Boolean> = _searchingGitHub.asStateFlow()
+
+    /**
+     * The repositories to pick from for what is typed: the ones cloned here first, most used
+     * first; then the user's GitHub repositories and GitHub's search; then NIP-34 ones.
+     */
+    val repoCandidates: StateFlow<List<RepoCandidate>> =
+        combine(repoQuery, localRepos, myGitHubRepos, foundGitHubRepos, nostrRepos) { query, local, mine, found, nostr ->
+            RepoCatalog.merge(query, local, mine, nostr, found)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Reads what the picker offers: the mirrors and their use, the NIP-34 repositories seen, the user's GitHub ones. */
+    fun loadRepoCatalog() {
+        viewModelScope.launch {
+            localRepos.value = withContext(Dispatchers.IO) { RepoCatalog.local(service.agentWorkspaces) }
+            nostrRepos.value = withContext(Dispatchers.Default) { RepoCatalog.nostr() }
+            myGitHubRepos.value = RepoCatalog.github()
+        }
+    }
+
+    /** Filters the picker by [text], and searches GitHub for it once the typing pauses. */
+    fun searchRepos(text: String) {
+        repoQuery.value = text
+        searchJob?.cancel()
+        foundGitHubRepos.value = emptyList()
+        val query = text.trim()
+        // A URL is added as it is; a short word would match half of GitHub.
+        if (query.length < 3 || query.contains("://") || query.contains('@')) {
+            _searchingGitHub.value = false
+            return
+        }
+        searchJob =
+            viewModelScope.launch {
+                delay(SEARCH_DELAY_MS)
+                _searchingGitHub.value = true
+                try {
+                    foundGitHubRepos.value = RepoCatalog.searchGitHub(query)
+                } finally {
+                    _searchingGitHub.value = false
+                }
+            }
+    }
+
     /** The agent a new session starts with unless the user picks another: the last one used. */
     fun preferredAgentId(): String? = service.preferredAgent()?.id
 
@@ -277,6 +331,7 @@ class ClaudeCodeSessionsViewModel(
     companion object {
         private const val TAG = "ClaudeCodeSessions"
         private const val REFRESH_MS = 5_000L
+        private const val SEARCH_DELAY_MS = 400L
     }
 }
 

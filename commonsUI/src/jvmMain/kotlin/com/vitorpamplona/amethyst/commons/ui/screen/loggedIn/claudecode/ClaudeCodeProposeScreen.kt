@@ -145,8 +145,10 @@ fun ClaudeCodeProposeScreen(
     key: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    /** A repository's folder in the chat's workspace, or null for the chat's own folder. */
+    folder: String? = null,
 ) {
-    val viewModel = rememberViewModel(key = "ClaudeCodePropose-$key") { ClaudeCodeProposeViewModel(ClaudeCodeService.shared, key) }
+    val viewModel = rememberViewModel(key = "ClaudeCodePropose-$key-$folder") { ClaudeCodeProposeViewModel(ClaudeCodeService.shared, key, folder) }
     val info by viewModel.info.collectAsStateWithLifecycle()
     val isUpdate = info?.proposalId != null
 
@@ -157,7 +159,7 @@ fun ClaudeCodeProposeScreen(
                 subtitle = info?.let { listOfNotNull(it.repo?.identifier, it.branch).joinToString(" · ") },
                 nav = nav,
             ) {
-                TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) { Text(stringRes(Res.string.claude_code_changes)) }
+                TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key, folder)) }) { Text(stringRes(Res.string.claude_code_changes)) }
             }
         },
     ) { padding ->
@@ -170,7 +172,7 @@ fun ClaudeCodeProposeScreen(
                 Text(stringRes(Res.string.claude_code_publish_no_repo), color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(32.dp))
             } else {
                 val repoNote = remember(repo) { LocalCache.getOrCreateAddressableNote(Address(repo.kind, repo.pubKeyHex, repo.identifier)) }
-                ProposeForm(key, current, repoNote, viewModel, accountViewModel, nav)
+                ProposeForm(key, folder, current, repoNote, viewModel, accountViewModel, nav)
             }
         }
     }
@@ -179,13 +181,14 @@ fun ClaudeCodeProposeScreen(
 @Composable
 private fun ProposeForm(
     key: String,
+    folder: String?,
     info: GitWorkInfo,
     repoNote: AddressableNote,
     viewModel: ClaudeCodeProposeViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val proposals = rememberGitProposals("ClaudeCode-$key", accountViewModel)
+    val proposals = rememberGitProposals("ClaudeCode-$key-$folder", accountViewModel)
     val target = rememberGitProposalTarget(repoNote, proposals, accountViewModel)
     val publishState by proposals.state.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
@@ -267,7 +270,7 @@ private fun ProposeForm(
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
                         Row {
-                            TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) { Text(stringRes(Res.string.claude_code_show_changes), color = MaterialTheme.colorScheme.onErrorContainer) }
+                            TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key, folder)) }) { Text(stringRes(Res.string.claude_code_show_changes), color = MaterialTheme.colorScheme.onErrorContainer) }
                             TextButton(onClick = {
                                 viewModel.chat?.send(commitPrompt)
                                 nav.popBack()

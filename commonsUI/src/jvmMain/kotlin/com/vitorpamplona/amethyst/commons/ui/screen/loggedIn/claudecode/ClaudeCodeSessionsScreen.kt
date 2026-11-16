@@ -94,6 +94,8 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeSessionRow
 import com.vitorpamplona.amethyst.commons.claudecode.NewChatError
+import com.vitorpamplona.amethyst.commons.claudecode.NostrWorkspaces
+import com.vitorpamplona.amethyst.commons.claudecode.RepoCandidate
 import com.vitorpamplona.amethyst.commons.claudecode.RepoGroup
 import com.vitorpamplona.amethyst.commons.claudecode.expandHome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -121,6 +123,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_github
+import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_local
+import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_nostr
+import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_uses
 import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_needs_you
@@ -147,7 +153,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name
-import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_save_group
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
@@ -587,11 +592,18 @@ private fun NewSessionDialog(
     val browseTitle = stringRes(Res.string.claude_code_browse)
 
     // What a click on Start clones: the rows, and a URL still in the field.
-    fun pendingRepos(): List<String> = (repos + splitUrls(adding)).distinct()
+    val candidates by viewModel.repoCandidates.collectAsStateWithLifecycle()
+    val searchingGitHub by viewModel.searchingGitHub.collectAsStateWithLifecycle()
+    // Read once the user asks for clones: it lists mirrors and runs `gh`.
+    LaunchedEffect(clones) { if (clones) viewModel.loadRepoCatalog() }
+
+    // What a click on Start clones: the chosen ones, and a URL still in the field (not a search).
+    fun pendingRepos(): List<String> = (repos + if (looksLikeUrl(adding)) splitUrls(adding) else emptyList()).distinct()
 
     fun addTyped() {
-        splitUrls(adding).forEach { if (it !in repos) repos.add(it) }
+        if (looksLikeUrl(adding)) splitUrls(adding).forEach { if (it !in repos) repos.add(it) }
         adding = ""
+        viewModel.searchRepos("")
         viewModel.clearNewChatError()
     }
 
@@ -621,12 +633,19 @@ private fun NewSessionDialog(
                     )
                     RepoList(
                         repos = repos,
+                        candidates = candidates,
+                        searchingGitHub = searchingGitHub,
                         adding = adding,
                         onAddingChange = {
                             adding = it
+                            viewModel.searchRepos(it)
                             viewModel.clearNewChatError()
                         },
                         onAdd = ::addTyped,
+                        onPick = { url ->
+                            if (url !in repos) repos.add(url)
+                            viewModel.clearNewChatError()
+                        },
                         onRemove = { repos.remove(it) },
                         isError = error != null,
                         onSaveGroup = { name ->
@@ -769,61 +788,60 @@ private fun RepoGroupChips(
     }
 }
 
-/** The repositories to clone, one row each, and a field to add more; the list can be saved as a group. */
+/**
+ * The repositories to clone, as one list with checkboxes: the chosen ones first, then the ones
+ * that fit what is typed (cloned here before, the user's GitHub ones, GitHub's search, NIP-34
+ * ones). Enter adds a pasted URL, or checks the first match of a word. The chosen list can be
+ * saved as a group.
+ */
 @Composable
 private fun RepoList(
     repos: List<String>,
+    candidates: List<RepoCandidate>,
+    searchingGitHub: Boolean,
     adding: String,
     onAddingChange: (String) -> Unit,
     onAdd: () -> Unit,
+    onPick: (String) -> Unit,
     onRemove: (String) -> Unit,
     isError: Boolean,
     onSaveGroup: (String) -> Unit,
 ) {
     var naming by remember { mutableStateOf(false) }
     var groupName by remember { mutableStateOf("") }
+    val chosen = remember(repos) { repos.map { NostrWorkspaces.normalize(it) }.toSet() }
+    val known = remember(candidates) { candidates.associateBy { NostrWorkspaces.normalize(it.url) } }
+    val offered = remember(candidates, chosen) { candidates.filter { NostrWorkspaces.normalize(it.url) !in chosen }.take(OFFERED_REPOS) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringRes(Res.string.claude_code_workspace_repos), style = MaterialTheme.typography.labelLarge)
-        repos.forEach { url ->
-            // Outlined: the dialog's own surface is the same tone as a filled row.
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                    .padding(start = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-                    Text(AgentWorkspaces.ownerAndName(url), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(url, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                val remove = stringRes(Res.string.claude_code_workspace_remove_repo, AgentWorkspaces.ownerAndName(url))
-                HoverTooltip(remove) {
-                    IconButton(onClick = { onRemove(url) }) { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(18.dp)) }
-                }
-            }
-        }
         OutlinedTextField(
             value = adding,
             onValueChange = onAddingChange,
             placeholder = { Text(stringRes(Res.string.claude_code_workspace_add_repo), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
             singleLine = true,
             isError = isError,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
             trailingIcon = {
-                if (adding.isNotBlank()) TextButton(onClick = onAdd) { Text(stringRes(Res.string.claude_code_workspace_add)) }
+                when {
+                    searchingGitHub -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    looksLikeUrl(adding) -> TextButton(onClick = onAdd) { Text(stringRes(Res.string.claude_code_workspace_add)) }
+                }
             },
             modifier =
                 Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
-                    // Enter adds the URL as a row.
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && adding.isNotBlank()) {
-                        onAdd()
-                        true
-                    } else {
-                        false
-                    }
+                    if (event.type != KeyEventType.KeyDown || event.key != Key.Enter || adding.isBlank()) return@onPreviewKeyEvent false
+                    // A URL is added as it is; a word checks its first match.
+                    if (looksLikeUrl(adding)) onAdd() else offered.firstOrNull()?.let { onPick(it.url) }
+                    true
                 },
         )
+        repos.forEach { url ->
+            val candidate = known[NostrWorkspaces.normalize(url)]
+            RepoCheckRow(candidate?.label ?: AgentWorkspaces.ownerAndName(url), candidate?.let { repoDetail(it) } ?: url, candidate?.nostr != null, checked = true) { onRemove(url) }
+        }
+        offered.forEach { candidate ->
+            RepoCheckRow(candidate.label, repoDetail(candidate), candidate.nostr != null, checked = false) { onPick(candidate.url) }
+        }
         if (naming) {
             // Typing goes to the name as soon as the field appears; Enter saves.
             val focus = remember { FocusRequester() }
@@ -854,6 +872,67 @@ private fun RepoList(
             }
         } else if (repos.isNotEmpty()) {
             TextButton(onClick = { naming = true }) { Text(stringRes(Res.string.claude_code_workspace_save_group)) }
+        }
+    }
+}
+
+/** How many unchosen repositories the picker lists at once: past that, typing narrows it. */
+private const val OFFERED_REPOS = 8
+
+/** Whether the field holds a repository URL (or several) rather than words to search for. */
+private fun looksLikeUrl(text: String): Boolean = splitUrls(text).let { parts -> parts.isNotEmpty() && parts.all { it.contains("://") || it.contains('@') || it.startsWith("/") || it.matches(Regex("^[A-Za-z]:\\\\.*")) } }
+
+/** Where a repository is known from, and how often it was cloned here: the row's second line. */
+@Composable
+private fun repoDetail(candidate: RepoCandidate): String {
+    val source =
+        when (candidate.source) {
+            RepoCandidate.Source.LOCAL ->
+                if (candidate.uses > 0) {
+                    pluralStringRes(Res.plurals.claude_code_repo_uses, candidate.uses, candidate.uses)
+                } else {
+                    stringRes(Res.string.claude_code_repo_source_local)
+                }
+            RepoCandidate.Source.GITHUB -> stringRes(Res.string.claude_code_repo_source_github)
+            // Its tag already says Nostr: the server it clones from says more.
+            RepoCandidate.Source.NOSTR -> candidate.url.substringAfter("://").substringBefore('/')
+        }
+    return listOfNotNull(source, candidate.description).joinToString(" · ")
+}
+
+/** One repository of the picker: a checkbox, its name, and where it comes from. */
+@Composable
+private fun RepoCheckRow(
+    label: String,
+    detail: String,
+    nostr: Boolean,
+    checked: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onToggle)
+            .padding(end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                // A NIP-34 repository: its changes can go back as a proposal.
+                if (nostr) {
+                    Text(
+                        stringRes(Res.string.claude_code_repo_source_nostr),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 6.dp).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
+            }
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

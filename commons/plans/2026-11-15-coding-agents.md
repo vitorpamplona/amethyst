@@ -131,6 +131,25 @@ URLs (the last list is offered again).
   last-used list and named groups as chips. Each repository card on the Pull requests screen has
   its own Changes view; questions asked from it name the file by its path inside the workspace.
 
+### Picking repositories, proposals and forks
+
+- **Picker:** New session › Fresh clones has one searchable list with checkboxes (`RepoCatalog`), from:
+  - the mirrors on this computer, most cloned first (`usage.json` counts each clone and outlives
+    the workspace);
+  - the user's GitHub repositories (`gh repo list`);
+  - the NIP-34 repositories in `LocalCache`, through a clone URL git can fetch alone (`https` first;
+    never `nostr://` or `htree://`, which need a helper);
+  - GitHub's search (`gh search repos`), last, since it is the widest.
+
+  Enter adds a pasted URL, or checks the first match of a word.
+- **Proposals:** a cloned URL that a cached NIP-34 announcement lists gets its branch linked to
+  that repository (`GitWorkspace.link`, as the repository screen's checkouts do). Its card offers
+  "Send proposal", the Propose screen for that folder of the workspace.
+- **Forks:** before a pull request, `gh` says whether the user may push to the repository
+  (`viewerPermission`). Without write access the app runs `gh repo fork`, pushes the branch to a
+  `fork` remote, and opens the PR with `--repo upstream --head user:branch`. The PR's state is
+  looked up on the upstream by branch, so it works whether or not a fork was used.
+
 ## Open
 
 - A pull request opened outside the app (the user's own `gh pr create`) shows once its branch is

@@ -82,6 +82,14 @@ data class SavedPullRequest(
     val isMerged get() = state == "MERGED"
 }
 
+/** How often workspaces cloned a repository, and when last: what the repository picker leads with. */
+@Immutable
+@Serializable
+data class RepoUsage(
+    val count: Int,
+    val lastUsed: Long,
+)
+
 /** A named list of repositories that sessions often need together. */
 @Immutable
 @Serializable
@@ -120,6 +128,7 @@ class AgentWorkspaces(
     private val metaDir = File(root, "meta")
     private val groupsFile = File(root, "groups.json")
     private val lastAgentFile = File(metaDir, "last-agent.txt")
+    private val usageFile = File(root, "usage.json")
 
     /** One fetch at a time per mirror: fifteen sessions starting together share one. */
     private val mirrorLocks = ConcurrentHashMap<String, Mutex>()
@@ -163,6 +172,8 @@ class AgentWorkspaces(
         title: String?,
         branch: String = defaultBranchName(),
         agentId: String? = null,
+        /** The NIP-34 repository each URL belongs to, when it is one: its branch is linked to it, to propose back. */
+        nostrRepos: Map<String, NostrRepoRef> = emptyMap(),
     ): AgentWorkspace {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
@@ -196,6 +207,9 @@ class AgentWorkspaces(
                                 ?.trim()
                                 ?.takeIf { it.isNotEmpty() } ?: "main"
                         git(target, "checkout", "--quiet", "-b", branch)
+                        // A NIP-34 repository: the branch remembers it and its base, as a checkout
+                        // made from the repository's own screen does, so the Propose screen works here.
+                        nostrRepos[url]?.let { GitWorkspace.link(target, branch, repo = it, base = "origin/$base") }
                         WorkspaceRepo(url, name, base, branch)
                     }
                 val workspace =
@@ -208,6 +222,7 @@ class AgentWorkspaces(
                         agentId = agentId,
                     )
                 save(workspace)
+                countUses(workspace.repos.map { it.url })
                 workspace
             } catch (e: IOException) {
                 if (!deleteTree(dir)) Log.w(TAG) { "Could not remove the half-made $dir" }
@@ -306,6 +321,38 @@ class AgentWorkspaces(
         groupsFile.writeText(json.encodeToString(groups))
     }
 
+    /** How often each repository was cloned into a workspace, by URL. */
+    fun usage(): Map<String, RepoUsage> =
+        try {
+            if (usageFile.isFile) json.decodeFromString<Map<String, RepoUsage>>(usageFile.readText()) else emptyMap()
+        } catch (e: SerializationException) {
+            Log.w(TAG, "Unreadable $usageFile", e)
+            emptyMap()
+        } catch (e: IOException) {
+            Log.w(TAG, "Unreadable $usageFile", e)
+            emptyMap()
+        }
+
+    /** Counts one more use of each of [urls]. Kept apart from the workspaces: it outlives them. */
+    @Synchronized
+    private fun countUses(urls: List<String>) {
+        val now = System.currentTimeMillis()
+        val usage = usage().toMutableMap()
+        urls.forEach { url -> usage[url] = RepoUsage((usage[url]?.count ?: 0) + 1, now) }
+        try {
+            usageFile.writeText(json.encodeToString(usage))
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not save $usageFile", e)
+        }
+    }
+
+    /** The URL each mirror on this computer was made from. */
+    fun mirrorUrls(): List<String> =
+        mirrorsDir
+            .listFiles { f -> f.isDirectory && f.name.endsWith(".git") }
+            .orEmpty()
+            .mapNotNull { mirror -> GitWorkspace.git(mirror, "config", "--get", "remote.origin.url")?.trim()?.takeIf { it.isNotEmpty() } }
+
     /** Forgets the group named [name]. */
     @Synchronized
     fun deleteGroup(name: String) {
@@ -384,6 +431,8 @@ class AgentWorkspaces(
                     .filter { it.isNotEmpty() }
             // The first part is the host, except for a local path.
             val parts = if (url.contains("://") || url.contains('@')) path.drop(1) else path
+            // A GRASP server names the owner by their npub: unreadable, and the name says enough.
+            if (parts.size >= 2 && parts[parts.size - 2].startsWith("npub1")) return parts.last()
             return parts.takeLast(2).joinToString("/").ifEmpty { repoName(url) }
         }
 

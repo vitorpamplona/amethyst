@@ -315,6 +315,8 @@ data class LocalTip(
 class ClaudeCodeProposeViewModel(
     service: ClaudeCodeService,
     key: String,
+    /** A repository's folder in the chat's workspace, or null for the chat's folder itself. */
+    repo: String? = null,
 ) : ViewModel() {
     val chat: ClaudeChat? = service.chat(key)
     private val dir: File? =
@@ -323,6 +325,7 @@ class ClaudeCodeProposeViewModel(
             ?.value
             ?.cwd
             ?.let(::File)
+            ?.let { cwd -> repo?.let { File(cwd, it) } ?: cwd }
 
     private val _info = MutableStateFlow<GitWorkInfo?>(null)
     val info: StateFlow<GitWorkInfo?> = _info.asStateFlow()

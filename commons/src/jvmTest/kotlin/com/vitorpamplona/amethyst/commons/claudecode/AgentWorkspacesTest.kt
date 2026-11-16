@@ -190,6 +190,8 @@ class AgentWorkspacesTest {
         assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("https://github.com/vitorpamplona/amethyst.git"))
         assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("git@github.com:vitorpamplona/amethyst.git"))
         assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("ssh://git@github.com/vitorpamplona/amethyst"))
+        // A GRASP server's owner is an npub: the name alone reads better.
+        assertEquals("freiheit-funk", AgentWorkspaces.ownerAndName("https://relay.ngit.dev/npub14rg4vrt2v374q95ezeeydu3hkdhmzglcj950mggacap4x0lv0gyq04wun7/freiheit-funk.git"))
         assertEquals("https://github.com/vitorpamplona/amethyst", AgentWorkspaces.webUrl("git@github.com:vitorpamplona/amethyst.git"))
         assertEquals("https://github.com/vitorpamplona/amethyst", AgentWorkspaces.webUrl("https://github.com/vitorpamplona/amethyst.git"))
         assertEquals("https://github.com/o/r", AgentWorkspaces.webUrl("ssh://git@github.com:22/o/r.git"))
@@ -243,5 +245,113 @@ class AgentWorkspacesTest {
         assertEquals("fatal: could not read Username for 'https://github.com'", error.summary)
         assertTrue(error.hasDetails)
         assertFalse(PullRequestError("one line", pushed = true).hasDetails)
+    }
+
+    @Test
+    fun usageIsCountedAndOutlivesTheWorkspace() =
+        runBlocking {
+            val first = workspaces.create(listOf(appUrl, libUrl), null)
+            workspaces.create(listOf(appUrl), null)
+            workspaces.delete(first)
+            assertEquals(2, workspaces.usage().getValue(appUrl).count)
+            assertEquals(1, workspaces.usage().getValue(libUrl).count)
+            // The picker leads with the most used, and knows every mirror's URL.
+            assertEquals(listOf(appUrl, libUrl), RepoCatalog.local(workspaces).map { it.url })
+            assertEquals(setOf(appUrl, libUrl), workspaces.mirrorUrls().toSet())
+        }
+
+    @Test
+    fun aNostrRepositorysBranchIsLinkedForProposals() =
+        runBlocking {
+            val ref = NostrRepoRef("a".repeat(64), "app")
+            val ws = workspaces.create(listOf(appUrl, libUrl), null, branch = "agent/n", nostrRepos = mapOf(appUrl to ref))
+            // What the Propose screen reads: the repository, and the base the branch is measured against.
+            val info = assertNotNull(GitWorkspace.inspect(File(ws.dir, "app")))
+            assertEquals(ref, info.repo)
+            assertEquals(null, GitWorkspace.inspect(File(ws.dir, "lib"))?.repo)
+        }
+
+    /** `gh` answering as GitHub would for a user ("me") who may only read "o/app". */
+    private fun fakeGh(
+        permission: String,
+        calls: MutableList<List<String>>,
+    ): (File, List<String>, Long) -> GitWorkspace.Result =
+        { _, command, _ ->
+            val args = command.drop(1)
+            synchronized(calls) { calls.add(args) }
+            when {
+                args.take(2) == listOf("repo", "view") -> GitWorkspace.Result(0, "$permission\n")
+                args.take(2) == listOf("repo", "fork") -> GitWorkspace.Result(0, "Created fork me/app\n")
+                args.take(2) == listOf("api", "user") -> GitWorkspace.Result(0, "me\n")
+                args.take(2) == listOf("pr", "create") -> GitWorkspace.Result(0, "https://github.com/o/app/pull/9\n")
+                else -> GitWorkspace.Result(1, "unexpected: $args")
+            }
+        }
+
+    @Test
+    fun withoutPushAccessTheBranchGoesToAForkAndThePullRequestOpensFromIt() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/f")
+            val app = File(ws.dir, "app")
+            File(app, "fix.txt").writeText("fixed\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "fix")
+            // The user's fork, standing in for github.com/me/app.
+            val fork = File(tmp, "remotes/fork.git").apply { mkdirs() }
+            git(fork, "init", "--quiet", "--bare", "-b", "main")
+            val calls = mutableListOf<List<String>>()
+            val real = GitHubPullRequests.runGh
+            GitHubPullRequests.runGh = fakeGh("READ", calls)
+            try {
+                val result = GitHubPullRequests.open(app, "main", "agent/f", "Fix", "", draft = false, upstream = "o/app", gh = File("gh"), forkUrl = { fileUrl(fork) })
+                assertEquals(GitHubPullRequests.Result.Opened("https://github.com/o/app/pull/9", fork = "me/app"), result)
+            } finally {
+                GitHubPullRequests.runGh = real
+            }
+            // The branch reached the fork, not the repository it was cloned from.
+            assertTrue(git(fork, "branch", "--list", "agent/f").contains("agent/f"))
+            assertFalse(git(File(tmp, "remotes/app.git"), "branch", "--list", "agent/f").contains("agent/f"))
+            // The pull request is opened on the repository, from the fork's branch.
+            val create = calls.single { it.take(2) == listOf("pr", "create") }
+            assertEquals("o/app", create[create.indexOf("--repo") + 1])
+            assertEquals("me:agent/f", create[create.indexOf("--head") + 1])
+        }
+
+    @Test
+    fun withPushAccessTheBranchGoesToTheRepositoryItself() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/w")
+            val app = File(ws.dir, "app")
+            File(app, "fix.txt").writeText("fixed\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "fix")
+            val calls = mutableListOf<List<String>>()
+            val real = GitHubPullRequests.runGh
+            GitHubPullRequests.runGh = fakeGh("WRITE", calls)
+            try {
+                val result = GitHubPullRequests.open(app, "main", "agent/w", "Fix", "", draft = false, upstream = "o/app", gh = File("gh"))
+                assertEquals(GitHubPullRequests.Result.Opened("https://github.com/o/app/pull/9"), result)
+            } finally {
+                GitHubPullRequests.runGh = real
+            }
+            assertTrue(git(File(tmp, "remotes/app.git"), "branch", "--list", "agent/w").contains("agent/w"))
+            assertTrue(calls.none { it.take(2) == listOf("repo", "fork") })
+            val create = calls.single { it.take(2) == listOf("pr", "create") }
+            assertEquals("agent/w", create[create.indexOf("--head") + 1])
+        }
+
+    @Test
+    fun ghsForksAndListsAreRead() {
+        assertEquals("me/app", GitHubPullRequests.parseForkName("✓ Created fork me/app"))
+        assertEquals("me/app", GitHubPullRequests.parseForkName("! me/app already exists"))
+        assertTrue(GitHubPullRequests.needsFork("READ"))
+        assertFalse(GitHubPullRequests.needsFork("WRITE"))
+        // gh couldn't say: try the repository itself, as before.
+        assertFalse(GitHubPullRequests.needsFork(null))
+        assertEquals("o/app", GitHubPullRequests.gitHubRepo("git@github.com:o/app.git"))
+        assertEquals(null, GitHubPullRequests.gitHubRepo("https://relay.ngit.dev/npub1x/app.git"))
+        // `gh pr list` answers with an array.
+        assertTrue(assertNotNull(GitHubPullRequests.parseState("""[{"isDraft":false,"state":"OPEN","url":"https://github.com/o/app/pull/9"}]""")).isOpen)
+        assertEquals(null, GitHubPullRequests.parseState("[]"))
     }
 }

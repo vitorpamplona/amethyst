@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -50,6 +51,8 @@ object GitHubPullRequests {
     sealed interface Result {
         data class Opened(
             val url: String,
+            /** The fork the branch went to, `owner/name`, when the user can't push to the repository. */
+            val fork: String? = null,
         ) : Result
 
         data class Failed(
@@ -70,8 +73,10 @@ object GitHubPullRequests {
     }
 
     /**
-     * Pushes [dir]'s branch to its `origin` and opens a pull request into [base]. The push runs
-     * as the user (their git credentials); the pull request as their `gh` login.
+     * Pushes [dir]'s branch and opens a pull request into [base]. The push runs as the user (their
+     * git credentials); the pull request as their `gh` login. When [upstream] (`owner/name` on
+     * GitHub) is one the user can't push to, the branch goes to their fork of it, made if needed,
+     * and the pull request opens from there.
      */
     suspend fun open(
         dir: File,
@@ -80,45 +85,137 @@ object GitHubPullRequests {
         title: String,
         body: String,
         draft: Boolean,
+        upstream: String? = null,
         gh: File? = find(),
+        forkUrl: (String) -> String = { "https://github.com/$it.git" },
     ): Result =
         withContext(Dispatchers.IO) {
             gh ?: return@withContext Result.Failed("The GitHub CLI (gh) is not installed")
-            val push = GitWorkspace.run(dir, listOf("git", "push", "--set-upstream", "origin", branch), timeoutSeconds = 300)
+            val fork =
+                if (upstream != null && needsFork(permission(dir, upstream, gh))) {
+                    fork(dir, upstream, gh) ?: return@withContext Result.Failed("Could not fork $upstream")
+                } else {
+                    null
+                }
+            val push =
+                if (fork != null) {
+                    // A remote of its own: `origin` stays the repository the clone came from.
+                    val url = forkUrl(fork)
+                    if (GitWorkspace.run(dir, listOf("git", "remote", "set-url", FORK_REMOTE, url)).code != 0) {
+                        GitWorkspace.run(dir, listOf("git", "remote", "add", FORK_REMOTE, url))
+                    }
+                    GitWorkspace.run(dir, listOf("git", "push", "--set-upstream", FORK_REMOTE, branch), timeoutSeconds = 300)
+                } else {
+                    GitWorkspace.run(dir, listOf("git", "push", "--set-upstream", "origin", branch), timeoutSeconds = 300)
+                }
             if (push.code != 0) return@withContext Result.Failed(push.output.trim().takeLast(2000))
             val command =
                 buildList {
                     add(gh.path)
                     add("pr")
                     add("create")
+                    if (upstream != null) {
+                        add("--repo")
+                        add(upstream)
+                    }
                     add("--base")
                     add(base)
                     add("--head")
-                    add(branch)
+                    add(if (fork != null) fork.substringBefore('/') + ":" + branch else branch)
                     add("--title")
                     add(title)
                     add("--body")
                     add(body)
                     if (draft) add("--draft")
                 }
-            val created = GitWorkspace.run(dir, command, timeoutSeconds = 120)
+            val created = runGh(dir, command, 120)
             when (val result = parseCreated(created.code, created.output)) {
                 is Result.Failed -> result.copy(pushed = true)
-                is Result.Opened -> result
+                is Result.Opened -> result.copy(fork = fork)
             }
         }
 
-    /** The pull request [branch] opened, or null when it has none (or `gh` can't say). */
+    /** What the user may do on [upstream] (`ADMIN`, `MAINTAIN`, `WRITE`, `TRIAGE`, `READ`), or null when `gh` can't say. */
+    suspend fun permission(
+        dir: File,
+        upstream: String,
+        gh: File? = find(),
+    ): String? =
+        withContext(Dispatchers.IO) {
+            gh ?: return@withContext null
+            val result = runGh(dir, listOf(gh.path, "repo", "view", upstream, "--json", "viewerPermission", "--jq", ".viewerPermission"), 60)
+            result.output
+                .trim()
+                .takeIf { result.code == 0 && it.isNotEmpty() && it.all { c -> c.isLetter() || c == '_' } }
+        }
+
+    /** Whether a branch must go to a fork: the user can't push to the repository. Unknown is not "can't". */
+    fun needsFork(permission: String?): Boolean = permission != null && permission !in PUSH_PERMISSIONS
+
+    /**
+     * The user's fork of [upstream], `owner/name`: made now, or the one they have. `gh repo fork`
+     * answers with the existing fork when there is one.
+     */
+    suspend fun fork(
+        dir: File,
+        upstream: String,
+        gh: File? = find(),
+    ): String? =
+        withContext(Dispatchers.IO) {
+            gh ?: return@withContext null
+            val forked = runGh(dir, listOf(gh.path, "repo", "fork", upstream, "--clone=false", "--remote=false"), 120)
+            if (forked.code != 0) return@withContext null
+            val login =
+                runGh(dir, listOf(gh.path, "api", "user", "--jq", ".login"), 60)
+                    .takeIf { it.code == 0 }
+                    ?.output
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() && !it.contains(' ') } ?: return@withContext null
+            // gh names the fork after the repository; it says so when it already existed under that name.
+            parseForkName(forked.output) ?: (login + "/" + upstream.substringAfter('/'))
+        }
+
+    /** The fork `gh repo fork` names in its output ("Created fork me/app", "me/app already exists"). */
+    internal fun parseForkName(output: String): String? =
+        Regex("""Created fork\s+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)""").find(output)?.groupValues?.get(1)
+            ?: Regex("""([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)\s+already exists""").find(output)?.groupValues?.get(1)
+
+    /**
+     * The pull request [branch] opened, or null when it has none (or `gh` can't say). With
+     * [upstream], it is looked up there by branch, whether the branch was pushed to the
+     * repository itself or to a fork.
+     */
     suspend fun state(
         dir: File,
         branch: String,
         gh: File? = find(),
+        upstream: String? = null,
     ): PullRequestInfo? =
         withContext(Dispatchers.IO) {
             gh ?: return@withContext null
-            val result = GitWorkspace.run(dir, listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft"), timeoutSeconds = 60)
+            val command =
+                if (upstream != null) {
+                    listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "1", "--json", "url,state,isDraft")
+                } else {
+                    listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft")
+                }
+            val result = runGh(dir, command, 60)
             if (result.code != 0) null else parseState(result.output)
         }
+
+    /** `owner/name` of a GitHub repository URL, or null for any other host. */
+    fun gitHubRepo(url: String): String? {
+        val clean = url.trim().lowercase()
+        val onGitHub = clean.startsWith("https://github.com/") || clean.startsWith("http://github.com/") || clean.startsWith("git@github.com:") || clean.startsWith("ssh://git@github.com/")
+        return if (onGitHub) AgentWorkspaces.ownerAndName(url).takeIf { it.count { c -> c == '/' } == 1 } else null
+    }
+
+    /** How `gh` runs: the user's program. Tests stand in for it; git itself always runs for real. */
+    @Volatile
+    internal var runGh: (File, List<String>, Long) -> GitWorkspace.Result = { dir, command, timeout -> GitWorkspace.run(dir, command, timeoutSeconds = timeout) }
+
+    private const val FORK_REMOTE = "fork"
+    private val PUSH_PERMISSIONS = setOf("ADMIN", "MAINTAIN", "WRITE")
 
     /** `gh pr create` prints the new pull request's URL last. */
     internal fun parseCreated(
@@ -129,15 +226,17 @@ object GitHubPullRequests {
         return if (code == 0 && url != null) Result.Opened(url) else Result.Failed(output.trim().ifEmpty { "gh exited with code $code" }.takeLast(2000))
     }
 
+    /** `gh pr view`'s object, or the first of `gh pr list`'s array. */
     internal fun parseState(output: String): PullRequestInfo? {
-        val start = output.indexOf('{')
+        val start = output.indexOfFirst { it == '{' || it == '[' }
         if (start < 0) return null
-        val obj =
+        val element =
             try {
-                Json.parseToJsonElement(output.substring(start)) as? JsonObject
+                Json.parseToJsonElement(output.substring(start))
             } catch (e: IllegalArgumentException) {
                 null
-            } ?: return null
+            }
+        val obj = (element as? JsonObject) ?: ((element as? JsonArray)?.firstOrNull() as? JsonObject) ?: return null
         val url = (obj["url"] as? JsonPrimitive)?.content ?: return null
         return PullRequestInfo(url, (obj["state"] as? JsonPrimitive)?.content ?: "OPEN", (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false)
     }

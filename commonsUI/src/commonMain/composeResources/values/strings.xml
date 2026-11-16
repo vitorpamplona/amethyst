@@ -9747,8 +9747,7 @@
     <string name="claude_code_workspace_delete_title">Delete this workspace?</string>
     <string name="claude_code_workspace_last_used">Last used</string>
     <string name="claude_code_workspace_forget_group">Forget %1$s</string>
-    <string name="claude_code_workspace_remove_repo">Remove %1$s</string>
-    <string name="claude_code_workspace_add_repo">Repository URL, then Enter</string>
+    <string name="claude_code_workspace_add_repo">Search or paste a URL</string>
     <string name="claude_code_workspace_add">Add</string>
     <string name="claude_code_workspace_group_name">Group name</string>
     <string name="claude_code_workspace_save_group">Save as group</string>
@@ -9761,10 +9760,20 @@
     <string name="claude_code_pr_details">Details</string>
     <string name="claude_code_pr_hide_details">Hide details</string>
     <string name="claude_code_pr_pushed">Pushed %1$s. The pull request didn’t open: try again, or open it on GitHub.</string>
-    <string name="claude_code_pr_open_repo">Open %1$s on the web</string>
+    <string name="claude_code_pr_open_repo">Open %1$s</string>
     <string name="claude_code_pr_changes">Changes in %1$s</string>
     <string name="claude_code_model_other">Other models</string>
     <string name="claude_code_model_default_named">Default (%1$s)</string>
+    <string name="claude_code_repo_source_local">Cloned before</string>
+    <plurals name="claude_code_repo_uses">
+        <item quantity="one">Cloned %1$d time</item>
+        <item quantity="other">Cloned %1$d times</item>
+    </plurals>
+    <string name="claude_code_repo_source_github">GitHub</string>
+    <string name="claude_code_repo_source_nostr">Nostr</string>
+    <string name="claude_code_pr_send_proposal">Send proposal</string>
+    <string name="claude_code_pr_nostr_hint">A Nostr repository: its changes go back as a proposal.</string>
+    <string name="claude_code_pr_via_fork">You can’t push to %1$s: the branch goes to your fork, and the pull request opens from there.</string>
     <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">

@@ -41,6 +41,12 @@ data class WorkspaceRepoRow(
     /** Title and description for a new pull request: from its commits. */
     val draftTitle: String,
     val draftBody: String,
+    /** The NIP-34 repository it was cloned from: its changes go back as a proposal. */
+    val nostr: NostrRepoRef? = null,
+    /** `owner/name` on GitHub, when it is there: where a pull request opens. */
+    val gitHub: String? = null,
+    /** The user can't push to it: the branch goes to their fork. */
+    val viaFork: Boolean = false,
 ) {
     val name get() = status.repo.name
 }
@@ -106,7 +112,8 @@ class ClaudeCodeWorkspaceViewModel(
                                 ?.lines()
                                 ?.filter { it.isNotBlank() }
                                 .orEmpty()
-                        val pr = GitHubPullRequests.state(dir, status.repo.branch)
+                        val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
+                        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub)
                         // The session list shows it from the saved record, without asking GitHub.
                         if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
                         WorkspaceRepoRow(
@@ -114,6 +121,9 @@ class ClaudeCodeWorkspaceViewModel(
                             pullRequest = pr,
                             draftTitle = subjects.lastOrNull() ?: ws.title,
                             draftBody = subjects.reversed().joinToString("\n") { "- $it" },
+                            nostr = NostrRepoRef.fromConfig(GitWorkspace.git(dir, "config", "--get", "branch.${status.repo.branch}.${GitWorkspace.KEY_REPO}")?.trim()),
+                            gitHub = gitHub,
+                            viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
                         )
                     }
             } finally {
@@ -136,7 +146,7 @@ class ClaudeCodeWorkspaceViewModel(
         _errors.update { it - repo }
         viewModelScope.launch {
             try {
-                when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft)) {
+                when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft, upstream = row.gitHub)) {
                     is GitHubPullRequests.Result.Failed -> {
                         _errors.update { it + (repo to PullRequestError(result.reason, result.pushed)) }
                         // gh may have failed because the pull request already exists: it shows.

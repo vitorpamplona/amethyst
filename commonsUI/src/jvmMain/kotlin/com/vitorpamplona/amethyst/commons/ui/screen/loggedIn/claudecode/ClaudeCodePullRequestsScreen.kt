@@ -62,11 +62,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeWorkspaceViewModel
+import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.PullRequestError
 import com.vitorpamplona.amethyst.commons.claudecode.PullRequestInfo
 import com.vitorpamplona.amethyst.commons.claudecode.WorkspaceRepoRow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
@@ -78,18 +80,21 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_details
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_hide_details
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_no_gh
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_nostr_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_nothing
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_pushed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_rules
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_send_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_uncommitted
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_via_fork
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_view
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
@@ -103,6 +108,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 /**
  * A workspace session's repositories, each on its own branch: what each has to propose, and the
@@ -171,6 +178,8 @@ fun ClaudeCodePullRequestsScreen(
                         error = errors[row.name],
                         onOpen = { title, body, draft -> viewModel.openPullRequest(row.name, title, body, draft) },
                         onChanges = { nav.nav(Route.ClaudeCodeChanges(key, row.name)) },
+                        onPropose = { nav.nav(Route.ClaudeCodePropose(key, row.name)) },
+                        onOpenNostr = { repo -> nav.nav(Route.GitRepository(repo.kind, repo.pubKeyHex, repo.identifier)) },
                         onAskToCommit = {
                             viewModel.askToCommit(row.name)
                             nav.popBack()
@@ -206,6 +215,8 @@ private fun RepoCard(
     error: PullRequestError?,
     onOpen: (title: String, body: String, draft: Boolean) -> Unit,
     onChanges: () -> Unit,
+    onPropose: () -> Unit,
+    onOpenNostr: (NostrRepoRef) -> Unit,
     onAskToCommit: () -> Unit,
 ) {
     val status = row.status
@@ -213,16 +224,22 @@ private fun RepoCard(
     var body by remember(row.draftBody) { mutableStateOf(row.draftBody) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // owner/name, as GitHub shows it, with a link to the repository's page.
-            val label = AgentWorkspaces.ownerAndName(status.repo.url)
-            val web = AgentWorkspaces.webUrl(status.repo.url)
+            // A NIP-34 repository by its announced name, opening its page in the app; any other by
+            // owner/name, as GitHub shows it, opening its web page.
+            val nostr = row.nostr
+            val label =
+                remember(nostr, status.repo.url) {
+                    nostr?.let { (LocalCache.getAddressableNoteIfExists(Address(it.kind, it.pubKeyHex, it.identifier))?.event as? GitRepositoryEvent)?.name()?.takeIf { name -> name.isNotBlank() } ?: it.identifier }
+                        ?: AgentWorkspaces.ownerAndName(status.repo.url)
+                }
+            val web = if (nostr == null) AgentWorkspaces.webUrl(status.repo.url) else null
             val uriHandler = LocalUriHandler.current
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (web != null) {
+                if (web != null || nostr != null) {
                     val open = stringRes(Res.string.claude_code_pr_open_repo, label)
                     HoverTooltip(open) {
-                        IconButton(onClick = { uriHandler.openUri(web) }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { if (nostr != null) onOpenNostr(nostr) else web?.let(uriHandler::openUri) }, modifier = Modifier.size(32.dp)) {
                             Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = open, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
                         }
                     }
@@ -249,10 +266,20 @@ private fun RepoCard(
                     }
                 }
             }
+            // A NIP-34 repository takes its changes as a proposal, signed and sent from the app.
+            if (row.nostr != null && status.ahead > 0) {
+                Text(stringRes(Res.string.claude_code_pr_nostr_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                Button(onClick = onPropose) { Text(stringRes(Res.string.claude_code_pr_send_proposal)) }
+            }
             val pr = row.pullRequest
+            // A GitHub pull request, unless the repository is only on Nostr.
+            val offersPullRequest = row.gitHub != null || row.nostr == null
             if (pr != null) {
                 PullRequestLine(pr)
-            } else if (status.ahead > 0) {
+            } else if (status.ahead > 0 && offersPullRequest) {
+                if (row.viaFork && row.gitHub != null) {
+                    Text(stringRes(Res.string.claude_code_pr_via_fork, row.gitHub ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                }
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringRes(Res.string.claude_code_pr_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = body, onValueChange = { body = it }, label = { Text(stringRes(Res.string.claude_code_pr_body)) }, minLines = 3, maxLines = 10, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
