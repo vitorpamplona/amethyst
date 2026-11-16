@@ -35,9 +35,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.resources.upload_media
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.GallerySelectSingleCropped
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.StringResource
@@ -65,23 +68,32 @@ fun SelectFromGallery(
     GallerySelectButton(isUploading, enabled, tint, Res.string.upload_media, modifier) { showGallerySelect = true }
 }
 
+/**
+ * A button that picks one picture or video. With [crop] (and the [uploader] that writes it), a
+ * still picture goes through [GallerySelectSingleCropped] first and [onImageChosen] gets the crop.
+ */
 @Composable
 fun SelectSingleFromGallery(
     isUploading: Boolean,
     tint: Color,
     modifier: Modifier,
+    crop: ImageCropShape? = null,
+    uploader: MediaUploader? = null,
     onImageChosen: (SelectedMedia) -> Unit,
 ) {
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
-        GallerySelectSingle(
-            onImageUri = { media ->
-                showGallerySelect = false
-                if (media != null) {
-                    onImageChosen(media)
-                }
-            },
-        )
+        val chosen = { media: SelectedMedia? ->
+            showGallerySelect = false
+            if (media != null) {
+                onImageChosen(media)
+            }
+        }
+        if (crop != null && uploader != null) {
+            GallerySelectSingleCropped(crop, uploader, imagesOnly = true, onImage = chosen)
+        } else {
+            GallerySelectSingle(onImageUri = chosen)
+        }
     }
 
     GallerySelectButton(isUploading, true, tint, Res.string.upload_image, modifier) { showGallerySelect = true }

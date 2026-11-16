@@ -44,8 +44,9 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_change_photo
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_icon
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_photo
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.GallerySelectSingleCropped
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -76,7 +77,7 @@ fun MarmotGroupIconEditor(
 ) {
     var showPicker by remember { mutableStateOf(false) }
     if (showPicker) {
-        GallerySelectSingle(imagesOnly = true) { media ->
+        GallerySelectSingleCropped(ImageCropShape.Icon, accountViewModel.mediaUploader) { media ->
             showPicker = false
             media?.let(onPick)
         }

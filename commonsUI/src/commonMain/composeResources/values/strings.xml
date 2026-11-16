@@ -9948,4 +9948,7 @@
     <string name="media_studio_caption_placeholder">Write a caption…</string>
     <string name="media_studio_retry">Nothing was sent. %1$s tries again.</string>
     <string name="media_post_nothing_posted">Nothing was posted. Post tries again.</string>
+    <string name="media_crop_hint">Drag the corners or move the frame</string>
+    <string name="media_crop_reset">Reset</string>
+    <string name="media_crop_failed">This picture can't be cropped here. Save uses it as it is.</string>
 </resources>

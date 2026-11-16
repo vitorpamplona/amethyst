@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
@@ -39,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
@@ -831,6 +834,71 @@ class AndroidMediaUploader(
         }
     }
 
+    override suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.IO) {
+            val resolver = appContext.contentResolver
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            runCatching { resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+            // An avatar or banner needs no more than this; sampling keeps a 50 MP photo out of memory.
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= CROP_MAX_EDGE) sample *= 2
+            val decoded =
+                runCatching {
+                    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
+                }.getOrNull() ?: return@withContext null
+            val orientation =
+                runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } }
+                    .getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+            val upright = applyExifOrientation(decoded, orientation)
+            val (x, y, w, h) = crop.pixels(upright.width, upright.height).toList()
+            val cropped = Bitmap.createBitmap(upright, x, y, w, h)
+            val png = cropped.hasAlpha()
+            val file = File.createTempFile("crop_", if (png) ".png" else ".jpg", appContext.cacheDir)
+            try {
+                file.outputStream().use { out ->
+                    if (!cropped.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, CROP_JPEG_QUALITY, out)) error("could not encode the crop")
+                }
+            } catch (e: Exception) {
+                if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
+                throw e
+            } finally {
+                if (cropped !== upright) cropped.recycle()
+                if (upright !== decoded) upright.recycle()
+                decoded.recycle()
+            }
+            MediaCompressorResult(Uri.fromFile(file), if (png) "image/png" else "image/jpeg", file.length())
+        }
+
+    /** [bitmap] as it displays under the EXIF [orientation]. */
+    private fun applyExifOrientation(
+        bitmap: Bitmap,
+        orientation: Int,
+    ): Bitmap {
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(-90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+            else -> return bitmap
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
     /** Pixel size as displayed (EXIF rotation applied) and byte length, without decoding the pixels. */
     private fun imageStats(uri: Uri): ImageFileStats {
         val resolver = appContext.contentResolver
@@ -902,3 +970,8 @@ class AndroidMediaUploader(
 
 /** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */
 private const val BUZZ_UPLOAD_TOKEN_SECS = 55L
+
+// A cropped avatar, icon or banner is decoded at no more than about twice this long edge.
+private const val CROP_MAX_EDGE = 2048
+
+private const val CROP_JPEG_QUALITY = 92

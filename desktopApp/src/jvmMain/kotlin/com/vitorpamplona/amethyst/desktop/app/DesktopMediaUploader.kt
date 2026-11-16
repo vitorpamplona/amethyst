@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.ExifOrientation
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.upload.ImageCompressionTarget
+import com.vitorpamplona.amethyst.commons.service.upload.ImageCropper
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
 import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressionR
 import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressor
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
@@ -502,6 +504,15 @@ class DesktopMediaUploader(
             result.file.delete()
             throw e
         }
+    }
+
+    override suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? {
+        val cropped = ImageCropper.crop(fileOf(uri), crop, fallbackDecode = ::decodeImageWithSkia) ?: return null
+        return MediaCompressorResult(StringMediaUri(cropped.file.absolutePath), cropped.mimeType, cropped.file.length())
     }
 
     private suspend fun imageStats(file: File): ImageFileStats =

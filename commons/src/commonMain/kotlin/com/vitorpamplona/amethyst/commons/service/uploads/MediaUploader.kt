@@ -92,6 +92,18 @@ interface MediaUploader {
     ): ImageCompressionPreview? = null
 
     /**
+     * Writes the [crop] of the still image at [uri] to a new temp file, with the camera's
+     * orientation applied to the pixels and no metadata kept: a PNG when the picture has
+     * transparency, else a high-quality JPEG. Null when this platform cannot decode [uri] (a GIF's
+     * animation would be lost, so callers don't offer a crop for one). The caller owns the file.
+     */
+    suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? = null
+
+    /**
      * Downloads the already-hosted file at [url] and computes its [FileHeader] (hash, size,
      * dimensions, preview hashes) for an `imeta` tag, guessing the MIME type from the URL's
      * extension. Null when it cannot be downloaded or decoded.

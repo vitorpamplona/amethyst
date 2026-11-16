@@ -37,7 +37,23 @@ their share targets) are the Studio with a caption field and Post.
 - A content warning on any image covers the picture post.
 - A failed upload no longer leaves Post disabled for good.
 
-Still on their old flows: avatar/banner/icon uploads.
+**Avatar, banner and icon uploads** crop first. Picking a still picture opens `ImageCropDialog`
+(studio package): the picture on the Studio's black stage with a frame on it, corners to resize,
+drag inside to move, Reset, and Save.
+- `ImageCropShape.Avatar` and `.Icon` lock a square and dim outside a circle (how they display);
+  `.Banner` locks 3:1.
+- Save writes the crop with `MediaUploader.cropImage` (new): the camera's orientation applied to
+  the pixels, no metadata kept, PNG when the picture has transparency, JPEG 92 otherwise. Desktop
+  is `ImageCropper` (commons jvmMain: ImageIO, Skia for WebP); Android decodes with
+  `BitmapFactory` sampled to a 2,048–4,096 px long edge and turns it with `ExifInterface`.
+- The screens keep their own upload: `SelectSingleFromGallery(crop = …, uploader = …)` and
+  `GallerySelectSingleCropped` hand them the cropped file. GIFs and SVGs skip the crop (it would
+  lose the animation), and a picture the platform can't decode says so and Save uses it whole.
+- Where: profile edit (avatar, banner), the profile header's add-a-picture button, NIP-28 channel,
+  relay (NIP-29) group, Concord icon and banner, Marmot group icon.
+- Tests: `ImageCropperTest` (commons, an EXIF-rotated JPEG and a transparent PNG), `ImageCropTest`
+  (commonsUI, the drag math and renders).
+- Still uncropped: emoji, list and pack covers, nests, geocaches, drss, podcast and music art.
 
 **Implemented (described for the note composer, `ShortNotePostScreen`):**
 
@@ -87,8 +103,7 @@ AVIF sent as the original. Hooked in through `UploadOrchestrator(readMetadata = 
 real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get none.
 
 Not yet:
-- crop and trim (step 3)
-- avatar/banner/icon uploads (they need crop with a locked shape)
+- crop as a Studio tool for posts and chats, rotate, and video trim (step 3)
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 
