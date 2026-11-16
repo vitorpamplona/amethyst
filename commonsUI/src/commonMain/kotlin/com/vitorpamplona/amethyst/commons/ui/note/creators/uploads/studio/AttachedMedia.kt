@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -193,9 +194,24 @@ fun AttachedMediaCard(
             .semantics { contentDescription = label },
     ) {
         when {
-            media.isImage() == true -> AsyncImage(media.uri.toString(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            media.isImage() == true ->
+                AsyncImage(
+                    model = media.uri.toString(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    // The decoded size, after EXIF orientation: the card takes this shape.
+                    onSuccess = { state ->
+                        val size = state.painter.intrinsicSize
+                        if (size.width > 0f && size.height > 0f) item.displayAspectRatio = size.width / size.height
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
             media.isVideo() == true -> {
-                rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                val frame = rememberVideoThumbnail(media)
+                if (frame != null && frame.width > 0 && frame.height > 0) {
+                    SideEffect { item.displayAspectRatio = frame.width.toFloat() / frame.height }
+                }
+                frame?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 if (state is UploadingState.Ready) {
                     Icon(
                         MaterialSymbols.PlayArrow,

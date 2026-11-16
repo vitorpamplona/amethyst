@@ -51,6 +51,9 @@ interface VideoCompressor {
     /** The source's dimensions and frame rate, for the slider label; null when it cannot be read. */
     suspend fun probe(source: File): VideoInfo?
 
+    /** Width and height as the video plays (after any rotation flag): an `imeta` `dim`. Null when unknown. */
+    suspend fun displaySize(source: File): Pair<Int, Int>? = probe(source)?.resolution?.let { it.width to it.height }
+
     /**
      * Transcodes [source] at [quality] (through its video level), H.265 when [useH265] and an
      * HEVC encoder works. [onProgress] receives fractions in 0..1.

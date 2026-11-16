@@ -55,6 +55,8 @@ class FfmpegVideoCompressor(
 
     override suspend fun probe(source: File): VideoInfo? = probed(source)?.info
 
+    override suspend fun displaySize(source: File): Pair<Int, Int>? = probed(source)?.displaySize
+
     override suspend fun compress(
         source: File,
         quality: CompressorQuality,

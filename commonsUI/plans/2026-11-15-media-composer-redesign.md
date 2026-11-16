@@ -30,6 +30,9 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
      - The cursor against a card selects it: outline, no caret. Backspace removes it, and undo
        brings it back with its settings.
      - `MentionPreservingInputTransformation` keeps markers whole against IME partial edits.
+   - Each card takes its media's shape (`SelectedMediaProcessing.displayAspectRatio`, read when its
+     picture or video frame loads) at the field's width, between 120 and 420 dp, and its gap in
+     the text follows.
    - The card shows an ALT badge (amber when missing), CW, the quality and remove. Tapping it
      reopens the Studio ("Done"). A chip style (`MediaMarkerChips`) remains for fields too small
      for a card. The field takes the focus back after Add.
@@ -46,6 +49,12 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
    - Tests: `MediaMarkersTest`, `MultiOrchestratorUploadEachTest` (commons);
      `MediaStudioRenderTest` (commonsUI); `MediaStudioUiTest`, `MediaMarkerFieldUiTest`
      (desktopApp, real clicks and keys).
+
+**Desktop `imeta` dimensions.** The desktop's upload metadata (`readDesktopUploadMetadata`) adds
+Skia for images ImageIO can't decode (WebP), and ffprobe's display size, after any rotation flag,
+for videos and AVIF. Before, an `imeta` from desktop had no `dim` for any video or for a WebP or
+AVIF sent as the original. Hooked in through `UploadOrchestrator(readMetadata = …)`. Tested on
+real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get none.
 
 Not yet:
 - crop and trim (step 3)

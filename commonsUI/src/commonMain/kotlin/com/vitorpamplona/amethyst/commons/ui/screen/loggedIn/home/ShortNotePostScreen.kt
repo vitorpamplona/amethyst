@@ -495,7 +495,7 @@ private fun NewPostScreenBody(
                             refocusKey = postViewModel.attachCount.takeIf { it > 0 },
                             mediaBlocks =
                                 remember(postViewModel) {
-                                    MediaBlocks(AttachedMediaHeight) { id, selected, modifier ->
+                                    MediaBlocks(aspectRatio = { id -> postViewModel.attachedMedia[id]?.displayAspectRatio }) { id, selected, modifier ->
                                         val item = postViewModel.attachedMedia[id]
                                         if (item != null) {
                                             AttachedMediaCard(
@@ -820,9 +820,6 @@ private fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationS
 
 /** Lines the wrapped tools up with the text: past the 10dp side padding and the 35dp avatar. */
 private val ComposerToolsStartPadding = 45.dp
-
-/** How tall a photo or video attached to the note is drawn inside the text. */
-private val AttachedMediaHeight = 220.dp
 
 @Composable
 private fun BottomRowActions(

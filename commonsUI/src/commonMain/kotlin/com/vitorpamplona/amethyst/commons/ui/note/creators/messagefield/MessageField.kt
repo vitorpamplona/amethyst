@@ -31,7 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -66,14 +68,29 @@ import org.jetbrains.compose.resources.StringResource
 import kotlin.math.roundToInt
 
 /**
- * The media a composer draws inside its text: one [card] per media marker, [height] tall, in the
- * gap the marker leaves where it sits in the text. [card] gets the marker's id and whether the
- * cursor sits against it (Backspace would remove it).
+ * The media a composer draws inside its text: one [card] per media marker, in the gap the marker
+ * leaves where it sits in the text. Each card takes the field's width and its media's shape
+ * ([aspectRatio], width over height, null until known: [defaultHeight]), between [minHeight] and
+ * [maxHeight] so a panorama stays tappable and a tall portrait doesn't fill the screen. [card]
+ * gets the marker's id and whether the cursor sits against it (Backspace would remove it).
  */
 class MediaBlocks(
-    val height: Dp,
+    val aspectRatio: (id: Int) -> Float?,
+    val defaultHeight: Dp = 220.dp,
+    val minHeight: Dp = 120.dp,
+    val maxHeight: Dp = 420.dp,
     val card: @Composable (id: Int, selected: Boolean, modifier: Modifier) -> Unit,
-)
+) {
+    /** The card's height in a field [widthDp] wide. */
+    fun heightOf(
+        id: Int,
+        widthDp: Float,
+    ): Dp {
+        val ratio = aspectRatio(id)?.takeIf { it > 0f }
+        if (ratio == null || widthDp <= 0f) return defaultHeight
+        return (widthDp / ratio).dp.coerceIn(minHeight, maxHeight)
+    }
+}
 
 /** Space above and below a media card, inside its gap. */
 private val MediaBlockGap = 8.dp
@@ -111,9 +128,15 @@ fun MessageField(
     }
 
     val density = LocalDensity.current
+    // The text's width, from the last layout: a card's height follows it and its media's shape.
+    val textWidth = remember { mutableFloatStateOf(0f) }
     val rendering: MediaMarkerRendering? =
         if (mediaBlocks != null) {
-            remember(mediaBlocks.height, density) { MediaMarkerBlocks(with(density) { (mediaBlocks.height + MediaBlockGap * 2).toSp() }) }
+            remember(mediaBlocks, density) {
+                MediaMarkerBlocks { id ->
+                    with(density) { (mediaBlocks.heightOf(id, textWidth.floatValue / density.density) + MediaBlockGap * 2).toSp() }
+                }
+            }
         } else {
             mediaChips
         }
@@ -159,7 +182,11 @@ fun MessageField(
         cursorBrush = if (selectedBlock != null) SolidColor(Color.Transparent) else null,
         textOverlay =
             mediaBlocks?.let { blocks ->
-                { layout -> MediaBlockCards(viewModel.message.text, transformation, layout, blocks, selectedBlock) }
+                { layout ->
+                    val width = layout.fieldWidth().toFloat()
+                    if (width != textWidth.floatValue) SideEffect { textWidth.floatValue = width }
+                    MediaBlockCards(viewModel.message.text, transformation, layout, blocks, selectedBlock)
+                }
             },
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
@@ -183,7 +210,8 @@ private fun MediaBlockCards(
 ) {
     val rawText = raw.toString()
     val replacements = transformation.replacements(rawText)
-    val cardHeight = with(LocalDensity.current) { blocks.height.toPx() }
+    val density = LocalDensity.current
+    val widthDp = layout.fieldWidth() / density.density
     val drawn = layout.layoutInput.text.length
     replacements.forEach { replacement ->
         if (!replacement.isMediaMarker) return@forEach
@@ -193,11 +221,16 @@ private fun MediaBlockCards(
         if (offset >= drawn) return@forEach
         // Centred between the text above (the previous line's bottom, which can sit higher than this
         // line's top) and the end of the gap, so the space above and below the card matches.
+        val cardHeight = blocks.heightOf(id, widthDp)
+        val cardHeightPx = with(density) { cardHeight.toPx() }
         val line = layout.getLineForOffset(offset)
         val above = if (line > 0) layout.getLineBottom(line - 1) else layout.getLineTop(line)
-        val top = ((above + layout.getLineBottom(line) - cardHeight) / 2).roundToInt()
+        val top = ((above + layout.getLineBottom(line) - cardHeightPx) / 2).roundToInt()
         key(id) {
-            blocks.card(id, id == selected, Modifier.offset { IntOffset(0, top) }.fillMaxWidth().height(blocks.height))
+            blocks.card(id, id == selected, Modifier.offset { IntOffset(0, top) }.fillMaxWidth().height(cardHeight))
         }
     }
 }
+
+/** The width the text may take: the field's, not the laid-out text's own (one short line is narrow). */
+private fun TextLayoutResult.fieldWidth(): Int = layoutInput.constraints.let { if (it.hasBoundedWidth) it.maxWidth else size.width }

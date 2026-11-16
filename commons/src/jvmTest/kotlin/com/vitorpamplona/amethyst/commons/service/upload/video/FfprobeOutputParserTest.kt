@@ -82,4 +82,21 @@ class FfprobeOutputParserTest {
     fun zeroDenominatorFpsIsZero() {
         assertEquals(0f, FfprobeOutputParser.parse("""{"streams":[{"width":10,"height":10,"avg_frame_rate":"0/0"}],"format":{}}""")!!.info.framerate)
     }
+
+    @Test
+    fun aRotatedClipPlaysWithItsSidesSwapped() {
+        // ffprobe's own output for a 640x360 clip flagged to turn 90°, as phones store portrait video.
+        val r = FfprobeOutputParser.parse("""{"streams":[{"width":640,"height":360,"sample_aspect_ratio":"1:1","tags":{},"side_data_list":[{"rotation":90}]}],"format":{"duration":"1.000000"}}""")!!
+        assertEquals(VideoResolution(640, 360), r.info.resolution)
+        assertEquals(90, r.rotation)
+        assertEquals(360 to 640, r.displaySize)
+    }
+
+    @Test
+    fun theOlderRotateTagCountsToo() {
+        val r = FfprobeOutputParser.parse("""{"streams":[{"width":1920,"height":1080,"tags":{"rotate":"270"}}],"format":{}}""")!!
+        assertEquals(1080 to 1920, r.displaySize)
+        val upsideDown = FfprobeOutputParser.parse("""{"streams":[{"width":1920,"height":1080,"side_data_list":[{"rotation":-180}]}],"format":{}}""")!!
+        assertEquals(1920 to 1080, upsideDown.displaySize)
+    }
 }

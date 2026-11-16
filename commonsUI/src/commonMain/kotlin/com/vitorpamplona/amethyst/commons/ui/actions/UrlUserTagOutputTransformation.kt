@@ -67,13 +67,14 @@ class MediaMarkerChips(
 ) : MediaMarkerRendering
 
 /**
- * Each marker as an empty paragraph [lineHeight] tall: a gap in the text where the field's owner
- * draws the media itself (see `ThinPaddingTextField.textOverlay`), so the composer reads like the
- * note will. The marker becomes a single invisible character, so the cursor steps over it in one
- * move and Backspace removes the whole marker.
+ * Each marker as an empty paragraph [lineHeight] tall (by the marker's id: each media keeps its
+ * own shape): a gap in the text where the field's owner draws the media itself (see
+ * `ThinPaddingTextField.textOverlay`), so the composer reads like the note will. The marker becomes
+ * a single invisible character, so the cursor steps over it in one move and Backspace removes the
+ * whole marker.
  */
-data class MediaMarkerBlocks(
-    val lineHeight: TextUnit,
+class MediaMarkerBlocks(
+    val lineHeight: (id: Int) -> TextUnit,
 ) : MediaMarkerRendering
 
 class UrlUserTagOutputTransformation(
@@ -82,7 +83,8 @@ class UrlUserTagOutputTransformation(
 ) : OutputTransformation,
     VisualOffsetMapping {
     override fun TextFieldBuffer.transformOutput() {
-        val replacements = replacements(asCharSequence().toString())
+        val rawText = asCharSequence().toString()
+        val replacements = replacements(rawText)
 
         // Phase 1: replace mentions back to front, so earlier indices stay valid after each replace.
         // Styles come after: addStyle must be called after all text mutations.
@@ -95,7 +97,7 @@ class UrlUserTagOutputTransformation(
         val style = SpanStyle(color = color, textDecoration = TextDecoration.None)
         val markers = mediaMarkers
         val chipStyle = (markers as? MediaMarkerChips)?.let { SpanStyle(color = it.onChip, background = it.chip, fontWeight = FontWeight.Medium) }
-        val blockParagraph = (markers as? MediaMarkerBlocks)?.let { ParagraphStyle(lineHeight = it.lineHeight, lineHeightStyle = BlockLineHeightStyle) }
+        val blocks = markers as? MediaMarkerBlocks
         var cumulativeShift = 0
         for (replacement in replacements) {
             val adjustedStart = replacement.rawStart + cumulativeShift
@@ -103,8 +105,9 @@ class UrlUserTagOutputTransformation(
             when {
                 !replacement.isMediaMarker -> addStyle(style, adjustedStart, adjustedEnd)
                 chipStyle != null -> addStyle(chipStyle, adjustedStart, adjustedEnd)
-                blockParagraph != null -> {
-                    addStyle(blockParagraph, adjustedStart, adjustedEnd)
+                blocks != null -> {
+                    val id = MediaMarkers.idAt(rawText, replacement.rawStart)
+                    if (id != null) addStyle(ParagraphStyle(lineHeight = blocks.lineHeight(id), lineHeightStyle = BlockLineHeightStyle), adjustedStart, adjustedEnd)
                     addStyle(HiddenStyle, adjustedStart, adjustedEnd)
                 }
             }

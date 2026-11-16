@@ -133,7 +133,9 @@ class DesktopMediaUploader(
     private fun isBlossom(server: ServerName) = server.type == ServerType.Blossom || server.type == ServerType.BuzzWorkspace
 
     // Each server it tries goes out on its own client, so a fallback keeps its own route.
-    private fun pipeline(server: ServerName) = BlossomUploadPipeline(clientFor(server.baseUrl), clientFor)
+    private fun pipeline(server: ServerName) = BlossomUploadPipeline(client = clientFor(server.baseUrl), readMetadata = ::readUploadMetadata, clientFor = clientFor)
+
+    private suspend fun readUploadMetadata(file: File) = readDesktopUploadMetadata(file, videoCompressor::displaySize)
 
     // After the selected server, the rest of the Blossom servers the picker offered, as Android tries
     // them (blossomUploadOrder). A Buzz workspace keeps its single target.
@@ -270,7 +272,7 @@ class DesktopMediaUploader(
         stripMetadata: Boolean,
         cipher: AESGCM?,
     ): Payload =
-        BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget()) { ready, metadata ->
+        BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget(), ::readUploadMetadata) { ready, metadata ->
             val plain = withContext(Dispatchers.IO) { ready.readBytes() }
             if (cipher == null) {
                 Payload(plain, metadata.mimeType, metadata, encrypted = false)
@@ -595,6 +597,23 @@ class DesktopMediaUploader(
         // Where the bar stands once a Blossom upload has sent its last byte; the server's reply finishes it.
         const val BLOSSOM_SENT_CEILING = 0.95
     }
+}
+
+/**
+ * What the desktop reports about the bytes it uploads: ImageIO's reading, Skia for the images
+ * ImageIO cannot decode (WebP, ...), and [displaySize] (ffprobe, after any rotation flag) for a
+ * video or an image neither decodes (AVIF). Without these an `imeta` lost its `dim` for every
+ * video and for a WebP or AVIF sent as the original.
+ */
+internal suspend fun readDesktopUploadMetadata(
+    file: File,
+    displaySize: suspend (File) -> Pair<Int, Int>?,
+): MediaMetadata {
+    val mime = MediaMetadataReader.guessMimeType(file)
+    val read = withContext(Dispatchers.IO) { MediaMetadataReader.compute(file.readBytes(), mime, ::decodeImageWithSkia) }
+    if (read.width != null || !(mime.startsWith("video/") || mime.startsWith("image/"))) return read
+    val (width, height) = displaySize(file) ?: return read
+    return read.copy(width = width, height = height)
 }
 
 /** Skia decodes what ImageIO cannot, WebP above all: the same decoder the previews draw with. */
