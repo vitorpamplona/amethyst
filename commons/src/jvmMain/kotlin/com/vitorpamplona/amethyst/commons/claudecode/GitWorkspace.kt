@@ -381,13 +381,15 @@ object GitWorkspace {
      * (a fetch from a slow host); past it the command and what it started are stopped. Git never
      * waits on a terminal password prompt here: there is no terminal to answer it. With
      * [noLoginWindow] it opens no login window either (Git Credential Manager): for hosts named
-     * in events, which anyone can publish. The user's own push keeps it.
+     * in events, which anyone can publish. The user's own push keeps it. [input] goes to the
+     * command's standard input.
      */
     internal fun run(
         dir: File,
         command: List<String>,
         timeoutSeconds: Long = 60,
         noLoginWindow: Boolean = false,
+        input: String? = null,
     ): Result {
         val process =
             try {
@@ -401,7 +403,11 @@ object GitWorkspace {
             } catch (e: IOException) {
                 return Result(-1, e.message ?: "${command.first()} could not run")
             }
-        process.outputStream.close()
+        try {
+            process.outputStream.use { stdin -> input?.let { stdin.write(it.toByteArray()) } }
+        } catch (e: IOException) {
+            // The command ended without reading it all: its exit code says what happened.
+        }
         val output = StringBuilder()
         val reader =
             Thread({

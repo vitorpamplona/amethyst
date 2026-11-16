@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -466,6 +467,47 @@ class AgentWorkspacesTest {
             assertEquals(0, workspaces.removeUnusedMirrors())
             assertEquals(listOf("lib"), starting.await().repos.map { it.name })
             assertTrue(mirror.isDirectory)
+        }
+
+    /** Gives the remote at [url] a pull request's ref, as GitHub keeps one per pull request. */
+    private fun addPullRequestRef(url: String) {
+        val bare = File(URI(url))
+        val main = git(bare, "rev-parse", "main").trim()
+        git(bare, "update-ref", "refs/pull/1/head", main)
+    }
+
+    @Test
+    fun mirrorsFetchBranchesAndTagsNotPullRequests() =
+        runBlocking {
+            addPullRequestRef(appUrl)
+            workspaces.create(listOf(appUrl), null)
+            val mirror = workspaces.mirrorDir(appUrl)
+            assertEquals("", git(mirror, "for-each-ref", "refs/pull").trim())
+            assertEquals("+refs/heads/*:refs/heads/*\n+refs/tags/*:refs/tags/*", git(mirror, "config", "--get-all", "remote.origin.fetch").trim())
+            // A later fetch still brings new branches in, and still no pull requests.
+            val seed = File(tmp, "seed-app")
+            git(seed, "checkout", "--quiet", "-b", "feature")
+            git(seed, "push", "--quiet", File(URI(appUrl)).absolutePath, "feature")
+            workspaces.refreshMirror(appUrl)
+            assertTrue(git(mirror, "for-each-ref", "--format=%(refname)").lines().contains("refs/heads/feature"))
+            assertEquals("", git(mirror, "for-each-ref", "refs/pull").trim())
+        }
+
+    @Test
+    fun anOldStyleMirrorIsNarrowedOnItsNextFetch() =
+        runBlocking {
+            addPullRequestRef(appUrl)
+            val mirror = workspaces.mirrorDir(appUrl)
+            mirror.parentFile.mkdirs()
+            git(mirror.parentFile, "clone", "--quiet", "--mirror", appUrl, mirror.absolutePath)
+            assertTrue(git(mirror, "for-each-ref", "refs/pull").isNotBlank())
+
+            val made = workspaces.create(listOf(appUrl), null)
+
+            assertEquals("", git(mirror, "for-each-ref", "refs/pull").trim())
+            assertTrue(GitWorkspace.git(mirror, "config", "--get", "remote.origin.mirror") == null)
+            assertEquals("+refs/heads/*:refs/heads/*\n+refs/tags/*:refs/tags/*", git(mirror, "config", "--get-all", "remote.origin.fetch").trim())
+            assertEquals(listOf("app"), made.repos.map { it.name })
         }
 
     @Test

@@ -200,6 +200,7 @@ class AgentWorkspaces(
         mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
             withContext(Dispatchers.IO) {
                 if (File(mirror, "HEAD").isFile) {
+                    narrowToBranchesAndTags(mirror)
                     // Git's automatic maintenance would run detached, past the lock, and repack
                     // the objects a clone is copying: off here, and run in step below instead.
                     val fetched = GitWorkspace.run(mirror, listOf("git", "-c", "maintenance.auto=false", "-c", "gc.auto=0", "fetch", "--prune", "origin"), timeoutSeconds = NETWORK_TIMEOUT)
@@ -207,8 +208,13 @@ class AgentWorkspaces(
                     GitWorkspace.run(mirror, listOf("git", "-c", "gc.autoDetach=false", "gc", "--auto", "--quiet"), timeoutSeconds = NETWORK_TIMEOUT)
                 } else {
                     if (!mirrorsDir.mkdirs() && !mirrorsDir.isDirectory) throw IOException("Could not create $mirrorsDir")
-                    val cloned = GitWorkspace.run(mirrorsDir, listOf("git", "clone", "--mirror", url, mirror.absolutePath), timeoutSeconds = NETWORK_TIMEOUT)
-                    if (cloned.code != 0) throw IOException(cloned.output.trim().ifEmpty { "git clone --mirror failed" })
+                    // Bare, not --mirror: a mirror fetches every ref, GitHub's refs/pull/* for
+                    // each pull request ever opened included, which no workspace clone uses.
+                    val cloned = GitWorkspace.run(mirrorsDir, listOf("git", "clone", "--bare", "--quiet", url, mirror.absolutePath), timeoutSeconds = NETWORK_TIMEOUT)
+                    if (cloned.code != 0) throw IOException(cloned.output.trim().ifEmpty { "git clone --bare failed" })
+                    // A bare clone records no fetch refspec: later fetches would update nothing.
+                    git(mirror, "config", "--replace-all", "remote.origin.fetch", BRANCHES)
+                    git(mirror, "config", "--add", "remote.origin.fetch", TAGS)
                 }
                 use(mirror)
             }
@@ -430,6 +436,27 @@ class AgentWorkspaces(
     }
 
     /**
+     * Turns a mirror made with `git clone --mirror` (fetches every ref) into one that fetches
+     * branches and tags, and drops the other refs it holds (the pull requests under `refs/pull`): their objects go at
+     * the next gc. Nothing to do for a mirror made since.
+     */
+    private fun narrowToBranchesAndTags(mirror: File) {
+        if (GitWorkspace.git(mirror, "config", "--get", "remote.origin.mirror")?.trim() != "true") return
+        git(mirror, "config", "--replace-all", "remote.origin.fetch", BRANCHES)
+        git(mirror, "config", "--add", "remote.origin.fetch", TAGS)
+        git(mirror, "config", "--unset", "remote.origin.mirror")
+        val others =
+            GitWorkspace
+                .git(mirror, "for-each-ref", "--format=%(refname)")
+                ?.lines()
+                .orEmpty()
+                .filter { it.isNotBlank() && !it.startsWith("refs/heads/") && !it.startsWith("refs/tags/") }
+        if (others.isEmpty()) return
+        val dropped = GitWorkspace.run(mirror, listOf("git", "update-ref", "--stdin"), input = others.joinToString("") { "delete $it\n" })
+        if (dropped.code != 0) Log.w(TAG) { "Could not drop the extra refs of $mirror: ${dropped.output.trim()}" }
+    }
+
+    /**
      * Whether removing [workspace] would lose work: a repository with files not committed, or
      * commits that are on no remote (the user's push, to the repository or a fork, puts them there).
      */
@@ -565,6 +592,8 @@ class AgentWorkspaces(
     companion object {
         private const val TAG = "AgentWorkspaces"
         private const val NETWORK_TIMEOUT = 900L
+        private const val BRANCHES = "+refs/heads/*:refs/heads/*"
+        private const val TAGS = "+refs/tags/*:refs/tags/*"
         private val json = Json { ignoreUnknownKeys = true }
 
         /**
