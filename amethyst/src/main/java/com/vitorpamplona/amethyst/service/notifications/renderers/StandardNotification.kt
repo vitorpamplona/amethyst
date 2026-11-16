@@ -24,7 +24,7 @@ import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.accountLabelFor
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.notificationAccountFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 
@@ -50,7 +50,7 @@ object StandardNotification {
             notes = draft.notes,
             isComplete = draft.isComplete,
         ) {
-            nm.postStandard(draft.render(), context, accountLabelFor(account))
+            nm.postStandard(draft.render(), context, notificationAccountFor(account))
         }
     }
 }

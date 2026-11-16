@@ -32,6 +32,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
+import android.os.Bundle
 import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
@@ -51,6 +52,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.notifications.NotificationAccountLabel
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
 import com.vitorpamplona.amethyst.commons.resources.app_notification_me
@@ -218,10 +220,31 @@ object NotificationUtils {
     )
 
     /**
-     * The name of the account a notification is for, when more than one account is loaded (every
-     * loaded account is notified, whichever one is on screen); null otherwise.
+     * The account a notification is for. [npub] is stamped on every notification (see
+     * [EXTRA_ACCOUNT_NPUB]) so logging the account out can take its notifications down; [label] is
+     * its name, set only when more than one account is loaded (every loaded account is notified,
+     * whichever one is on screen).
      */
-    fun accountLabelFor(account: Account): String? = NotificationAccountLabel.of(account, Amethyst.instance.accountsCache.accounts.value.size)
+    data class NotificationAccount(
+        val npub: String,
+        val label: String?,
+    )
+
+    /** The extra holding the npub of the account a notification is for. */
+    const val EXTRA_ACCOUNT_NPUB = "com.vitorpamplona.amethyst.notification.ACCOUNT_NPUB"
+
+    fun notificationAccountFor(account: Account) =
+        NotificationAccount(
+            npub = NotificationRoutes.accountNpub(account),
+            label = NotificationAccountLabel.of(account, Amethyst.instance.accountsCache.accounts.value.size),
+        )
+
+    /** Names the account in the sub text (when several are loaded) and records it for [cancelNotificationsFor]. */
+    private fun NotificationCompat.Builder.stampAccount(forAccount: NotificationAccount?) {
+        if (forAccount == null) return
+        forAccount.label?.let { setSubText(it) }
+        addExtras(Bundle().apply { putString(EXTRA_ACCOUNT_NPUB, forAccount.npub) })
+    }
 
     // ---------------------------------------------------------------------
     // Standard notification (BigText, or BigPicture when [bigPictureUrl] set)
@@ -231,7 +254,7 @@ object NotificationUtils {
     suspend fun NotificationManager.postStandard(
         message: NotificationMessage,
         applicationContext: Context,
-        accountLabel: String? = null,
+        forAccount: NotificationAccount? = null,
     ) = postStandard(
         category = message.topic.category(),
         id = message.id,
@@ -243,7 +266,7 @@ object NotificationUtils {
         applicationContext = applicationContext,
         bigPictureUrl = message.bigPictureUrl,
         badgeUrl = message.badgeUrl,
-        accountLabel = accountLabel,
+        forAccount = forAccount,
     )
 
     suspend fun NotificationManager.postStandard(
@@ -260,8 +283,8 @@ object NotificationUtils {
         inlineReply: InlineReplyTarget? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
-        /** Which account this is for, when more than one is notified ([accountLabelFor]). */
-        accountLabel: String? = null,
+        /** Which account this is for ([notificationAccountFor]). */
+        forAccount: NotificationAccount? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
         // running — don't resurrect it (and skip the bitmap work).
@@ -307,7 +330,7 @@ object NotificationUtils {
                 .setWhen(time * 1000)
 
         if (category.colorized) builder.setColorized(true)
-        accountLabel?.let { builder.setSubText(it) }
+        builder.stampAccount(forAccount)
 
         if (bigPicture != null) {
             builder.setStyle(
@@ -349,8 +372,8 @@ object NotificationUtils {
         conversation: Conversation? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
-        /** Which account this is for, when more than one is notified ([accountLabelFor]). */
-        accountLabel: String? = null,
+        /** Which account this is for ([notificationAccountFor]). */
+        forAccount: NotificationAccount? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
         // running — don't resurrect it (and skip the bitmap work).
@@ -447,7 +470,7 @@ object NotificationUtils {
             builder.setLocusId(LocusIdCompat(shortcutId))
         }
         builder.addPerson(sender)
-        accountLabel?.let { builder.setSubText(it) }
+        builder.stampAccount(forAccount)
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
@@ -784,6 +807,20 @@ object NotificationUtils {
     }
 
     /**
+     * Takes down every notification posted for the account [npub] (logging it out): they would
+     * otherwise stay in the shade, decrypted DM text included, for an account that is gone, and
+     * tapping one opens the app on another account. Summaries left without children go too.
+     */
+    fun NotificationManager.cancelNotificationsFor(npub: String) {
+        val gone =
+            activeNotifications
+                .filter { it.notification.extras.getString(EXTRA_ACCOUNT_NPUB) == npub }
+                .onEach { cancel(it.tag, it.id) }
+                .mapTo(HashSet()) { it.id }
+        if (gone.isNotEmpty()) cancelChildlessGroupSummaries(gone)
+    }
+
+    /**
      * Cancels [notId] and drops the group summary it leaves behind, if it was the last
      * child. Use this instead of a bare [NotificationManager.cancel] for anything we
      * posted through [postStandard] / [postConversation] — every one of those is a
@@ -806,7 +843,10 @@ object NotificationUtils {
      * summaries also carry FLAG_GROUP_SUMMARY and show up in this list; cancelling one
      * only makes the platform rebuild it.
      */
-    fun NotificationManager.cancelChildlessGroupSummaries(alreadyGone: Int? = null) {
+    fun NotificationManager.cancelChildlessGroupSummaries(alreadyGone: Int? = null) = cancelChildlessGroupSummaries(setOfNotNull(alreadyGone))
+
+    /** [cancelChildlessGroupSummaries] after cancelling several at once: [alreadyGone] are their ids. */
+    fun NotificationManager.cancelChildlessGroupSummaries(alreadyGone: Set<Int>) {
         val active: Array<StatusBarNotification> = activeNotifications
 
         // Collect the groups that still have a child in one pass, then cancel the
@@ -818,7 +858,7 @@ object NotificationUtils {
         val groupsWithChildren = HashSet<String>(active.size)
         for (child in active) {
             if (child.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            if (child.id == alreadyGone) continue
+            if (child.id in alreadyGone) continue
             child.notification.group?.let { groupsWithChildren.add(it) }
         }
 
