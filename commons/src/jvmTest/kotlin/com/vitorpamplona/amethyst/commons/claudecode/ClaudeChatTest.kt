@@ -276,4 +276,42 @@ class ClaudeChatTest {
             assertTrue(cli.written.isEmpty(), "a second process was started: ${cli.written}")
             chatScope.cancel()
         }
+
+    @Test
+    fun aSessionThatNamedNoFolderRefusesToStartInTheOneShown() =
+        runTest {
+            val cli = ScriptedCli()
+            chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+            val config = Files.createTempDirectory("claude-config").toFile()
+            val chat =
+                ClaudeChat(
+                    key = "s-nowhere",
+                    resumeSessionId = "s-nowhere",
+                    // The folder shown, and a real one: the chat still must not run there.
+                    cwd = File("."),
+                    title = null,
+                    permissionMode = PermissionMode.DEFAULT,
+                    model = null,
+                    backend = ClaudeBackend(ClaudeSessionStore(config), ClaudeCodeStarter { _, scope -> ClaudeCodeConnection(cli, scope).also { it.initialize() } }),
+                    scope = chatScope,
+                    onSessionChanged = {},
+                    inspectGit = { null },
+                    folderKnown = false,
+                )
+            repeat(200) {
+                advanceUntilIdle()
+                if (chat.state.value.historyLoaded) return@repeat
+                Thread.sleep(10)
+            }
+
+            chat.send("go on")
+            repeat(50) {
+                advanceUntilIdle()
+                Thread.sleep(5)
+            }
+
+            assertEquals(ChatError.FolderGone, chat.state.value.error)
+            assertTrue(cli.written.isEmpty(), "the agent was started: ${cli.written}")
+            chatScope.cancel()
+        }
 }

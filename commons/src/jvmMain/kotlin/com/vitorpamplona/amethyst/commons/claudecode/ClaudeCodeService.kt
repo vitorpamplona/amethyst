@@ -461,9 +461,19 @@ class ClaudeCodeService(
                 ?: backends.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
                 ?: return null
         // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
-        // to start rather than resume in some other folder.
-        val cwd = info.cwd?.let { File(it) } ?: File(System.getProperty("user.home"))
-        return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null, agent = backendOf(info.sessionId))
+        // to start rather than resume in some other folder. A session that never named one shows
+        // the home folder, and refuses the same way.
+        val cwd = info.cwd?.let { File(it) }
+        return open(
+            key,
+            info.sessionId,
+            cwd ?: File(System.getProperty("user.home")),
+            info.title,
+            PermissionMode.DEFAULT,
+            null,
+            agent = backendOf(info.sessionId),
+            folderKnown = cwd != null,
+        )
     }
 
     /**
@@ -489,6 +499,7 @@ class ClaudeCodeService(
         model: String? = null,
         title: String? = null,
         agent: AgentBackend = backend,
+        folderKnown: Boolean = true,
     ): ClaudeChat {
         rememberAgent(agent)
         return open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model, agent = agent)
@@ -503,6 +514,7 @@ class ClaudeCodeService(
         title: String?,
         permissionMode: PermissionMode,
         agent: AgentBackend = backend,
+        folderKnown: Boolean = true,
     ): ClaudeChat {
         // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
         val nostrRepos = urls.mapNotNull { url -> RepoCatalog.nostrRepoOf(url)?.let { url.trim() to it } }.toMap()
@@ -575,6 +587,7 @@ class ClaudeCodeService(
         launchOptions: (AgentStartOptions) -> AgentStartOptions = { it },
         kind: ChatKind = ChatKind.CODE,
         agent: AgentBackend = backend,
+        folderKnown: Boolean = true,
     ): ClaudeChat {
         val chat =
             ClaudeChat(
@@ -594,6 +607,7 @@ class ClaudeCodeService(
                 kind = kind,
                 forkBefore = forkBefore,
                 publishingIsTheUsers = { agentWorkspaces.of(it) != null },
+                folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }
         watchers[key] =
@@ -752,6 +766,7 @@ class ClaudeCodeService(
         prompt: String,
         title: String? = null,
         agent: AgentBackend = backend,
+        folderKnown: Boolean = true,
     ): ClaudeChat {
         val workspace = workspaces.prepare(checkout, target, branch)
         val chat = newChat(workspace.dir, permissionMode, title = title, agent = agent)

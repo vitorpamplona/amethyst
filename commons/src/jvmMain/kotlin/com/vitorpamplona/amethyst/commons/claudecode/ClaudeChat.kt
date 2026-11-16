@@ -176,8 +176,16 @@ class ClaudeChat internal constructor(
      * differently. The CLI cuts at the message's parent ([TranscriptEntry.parentUuid]).
      */
     private val forkBefore: TranscriptEntry? = null,
+    /**
+     * False when the session never said where it ran (a saved file with no cwd): [cwd] is then
+     * only somewhere to show, and the chat refuses to start rather than resume there.
+     */
+    private val folderKnown: Boolean = true,
 ) {
     private val workDir = cwd
+
+    /** Whether the agent may run in [workDir]: a folder the session named, and still there. */
+    private fun canRunHere() = folderKnown && workDir.isDirectory
 
     /** Text for the composer when the chat first shows (a message to ask again); the screen takes it once. */
     @Volatile
@@ -376,7 +384,7 @@ class ClaudeChat internal constructor(
     }
 
     private suspend fun probe(): AgentInfo? {
-        if (!workDir.isDirectory || killed) return null
+        if (!canRunHere() || killed) return null
         val options = AgentStartOptions(cwd = workDir, hostTools = mcpServers, probeOnly = true).let(launchOptions)
         val c =
             try {
@@ -436,8 +444,9 @@ class ClaudeChat internal constructor(
         lock.withLock {
             connection?.let { if (it.isRunning) return@withLock it }
             if (killed) return@withLock null
-            // A removed worktree: resuming elsewhere (the home folder) would run the session there.
-            if (!workDir.isDirectory) {
+            // A removed worktree, or a session that never named its folder: resuming elsewhere
+            // (the home folder) would run the session there.
+            if (!canRunHere()) {
                 publish { it.copy(status = ChatStatus.ENDED, error = ChatError.FolderGone) }
                 return@withLock null
             }
