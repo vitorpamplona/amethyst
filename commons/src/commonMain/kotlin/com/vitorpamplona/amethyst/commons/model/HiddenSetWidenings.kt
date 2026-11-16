@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.model
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Fires when any loaded account starts showing what it hid: an unmute, a spammer cleared, a hidden
@@ -38,9 +37,6 @@ object HiddenSetWidenings {
     private val widened = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     val flow: SharedFlow<Unit> = widened
-
-    /** How many collect [flow]: one per live feed. */
-    val listeners: StateFlow<Int> = widened.subscriptionCount
 
     fun widened() {
         widened.tryEmit(Unit)

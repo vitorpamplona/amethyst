@@ -251,16 +251,17 @@ class LazyFeedContentStateTest {
     @Test
     fun aFeedForgetsItsCursorsWhenAnAccountShowsWhatItHid() {
         val relay = NormalizedRelayUrl("wss://relay.example.com/")
-        val before = HiddenSetWidenings.listeners.value
         val feed = FeedContentState(CountingFilter(listOf(a)), scope, StubCache())
         val cards = CardFeedContentState(CountingFilter(listOf(a)), scope)
         feed.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(1))), 1_000)
         cards.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(1))), 1_000)
-        // The collectors start on the scope's threads.
-        waitUntil("the feeds to listen") { HiddenSetWidenings.listeners.value >= before + 2 }
 
-        HiddenSetWidenings.widened()
-
-        waitUntil("the cursors to clear") { feed.relayCursors.isEmpty() && cards.relayCursors.isEmpty() }
+        // The collectors start on the scope's threads, and a signal sent before one listens is not
+        // replayed: send it until both have heard. (Waiting on a count of its listeners first
+        // raced the previous tests' feeds, whose collectors were still letting go of the count.)
+        waitUntil("the cursors to clear") {
+            HiddenSetWidenings.widened()
+            feed.relayCursors.isEmpty() && cards.relayCursors.isEmpty()
+        }
     }
 }
