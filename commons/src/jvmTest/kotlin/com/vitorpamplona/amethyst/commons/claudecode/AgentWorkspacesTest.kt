@@ -102,9 +102,10 @@ class AgentWorkspacesTest {
             // The mirror's objects come packed: the clone's packs must be the mirror's own files.
             val files = File(objects, "pack").listFiles { f -> f.name.endsWith(".pack") || f.name.endsWith(".idx") }.orEmpty().toList()
             assertTrue(files.isNotEmpty())
+            // The same file on disk (inode on Unix, file index on NTFS), not a copy of it.
+            val mirrorPacks = File(workspaces.mirrorDir(appUrl), "objects/pack")
             files.forEach { file ->
-                val links = Files.getAttribute(file.toPath(), "unix:nlink") as Int
-                assertTrue(links > 1, "$file is a copy, not a hardlink")
+                assertTrue(Files.isSameFile(file.toPath(), File(mirrorPacks, file.name).toPath()), "$file is a copy, not a hardlink")
             }
         }
 

@@ -210,7 +210,7 @@ class AgentWorkspaces(
                 save(workspace)
                 workspace
             } catch (e: IOException) {
-                if (!dir.deleteRecursively()) Log.w(TAG) { "Could not remove the half-made $dir" }
+                if (!deleteTree(dir)) Log.w(TAG) { "Could not remove the half-made $dir" }
                 throw e
             }
         }
@@ -282,7 +282,7 @@ class AgentWorkspaces(
     suspend fun delete(workspace: AgentWorkspace) =
         withContext(Dispatchers.IO) {
             val dir = File(workspace.dir)
-            if (dir.exists() && !dir.deleteRecursively()) throw IOException("Could not remove $dir")
+            if (dir.exists() && !deleteTree(dir)) throw IOException("Could not remove $dir")
             val meta = File(metaDir, "${workspace.id}.json")
             if (meta.exists() && !meta.delete()) Log.w(TAG) { "Could not remove $meta" }
         }
@@ -398,6 +398,17 @@ class AgentWorkspaces(
                 clean.startsWith("ssh://") -> "https://" + clean.removePrefix("ssh://").replace(Regex("^[^@/]*@"), "").replace(Regex(":\\d+/"), "/")
                 else -> null
             }
+        }
+
+        /**
+         * Removes [dir] and everything in it. Git makes its pack files read-only, and Windows
+         * refuses to delete a read-only file: each file is made writable first.
+         */
+        fun deleteTree(dir: File): Boolean {
+            dir.walkBottomUp().forEach { file ->
+                if (!file.canWrite() && !file.setWritable(true)) Log.w(TAG) { "Could not make $file writable" }
+            }
+            return dir.deleteRecursively()
         }
 
         fun defaultBranchName(): String = "agent/" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
