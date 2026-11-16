@@ -233,6 +233,56 @@ class CodexConnectionTest {
         assertEquals(TranscriptEntry.Role.USER, history[2].role)
     }
 
+    /** A `codex` that answers every request with an empty result, and counts its starts in [launches]. */
+    private fun fakeCodex(
+        dir: File,
+        launches: File,
+    ): File {
+        val script = File(dir, "codex")
+        script.writeText(
+            """
+            #!/bin/sh
+            echo started >> '${launches.absolutePath}'
+            while IFS= read -r line; do
+              id=${'$'}(printf '%s' "${'$'}line" | sed -n 's/.*"id":\([^,}]*\).*/\1/p')
+              [ -n "${'$'}id" ] && printf '{"id":%s,"result":{"data":[]}}\n' "${'$'}id"
+            done
+            """.trimIndent() + "\n",
+        )
+        script.setExecutable(true)
+        return script
+    }
+
+    @Test
+    fun refreshesInARowShareOneListing() {
+        if (System.getProperty("os.name").startsWith("Windows")) return
+        val dir = Files.createTempDirectory("fake-codex").toFile()
+        try {
+            val launches = File(dir, "launches")
+            val exe = fakeCodex(dir, launches)
+            var clock = 1_000_000L
+            val backend = CodexBackend(findExecutable = { exe }, now = { clock })
+
+            fun starts() = if (launches.isFile) launches.readLines().size else 0
+
+            assertEquals(emptyList(), backend.listSessions())
+            assertEquals(1, starts())
+            // Every chat's turn ends with a refresh: they don't each start a server.
+            repeat(5) { backend.listSessions() }
+            assertEquals(1, starts())
+            // A change through the app is seen at once.
+            backend.rename("t1", "New name")
+            backend.listSessions()
+            assertEquals(3, starts())
+            // And changes made elsewhere within a minute.
+            clock += 61_000
+            backend.listSessions()
+            assertEquals(4, starts())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     /**
      * Against the real `codex app-server`: set CODEX_LIVE=1. Starts, renames, lists and deletes a
      * thread (no account needed), then sends a turn and checks it ends with an event either way.

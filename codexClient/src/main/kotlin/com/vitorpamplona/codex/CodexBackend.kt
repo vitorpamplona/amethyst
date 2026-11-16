@@ -61,6 +61,7 @@ object CodexExecutable {
 /** Codex as an [AgentBackend]: the user's `codex`, its saved threads, and how to start it. */
 class CodexBackend(
     private val findExecutable: () -> File? = { CodexExecutable.find() },
+    private val now: () -> Long = System::currentTimeMillis,
 ) : AgentBackend {
     override val id = ID
     override val displayName = "Codex"
@@ -129,7 +130,26 @@ class CodexBackend(
         }
     }
 
+    /**
+     * The last listing per folder (null: all), and when it was made. The app re-lists after
+     * every turn of every chat, and each listing starts a whole `codex app-server`: once a
+     * minute is enough, since a chat open in the app shows before its thread is listed. A change
+     * made through this backend (rename, delete, archive) drops them.
+     */
+    private val listings = HashMap<String?, Pair<Long, List<AgentSessionInfo>>>()
+
     override fun listSessions(cwd: String?): List<AgentSessionInfo> =
+        // Refreshes that come together share one server instead of starting one each.
+        synchronized(listings) {
+            listings[cwd]?.takeIf { now() - it.first < LIST_TTL_MS }?.let { return it.second }
+            val listed = listFromServer(cwd) ?: return emptyList()
+            listings[cwd] = now() to listed
+            listed
+        }
+
+    private fun forgetListings() = synchronized(listings) { listings.clear() }
+
+    private fun listFromServer(cwd: String?): List<AgentSessionInfo>? =
         withServer { codex ->
             // Codex lists archived threads apart: both, so archived ones stay in reach.
             listOf(false, true).flatMap { archived ->
@@ -141,7 +161,7 @@ class CodexBackend(
                     }
                 (codex.call("thread/list", params)["data"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonObject)?.let(::info)?.copy(archived = archived) }
             }
-        }.orEmpty()
+        }
 
     override fun session(sessionId: String): AgentSessionInfo? = withServer { codex -> (read(codex, sessionId, turns = false))?.let(::info) }
 
@@ -160,14 +180,24 @@ class CodexBackend(
                 },
             )
         }
+        // After the change: a listing made meanwhile would hold the old state.
+        forgetListings()
     }
 
-    override fun delete(sessionId: String): Boolean = withServer { codex -> codex.call("thread/delete", buildJsonObject { put("threadId", sessionId) }) } != null
+    override fun delete(sessionId: String): Boolean {
+        val deleted = withServer { codex -> codex.call("thread/delete", buildJsonObject { put("threadId", sessionId) }) } != null
+        forgetListings()
+        return deleted
+    }
 
     override fun archive(
         sessionId: String,
         archived: Boolean,
-    ): Boolean = withServer { codex -> codex.call(if (archived) "thread/archive" else "thread/unarchive", buildJsonObject { put("threadId", sessionId) }) } != null
+    ): Boolean {
+        val done = withServer { codex -> codex.call(if (archived) "thread/archive" else "thread/unarchive", buildJsonObject { put("threadId", sessionId) }) } != null
+        forgetListings()
+        return done
+    }
 
     private suspend fun read(
         codex: CodexConnection,
@@ -185,6 +215,7 @@ class CodexBackend(
     companion object {
         const val ID = "codex"
         private const val LIST_LIMIT = 200
+        private const val LIST_TTL_MS = 60_000L
 
         /** A thread as the session list shows it. Codex's times are seconds. */
         fun info(thread: JsonObject): AgentSessionInfo? {
