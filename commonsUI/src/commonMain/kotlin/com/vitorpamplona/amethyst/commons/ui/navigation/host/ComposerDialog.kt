@@ -74,7 +74,8 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 
 /**
- * How big a composer's dialog is on a wide window. A phone shows every composer full screen.
+ * How big a composer's dialog is where composers open as dialogs ([composersOpenAsDialogs]). A
+ * touch screen shows every composer full screen.
  *
  * [QUICK] is a message: a note, a reply, a poll, a DM, a find log. [FORM] fills in a standalone
  * piece or a place: a product, an event, a group, a geocache, a profile. [DOCUMENT] is long-form
@@ -107,9 +108,18 @@ val LocalComposerFrame = staticCompositionLocalOf<ComposerFrame?> { null }
 fun isComposerDialog(): Boolean = LocalComposerFrame.current != null
 
 /**
- * The one container every composer opens in. On a wide window it is a [size]d dialog over the
- * screen that opened it, which stays in view around it; on a phone it fills the screen, as a
- * pushed screen does. Esc or back calls [onDismissRequest]; a click outside does nothing, so a
+ * Whether composers open as dialogs here: a wide window driven by a mouse, the desktop. A touch
+ * screen keeps them full screen even when wide: the rail tier is also a phone turned sideways,
+ * and on a tablet the on-screen keyboard takes the bottom of a centered card while the screen
+ * around it, which a modal dialog blocks anyway, adds nothing.
+ */
+@Composable
+fun composersOpenAsDialogs(): Boolean = LocalScreenLayout.current.isLargeScreen && LocalAppPlatform.current.hasFinePointer
+
+/**
+ * The one container every composer opens in. Where [composersOpenAsDialogs] it is a [size]d
+ * dialog over the screen that opened it, which stays in view around it; on a touch screen it
+ * fills the screen, as a pushed screen does. Esc or back calls [onDismissRequest]; a click outside does nothing, so a
  * stray click never throws a draft away.
  *
  * The navigation host draws composer destinations in it; a composer that is not a destination
@@ -122,7 +132,7 @@ fun ComposerDialog(
     popOut: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    if (LocalScreenLayout.current.isLargeScreen) {
+    if (composersOpenAsDialogs()) {
         Dialog(
             onDismissRequest = onDismissRequest,
             properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),

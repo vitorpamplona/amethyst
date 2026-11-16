@@ -105,7 +105,7 @@ fun NewMediaView(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    // Full screen on a phone, a dialog over the feed on a wide window, like every other composer.
+    // Full screen on a touch screen, a dialog over the feed on a wide desktop window, like every other composer.
     ComposerDialog(
         size = ComposerSize.QUICK,
         onDismissRequest = { onClose() },

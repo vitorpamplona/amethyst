@@ -37,7 +37,6 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
@@ -56,7 +55,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
  * every back.
  *
  * A composer on top is drawn over the screen below it, in a dialog, where [composerDialogs] (a wide
- * window); [popOut], when the platform has windows, moves it out to one of its own.
+ * window with a mouse, see [composersOpenAsDialogs]); [popOut], when the platform has windows,
+ * moves it out to one of its own.
  */
 @Composable
 fun NavigationHost(
@@ -64,7 +64,7 @@ fun NavigationHost(
     destinations: NavDestinations,
     modifier: Modifier = Modifier,
     navFor: (NavStackEntry) -> INav = nav::forEntry,
-    composerDialogs: Boolean = LocalScreenLayout.current.isLargeScreen,
+    composerDialogs: Boolean = composersOpenAsDialogs(),
     popOut: ((NavStackEntry) -> Unit)? = null,
 ) {
     // Every layout asks the destinations which routes are composers, before the first request.

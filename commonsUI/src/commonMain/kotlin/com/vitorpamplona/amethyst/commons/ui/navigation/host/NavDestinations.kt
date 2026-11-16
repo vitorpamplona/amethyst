@@ -110,7 +110,8 @@ class DestinationScope(
 
 /**
  * One destination: how it animates, whether it takes the reading-column cap, and what it draws. A
- * [composer] opens over the screen that asked for it, in a dialog of that size on a wide window.
+ * [composer] opens over the screen that asked for it, in a dialog of that size where composers
+ * open as dialogs ([composersOpenAsDialogs]).
  */
 class NavDestination(
     private val route: KClass<out Route>,
@@ -261,9 +262,10 @@ inline fun <reified T : Route> NavDestinations.composableFromBottomArgs(
 }
 
 /**
- * A composer: a task that opens over the screen that asked for it and closes back to it. A phone
- * shows it full screen, moving in as [family] says; a wide window draws it in a [size]d dialog
- * ([ComposerDialog]), and the tabs layout never makes it a tab.
+ * A composer: a task that opens over the screen that asked for it and closes back to it. A touch
+ * screen shows it full screen, moving in as [family] says; a wide window with a mouse draws it in
+ * a [size]d dialog ([ComposerDialog], [composersOpenAsDialogs]), and the tabs layout never makes
+ * it a tab.
  */
 inline fun <reified T : Route> NavDestinations.composer(
     size: ComposerSize,

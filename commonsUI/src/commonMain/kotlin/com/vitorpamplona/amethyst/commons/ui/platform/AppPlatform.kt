@@ -111,7 +111,8 @@ interface AppPlatform {
 
     /**
      * Whether a mouse or trackpad is the main pointer (the desktop), so dense controls need not be
-     * padded out to Material's 48dp touch target. False wherever a finger is the pointer, including
+     * padded out to Material's 48dp touch target, and composers on a wide window open as dialogs
+     * over the screen rather than full screen. False wherever a finger is the pointer, including
      * Android tablets on the wide layouts.
      */
     val hasFinePointer: Boolean get() = false

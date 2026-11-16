@@ -35,8 +35,8 @@ import kotlin.reflect.KClass
  * Nothing *above* a tab root is ever saved: switching tabs drops it first, so returning to a tab
  * always lands on the tab itself.
  *
- * A composer is pushed like any screen, so back closes it and a phone shows it full screen; on a
- * wide window the host draws it over the screen below. [popOut] moves one to a window of its own
+ * A composer is pushed like any screen, so back closes it and a touch screen shows it full screen;
+ * on a wide desktop window the host draws it over the screen below. [popOut] moves one to a window of its own
  * ([windows]), which closes instead of popping.
  */
 @Stable
