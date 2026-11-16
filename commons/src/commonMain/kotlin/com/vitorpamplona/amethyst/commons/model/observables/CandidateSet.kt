@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.observables
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -49,11 +51,14 @@ class CandidateSet(
     @OptIn(ExperimentalAtomicApi::class)
     private val started = AtomicBoolean(false)
 
+    // Held for the whole first walk, so a caller that arrives while it runs waits for its result.
+    private val firstWalk = KmpLock()
+
     /**
-     * The candidates, or null until the first walk of the cache has finished. The first call
-     * starts the set on the calling thread (a rebuild, already off the main thread), so that
-     * rebuild uses the set's own first walk instead of walking the cache a second time. A family
-     * of feeds nobody opens never walks the cache or watches new notes.
+     * The candidates. The first call starts the set on the calling thread (a rebuild, already off
+     * the main thread), so that rebuild uses the set's own first walk instead of walking the cache
+     * a second time. A call made while that walk is running elsewhere ([start]) waits for it, for
+     * the same reason. A family of feeds nobody opens never walks the cache or watches new notes.
      */
     fun snapshot(): Set<Note>? {
         startHere()
@@ -71,9 +76,13 @@ class CandidateSet(
     /** Registers and walks the cache on this thread; follows the cache until the scope ends. */
     @OptIn(ExperimentalAtomicApi::class)
     private fun startHere() {
-        if (!started.compareAndSet(expectedValue = false, newValue = true)) return
-        cache.registerNoteSet(observer)
-        // Runs at once when the scope has already ended, so the observer never outlives it.
-        scope.coroutineContext[Job]?.invokeOnCompletion { cache.unregisterNoteSet(observer) }
+        // Started and walked: the common case takes no lock.
+        if (started.load() && observer.ready) return
+        firstWalk.withLock {
+            if (!started.compareAndSet(expectedValue = false, newValue = true)) return
+            cache.registerNoteSet(observer)
+            // Runs at once when the scope has already ended, so the observer never outlives it.
+            scope.coroutineContext[Job]?.invokeOnCompletion { cache.unregisterNoteSet(observer) }
+        }
     }
 }
