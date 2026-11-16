@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -115,6 +116,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -1119,7 +1121,66 @@ open class ShortNotePostViewModel :
         urlPreviews.update(message.text.toString())
     }
 
-    suspend fun sendPostSync() {
+    /**
+     * True from the moment Post is pressed until the note is signed and on its way (or queued
+     * for mining), or until that fails. The Post button shows a spinner meanwhile and comes back
+     * afterwards, so a post the signer did not sign can be sent again.
+     */
+    var isPosting by mutableStateOf(false)
+        private set
+
+    /** The composer was closed while its post was being sent, so nothing shows its text any more. */
+    var closedWhilePosting = false
+        private set
+
+    /** Marks the composer as posting. False when a post is already under way. */
+    fun tryStartPosting(): Boolean {
+        if (isPosting) return false
+        isPosting = true
+        closedWhilePosting = false
+        return true
+    }
+
+    /**
+     * Close pressed while a post is being sent: the post finishes on its own, and if the signer
+     * does not sign it the text is saved as a draft, since no composer is left to hold it.
+     */
+    fun closeWhilePosting() {
+        closedWhilePosting = true
+    }
+
+    /**
+     * Sends the note. Returns true once it has left the composer, which is then cleared. Returns
+     * false when it was not sent: the text stays in the composer and, when the signer did not sign
+     * it, the user is told why. A NIP-46 bunker that is offline only gives up after its request
+     * timeout and one retry, and the account's launchSigner would just log that, so it is reported
+     * here.
+     */
+    suspend fun sendPostSync(): Boolean {
+        isPosting = true
+        val sent =
+            try {
+                publishPost()
+            } catch (e: SignerExceptions) {
+                // These already have their own notice in the account's launchSigner.
+                if (e is SignerExceptions.ReadOnlyException ||
+                    e is SignerExceptions.SignerNotFoundException ||
+                    e is SignerExceptions.UnauthorizedDecryptionException
+                ) {
+                    throw e
+                }
+                Log.w("ShortNotePostViewModel", "Post not sent: the signer did not sign it", e)
+                accountViewModel.notices.notify(PostNotSent.of(e))
+                false
+            } finally {
+                isPosting = false
+            }
+
+        if (!sent && closedWhilePosting) sendDraftSync()
+        return sent
+    }
+
+    private suspend fun publishPost(): Boolean {
         // Upload voice message first if it hasn't been uploaded yet
         if (voiceRecording != null && voiceMetadata == null) {
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
@@ -1132,7 +1193,7 @@ open class ShortNotePostViewModel :
                 Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
                 deleteVoiceLocalFile()
                 voiceAnonymization.deleteDistortedFiles()
-                return
+                return false
             }
             // Update default server if voice message was successfully uploaded
             voiceSelectedServer?.let {
@@ -1140,15 +1201,16 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val template = createTemplate() ?: return
+        val template = createTemplate() ?: return false
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
 
         // A mined post leaves the phone minutes after this returns — much later if the
         // app is backgrounded and frozen — and the draft is its only user-visible copy
-        // until then. The auto-save is debounced and cancel() below drops the pending
-        // save, so the last second of typing would never reach it: flush it now.
+        // until then. The auto-save is debounced and skipped while posting, and cancel()
+        // below drops the pending save, so the last second of typing would never reach it:
+        // flush it now.
         // A private note mines its gift wraps, not the kind-1 itself.
         val minedKind = if (wantsPrivateNote && template.kind == TextNoteEvent.KIND) GiftWrapEvent.KIND else template.kind
         if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
@@ -1162,8 +1224,28 @@ open class ShortNotePostViewModel :
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
-        onUiThread { cancel() }
 
+        sendTemplate(template, chosenPow, draftToDelete, anonymous, scheduledFor, privately, threadTarget)
+
+        // Only now: when the signer is not mined for, it signs inside sendTemplate, and a signer
+        // that times out or refuses throws out of it. Clearing earlier would lose the text.
+        onUiThread { cancel() }
+        return true
+    }
+
+    /**
+     * Signs (or queues for mining) and dispatches [template] down the path the composer chose.
+     * Throws when the signer does not sign an event it signs inline.
+     */
+    private suspend fun sendTemplate(
+        template: EventTemplate<out Event>,
+        chosenPow: Int?,
+        draftToDelete: AddressableNote?,
+        anonymous: Boolean,
+        scheduledFor: Long?,
+        privately: Boolean,
+        threadTarget: GroupThreadTarget?,
+    ) {
         // Draft deletion lives INSIDE each publish continuation: when the post
         // is mined first, the draft must survive until the mined event is
         // actually signed and dispatched — a cancelled or process-killed
@@ -1301,6 +1383,10 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendDraftSync() {
+        // The post being sent owns the text now. A draft saved meanwhile could land after the post
+        // deletes its draft and outlive it; one that fails leaves the draft saved before Post.
+        if (isPosting) return
+
         val text = message.text.toString()
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)

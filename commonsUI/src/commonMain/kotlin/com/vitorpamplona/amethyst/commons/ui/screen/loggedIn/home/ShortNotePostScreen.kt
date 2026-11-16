@@ -245,20 +245,33 @@ internal fun NewPostScreenInner(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    PlatformBackHandler {
-        accountViewModel.launchSigner {
-            postViewModel.sendDraftSync()
-            onUiThread { postViewModel.cancel() }
+    val onClose: () -> Unit = {
+        if (postViewModel.isPosting) {
+            // The post being sent finishes on its own and keeps its text as a draft if it fails.
+            postViewModel.closeWhilePosting()
+        } else {
+            // uses the accountViewModel scope to avoid cancelling this
+            // function when the postViewModel is released
+            accountViewModel.launchSigner {
+                postViewModel.sendDraftSync()
+                onUiThread { postViewModel.cancel() }
+            }
         }
         nav.popBack()
     }
 
+    PlatformBackHandler(onBack = onClose)
+
     val onPost: () -> Unit = {
-        // uses the accountViewModel scope to avoid cancelling this
-        // function when the postViewModel is released
-        accountViewModel.launchSigner {
-            postViewModel.sendPostSync()
-            nav.popBack()
+        if (postViewModel.tryStartPosting()) {
+            // uses the accountViewModel scope to avoid cancelling this
+            // function when the postViewModel is released
+            accountViewModel.launchSigner {
+                // Not sent: stay, with the text, so Post can be pressed again.
+                if (postViewModel.sendPostSync() && !postViewModel.closedWhilePosting) {
+                    nav.popBack()
+                }
+            }
         }
     }
 
@@ -269,15 +282,8 @@ internal fun NewPostScreenInner(
                 isActive = postViewModel::canPost,
                 postRes = if (postViewModel.wantsPrivateNote) Res.string.audience_send_privately else Res.string.post,
                 onPost = onPost,
-                onCancel = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendDraftSync()
-                        onUiThread { postViewModel.cancel() }
-                    }
-                    nav.popBack()
-                },
+                onCancel = onClose,
+                isBusy = { postViewModel.isPosting },
             )
         },
     ) { pad ->
