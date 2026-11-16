@@ -240,8 +240,10 @@ object ToolViews {
         cwd: File?,
     ): String {
         if (cwd == null) return path
-        val base = cwd.absolutePath.trimEnd(File.separatorChar) + File.separatorChar
-        return if (path.startsWith(base)) path.removePrefix(base) else path
+        // On Windows an agent may write either separator, or both in one path.
+        val base = cwd.absolutePath.replace('\\', '/').trimEnd('/') + "/"
+        val normalized = path.replace('\\', '/')
+        return if (normalized.startsWith(base)) normalized.removePrefix(base) else path
     }
 
     private fun edit(

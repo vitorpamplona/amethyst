@@ -289,7 +289,7 @@ class ClaudeCodeServiceTest {
             git(seed, "add", ".")
             git(seed, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "--quiet", "-m", "init")
             git(seed, "push", "--quiet", remote.absolutePath, "main")
-            val ws = service.agentWorkspaces.create(listOf("file://" + remote.absolutePath), "Idle one", agentId = "claude")
+            val ws = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Idle one", agentId = "claude")
 
             service.refresh()
             val row = assertNotNull(service.rows.value.firstOrNull { it.workspace?.id == ws.id })

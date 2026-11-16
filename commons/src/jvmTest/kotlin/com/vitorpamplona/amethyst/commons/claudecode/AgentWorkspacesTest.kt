@@ -60,7 +60,7 @@ class AgentWorkspacesTest {
         git(seed, "add", ".")
         git(seed, "commit", "--quiet", "-m", "init")
         git(seed, "push", "--quiet", bare.absolutePath, "main")
-        return "file://" + bare.absolutePath
+        return fileUrl(bare)
     }
 
     @BeforeTest
@@ -141,7 +141,7 @@ class AgentWorkspacesTest {
     @Test
     fun aBadRepositoryLeavesNothingBehind() =
         runBlocking {
-            val failed = runCatching { workspaces.create(listOf(appUrl, "file://" + File(tmp, "missing.git").absolutePath), "broken") }
+            val failed = runCatching { workspaces.create(listOf(appUrl, fileUrl(File(tmp, "missing.git"))), "broken") }
             assertTrue(failed.isFailure)
             assertTrue(
                 workspaces.sessionsDir
@@ -167,6 +167,10 @@ class AgentWorkspacesTest {
         assertEquals("github.com-vitorpamplona-amethyst.git", workspaces.mirrorDir("git@github.com:vitorpamplona/amethyst.git").name)
         assertEquals("github.com-someone-amethyst.git", workspaces.mirrorDir("https://github.com/someone/amethyst").name)
         assertEquals("amethyst", AgentWorkspaces.repoName("git@github.com:vitorpamplona/amethyst.git"))
+        // Local repositories on Windows.
+        assertEquals("amethyst", AgentWorkspaces.repoName("C:\\repos\\amethyst"))
+        assertEquals("amethyst", AgentWorkspaces.repoName("file:///C:/repos/amethyst.git"))
+        assertEquals("repos/amethyst", AgentWorkspaces.ownerAndName("C:\\repos\\amethyst"))
     }
 
     @Test

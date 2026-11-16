@@ -95,8 +95,10 @@ class ToolViewTest {
     @Test
     fun otherToolsReadAsWhatTheyDo() {
         assertEquals(ToolView.Command("ls -la", "List files"), ToolViews.of("Bash", json("command" to "ls -la", "description" to "List files"), dir))
-        assertEquals(ToolView.FileRead("src/x.kt", 10, 59), ToolViews.of("Read", "{\"file_path\":\"${dir.absolutePath}/src/x.kt\",\"offset\":10,\"limit\":50}", dir))
+        assertEquals(ToolView.FileRead("src/x.kt", 10, 59), ToolViews.of("Read", "{\"file_path\":\"${dir.absolutePath.replace("\\", "\\\\")}/src/x.kt\",\"offset\":10,\"limit\":50}", dir))
         assertEquals(ToolView.FileRead("/etc/hosts", null, null), ToolViews.of("Read", json("file_path" to "/etc/hosts"), dir))
+        // On Windows the agent may write backslashes, or mix both separators.
+        assertEquals("src/x.kt", ToolViews.relative(dir.absolutePath + "\\src\\x.kt", dir))
         assertIs<ToolView.Raw>(ToolViews.of("SomethingNew", "{\"x\":1}", dir))
     }
 }

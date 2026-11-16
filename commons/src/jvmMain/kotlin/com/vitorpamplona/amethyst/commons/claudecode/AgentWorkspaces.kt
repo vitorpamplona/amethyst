@@ -355,10 +355,14 @@ class AgentWorkspaces(
         private const val NETWORK_TIMEOUT = 900L
         private val json = Json { ignoreUnknownKeys = true }
 
-        /** The repository's name from its URL: `amethyst` for `https://github.com/vitorpamplona/amethyst.git`. */
+        /**
+         * The repository's name from its URL: `amethyst` for `https://github.com/vitorpamplona/amethyst.git`,
+         * and for a local path on Windows (`C:\repos\amethyst`) too.
+         */
         fun repoName(url: String): String =
             url
                 .trim()
+                .replace('\\', '/')
                 .removeSuffix("/")
                 .removeSuffix(".git")
                 .substringAfterLast('/')
@@ -370,6 +374,7 @@ class AgentWorkspaces(
             val path =
                 url
                     .trim()
+                    .replace('\\', '/')
                     .removeSuffix("/")
                     .removeSuffix(".git")
                     .substringAfter("://")
