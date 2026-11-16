@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.notices.PostNotSent
+import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -75,6 +76,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,11 +86,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -166,24 +171,71 @@ class ShortNotePostSignerFailureTest {
 
             assertEquals("", postViewModel.message.text.toString())
             assertFalse(postViewModel.isPosting)
-            assertEquals(1, bunker.signed, "only the retry was signed")
+            assertEquals(1, bunker.signedNotes, "only the retry's note was signed")
         }
 
     @Test
-    fun closingWhileThePostWaitsKeepsTheTextAsADraft() =
+    fun aFailedPostSavesItsTextAsADraft() =
         runTest {
             // Fails the note only, so the draft that follows can still be signed and encrypted.
             bunker.failWith = SignerExceptions.TimedOutException("Could not sign: User didn't accept or reject in time.")
             bunker.onlyKind = TextNoteEvent.KIND
-            postViewModel.message.setTextAndPlaceCursorAtEnd("closed before the bunker gave up")
+            postViewModel.message.setTextAndPlaceCursorAtEnd("typed just before Post")
 
             assertTrue(postViewModel.tryStartPosting())
-            postViewModel.closeWhilePosting()
             assertFalse(postViewModel.sendPostSync())
 
+            // The auto-save skipped while posting is asked for again, debounced like any edit.
             val draft = accountViewModel.account.getOrCreateDraftNote(postViewModel.draftTag.current)
-            assertIs<DraftWrapEvent>(draft.event, "the text must survive as a draft")
-            assertEquals(PostNotSent.Reason.SignerTimedOut, shownNotice().reason)
+            withContext(Dispatchers.Default) {
+                withTimeout(10_000) { while (draft.event !is DraftWrapEvent) delay(50) }
+            }
+            assertEquals("typed just before Post", postViewModel.message.text.toString())
+        }
+
+    @Test
+    fun aSignerFailureWithItsOwnNoticeKeepsThePostToo() =
+        runTest {
+            bunker.failWith = SignerExceptions.ReadOnlyException()
+            postViewModel.message.setTextAndPlaceCursorAtEnd("read-only key")
+
+            assertTrue(postViewModel.tryStartPosting())
+            assertFalse(postViewModel.sendPostSync())
+
+            assertEquals("read-only key", postViewModel.message.text.toString())
+            assertFalse(postViewModel.isPosting)
+            val toast = assertIs<NoticeToastMsg>(accountViewModel.toastManager.toasts.value, "the user must be told")
+            assertEquals(SignerNotice.ReadOnly, toast.notice)
+        }
+
+    @Test
+    fun anUnexpectedFailureStillEndsPostingAndKeepsTheText() =
+        runTest {
+            bunker.failWith = IllegalStateException("a signer answer that could not be read")
+            postViewModel.message.setTextAndPlaceCursorAtEnd("still here")
+
+            assertTrue(postViewModel.tryStartPosting())
+            assertFailsWith<IllegalStateException> { postViewModel.sendPostSync() }
+
+            assertEquals("still here", postViewModel.message.text.toString())
+            assertFalse(postViewModel.isPosting, "Post must come back so it can be pressed again")
+        }
+
+    @Test
+    fun theComposerLeavesOnlyWhenThePostWentOut() =
+        runTest {
+            bunker.failWith = SignerExceptions.TimedOutException("Could not sign: User didn't accept or reject in time.")
+            postViewModel.message.setTextAndPlaceCursorAtEnd("leave when sent")
+            var left = 0
+
+            assertTrue(postViewModel.tryStartPosting())
+            assertFalse(postViewModel.sendPostSync(onSent = { left++ }))
+            assertEquals(0, left)
+
+            bunker.failWith = null
+            assertTrue(postViewModel.tryStartPosting())
+            assertTrue(postViewModel.sendPostSync(onSent = { left++ }))
+            assertEquals(1, left)
         }
 
     private fun shownNotice(): PostNotSent {
@@ -196,12 +248,12 @@ class ShortNotePostSignerFailureTest {
 private class FlakyBunker(
     private val inner: NostrSignerInternal,
 ) : NostrSigner(inner.pubKey) {
-    @Volatile var failWith: SignerExceptions? = null
+    @Volatile var failWith: Exception? = null
 
     /** When set, only signing this kind fails; everything else answers. */
     @Volatile var onlyKind: Int? = null
 
-    @Volatile var signed = 0
+    @Volatile var signedNotes = 0
 
     private fun answer(kind: Int? = null) {
         val only = onlyKind
@@ -218,7 +270,7 @@ private class FlakyBunker(
         content: String,
     ): T {
         answer(kind)
-        return inner.sign<T>(createdAt, kind, tags, content).also { signed++ }
+        return inner.sign<T>(createdAt, kind, tags, content).also { if (kind == TextNoteEvent.KIND) signedNotes++ }
     }
 
     override suspend fun nip04Encrypt(

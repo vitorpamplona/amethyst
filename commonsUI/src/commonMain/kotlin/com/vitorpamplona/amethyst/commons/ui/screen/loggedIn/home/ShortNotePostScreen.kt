@@ -61,6 +61,9 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -245,32 +248,33 @@ internal fun NewPostScreenInner(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
+    val focusManager = LocalFocusManager.current
+
     val onClose: () -> Unit = {
-        if (postViewModel.isPosting) {
-            // The post being sent finishes on its own and keeps its text as a draft if it fails.
-            postViewModel.closeWhilePosting()
-        } else {
+        // A post being sent keeps the composer open: if the signer does not sign it, the text has
+        // nowhere else to go, because saving a draft needs the same signer.
+        if (!postViewModel.isPosting) {
             // uses the accountViewModel scope to avoid cancelling this
             // function when the postViewModel is released
             accountViewModel.launchSigner {
                 postViewModel.sendDraftSync()
                 onUiThread { postViewModel.cancel() }
             }
+            nav.popBack()
         }
-        nav.popBack()
     }
 
     PlatformBackHandler(onBack = onClose)
 
     val onPost: () -> Unit = {
         if (postViewModel.tryStartPosting()) {
+            // Read-only while posting, keyboard included: what is shown is what is being sent.
+            focusManager.clearFocus()
             // uses the accountViewModel scope to avoid cancelling this
             // function when the postViewModel is released
             accountViewModel.launchSigner {
                 // Not sent: stay, with the text, so Post can be pressed again.
-                if (postViewModel.sendPostSync() && !postViewModel.closedWhilePosting) {
-                    nav.popBack()
-                }
+                postViewModel.sendPostSync(onSent = { nav.popBack() })
             }
         }
     }
@@ -284,6 +288,7 @@ internal fun NewPostScreenInner(
                 onPost = onPost,
                 onCancel = onClose,
                 isBusy = { postViewModel.isPosting },
+                canCancel = { !postViewModel.isPosting },
             )
         },
     ) { pad ->
@@ -294,7 +299,22 @@ internal fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePaddingSafe(),
         ) {
-            NewPostScreenBody(postViewModel, accountViewModel, nav)
+            Box {
+                NewPostScreenBody(postViewModel, accountViewModel, nav)
+                if (postViewModel.isPosting) {
+                    // Read-only while posting: this layer takes every touch meant for the body.
+                    Box(Modifier.matchParentSize().pointerInput(Unit) { consumeAllPointerEvents() })
+                }
+            }
+        }
+    }
+}
+
+/** Takes every pointer event that reaches this layer, so nothing under it reacts. */
+private suspend fun PointerInputScope.consumeAllPointerEvents() {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.forEach { it.consume() }
         }
     }
 }
