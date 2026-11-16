@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -454,7 +455,7 @@ class ClaudeChat internal constructor(
                     permissionMode = current.permissionMode,
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
                     blockedCommands = if (nostrCheckout) NO_PUBLISHING else emptyList(),
-                    environment = if (nostrCheckout) noPushEnvironment() else emptyMap(),
+                    environment = if (nostrCheckout) noPushEnvironment(remoteUrls = withContext(Dispatchers.IO) { remoteUrls(workDir) }) else emptyMap(),
                     hostTools = mcpServers,
                 ).let(launchOptions)
             val started =
@@ -634,22 +635,52 @@ class ClaudeChat internal constructor(
         private const val STDERR_SHOWN = 2_000
 
         /**
-         * Git config, through the environment, that sends every push from the session's process
-         * tree to a transport that doesn't exist: an empty `pushInsteadOf` prefix matches every
-         * URL. Unlike [NO_PUBLISHING]'s command rules, `git -C . push`, `/usr/bin/git push`, a
-         * script or `--no-verify` don't get around it. The app's own push runs in its own
-         * process and is untouched. Fetching still works.
+         * Git config, through the environment, that sends the session's pushes to a transport
+         * that doesn't exist: an empty `pushInsteadOf` prefix matches every URL, and one per
+         * URL in [remoteUrls] outranks the user's own rewrites (git takes the longest prefix, so
+         * `url.git@github.com:.pushInsteadOf https://github.com/` would otherwise win). Unlike
+         * [NO_PUBLISHING]'s command rules, `git -C . push`, `/usr/bin/git push`, a script or
+         * `--no-verify` don't get around it. The app's own push runs in its own process and is
+         * untouched. Fetching still works.
+         *
+         * It guards against a push by habit or by mistake, not against an agent set on pushing:
+         * git config the session writes itself wins (a `remote.<name>.pushurl` skips
+         * `pushInsteadOf`, a local rewrite as long as ours ties and is read first), as does a
+         * token passed on the command line. Only the permission prompts stand in the way of that.
          *
          * Added after any config [parent] already passes this way (a proxy's URL rewrites,
          * credential settings), which a fresh count would drop.
          */
-        fun noPushEnvironment(parent: Map<String, String> = System.getenv()): Map<String, String> {
+        fun noPushEnvironment(
+            parent: Map<String, String> = System.getenv(),
+            remoteUrls: Collection<String> = emptyList(),
+        ): Map<String, String> {
             val n = parent["GIT_CONFIG_COUNT"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
-            return mapOf(
-                "GIT_CONFIG_COUNT" to (n + 1).toString(),
-                "GIT_CONFIG_KEY_$n" to "url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf",
-                "GIT_CONFIG_VALUE_$n" to "",
-            )
+            val prefixes = listOf("") + remoteUrls.filter { it.isNotBlank() }.distinct()
+            return buildMap {
+                put("GIT_CONFIG_COUNT", (n + prefixes.size).toString())
+                prefixes.forEachIndexed { i, prefix ->
+                    put("GIT_CONFIG_KEY_${n + i}", "url.$NO_PUSH_URL.pushInsteadOf")
+                    put("GIT_CONFIG_VALUE_${n + i}", prefix)
+                }
+            }
         }
+
+        private const val NO_PUSH_URL = "publishing-is-the-users-step-in-amethyst://"
+
+        /**
+         * The remote URLs of the repository in [dir], or of the clones one folder down (a
+         * workspace's), as [noPushEnvironment] wants them.
+         */
+        fun remoteUrls(dir: File): List<String> =
+            (listOf(dir) + dir.listFiles().orEmpty().filter { it.isDirectory })
+                .filter { File(it, ".git").exists() }
+                .flatMap { repo ->
+                    GitWorkspace
+                        .git(repo, "config", "--get-regexp", "^remote\\..*\\.url$")
+                        ?.lines()
+                        .orEmpty()
+                        .mapNotNull { line -> line.substringAfter(' ', "").trim().takeIf { it.isNotEmpty() } }
+                }.distinct()
     }
 }

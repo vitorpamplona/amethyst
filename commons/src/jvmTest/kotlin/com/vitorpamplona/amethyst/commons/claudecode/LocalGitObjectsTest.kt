@@ -191,12 +191,44 @@ class LocalGitObjectsTest {
     }
 
     @Test
+    fun theUsersOwnPushRewriteDoesNotOpenAWayAround() {
+        val remote = Files.createTempDirectory("remote").toFile()
+        try {
+            git("init", "-q", "--bare", remote.absolutePath)
+            git("remote", "add", "origin", remote.absolutePath)
+            // A common setup: pushes to the host go over another URL. Longer than the empty
+            // prefix, so git would pick it over a guard made of the empty prefix alone.
+            val prefix = remote.parentFile.absolutePath + "/"
+            git("config", "url.$prefix.pushInsteadOf", prefix)
+
+            fun push(env: Map<String, String>): Int {
+                val p =
+                    ProcessBuilder("git", "push", "-q", "origin", "HEAD:refs/heads/x")
+                        .directory(dir)
+                        .redirectErrorStream(true)
+                        .apply { environment().putAll(env) }
+                        .start()
+                p.inputStream.readBytes()
+                return p.waitFor()
+            }
+            assertEquals(listOf(remote.absolutePath), ClaudeChat.remoteUrls(dir))
+            assertTrue(push(ClaudeChat.noPushEnvironment(remoteUrls = ClaudeChat.remoteUrls(dir))) != 0, "pushed past the user's rewrite")
+            assertTrue(GitWorkspace.git(remote, "for-each-ref").orEmpty().isBlank())
+        } finally {
+            remote.deleteRecursively()
+        }
+    }
+
+    @Test
     fun theNoPushConfigKeepsConfigTheEnvironmentAlreadyPasses() {
         val env = ClaudeChat.noPushEnvironment(mapOf("GIT_CONFIG_COUNT" to "2", "GIT_CONFIG_KEY_0" to "a.b", "GIT_CONFIG_KEY_1" to "c.d"))
         assertEquals("3", env["GIT_CONFIG_COUNT"])
         assertEquals("url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf", env["GIT_CONFIG_KEY_2"])
         assertTrue("GIT_CONFIG_KEY_0" !in env && "GIT_CONFIG_KEY_1" !in env)
         assertEquals("1", ClaudeChat.noPushEnvironment(emptyMap())["GIT_CONFIG_COUNT"])
+        val withUrls = ClaudeChat.noPushEnvironment(emptyMap(), remoteUrls = listOf("https://github.com/a/b", "https://github.com/a/b"))
+        assertEquals("2", withUrls["GIT_CONFIG_COUNT"])
+        assertEquals("https://github.com/a/b", withUrls["GIT_CONFIG_VALUE_1"])
     }
 
     @Test
