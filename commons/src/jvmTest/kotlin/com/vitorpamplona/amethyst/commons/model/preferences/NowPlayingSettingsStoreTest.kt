@@ -30,7 +30,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okio.Path.Companion.toOkioPath
@@ -39,6 +41,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 
 class NowPlayingSettingsStoreTest {
     @get:Rule
@@ -51,6 +54,24 @@ class NowPlayingSettingsStoreTest {
             produceFile = { file.toOkioPath() },
         )
     }
+
+    @Test
+    fun anUnreadableFileStillCountsAsRestored() =
+        runBlocking {
+            val unreadable =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = flow { throw IOException("disk gone") }
+
+                    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = throw IOException("disk gone")
+                }
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val state = NowPlayingSettingsState()
+            NowPlayingSettingsStore(unreadable, scope, "alice", state)
+
+            // Whatever waits for the saved settings carries on with the defaults instead of forever.
+            assertEquals(false, withTimeout(5_000) { state.sharesOtherApps().first() })
+            scope.cancel()
+        }
 
     @Test
     fun appLabelsSurviveTheEncoding() {

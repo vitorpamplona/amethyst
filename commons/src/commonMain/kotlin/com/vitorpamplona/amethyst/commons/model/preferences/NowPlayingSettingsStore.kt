@@ -74,7 +74,9 @@ class NowPlayingSettingsStore(
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NowPlayingSettingsStore") { "Error reading now playing settings: ${e.message}" }
+            Log.e("NowPlayingSettingsStore", "Error reading now playing settings", e)
+            // Carry on with the defaults, so whatever waits for the saved settings does not wait forever.
+            state.restore(state.flow.value)
         }
     }
 
@@ -88,7 +90,7 @@ class NowPlayingSettingsStore(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NowPlayingSettingsStore") { "Error writing now playing settings: ${e.message}" }
+            Log.e("NowPlayingSettingsStore", "Error writing now playing settings", e)
         }
     }
 
