@@ -207,7 +207,10 @@ class AccountFeedContentStates(
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true)
+
+    // Kept current, not rebuilt on resume: a move reaches it as its game (ChessLobbyFeedFilter.applyFilter
+    // maps a move to its start) and the update sorts the list again by activity.
+    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
 
     /**
      * Every calendar RSVP (kind 31925) the account has seen, held while these feeds live. The
@@ -259,8 +262,9 @@ class AccountFeedContentStates(
     // Sorted by date and reading nothing but their events, their list and the mutes, like Home: kept
     // current by FeedsKeptCurrent instead of rebuilt each time their screen comes back. Polls'
     // open/closed tabs, calendar appointments, Nests and Relay groups compare against the clock,
-    // and Chess, Chat, Live and Messages sort by activity that never reaches them as feed items, so
-    // those still rebuild on resume. Drafts and web bookmarks are read off the account, not the
+    // and Chat, Live and Messages sort by activity that never reaches them as feed items, so those
+    // still rebuild on resume. Chess sorts by activity too, but its activity is moves, which reach
+    // it as their games. Drafts and web bookmarks are read off the account, not the
     // cache, so theirs is cheap.
     private val keptCurrent =
         listOf(
@@ -271,6 +275,7 @@ class AccountFeedContentStates(
             keptCurrent(picturesFeed, account.livePicturesFollowLists),
             keptCurrent(workoutsFeed, account.liveWorkoutsFollowLists),
             keptCurrent(highlightsFeed, account.liveHighlightsFollowLists),
+            keptCurrent(chessLobbyFeed, account.liveChessFollowLists),
             keptCurrent(badgesFeed, account.liveBadgesFollowLists),
             keptCurrent(browseEmojiSetsFeed, account.liveBrowseEmojiSetsFollowLists),
             keptCurrent(gitRepositoriesFeed, account.liveGitRepositoriesFollowLists),
