@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -132,13 +133,17 @@ fun ClaudeCodeChangesScreen(
                             .widthIn(max = 1100.dp)
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(Gutter),
+                        verticalArrangement = Arrangement.spacedBy(GroupGap),
                     ) {
                         ScopePicker(s.info, s.scope, viewModel::show)
                         if (s.patch.hasDiff) {
-                            Text(stringRes(Res.string.claude_code_ask_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                            GitDiffView(s.patch, onLineClick = { file, line -> asking = file to line })
+                            // The hint belongs to the diff under it, not to the commits above: no gap of its
+                            // own, since the diff's summary row is taller than its text and brings the room.
+                            Column {
+                                Text(stringRes(Res.string.claude_code_ask_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                                GitDiffView(s.patch, onLineClick = { file, line -> asking = file to line })
+                            }
                         } else {
                             Text(stringRes(Res.string.claude_code_no_changes), color = MaterialTheme.colorScheme.grayText)
                         }
@@ -175,7 +180,7 @@ private fun ScopePicker(
     scope: ChangesScope,
     onPick: (ChangesScope) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PartGap)) {
         // A commit picked below leaves both segments unselected: it is a third way to look.
         SegmentedChoice(
             options = listOf<ChangesScope>(ChangesScope.Uncommitted, ChangesScope.Branch),
@@ -186,21 +191,25 @@ private fun ScopePicker(
         )
         val commits = info?.commits.orEmpty()
         if (commits.isNotEmpty()) {
-            SectionTitle(pluralStringRes(Res.plurals.claude_code_commits, commits.size, commits.size))
-            commits.forEach { commit ->
-                val selected = (scope as? ChangesScope.Commit)?.sha == commit.sha
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                        .clickable { onPick(ChangesScope.Commit(commit.sha)) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(commit.sha.take(7), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(10.dp))
-                    Text(commit.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SectionTitle(pluralStringRes(Res.plurals.claude_code_commits, commits.size, commits.size))
+                commits.forEach { commit ->
+                    val selected = (scope as? ChangesScope.Commit)?.sha == commit.sha
+                    Row(
+                        Modifier
+                            // The highlight reaches into the gutter; the text stays on the column's edge.
+                            .offset(x = (-8).dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                            .clickable { onPick(ChangesScope.Commit(commit.sha)) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(commit.sha.take(7), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(InlineGap))
+                        Text(commit.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }

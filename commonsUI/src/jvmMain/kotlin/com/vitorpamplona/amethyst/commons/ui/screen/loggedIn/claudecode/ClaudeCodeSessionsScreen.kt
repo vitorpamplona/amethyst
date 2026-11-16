@@ -86,6 +86,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
@@ -357,23 +358,32 @@ private fun SessionList(
             onDeleteWorkspace = { onDeleteWorkspace(row) },
         )
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Gutter)) {
+        // The first header sits under the top bar; every later one starts a section, a clear break.
+        var first = true
+
+        fun headerTop(): Dp = (if (first) 8.dp else SectionHeaderTop).also { first = false }
         if (needsYou.isNotEmpty()) {
-            item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error) }
+            val top = headerTop()
+            item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error, top = top) }
             items(needsYou, key = { "needs-" + it.key }) { Item(it) }
         }
         if (inWorkspaces.isNotEmpty()) {
-            item(key = "section-workspaces") { SectionHeader(stringRes(Res.string.claude_code_section_workspaces)) }
+            val top = headerTop()
+            item(key = "section-workspaces") { SectionHeader(stringRes(Res.string.claude_code_section_workspaces), top = top) }
             items(inWorkspaces, key = { "ws-" + it.key }) { Item(it) }
         }
         sections.forEach { (project, sessions) ->
-            item(key = "section-$project") { SectionHeader(project) }
+            val top = headerTop()
+            item(key = "section-$project") { SectionHeader(project, top = top) }
             items(sessions, key = { it.key }) { Item(it) }
         }
         if (archived.isNotEmpty()) {
+            val top = headerTop()
             item(key = "section-archived") {
                 SectionHeader(
                     pluralStringRes(Res.plurals.claude_code_section_archived, archived.size, archived.size),
+                    top = top,
                     expanded = showArchived,
                     onClick = { showArchived = !showArchived },
                 )
@@ -383,19 +393,24 @@ private fun SessionList(
     }
 }
 
+/** The break above a section of the list: wider than the gap between its rows. */
+private val SectionHeaderTop = 28.dp
+
 /** A quiet label over a group of sessions; a foldable one when it has [onClick]. */
 @Composable
 private fun SectionHeader(
     text: String,
     color: Color = MaterialTheme.colorScheme.grayText,
+    top: Dp = SectionHeaderTop,
     expanded: Boolean? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    // Nothing below: the first row's own padding is the gap, tighter than the break above.
     Row(
         Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
+            .padding(start = Gutter, end = Gutter, top = top),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = color, modifier = Modifier.weight(1f, fill = false))
@@ -421,7 +436,7 @@ private fun SessionRow(
             .fillMaxWidth()
             .hoverable(hover)
             .clickable(onClick = onOpen)
-            .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            .padding(start = Gutter, top = RowPaddingV, bottom = RowPaddingV, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusMark(row)
@@ -466,7 +481,8 @@ private fun SessionRow(
         }
         // Shown on hover (or while open); still there to click or tab to without a mouse.
         Box(Modifier.alpha(if (hovered || menu) 1f else 0f)) {
-            IconButton(onClick = { menu = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.grayText) }
+            // 40 dp, not the default 48: the row's height is its text's, not the hidden button's.
+            Dense { IconButton(onClick = { menu = true }, modifier = Modifier.size(40.dp)) { Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.grayText) } }
             RoundedDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 RoundedMenuSection {
                     // A workspace no session works in yet has only itself to remove.
@@ -718,10 +734,12 @@ private fun NewSessionDialog(
                             if (!loaded) {
                                 Spacer(Modifier.height(32.dp))
                             } else if (suggestedFolders.size > 1) {
-                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    suggestedFolders.take(12).forEach { cwd ->
-                                        HoverTooltip(cwd) {
-                                            FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
+                                Dense {
+                                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(InlineGap)) {
+                                        suggestedFolders.take(12).forEach { cwd ->
+                                            HoverTooltip(cwd) {
+                                                FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
+                                            }
                                         }
                                     }
                                 }
@@ -820,19 +838,21 @@ private fun RepoPicker(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (repos.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                repos.forEach { url ->
-                    val label = names[NostrWorkspaces.normalize(url)] ?: AgentWorkspaces.ownerAndName(url)
-                    val remove = stringRes(Res.string.claude_code_workspace_remove_repo, label)
-                    HoverTooltip(url) {
-                        InputChip(
-                            selected = true,
-                            onClick = { onRemove(url) },
-                            label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            leadingIcon = { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
-                            shape = RoundedCornerShape(50),
-                        )
+            Dense {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(InlineGap), verticalArrangement = Arrangement.spacedBy(InlineGap)) {
+                    repos.forEach { url ->
+                        val label = names[NostrWorkspaces.normalize(url)] ?: AgentWorkspaces.ownerAndName(url)
+                        val remove = stringRes(Res.string.claude_code_workspace_remove_repo, label)
+                        HoverTooltip(url) {
+                            InputChip(
+                                selected = true,
+                                onClick = { onRemove(url) },
+                                label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                leadingIcon = { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
+                                shape = RoundedCornerShape(50),
+                            )
+                        }
                     }
                 }
             }
@@ -914,34 +934,36 @@ private fun RepoGroupActions(
 ) {
     if (groups.isEmpty() && !canSave) return
     val last = stringRes(Res.string.claude_code_workspace_last_used)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        groups.sortedByDescending { it.name == ClaudeCodeService.LAST_GROUP }.forEach { group ->
-            val isLast = group.name == ClaudeCodeService.LAST_GROUP
-            HoverTooltip(group.urls.joinToString("\n") { AgentWorkspaces.ownerAndName(it) }) {
+    Dense {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(InlineGap), verticalAlignment = Alignment.CenterVertically) {
+            groups.sortedByDescending { it.name == ClaudeCodeService.LAST_GROUP }.forEach { group ->
+                val isLast = group.name == ClaudeCodeService.LAST_GROUP
+                HoverTooltip(group.urls.joinToString("\n") { AgentWorkspaces.ownerAndName(it) }) {
+                    AssistChip(
+                        onClick = { onUse(group) },
+                        label = { Text(if (isLast) last else group.name, maxLines = 1) },
+                        leadingIcon = { Icon(if (isLast) MaterialSymbols.History else MaterialSymbols.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                        trailingIcon =
+                            if (isLast) {
+                                null
+                            } else {
+                                {
+                                    val forget = stringRes(Res.string.claude_code_workspace_forget_group, group.name)
+                                    Icon(MaterialSymbols.Close, contentDescription = forget, modifier = Modifier.size(16.dp).clip(CircleShape).clickable { onForget(group) })
+                                }
+                            },
+                        shape = RoundedCornerShape(50),
+                    )
+                }
+            }
+            if (canSave) {
                 AssistChip(
-                    onClick = { onUse(group) },
-                    label = { Text(if (isLast) last else group.name, maxLines = 1) },
-                    leadingIcon = { Icon(if (isLast) MaterialSymbols.History else MaterialSymbols.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    trailingIcon =
-                        if (isLast) {
-                            null
-                        } else {
-                            {
-                                val forget = stringRes(Res.string.claude_code_workspace_forget_group, group.name)
-                                Icon(MaterialSymbols.Close, contentDescription = forget, modifier = Modifier.size(16.dp).clip(CircleShape).clickable { onForget(group) })
-                            }
-                        },
+                    onClick = onSave,
+                    label = { Text(stringRes(Res.string.claude_code_workspace_save_group), maxLines = 1) },
+                    leadingIcon = { Icon(MaterialSymbols.BookmarkAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     shape = RoundedCornerShape(50),
                 )
             }
-        }
-        if (canSave) {
-            AssistChip(
-                onClick = onSave,
-                label = { Text(stringRes(Res.string.claude_code_workspace_save_group), maxLines = 1) },
-                leadingIcon = { Icon(MaterialSymbols.BookmarkAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
-            )
         }
     }
 }
@@ -979,7 +1001,8 @@ private fun RepoSuggestionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClickLabel = add, onClick = onAdd)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            // The plus under the search field's magnifier: both sit 14 dp in.
+            .padding(start = 14.dp, end = RowPaddingH, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(MaterialSymbols.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -1064,12 +1087,14 @@ internal fun RenameDialog(
 internal fun Banner(
     text: String,
     action: String? = null,
+    /** Its place in the column: the gutter by default, nothing inside a screen that pads already. */
+    modifier: Modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp),
     onAction: () -> Unit = {},
 ) {
-    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(12.dp)) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+        Row(Modifier.padding(horizontal = CardPadding, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(InlineGap))
             Text(text, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             action?.let {
                 Spacer(Modifier.width(8.dp))

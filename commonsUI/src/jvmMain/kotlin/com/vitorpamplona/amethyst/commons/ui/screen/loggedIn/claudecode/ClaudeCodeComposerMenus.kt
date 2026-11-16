@@ -203,7 +203,7 @@ internal fun ModelChip(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(MaterialSymbols.Assistant, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(label, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
                 Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
             }

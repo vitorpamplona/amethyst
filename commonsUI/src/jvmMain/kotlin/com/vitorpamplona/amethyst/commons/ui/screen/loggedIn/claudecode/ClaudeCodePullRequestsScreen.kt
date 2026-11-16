@@ -161,13 +161,13 @@ fun ClaudeCodePullRequestsScreen(
             }
             LazyColumn(
                 Modifier.widthIn(max = 760.dp).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(Gutter),
+                verticalArrangement = Arrangement.spacedBy(PartGap),
             ) {
                 item(key = "rules") {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                         Text(stringRes(Res.string.claude_code_pr_rules), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                        if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh))
+                        if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh), modifier = Modifier)
                         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }
@@ -187,7 +187,7 @@ fun ClaudeCodePullRequestsScreen(
                         },
                     )
                 }
-                errors[""]?.let { error -> item(key = "delete-error") { Banner(error.reason) } }
+                errors[""]?.let { error -> item(key = "delete-error") { Banner(error.reason, modifier = Modifier) } }
             }
         }
     }
@@ -224,7 +224,7 @@ private fun RepoCard(
     var title by remember(row.draftTitle) { mutableStateOf(row.draftTitle) }
     var body by remember(row.draftBody) { mutableStateOf(row.draftBody) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(PartGap)) {
             // A NIP-34 repository by its announced name, opening its page in the app; any other by
             // owner/name, as GitHub shows it, opening its web page.
             val nostr = row.nostr
@@ -267,12 +267,8 @@ private fun RepoCard(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(end = 4.dp),
                 )
-                if (status.ahead > 0 || status.uncommitted > 0) {
-                    TextButton(onClick = onChanges) { Text(stringRes(Res.string.claude_code_changes)) }
-                }
-                if (status.uncommitted > 0) {
-                    TextButton(onClick = onAskToCommit) { Text(stringRes(Res.string.claude_code_pr_ask_commit)) }
-                }
+                if (status.ahead > 0 || status.uncommitted > 0) InlineAction(stringRes(Res.string.claude_code_changes), onChanges)
+                if (status.uncommitted > 0) InlineAction(stringRes(Res.string.claude_code_pr_ask_commit), onAskToCommit)
             }
             // A NIP-34 repository takes its changes as a proposal, signed and sent from the app.
             if (row.nostr != null && status.ahead > 0) {
@@ -315,7 +311,7 @@ private fun PullRequestLine(pr: PullRequestInfo) {
             pr.isOpen -> stringRes(Res.string.claude_code_pr_state_open) to AddedColor
             else -> stringRes(Res.string.claude_code_pr_state_closed) to MaterialTheme.colorScheme.error
         }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PartGap)) {
         Text(label, color = color, style = MaterialTheme.typography.labelLarge)
         HoverTooltip(pr.url) {
             TextButton(onClick = { uriHandler.openUri(pr.url) }) { Text(stringRes(Res.string.claude_code_pr_view)) }

@@ -245,8 +245,8 @@ private fun ProposeForm(
                 .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .padding(Gutter),
+            verticalArrangement = Arrangement.spacedBy(GroupGap),
         ) {
             Text(
                 stringRes(
@@ -264,7 +264,8 @@ private fun ProposeForm(
             if (info.uncommitted > 0) {
                 // Left out of the proposal unless committed: say so, with the two ways forward.
                 Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 4.dp)) {
+                    // The buttons at the bottom bring their own room: less padding there and on the right.
+                    Column(Modifier.padding(start = CardPadding, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
                         Text(
                             pluralStringRes(Res.plurals.claude_code_uncommitted_warning, info.uncommitted, info.uncommitted),
                             style = MaterialTheme.typography.bodySmall,
@@ -347,7 +348,7 @@ private fun ProposeForm(
             }
         }
 
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(InlineGap)) {
             (done?.result as? GitProposalResult.Failed)?.let {
                 Text(stringRes(Res.string.claude_code_publish_failed, it.reason), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
@@ -451,7 +452,8 @@ private fun ProposeStep(
     done: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // A step starts a section: more room above it than between its parts.
+    Column(Modifier.padding(top = SectionGap - GroupGap), verticalArrangement = Arrangement.spacedBy(PartGap)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
@@ -466,10 +468,11 @@ private fun ProposeStep(
                     Text(number.toString(), style = MaterialTheme.typography.labelMedium)
                 }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(InlineGap))
             Text(title, style = MaterialTheme.typography.titleSmall)
         }
-        Column(Modifier.padding(start = 34.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+        // Under the title, past the 24 dp mark and its gap.
+        Column(Modifier.padding(start = 24.dp + InlineGap), verticalArrangement = Arrangement.spacedBy(PartGap)) { content() }
     }
 }
 
@@ -484,7 +487,7 @@ private fun PushSection(
 ) {
     // A darker card than the others: its field is filled with their tone.
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringRes(Res.string.claude_code_push_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             if (remotes.isEmpty()) {
                 Text(stringRes(Res.string.claude_code_push_no_remotes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -512,7 +515,7 @@ private fun GateSection(
 ) {
     var showLog by remember { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val (icon, tint) =
                     when (gate) {

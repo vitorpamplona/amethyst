@@ -22,27 +22,33 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -56,8 +62,42 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 // The pieces the coding-agent screens build their forms from, in the app's form look
 // (`FormFields.kt`): labels above, filled fields, switches for settings, segments for choices.
 
+// The spacing these screens share, on a 4 dp scale. One value per job, so the edges line up and
+// the gaps say what belongs together: the same job never gets two values.
+
+/** The one inset of a screen's column: messages, composer, banners, cards and lists all start here. */
+internal val Gutter = 16.dp
+
+/** The inside of a card, a banner or a callout. */
+internal val CardPadding = 16.dp
+
+/** The inside of a dense row (a menu item, a suggestion, a commit). */
+internal val RowPaddingH = 12.dp
+internal val RowPaddingV = 8.dp
+
+/** Between an icon and its text, or two small things on a line. */
+internal val InlineGap = 8.dp
+
+/** Between the parts of one thing: a reply and its tool calls, the fields of one step. */
+internal val PartGap = 12.dp
+
 /** Space between the groups of a form: a label, its field and its help text are one group. */
 internal val FormGap = 18.dp
+
+/** Between groups that stand apart: a new turn of the chat, the blocks of a screen. */
+internal val GroupGap = 24.dp
+
+/** Between sections and steps: the largest break on a screen. */
+internal val SectionGap = 32.dp
+
+/**
+ * Lays [content] out at its drawn size: chips and inline text buttons otherwise keep a 48 dp touch
+ * area that adds gaps nobody chose. For rows of them, where the row itself is easy to hit.
+ */
+@Composable
+internal fun Dense(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified, content = content)
+}
 
 /**
  * A setting that is on or off, with what it does: the whole row toggles it, as the settings
@@ -83,7 +123,7 @@ internal fun ToggleRow(
             Text(title, style = MaterialTheme.typography.bodyLarge)
             description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(PartGap))
         // The row handles the click: the switch only shows the state.
         Switch(checked = checked, onCheckedChange = null)
     }
@@ -102,11 +142,11 @@ internal fun CheckRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChange)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = RowPaddingH, vertical = RowPaddingV),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(checked = checked, onCheckedChange = null)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(PartGap))
         Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }
@@ -153,3 +193,17 @@ internal fun modeShortLabel(mode: PermissionMode): String =
  */
 @Composable
 internal fun formDialogColor(): Color = MaterialTheme.colorScheme.surfaceContainerLow
+
+/**
+ * A quiet action set inline with text (a status line, a heading): 32 dp tall, so it doesn't make
+ * its line taller than the text beside it.
+ */
+@Composable
+internal fun InlineAction(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Dense {
+        TextButton(onClick = onClick, modifier = Modifier.height(32.dp), contentPadding = PaddingValues(horizontal = 8.dp)) { Text(text) }
+    }
+}

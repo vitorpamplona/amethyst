@@ -565,7 +565,7 @@ internal fun ChatTopBar(
                                 MaterialSymbols.Edit,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.grayText,
-                                modifier = Modifier.padding(start = 6.dp).size(16.dp).alpha(if (hovered) 1f else 0f),
+                                modifier = Modifier.padding(start = 4.dp).size(16.dp).alpha(if (hovered) 1f else 0f),
                             )
                         }
                     }
@@ -625,8 +625,8 @@ private fun Messages(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = Gutter, vertical = Gutter),
+        verticalArrangement = Arrangement.spacedBy(PartGap),
     ) {
         if (!state.historyLoaded) {
             item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
@@ -642,7 +642,11 @@ private fun Messages(
                 is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
                 is ChatRow.Single ->
                     when (val item = row.item) {
-                        is ChatItem.UserText -> UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                        // A new turn: more room above it than between the parts of a reply.
+                        is ChatItem.UserText ->
+                            Box(Modifier.padding(top = GroupGap - PartGap)) {
+                                UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                            }
                         is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
                         is ChatItem.ToolCall ->
                             if (ToolKind.of(item.name) == ToolKind.EDIT) {
@@ -799,9 +803,9 @@ private fun ActionBanner(
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp),
     ) {
-        Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = CardPadding, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.weight(1f))
             TextButton(onClick = onAction) { Text(action) }
         }
@@ -857,7 +861,7 @@ private fun EmptyChatIntro(
     Column(
         Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(PartGap),
     ) {
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
@@ -871,7 +875,7 @@ private fun EmptyChatIntro(
             color = MaterialTheme.colorScheme.grayText,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.size(6.dp))
+        Spacer(Modifier.size(4.dp))
         val starters =
             buildList {
                 // A workspace of several repositories asks about all of them.
@@ -890,7 +894,7 @@ private fun EmptyChatIntro(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
             ) {
-                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = CardPadding, vertical = 12.dp))
             }
         }
     }
@@ -902,7 +906,7 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(PartGap),
     ) {
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(MaterialSymbols.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
@@ -915,7 +919,7 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = 420.dp),
         )
-        Spacer(Modifier.size(6.dp))
+        Spacer(Modifier.size(4.dp))
         listOf(
             stringRes(Res.string.claude_code_settings_starter_data),
             stringRes(Res.string.claude_code_settings_starter_text),
@@ -929,7 +933,7 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
             ) {
-                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = CardPadding, vertical = 12.dp))
             }
         }
     }
@@ -945,7 +949,7 @@ private fun UserBubble(
     onEdit: (() -> Unit)?,
 ) {
     if (images.isNotEmpty()) {
-        Box(Modifier.fillMaxWidth().padding(top = 8.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+        Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
             SentImageRow(images)
         }
     }
@@ -953,7 +957,7 @@ private fun UserBubble(
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     Row(
-        Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 8.dp else 4.dp).hoverable(hover),
+        Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 0.dp else 4.dp).hoverable(hover),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1094,7 +1098,7 @@ private fun InlineNote(text: String) {
         text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.grayText,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp),
     )
 }
 
@@ -1138,9 +1142,9 @@ private fun PermissionCard(
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp),
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(PartGap)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -1236,17 +1240,17 @@ private fun Composer(
         dismissedFor = null
     }
     if (showMenu) {
-        SlashCommandMenu(matches, selected.coerceIn(0, matches.lastIndex), pick, Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp))
+        SlashCommandMenu(matches, selected.coerceIn(0, matches.lastIndex), pick, Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp))
     }
     if (attachments.images.isNotEmpty()) {
-        ComposerImageRow(attachments, Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp))
+        ComposerImageRow(attachments, Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp))
     }
     attachments.refused?.let { name ->
         Text(
             stringRes(Res.string.claude_code_attach_failed, name),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
+            modifier = Modifier.padding(start = Gutter, end = Gutter, top = 8.dp),
         )
     }
     ThinPaddingTextField(
@@ -1254,7 +1258,7 @@ private fun Composer(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp, top = 6.dp)
+                .padding(start = Gutter, end = Gutter, top = 8.dp)
                 // Files dragged over the chat land here.
                 .then(if (dropHover) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, EditFieldBorder) else Modifier)
                 .focusRequester(focusRequester)
@@ -1336,7 +1340,7 @@ private fun ComposerFooter(
     modes: List<PermissionMode>,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp),
+        Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The settings assistant asks before every change whatever the mode: no mode to pick.
@@ -1402,7 +1406,7 @@ private fun OpenElsewhereBar(onFork: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp),
     ) {
         val note: @Composable (Modifier) -> Unit = { modifier ->
             Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -1414,18 +1418,18 @@ private fun OpenElsewhereBar(onFork: () -> Unit) {
         val fork: @Composable () -> Unit = {
             FilledTonalButton(onClick = onFork) {
                 Icon(MaterialSymbols.ForkRight, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(InlineGap))
                 Text(stringRes(Res.string.claude_code_fork))
             }
         }
         if (wide) {
-            Row(Modifier.padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(start = CardPadding, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 note(Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(InlineGap))
                 fork()
             }
         } else {
-            Column(Modifier.padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.padding(start = CardPadding, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                 note(Modifier)
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { fork() }
             }
@@ -1458,7 +1462,7 @@ private fun ModeChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(MaterialSymbols.Security, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(5.dp))
+            Spacer(Modifier.width(4.dp))
             Text(modeLabel(mode), style = MaterialTheme.typography.labelMedium, color = color)
             Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         }

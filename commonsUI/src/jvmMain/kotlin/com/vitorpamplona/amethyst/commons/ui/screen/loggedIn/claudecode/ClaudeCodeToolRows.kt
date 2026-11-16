@@ -280,7 +280,8 @@ internal fun ToolLine(
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp, horizontal = 2.dp),
+            // Less below than above: the reply's first line brings its own ascent.
+            .padding(top = 4.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText

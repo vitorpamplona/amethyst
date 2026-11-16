@@ -172,16 +172,16 @@ fun ClaudeCodeStartScreen(
                     .widthIn(max = 720.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                    .padding(Gutter),
+                verticalArrangement = Arrangement.spacedBy(FormGap),
             ) {
                 Text(stringRes(Res.string.claude_code_start_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.grayText)
 
                 itemTitle?.let {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(CardPadding), verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (proposal != null) MaterialSymbols.AltRoute else MaterialSymbols.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(InlineGap))
                             Text(it, style = MaterialTheme.typography.titleSmall)
                         }
                     }
@@ -248,7 +248,7 @@ fun ClaudeCodeStartScreen(
                 ) {
                     if (starting) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(InlineGap))
                     }
                     Text(stringRes(Res.string.claude_code_start))
                 }
@@ -266,7 +266,7 @@ private fun CheckoutSection(
 ) {
     var editing by remember { mutableStateOf(false) }
     var path by remember(repoName) { mutableStateOf(File(System.getProperty("user.home"), repoName).absolutePath) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
         Text(stringRes(Res.string.claude_code_checkout), style = MaterialTheme.typography.labelLarge)
         when (state) {
             CheckoutState.Looking -> Note(stringRes(Res.string.claude_code_checkout_looking))
@@ -275,7 +275,7 @@ private fun CheckoutSection(
                 if (!editing) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(MaterialSymbols.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(InlineGap))
                         Text(state.dir.absolutePath, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                         TextButton(onClick = {
                             path = state.dir.absolutePath
@@ -289,7 +289,7 @@ private fun CheckoutSection(
             LabeledField(Res.string.claude_code_folder) {
                 FormTextField(value = path, onValueChange = { path = it }, leadingIcon = MaterialSymbols.Folder, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(InlineGap)) {
                 OutlinedButton(onClick = {
                     editing = false
                     onUse(path)
