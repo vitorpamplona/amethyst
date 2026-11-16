@@ -137,10 +137,9 @@ fun PostingTopBar(
     // A private note is not posted, it is sealed and delivered to a named set of
     // people. The button says which of the two is about to happen.
     postRes: StringResource = Res.string.post,
-    // While true the button shows a spinner and cannot be pressed again.
+    // While true the button shows a spinner and cannot be pressed again, and Close is greyed out:
+    // a post on its way keeps the composer open.
     isBusy: () -> Boolean = { false },
-    // While false Close is greyed out.
-    canCancel: () -> Boolean = { true },
 ) = ActionTopBar(
     titleRes = titleRes,
     postRes = postRes,
@@ -148,7 +147,7 @@ fun PostingTopBar(
     onCancel = onCancel,
     onPost = onPost,
     isBusy = isBusy,
-    canCancel = canCancel,
+    canCancel = { !isBusy() },
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -175,7 +175,7 @@ class ShortNotePostSignerFailureTest {
         }
 
     @Test
-    fun aFailedPostSavesItsTextAsADraft() =
+    fun aFailedPostSavesTheDraftItSkipped() =
         runTest {
             // Fails the note only, so the draft that follows can still be signed and encrypted.
             bunker.failWith = SignerExceptions.TimedOutException("Could not sign: User didn't accept or reject in time.")
@@ -183,14 +183,33 @@ class ShortNotePostSignerFailureTest {
             postViewModel.message.setTextAndPlaceCursorAtEnd("typed just before Post")
 
             assertTrue(postViewModel.tryStartPosting())
+            // The debounced auto-save of the last keystrokes comes due while posting, and is skipped.
+            postViewModel.sendDraftSync()
             assertFalse(postViewModel.sendPostSync())
 
-            // The auto-save skipped while posting is asked for again, debounced like any edit.
+            // The text stays, so the skipped save is asked for again, debounced like any edit.
             val draft = accountViewModel.account.getOrCreateDraftNote(postViewModel.draftTag.current)
             withContext(Dispatchers.Default) {
                 withTimeout(10_000) { while (draft.event !is DraftWrapEvent) delay(50) }
             }
             assertEquals("typed just before Post", postViewModel.message.text.toString())
+        }
+
+    @Test
+    fun aFailedPostWithNothingSkippedSavesNoDraft() =
+        runTest {
+            bunker.failWith = SignerExceptions.TimedOutException("Could not sign: User didn't accept or reject in time.")
+            bunker.onlyKind = TextNoteEvent.KIND
+            postViewModel.message.setTextAndPlaceCursorAtEnd("nothing came due")
+
+            assertTrue(postViewModel.tryStartPosting())
+            assertFalse(postViewModel.sendPostSync())
+
+            // No auto-save was skipped, so the signer is not asked again: an offline bunker would
+            // only time out a second time, and a signer app would prompt right after a refusal.
+            withContext(Dispatchers.Default) { delay(2_000) }
+            val draft = accountViewModel.account.getOrCreateDraftNote(postViewModel.draftTag.current)
+            assertFalse(draft.event is DraftWrapEvent)
         }
 
     @Test

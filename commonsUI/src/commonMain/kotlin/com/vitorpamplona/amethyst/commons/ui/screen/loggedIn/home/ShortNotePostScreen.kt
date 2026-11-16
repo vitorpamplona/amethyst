@@ -61,8 +61,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -109,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.submitOnCtrlEnter
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -251,8 +250,7 @@ internal fun NewPostScreenInner(
     val focusManager = LocalFocusManager.current
 
     val onClose: () -> Unit = {
-        // A post being sent keeps the composer open: if the signer does not sign it, the text has
-        // nowhere else to go, because saving a draft needs the same signer.
+        // Does nothing while posting: the composer must stay open (see isPosting).
         if (!postViewModel.isPosting) {
             // uses the accountViewModel scope to avoid cancelling this
             // function when the postViewModel is released
@@ -288,7 +286,6 @@ internal fun NewPostScreenInner(
                 onPost = onPost,
                 onCancel = onClose,
                 isBusy = { postViewModel.isPosting },
-                canCancel = { !postViewModel.isPosting },
             )
         },
     ) { pad ->
@@ -299,22 +296,10 @@ internal fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePaddingSafe(),
         ) {
-            Box {
+            // Read-only while posting; drags still pass, so the text can be scrolled.
+            Box(if (postViewModel.isPosting) Modifier.blockInteractions() else Modifier) {
                 NewPostScreenBody(postViewModel, accountViewModel, nav)
-                if (postViewModel.isPosting) {
-                    // Read-only while posting: this layer takes every touch meant for the body.
-                    Box(Modifier.matchParentSize().pointerInput(Unit) { consumeAllPointerEvents() })
-                }
             }
-        }
-    }
-}
-
-/** Takes every pointer event that reaches this layer, so nothing under it reacts. */
-private suspend fun PointerInputScope.consumeAllPointerEvents() {
-    awaitPointerEventScope {
-        while (true) {
-            awaitPointerEvent().changes.forEach { it.consume() }
         }
     }
 }

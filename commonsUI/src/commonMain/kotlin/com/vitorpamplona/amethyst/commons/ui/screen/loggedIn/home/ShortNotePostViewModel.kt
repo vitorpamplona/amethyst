@@ -193,6 +193,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.Path
+import kotlin.concurrent.Volatile
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -1134,44 +1135,45 @@ open class ShortNotePostViewModel :
     var isPosting by mutableStateOf(false)
         private set
 
+    // An auto-save that came due while posting and was skipped, owed to the draft if the post
+    // does not go out.
+    @Volatile private var draftSaveSkipped = false
+
     /** Marks the composer as posting. False when a post is already under way. UI thread only. */
     fun tryStartPosting(): Boolean {
         if (isPosting) return false
         isPosting = true
+        draftSaveSkipped = false
         return true
     }
 
     /**
      * Sends the note started by [tryStartPosting]. Returns true once it has left the composer,
-     * which is then cleared. Returns false when it was not sent: the text stays in the composer and,
-     * when the signer did not sign it, the user is told why. A NIP-46 bunker that is offline only
-     * gives up after its request timeout and one retry, and the account's launchSigner would just
-     * log that, so it is reported here.
+     * which is then cleared. Returns false when it was not sent: the text stays and, when the signer
+     * did not sign it, the user is told why (a NIP-46 bunker that is offline only gives up after its
+     * request timeout and one retry, and launchSigner would just log that).
      *
-     * [onSent] runs on the UI thread in the same step that ends [isPosting], so nothing (a Close
-     * in particular) can land between the post going out and the composer leaving.
+     * The composer is cleared, [isPosting] ends and [onSent] runs in one UI-thread step, so nothing
+     * (a Close in particular) can land between the post going out and the composer leaving.
      */
     suspend fun sendPostSync(onSent: () -> Unit = {}): Boolean {
         var sent = false
         try {
-            sent =
-                try {
-                    publishPost()
-                } catch (e: SignerExceptions) {
-                    Log.w("ShortNotePostViewModel", "Post not sent: the signer did not sign it", e)
-                    accountViewModel.notices.notify(e.ownNotice() ?: PostNotSent.of(e))
-                    false
-                }
+            sent = publishPost()
+        } catch (e: SignerExceptions) {
+            Log.w("ShortNotePostViewModel", "Post not sent: the signer did not sign it", e)
+            accountViewModel.notices.notify(e.ownNotice() ?: PostNotSent.of(e))
         } finally {
             withContext(NonCancellable) {
                 onUiThread {
                     isPosting = false
-                    if (sent) onSent()
+                    if (sent) {
+                        cancel()
+                        onSent()
+                    }
                 }
             }
-            // The auto-save skips while posting, so the last edits before Post may never have
-            // reached the draft: save it now that the text is staying.
-            if (!sent) draftTag.newVersion()
+            if (!sent && draftSaveSkipped) draftTag.newVersion()
         }
         return sent
     }
@@ -1220,11 +1222,9 @@ open class ShortNotePostViewModel :
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
 
+        // When the post is not mined, the signer signs inside sendTemplate, and one that times out
+        // or refuses throws out of it before sendPostSync clears the composer.
         sendTemplate(template, chosenPow, draftToDelete, anonymous, scheduledFor, privately, threadTarget)
-
-        // Only now: when the signer is not mined for, it signs inside sendTemplate, and a signer
-        // that times out or refuses throws out of it. Clearing earlier would lose the text.
-        onUiThread { cancel() }
         return true
     }
 
@@ -1380,7 +1380,10 @@ open class ShortNotePostViewModel :
     suspend fun sendDraftSync() {
         // The post being sent owns the text now. A draft saved meanwhile could land after the post
         // deletes its draft and outlive it. If the post fails, sendPostSync asks for this save again.
-        if (isPosting) return
+        if (isPosting) {
+            draftSaveSkipped = true
+            return
+        }
 
         val text = message.text.toString()
         if (text.isBlank() || text.trim() == appliedSignature) {
