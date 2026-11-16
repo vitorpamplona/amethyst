@@ -72,6 +72,26 @@ data class LiveHiddenUsers(
 
     fun isHashtagHidden(hashtag: String) = hiddenHashtags.contains(hashtag.lowercase())
 
+    /**
+     * The spammers [newer] hides that this does not, when that is all that changed: spam detection
+     * growing the transient set, which happens about once a second while a busy feed loads. Null
+     * when anything else changed (a mute, a word, a hashtag, a setting) or someone was shown again,
+     * since then notes can leave or come back anywhere.
+     */
+    fun spammersAddedOnly(newer: LiveHiddenUsers): Set<String>? {
+        if (newer.hiddenUsers != hiddenUsers ||
+            newer.hiddenWords != hiddenWords ||
+            newer.hiddenHashtags != hiddenHashtags ||
+            newer.mutedThreads != mutedThreads ||
+            newer.showSensitiveContent != showSensitiveContent ||
+            newer.maxHashtagLimit != maxHashtagLimit ||
+            !newer.spammers.containsAll(spammers)
+        ) {
+            return null
+        }
+        return newer.spammers - spammers
+    }
+
     companion object {
         /** Neutral value that hides nothing — a safe default before any list has loaded. */
         val EMPTY =

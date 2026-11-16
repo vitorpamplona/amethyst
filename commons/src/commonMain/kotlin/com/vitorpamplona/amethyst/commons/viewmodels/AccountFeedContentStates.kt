@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.commons.livestreams.dal.LiveStreamsFeedFilter
 import com.vitorpamplona.amethyst.commons.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
@@ -100,6 +101,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -587,9 +589,23 @@ class AccountFeedContentStates(
         }
 
         scope.launch(Dispatchers.IO) {
-            account.hiddenUsers.flow.collect {
+            var previous: LiveHiddenUsers? = null
+            account.hiddenUsers.flow.collect { hidden ->
+                val last = previous
+                previous = hidden
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
+                // Spam detection hides a new author about once a second while a busy feed loads,
+                // and each one cleared and rebuilt all three card feeds below. A spammer posting
+                // in a hashtag is almost never in the notifications: rebuild only when one is.
+                val newSpammers = last?.spammersAddedOnly(hidden)
+                if (newSpammers != null) {
+                    val candidates = notificationCandidates.snapshot()
+                    if (candidates != null && candidates.none { it.author?.pubkeyHex in newSpammers }) {
+                        Log.d("FeedRebuild") { "notifications/ kept: ${newSpammers.size} new spammers, none in the notifications" }
+                        return@collect
+                    }
+                }
                 // Re-mute removes cards, not just adds them. CardFeedContentState's
                 // refreshSuspended() takes an additive-only path when lastNotes is
                 // populated, which keeps stale cards for notes that no longer pass
