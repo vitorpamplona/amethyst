@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -33,12 +34,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.composer_pop_out
 import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.publish
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.send
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalComposerFrame
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
@@ -67,7 +72,8 @@ fun ActionTopBar(
 /**
  * A composer's top bar: Close on the left, the title in the middle, and the main action on the
  * right, labelled [postLabel] for a label worked out at the call site (a plural, a count). While
- * [isBusy] the action shows a spinner instead of its label and cannot be pressed again.
+ * [isBusy] the action shows a spinner instead of its label and cannot be pressed again. In a
+ * composer's dialog, on a platform with windows, a Pop out button moves it to a window of its own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +105,11 @@ fun ActionTopBar(
             )
         },
         actions = {
+            LocalComposerFrame.current?.popOut?.let { popOut ->
+                IconButton(onClick = popOut) {
+                    Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringRes(Res.string.composer_pop_out))
+                }
+            }
             if (additionalActions != null) {
                 additionalActions()
             }

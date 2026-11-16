@@ -34,25 +34,39 @@ import kotlin.reflect.KClass
  * because its entry stays here, and so stays in the list whose state Navigation 3 keeps alive.
  * Nothing *above* a tab root is ever saved: switching tabs drops it first, so returning to a tab
  * always lands on the tab itself.
+ *
+ * A composer is pushed like any screen, so back closes it and a phone shows it full screen; on a
+ * wide window the host draws it over the screen below. [popOut] moves one to a window of its own
+ * ([windows]), which closes instead of popping.
  */
 @Stable
 class StackModel(
     ids: EntryIds,
     initialStack: List<NavStackEntry>,
     initialSavedTabs: Map<Route, NavStackEntry> = emptyMap(),
+    initialWindows: List<NavStackEntry> = emptyList(),
 ) : NavModel(ids) {
     val stack: SnapshotStateList<NavStackEntry> = mutableStateListOf<NavStackEntry>().apply { addAll(initialStack) }
 
     val savedTabs: SnapshotStateMap<Route, NavStackEntry> = mutableStateMapOf<Route, NavStackEntry>().apply { putAll(initialSavedTabs) }
 
+    /** The composers moved out to windows of their own, oldest first. */
+    private val screenWindows: SnapshotStateList<NavStackEntry> = mutableStateListOf<NavStackEntry>().apply { addAll(initialWindows) }
+
     override val arrangement: NavArrangement get() = NavArrangement.STACK
 
-    override val entries: List<NavStackEntry> get() = stack
+    override val entries: List<NavStackEntry> get() = stack + screenWindows
 
     override val top: NavStackEntry get() = stack.last()
 
     override fun open(request: NavRequest) {
-        when (val kind = request.kind) {
+        val kind = request.kind
+        // The next step of a flow in a moved-out composer (a created group replacing its form) stays in its window.
+        if (kind is NavRequest.Kind.Replace && screenWindows.any { it.id == request.origin }) {
+            replace(checkNotNull(request.origin), request.route)
+            return
+        }
+        when (kind) {
             NavRequest.Kind.Push -> push(request.route)
             NavRequest.Kind.Drawer -> push(request.route, drawerRoot = true)
             NavRequest.Kind.Section -> switchTab(request.route)
@@ -63,6 +77,7 @@ class StackModel(
 
     /** Pops the top. Asked by a screen that is no longer on top (already popped, or covered since), does nothing. */
     override fun back(from: NavStackEntry?): Boolean {
+        if (from != null && from in screenWindows) return close(from.id)
         if (from != null && from != top) return false
         return pop()
     }
@@ -76,7 +91,31 @@ class StackModel(
     override fun canGoBack(
         entry: NavStackEntry,
         wide: Boolean,
-    ): Boolean = !entry.tabRoot && entry.route != Route.Home && stack.firstOrNull() != entry
+    ): Boolean = entry !in screenWindows && !entry.tabRoot && entry.route != Route.Home && stack.firstOrNull() != entry
+
+    override fun isMainScreen(entry: NavStackEntry): Boolean = entry !in screenWindows
+
+    /** A moved-out composer's window names it. */
+    override fun titleShownOutside(
+        entry: NavStackEntry,
+        wide: Boolean,
+    ): Boolean = entry in screenWindows
+
+    override fun isOpenOver(entry: NavStackEntry): Boolean = entry in stack && opensOver(entry.route)
+
+    override fun windows(): List<NavStackEntry> = screenWindows.toList()
+
+    /** Moves the composer [id] from the stack to a window of its own; the screen below it shows again. */
+    override fun popOut(id: Long): Boolean {
+        val entry = stack.firstOrNull { it.id == id } ?: return false
+        if (!opensOver(entry.route) || stack.size <= 1) return false
+        stack.remove(entry)
+        screenWindows.add(entry)
+        return true
+    }
+
+    /** Closes the moved-out composer [id]; a screen in the stack is popped, not closed. */
+    override fun close(id: Long): Boolean = screenWindows.removeAll { it.id == id }
 
     override fun shown(wide: Boolean): List<NavStackEntry> = stack.toList()
 

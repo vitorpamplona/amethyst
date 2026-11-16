@@ -37,6 +37,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
  *
  * In a window too narrow for the strip the active tab shows on top of the tabs that opened it, so
  * back walks to them ([shown] with `wide` false).
+ *
+ * A composer ([opensOver]) is not a tab: it opens over the tabs ([overlays]), back closes it, and
+ * [popOut] moves it to a window of its own. A link followed from one opens its tab in the
+ * background, so the composer stays in front of the tab it was opened from.
  */
 @Stable
 class TabsModel(
@@ -46,6 +50,7 @@ class TabsModel(
     initialOpeners: Map<Long, Long> = emptyMap(),
     initialPinned: Set<Long> = emptySet(),
     initialDetached: Set<Long> = emptySet(),
+    initialOverlays: List<NavStackEntry> = emptyList(),
 ) : SingleScreenModel(ids, initialOpeners) {
     /** Every tab, the moved-out ones included, in strip order. */
     val tabs: SnapshotStateList<NavStackEntry> = mutableStateListOf<NavStackEntry>().apply { addAll(initialTabs) }
@@ -55,6 +60,9 @@ class TabsModel(
     private val detached = mutableStateMapOf<Long, Boolean>().apply { initialDetached.forEach { put(it, true) } }
 
     private var activeId by mutableStateOf(initialActiveId)
+
+    /** The composers open over the tabs, newest last. Each one's opener is the tab it was opened from. */
+    val overlays: SnapshotStateList<NavStackEntry> = mutableStateListOf<NavStackEntry>().apply { addAll(initialOverlays) }
 
     override val arrangement: NavArrangement get() = NavArrangement.TABS
 
@@ -74,21 +82,42 @@ class TabsModel(
     override fun canGoBack(
         entry: NavStackEntry,
         wide: Boolean,
-    ): Boolean = !wide && isMainScreen(entry) && openerOf(entry)?.takeIf(::isMainScreen) != null
+    ): Boolean = entry in overlays || (!wide && isMainScreen(entry) && openerOf(entry)?.takeIf(::isMainScreen) != null)
 
     /** The strip names a tab, when the window is wide enough for it; a moved-out tab's title bar names it. */
     override fun titleShownOutside(
         entry: NavStackEntry,
         wide: Boolean,
-    ): Boolean = wide || !isMainScreen(entry)
+    ): Boolean = entry !in overlays && (wide || !isMainScreen(entry))
 
-    override fun shown(wide: Boolean): List<NavStackEntry> = if (wide) listOf(top) else chain(top).filter(::isMainScreen)
+    override fun isOpenOver(entry: NavStackEntry): Boolean = entry in overlays
 
-    override fun retained(): List<NavStackEntry> = strip()
+    override fun shown(wide: Boolean): List<NavStackEntry> = (if (wide) listOf(top) else chain(top).filter(::isMainScreen)) + overlays
+
+    override fun retained(): List<NavStackEntry> = strip() + overlays
 
     override fun open(request: NavRequest) {
+        // A request a composer makes: its flow, a link in it, or another composer.
+        val overlay = request.origin?.let { origin -> overlays.firstOrNull { it.id == origin } }
         if (request.kind is NavRequest.Kind.Replace) {
-            replace(request.origin ?: top.id, request.route)
+            if (overlay != null) replaceOverlay(overlay, request.route) else replace(request.origin ?: top.id, request.route)
+            return
+        }
+        if (request.kind == NavRequest.Kind.Push && opensOver(request.route)) {
+            openOver(request, overlay)
+            return
+        }
+        if (overlay != null) {
+            val from = openers[overlay.id]
+            when (request.kind) {
+                // A link while writing: its tab opens behind the composer, which stays in front.
+                NavRequest.Kind.Push -> open(request.copy(origin = from, background = true))
+                // A place of its own: the composer's work is done.
+                else -> {
+                    closeOverlay(overlay)
+                    open(request.copy(origin = from))
+                }
+            }
             return
         }
         existing(request)?.let { open ->
@@ -126,6 +155,61 @@ class TabsModel(
         if (fromWindow && isMainScreen(tabs.first { it.id == id })) raise(id)
     }
 
+    /** Opens the composer [request] asks for over the tabs, or brings the one already open for it to the front. */
+    private fun openOver(
+        request: NavRequest,
+        from: NavStackEntry?,
+    ) {
+        val open = if (request.forceNew) null else overlays.firstOrNull { it.route == request.route }
+        if (open != null) {
+            overlays.remove(open)
+            overlays.add(open)
+            return
+        }
+        val entry = ids.entry(request.route)
+        val opener = from?.let { openers[it.id] } ?: request.origin?.takeIf { origin -> tabs.any { it.id == origin } } ?: activeId
+        openers[entry.id] = opener
+        overlays.add(entry)
+        // A composer asked for from a moved-out tab still opens in the main window: bring it forward.
+        if (tabs.firstOrNull { it.id == opener }?.let(::isMainScreen) == false) raise(activeId)
+    }
+
+    /** The composer [overlay]'s flow goes on as [route] (a created group): a tab of its own, beside the one it was opened from. */
+    private fun replaceOverlay(
+        overlay: NavStackEntry,
+        route: Route,
+    ) {
+        val from = openers[overlay.id]
+        closeOverlay(overlay, remember = false)
+        open(NavRequest(route, origin = from))
+    }
+
+    private fun closeOverlay(
+        overlay: NavStackEntry,
+        remember: Boolean = true,
+    ): Boolean {
+        if (!overlays.remove(overlay)) return false
+        if (remember) forget(overlay) else openers.remove(overlay.id)
+        return true
+    }
+
+    /** Back closes the composer on top first, then the tab. */
+    override fun back(from: NavStackEntry?): Boolean {
+        val overlay = if (from == null) overlays.lastOrNull() else overlays.firstOrNull { it == from }
+        if (overlay != null) return closeOverlay(overlay)
+        return close((from ?: top).id)
+    }
+
+    /** Moves the composer [id] out of the main window, as a tab moved out to a window of its own. */
+    override fun popOut(id: Long): Boolean {
+        val overlay = overlays.firstOrNull { it.id == id } ?: return false
+        overlays.remove(overlay)
+        tabs.add(overlay)
+        detached[id] = true
+        raise(id)
+        return true
+    }
+
     override fun activate(id: Long) {
         val entry = tabs.firstOrNull { it.id == id } ?: return
         if (isMainScreen(entry)) activeId = id else raise(id)
@@ -136,6 +220,7 @@ class TabsModel(
      * left neighbour. The last tab is replaced by Home.
      */
     override fun close(id: Long): Boolean {
+        overlays.firstOrNull { it.id == id }?.let { return closeOverlay(it) }
         val index = tabs.indexOfFirst { it.id == id }
         if (index < 0) return false
         val closing = tabs[index]
@@ -247,6 +332,22 @@ class TabsModel(
         fun fromStack(
             ids: EntryIds,
             stack: List<NavStackEntry>,
+            opensOver: (Route) -> Boolean = { false },
+        ): TabsModel {
+            // Composers stay open over the tabs, opened by the screen below them; none becomes a tab.
+            val composers = stack.filter { opensOver(it.route) }
+            val composerOpeners =
+                composers.mapNotNull { composer ->
+                    stack.take(stack.indexOf(composer)).lastOrNull { it !in composers }?.let { composer.id to it.id }
+                }
+            return fromScreens(ids, stack.filterNot { it in composers }, composers, composerOpeners.toMap()).also { it.opensOver = opensOver }
+        }
+
+        private fun fromScreens(
+            ids: EntryIds,
+            stack: List<NavStackEntry>,
+            composers: List<NavStackEntry>,
+            composerOpeners: Map<Long, Long>,
         ): TabsModel {
             val sections = stack.filter { it.tabRoot || it.route == Route.Home }
             // Sections and drawer screens are places of their own, opened by nothing (as rememberOpener files them).
@@ -259,8 +360,9 @@ class TabsModel(
                 ids = ids,
                 initialTabs = sections + stack.filterNot { it in sections },
                 initialActiveId = stack.last().id,
-                initialOpeners = openers,
+                initialOpeners = openers + composerOpeners,
                 initialPinned = sections.map { it.id }.toSet(),
+                initialOverlays = composers,
             )
         }
     }

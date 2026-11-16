@@ -78,7 +78,8 @@ fun MaybeCappedScreen(
     capWidth: Boolean,
     content: @Composable () -> Unit,
 ) {
-    if (capWidth) {
+    // A composer's dialog is already sized to it.
+    if (capWidth && !isComposerDialog()) {
         CappedScreenContent(content)
     } else {
         content()
@@ -107,12 +108,16 @@ class DestinationScope(
     val nav: INav,
 )
 
-/** One destination: how it animates, whether it takes the reading-column cap, and what it draws. */
+/**
+ * One destination: how it animates, whether it takes the reading-column cap, and what it draws. A
+ * [composer] opens over the screen that asked for it, in a dialog of that size on a wide window.
+ */
 class NavDestination(
     private val route: KClass<out Route>,
     val family: NavFamily,
     val capWidth: Boolean,
     val content: @Composable DestinationScope.(Route) -> Unit,
+    val composer: ComposerSize? = null,
 ) {
     /**
      * The route's serial name, which R8 leaves alone (unlike its class name). Resolved on first use:
@@ -144,10 +149,17 @@ class NavDestinations {
         klass: KClass<out Route>,
         family: NavFamily,
         capWidth: Boolean,
+        composer: ComposerSize? = null,
         content: @Composable DestinationScope.(Route) -> Unit,
     ) {
-        destinations[klass] = NavDestination(klass, family, capWidth, content)
+        destinations[klass] = NavDestination(klass, family, capWidth, content, composer)
     }
+
+    /** The dialog size of [route]'s composer, or null when it is not one. */
+    fun composerSizeOf(route: Route): ComposerSize? = destinations[route::class]?.composer
+
+    /** Whether [route] is a composer: what [com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks.opensOver] asks. */
+    fun isComposer(route: Route): Boolean = composerSizeOf(route) != null
 
     /** What a route nothing registered draws, instead of failing. Front ends that register every screen leave it unset. */
     fun unavailable(content: @Composable DestinationScope.(Route) -> Unit) {
@@ -246,6 +258,28 @@ inline fun <reified T : Route> NavDestinations.composableFromBottomArgs(
     noinline content: @Composable DestinationScope.(T) -> Unit,
 ) {
     register(T::class, NavFamily.BOTTOM, capWidth) { content(it as T) }
+}
+
+/**
+ * A composer: a task that opens over the screen that asked for it and closes back to it. A phone
+ * shows it full screen, moving in as [family] says; a wide window draws it in a [size]d dialog
+ * ([ComposerDialog]), and the tabs layout never makes it a tab.
+ */
+inline fun <reified T : Route> NavDestinations.composer(
+    size: ComposerSize,
+    family: NavFamily = NavFamily.BOTTOM,
+    noinline content: @Composable DestinationScope.() -> Unit,
+) {
+    register(T::class, family, capWidth = true, composer = size) { content() }
+}
+
+/** [composer], for a route that carries arguments. */
+inline fun <reified T : Route> NavDestinations.composerArgs(
+    size: ComposerSize,
+    family: NavFamily = NavFamily.BOTTOM,
+    noinline content: @Composable DestinationScope.(T) -> Unit,
+) {
+    register(T::class, family, capWidth = true, composer = size) { content(it as T) }
 }
 
 val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })

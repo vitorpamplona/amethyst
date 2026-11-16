@@ -117,14 +117,14 @@ class DesktopNavigator(
     /** Whether a tab or screen window holds each screen, so Cmd/Ctrl+W and +T act on those, not on the deck. */
     val singleScreen: Boolean get() = stacks?.isSingleScreen == true
 
-    /** Closes the focused screen window, or else the active tab. */
+    /** Closes the focused screen window, or else the composer open over the tabs, or else the active tab. */
     fun closeCurrentScreen() {
         val stacks = stacks ?: return
         val window = windows.focusedScreenWindow
         if (window != null && stacks.windows().any { it.id == window }) {
             stacks.close(window)
         } else if (stacks.model is TabsModel) {
-            stacks.close(stacks.top.id)
+            stacks.back()
         }
     }
 

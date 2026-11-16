@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -80,12 +79,12 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.FormImageTile
-import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
@@ -127,11 +126,11 @@ fun NewBadgeDialog(
         )
     }
 
-    Dialog(
+    // Full screen on a phone, a dialog over the feed on a wide window, like every other composer.
+    ComposerDialog(
+        size = ComposerSize.FORM,
         onDismissRequest = onClose,
-        properties = edgeToEdgeDialogProperties(dismissOnClickOutside = false),
     ) {
-        SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
                 CreatingTopBar(

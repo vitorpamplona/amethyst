@@ -112,6 +112,21 @@ sealed class NavModel(
     /** The last window asked to come to the front. */
     open val windowFocus: WindowFocus? get() = null
 
+    /**
+     * Whether a screen of this route is a composer: a task that opens over the screen that asked for
+     * it, not a place of its own. Set by the host from its destinations; until then, nothing is.
+     */
+    var opensOver: (Route) -> Boolean = { false }
+
+    /** The composer [entry] is, open over the main window and not yet moved out. */
+    open fun isOpenOver(entry: NavStackEntry): Boolean = false
+
+    /** Moves the composer [id] out to a window of its own. Whether it moved. */
+    open fun popOut(id: Long): Boolean = false
+
+    /** Closes the screen [id]: a tab, a screen window, a composer. Whether anything closed. */
+    open fun close(id: Long): Boolean = false
+
     /** Hands the screen [id] another route in place: the next step of a flow, not a new screen. */
     fun replace(
         id: Long,
@@ -175,7 +190,7 @@ sealed class SingleScreenModel(
     abstract fun activate(id: Long)
 
     /** Closes the screen [id]; it can come back with [reopenClosed]. */
-    abstract fun close(id: Long): Boolean
+    abstract override fun close(id: Long): Boolean
 
     override fun back(from: NavStackEntry?): Boolean = close((from ?: top).id)
 

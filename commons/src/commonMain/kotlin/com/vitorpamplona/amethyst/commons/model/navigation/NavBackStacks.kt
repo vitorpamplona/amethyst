@@ -45,6 +45,13 @@ class NavBackStacks private constructor(
     var model: NavModel by mutableStateOf(initialModel(ids))
         private set
 
+    /** Which routes are composers ([NavModel.opensOver]): the host sets it from its destinations, every layout follows it. */
+    var opensOver: (Route) -> Boolean = { false }
+        set(value) {
+            field = value
+            model.opensOver = value
+        }
+
     val arrangement: NavArrangement get() = model.arrangement
 
     /** Whether each screen is a tab or a window of its own, closed instead of left. */
@@ -70,8 +77,11 @@ class NavBackStacks private constructor(
 
     fun windows(): List<NavStackEntry> = model.windows()
 
-    /** Closes the tab or window [id]; the stack has nothing to close. */
-    fun close(id: Long): Boolean = (model as? SingleScreenModel)?.close(id) ?: false
+    /** Closes the tab, window or composer [id]; a screen of the stack is popped instead, not closed. */
+    fun close(id: Long): Boolean = model.close(id)
+
+    /** Moves the composer [id] out to a window of its own. */
+    fun popOut(id: Long): Boolean = model.popOut(id)
 
     /** Pushes [route], unless it is already the screen on top (in the stack). Returns whether anything opened. */
     fun push(
@@ -106,9 +116,10 @@ class NavBackStacks private constructor(
         model =
             when (target) {
                 NavArrangement.STACK -> StackModel(ids, stack)
-                NavArrangement.TABS -> TabsModel.fromStack(ids, stack)
+                NavArrangement.TABS -> TabsModel.fromStack(ids, stack, opensOver)
                 NavArrangement.WINDOWS -> WindowsModel.fromStack(ids, stack)
             }
+        model.opensOver = opensOver
     }
 
     /** The current screens as a stack, Home at the bottom. */
@@ -116,7 +127,7 @@ class NavBackStacks private constructor(
         val entries =
             when (val current = model) {
                 is StackModel -> current.stack.toList()
-                is TabsModel -> current.chain(current.top).filter(current::isMainScreen)
+                is TabsModel -> current.chain(current.top).filter(current::isMainScreen) + current.overlays
                 is WindowsModel -> listOf(current.top)
             }
         return if (entries.firstOrNull()?.route == Route.Home) entries else listOf(ids.entry(Route.Home)) + entries
@@ -152,6 +163,7 @@ class NavBackStacks private constructor(
         class Stack(
             val stack: List<SavedEntry>,
             val savedTabs: List<SavedEntry> = emptyList(),
+            val windows: List<SavedEntry> = emptyList(),
         ) : SavedModel()
 
         @Serializable
@@ -162,6 +174,7 @@ class NavBackStacks private constructor(
             val openers: Map<Long, Long> = emptyMap(),
             val pinned: Set<Long> = emptySet(),
             val detached: Set<Long> = emptySet(),
+            val overlays: List<SavedEntry> = emptyList(),
         ) : SavedModel()
 
         @Serializable
@@ -192,8 +205,8 @@ class NavBackStacks private constructor(
 
         private fun NavModel.toSaved(): SavedModel =
             when (this) {
-                is StackModel -> SavedModel.Stack(stack.map { it.toSaved() }, savedTabs.values.map { it.toSaved() })
-                is TabsModel -> SavedModel.Tabs(tabs.map { it.toSaved() }, activeTabId, openerMap(), pinnedIds(), detachedIds())
+                is StackModel -> SavedModel.Stack(stack.map { it.toSaved() }, savedTabs.values.map { it.toSaved() }, windows().map { it.toSaved() })
+                is TabsModel -> SavedModel.Tabs(tabs.map { it.toSaved() }, activeTabId, openerMap(), pinnedIds(), detachedIds(), overlays.map { it.toSaved() })
                 is WindowsModel -> SavedModel.Windows(sections.map { it.toSaved() }, activeSectionId, windows().map { it.toSaved() }, openerMap())
             }
 
@@ -207,11 +220,16 @@ class NavBackStacks private constructor(
                             require(model.stack.isNotEmpty())
                             // Filed under the route the bar asks for, as switchTab files them: a tab re-argued
                             // in place no longer matches its own route.
-                            StackModel(ids, model.stack.map { it.toEntry() }, model.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route })
+                            StackModel(
+                                ids,
+                                model.stack.map { it.toEntry() },
+                                model.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route },
+                                model.windows.map { it.toEntry() },
+                            )
                         }
                         is SavedModel.Tabs -> {
                             require(model.tabs.any { it.id !in model.detached })
-                            TabsModel(ids, model.tabs.map { it.toEntry() }, model.activeId, model.openers, model.pinned, model.detached)
+                            TabsModel(ids, model.tabs.map { it.toEntry() }, model.activeId, model.openers, model.pinned, model.detached, model.overlays.map { it.toEntry() })
                         }
                         is SavedModel.Windows -> {
                             require(model.sections.isNotEmpty())
