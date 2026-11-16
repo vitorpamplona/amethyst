@@ -9948,6 +9948,11 @@
     <string name="media_studio_caption_placeholder">Write a caption…</string>
     <string name="media_studio_retry">Nothing was sent. %1$s tries again.</string>
     <string name="media_post_nothing_posted">Nothing was posted. Post tries again.</string>
+    <string name="media_studio_alt_suggested">Suggested on this device. Check it before posting.</string>
+    <string name="media_studio_h265">Smaller file (H.265)</string>
+    <string name="media_studio_h265_description">Some older apps can't play it</string>
+    <string name="media_studio_gif_description">Usually much smaller</string>
+    <string name="media_studio_encrypt_description">Only this chat can open them</string>
     <string name="media_crop_hint">Drag the corners or move the frame</string>
     <string name="media_crop_reset">Reset</string>
     <string name="media_studio_tool_crop">Crop</string>

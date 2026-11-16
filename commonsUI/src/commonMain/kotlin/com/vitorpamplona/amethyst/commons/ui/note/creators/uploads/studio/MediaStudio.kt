@@ -48,19 +48,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -82,7 +78,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,15 +90,18 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_dismiss
-import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_hint
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_suggested
 import com.vitorpamplona.amethyst.commons.resources.media_studio_caption_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_gif_description
+import com.vitorpamplona.amethyst.commons.resources.media_studio_h265
+import com.vitorpamplona.amethyst.commons.resources.media_studio_h265_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_long_edge
 import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
@@ -119,7 +117,6 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_privacy
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_quality
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_trim
 import com.vitorpamplona.amethyst.commons.resources.remove
-import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.resources.video_compression_needs_ffmpeg
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -324,8 +321,13 @@ fun MediaStudio(
         UploadErrorBanner(current, confirmLabel)
 
         if (items.size > 1) {
+            // On the stage's black, in either theme: the strip belongs to the pictures, not the panel.
             Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             ) {
                 items.forEachIndexed { index, item ->
@@ -336,20 +338,18 @@ fun MediaStudio(
             }
         }
 
-        if (caption != null) {
-            OutlinedTextField(
-                value = caption,
-                onValueChange = onCaptionChange,
-                placeholder = { Text(stringRes(Res.string.media_studio_caption_placeholder)) },
-                keyboardOptions = KeyboardOptions.Default.copy(capitalization = KeyboardCapitalization.Sentences),
-                maxLines = 4,
-                enabled = !isUploading,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
-
         Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(top = 12.dp)) {
+                // The post's own text heads the panel, in the same filled style as the tools below it.
+                if (caption != null) {
+                    StudioTextField(
+                        value = caption,
+                        onValueChange = onCaptionChange,
+                        placeholder = stringRes(Res.string.media_studio_caption_placeholder),
+                        enabled = !isUploading,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    )
+                }
                 Box(Modifier.fillMaxWidth().heightIn(min = 112.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     when (tool) {
                         StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
@@ -819,7 +819,7 @@ private fun QualityTool(
             Text(stringRes(Res.string.video_compression_needs_ffmpeg), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
 
         media.isGif() ->
-            SwitchRow(stringRes(Res.string.convert_gif_to_mp4_label), null, item.options.convertGifToMp4) {
+            SwitchRow(stringRes(Res.string.convert_gif_to_mp4_label), stringRes(Res.string.media_studio_gif_description), item.options.convertGifToMp4, MaterialSymbols.Movie) {
                 item.options = item.options.copy(convertGifToMp4 = it)
             }
 
@@ -883,7 +883,7 @@ private fun VideoQuality(
             )
         }
         if (chosen != CompressorQuality.UNCOMPRESSED) {
-            SwitchRow(stringRes(Res.string.video_codec_h265_label), null, item.options.useH265) {
+            SwitchRow(stringRes(Res.string.media_studio_h265), stringRes(Res.string.media_studio_h265_description), item.options.useH265, MaterialSymbols.Movie) {
                 item.options = item.options.copy(useH265 = it)
             }
         }
@@ -946,22 +946,29 @@ private fun LevelCard(
 
 @Composable
 private fun AltTool(item: SelectedMediaProcessing) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        OutlinedTextField(
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        StudioTextField(
             value = item.options.alt,
             onValueChange = { item.options = item.options.copy(alt = it, altSuggested = false) },
-            placeholder = { Text(stringRes(Res.string.media_studio_alt_placeholder)) },
-            keyboardOptions = KeyboardOptions.Default.copy(capitalization = KeyboardCapitalization.Sentences),
-            maxLines = 3,
-            modifier = Modifier.fillMaxWidth(),
+            placeholder = stringRes(Res.string.media_studio_alt_placeholder),
+            minLines = 2,
+            maxLines = 4,
         )
         if (item.options.altSuggested) {
-            AssistChip(
-                onClick = { item.options = item.options.copy(alt = "", altSuggested = false) },
-                label = { Text(stringRes(Res.string.ai_suggested_alt_text_hint)) },
-                leadingIcon = { Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
-                trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.ai_suggested_alt_text_dismiss), modifier = Modifier.size(AssistChipDefaults.IconSize)) },
-            )
+            // A note under the field, not a chip: it says where the words came from and offers to clear them.
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    stringRes(Res.string.media_studio_alt_suggested),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { item.options = item.options.copy(alt = "", altSuggested = false) }) {
+                    Text(stringRes(Res.string.clear))
+                }
+            }
         }
     }
 }
@@ -977,33 +984,17 @@ private fun PrivacyTool(
     // A video that will really be re-encoded loses its metadata anyway; the choice still reaches the
     // uploader (the encode can fall back to the original), so only the switch is hidden.
     val videoReencoded = media.isVideo() == true && support == VideoCompressionSupport.Supported && item.options.quality != CompressorQuality.UNCOMPRESSED
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (showSensitive) {
-            SwitchRow(stringRes(Res.string.media_studio_sensitive), stringRes(Res.string.media_studio_sensitive_description), item.options.sensitive) {
+            SwitchRow(stringRes(Res.string.media_studio_sensitive), stringRes(Res.string.media_studio_sensitive_description), item.options.sensitive, MaterialSymbols.VisibilityOff) {
                 item.options = item.options.copy(sensitive = it)
             }
         }
         if (!media.isNotMedia() && !videoReencoded) {
-            SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(Res.string.media_studio_remove_location_description), item.options.stripMetadata) {
+            SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(Res.string.media_studio_remove_location_description), item.options.stripMetadata, MaterialSymbols.LocationOff) {
                 item.options = item.options.copy(stripMetadata = it)
             }
         }
         extras?.invoke(this)
-    }
-}
-
-@Composable
-internal fun SwitchRow(
-    title: String,
-    subtitle: String?,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit,
-) {
-    Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
     }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -27,7 +28,11 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.unit.Density
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.encrypt_files_label
+import com.vitorpamplona.amethyst.commons.resources.media_studio_encrypt_description
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
@@ -47,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.forestPhoto
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.simulateQuality
 import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.sunsetPhoto
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
@@ -187,6 +193,30 @@ class MediaStudioRenderTest {
         }
 
     @Test
+    fun caption() = render("caption") { Studio(photos(), caption = "Golden hour over the bay #photography") }
+
+    @Test
+    fun captionEmpty() = render("caption-empty") { Studio(photos(), caption = "") }
+
+    @Test
+    fun privacyInAChat() =
+        render("privacy-chat") {
+            Studio(photos(), tool = StudioTool.PRIVACY, privacyExtras = { SwitchRow(stringRes(Res.string.encrypt_files_label), stringRes(Res.string.media_studio_encrypt_description), true, MaterialSymbols.Lock) {} })
+        }
+
+    @Test
+    fun videoQualityLight() =
+        render("video-light", dark = false) {
+            Studio(MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/clip.mp4"), "video/mp4"))))
+        }
+
+    @Test
+    fun privacyLight() = render("privacy-light", dark = false) { Studio(photos(), tool = StudioTool.PRIVACY) }
+
+    @Test
+    fun altLight() = render("alt-light", dark = false) { Studio(photos(), tool = StudioTool.ALT, withSuggester = true) }
+
+    @Test
     fun privacy() = render("privacy") { Studio(photos(), tool = StudioTool.PRIVACY) }
 
     @Test
@@ -219,6 +249,8 @@ class MediaStudioRenderTest {
         holding: Boolean = false,
         uploading: Boolean = false,
         withSuggester: Boolean = false,
+        caption: String? = null,
+        privacyExtras: (@Composable ColumnScope.() -> Unit)? = null,
     ) = MediaStudio(
         media = media,
         servers = servers,
@@ -231,6 +263,8 @@ class MediaStudioRenderTest {
         onCancel = {},
         initialTool = tool,
         holdingOriginal = holding,
+        caption = caption,
+        privacyExtras = privacyExtras,
     )
 
     private fun render(

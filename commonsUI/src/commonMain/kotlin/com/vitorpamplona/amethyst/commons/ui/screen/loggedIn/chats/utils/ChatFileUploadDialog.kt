@@ -24,9 +24,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_send
 import com.vitorpamplona.amethyst.commons.resources.encrypt_files_label
+import com.vitorpamplona.amethyst.commons.resources.media_studio_encrypt_description
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MediaStudioDialog
@@ -79,7 +81,7 @@ fun ChatFileUploadDialog(
         privacyExtras =
             if (isNip17) {
                 {
-                    SwitchRow(stringRes(Res.string.encrypt_files_label), null, state.encryptFiles) { state.encryptFiles = it }
+                    SwitchRow(stringRes(Res.string.encrypt_files_label), stringRes(Res.string.media_studio_encrypt_description), state.encryptFiles, MaterialSymbols.Lock) { state.encryptFiles = it }
                 }
             } else {
                 null
