@@ -31,7 +31,9 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
@@ -48,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import java.io.File
+import javax.imageio.ImageIO
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -84,6 +87,12 @@ class MediaStudioRenderTest {
             compressionQuality: CompressorQuality,
         ): ImageCompressionPreview? {
             val edge = compressionQuality.imageMaxDimension ?: return null
+            if (uri.toString().endsWith("-crop.png")) {
+                // A crop's copy: its preview is the copy itself, so the stage shows the cropped part.
+                val img = ImageIO.read(File(uri.toString()))
+                val stats = ImageFileStats(img.width, img.height, File(uri.toString()).length())
+                return ImageCompressionPreview(stats, stats, uri)
+            }
             val portrait = uri.toString().contains("forest")
             val (w, h) = if (portrait) 3024 to 4032 else 4032 to 3024
             val scale = edge.toFloat() / max(w, h)
@@ -99,6 +108,18 @@ class MediaStudioRenderTest {
         }
 
         override fun fileSize(uri: MediaUri): Long = 3_840_000
+
+        override suspend fun cropImage(
+            uri: MediaUri,
+            mimeType: String?,
+            crop: ImageCrop,
+        ): MediaCompressorResult {
+            val img = ImageIO.read(File(uri.toString()))
+            val (x, y, w, h) = crop.pixels(img.width, img.height).toList()
+            val out = File(tmp, File(uri.toString()).nameWithoutExtension + "-${crop.hashCode()}-crop.png")
+            ImageIO.write(img.getSubimage(x, y, w, h), "png", out)
+            return MediaCompressorResult(StringMediaUri(out.absolutePath), "image/png", out.length())
+        }
     }
 
     private val suggester =
@@ -126,6 +147,24 @@ class MediaStudioRenderTest {
 
     @Test
     fun altSuggested() = render("alt-suggested") { Studio(photos(), tool = StudioTool.ALT, withSuggester = true) }
+
+    @Test
+    fun crop() =
+        render("crop") {
+            val media = photos()
+            media.get(0).displayAspectRatio = 4f / 3f
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop.centered(4f / 3f, 1f))
+            Studio(media, tool = StudioTool.CROP)
+        }
+
+    @Test
+    fun croppedQuality() =
+        render("quality-cropped") {
+            val media = photos()
+            media.get(0).displayAspectRatio = 4f / 3f
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0.1f, 1f, 0.9f))
+            Studio(media)
+        }
 
     @Test
     fun privacy() = render("privacy") { Studio(photos(), tool = StudioTool.PRIVACY) }

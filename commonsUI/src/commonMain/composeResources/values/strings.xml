@@ -9950,5 +9950,8 @@
     <string name="media_post_nothing_posted">Nothing was posted. Post tries again.</string>
     <string name="media_crop_hint">Drag the corners or move the frame</string>
     <string name="media_crop_reset">Reset</string>
+    <string name="media_studio_tool_crop">Crop</string>
+    <string name="media_crop_free">Free</string>
+    <string name="media_crop_upload_failed">Couldn't crop this picture</string>
     <string name="media_crop_failed">This picture can't be cropped here. Save uses it as it is.</string>
 </resources>

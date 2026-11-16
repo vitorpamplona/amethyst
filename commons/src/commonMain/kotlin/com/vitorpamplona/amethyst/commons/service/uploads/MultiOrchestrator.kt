@@ -137,21 +137,23 @@ class MultiOrchestrator(
                     item.sentEncrypted = null
                     val p = plans.getValue(item)
                     launch(Dispatchers.IO) {
-                        item.orchestrator.upload(
-                            item.media.uri,
-                            item.media.mimeType,
-                            p.alt,
-                            p.contentWarningReason,
-                            p.settings.mediaQuality,
-                            p.settings.server,
-                            account,
-                            uploader,
-                            p.settings.useH265,
-                            p.settings.stripMetadata,
-                            onStrippingFailed,
-                            convertGifToMp4 = p.settings.convertGifToMp4,
-                            forcedSigner = forcedSigner,
-                        )
+                        item.withCrop(p.settings.crop, uploader) { uri, mimeType ->
+                            item.orchestrator.upload(
+                                uri,
+                                mimeType,
+                                p.alt,
+                                p.contentWarningReason,
+                                p.settings.mediaQuality,
+                                p.settings.server,
+                                account,
+                                uploader,
+                                p.settings.useH265,
+                                p.settings.stripMetadata,
+                                onStrippingFailed,
+                                convertGifToMp4 = p.settings.convertGifToMp4,
+                                forcedSigner = forcedSigner,
+                            )
+                        }
                     }
                 }
 
@@ -181,7 +183,7 @@ class MultiOrchestrator(
         return Planned(
             alt = o.altOrNull ?: altFallback?.ifBlank { null },
             contentWarningReason = o.contentWarningReason ?: contentWarningFallback,
-            settings = UploadSettings(o.quality, server, o.useH265, o.stripMetadata, o.convertGifToMp4),
+            settings = UploadSettings(o.quality, server, o.useH265, o.stripMetadata, o.convertGifToMp4, o.crop),
         )
     }
 
@@ -211,6 +213,7 @@ class MultiOrchestrator(
         val useH265: Boolean,
         val stripMetadata: Boolean,
         val convertGifToMp4: Boolean,
+        val crop: ImageCrop? = null,
     )
 
     internal class SentEncrypted(
@@ -281,22 +284,24 @@ class MultiOrchestrator(
                     .map { (item, cipher) ->
                         val p = plans.getValue(item)
                         async(Dispatchers.IO) {
-                            item.orchestrator.uploadEncrypted(
-                                item.media.uri,
-                                item.media.mimeType,
-                                p.alt,
-                                p.contentWarningReason,
-                                p.settings.mediaQuality,
-                                cipher,
-                                p.settings.server,
-                                account,
-                                uploader,
-                                p.settings.useH265,
-                                p.settings.stripMetadata,
-                                onStrippingFailed,
-                                convertGifToMp4 = p.settings.convertGifToMp4,
-                                forcedSigner = forcedSigner,
-                            )
+                            item.withCrop(p.settings.crop, uploader) { uri, mimeType ->
+                                item.orchestrator.uploadEncrypted(
+                                    uri,
+                                    mimeType,
+                                    p.alt,
+                                    p.contentWarningReason,
+                                    p.settings.mediaQuality,
+                                    cipher,
+                                    p.settings.server,
+                                    account,
+                                    uploader,
+                                    p.settings.useH265,
+                                    p.settings.stripMetadata,
+                                    onStrippingFailed,
+                                    convertGifToMp4 = p.settings.convertGifToMp4,
+                                    forcedSigner = forcedSigner,
+                                )
+                            }
                         }
                     }.awaitAll()
             }
@@ -388,21 +393,23 @@ class MultiOrchestrator(
                         val options = item.options
                         async(Dispatchers.IO) {
                             options to
-                                item.orchestrator.upload(
-                                    item.media.uri,
-                                    item.media.mimeType,
-                                    options.altOrNull,
-                                    options.contentWarningReason,
-                                    options.quality,
-                                    server,
-                                    account,
-                                    uploader,
-                                    options.useH265,
-                                    options.stripMetadata,
-                                    onStrippingFailed,
-                                    convertGifToMp4 = options.convertGifToMp4,
-                                    forcedSigner = forcedSigner,
-                                )
+                                item.withCrop(options.crop, uploader) { uri, mimeType ->
+                                    item.orchestrator.upload(
+                                        uri,
+                                        mimeType,
+                                        options.altOrNull,
+                                        options.contentWarningReason,
+                                        options.quality,
+                                        server,
+                                        account,
+                                        uploader,
+                                        options.useH265,
+                                        options.stripMetadata,
+                                        onStrippingFailed,
+                                        convertGifToMp4 = options.convertGifToMp4,
+                                        forcedSigner = forcedSigner,
+                                    )
+                                }
                         }
                     }.awaitAll()
             }
@@ -428,6 +435,25 @@ class MultiOrchestrator(
         val remaining = items.filter { it in list }
         val successful = remaining.mapNotNull { item -> finished[item]?.let { Uploaded(item, it) } }
         return EachResult(successful.size == remaining.size, successful, remaining.mapNotNull { errors[it] })
+    }
+
+    /**
+     * Runs [send] on the file to upload: a temp copy holding [crop] of the picture when there is one
+     * (deleted once [send] returns), else the picked file. A crop that cannot be written fails the
+     * file with [UploadError.CROP_FAILED] rather than sending the whole picture.
+     */
+    private suspend fun SelectedMediaProcessing.withCrop(
+        crop: ImageCrop?,
+        uploader: MediaUploader,
+        send: suspend (MediaUri, String?) -> UploadingState.UploadingFinalState,
+    ): UploadingState.UploadingFinalState {
+        if (crop == null || !media.canCrop()) return send(media.uri, media.mimeType)
+        val cropped = uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)
+        return try {
+            send(cropped.uri, cropped.contentType)
+        } finally {
+            uploader.discardTempFile(cropped.uri)
+        }
     }
 
     /** Every file, in order. */

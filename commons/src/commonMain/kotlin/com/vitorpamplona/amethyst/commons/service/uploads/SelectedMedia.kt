@@ -42,6 +42,9 @@ class SelectedMedia(
 
     fun isDocument() = mimeType == "application/pdf"
 
+    /** Whether a crop can apply: a still picture (a GIF's animation and an SVG would not survive one). */
+    fun canCrop(): Boolean = isImage() == true && !isGif() && mimeType?.contains("svg", ignoreCase = true) != true
+
     /**
      * Returns true if [MediaCompressor.compress] would actually compress this file when a
      * non-UNCOMPRESSED quality is selected. AVIF, GIF, SVG, and unknown MIME types pass

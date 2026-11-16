@@ -33,4 +33,7 @@ enum class UploadError {
     FILE_TOO_LARGE_TO_ENCRYPT,
     AVIF_METADATA_STRIP_FAILED,
     UPLOAD_CANCELLED,
+
+    /** The picture's crop could not be written ([MediaUploader.cropImage] returned null). */
+    CROP_FAILED,
 }

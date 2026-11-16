@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.resources.could_not_open_the_compresse
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media
 import com.vitorpamplona.amethyst.commons.resources.file_too_large_to_encrypt
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_upload
+import com.vitorpamplona.amethyst.commons.resources.media_crop_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.resources.server_returned_different_file
 import com.vitorpamplona.amethyst.commons.resources.upload_cancelled
@@ -51,4 +52,5 @@ val UploadingState.Error.errorResource: StringResource
             UploadError.FILE_TOO_LARGE_TO_ENCRYPT -> Res.string.file_too_large_to_encrypt
             UploadError.AVIF_METADATA_STRIP_FAILED -> Res.string.avif_metadata_strip_failed
             UploadError.UPLOAD_CANCELLED -> Res.string.upload_cancelled
+            UploadError.CROP_FAILED -> Res.string.media_crop_upload_failed
         }

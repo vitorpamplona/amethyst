@@ -87,7 +87,7 @@ import kotlin.math.abs
 
 /** The frame a picked picture is cropped to: a locked [ratio] (width over height, null for any) and whether it shows in a circle. */
 @Immutable
-class ImageCropShape(
+data class ImageCropShape(
     val ratio: Float?,
     val circle: Boolean,
 ) {
@@ -102,9 +102,6 @@ class ImageCropShape(
         val Banner = ImageCropShape(3f, circle = false)
     }
 }
-
-/** Whether [this] gets a crop step: a still picture (a GIF's animation and an SVG would not survive one). */
-fun SelectedMedia.isCroppable(): Boolean = isImage() == true && !isGif() && mimeType?.contains("svg", ignoreCase = true) != true
 
 /**
  * The platform's single-picture picker, then [ImageCropDialog] for a still picture. Reports the
@@ -123,7 +120,7 @@ fun GallerySelectSingleCropped(
         GallerySelectSingle(imagesOnly = imagesOnly) { media ->
             when {
                 media == null -> onImage(null)
-                media.isCroppable() -> picked = media
+                media.canCrop() -> picked = media
                 else -> onImage(media)
             }
         }

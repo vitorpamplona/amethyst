@@ -55,7 +55,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -195,15 +194,13 @@ fun AttachedMediaCard(
     ) {
         when {
             media.isImage() == true ->
-                AsyncImage(
+                CroppedImage(
                     model = media.uri.toString(),
-                    contentDescription = null,
+                    crop = item.options.crop,
+                    imageAspect = item.displayAspectRatio,
                     contentScale = ContentScale.Crop,
-                    // The decoded size, after EXIF orientation: the card takes this shape.
-                    onSuccess = { state ->
-                        val size = state.painter.intrinsicSize
-                        if (size.width > 0f && size.height > 0f) item.displayAspectRatio = size.width / size.height
-                    },
+                    // The decoded size, after EXIF orientation: the card takes this shape, cropped.
+                    onAspect = { item.displayAspectRatio = it },
                     modifier = Modifier.fillMaxSize(),
                 )
             media.isVideo() == true -> {

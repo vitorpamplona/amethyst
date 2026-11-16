@@ -27,8 +27,10 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 
 /**
  * The studio's compressed previews, one per (image, level), each made exactly as the upload would
@@ -79,4 +81,67 @@ fun rememberCompressionPreviews(uploader: MediaUploader): CompressionPreviews {
     val previews = remember(uploader) { CompressionPreviews(uploader) }
     DisposableEffect(previews) { onDispose { previews.discardAll() } }
     return previews
+}
+
+/**
+ * The cropped copy of each picture whose options carry a crop, written as the upload will write
+ * it ([MediaUploader.cropImage]), so the quality previews, their sizes and hold-for-original show
+ * the part that will be sent. A copy is rewritten when its crop changes and deleted, with its
+ * previews, when replaced or when the studio closes.
+ */
+@Stable
+class CroppedSources(
+    private val uploader: MediaUploader,
+    private val previews: CompressionPreviews,
+) {
+    private class Made(
+        val crop: ImageCrop,
+        /** Null when the platform could not write it: the previews then show the whole picture. */
+        val copy: SelectedMedia?,
+    )
+
+    private val made = mutableStateMapOf<SelectedMediaProcessing, Made>()
+
+    /** What the previews of [item] are made from: its cropped copy, the file itself when uncropped, null while the copy is being written. */
+    fun sourceFor(item: SelectedMediaProcessing): SelectedMedia? {
+        val crop = item.options.crop ?: return item.media
+        val done = made[item]?.takeIf { it.crop == crop } ?: return null
+        return done.copy ?: item.media
+    }
+
+    /** Writes [item]'s cropped copy unless it is current. */
+    suspend fun prepare(item: SelectedMediaProcessing) {
+        val crop = item.options.crop
+        val old = made[item]
+        if (crop == null) {
+            if (old != null) made.remove(item)?.let(::drop)
+            return
+        }
+        if (old?.crop == crop) return
+        val written = uploader.cropImage(item.media.uri, item.media.mimeType, crop)?.let { SelectedMedia(it.uri, it.contentType) }
+        made[item] = Made(crop, written)
+        old?.let(::drop)
+    }
+
+    private fun drop(old: Made) {
+        old.copy?.let {
+            previews.discard(it)
+            uploader.discardTempFile(it.uri)
+        }
+    }
+
+    fun discardAll() {
+        made.values.forEach(::drop)
+        made.clear()
+    }
+}
+
+@Composable
+fun rememberCroppedSources(
+    uploader: MediaUploader,
+    previews: CompressionPreviews,
+): CroppedSources {
+    val sources = remember(uploader, previews) { CroppedSources(uploader, previews) }
+    DisposableEffect(sources) { onDispose { sources.discardAll() } }
+    return sources
 }

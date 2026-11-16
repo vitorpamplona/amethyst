@@ -67,6 +67,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -113,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_retry
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_alt
+import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_crop
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_privacy
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_quality
 import com.vitorpamplona.amethyst.commons.resources.remove
@@ -213,7 +215,7 @@ fun MediaStudioDialog(
     }
 }
 
-enum class StudioTool { QUALITY, ALT, PRIVACY }
+enum class StudioTool { QUALITY, CROP, ALT, PRIVACY }
 
 /** The tools that do something for [media] on a platform with [support]. */
 fun studioToolsFor(
@@ -228,6 +230,7 @@ fun studioToolsFor(
                 else -> media.isCompressible()
             }
         if (hasQuality) add(StudioTool.QUALITY)
+        if (media.canCrop() && media.isCompressible()) add(StudioTool.CROP)
         if (media.isImage() == true || media.isVideo() == true) add(StudioTool.ALT)
         add(StudioTool.PRIVACY)
     }
@@ -268,11 +271,21 @@ fun MediaStudio(
     val server = pickedServer ?: servers.firstOrNull { it == defaultServer } ?: servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
 
     val previews = rememberCompressionPreviews(uploader)
+    val cropped = rememberCroppedSources(uploader, previews)
+    // The shape each picture's crop is held to while this studio is open.
+    val cropAspects = remember { mutableStateMapOf<SelectedMediaProcessing, CropAspect>() }
     val tools = studioToolsFor(current.media, uploader.videoCompression)
     var tool by remember(current) { mutableStateOf(if (initialTool in tools) initialTool else tools.first()) }
 
+    // Opening Crop on a picture cropped earlier holds the shape that crop has, once, so a free drag
+    // passing through 1:1 doesn't lock it.
+    val imageAspect = current.displayAspectRatio
+    LaunchedEffect(current, tool, imageAspect) {
+        if (tool == StudioTool.CROP && imageAspect != null && current !in cropAspects) cropAspects[current] = CropAspect.of(current.options.crop, imageAspect)
+    }
+
     SuggestAltText(items, altSuggester)
-    PreparePreviews(current, previews, isUploading)
+    PreparePreviews(current, previews, cropped, isUploading || tool == StudioTool.CROP)
 
     Column(
         modifier
@@ -293,7 +306,11 @@ fun MediaStudio(
         )
 
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
-            StudioPreview(current, previews, uploader, holdingOriginal)
+            if (tool == StudioTool.CROP) {
+                StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
+            } else {
+                StudioPreview(current, previews, cropped, uploader, holdingOriginal)
+            }
             UploadOverlay(current)
         }
 
@@ -328,14 +345,23 @@ fun MediaStudio(
             Column(Modifier.padding(top = 12.dp)) {
                 Box(Modifier.fillMaxWidth().heightIn(min = 112.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     when (tool) {
-                        StudioTool.QUALITY -> QualityTool(current, previews, uploader)
+                        StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
+                        StudioTool.CROP ->
+                            CropTool(
+                                current,
+                                aspect = cropAspects[current] ?: CropAspect.FREE,
+                                enabled = !isUploading,
+                                onAspect = { cropAspects[current] = it },
+                            )
                         StudioTool.ALT -> AltTool(current)
                         StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression, showSensitive, privacyExtras)
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
-                    Spacer(Modifier.weight(1f))
+                    // The tabs keep their width; the server's name shortens into what is left.
+                    Box(Modifier.weight(1f)) {
+                        ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
+                    }
                     tools.forEach { t -> ToolTab(t, t == tool) { tool = t } }
                 }
             }
@@ -414,15 +440,19 @@ private fun SuggestAltText(
 private fun PreparePreviews(
     item: SelectedMediaProcessing,
     previews: CompressionPreviews,
-    isUploading: Boolean,
+    cropped: CroppedSources,
+    paused: Boolean,
 ) {
     val quality = item.options.quality
-    LaunchedEffect(item, quality, isUploading) {
-        if (isUploading || item.media.isImage() != true || !item.media.isCompressible()) return@LaunchedEffect
+    val crop = item.options.crop
+    LaunchedEffect(item, quality, crop, paused) {
+        if (paused || item.media.isImage() != true || !item.media.isCompressible()) return@LaunchedEffect
         // Lets a fast tap through the levels settle before encoding.
         delay(250)
-        previews.load(item.media, quality)
-        CompressorQuality.sliderSteps.forEach { previews.load(item.media, it) }
+        cropped.prepare(item)
+        val source = cropped.sourceFor(item) ?: return@LaunchedEffect
+        previews.load(source, quality)
+        CompressorQuality.sliderSteps.forEach { previews.load(source, it) }
     }
 }
 
@@ -434,12 +464,24 @@ private fun PreparePreviews(
 private fun StudioPreview(
     item: SelectedMediaProcessing,
     previews: CompressionPreviews,
+    cropped: CroppedSources,
     uploader: MediaUploader,
     forceOriginal: Boolean,
 ) {
     val media = item.media
     when {
-        media.isImage() == true && media.isCompressible() -> CompressedImagePreview(item, previews, forceOriginal)
+        media.isImage() == true && media.isCompressible() -> {
+            val source = cropped.sourceFor(item)
+            if (source != null) {
+                CompressedImagePreview(item, source, previews, forceOriginal)
+            } else {
+                // The crop's copy is being written: show the part it will hold meanwhile.
+                Box(Modifier.fillMaxSize()) {
+                    CroppedImage(media.uri.toString(), item.options.crop, item.displayAspectRatio, ContentScale.Fit, Modifier.fillMaxSize())
+                    WorkingBadge(Modifier.align(Alignment.TopEnd).padding(12.dp))
+                }
+            }
+        }
 
         media.isImage() == true -> {
             val zoomState = rememberZoomState()
@@ -464,10 +506,10 @@ private fun StudioPreview(
 @Composable
 private fun CompressedImagePreview(
     item: SelectedMediaProcessing,
+    media: SelectedMedia,
     previews: CompressionPreviews,
     forceOriginal: Boolean,
 ) {
-    val media = item.media
     val quality = item.options.quality
     val compresses = quality.imageMaxDimension != null
     val preview = if (compresses) previews[media, quality] else null
@@ -506,19 +548,7 @@ private fun CompressedImagePreview(
             MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
         }
 
-        if (loading) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(12.dp)
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-            }
-        }
+        if (loading) WorkingBadge(Modifier.align(Alignment.TopEnd).padding(12.dp))
 
         if (preview != null) {
             HoldForOriginal(
@@ -527,6 +557,19 @@ private fun CompressedImagePreview(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun WorkingBadge(modifier: Modifier) {
+    Box(
+        modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
     }
 }
 
@@ -633,7 +676,15 @@ private fun Thumbnail(
     ) {
         val media = item.media
         when {
-            media.isImage() == true -> AsyncImage(media.uri.toString(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            media.isImage() == true ->
+                CroppedImage(
+                    media.uri.toString(),
+                    item.options.crop,
+                    item.displayAspectRatio,
+                    ContentScale.Crop,
+                    Modifier.fillMaxSize(),
+                    onAspect = { item.displayAspectRatio = it },
+                )
             media.isVideo() == true -> rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
             else -> Icon(MaterialSymbols.AutoMirrored.InsertDriveFile, contentDescription = null)
         }
@@ -676,6 +727,7 @@ private fun ToolTab(
     val (symbol, label) =
         when (tool) {
             StudioTool.QUALITY -> MaterialSymbols.Tune to Res.string.media_studio_tool_quality
+            StudioTool.CROP -> MaterialSymbols.Crop to Res.string.media_studio_tool_crop
             StudioTool.ALT -> MaterialSymbols.EditNote to Res.string.media_studio_tool_alt
             StudioTool.PRIVACY -> MaterialSymbols.PrivacyTip to Res.string.media_studio_tool_privacy
         }
@@ -690,11 +742,11 @@ private fun ToolTabContent(
     onClick: () -> Unit,
 ) {
     Column(
-        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(symbol, contentDescription = null, tint = color)
-        Text(label, color = color, fontSize = 11.sp)
+        Text(label, color = color, fontSize = 11.sp, maxLines = 1, softWrap = false)
     }
 }
 
@@ -716,7 +768,7 @@ private fun ServerChip(
         ) {
             Icon(MaterialSymbols.CloudUpload, contentDescription = stringRes(Res.string.file_server), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(6.dp))
-            Text(server.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 140.dp))
+            Text(server.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).widthIn(max = 140.dp))
             if (servers.size > 1) Icon(MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -738,6 +790,7 @@ private fun ServerChip(
 private fun QualityTool(
     item: SelectedMediaProcessing,
     previews: CompressionPreviews,
+    cropped: CroppedSources,
     uploader: MediaUploader,
 ) {
     val media = item.media
@@ -754,7 +807,7 @@ private fun QualityTool(
 
         isVideo -> VideoQuality(item, uploader)
 
-        media.isCompressible() -> ImageQuality(item, previews, uploader)
+        media.isCompressible() -> ImageQuality(item, cropped.sourceFor(item), previews, uploader)
 
         else -> Text(stringRes(Res.string.media_studio_no_options), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -764,15 +817,16 @@ private fun QualityTool(
 @Composable
 private fun ImageQuality(
     item: SelectedMediaProcessing,
+    /** What the previews are made from (a crop's copy); null while that copy is being written. */
+    media: SelectedMedia?,
     previews: CompressionPreviews,
     uploader: MediaUploader,
 ) {
-    val media = item.media
-    val original = previews.anyOf(media)?.original
-    val originalBytes = original?.bytes ?: remember(media) { uploader.fileSize(media.uri) }
+    val original = media?.let { previews.anyOf(it) }?.original
+    val originalBytes = original?.bytes ?: remember(media) { media?.let { uploader.fileSize(it.uri) } }
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         CompressorQuality.sliderSteps.forEach { level ->
-            val compressed = previews[media, level]?.compressed
+            val compressed = media?.let { previews[it, level] }?.compressed
             val bytes = if (level == CompressorQuality.UNCOMPRESSED) originalBytes else compressed?.bytes
             val edge =
                 when {

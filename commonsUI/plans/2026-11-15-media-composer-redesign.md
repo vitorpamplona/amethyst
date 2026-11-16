@@ -55,6 +55,25 @@ drag inside to move, Reset, and Save.
   (commonsUI, the drag math and renders).
 - Still uncropped: emoji, list and pack covers, nests, geocaches, drss, podcast and music art.
 
+**Crop in the Studio** (posts, comments, long-form, picture posts, chats; every screen on
+`MediaStudio`). A Crop tool sits beside Quality for still pictures the platform re-encodes (not
+GIF, SVG or AVIF).
+- The stage becomes `CropEditor` (shared with the avatar dialog) and the panel offers Free, 1:1,
+  4:5, 3:2 and 16:9, plus Reset. A reopened Studio holds the shape the crop already has.
+- The crop is a per-file option, `MediaUploadOptions.crop` (normalized, as the picture displays;
+  null when it keeps the whole picture), so it travels with the file like quality and alt text.
+- Upload: `MultiOrchestrator` crops right before each upload (`withCrop`, in `uploadEach`,
+  `uploadOwnOptions` and `uploadEncryptedOwnOptions`) and deletes the copy after. The crop is part
+  of `UploadSettings`, so a changed crop sends again and an unchanged one is reused. A crop that
+  can't be written fails that file (`UploadError.CROP_FAILED`) instead of sending the whole picture.
+- Quality previews are made from the cropped copy (`CroppedSources`), so the stage, the sizes and
+  hold-for-original show the part that will be sent.
+- The composer's inline card and the Studio thumbnails draw the crop without re-encoding
+  (`CroppedImage`), and the card takes the cropped shape (`SelectedMediaProcessing.sentAspectRatio`).
+- Tests: `MultiOrchestratorUploadEachTest` (crop sent then deleted, failed crop sends nothing, a new
+  crop resends, GIFs skip, encrypted path), `ImageCropTest`, `MediaStudioRenderTest` (`crop`,
+  `quality-cropped`).
+
 **Implemented (described for the note composer, `ShortNotePostScreen`):**
 
 1. **Studio after every pick.** Picking files opens `MediaStudioDialog`
@@ -103,7 +122,7 @@ AVIF sent as the original. Hooked in through `UploadOrchestrator(readMetadata = 
 real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get none.
 
 Not yet:
-- crop as a Studio tool for posts and chats, rotate, and video trim (step 3)
+- rotate and mirror in the crop, and video trim (step 3)
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 

@@ -109,6 +109,20 @@ class MultiOrchestratorUploadEachTest {
             url: String,
             httpClients: IRoleBasedHttpClientBuilder,
         ): FileHeader? = null
+
+        /** Paths whose crop cannot be written. */
+        var uncroppable: Set<String> = emptySet()
+        val discarded = ConcurrentLinkedQueue<String>()
+
+        override suspend fun cropImage(
+            uri: MediaUri,
+            mimeType: String?,
+            crop: ImageCrop,
+        ): MediaCompressorResult? = if (uri.toString() in uncroppable) null else MediaCompressorResult(StringMediaUri("$uri.crop${crop.left}"), "image/jpeg", 1)
+
+        override fun discardTempFile(uri: MediaUri) {
+            discarded += uri.toString()
+        }
     }
 
     private val server = ServerName("one", "https://one.example")
@@ -236,5 +250,71 @@ class MultiOrchestratorUploadEachTest {
                         .toString()
                 },
             )
+        }
+
+    @Test
+    fun aCroppedPictureSendsItsCropAndDeletesIt() =
+        runTest {
+            val media = files("/a.jpg", "/b.jpg")
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.25f, 0f, 0.75f, 1f))
+            val uploader = RecordingUploader()
+
+            assertTrue(media.uploadEach(server, account, uploader).allGood)
+
+            assertEquals(setOf("/a.jpg.crop0.25", "/b.jpg"), uploader.sent.map { it.path }.toSet())
+            assertEquals(listOf("/a.jpg.crop0.25"), uploader.discarded.toList(), "the crop's temp copy is deleted, the picked file is not")
+        }
+
+    @Test
+    fun aCropThatCannotBeWrittenSendsNothing() =
+        runTest {
+            val media = files("/a.jpg")
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0f, 0f, 0.5f, 0.5f))
+            val uploader = RecordingUploader().apply { uncroppable = setOf("/a.jpg") }
+
+            val result = media.uploadEach(server, account, uploader)
+
+            assertFalse(result.allGood)
+            assertEquals(UploadError.CROP_FAILED, result.errors.single().error)
+            assertTrue(uploader.sent.isEmpty(), "the whole picture is not sent instead")
+        }
+
+    @Test
+    fun aNewCropSendsAgain() =
+        runTest {
+            val media = files("/a.jpg")
+            val uploader = RecordingUploader()
+            media.uploadEach(server, account, uploader)
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0f, 1f, 1f))
+
+            media.uploadEach(server, account, uploader)
+
+            assertEquals(listOf("/a.jpg", "/a.jpg.crop0.5"), uploader.sent.map { it.path })
+        }
+
+    @Test
+    fun gifsAreNotCropped() =
+        runTest {
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/a.gif"), "image/gif")))
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0f, 1f, 1f))
+            val uploader = RecordingUploader()
+
+            media.uploadEach(server, account, uploader)
+
+            assertEquals(listOf("/a.gif"), uploader.sent.map { it.path })
+        }
+
+    @Test
+    fun encryptedUploadsSendTheCrop() =
+        runTest {
+            val media = files("/a.jpg")
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.25f, 0f, 0.75f, 1f))
+            val uploader = RecordingUploader()
+
+            val result = media.uploadEncryptedOwnOptions({ AESGCM() }, server, account, uploader)
+
+            assertTrue(result.allGood)
+            assertEquals(listOf("enc:/a.jpg.crop0.25"), uploader.sent.map { it.path })
+            assertEquals(1, result.successful.size)
         }
 }

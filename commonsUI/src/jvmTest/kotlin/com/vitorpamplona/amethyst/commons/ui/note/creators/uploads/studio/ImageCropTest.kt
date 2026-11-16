@@ -91,6 +91,20 @@ class ImageCropTest {
         assertTrue(dragged.right > dragged.left && dragged.bottom > dragged.top)
     }
 
+    @Test
+    fun aReopenedCropKeepsItsShape() {
+        assertEquals(CropAspect.SQUARE, CropAspect.of(ImageCrop.centered(aspect, 1f), aspect))
+        assertEquals(CropAspect.WIDE, CropAspect.of(ImageCrop.centered(aspect, 16f / 9f), aspect))
+        assertEquals(CropAspect.FREE, CropAspect.of(ImageCrop(0.1f, 0.1f, 0.7f, 0.5f), aspect))
+        assertEquals(CropAspect.FREE, CropAspect.of(null, aspect))
+    }
+
+    @Test
+    fun aWholePictureIsNoCrop() {
+        assertEquals(null, ImageCrop(0.0001f, 0f, 1f, 0.9999f).orNullIfWhole())
+        assertEquals(ImageCrop(0.1f, 0f, 1f, 1f), ImageCrop(0.1f, 0f, 1f, 1f).orNullIfWhole())
+    }
+
     // ---- renders ----
 
     private val outDir = File("build/media-studio").apply { mkdirs() }

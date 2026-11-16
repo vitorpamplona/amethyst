@@ -37,6 +37,8 @@ data class MediaUploadOptions(
     val stripMetadata: Boolean = true,
     val useH265: Boolean = false,
     val convertGifToMp4: Boolean = false,
+    /** The part of a still picture to send, as it displays; null sends it whole. */
+    val crop: ImageCrop? = null,
 ) {
     /** The `alt` to publish: null when blank. */
     val altOrNull: String? get() = alt.trim().ifBlank { null }

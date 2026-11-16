@@ -87,7 +87,7 @@ fun rememberAttachedMediaBlocks(
     isUploading: () -> Boolean,
 ): MediaBlocks =
     remember(state) {
-        MediaBlocks(aspectRatio = { id -> state.items[id]?.displayAspectRatio }) { id, selected, modifier ->
+        MediaBlocks(aspectRatio = { id -> state.items[id]?.sentAspectRatio }) { id, selected, modifier ->
             val item = state.items[id]
             if (item != null) {
                 AttachedMediaCard(

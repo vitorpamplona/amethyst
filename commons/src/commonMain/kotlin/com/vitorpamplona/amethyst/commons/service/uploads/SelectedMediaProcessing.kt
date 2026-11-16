@@ -36,6 +36,10 @@ class SelectedMediaProcessing(
     /** Width over height as the file displays, once its picture (or a video's frame) has loaded; null until then. */
     var displayAspectRatio: Float? by mutableStateOf(null)
 
+    /** Width over height as it will be sent: [displayAspectRatio] after the [MediaUploadOptions.crop]; null until the picture loads. */
+    val sentAspectRatio: Float?
+        get() = displayAspectRatio?.let { aspect -> options.crop?.let { aspect * it.width / it.height } ?: aspect }
+
     /**
      * What [MultiOrchestrator.uploadEach] last sent for this file in plaintext, kept so a retry after
      * another file failed doesn't send this one again. Dropped when its options or the server change.
