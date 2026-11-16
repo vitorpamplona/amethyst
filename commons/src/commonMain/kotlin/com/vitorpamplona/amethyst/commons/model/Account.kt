@@ -2837,10 +2837,15 @@ class Account(
         signAndComputeBroadcast(VoiceReplyEvent.build(url, mimeType, hash, duration, waveform, replyTo))
     }
 
+    /**
+     * One picture post (NIP-68) with every image in [urlHeaderInfo]. Each image's `alt` is its own
+     * from [altByUrl] (the media studio's alt text), or the [caption] when it has none.
+     */
     suspend fun sendAllAsOnePictureEvent(
         urlHeaderInfo: Map<String, FileHeader>,
         caption: String?,
         contentWarningReason: String?,
+        altByUrl: Map<String, String> = emptyMap(),
     ) {
         val iMetas =
             urlHeaderInfo.map {
@@ -2849,7 +2854,7 @@ class Account(
                     mimeType = it.value.mimeType,
                     blurhash = it.value.blurHash?.blurhash,
                     dimension = it.value.dim,
-                    alt = caption,
+                    alt = altByUrl[it.key] ?: caption,
                     hash = it.value.hash,
                     size = it.value.size,
                     service = null,
@@ -2876,6 +2881,11 @@ class Account(
         signAndComputeBroadcast(template)
     }
 
+    /**
+     * One post for one uploaded file: a picture, a video (short or normal by [videoKind]) or a file
+     * metadata event. [alt] describes the file in its `imeta`; [content] is the post's text (the
+     * composer's caption), which defaults to the [alt] as it always did.
+     */
     suspend fun sendHeader(
         url: String,
         magnetUri: String?,
@@ -2884,6 +2894,7 @@ class Account(
         contentWarningReason: String?,
         originalHash: String? = null,
         videoKind: VideoPostKind = VideoPostKind.AUTO,
+        content: String? = alt,
     ) {
         if (!isWriteable()) return
 
@@ -2894,8 +2905,8 @@ class Account(
 
         val template =
             if (isImage) {
-                PictureEvent.build(alt ?: "") {
-                    alt?.let {
+                PictureEvent.build(content ?: "") {
+                    content?.let {
                         hashtags(findHashtags(it))
                         references(findURLs(it))
                         quotes(findNostrUris(it))
@@ -2933,11 +2944,11 @@ class Account(
                 // them (Shorts, Longs) or from that feed's share target, so the post lands where the
                 // user asked for it. Everywhere else the orientation decides.
                 if (videoKind.isShort(dim)) {
-                    VideoShortEvent.build(videoMeta, alt ?: "") {
+                    VideoShortEvent.build(videoMeta, content ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
                 } else {
-                    VideoNormalEvent.build(videoMeta, alt ?: "") {
+                    VideoNormalEvent.build(videoMeta, content ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
                 }

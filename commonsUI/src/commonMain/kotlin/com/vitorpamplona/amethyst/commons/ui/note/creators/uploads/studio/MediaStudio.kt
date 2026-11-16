@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_caption_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_long_edge
 import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
@@ -176,6 +177,8 @@ fun MediaStudioDialog(
     showSensitive: Boolean = true,
     lockedServer: ServerName? = null,
     privacyExtras: (@Composable ColumnScope.() -> Unit)? = null,
+    caption: String? = null,
+    onCaptionChange: (String) -> Unit = {},
 ) {
     val accountServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
@@ -204,6 +207,8 @@ fun MediaStudioDialog(
             canCancel = canCancel,
             showSensitive = showSensitive,
             privacyExtras = privacyExtras,
+            caption = caption,
+            onCaptionChange = onCaptionChange,
         )
     }
 }
@@ -247,6 +252,9 @@ fun MediaStudio(
     showSensitive: Boolean = true,
     /** Switches a screen adds to Privacy, e.g. a NIP-17 chat's file encryption. */
     privacyExtras: (@Composable ColumnScope.() -> Unit)? = null,
+    /** The post's own text, for a screen where the media is the post (picture and video posts); null shows no field. */
+    caption: String? = null,
+    onCaptionChange: (String) -> Unit = {},
     initialTool: StudioTool = StudioTool.QUALITY,
     holdingOriginal: Boolean = false,
 ) {
@@ -302,6 +310,18 @@ fun MediaStudio(
                     }
                 }
             }
+        }
+
+        if (caption != null) {
+            OutlinedTextField(
+                value = caption,
+                onValueChange = onCaptionChange,
+                placeholder = { Text(stringRes(Res.string.media_studio_caption_placeholder)) },
+                keyboardOptions = KeyboardOptions.Default.copy(capitalization = KeyboardCapitalization.Sentences),
+                maxLines = 4,
+                enabled = !isUploading,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            )
         }
 
         Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {

@@ -9945,6 +9945,7 @@
     <string name="media_alt_badge">ALT</string>
     <string name="media_cw_badge">CW</string>
     <string name="media_post_upload_failed">%1$s didn't upload</string>
+    <string name="media_studio_caption_placeholder">Write a caption…</string>
     <string name="media_studio_retry">Nothing was sent. %1$s tries again.</string>
     <string name="media_post_nothing_posted">Nothing was posted. Post tries again.</string>
 </resources>

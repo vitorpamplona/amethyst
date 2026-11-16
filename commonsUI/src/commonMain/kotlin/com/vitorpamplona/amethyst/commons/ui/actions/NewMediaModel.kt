@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.actions
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -35,7 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
@@ -67,13 +66,7 @@ open class NewMediaModel : ViewModel() {
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
 
-    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
-
-    // Codec selection: false = H264, true = H265
-    var useH265Codec by mutableStateOf(false)
-
-    // Strip location and sensitive metadata from files before upload
+    // Where each file's own metadata switch starts (the account's setting); the media studio edits it per file.
     var stripMetadata by mutableStateOf(true)
 
     // Which NIP-71 kind videos in this batch are published as. Set by the composer's host feed.
@@ -87,9 +80,10 @@ open class NewMediaModel : ViewModel() {
     ) {
         this.caption = caption
         this.account = account
-        this.multiOrchestrator = MultiOrchestrator(uris)
-        this.selectedServer = defaultServer()
         this.stripMetadata = account.settings.stripLocationOnUpload
+        val strip = stripMetadata
+        this.multiOrchestrator = MultiOrchestrator(uris) { MediaUploadOptions.defaultFor(it, stripMetadata = strip) }
+        this.selectedServer = defaultServer()
         this.videoKind = videoKind
     }
 
@@ -120,69 +114,56 @@ open class NewMediaModel : ViewModel() {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
+            try {
+                // Each file with its own options; one that already went up is not sent again.
+                val results =
+                    myMultiOrchestrator.uploadEach(
+                        serverToUse,
+                        myAccount,
+                        uploader,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    )
 
-            val results =
-                myMultiOrchestrator.upload(
-                    caption,
-                    if (sensitiveContent) "" else null,
-                    CompressorQuality.fromSlider(mediaQualitySlider),
-                    serverToUse,
-                    myAccount,
-                    uploader,
-                    useH265Codec,
-                    stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                )
+                if (!results.allGood) {
+                    val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
+                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                    return@launch
+                }
 
-            if (results.allGood) {
-                // It all finished successfully
-                val videosAndOthers =
-                    results.successful.mapNotNull {
-                        val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
-                        if (map != null && !isImage(map.url, map.fileHeader.mimeType)) {
-                            map
-                        } else {
-                            null
-                        }
-                    }
-
-                val imageUrls =
-                    results.successful
-                        .mapNotNull {
-                            val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
-                            if (map != null && isImage(map.url, map.fileHeader.mimeType)) {
-                                Pair(map.url, map.fileHeader)
-                            } else {
-                                null
-                            }
-                        }.toMap()
+                val post = caption.ifBlank { null }
+                val uploaded = results.successful.mapNotNull { done -> (done.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { done.item to it } }
+                val (images, others) = uploaded.partition { (_, result) -> isImage(result.url, result.fileHeader.mimeType) }
 
                 // Sign + publish via launchSigner so SignerExceptions surface
                 // through the standard toastManager pipeline (and timed-out /
                 // rejected prompts get logged instead of crashing the process).
                 val videoJobs =
-                    videosAndOthers.map {
+                    others.map { (item, result) ->
                         accountViewModel.launchSigner {
                             myAccount.sendHeader(
-                                url = it.url,
-                                magnetUri = it.magnet,
-                                headerInfo = it.fileHeader,
-                                alt = caption,
-                                contentWarningReason = if (sensitiveContent) "" else null,
-                                originalHash = it.uploadedHash,
+                                url = result.url,
+                                magnetUri = result.magnet,
+                                headerInfo = result.fileHeader,
+                                alt = item.options.altOrNull ?: post,
+                                contentWarningReason = item.options.contentWarningReason ?: if (sensitiveContent) "" else null,
+                                originalHash = result.uploadedHash,
                                 videoKind = videoKind,
+                                content = post ?: item.options.altOrNull,
                             )
                         }
                     }
 
                 val imageJobs =
-                    if (imageUrls.isNotEmpty()) {
+                    if (images.isNotEmpty()) {
+                        // One picture post: a content warning on any image covers the post.
+                        val sensitive = sensitiveContent || images.any { (item, _) -> item.options.sensitive }
                         listOf(
                             accountViewModel.launchSigner {
                                 myAccount.sendAllAsOnePictureEvent(
-                                    urlHeaderInfo = imageUrls,
-                                    caption = caption,
-                                    contentWarningReason = if (sensitiveContent) "" else null,
+                                    urlHeaderInfo = images.associate { (_, result) -> result.url to result.fileHeader },
+                                    caption = post,
+                                    contentWarningReason = if (sensitive) "" else null,
+                                    altByUrl = images.mapNotNull { (item, result) -> item.options.altOrNull?.let { result.url to it } }.toMap(),
                                 )
                             },
                         )
@@ -196,10 +177,9 @@ open class NewMediaModel : ViewModel() {
                 onSucess()
                 onceUploaded()
                 cancelModel()
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            } finally {
+                // Also after a failure: a stuck flag left Post disabled for good.
+                isUploadingImage = false
             }
         }
     }

@@ -28,7 +28,16 @@ group DM screen.
   through the encrypted path and its plaintext retry; their results name the file.
 - The old card (`ImageVideoDescription`) is deleted.
 
-Still on their old flows: picture and video posts, and avatar/banner/icon uploads.
+**Picture and video posts** (`NewMediaView`, from the Pictures, Shorts, Videos and Longs feeds and
+their share targets) are the Studio with a caption field and Post.
+- Each file goes with its own options (`uploadEach`; a retry sends only what failed).
+- Each image carries its own `alt` in the picture event (`sendAllAsOnePictureEvent(altByUrl)`),
+  where every image used to get the caption.
+- A video's post text is the caption while its `imeta` alt is its own (`sendHeader(content)`).
+- A content warning on any image covers the picture post.
+- A failed upload no longer leaves Post disabled for good.
+
+Still on their old flows: avatar/banner/icon uploads.
 
 **Implemented (described for the note composer, `ShortNotePostScreen`):**
 
@@ -79,7 +88,7 @@ real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get n
 
 Not yet:
 - crop and trim (step 3)
-- picture/video posts and avatar/banner/icon uploads
+- avatar/banner/icon uploads (they need crop with a locked shape)
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 
