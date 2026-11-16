@@ -28,3 +28,11 @@ import java.awt.Cursor
 private val ResizeCursor = PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR))
 
 internal actual fun Modifier.horizontalResizeCursor(): Modifier = pointerHoverIcon(ResizeCursor)
+
+private val VerticalResizeCursor = PointerIcon(Cursor(Cursor.S_RESIZE_CURSOR))
+
+internal actual fun Modifier.verticalResizeCursor(): Modifier = pointerHoverIcon(VerticalResizeCursor)
+
+private val CornerResizeCursor = PointerIcon(Cursor(Cursor.SE_RESIZE_CURSOR))
+
+internal actual fun Modifier.cornerResizeCursor(): Modifier = pointerHoverIcon(CornerResizeCursor)

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialogSizes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
@@ -91,6 +92,8 @@ class DesktopAppPlatform(
     private val desktopSpellCheck: DesktopSpellCheck? = null,
     // Opens napplets (NIP-5D) and nSites (NIP-5A) in their own sandboxed window; null where Chromium can't run.
     private val nappletHost: DesktopNappletHost? = null,
+    // The composer dialog sizes the user dragged to, kept between runs.
+    override val composerDialogSizes: ComposerDialogSizes = ComposerDialogSizes.InMemory,
 ) : AppPlatform {
     override val appFlavor: String get() = "desktop"
 

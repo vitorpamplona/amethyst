@@ -24,3 +24,9 @@ import androidx.compose.ui.Modifier
 
 /** Touch only: no pointer to change. */
 internal actual fun Modifier.horizontalResizeCursor(): Modifier = this
+
+/** Touch only: no pointer to change. */
+internal actual fun Modifier.verticalResizeCursor(): Modifier = this
+
+/** Touch only: no pointer to change. */
+internal actual fun Modifier.cornerResizeCursor(): Modifier = this

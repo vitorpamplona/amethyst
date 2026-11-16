@@ -276,6 +276,7 @@ fun main(args: Array<String>) {
             // Decrypted pictures of private communities: owner-only, like the rest of the profile.
             concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
             nappletHost = nappletHost,
+            composerDialogSizes = DesktopComposerDialogSizes(File(filesDir, "composer-dialog-sizes.properties")),
         )
     val root = DesktopAppRoot(modules, nappletHost)
 
