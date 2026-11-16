@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.submitOnCtrlEnter
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.HoldOpenWhile
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -265,6 +266,8 @@ internal fun NewPostScreenInner(
     }
 
     PlatformBackHandler(onBack = onClose)
+    // Its tab or window can't be closed either, by its × or the tab menu: that would drop the text too.
+    HoldOpenWhile { postViewModel.isPosting }
 
     val onPost: () -> Unit = {
         if (postViewModel.tryStartPosting()) {

@@ -290,6 +290,64 @@ class NavBackStacksLayoutsTest {
     }
 
     @Test
+    fun aTabHeldOpenSurvivesEveryWayToCloseIt() {
+        val stacks = tabs()
+        stacks.push(Route.Note("a"))
+        val a = stacks.top.id
+        stacks.push(Route.Note("held"))
+        val held = stacks.top
+        stacks.push(Route.Note("c"))
+        held.holdOpen = { true }
+
+        assertFalse(stacks.close(held.id))
+        assertEquals(held.id, stacks.attention?.id)
+        assertFalse(stacks.back(held))
+
+        stacks.closeToTheRight(a)
+        assertEquals(listOf(Route.Home, Route.Note("a"), Route.Note("held")), stacks.routes())
+
+        stacks.push(Route.Note("d"))
+        stacks.closeOthers(stacks.top.id)
+        assertEquals(listOf(Route.Home, Route.Note("held"), Route.Note("d")), stacks.routes())
+
+        stacks.activate(held.id)
+        stacks.push(Route.Note("e"))
+        stacks.closeOpenedBy(stacks.tabs().first { it.route == Route.Note("d") }.id)
+        stacks.closeOthers(stacks.top.id)
+        assertTrue(held in stacks.stack)
+    }
+
+    @Test
+    fun aHoldIsAskedAtTheMomentOfClosing() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        val entry = stacks.top
+        var posting = true
+        entry.holdOpen = { posting }
+
+        assertFalse(stacks.close(entry.id))
+        posting = false
+        assertTrue(stacks.close(entry.id))
+        assertEquals(listOf<Route>(Route.Home), stacks.routes())
+    }
+
+    @Test
+    fun aWindowHeldOpenStaysOpen() {
+        val stacks = windows()
+        stacks.push(Route.Note("n"))
+        val window = stacks.windows().single()
+        window.holdOpen = { true }
+
+        assertFalse(stacks.close(window.id))
+        assertFalse(stacks.back(window))
+        assertEquals(listOf(window), stacks.windows())
+
+        window.holdOpen = null
+        assertTrue(stacks.close(window.id))
+        assertTrue(stacks.windows().isEmpty())
+    }
+
+    @Test
     fun aBackgroundTabOpensWithoutTakingFocus() {
         val stacks = tabs()
         stacks.open(Route.Note("n"), background = true)

@@ -115,14 +115,12 @@ class WindowsModel(
         return !isMainScreen(entry) && close(entry.id)
     }
 
-    /** Closes the window [id], or the section [id]: the main window always keeps one, Home at worst. */
-    override fun close(id: Long): Boolean {
-        val entry = entries.firstOrNull { it.id == id } ?: return false
+    /** Closes the window [entry], or the section [entry]: the main window always keeps one, Home at worst. */
+    override fun remove(entry: NavStackEntry) {
         if (!screenWindows.remove(entry)) sections.remove(entry)
         forget(entry)
         if (sections.isEmpty()) sections.add(ids.entry(Route.Home))
         if (sections.none { it.id == activeId }) activeId = sections.last().id
-        return true
     }
 
     internal val activeSectionId: Long get() = activeId

@@ -75,6 +75,16 @@ class NavStackEntry(
     /** Opened from the navigation drawer: it can pop, but keeps the bottom bar like a tab root. */
     var drawerRoot by mutableStateOf(drawerRoot)
 
+    /**
+     * Set by the screen while it must not be closed, such as a composer whose post is waiting for
+     * the signer: closing it would drop text the post never published. The tab and window layouts
+     * ask it at the moment of closing and refuse while it answers true, so it can follow live state
+     * that changes in the same step as the screen closing itself. Set it with `HoldOpenWhile`.
+     */
+    var holdOpen: (() -> Boolean)? = null
+
+    fun isHeldOpen(): Boolean = holdOpen?.invoke() == true
+
     val contentKey: String get() = "nav-$id"
 
     override fun equals(other: Any?): Boolean = other is NavStackEntry && other.id == id
