@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.commons.ui.components.FormImageTile
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
@@ -189,19 +190,21 @@ private fun BadgeImagePicker(
     accountViewModel: AccountViewModel,
     onPickImage: () -> Unit,
 ) {
-    if (postViewModel.hasPickedImage()) {
-        postViewModel.multiOrchestrator?.let {
-            // Tap the preview to swap to a different image.
-            Box(modifier = Modifier.clickable(onClick = onPickImage)) {
-                ShowImageUploadGallery(
-                    list = it,
-                    onDelete = { postViewModel.setPickedMedia(persistentListOf()) },
-                    accountViewModel = accountViewModel,
-                )
+    FormImageTile {
+        if (postViewModel.hasPickedImage()) {
+            postViewModel.multiOrchestrator?.let {
+                // Tap the preview to swap to a different image.
+                Box(modifier = Modifier.clickable(onClick = onPickImage)) {
+                    ShowImageUploadGallery(
+                        list = it,
+                        onDelete = { postViewModel.setPickedMedia(persistentListOf()) },
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
+        } else {
+            UploadPlaceholder(onClick = onPickImage)
         }
-    } else {
-        UploadPlaceholder(onClick = onPickImage)
     }
 }
 

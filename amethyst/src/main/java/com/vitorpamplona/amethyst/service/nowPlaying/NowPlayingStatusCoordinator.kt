@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.Now
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -53,6 +54,8 @@ class NowPlayingStatusCoordinator(
     private val relayServices: Flow<*>,
     private val inApp: StateFlow<Map<Int, InAppPlayback>> = InAppPlaybackRegistry.flow,
     private val otherApps: StateFlow<NowPlaying?> = OtherAppsPlaybackRegistry.flow,
+    /** Whether the other-apps listener should stay bound: only while the account shares them. */
+    private val setOtherAppsWanted: (Boolean) -> Unit = {},
 ) {
     private var relayHold: Job? = null
 
@@ -61,8 +64,14 @@ class NowPlayingStatusCoordinator(
             accountFlow
                 .distinctUntilChanged { a, b -> a?.signer?.pubKey == b?.signer?.pubKey }
                 .collectLatest { account ->
-                    if (account == null || !account.isWriteable()) return@collectLatest
-                    run(account)
+                    if (account == null || !account.isWriteable()) {
+                        setOtherAppsWanted(false)
+                        return@collectLatest
+                    }
+                    coroutineScope {
+                        launch { account.nowPlayingSettings.sharesOtherApps().collect { setOtherAppsWanted(it) } }
+                        run(account)
+                    }
                 }
         }
     }

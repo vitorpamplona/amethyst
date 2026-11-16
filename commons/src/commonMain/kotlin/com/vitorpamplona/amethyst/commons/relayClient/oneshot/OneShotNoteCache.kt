@@ -76,7 +76,7 @@ class OneShotNoteCache(
         // Consuming hints the first relay for the event and what it links to; every relay that
         // served it is also where its author publishes.
         relays.forEach { relay ->
-            note?.addRelay(relay)
+            note?.let { cache.seenOn(it, relay) }
             if (relay != first) cache.addIncomingRelayAsHintToAllRelatedEvents(event, relay)
             cache.relayHints.addKey(event.pubKey, relay)
         }

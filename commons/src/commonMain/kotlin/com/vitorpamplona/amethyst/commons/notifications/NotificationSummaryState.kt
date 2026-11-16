@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter.Companion.NOTIFICATION_KINDS
 import com.vitorpamplona.amethyst.commons.search.calendar.EpochDayCounter
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
@@ -67,6 +69,12 @@ data class NotificationChart(
 @Stable
 class NotificationSummaryState(
     val account: Account,
+    /**
+     * The account's notification candidates (`AccountFeedContentStates.notificationCandidates`):
+     * the first count reads them instead of every note in the cache. Only what the Notifications
+     * tab can show ([NOTIFICATION_KINDS]) is counted, there and as notes arrive.
+     */
+    private val notificationCandidates: CandidateSet? = null,
 ) {
     val user: User = account.userProfile()
 
@@ -105,9 +113,11 @@ class NotificationSummaryState(
         val replies = mutableMapOf<String, Int>()
         val takenIntoAccount = mutableSetOf<HexKey>()
 
-        LocalCache.notes.forEach { _, it ->
+        // From the account's notification candidates, which hold every note that can reach it,
+        // once their first walk is done; else a walk over the cache.
+        val visit = { it: Note ->
             val noteEvent = it.event
-            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
+            if (noteEvent != null && noteEvent.kind in NOTIFICATION_KINDS && !takenIntoAccount.contains(noteEvent.id)) {
                 when {
                     noteEvent is ReactionEvent -> {
                         if (noteEvent.originalAuthor().contains(currentUser) && noteEvent.pubKey != currentUser) {
@@ -183,6 +193,8 @@ class NotificationSummaryState(
                 }
             }
         }
+        val candidates = notificationCandidates?.snapshot()
+        if (candidates != null) candidates.forEach(visit) else LocalCache.notes.forEach { _, note -> visit(note) }
 
         this.takenIntoAccount = takenIntoAccount
         this.reactions.emit(reactions)
@@ -208,7 +220,7 @@ class NotificationSummaryState(
         newBlockNotes.forEach { newNotes ->
             newNotes.forEach {
                 val noteEvent = it.event
-                if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
+                if (noteEvent != null && noteEvent.kind in NOTIFICATION_KINDS && !takenIntoAccount.contains(noteEvent.id)) {
                     when {
                         noteEvent is ReactionEvent -> {
                             if (noteEvent.originalAuthor().contains(currentUser) && noteEvent.pubKey != currentUser) {

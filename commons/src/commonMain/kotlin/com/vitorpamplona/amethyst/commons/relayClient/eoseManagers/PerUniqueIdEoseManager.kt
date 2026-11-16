@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
-import com.vitorpamplona.amethyst.commons.relays.EOSEByKey
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -39,21 +38,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * that is subscribed into the keys. It is ideal for screen loading that
  * can be shared among multiple logged-in users.
  *
- * This class keeps EOSEs for each SubID.id() for as long as possible and
- * shares all EOSEs among all users.
+ * The cursors live on the holders the keys name ([cursorHoldersOf]): what holds the notes the
+ * subscription loads. A key that names none is asked from scratch.
  */
 abstract class PerUniqueIdEoseManager<T, U : Any>(
     client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    // long term EOSE cache
-    private val latestEOSEs = EOSEByKey<U>()
-
     // map between each query Id and each subscription id
     private val userSubscriptionMap = mutableMapOf<U, String>()
-
-    fun since(key: T) = latestEOSEs.since(id(key))
 
     /** Open so a subclass can also record who answered, not just when. */
     open fun newEose(
@@ -62,7 +56,6 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        latestEOSEs.newEose(id(key), relayUrl, time)
         if (invalidateAfterEose) {
             invalidateFilters()
         }
@@ -111,21 +104,25 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
     }
 
     override fun updateSubscriptions(keys: Set<T>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { id(it) }
+        val keysById = keys.groupBy { id(it) }
 
         val updated = mutableSetOf<U>()
 
-        uniqueSubscribedAccounts.forEach {
-            val mainKey = id(it)
+        keysById.forEach { (mainKey, idKeys) ->
+            val it = idKeys.first()
             watchChatFeeds(mainKey, it)
+            // Every key with this id shares the subscription, so every holder they name gets its answers.
+            val (filters, cursors) = filtersFor(idKeys) { s -> updateFilter(it, s) }
             val newFilters =
-                updateFilter(it, since(it))
+                filters
                     ?.ifEmpty { null }
                     // Attribute to the account that owns this subscription, once, here — rather than
                     // threading a pubkey through every filter builder underneath. Builders that already
                     // know their account keep what they set.
                     ?.let { f -> accountPubKeyOf(it)?.let { pk -> f.attributedTo(pk) } ?: f }
-            findOrCreateSubFor(it).updateFilters(newFilters?.groupByRelay())
+            val sub = findOrCreateSubFor(it)
+            serve(sub.id, cursors)
+            sub.updateFilters(newFilters?.groupByRelay())
 
             updated.add(mainKey)
         }

@@ -242,7 +242,7 @@ open class ChannelNewMessageViewModel :
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapraiser by mutableStateOf(false)
+    var wantsZapRaiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
@@ -377,7 +377,7 @@ open class ChannelNewMessageViewModel :
         pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
-        wantsZapraiser = zapraiser != null
+        wantsZapRaiser = zapraiser != null
         zapRaiserAmount = null
         if (zapraiser != null) {
             zapRaiserAmount = zapraiser
@@ -970,7 +970,7 @@ open class ChannelNewMessageViewModel :
         urlPreview = null
 
         wantsInvoice = false
-        wantsZapraiser = false
+        wantsZapRaiser = false
         zapRaiserAmount = null
 
         wantsForwardZapTo = false
@@ -1069,7 +1069,7 @@ open class ChannelNewMessageViewModel :
         message.text.isNotBlank() &&
             uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount != null) &&
+            (!wantsZapRaiser || zapRaiserAmount != null) &&
             uploadState?.multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {

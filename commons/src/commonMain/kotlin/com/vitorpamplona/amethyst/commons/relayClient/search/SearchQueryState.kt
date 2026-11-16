@@ -24,6 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +48,11 @@ class SearchQueryState(
     val indexerRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val followPlusAllMineWithSearchRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : MutableQueryState,
-    AccountScopedQuery {
+    AccountScopedQuery,
+    KeyHeldCursors {
+    /** The search screen holds the results; a different query asks for a different shape. */
+    override val relayCursors = RelayCursors()
+
     // The text alone re-issues the REQs: a `from:` name the field could not decode is rewritten
     // in place to `from:npub1…` once it resolves (see AuthorNameRewrite), which is a text change
     // like any other and arrives through this same flow.

@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,9 +32,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.publish
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
@@ -48,6 +52,32 @@ fun ActionTopBar(
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
+    isBusy: () -> Boolean = { false },
+    additionalActions: @Composable (() -> Unit)? = null,
+) = ActionTopBar(
+    postLabel = stringRes(postRes),
+    titleRes = titleRes,
+    isActive = isActive,
+    onCancel = onCancel,
+    onPost = onPost,
+    isBusy = isBusy,
+    additionalActions = additionalActions,
+)
+
+/**
+ * A composer's top bar: Close on the left, the title in the middle, and the main action on the
+ * right, labelled [postLabel] for a label worked out at the call site (a plural, a count). While
+ * [isBusy] the action shows a spinner instead of its label and cannot be pressed again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActionTopBar(
+    postLabel: String,
+    titleRes: StringResource? = null,
+    isActive: () -> Boolean = { true },
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+    isBusy: () -> Boolean = { false },
     additionalActions: @Composable (() -> Unit)? = null,
 ) {
     ShorterTopAppBar(
@@ -72,12 +102,17 @@ fun ActionTopBar(
             if (additionalActions != null) {
                 additionalActions()
             }
+            val busy = isBusy()
             Button(
                 modifier = HalfHorzPadding,
-                enabled = isActive(),
+                enabled = isActive() && !busy,
                 onClick = onPost,
             ) {
-                Text(text = stringRes(postRes))
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(text = postLabel)
+                }
             }
         },
         colors =
@@ -137,6 +172,27 @@ fun SendingTopBar(
     onCancel = onCancel,
     onPost = onPost,
     additionalActions = additionalActions,
+)
+
+/**
+ * For a standalone piece people find and come back to (an article, a product, a track, an event).
+ * The labels follow one rule: Post for a public message in feeds, Send for one only its recipients
+ * read, Publish for a standalone piece, Create for a place others join, Save for changing something
+ * that already exists.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PublishingTopBar(
+    titleRes: StringResource? = null,
+    isActive: () -> Boolean = { true },
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+) = ActionTopBar(
+    titleRes = titleRes,
+    postRes = Res.string.publish,
+    isActive = isActive,
+    onCancel = onCancel,
+    onPost = onPost,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

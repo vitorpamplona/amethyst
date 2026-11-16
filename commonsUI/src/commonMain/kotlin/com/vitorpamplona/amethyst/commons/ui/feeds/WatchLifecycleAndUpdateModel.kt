@@ -28,11 +28,11 @@ import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
 @Composable
 fun WatchLifecycleAndUpdateModel(model: InvalidatableContent) {
     LaunchedEffect(model) {
-        model.invalidateData(true)
+        model.onResume()
     }
 
     LifecycleResumeEffect(model) {
-        model.invalidateData(true)
+        model.onResume()
         onPauseOrDispose {}
     }
 }

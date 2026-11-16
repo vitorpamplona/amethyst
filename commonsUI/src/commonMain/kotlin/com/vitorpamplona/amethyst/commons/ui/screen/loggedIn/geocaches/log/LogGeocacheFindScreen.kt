@@ -39,15 +39,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,13 +65,11 @@ import com.vitorpamplona.amethyst.commons.geocaches.log.ScanOutcome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_add_photo
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_cache_label
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_mission_answer
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_no_location_attached
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_placeholder
-import com.vitorpamplona.amethyst.commons.resources.geocache_log_post
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_proof_bad_code
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_proof_explain
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_proof_optional
@@ -91,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -146,28 +142,11 @@ fun LogGeocacheFindScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringRes(Res.string.route_log_geocache_find)) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(Res.string.back),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        enabled = model.isValid() && !model.isPublishing.value,
-                        onClick = {
-                            scope.launch {
-                                if (model.publish()) nav.popBack()
-                            }
-                        },
-                    ) { Text(stringRes(Res.string.geocache_log_post)) }
-                },
+            PostingTopBar(
+                titleRes = Res.string.route_log_geocache_find,
+                isActive = { model.isValid() && !model.isPublishing.value },
+                onCancel = { nav.popBack() },
+                onPost = { scope.launch { if (model.publish()) nav.popBack() } },
             )
         },
     ) { pad ->

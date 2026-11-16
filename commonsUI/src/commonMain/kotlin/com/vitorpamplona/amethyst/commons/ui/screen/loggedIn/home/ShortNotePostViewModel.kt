@@ -84,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
@@ -209,6 +211,8 @@ open class ShortNotePostViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
+    IComposerMediaTools,
+    IComposerPostOptions,
     IZapField,
     IZapRaiser,
     IExpiration,
@@ -220,7 +224,7 @@ open class ShortNotePostViewModel :
     var draftNote: AddressableNote? = null
         private set
 
-    lateinit var accountViewModel: AccountViewModel
+    override lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     init {
@@ -268,8 +272,8 @@ open class ShortNotePostViewModel :
     val urlPreviews = PreviewState()
 
     val mediaUploadTracker = MediaUploadTracker()
-    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
-    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -355,13 +359,13 @@ open class ShortNotePostViewModel :
     var isValidClosedAt = mutableStateOf(true)
 
     // Invoices
-    var canAddInvoice by mutableStateOf(false)
-    var wantsInvoice by mutableStateOf(false)
+    override var canAddInvoice by mutableStateOf(false)
+    override var wantsInvoice by mutableStateOf(false)
 
-    var wantsSecretEmoji by mutableStateOf(false)
+    override var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
-    var wantsForwardZapTo by mutableStateOf(false)
+    override var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
 
@@ -371,23 +375,23 @@ open class ShortNotePostViewModel :
     val subject = TextFieldState()
 
     // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
+    override var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
     // Expiration Date (NIP-40)
-    var wantsExpirationDate by mutableStateOf(false)
+    override var wantsExpirationDate by mutableStateOf(false)
     override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
-    var wantsToAddGeoHash by mutableStateOf(false)
+    override var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationResult>? = null
 
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
-    var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapRaiser by mutableStateOf(false)
+    override var canAddZapRaiser by mutableStateOf(false)
+    override var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     // Anonymous Reply
@@ -644,7 +648,7 @@ open class ShortNotePostViewModel :
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -1560,7 +1564,7 @@ open class ShortNotePostViewModel :
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
-    fun uploadDrawing(
+    override fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
@@ -1752,7 +1756,7 @@ open class ShortNotePostViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
+    override fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
     fun selectVoiceRecording(recording: RecordingResult) {
         // Cancel any ongoing processing and delete existing files
@@ -2065,7 +2069,7 @@ open class ShortNotePostViewModel :
         }
     }
 
-    fun toggleMarkAsSensitive() {
+    override fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
@@ -2076,7 +2080,7 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    fun toggleExpirationDate() {
+    override fun toggleExpirationDate() {
         wantsExpirationDate = !wantsExpirationDate
         if (wantsExpirationDate) {
             expirationDate = TimeUtils.oneDayAhead()

@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.toAccountSettings
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelNotificationsFor
+import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -671,6 +673,10 @@ object LocalPreferences : AccountSessionStore {
             accountStores.removeAccount(accountInfo.npub)
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
+            // Its notifications too: left in the shade they show a gone account's DMs in clear text.
+            Amethyst.instance.appContext
+                .notificationManager()
+                .cancelNotificationsFor(accountInfo.npub)
 
             if (savedAccounts().isEmpty()) {
                 updateCurrentAccount(null)

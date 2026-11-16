@@ -24,11 +24,15 @@ import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 
 class ForwardKind0ToLocalRelayState(
     val client: INostrClient,
     val localRelayList: LocalRelayListState,
     val settings: AccountSettings,
+    /** The account's scope: the collector leaves the shared client when it ends. */
+    scope: CoroutineScope,
 ) {
     private val eventCollector =
         EventCollector(client) { event, _ ->
@@ -39,4 +43,11 @@ class ForwardKind0ToLocalRelayState(
                 }
             }
         }
+
+    init {
+        // The collector is a listener on the app-wide client, and its callback holds this
+        // account's settings and relay lists: without this, every logged-out account stayed
+        // reachable through the client for the life of the app.
+        scope.coroutineContext[Job]?.invokeOnCompletion { eventCollector.destroy() }
+    }
 }

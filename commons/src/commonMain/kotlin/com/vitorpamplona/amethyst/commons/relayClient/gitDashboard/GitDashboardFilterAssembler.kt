@@ -24,7 +24,9 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -71,7 +73,11 @@ class GitDashboardQueryState(
     override val account: IAccount,
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val inboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : AccountScopedQuery
+) : AccountScopedQuery,
+    KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 class GitDashboardSubAssembler(
     client: INostrClient,

@@ -90,7 +90,7 @@ fun EventKindScreen(
     val definitions = rememberNipsDefining(kind, accountViewModel)
     val loadingDefinitions = definitions.isEmpty() && feedNotes(accountViewModel.feedStates.nipsFeed).second
     WatchLifecycleAndUpdateModel(eventsModel)
-    KindEventsSubscription(kind, accountViewModel)
+    KindEventsSubscription(kind, eventsModel.feedState, accountViewModel)
     val (recent, loadingRecent) = feedNotes(eventsModel.feedState)
 
     Scaffold(

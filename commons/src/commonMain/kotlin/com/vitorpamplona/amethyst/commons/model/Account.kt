@@ -188,6 +188,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLe
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldersByKey
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
@@ -205,6 +209,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedsKeptCurrent.Companion.onlyHidesMoreThan
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
@@ -405,6 +410,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -519,7 +525,8 @@ class Account(
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) : IAccount,
-    UserFinderAccount {
+    UserFinderAccount,
+    RelayCursorHolder {
     private var userProfileCache: User? = null
 
     override fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
@@ -731,7 +738,7 @@ class Account(
             relayAcceptsSignerTraffic = { cache.appHost.nip11Cache.acceptsSignerTraffic(it) },
         )
 
-    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
+    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings, scope)
 
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
 
@@ -1029,14 +1036,35 @@ class Account(
 
     val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
 
-    // Account-level notification history paging cursors (one scope per account): how far back each
-    // notification relay has been paged by until+limit. Held here so they share the account's lifetime;
-    // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
-    val notificationHistory = RelayLoadingCursors()
+    /**
+     * How far each relay has been asked for what this account keeps for as long as it is loaded: its
+     * own profile, follows, mutes and lists (`AccountMetadataEoseManager`), its wallets, drafts,
+     * memberships, joined groups and communities, and the chats it follows (which their channels
+     * hold). Each manager has its own entries. A new `Account` for the same key (a log out and back
+     * in) asks from scratch.
+     */
+    override val relayCursors = RelayCursors()
+
+    /**
+     * How far each relay has been asked for this account's own messages in each channel: the
+     * channel holds them (strongly, as it does every message), but each account asks for its own,
+     * so they cannot share the channel's cursors.
+     */
+    override val myChannelMessagesCursors = CursorHoldersByKey<Channel>()
+
+    /**
+     * This account's drafts, held for as long as it is loaded: `LocalCache` keeps them weakly, and a
+     * draft no screen happens to show would otherwise go while the drafts subscription's cursors
+     * (kept here too) said it was loaded. Made when that subscription first runs.
+     */
+    val draftNotes by lazy {
+        val me = signer.pubKey
+        HeldNotes(cache, scope) { note -> (note.event as? DraftWrapEvent)?.pubKey == me }
+    }
 
     // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
-    // outbox relay has been paged by until+limit. Same lifetime rule as notificationHistory — held here
-    // so paging progress survives leaving and re-entering the wallet screen; the history loader
+    // outbox relay has been paged by until+limit. Held here so paging progress survives leaving and
+    // re-entering the wallet screen; the history loader
     // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
     val cashuHistory = RelayLoadingCursors()
 
@@ -4436,6 +4464,19 @@ class Account(
         // Observed rather than hooked onto the local block action because the kind-10006 list is
         // shared: a block published by another client arrives as a flow update with no call of ours
         // behind it.
+        // Showing what was hidden: what the feeds and the pruner dropped for it is wanted again.
+        // Hiding more only removes notes, so it keeps the cursors (see [HiddenSetWidenings]).
+        scope.launch(Dispatchers.IO) {
+            var applied = hiddenUsers.flow.value
+            hiddenUsers.flow.drop(1).collect { now ->
+                if (!now.onlyHidesMoreThan(applied)) {
+                    cache.pruner.restoreHiddenPrunes()
+                    HiddenSetWidenings.widened()
+                }
+                applied = now
+            }
+        }
+
         scope.launch {
             blockedRelayList.flow.collect { blocked ->
                 relayAuthLedger.revokeSessionGrantsFor(blocked.map { it.url })

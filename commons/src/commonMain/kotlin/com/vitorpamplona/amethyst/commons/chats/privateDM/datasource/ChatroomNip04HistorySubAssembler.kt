@@ -54,15 +54,13 @@ import kotlinx.coroutines.flow.StateFlow
 class ChatroomNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<ChatroomQueryState>(client, allKeys) {
     private val pager = BackwardRelayPager("convo.nip04.history")
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val status: StateFlow<PagingStatus> = pager.status
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
-
-    override fun list(key: ChatroomQueryState) = key.listId
 
     // This conversation's persistent paging cursors, held on its Chatroom (per account + room).
     private fun cursorsFor(key: ChatroomQueryState) =

@@ -84,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_episode_transcript_l
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_video_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
+import com.vitorpamplona.amethyst.commons.resources.publish
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
@@ -92,7 +94,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
@@ -144,12 +146,13 @@ fun NewPodcastEpisodeScreen(
 
     Scaffold(
         topBar = {
-            SendingTopBar(
+            ActionTopBar(
+                postRes = if (vm.isEditing) Res.string.save else Res.string.publish,
                 titleRes = if (vm.isEditing) Res.string.podcast_edit_episode else Res.string.podcast_new_episode,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SendingTopBar
+                    if (!vm.isValid() || isBusy) return@ActionTopBar
                     vm.saveAndPublish(accountViewModel)
                 },
             )

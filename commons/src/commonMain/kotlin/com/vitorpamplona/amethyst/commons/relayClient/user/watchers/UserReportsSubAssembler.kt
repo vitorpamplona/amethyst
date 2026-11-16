@@ -44,6 +44,8 @@ class UserReportsSubAssembler(
         filters: List<Filter>?,
     ) {
         filters?.forEach { filter ->
+            // Cut at its limit: the users it names may lack older events.
+            if (wasCut(relay, filter)) return@forEach
             filter.tags?.get("p")?.forEach {
                 val targetUser = cache.getUserIfExists(it)
                 targetUser?.reportsOrNull()?.latestEOSEs?.newEose(relay, time)

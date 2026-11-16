@@ -28,8 +28,11 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 // Bounded: a few keys are per note (a community's or follow pack's pager), so a plain map would
 // keep one entry for every one ever opened.
@@ -39,6 +42,34 @@ private data class ScrollState(
     val index: Int,
     val scrollOffsetFraction: Float,
 )
+
+// A new value in every process. A position saved by one process is an index into a feed that
+// process built; after the process dies the feed is rebuilt from scratch, with other notes at those
+// indexes, and restoring it opened Home months back instead of at the top.
+private val thisProcess = Random.nextLong()
+
+/**
+ * Saves a lazy list's position for [rememberSaveable], which keeps it per back-stack entry, but
+ * restores it only in the process that saved it. Across a process death the list starts at the top.
+ */
+internal fun <T : Any> sameProcessSaver(
+    index: (T) -> Int,
+    offset: (T) -> Int,
+    create: (index: Int, offset: Int) -> T,
+): Saver<T, Any> =
+    listSaver(
+        save = { listOf(thisProcess, index(it), offset(it)) },
+        restore = { if (it[0] == thisProcess) create(it[1] as Int, it[2] as Int) else create(0, 0) },
+    )
+
+private val SameProcessLazyListSaver =
+    sameProcessSaver<LazyListState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> LazyListState(i, o) }
+
+private val SameProcessLazyGridSaver =
+    sameProcessSaver<LazyGridState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> LazyGridState(i, o) }
+
+private val SameProcessLazyStaggeredGridSaver =
+    sameProcessSaver<LazyStaggeredGridState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> LazyStaggeredGridState(i, o) }
 
 object ScrollStateKeys {
     const val NOTIFICATION_SCREEN = "NotificationsFeed"
@@ -116,7 +147,7 @@ fun rememberForeverLazyGridState(
     initialFirstVisibleItemScrollOffset: Int = 0,
 ): LazyGridState {
     val scrollState =
-        rememberSaveable(saver = LazyGridState.Saver) {
+        rememberSaveable(saver = SameProcessLazyGridSaver) {
             val savedValue = savedScrollStates[key]
             val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
             val savedOffset =
@@ -143,7 +174,7 @@ fun rememberForeverLazyStaggeredGridState(
     initialFirstVisibleItemScrollOffset: Int = 0,
 ): LazyStaggeredGridState {
     val scrollState =
-        rememberSaveable(saver = LazyStaggeredGridState.Saver) {
+        rememberSaveable(saver = SameProcessLazyStaggeredGridSaver) {
             val savedValue = savedScrollStates[key]
             val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
             val savedOffset =
@@ -170,7 +201,7 @@ fun rememberForeverLazyListState(
     initialFirstVisibleItemScrollOffset: Int = 0,
 ): LazyListState {
     val scrollState =
-        rememberSaveable(saver = LazyListState.Saver) {
+        rememberSaveable(saver = SameProcessLazyListSaver) {
             val savedValue = savedScrollStates[key]
             val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
             val savedOffset =

@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PublishingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -103,12 +103,12 @@ fun NewPodcastTrailerScreen(
 
     Scaffold(
         topBar = {
-            SendingTopBar(
+            PublishingTopBar(
                 titleRes = Res.string.podcast_new_trailer,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SendingTopBar
+                    if (!vm.isValid() || isBusy) return@PublishingTopBar
                     vm.saveAndPublish(accountViewModel)
                 },
             )

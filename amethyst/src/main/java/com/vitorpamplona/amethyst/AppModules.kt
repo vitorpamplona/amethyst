@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.nowPlaying.NowPlayingStatusCoordinator
+import com.vitorpamplona.amethyst.service.nowPlaying.OtherAppsNowPlayingService
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
@@ -1144,8 +1145,13 @@ class AppModules(
     val nowPlayingStatusCoordinator =
         NowPlayingStatusCoordinator(
             scope = applicationIOScope,
-            accountFlow = sessionManager.accountContent.map { (it as? AccountState.LoggedIn)?.account },
+            // Still loading is not logged off: that would read as "not sharing" on every start.
+            accountFlow =
+                sessionManager.accountContent
+                    .filter { it !is AccountState.Loading }
+                    .map { (it as? AccountState.LoggedIn)?.account },
             relayServices = relayProxyClientConnector.relayServices,
+            setOtherAppsWanted = { OtherAppsNowPlayingService.setWanted(appContext, it) },
         ).also { it.start() }
 
     fun subscribedFlow(
@@ -1681,7 +1687,7 @@ class AppModules(
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
+            trimmingService.run(loggedIn, underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
             // Trim in-process caches proportional to OS memory pressure.
             //
             // Since API 34 the OS only ever delivers two trim levels (the foreground

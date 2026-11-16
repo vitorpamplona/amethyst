@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessin
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
@@ -135,6 +137,8 @@ open class CommentPostViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
+    IComposerMediaTools,
+    IComposerPostOptions,
     IZapField,
     IZapRaiser,
     IExpiration,
@@ -162,7 +166,7 @@ open class CommentPostViewModel :
         }
     }
 
-    lateinit var accountViewModel: AccountViewModel
+    override lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
@@ -230,8 +234,8 @@ open class CommentPostViewModel :
     val urlPreviews = PreviewState()
 
     val mediaUploadTracker = MediaUploadTracker()
-    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
-    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -254,32 +258,32 @@ open class CommentPostViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Invoices
-    var canAddInvoice by mutableStateOf(false)
-    var wantsInvoice by mutableStateOf(false)
+    override var canAddInvoice by mutableStateOf(false)
+    override var wantsInvoice by mutableStateOf(false)
 
-    var wantsSecretEmoji by mutableStateOf(false)
+    override var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
-    var wantsForwardZapTo by mutableStateOf(false)
+    override var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
+    override var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
     // Expiration Date (NIP-40)
-    var wantsExpirationDate by mutableStateOf(false)
+    override var wantsExpirationDate by mutableStateOf(false)
     override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
-    var wantsToAddGeoHash by mutableStateOf(false)
+    override var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
-    var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapraiser by mutableStateOf(false)
+    override var canAddZapRaiser by mutableStateOf(false)
+    override var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var wantsAnonymousPost by mutableStateOf(false)
@@ -308,7 +312,7 @@ open class CommentPostViewModel :
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -528,7 +532,7 @@ open class CommentPostViewModel :
         expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val zapraiser = draftEvent.zapraiserAmount()
-        wantsZapraiser = zapraiser != null
+        wantsZapRaiser = zapraiser != null
         zapRaiserAmount.value = null
         if (zapraiser != null) {
             zapRaiserAmount.value = zapraiser
@@ -702,7 +706,7 @@ open class CommentPostViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
+        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
@@ -814,7 +818,7 @@ open class CommentPostViewModel :
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the comment. */
-    fun uploadDrawing(
+    override fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
@@ -847,7 +851,7 @@ open class CommentPostViewModel :
         resetAudienceEditor()
 
         wantsInvoice = false
-        wantsZapraiser = false
+        wantsZapRaiser = false
         zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
@@ -948,7 +952,7 @@ open class CommentPostViewModel :
         message.text.toString().isNotBlank() &&
             !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount.value != null) &&
+            (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null &&
             validationResult == null
 
@@ -958,7 +962,7 @@ open class CommentPostViewModel :
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
+    override fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
     override fun updateZapPercentage(
         index: Int,
@@ -985,12 +989,12 @@ open class CommentPostViewModel :
         draftTag.newVersion()
     }
 
-    fun toggleMarkAsSensitive() {
+    override fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
 
-    fun toggleExpirationDate() {
+    override fun toggleExpirationDate() {
         wantsExpirationDate = !wantsExpirationDate
         if (wantsExpirationDate) {
             expirationDate = TimeUtils.oneDayAhead()

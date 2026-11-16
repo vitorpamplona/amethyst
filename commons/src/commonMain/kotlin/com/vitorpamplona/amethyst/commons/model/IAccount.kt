@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldersByKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -71,6 +72,26 @@ data class LiveHiddenUsers(
 
     fun isHashtagHidden(hashtag: String) = hiddenHashtags.contains(hashtag.lowercase())
 
+    /**
+     * The spammers [newer] hides that this does not, when that is all that changed: spam detection
+     * growing the transient set, which happens about once a second while a busy feed loads. Null
+     * when anything else changed (a mute, a word, a hashtag, a setting) or someone was shown again,
+     * since then notes can leave or come back anywhere.
+     */
+    fun spammersAddedOnly(newer: LiveHiddenUsers): Set<String>? {
+        if (newer.hiddenUsers != hiddenUsers ||
+            newer.hiddenWords != hiddenWords ||
+            newer.hiddenHashtags != hiddenHashtags ||
+            newer.mutedThreads != mutedThreads ||
+            newer.showSensitiveContent != showSensitiveContent ||
+            newer.maxHashtagLimit != maxHashtagLimit ||
+            !newer.spammers.containsAll(spammers)
+        ) {
+            return null
+        }
+        return newer.spammers - spammers
+    }
+
     companion object {
         /** Neutral value that hides nothing — a safe default before any list has loaded. */
         val EMPTY =
@@ -88,6 +109,9 @@ data class LiveHiddenUsers(
  * Abstracts Android-specific Account class for use in commons.
  */
 interface IAccount {
+    /** How far each relay has been asked for this account's own messages in each channel. */
+    val myChannelMessagesCursors: CursorHoldersByKey<Channel>
+
     /** NIP-47 wallet connect state for payment verification */
     val nip47SignerState: INwcSignerState
 

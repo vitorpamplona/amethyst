@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldingQuery
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -46,7 +48,16 @@ class ChessLobbyGamesQueryState(
     override val account: Account,
     val watchedGames: Set<HexKey>,
     val missingStarts: Set<HexKey> = emptySet(),
-) : AccountScopedQuery
+    /**
+     * What holds the user's own games (`AccountFeedContentStates.chessMine`): not this key, which
+     * is made again for every new set of listed games, and not the lobby's feed, which holds only
+     * the listed ones. The listed games' moves are their start notes' replies.
+     */
+    val ownGames: RelayCursorHolder,
+) : AccountScopedQuery,
+    CursorHoldingQuery {
+    override val cursorHolders get() = listOf(ownGames)
+}
 
 /**
  * What the chess screen needs besides the top-bar list ([ChessFilterAssembler]):
