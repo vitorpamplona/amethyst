@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialogSizes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
@@ -75,6 +76,9 @@ interface AppPlatform {
      */
     val navigationLayouts: List<NavigationLayoutType> get() = listOf(NavigationLayoutType.STACK)
 
+    /** Where the composer dialogs' sizes the user picked are kept; only for as long as the app runs by default. */
+    val composerDialogSizes: ComposerDialogSizes get() = ComposerDialogSizes.InMemory
+
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
 
@@ -107,7 +111,8 @@ interface AppPlatform {
 
     /**
      * Whether a mouse or trackpad is the main pointer (the desktop), so dense controls need not be
-     * padded out to Material's 48dp touch target. False wherever a finger is the pointer, including
+     * padded out to Material's 48dp touch target, and composers on a wide window open as dialogs
+     * over the screen rather than full screen. False wherever a finger is the pointer, including
      * Android tablets on the wide layouts.
      */
     val hasFinePointer: Boolean get() = false

@@ -316,10 +316,10 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
     composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
-    composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromBottomArgs<Route.NewCalendarEvent> { NewCalendarEventScreen(nav, accountViewModel) }
-    composableFromBottomArgs<Route.EditCalendarEvent> {
+    composer<Route.NewCommunity>(ComposerSize.FORM, NavFamily.END) { NewCommunityScreen(accountViewModel, nav) }
+    composerArgs<Route.EditCommunity>(ComposerSize.FORM, NavFamily.END) { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composerArgs<Route.NewCalendarEvent>(ComposerSize.FORM) { NewCalendarEventScreen(nav, accountViewModel) }
+    composerArgs<Route.EditCalendarEvent>(ComposerSize.FORM) {
         NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
     composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
@@ -337,12 +337,12 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
-    composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
+    composerArgs<Route.AwardBadge>(ComposerSize.FORM) { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
     composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
     // The dashboard sizes its own columns; Explore caps its feed to the reading width itself.
     composableFromEnd<Route.GitRepositories>(capWidth = false) { GitRepositoriesScreen(accountViewModel, nav) }
-    composableFromEnd<Route.NewGitRepository> { NewGitRepositoryScreen(accountViewModel, nav) }
+    composer<Route.NewGitRepository>(ComposerSize.FORM, NavFamily.END) { NewGitRepositoryScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
@@ -360,7 +360,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.CalendarEventDetail> {
         CalendarEventDetailScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
     }
-    composableFromBottomArgs<Route.NewCalendarCollection> { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
+    composerArgs<Route.NewCalendarCollection>(ComposerSize.FORM) { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
     composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.Geocaches> { GeocachesScreen(it.initialTab, accountViewModel, nav) }
     composableFromEndArgs<Route.GeocacheDetail> {
@@ -369,17 +369,17 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.GeocacheHunt> {
         GeocacheHuntScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
     }
-    composableFromBottomArgs<Route.LogGeocacheFind> {
+    composerArgs<Route.LogGeocacheFind>(ComposerSize.QUICK) {
         LogGeocacheFindScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
     }
-    composableFromBottomArgs<Route.NewGeocache> {
+    composerArgs<Route.NewGeocache>(ComposerSize.FORM) {
         NewGeocacheScreen(nav, accountViewModel, prefillGeohash = it.geohash)
     }
-    composableFromBottomArgs<Route.EditGeocache> {
+    composerArgs<Route.EditGeocache>(ComposerSize.FORM) {
         NewGeocacheScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
-    composableFromBottomArgs<Route.NewGeocacheHunt> { NewGeocacheHuntScreen(nav, accountViewModel, seedCache = it.seedCache) }
-    composableFromBottomArgs<Route.EditGeocacheHunt> {
+    composerArgs<Route.NewGeocacheHunt>(ComposerSize.FORM) { NewGeocacheHuntScreen(nav, accountViewModel, seedCache = it.seedCache) }
+    composerArgs<Route.EditGeocacheHunt>(ComposerSize.FORM) {
         NewGeocacheHuntScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
     composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachments, it.message) }
@@ -403,11 +403,11 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.Podcast> { PodcastScreen(it.pubkey, accountViewModel, nav) }
     composableFromEnd<Route.PodcastAuthoring> { PodcastAuthoringScreen(accountViewModel, nav) }
-    composableFromEnd<Route.EditPodcastShow> { EditPodcastShowScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.NewPodcastEpisode> { NewPodcastEpisodeScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
-    composableFromEnd<Route.NewPodcastTrailer> { NewPodcastTrailerScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
-    composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+    composer<Route.EditPodcastShow>(ComposerSize.FORM, NavFamily.END) { EditPodcastShowScreen(accountViewModel, nav) }
+    composerArgs<Route.NewPodcastEpisode>(ComposerSize.FORM, NavFamily.END) { NewPodcastEpisodeScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+    composer<Route.NewPodcastTrailer>(ComposerSize.FORM, NavFamily.END) { NewPodcastTrailerScreen(accountViewModel, nav) }
+    composerArgs<Route.NewMusicTrack>(ComposerSize.FORM, NavFamily.END) { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+    composerArgs<Route.NewMusicPlaylist>(ComposerSize.FORM, NavFamily.END) { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
     composableCapped<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
     composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
@@ -429,27 +429,27 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
     composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
     composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
-    composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
-    composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
+    composerArgs<Route.PeopleListMetadataEdit>(ComposerSize.FORM) { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
+    composerArgs<Route.FollowPackMetadataEdit>(ComposerSize.FORM) { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
     composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
-    composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
+    composerArgs<Route.BookmarkGroupMetadataEdit>(ComposerSize.FORM) { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
     composableFromEnd<Route.InterestSets> { ListOfInterestSetsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.InterestSetView> { InterestSetScreen(it.dTag, accountViewModel, nav) }
-    composableFromBottomArgs<Route.InterestSetMetadataEdit> { InterestSetMetadataScreen(it.dTag, accountViewModel, nav) }
+    composerArgs<Route.InterestSetMetadataEdit>(ComposerSize.FORM) { InterestSetMetadataScreen(it.dTag, accountViewModel, nav) }
     composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
     composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEnd<Route.EmojiPacks> { ListOfEmojiPacksScreen(accountViewModel, nav) }
     composableFromEnd<Route.MyEmojiList> { MyEmojiListScreen(accountViewModel, nav) }
     composableFromEnd<Route.BrowseEmojiSets> { BrowseEmojiSetsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EmojiPackView> { EmojiPackScreen(it.dTag, accountViewModel, nav) }
-    composableFromBottomArgs<Route.EmojiPackMetadataEdit> { EmojiPackMetadataScreen(it.dTag, accountViewModel, nav) }
+    composerArgs<Route.EmojiPackMetadataEdit>(ComposerSize.FORM) { EmojiPackMetadataScreen(it.dTag, accountViewModel, nav) }
     composableFromBottomArgs<Route.EmojiPackSelection> { EmojiPackSelectionScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav, it.startScanning) }
     composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
     composableFromBottomArgs<Route.ReloadMint> { ReloadMintScreen(it.requestId, accountViewModel, nav) }
     composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
-    composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
+    composerArgs<Route.EditProfile>(ComposerSize.FORM) { NewUserMetadataScreen(nav, accountViewModel) }
     composableCappedArgs<Route.Search> { SearchScreen(it.query, accountViewModel, nav) }
     composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
@@ -566,11 +566,11 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.CordnGroupList>(capWidth = false) {
         ChatListDetailScreen(::isPlatformChatDetailRoute, accountViewModel, nav) { CordnGroupListScreen(accountViewModel, it) }
     }
-    composableFromBottom<Route.CordnCreateGroup> { CordnCreateGroupScreen(accountViewModel, nav) }
-    composableFromBottom<Route.CordnCreateGroupMembers> { CordnCreateMembersScreen(accountViewModel, nav) }
+    composer<Route.CordnCreateGroup>(ComposerSize.FORM) { CordnCreateGroupScreen(accountViewModel, nav) }
+    composer<Route.CordnCreateGroupMembers>(ComposerSize.FORM) { CordnCreateMembersScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnInvitations> { CordnInvitationsScreen(accountViewModel, nav) }
-    composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
-    composableFromBottomArgs<Route.MarmotGroupEditInfo> { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
+    composer<Route.CreateMarmotGroup>(ComposerSize.FORM) { CreateGroupScreen(accountViewModel, nav) }
+    composerArgs<Route.MarmotGroupEditInfo>(ComposerSize.FORM) { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
     composableFromEndArgs<Route.PublicChatChannel> {
         PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
     }
@@ -604,7 +604,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.GeohashChats>(capWidth = false) {
         ChatListDetailScreen(::isGeohashDetailRoute, accountViewModel, nav) { GeohashChatsScreen(accountViewModel, it) }
     }
-    composableFromBottomArgs<Route.NewGeohashChat> { NewGeohashChatScreen(accountViewModel, nav) }
+    composerArgs<Route.NewGeohashChat>(ComposerSize.FORM) { NewGeohashChatScreen(accountViewModel, nav) }
     composableFromBottomArgs<Route.GeohashTeleport> { GeohashTeleportScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.RelayGroup> {
         RelayGroupChatScreen(
@@ -682,7 +682,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     }
     composableFromEndArgs<Route.BuzzInvite> { BuzzInviteScreen(it.link, accountViewModel, nav) }
     composableFromEnd<Route.Concords> { ConcordHomeScreen(accountViewModel, nav) }
-    composableFromEnd<Route.ConcordCreate> { ConcordCreateScreen(accountViewModel, nav) }
+    composer<Route.ConcordCreate>(ComposerSize.FORM, NavFamily.END) { ConcordCreateScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.RelayGroupMembers> {
         RelayGroupMembersScreen(
             id = it.id,
@@ -703,7 +703,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.BuzzJobBoard> { JobBoardScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
     composableFromEndArgs<Route.BuzzWorkflowBoard> { WorkflowRunBoardScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
     composableFromEndArgs<Route.BuzzAgentWork> { AgentWorkBoardScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
-    composableFromBottomArgs<Route.BuzzForumPost> { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
+    composerArgs<Route.BuzzForumPost>(ComposerSize.QUICK) { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
     composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
     composableFromEndArgs<Route.RelayGroupCreate> {
         RelayGroupCreateScreen(
@@ -727,13 +727,13 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
-    composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
+    composerArgs<Route.ChannelMetadataEdit>(ComposerSize.FORM) { ChannelMetadataScreen(it.id, accountViewModel, nav) }
+    composerArgs<Route.NewEphemeralChat>(ComposerSize.FORM) { NewEphemeralChatScreen(accountViewModel, nav) }
     composableFromBottom<Route.NewConversation> { NewConversationScreen(nav) }
-    composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
+    composerArgs<Route.NewGroupDM>(ComposerSize.QUICK) { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
     composableFromBottomArgs<Route.ShareToDM> { ShareToDMScreen(it.message, it.attachment, accountViewModel, nav) }
     composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, it.isPrivate, accountViewModel, nav) }
-    composableFromBottomArgs<Route.GeoPost> {
+    composerArgs<Route.GeoPost>(ComposerSize.QUICK) {
         GeoHashPostScreen(
             geohash = it.geohash,
             message = it.message,
@@ -745,7 +745,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav,
         )
     }
-    composableFromBottomArgs<Route.NewPublicMessage> {
+    composerArgs<Route.NewPublicMessage>(ComposerSize.QUICK) {
         NewPublicMessageScreen(
             to = it.toKey(),
             replyId = it.replyId,
@@ -754,20 +754,20 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottom<Route.NewGoal> {
+    composer<Route.NewGoal>(ComposerSize.FORM) {
         NewGoalScreen(
             accountViewModel = accountViewModel,
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.NewWorkout> {
+    composerArgs<Route.NewWorkout>(ComposerSize.FORM) {
         NewWorkoutScreen(
             prefill = it,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.HashtagPost> {
+    composerArgs<Route.HashtagPost>(ComposerSize.QUICK) {
         HashtagPostScreen(
             hashtag = it.hashtag,
             message = it.message,
@@ -779,7 +779,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav,
         )
     }
-    composableFromBottomArgs<Route.UrlPost> {
+    composerArgs<Route.UrlPost>(ComposerSize.QUICK) {
         UrlPostScreen(
             url = it.url,
             message = it.message,
@@ -791,7 +791,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav,
         )
     }
-    composableFromBottomArgs<Route.GenericCommentPost> {
+    composerArgs<Route.GenericCommentPost>(ComposerSize.QUICK) {
         ReplyCommentPostScreen(
             replyId = it.replyTo,
             message = it.message,
@@ -803,7 +803,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav,
         )
     }
-    composableFromBottomArgs<Route.NewProduct> {
+    composerArgs<Route.NewProduct>(ComposerSize.FORM) {
         NewProductScreen(
             message = it.message,
             attachment = it.attachment,
@@ -813,7 +813,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav,
         )
     }
-    composableFromBottomArgs<Route.NewLongFormPost> {
+    composerArgs<Route.NewLongFormPost>(ComposerSize.DOCUMENT) {
         LongFormPostScreen(
             draftId = it.draft,
             versionId = it.version,
@@ -821,7 +821,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.NewShortNote> {
+    composerArgs<Route.NewShortNote>(ComposerSize.QUICK) {
         ShortNotePostScreen(
             message = it.message,
             attachment = it.attachment,
@@ -836,7 +836,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.NewPoll> {
+    composerArgs<Route.NewPoll>(ComposerSize.QUICK) {
         PollPostScreen(
             message = it.message,
             draftId = it.draft,
@@ -844,7 +844,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.NewHighlight> {
+    composerArgs<Route.NewHighlight>(ComposerSize.QUICK) {
         NewHighlightScreen(
             quote = it.quote,
             url = it.url,
@@ -859,7 +859,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromBottomArgs<Route.VoiceReply> {
+    composerArgs<Route.VoiceReply>(ComposerSize.QUICK) {
         VoiceReplyScreen(
             replyToNoteId = it.replyToNoteId,
             recordingFilePath = it.recordingFilePath,

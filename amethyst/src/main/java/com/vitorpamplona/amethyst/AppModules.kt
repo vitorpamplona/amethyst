@@ -251,7 +251,7 @@ import java.io.File
 class AppModules(
     val appContext: Context,
 ) {
-    val appAgent = "Amethyst/${BuildConfig.VERSION_NAME}"
+    val appAgent = Amethyst.APP_AGENT
 
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =

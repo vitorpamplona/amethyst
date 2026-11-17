@@ -83,7 +83,6 @@ fun VoiceMessagePreview(
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     ManageMediaPlayer(
-        voiceMetadata = voiceMetadata,
         localFile = localFile,
         onCompletion = {
             isPlaying = false
@@ -264,14 +263,13 @@ private fun ReRecordButton(
 
 @Composable
 private fun ManageMediaPlayer(
-    voiceMetadata: AudioMeta,
     localFile: Path?,
     onCompletion: () -> Unit,
     onPlayerChanged: (MediaPlayer?) -> Unit,
     onRelease: () -> Unit,
 ) {
-    DisposableEffect(voiceMetadata.url, localFile) {
-        val player = createMediaPlayer(voiceMetadata.url, localFile)
+    DisposableEffect(localFile) {
+        val player = createMediaPlayer(localFile)
         player?.setOnCompletionListener { onCompletion() }
         onPlayerChanged(player)
 
@@ -371,18 +369,21 @@ private fun handleWaveformScrub(
     }
 }
 
-private fun createMediaPlayer(
-    url: String,
-    localFile: Path?,
-): MediaPlayer? =
+/**
+ * Plays only the recording on the device. Never hand [MediaPlayer] a URL: the platform player
+ * fetches it itself, outside the app's HTTP clients, so the request would skip Tor, the app's DNS
+ * and its User-Agent. Every caller previews a recording that has not been uploaded yet, so there is
+ * always a local file while there is something to play.
+ */
+private fun createMediaPlayer(localFile: Path?): MediaPlayer? =
     try {
-        MediaPlayer().apply {
-            if (localFile != null && localFile.toFile().exists()) {
+        if (localFile == null || !localFile.toFile().exists()) {
+            null
+        } else {
+            MediaPlayer().apply {
                 setDataSource(localFile.toString())
-            } else {
-                setDataSource(url)
+                prepare()
             }
-            prepare()
         }
     } catch (e: Exception) {
         Log.w("VoiceMessagePreview", "Failed to create MediaPlayer", e)

@@ -270,6 +270,9 @@ fun main(args: Array<String>) {
 
     val services = DesktopAppServices(modules)
     val spellCheck = DesktopSpellCheck(filesDir, version, modules.uiPrefs.spellCheck, modules.applicationIOScope)
+    // Read now, off the UI thread, so the first composer dialog doesn't wait on the disk.
+    val composerDialogSizes = ScreenWindowSizes(File(filesDir, "composer-dialog-sizes.properties"))
+    modules.applicationIOScope.launch { composerDialogSizes.preload() }
     val platform =
         DesktopAppPlatform(
             appVersionName = version,
@@ -279,6 +282,7 @@ fun main(args: Array<String>) {
             // Decrypted pictures of private communities: owner-only, like the rest of the profile.
             concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
             nappletHost = nappletHost,
+            composerDialogSizes = DesktopComposerDialogSizes(composerDialogSizes),
         )
     val root = DesktopAppRoot(modules, nappletHost)
 

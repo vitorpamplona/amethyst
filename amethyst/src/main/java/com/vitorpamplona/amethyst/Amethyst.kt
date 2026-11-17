@@ -24,6 +24,7 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
@@ -106,6 +107,9 @@ class Amethyst : Application() {
 
         lateinit var instance: AppModules
             private set
+
+        /** The User-Agent every HTTP request of this app carries, in every process. */
+        val APP_AGENT = "Amethyst/${BuildConfig.VERSION_NAME}"
     }
 
     /**
@@ -133,6 +137,7 @@ class Amethyst : Application() {
             // and `LocalCache` is empty in this process. Without it a napplet-process log looks
             // like a broken app rather than a deliberately secret-free sandbox.
             Log.i("AmethystApp") { "Napplet sandbox process starting — no account, no AppModules" }
+            NappletBlobHttp.userAgent = APP_AGENT
             return
         }
 
@@ -144,6 +149,7 @@ class Amethyst : Application() {
         MediaCallEventListener.verboseLogging = isDebug
         HttpClientEnvironment.isEmulator = isEmulator()
 
+        NappletBlobHttp.userAgent = APP_AGENT
         instance = AppModules(this)
 
         // Keeps the ~650 relay/ingest worker threads a cold start spawns from starving the UI

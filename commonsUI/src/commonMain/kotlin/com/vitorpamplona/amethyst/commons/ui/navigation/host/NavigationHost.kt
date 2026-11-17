@@ -27,6 +27,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
@@ -50,6 +53,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
  * one behind), so mid-transition what is under the host shows through. That is the window's own
  * background, which does not follow the theme the user picked, so a dark theme flashed light on
  * every back.
+ *
+ * A composer on top is drawn over the screen below it, in a dialog, where [composerDialogs] (a wide
+ * window with a mouse, see [composersOpenAsDialogs]); [popOut], when the platform has windows,
+ * moves it out to one of its own.
  */
 @Composable
 fun NavigationHost(
@@ -57,16 +64,30 @@ fun NavigationHost(
     destinations: NavDestinations,
     modifier: Modifier = Modifier,
     navFor: (NavStackEntry) -> INav = nav::forEntry,
+    composerDialogs: Boolean = composersOpenAsDialogs(),
+    popOut: ((NavStackEntry) -> Unit)? = null,
 ) {
+    // Every layout asks the destinations which routes are composers, before the first request.
+    remember(nav.stacks, destinations) { nav.stacks.opensOver = destinations::isComposer }
+    val windows = nav.stacks.windows()
+    val shown = nav.shownEntries()
     NavigationHost(
-        visible = nav.shownEntries(),
+        visible = shown,
         retained = nav.stacks.retained(),
         destinations = destinations,
         navFor = navFor,
-        // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
-        animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
+        // Switching tabs or sections swaps the screen at once; only a stack slides and fades. A
+        // composer open over a tab doesn't make the tabs a stack.
+        animated = !nav.stacks.isSingleScreen || shown.count { !nav.stacks.model.isOpenOver(it) } > 1,
         onBack = { nav.stacks.back() },
         modifier = modifier,
+        composerDialogs = composerDialogs,
+        popOut = popOut,
+        onHosted = { hosted ->
+            // The screens in windows of their own, for the windows to draw.
+            val byId = windows.mapNotNull { window -> hosted.firstOrNull { it.contentKey == window.contentKey }?.let { window.id to it } }.toMap()
+            if (byId != nav.hostedEntries) nav.hostedEntries = byId
+        },
     )
 }
 
@@ -84,6 +105,9 @@ fun NavigationHost(
     animated: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    composerDialogs: Boolean = false,
+    popOut: ((NavStackEntry) -> Unit)? = null,
+    onHosted: ((List<NavEntry<NavStackEntry>>) -> Unit)? = null,
 ) {
     val currentNavFor = rememberUpdatedState(navFor)
     // The shown entries first: the display takes the head of the decorated list.
@@ -99,7 +123,37 @@ fun NavigationHost(
             entryProvider = { entry -> destinations.entryFor(entry, currentNavFor.value) },
         )
 
-    Display(decorated.subList(0, visible.size), destinations, animated, onBack, modifier)
+    // The composers on top go in a dialog over the screen below them, unless nothing is below.
+    val screens =
+        if (composerDialogs) {
+            (visible.indexOfLast { destinations.composerSizeOf(it.route) == null } + 1).takeIf { it > 0 } ?: visible.size
+        } else {
+            visible.size
+        }
+    Display(decorated.subList(0, screens), destinations, animated, onBack, modifier)
+
+    if (onHosted != null) {
+        val hidden = decorated.subList(visible.size, decorated.size)
+        SideEffect { onHosted(hidden) }
+    }
+
+    if (screens < visible.size) {
+        // Only the newest composer shows; one it opened over another keeps the other's state.
+        val entry = visible.last()
+        val content = decorated[visible.lastIndex]
+        val size = destinations.composerSizeOf(entry.route) ?: ComposerSize.QUICK
+        key(entry.id) {
+            ComposerDialog(
+                size = size,
+                // Esc reaches the dialog before the composer's own back handler: a composer whose post
+                // is still waiting for the signer holds itself open, and stays.
+                onDismissRequest = { if (!entry.isHeldOpen()) currentNavFor.value(entry).popBack() },
+                popOut = popOut?.let { { it(entry) } },
+            ) {
+                content.Content()
+            }
+        }
+    }
 }
 
 @Composable
