@@ -28,3 +28,11 @@ import android.view.PointerIcon as AndroidPointerIcon
 private val ResizeCursor = PointerIcon(AndroidPointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW)
 
 internal actual fun Modifier.horizontalResizeCursor(): Modifier = pointerHoverIcon(ResizeCursor)
+
+private val VerticalResizeCursor = PointerIcon(AndroidPointerIcon.TYPE_VERTICAL_DOUBLE_ARROW)
+
+internal actual fun Modifier.verticalResizeCursor(): Modifier = pointerHoverIcon(VerticalResizeCursor)
+
+private val CornerResizeCursor = PointerIcon(AndroidPointerIcon.TYPE_TOP_LEFT_DIAGONAL_DOUBLE_ARROW)
+
+internal actual fun Modifier.cornerResizeCursor(): Modifier = pointerHoverIcon(CornerResizeCursor)

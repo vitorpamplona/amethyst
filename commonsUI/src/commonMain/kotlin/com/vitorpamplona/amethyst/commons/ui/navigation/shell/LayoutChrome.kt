@@ -75,8 +75,13 @@ fun rememberLayoutChrome(
                     windows = { ScreenWindows(nav, accountViewModel, root) },
                 )
             arrangement == NavArrangement.WINDOWS -> LayoutChrome(windows = { ScreenWindows(nav, accountViewModel, root) })
-            deck -> LayoutChrome(deck = { modifier -> DeckArea(accountViewModel = accountViewModel, mainNav = nav, modifier = modifier) })
-            else -> LayoutChrome.None
+            // The stack has windows only for the composers moved out of it.
+            deck ->
+                LayoutChrome(
+                    deck = { modifier -> DeckArea(accountViewModel = accountViewModel, mainNav = nav, modifier = modifier) },
+                    windows = { ScreenWindows(nav, accountViewModel, root) },
+                )
+            else -> LayoutChrome(windows = { ScreenWindows(nav, accountViewModel, root) })
         }
     }
 }

@@ -50,7 +50,9 @@ import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
+import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.arrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
@@ -415,7 +417,16 @@ private fun BuildNavigation(
     destinations: NavDestinations,
     root: AppRoot,
 ) {
-    NavigationHost(nav, destinations)
+    // A composer moves out to a window of its own where the platform has windows, unless every
+    // screen already is one.
+    val hasWindows = NavigationLayoutType.WINDOWS in LocalAppPlatform.current.navigationLayouts
+    val popOut: ((NavStackEntry) -> Unit)? =
+        if (hasWindows && nav.stacks.arrangement != NavArrangement.WINDOWS) {
+            remember(nav) { { entry -> nav.stacks.popOut(entry.id) } }
+        } else {
+            null
+        }
+    NavigationHost(nav, destinations, popOut = popOut)
 
     TrackScreen(nav, destinations, root)
     RelockOnLeave(nav)

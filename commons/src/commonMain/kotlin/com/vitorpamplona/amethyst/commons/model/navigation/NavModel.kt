@@ -100,7 +100,10 @@ sealed class NavModel(
     /** What the main window's host displays, bottom to top. */
     abstract fun shown(wide: Boolean): List<NavStackEntry>
 
-    /** Every entry whose state the main window's host keeps alive. Windows keep theirs in their own. */
+    /**
+     * Every entry whose state the main window's host keeps alive. A screen window of the stack or the
+     * tabs is among them, so moving a screen out keeps its state; the windows layout's keep their own.
+     */
     abstract fun retained(): List<NavStackEntry>
 
     /** The screens with an OS window of their own. */
@@ -111,6 +114,24 @@ sealed class NavModel(
 
     /** The last window asked to come to the front. */
     open val windowFocus: WindowFocus? get() = null
+
+    /**
+     * Whether a screen of this route is a composer: a task that opens over the screen that asked for
+     * it, not a place of its own. Set by the host from its destinations; until then, nothing is.
+     */
+    var opensOver: (Route) -> Boolean = { false }
+
+    /** The composer [entry] is, open over the main window and not yet moved out. */
+    open fun isOpenOver(entry: NavStackEntry): Boolean = false
+
+    /** Moves the composer [id] out to a window of its own. Whether it moved. */
+    open fun popOut(id: Long): Boolean = false
+
+    /** Closes the screen [id]: a tab, a screen window, a composer. Whether anything closed. */
+    open fun close(id: Long): Boolean = false
+
+    /** Takes over the screen windows another layout had open, so switching layouts keeps them, drafts and all. */
+    internal open fun adoptWindows(windows: List<NavStackEntry>) {}
 
     /** Hands the screen [id] another route in place: the next step of a flow, not a new screen. */
     fun replace(
@@ -179,7 +200,7 @@ sealed class SingleScreenModel(
      * ([NavStackEntry.holdOpen]) stays, and its tab flashes, whichever way the close was asked for:
      * its own ×, the tab menu's bulk closes, a window's title bar or back.
      */
-    fun close(id: Long): Boolean {
+    override fun close(id: Long): Boolean {
         val entry = entries.firstOrNull { it.id == id } ?: return false
         if (entry.isHeldOpen()) {
             flash(id)
@@ -197,9 +218,12 @@ sealed class SingleScreenModel(
     /** Opens the screen closed last again. */
     fun reopenClosed(): Boolean {
         val route = closed.removeLastOrNull() ?: return false
-        open(NavRequest(route, forceNew = entries.none { it.route == route }))
+        open(NavRequest(route, forceNew = !holds(route)))
         return true
     }
+
+    /** Whether a screen of [route] is open here. */
+    protected open fun holds(route: Route): Boolean = entries.any { it.route == route }
 
     /** Files a closing screen for [reopenClosed] and hands the screens it opened to its own opener. */
     protected fun forget(entry: NavStackEntry) {

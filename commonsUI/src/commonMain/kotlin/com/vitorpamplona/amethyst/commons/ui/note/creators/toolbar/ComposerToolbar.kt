@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.isComposerDialog
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
@@ -46,10 +47,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 /**
  * Whether a composer's tools wrap under the text rather than scroll in a strip at the bottom:
  * on the docked tier, a desktop-sized window. Not on the rail tier, which landscape phones reach,
- * where the keyboard leaves no height for a second row of tools.
+ * where the keyboard leaves no height for a second row of tools. Nor in a composer's dialog, whose
+ * strip sits at its bottom edge like a dialog's footer.
  */
 @Composable
-fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
+fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER && !isComposerDialog()
 
 /** Lines the wrapped tools up with a composer's text: past the side padding and the avatar beside it. */
 val ComposerToolsStartPadding: Dp = Size10dp + Size35dp

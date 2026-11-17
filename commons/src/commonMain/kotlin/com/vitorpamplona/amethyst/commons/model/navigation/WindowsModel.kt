@@ -102,6 +102,10 @@ class WindowsModel(
         if (!request.background) raise(window.id)
     }
 
+    override fun adoptWindows(windows: List<NavStackEntry>) {
+        screenWindows.addAll(windows.filter { it !in screenWindows })
+    }
+
     override fun activate(id: Long) {
         val entry = entries.firstOrNull { it.id == id } ?: return
         if (isMainScreen(entry)) activeId = id

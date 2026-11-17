@@ -96,3 +96,9 @@ fun PaneSplitter(
 
 /** The platform's sideways-resize pointer, where there is a pointer. */
 internal expect fun Modifier.horizontalResizeCursor(): Modifier
+
+/** The platform's up-and-down resize pointer, where there is a pointer. */
+internal expect fun Modifier.verticalResizeCursor(): Modifier
+
+/** The platform's corner (bottom-right) resize pointer, where there is a pointer. */
+internal expect fun Modifier.cornerResizeCursor(): Modifier

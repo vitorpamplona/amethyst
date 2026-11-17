@@ -43,15 +43,17 @@ class ScreenWindowSizes(
     }
 
     @Synchronized
-    fun sizeFor(kind: String): DpSize {
-        val saved =
-            sizes
-                .getProperty(kind)
-                ?.split(',')
-                ?.mapNotNull { it.toFloatOrNull() }
-                ?.takeIf { it.size == 2 && it.all { side -> side >= MIN_SIDE } }
-        return if (saved != null) DpSize(saved[0].dp, saved[1].dp) else defaultFor(kind)
-    }
+    fun sizeFor(kind: String): DpSize = saved(kind) ?: defaultFor(kind)
+
+    /** The size [kind] was left at, or null when it never was (or the entry can't be read). */
+    @Synchronized
+    fun saved(kind: String): DpSize? =
+        sizes
+            .getProperty(kind)
+            ?.split(',')
+            ?.mapNotNull { it.toFloatOrNull() }
+            ?.takeIf { it.size == 2 && it.all { side -> side.isFinite() && side >= MIN_SIDE } }
+            ?.let { DpSize(it[0].dp, it[1].dp) }
 
     @Synchronized
     fun save(
@@ -60,6 +62,21 @@ class ScreenWindowSizes(
     ) {
         if (!size.width.value.isFinite() || !size.height.value.isFinite()) return
         sizes.setProperty(kind, "${size.width.value.toInt()},${size.height.value.toInt()}")
+        write()
+    }
+
+    /** Forgets [kind]'s size, so the next one opens at the default. */
+    @Synchronized
+    fun forget(kind: String) {
+        if (sizes.remove(kind) != null) write()
+    }
+
+    /** Reads the file now, off the UI thread, so the first window or dialog doesn't wait on the disk. */
+    fun preload() {
+        sizes
+    }
+
+    private fun write() {
         runCatching { file.outputStream().use { sizes.store(it, null) } }.onFailure { Log.w("ScreenWindowSizes", "Could not write $file", it) }
     }
 

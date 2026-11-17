@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation3.runtime.NavEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
@@ -72,6 +73,14 @@ class Nav(
      * then opens in the background (a tab or window that does not take the focus). Read once.
      */
     var openNextInBackground: Boolean = false
+
+    /**
+     * The main window host's screens that it keeps but does not show, by entry id: a screen window
+     * draws its screen from here, with the ViewModels and saved state the host kept, so a tab or a
+     * composer moved out to a window carries on where it was. Set by the host after it composes.
+     */
+    var hostedEntries: Map<Long, NavEntry<NavStackEntry>> by mutableStateOf(emptyMap())
+        internal set
 
     /** What the navigation host displays: the stack, or the one screen of a tab or section. */
     fun shownEntries(): List<NavStackEntry> = stacks.shown(wide = isDrawerDocked)
