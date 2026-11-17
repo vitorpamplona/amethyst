@@ -26,7 +26,15 @@ import androidx.compose.runtime.Stable
 class SelectedMedia(
     val uri: MediaUri,
     val mimeType: String?,
+    /**
+     * A picture that moves although its type doesn't say so (an animated WebP), found by
+     * [refineMediaType]. It is never cropped or re-encoded, which would keep only its first frame.
+     */
+    val animated: Boolean = false,
 ) {
+    /** A picture that plays: a GIF, or one found [animated]. */
+    fun isAnimated() = isGif() || animated
+
     fun isImage() = mimeType?.startsWith("image")
 
     fun isGif() = mimeType?.equals("image/gif", ignoreCase = true) == true
@@ -43,7 +51,7 @@ class SelectedMedia(
     fun isDocument() = mimeType == "application/pdf"
 
     /** Whether a crop can apply: a still picture (a GIF's animation and an SVG would not survive one). */
-    fun canCrop(): Boolean = isImage() == true && !isGif() && mimeType?.contains("svg", ignoreCase = true) != true
+    fun canCrop(): Boolean = isImage() == true && !isAnimated() && mimeType?.contains("svg", ignoreCase = true) != true
 
     /**
      * Returns true if [MediaCompressor.compress] would actually compress this file when a
@@ -59,7 +67,8 @@ class SelectedMedia(
         return when {
             mt.startsWith("video") -> true
             mt.startsWith("image") ->
-                !mt.contains("gif") &&
+                !animated &&
+                    !mt.contains("gif") &&
                     !mt.contains("svg") &&
                     !isAvif(mt)
             else -> false

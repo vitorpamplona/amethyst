@@ -164,6 +164,27 @@ real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get n
   `DesktopAudioUploadTest` (real ffmpeg), `MediaStudioRenderTest` (`audio`, `pdf`, `file-cards`).
 - **Still open:** desktop's Files button is a stub, so a PDF can't be attached there.
 
+**GIFs and animated WebP.** A GIF left alone still goes up as the same file. Editing one is opt-in.
+- **Playing.** GIFs play in the Studio's stage and thumbnails and in the composer's card on
+  desktop too. `CroppedImage(animated = true)` draws through the platform's `AnimatedImage`, and
+  desktop's `AnimatedGifImage` now reads local files. A moving picture's shape comes from its
+  header (`PictureHeaders.gifSize`, `webpCanvasSize`), since the player reports no size.
+- **Crop and trim.** A GIF offers Crop and Trim where the platform can apply them
+  (`MediaUploader.gifCrop`, `gifTrim`). An edited GIF goes up as an MP4 (`editGif`, run by
+  `MultiOrchestrator.withEdits`), and the Studio says so: "A cropped GIF is sent as a video", and
+  "Convert GIF to MP4" is shown on and locked.
+  - Desktop: ffmpeg crops and cuts in the GIF to MP4 encode, frame-accurate.
+  - Android: trim only. The platform converter makes the MP4 and `VideoTrimmer` cuts it, from the
+    key frame (one a second) at or before the start. Its length comes from the GIF's frame delays
+    (`PictureHeaders.gifDurationMs`) and its frames from `android.graphics.Movie`. No crop: that
+    converter takes none.
+- **Animated WebP.** It is found by its header (`refineMediaType` sets `SelectedMedia.animated`;
+  the avatar crop step checks too). It gets no Crop and no Quality re-encode, and Android's
+  `MediaCompressor` uploads it unchanged at any quality. It used to keep one frame.
+- **Tests:** `PictureHeadersTest`, `MediaTypeRefinementTest`, `DesktopGifEditTest` (real ffmpeg:
+  the GIF's length and frames, crop and trim into an MP4 of the right size and length, an untouched
+  GIF sent as is).
+
 Not yet:
 - rotate and mirror in the crop; playing the trimmed part in the Studio (the stage shows frames, not playback)
 - the long-form preview shows the text without the attached media until it is posted

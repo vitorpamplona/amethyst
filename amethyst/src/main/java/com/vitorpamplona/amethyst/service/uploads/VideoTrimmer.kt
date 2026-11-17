@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Movie
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
@@ -29,7 +31,9 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
 import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -128,14 +132,50 @@ object VideoTrimmer {
         }
     }
 
-    /** How long [uri] runs, in milliseconds. */
+    /** How long [uri] runs, in milliseconds: a video's own length, or a GIF's frame delays added up. */
     fun durationMs(
         context: Context,
         uri: Uri,
     ): Long? =
-        retrieve(context, uri) {
-            it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+        gifBytes(context, uri)?.let(PictureHeaders::gifDurationMs)
+            ?: retrieve(context, uri) { it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() }
+
+    /** The whole file when [uri] is a GIF (the retriever can't open one), else null. */
+    private fun gifBytes(
+        context: Context,
+        uri: Uri,
+    ): ByteArray? =
+        try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val header = ByteArray(PictureHeaders.GIF_HEADER_BYTES)
+                var read = 0
+                while (read < header.size) {
+                    val n = stream.read(header, read, header.size - read)
+                    if (n < 0) break
+                    read += n
+                }
+                if (PictureHeaders.gifSize(header.copyOf(read)) == null) null else header.copyOf(read) + stream.readBytes()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read $uri", e)
+            null
         }
+
+    /** The GIF [bytes] drawn at [atMs], at most [maxEdge] on its long side. */
+    @Suppress("DEPRECATION") // Movie is the platform's only GIF decoder that seeks to a time.
+    private fun gifFrame(
+        bytes: ByteArray,
+        atMs: Long,
+        maxEdge: Int,
+    ): Bitmap? {
+        val movie = Movie.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        if (movie.width() <= 0 || movie.height() <= 0) return null
+        val length = movie.duration().takeIf { it > 0 } ?: 1
+        movie.setTime((atMs.coerceAtLeast(0) % length).toInt())
+        val frame = createBitmap(movie.width(), movie.height())
+        movie.draw(Canvas(frame), 0f, 0f)
+        return fitWithin(frame, maxEdge)
+    }
 
     /** A JPEG of the frame near [atMs], as it displays, at most [maxEdge] on its long side. */
     fun frame(
@@ -144,7 +184,7 @@ object VideoTrimmer {
         atMs: Long,
         maxEdge: Int,
     ): ByteArray? =
-        retrieve(context, uri) { retriever ->
+        gifBytes(context, uri)?.let { gif -> gifFrame(gif, atMs, maxEdge)?.let(::toJpeg) } ?: retrieve(context, uri) { retriever ->
             val us = atMs.coerceAtLeast(0) * 1000
             val bitmap =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -152,14 +192,18 @@ object VideoTrimmer {
                 } else {
                     retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { fitWithin(it, maxEdge) }
                 } ?: return@retrieve null
-            try {
-                ByteArrayOutputStream().use { bytes ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, FRAME_JPEG_QUALITY, bytes)
-                    bytes.toByteArray()
-                }
-            } finally {
-                bitmap.recycle()
+            toJpeg(bitmap)
+        }
+
+    /** [bitmap] as JPEG bytes; recycles it. */
+    private fun toJpeg(bitmap: Bitmap): ByteArray =
+        try {
+            ByteArrayOutputStream().use { bytes ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, FRAME_JPEG_QUALITY, bytes)
+                bytes.toByteArray()
             }
+        } finally {
+            bitmap.recycle()
         }
 
     private fun fitWithin(

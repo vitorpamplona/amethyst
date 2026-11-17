@@ -514,6 +514,26 @@ class DesktopMediaUploader(
 
     override val videoTrim: Boolean get() = videoCompressor.available
 
+    // ffmpeg reads a GIF like a video: its length and frames, and it cuts and crops it in the encode.
+    override val gifCrop: Boolean get() = videoCompressor.available
+
+    override val gifTrim: Boolean get() = videoCompressor.available
+
+    override suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? {
+        val file =
+            videoCompressor.editGif(
+                fileOf(uri),
+                crop?.let { floatArrayOf(it.left, it.top, it.width, it.height) },
+                trim?.startMs,
+                trim?.durationMs,
+            ) ?: return null
+        return MediaCompressorResult(StringMediaUri(file.absolutePath), MP4_CONTENT_TYPE, file.length())
+    }
+
     override suspend fun videoDurationMs(uri: MediaUri): Long? = videoCompressor.durationMs(fileOf(uri))
 
     override suspend fun trimVideo(

@@ -100,6 +100,7 @@ internal fun SwitchRow(
     subtitle: String?,
     checked: Boolean,
     icon: MaterialSymbol? = null,
+    enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -107,7 +108,7 @@ internal fun SwitchRow(
             .fillMaxWidth()
             .clip(TileShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
             .heightIn(min = 52.dp)
             .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -121,7 +122,7 @@ internal fun SwitchRow(
             if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // Null: the tile is the toggle, so the switch must not take the click for itself.
-        Switch(checked = checked, onCheckedChange = null, colors = studioSwitchColors(), modifier = Modifier.scale(0.8f))
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = studioSwitchColors(), modifier = Modifier.scale(0.8f))
     }
 }
 
@@ -135,4 +136,8 @@ internal fun studioSwitchColors() =
         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
         uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
         uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        // A locked choice (an edited GIF is always a video) stays readable: the accent, dimmed.
+        disabledCheckedThumbColor = Color.White.copy(alpha = 0.8f),
+        disabledCheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+        disabledCheckedBorderColor = Color.Transparent,
     )

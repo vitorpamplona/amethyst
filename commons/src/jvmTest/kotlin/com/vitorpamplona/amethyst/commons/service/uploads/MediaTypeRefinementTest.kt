@@ -121,6 +121,9 @@ class MediaTypeRefinementTest {
                 "/clip.mp4" to mp4("vide", "soun"),
                 "/song.m4a" to mp4("soun"),
                 "/broken.mp4" to ByteArray(10),
+                "/anim.webp" to PictureHeadersTest().webp(animated = true),
+                "/still.webp" to PictureHeadersTest().webp(animated = false),
+                "/anim.gif" to PictureHeadersTest().gif(10, 10),
             ),
         )
 
@@ -161,5 +164,30 @@ class MediaTypeRefinementTest {
             media.uploadEach(ServerName("one", "https://one.example"), mockk<Account>(), uploader)
 
             assertEquals(listOf("audio/mp4", "video/mp4"), uploader.sentTypes.sortedBy { it })
+        }
+
+    @Test
+    fun anAnimatedWebpIsNeverCroppedOrReencoded() =
+        runTest {
+            val anim = uploader.refineMediaType(SelectedMedia(StringMediaUri("/anim.webp"), "image/webp"))
+            assertEquals(true, anim.animated)
+            assertEquals(false, anim.canCrop())
+            assertEquals(false, anim.isCompressible())
+
+            val still = uploader.refineMediaType(SelectedMedia(StringMediaUri("/still.webp"), "image/webp"))
+            assertEquals(false, still.animated)
+            assertEquals(true, still.canCrop())
+        }
+
+    @Test
+    fun aMovingPictureTakesItsShapeFromItsHeader() =
+        runTest {
+            val webp = SelectedMediaProcessing(SelectedMedia(StringMediaUri("/anim.webp"), "image/webp"))
+            webp.checkType(uploader)
+            assertEquals(640f / 360f, webp.displayAspectRatio)
+
+            val gif = SelectedMediaProcessing(SelectedMedia(StringMediaUri("/anim.gif"), "image/gif"))
+            gif.checkType(uploader)
+            assertEquals(2f, gif.displayAspectRatio)
         }
 }

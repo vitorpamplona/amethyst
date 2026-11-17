@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
 import java.io.File
+import java.util.Locale
 
 /** Builds the `ffmpeg` argument lists the desktop compressor runs. Pure, so it is unit-tested without ffmpeg. */
 object FfmpegCommandBuilder {
@@ -48,13 +49,23 @@ object FfmpegCommandBuilder {
         encoder: String,
         bitrateBps: Int,
         shortSide: Int?,
+        /** The part to keep, `[x, y, w, h]` as fractions of the frame; null keeps it all. */
+        crop: FloatArray? = null,
+        startMs: Long? = null,
+        durationMs: Long? = null,
     ): List<String> =
         buildList {
-            addAll(prefix(ffmpeg, input))
+            if (startMs == null) {
+                addAll(prefix(ffmpeg, input))
+            } else {
+                // Before -i: a fast seek, exact on a re-encode.
+                addAll(listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-ss", seconds(startMs), "-i", input.absolutePath))
+            }
+            if (durationMs != null) addAll(listOf("-t", seconds(durationMs)))
             // First video and (optional) first audio stream only; no subtitles, data tracks or chapters.
             addAll(listOf("-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn", "-map_chapters", "-1"))
             addAll(listOf("-c:v", encoder, "-b:v", "$bitrateBps", "-maxrate", "$bitrateBps", "-bufsize", "${2L * bitrateBps}"))
-            addAll(listOf("-pix_fmt", "yuv420p", "-vf", scaleFilter(shortSide)))
+            addAll(listOf("-pix_fmt", "yuv420p", "-vf", listOfNotNull(crop?.let(::cropFilter), scaleFilter(shortSide)).joinToString(",")))
             addAll(listOf("-c:a", "aac", "-b:a", "128k"))
             addAll(STRIP_METADATA)
             addAll(listOf("-movflags", "+faststart"))
@@ -153,6 +164,12 @@ object FfmpegCommandBuilder {
             }
             addAll(listOf("-progress", "pipe:1", output.path))
         }
+
+    /** The `crop` filter for `[x, y, w, h]` fractions of the frame, rounded to whole pixels. */
+    fun cropFilter(crop: FloatArray): String {
+        val (x, y, w, h) = crop.map { "%.6f".format(Locale.ROOT, it) }
+        return "crop=trunc(iw*$w):trunc(ih*$h):trunc(iw*$x):trunc(ih*$y)"
+    }
 
     /** [ms] as ffmpeg's seconds, always with a dot. */
     private fun seconds(ms: Long): String = "${ms / 1000}.${(ms % 1000).toString().padStart(3, '0')}"

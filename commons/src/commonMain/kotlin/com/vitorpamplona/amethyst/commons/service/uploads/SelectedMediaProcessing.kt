@@ -42,7 +42,8 @@ class SelectedMediaProcessing(
     private var typeChecked = false
 
     /**
-     * Relabels [media] by its content, once: an MP4-family file whose tracks are all sound is audio.
+     * Relabels [media] by its content, once: an MP4-family file whose tracks are all sound is audio,
+     * a WebP that moves is [SelectedMedia.animated], and a moving picture's header gives [displayAspectRatio].
      * The Studio runs it as it opens, and every upload runs it first, so nothing is sent as a video
      * that has no picture.
      */
@@ -50,7 +51,17 @@ class SelectedMediaProcessing(
         if (typeChecked) return
         val refined = uploader.refineMediaType(media)
         typeChecked = true
-        if (refined.mimeType != media.mimeType) media = refined
+        if (refined.mimeType != media.mimeType || refined.animated != media.animated) media = refined
+        // A moving picture is drawn by a player that reports no size: its header gives the card its shape.
+        if (displayAspectRatio == null && media.isAnimated()) {
+            val size =
+                if (media.isGif()) {
+                    uploader.readRange(media.uri, 0, PictureHeaders.GIF_HEADER_BYTES)?.let(PictureHeaders::gifSize)
+                } else {
+                    uploader.readRange(media.uri, 0, PictureHeaders.WEBP_HEADER_BYTES)?.let(PictureHeaders::webpCanvasSize)
+                }
+            size?.let { (w, h) -> displayAspectRatio = w.toFloat() / h }
+        }
     }
 
     /** This file's own upload options, edited in the media studio; snapshot state so its UI follows. */

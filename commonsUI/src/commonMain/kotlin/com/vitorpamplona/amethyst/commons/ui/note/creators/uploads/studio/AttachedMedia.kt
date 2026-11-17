@@ -210,6 +210,7 @@ fun AttachedMediaCard(
                     // The decoded size, after EXIF orientation: the card takes this shape, cropped.
                     onAspect = { item.displayAspectRatio = it },
                     modifier = Modifier.fillMaxSize(),
+                    animated = media.isAnimated(),
                 )
             media.isVideo() == true -> {
                 // The first frame that will be sent, where the platform decodes frames (desktop has no thumbnail otherwise).

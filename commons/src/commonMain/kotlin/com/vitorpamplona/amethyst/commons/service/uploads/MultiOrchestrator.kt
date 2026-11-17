@@ -440,8 +440,8 @@ class MultiOrchestrator(
     }
 
     /**
-     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture or [trim] of a
-     * video when there is one (deleted once [send] returns), else the picked file. An edit that
+     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture, [trim] of a video,
+     * or either of a GIF (as an MP4) when there is one (deleted once [send] returns), else the picked file. An edit that
      * cannot be written fails the file ([UploadError.CROP_FAILED], [UploadError.TRIM_FAILED])
      * rather than sending all of it.
      */
@@ -455,6 +455,9 @@ class MultiOrchestrator(
         checkType(uploader)
         val edited =
             when {
+                // An edited GIF goes up as a video: the only way to keep its motion and cut it.
+                media.isGif() && (crop != null || trim != null) ->
+                    uploader.editGif(media.uri, crop, trim) ?: return orchestrator.error(if (crop != null) UploadError.CROP_FAILED else UploadError.TRIM_FAILED)
                 crop != null && media.canCrop() -> uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)
                 trim != null && media.isVideo() == true -> uploader.trimVideo(media.uri, media.mimeType, trim) ?: return orchestrator.error(UploadError.TRIM_FAILED)
                 else -> return send(media.uri, media.mimeType)

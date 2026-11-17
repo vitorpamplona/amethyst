@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_crop_free
 import com.vitorpamplona.amethyst.commons.resources.media_crop_hint
 import com.vitorpamplona.amethyst.commons.resources.media_crop_reset
+import com.vitorpamplona.amethyst.commons.resources.media_gif_edit_hint
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -142,7 +143,7 @@ internal fun CropTool(
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringRes(Res.string.media_crop_hint),
+                stringRes(if (item.media.isGif()) Res.string.media_gif_edit_hint else Res.string.media_crop_hint),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),

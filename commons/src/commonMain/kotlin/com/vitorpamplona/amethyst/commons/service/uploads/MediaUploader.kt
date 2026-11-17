@@ -103,6 +103,23 @@ interface MediaUploader {
         crop: ImageCrop,
     ): MediaCompressorResult? = null
 
+    /** Whether [editGif] can crop a GIF here. */
+    val gifCrop: Boolean get() = false
+
+    /** Whether [editGif] can trim a GIF here, and [videoDurationMs] and [videoFrame] read one. */
+    val gifTrim: Boolean get() = false
+
+    /**
+     * The GIF at [uri] as an MP4 holding only its [crop] and [trim] (either may be null), for a GIF
+     * the user edited: a GIF left alone goes up as it is. Null when it could not be written, or
+     * when this platform can't apply what was asked ([gifCrop], [gifTrim]). The caller owns the file.
+     */
+    suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? = null
+
     /** [length] bytes of the file at [uri] from [offset] (fewer at its end); null when it can't be read. */
     suspend fun readRange(
         uri: MediaUri,

@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
+import com.vitorpamplona.amethyst.commons.ui.note.platform.AnimatedImage
 import kotlin.math.roundToInt
 
 /**
@@ -46,7 +47,13 @@ fun CroppedImage(
     contentScale: ContentScale,
     modifier: Modifier = Modifier,
     onAspect: (Float) -> Unit = {},
+    /** Draws through the platform's player, so a GIF moves; such a player reports no size, so [imageAspect] must come from elsewhere. */
+    animated: Boolean = false,
 ) {
+    if (animated && model is String) {
+        AnimatedCroppedImage(model, crop, imageAspect, contentScale, modifier)
+        return
+    }
     if (crop == null || imageAspect == null || imageAspect <= 0f) {
         AsyncImage(
             model = model,
@@ -69,28 +76,52 @@ fun CroppedImage(
                 val size = state.painter.intrinsicSize
                 if (size.width > 0f && size.height > 0f) onAspect(size.width / size.height)
             },
-            modifier =
-                Modifier.layout { measurable, constraints ->
-                    if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
-                        val placeable = measurable.measure(constraints)
-                        return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
-                    }
-                    val boxW = constraints.maxWidth.toFloat()
-                    val boxH = constraints.maxHeight.toFloat()
-                    // The cropped part's own shape, scaled to cover (Crop) or fit the space.
-                    val partAspect = imageAspect * crop.width / crop.height
-                    val cover = contentScale == ContentScale.Crop
-                    val widthLeads = (partAspect > boxW / boxH) != cover
-                    val partW = if (widthLeads) boxW else boxH * partAspect
-                    val partH = if (widthLeads) boxW / partAspect else boxH
-                    // The whole picture at the scale that makes that part this size.
-                    val fullW = (partW / crop.width).roundToInt().coerceAtLeast(1)
-                    val fullH = (partH / crop.height).roundToInt().coerceAtLeast(1)
-                    val placeable = measurable.measure(Constraints.fixed(fullW, fullH))
-                    val x = ((boxW - partW) / 2f - crop.left * fullW).roundToInt()
-                    val y = ((boxH - partH) / 2f - crop.top * fullH).roundToInt()
-                    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(x, y) }
-                },
+            modifier = Modifier.cropPlacement(crop, imageAspect, contentScale),
         )
     }
 }
+
+@Composable
+private fun AnimatedCroppedImage(
+    url: String,
+    crop: ImageCrop?,
+    imageAspect: Float?,
+    contentScale: ContentScale,
+    modifier: Modifier,
+) {
+    if (crop == null || imageAspect == null || imageAspect <= 0f) {
+        AnimatedImage(url, contentDescription = null, contentScale = contentScale, modifier = modifier, onError = {})
+        return
+    }
+    Box(modifier.clipToBounds()) {
+        AnimatedImage(url, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.cropPlacement(crop, imageAspect, contentScale), onError = {})
+    }
+}
+
+/** Lays the whole picture out so only [crop] of it lands in the space, scaled as [contentScale] would place that part. */
+private fun Modifier.cropPlacement(
+    crop: ImageCrop,
+    imageAspect: Float,
+    contentScale: ContentScale,
+): Modifier =
+    layout { measurable, constraints ->
+        if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+            val placeable = measurable.measure(constraints)
+            return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+        }
+        val boxW = constraints.maxWidth.toFloat()
+        val boxH = constraints.maxHeight.toFloat()
+        // The cropped part's own shape, scaled to cover (Crop) or fit the space.
+        val partAspect = imageAspect * crop.width / crop.height
+        val cover = contentScale == ContentScale.Crop
+        val widthLeads = (partAspect > boxW / boxH) != cover
+        val partW = if (widthLeads) boxW else boxH * partAspect
+        val partH = if (widthLeads) boxW / partAspect else boxH
+        // The whole picture at the scale that makes that part this size.
+        val fullW = (partW / crop.width).roundToInt().coerceAtLeast(1)
+        val fullH = (partH / crop.height).roundToInt().coerceAtLeast(1)
+        val placeable = measurable.measure(Constraints.fixed(fullW, fullH))
+        val x = ((boxW - partW) / 2f - crop.left * fullW).roundToInt()
+        val y = ((boxH - partH) / 2f - crop.top * fullH).roundToInt()
+        layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(x, y) }
+    }

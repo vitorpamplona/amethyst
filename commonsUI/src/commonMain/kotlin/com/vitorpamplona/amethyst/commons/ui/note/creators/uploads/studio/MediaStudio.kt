@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
+import com.vitorpamplona.amethyst.commons.resources.media_gif_edited_note
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_suggested
@@ -222,6 +223,9 @@ fun studioToolsFor(
     support: VideoCompressionSupport,
     /** The platform can trim a video ([MediaUploader.videoTrim]). */
     trim: Boolean = false,
+    /** The platform can crop or trim a GIF, which then goes up as a video ([MediaUploader.gifCrop], [MediaUploader.gifTrim]). */
+    gifCrop: Boolean = false,
+    gifTrim: Boolean = false,
 ): List<StudioTool> =
     buildList {
         val hasQuality =
@@ -231,8 +235,8 @@ fun studioToolsFor(
                 else -> media.isCompressible()
             }
         if (hasQuality) add(StudioTool.QUALITY)
-        if (media.canCrop() && media.isCompressible()) add(StudioTool.CROP)
-        if (trim && media.isVideo() == true) add(StudioTool.TRIM)
+        if ((media.canCrop() && media.isCompressible()) || (gifCrop && media.isGif())) add(StudioTool.CROP)
+        if ((trim && media.isVideo() == true) || (gifTrim && media.isGif())) add(StudioTool.TRIM)
         if (media.isImage() == true || media.isVideo() == true) add(StudioTool.ALT)
         add(StudioTool.PRIVACY)
     }
@@ -276,7 +280,7 @@ fun MediaStudio(
     val cropped = rememberCroppedSources(uploader, previews)
     // The shape each picture's crop is held to while this studio is open.
     val cropAspects = remember { mutableStateMapOf<SelectedMediaProcessing, CropAspect>() }
-    val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim)
+    val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim, uploader.gifCrop, uploader.gifTrim)
     val trimSession = remember(current) { TrimSession() }
     var picked by remember(current) { mutableStateOf(initialTool) }
     // The tools can change under the user: a "video" found to be sound loses its video tools.
@@ -500,11 +504,15 @@ private fun StudioPreview(
 
         media.isImage() == true -> {
             val zoomState = rememberZoomState()
-            AsyncImage(
-                model = media.uri.toString(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+            // A GIF or an animated WebP plays here as it will in the note, cropped as it will be sent.
+            CroppedImage(
+                media.uri.toString(),
+                item.options.crop,
+                item.displayAspectRatio,
+                ContentScale.Fit,
+                Modifier.fillMaxSize().zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+                onAspect = { item.displayAspectRatio = it },
+                animated = media.isAnimated(),
             )
         }
 
@@ -708,6 +716,7 @@ private fun Thumbnail(
                     ContentScale.Crop,
                     Modifier.fillMaxSize(),
                     onAspect = { item.displayAspectRatio = it },
+                    animated = media.isAnimated(),
                 )
             media.isVideo() == true -> rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
             else -> Icon(fileSymbol(media), contentDescription = null)
@@ -825,10 +834,19 @@ private fun QualityTool(
         isVideo && support == VideoCompressionSupport.NeedsFfmpeg ->
             Text(stringRes(Res.string.video_compression_needs_ffmpeg), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
 
-        media.isGif() ->
-            SwitchRow(stringRes(Res.string.convert_gif_to_mp4_label), stringRes(Res.string.media_studio_gif_description), item.options.convertGifToMp4, MaterialSymbols.Movie) {
+        media.isGif() -> {
+            // A cropped or trimmed GIF goes up as a video whatever this says, so it says so.
+            val edited = item.options.crop != null || item.options.trim != null
+            SwitchRow(
+                stringRes(Res.string.convert_gif_to_mp4_label),
+                stringRes(if (edited) Res.string.media_gif_edited_note else Res.string.media_studio_gif_description),
+                item.options.convertGifToMp4 || edited,
+                MaterialSymbols.Movie,
+                enabled = !edited,
+            ) {
                 item.options = item.options.copy(convertGifToMp4 = it)
             }
+        }
 
         isVideo -> VideoQuality(item, uploader)
 

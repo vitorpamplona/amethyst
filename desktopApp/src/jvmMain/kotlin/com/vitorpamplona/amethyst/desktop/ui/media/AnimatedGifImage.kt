@@ -51,6 +51,8 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.impl.use
+import java.io.File
+import java.net.URI
 
 private const val MIN_FRAME_DURATION_MS = 20
 
@@ -266,6 +268,9 @@ internal class GifPlayer(
  * download fails: an error page is not a GIF.
  */
 private suspend fun gifBytes(url: String): ByteArray? {
+    // A file the user picked to post (the media Studio, the composer's card): read it in place.
+    localFile(url)?.let { return it.readBytes() }
+
     val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
     val key = "gif:$url"
     disk?.openSnapshot(key)?.use { snapshot ->
@@ -315,3 +320,14 @@ private suspend fun loadGif(url: String): GifSource? =
         println("AnimatedGif: failed to load $url — ${e.message}")
         null
     }
+
+/** The file [url] names when it is a local path (`/home/…`, `C:\…`) or a `file:` URL; null for anything fetched. */
+private fun localFile(url: String): File? {
+    val file =
+        when {
+            url.startsWith("file:") -> runCatching { File(URI(url)) }.getOrNull()
+            url.startsWith("http://") || url.startsWith("https://") -> null
+            else -> File(url)
+        }
+    return file?.takeIf { it.isFile }
+}

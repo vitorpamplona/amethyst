@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_crop_reset
+import com.vitorpamplona.amethyst.commons.resources.media_gif_edited_note
 import com.vitorpamplona.amethyst.commons.resources.media_trim_hint
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -169,7 +170,12 @@ internal fun TrimTool(
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (duration != null) "${formatClock(start)} – ${formatClock(end)} · ${formatLength(end - start)}" else stringRes(Res.string.media_trim_hint),
+                when {
+                    duration == null -> stringRes(Res.string.media_trim_hint)
+                    // A GIF says what a cut does to it once there is one.
+                    item.media.isGif() && trim != null -> "${formatLength(end - start)} · ${stringRes(Res.string.media_gif_edited_note)}"
+                    else -> "${formatClock(start)} – ${formatClock(end)} · ${formatLength(end - start)}"
+                },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),

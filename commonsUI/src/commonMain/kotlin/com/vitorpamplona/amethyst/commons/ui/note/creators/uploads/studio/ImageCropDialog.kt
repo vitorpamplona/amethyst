@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.refineMediaType
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -115,12 +117,21 @@ fun GallerySelectSingleCropped(
     onImage: (SelectedMedia?) -> Unit,
 ) {
     var picked by remember { mutableStateOf<SelectedMedia?>(null) }
+    var checking by remember { mutableStateOf<SelectedMedia?>(null) }
     val cropping = picked
-    if (cropping == null) {
+    val unchecked = checking
+    if (unchecked != null) {
+        // Its header first: an animated WebP looks like a photo by its type, and a crop would keep one frame.
+        LaunchedEffect(unchecked) {
+            val media = uploader.refineMediaType(unchecked)
+            checking = null
+            if (media.canCrop()) picked = media else onImage(media)
+        }
+    } else if (cropping == null) {
         GallerySelectSingle(imagesOnly = imagesOnly) { media ->
             when {
                 media == null -> onImage(null)
-                media.canCrop() -> picked = media
+                media.canCrop() -> checking = media
                 else -> onImage(media)
             }
         }

@@ -864,6 +864,25 @@ class AndroidMediaUploader(
 
     override val videoTrim: Boolean get() = true
 
+    // A GIF is cut after the platform converter makes it an MP4. No crop: that converter takes no
+    // crop, and Android has no other encoder here to draw one.
+    override val gifTrim: Boolean get() = true
+
+    override suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? {
+        if (crop != null || trim == null) return null
+        val converted = MediaCompressor().compress(uri, "image/gif", CompressorQuality.UNCOMPRESSED, appContext, convertGifToMp4 = true)
+        if (converted.uri == uri) return null
+        return try {
+            trimVideo(converted.uri, converted.contentType, trim)
+        } finally {
+            discardTempFile(converted.uri)
+        }
+    }
+
     override suspend fun videoDurationMs(uri: MediaUri): Long? = withContext(Dispatchers.IO) { VideoTrimmer.durationMs(appContext, uri) }
 
     override suspend fun trimVideo(

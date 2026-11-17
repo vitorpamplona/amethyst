@@ -302,15 +302,29 @@ class MultiOrchestratorUploadEachTest {
         }
 
     @Test
-    fun gifsAreNotCropped() =
+    fun aGifLeftAloneGoesUpAsItIs() =
         runTest {
             val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/a.gif"), "image/gif")))
-            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0f, 1f, 1f))
             val uploader = RecordingUploader()
 
             media.uploadEach(server, account, uploader)
 
             assertEquals(listOf("/a.gif"), uploader.sent.map { it.path })
+        }
+
+    @Test
+    fun anEditedGifIsNeverSentUnedited() =
+        runTest {
+            // This uploader can't edit a GIF (no editGif): the crop fails the file rather than
+            // sending the whole GIF as if it had been cropped.
+            val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/a.gif"), "image/gif")))
+            media.get(0).options = media.get(0).options.copy(crop = ImageCrop(0.5f, 0f, 1f, 1f))
+            val uploader = RecordingUploader()
+
+            val result = media.uploadEach(server, account, uploader)
+
+            assertEquals(UploadError.CROP_FAILED, result.errors.single().error)
+            assertTrue(uploader.sent.isEmpty())
         }
 
     @Test
