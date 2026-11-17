@@ -67,7 +67,8 @@ class AgentWorkspacesTest {
         File(seed, "README.md").writeText("# $name\n")
         git(seed, "add", ".")
         git(seed, "commit", "--quiet", "-m", "init")
-        git(seed, "push", "--quiet", bare.absolutePath, "main")
+        // Fetched into, not pushed: a push is what an agent workstream blocks, and these run in one too.
+        git(bare, "fetch", "--quiet", seed.absolutePath, "main:main")
         return fileUrl(bare)
     }
 
@@ -415,6 +416,96 @@ class AgentWorkspacesTest {
             assertTrue(workspaces.hasUnsavedWork(ws))
             git(dir, "push", "--quiet", "origin", "agent/x")
             assertFalse(workspaces.hasUnsavedWork(ws))
+        }
+
+    @Test
+    fun freeingKeepsTheBranchAndRestoringBringsItBack() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl, libUrl), null, branch = "agent/x")
+            val app = File(ws.dir, "app")
+            File(app, "fix.txt").writeText("fixed\n")
+            File(app, ".gitignore").writeText("build/\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "fix")
+            git(app, "config", "--add", "branch.agent/x.amethyst-reviewed", "e1")
+            git(app, "config", "--add", "branch.agent/x.amethyst-reviewed", "e2")
+            // Notes beside the clones are not the workspace's to remove.
+            File(ws.dir, "notes.md").writeText("plan\n")
+            // What a build makes again goes with the clone.
+            val build = File(app, "build").apply { mkdirs() }
+            File(build, "out.bin").writeText("x")
+
+            val freed = workspaces.free(ws)
+            assertTrue(freed.isFreed)
+            assertTrue(workspaces.list().single().isFreed)
+            assertFalse(app.exists())
+            assertFalse(File(ws.dir, "lib").exists())
+            assertTrue(File(ws.dir, "notes.md").isFile)
+
+            val restored = workspaces.restore(freed)
+            assertFalse(restored.isFreed)
+            assertFalse(workspaces.list().single().isFreed)
+            assertEquals("agent/x", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
+            assertEquals("fixed\n", File(app, "fix.txt").readText())
+            assertEquals("", git(app, "status", "--porcelain"))
+            assertEquals(listOf("e1", "e2"), git(app, "config", "--get-all", "branch.agent/x.amethyst-reviewed").lines().filter { it.isNotBlank() })
+            assertEquals(appUrl, git(app, "remote", "get-url", "origin").trim())
+            // The repository with nothing of its own is back on its branch too.
+            assertEquals("agent/x", git(File(ws.dir, "lib"), "rev-parse", "--abbrev-ref", "HEAD").trim())
+            assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
+        }
+
+    @Test
+    fun aBranchWithNothingOfItsOwnComesBackFromTheLatestBase() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/z")
+            val freed = workspaces.free(ws)
+            // The remote moves on while the workspace is freed.
+            val seed = File(tmp, "seed-app")
+            File(seed, "later.txt").writeText("later\n")
+            git(seed, "add", ".")
+            git(seed, "commit", "--quiet", "-m", "later")
+            git(File(tmp, "remotes/app.git"), "fetch", "--quiet", seed.absolutePath, "main:main")
+
+            workspaces.restore(freed)
+            val app = File(ws.dir, "app")
+            assertEquals("agent/z", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
+            assertTrue(File(app, "later.txt").isFile)
+        }
+
+    @Test
+    fun workABundleCannotCarryKeepsTheClones() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/w")
+            val app = File(ws.dir, "app")
+            File(app, "draft.txt").writeText("not committed\n")
+            assertTrue(workspaces.cannotFree(ws))
+            assertIs<UnsavedWorkException>(runCatching { workspaces.free(ws) }.exceptionOrNull())
+            assertTrue(File(app, "draft.txt").isFile)
+            assertFalse(workspaces.list().single().isFreed)
+            assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
+
+            // A stash is work only this clone holds, too.
+            git(app, "stash", "--include-untracked", "--quiet")
+            assertTrue(workspaces.cannotFree(ws))
+            git(app, "stash", "drop", "--quiet")
+            assertFalse(workspaces.cannotFree(ws))
+        }
+
+    @Test
+    fun deletingAFreedWorkspaceRemovesWhatItKept() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/d")
+            val app = File(ws.dir, "app")
+            File(app, "a.txt").writeText("a\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "a")
+            val freed = workspaces.free(ws)
+            assertTrue(File(tmp, "agents/meta/${ws.id}.freed/app.bundle").isFile)
+            workspaces.delete(freed)
+            assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
+            assertFalse(File(ws.dir).exists())
+            assertTrue(workspaces.list().isEmpty())
         }
 
     @Test

@@ -10326,17 +10326,17 @@
         <item quantity="other">%1$d not used in %2$d days</item>
     </plurals>
     <string name="claude_code_storage_auto">Clean up on its own</string>
-    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, free its clones, unless something in them is not committed. Its commits are kept, and its next message brings the clones back. Mirrors not used in %1$d days go too. Conversations stay.</string>
     <string name="claude_code_storage_finished">Finished workstreams</string>
     <string name="claude_code_storage_none_finished">None yet: a workstream is finished when every repository’s pull request is merged or closed.</string>
-    <string name="claude_code_storage_unsaved">Kept: work not pushed</string>
+    <string name="claude_code_storage_unsaved">Kept: work not committed</string>
     <plurals name="claude_code_storage_clean_up">
         <item quantity="one">Clean up %1$d · frees %2$s</item>
         <item quantity="other">Clean up %1$d · frees %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_cleaned">
-        <item quantity="one">Removed %1$d workstream, freed %2$s</item>
-        <item quantity="other">Removed %1$d workstreams, freed %2$s</item>
+        <item quantity="one">Freed the clones of %1$d workstream, %2$s</item>
+        <item quantity="other">Freed the clones of %1$d workstreams, %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_tidied">
         <item quantity="one">Tidied the mirrors and removed %1$d unused one, freed %2$s</item>
@@ -10422,4 +10422,5 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
+    <string name="claude_code_workspace_freed">space freed</string>
 </resources>

@@ -36,6 +36,8 @@ import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.codex.CodexBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -359,31 +361,91 @@ class ClaudeCodeService(
     /** The workspaces whose work is done: every pull request merged or closed. */
     fun finishedWorkspaces(): List<AgentWorkspace> = knownWorkspaces.filter { it.finishedAt != null }
 
-    /** Whether a chat is busy in [workspace]: it must not be removed under the agent. */
-    private fun isBusy(workspace: AgentWorkspace): Boolean =
-        chats.value.values.any { chat ->
+    /** The chats open in [workspace]'s folder. */
+    private fun chatsIn(workspace: AgentWorkspace): List<ClaudeChat> =
+        chats.value.values.filter { chat ->
             val path = File(chat.state.value.cwd).absoluteFile.normalize().path
-            (path == workspace.dir || path.startsWith(workspace.dir + File.separator)) && chat.state.value.isBusy
+            path == workspace.dir || path.startsWith(workspace.dir + File.separator)
         }
 
+    /** Whether a chat is busy in [workspace]: it must not be removed under the agent. */
+    private fun isBusy(workspace: AgentWorkspace): Boolean = chatsIn(workspace).any { it.state.value.isBusy }
+
     /**
-     * Removes the clones of [workspaces] that are safe to remove: no busy chat, nothing left
-     * uncommitted or unpushed. Their conversations stay, archived. Returns those removed.
+     * Frees the clones of [workspaces] that are safe to free ([freeWorkspace]): no busy chat, no
+     * work a bundle can't carry. Their conversations stay, archived, and bring them back. Returns
+     * those freed.
      */
     suspend fun cleanUp(workspaces: List<AgentWorkspace>): List<AgentWorkspace> {
-        val removed = mutableListOf<AgentWorkspace>()
-        for (workspace in workspaces) {
-            if (isBusy(workspace) || agentWorkspaces.hasUnsavedWork(workspace)) continue
-            try {
-                deleteWorkspace(workspace, thenRefresh = false)
-                workspaceSizes.remove(workspace.id)
-                removed.add(workspace)
-            } catch (e: IOException) {
-                Log.w(TAG, "Could not clean up ${workspace.dir}", e)
-            }
+        val freed = workspaces.filter { !it.isFreed && freeWorkspace(it) }
+        if (freed.isNotEmpty()) refresh()
+        return freed
+    }
+
+    /**
+     * Gives [workspace]'s disk back ([AgentWorkspaces.free]) unless a chat is busy in it or it
+     * holds work only its folder has. The idle chats there end first; their next message brings
+     * the clones back ([restoreWorkspace]). Whether it was freed.
+     */
+    private suspend fun freeWorkspace(workspace: AgentWorkspace): Boolean {
+        if (workspace.isFreed) return true
+        if (isBusy(workspace)) return false
+        // Idle, each ends at once; the folder they started in stays, only the clones go.
+        chatsIn(workspace).forEach { it.close() }
+        return try {
+            val freed = agentWorkspaces.free(workspace)
+            knownWorkspaces = knownWorkspaces.map { if (it.id == freed.id) freed else it }
+            workspaceSizes[freed.id] = 0L to System.currentTimeMillis()
+            true
+        } catch (e: UnsavedWorkException) {
+            Log.i(TAG) { "Kept the clones of ${workspace.dir}: ${e.message}" }
+            false
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not free ${workspace.dir}", e)
+            false
         }
-        if (removed.isNotEmpty()) refresh()
-        return removed
+    }
+
+    /** Restores in progress, by workspace id: two chats sending at once share one. */
+    private val restoring = ConcurrentHashMap<String, Deferred<AgentWorkspace>>()
+
+    /**
+     * Makes a freed [workspace]'s clones again ([AgentWorkspaces.restore]), on the service's scope:
+     * a screen closed meanwhile doesn't stop it halfway. Throws [IOException] when it can't.
+     */
+    suspend fun restoreWorkspace(workspace: AgentWorkspace): AgentWorkspace {
+        if (!workspace.isFreed) return workspace
+        val job =
+            restoring.computeIfAbsent(workspace.id) {
+                scope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                    agentWorkspaces.restore(workspace).also { restored ->
+                        knownWorkspaces = knownWorkspaces.map { if (it.id == restored.id) restored else it }
+                        workspaceSizes.remove(restored.id)
+                    }
+                }
+            }
+        try {
+            job.start()
+            return job.await().also {
+                rebuildRows()
+                measureWorkspaces()
+            }
+        } finally {
+            restoring.remove(workspace.id, job)
+        }
+    }
+
+    /**
+     * For a chat in [cwd]: when its workstream is freed, brings the clones back before the agent
+     * starts, telling [restoring] how many repositories it makes.
+     */
+    private suspend fun restoreBeforeStart(
+        cwd: File,
+        restoring: (Int) -> Unit,
+    ) {
+        val workspace = workspaceOf(cwd.path)?.takeIf { it.isFreed } ?: return
+        restoring(workspace.repos.size)
+        restoreWorkspace(workspace)
     }
 
     @Volatile
@@ -399,11 +461,11 @@ class ClaudeCodeService(
         if (now - lastAutoCleanup < AUTO_CLEANUP_EVERY_MS) return
         lastAutoCleanup = now
         if (!preferences.value.autoCleanup) return
-        val due = knownWorkspaces.filter { ws -> ws.finishedAt?.let { now - it > CLEANUP_AFTER_MS } == true }
+        val due = knownWorkspaces.filter { ws -> !ws.isFreed && ws.finishedAt?.let { now - it > CLEANUP_AFTER_MS } == true }
         scope.launch {
             if (due.isNotEmpty()) {
                 val removed = cleanUp(due)
-                if (removed.isNotEmpty()) Log.i(TAG) { "Cleaned up ${removed.size} finished workspaces" }
+                if (removed.isNotEmpty()) Log.i(TAG) { "Freed ${removed.size} finished workspaces" }
             }
             val mirrors = agentWorkspaces.removeUnusedMirrors()
             if (mirrors > 0) Log.i(TAG) { "Removed $mirrors unused mirrors" }
@@ -413,6 +475,10 @@ class ClaudeCodeService(
     /**
      * Archives the row's session, or brings it back: with the agent's own archive when it keeps
      * one, else with the app's.
+     *
+     * Archived, its chat ends when idle (the next message starts it again), and its workstream's
+     * clones are freed once every session there is archived ([freeWorkspace]). Brought back, a
+     * freed workstream's clones are made again. Throws [IOException] when they can't be.
      */
     suspend fun archive(
         row: ClaudeSessionRow,
@@ -427,7 +493,29 @@ class ClaudeCodeService(
                     prefs.copy(archivedSessions = if (archived) prefs.archivedSessions + sessionId else prefs.archivedSessions - sessionId)
                 }
         }
-        refresh()
+        val workspace = workspaceOf(row.cwd)
+        try {
+            if (archived) {
+                // An idle chat would sit there "Ready" under Archived, holding a process.
+                chats.value[row.key]?.takeIf { !it.state.value.isBusy }?.close()
+                if (workspace != null && everySessionArchived(workspace, sessionId)) freeWorkspace(workspace)
+            } else if (workspace != null) {
+                restoreWorkspace(workspace)
+            }
+        } finally {
+            refresh()
+        }
+    }
+
+    /** Whether every saved session in [workspace] is archived, [justArchived] counted as one. */
+    private fun everySessionArchived(
+        workspace: AgentWorkspace,
+        justArchived: String,
+    ): Boolean {
+        val appArchived = preferences.value.archivedSessions
+        return saved.value
+            .filter { workspaceOf(it.cwd)?.id == workspace.id }
+            .all { it.sessionId == justArchived || it.archived || it.sessionId in appArchived }
     }
 
     private val _executable = MutableStateFlow<File?>(null)
@@ -672,6 +760,7 @@ class ClaudeCodeService(
                 kind = kind,
                 forkBefore = forkBefore,
                 publishingIsTheUsers = { agentWorkspaces.of(it) != null },
+                restoreFolder = ::restoreBeforeStart,
                 folderBrief = { agentWorkspaces.of(it)?.brief },
                 folderKnown = folderKnown,
             )
@@ -990,6 +1079,9 @@ class ClaudeCodeService(
         val fromDisk =
             saved.value.map { info ->
                 val chat = openBySession[info.sessionId]
+                val workspace = workspaceOf(info.cwd)
+                // A freed workstream's sessions are archived: their next message brings its clones back.
+                val freed = workspace?.isFreed == true
                 ClaudeSessionRow(
                     key = chat?.key ?: info.sessionId,
                     sessionId = info.sessionId,
@@ -1001,10 +1093,10 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
-                    archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
-                    userArchived = info.archived || info.sessionId in appArchived,
-                    workspace = workspaceOf(info.cwd),
-                    workspaceSize = workspaceOf(info.cwd)?.let { workspaceSizes[it.id]?.first },
+                    archived = info.cwd in gone || info.archived || info.sessionId in appArchived || freed,
+                    userArchived = info.archived || info.sessionId in appArchived || freed,
+                    workspace = workspace,
+                    workspaceSize = workspace?.takeIf { !freed }?.let { workspaceSizes[it.id]?.first },
                     agentId = backendOf(info.sessionId).id,
                     agentName = backendOf(info.sessionId).displayName,
                 )

@@ -292,7 +292,7 @@ class ClaudeCodeServiceTest {
             File(seed, "README.md").writeText("app\n")
             git(seed, "add", ".")
             git(seed, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "--quiet", "-m", "init")
-            git(seed, "push", "--quiet", remote.absolutePath, "main")
+            git(remote, "fetch", "--quiet", seed.absolutePath, "main:main")
             val ws = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Idle one", agentId = "claude")
 
             service.refresh()
@@ -374,40 +374,132 @@ class ClaudeCodeServiceTest {
             waitFor { id !in restarted.agentWorkspaces.preferences().sessionModes }
         }
 
-    @Test
-    fun cleaningUpKeepsAWorkspaceWithWorkNotPushed() =
-        runBlocking {
-            val remote = File(work, "remote.git")
-            val seed = File(work, "seed").apply { mkdirs() }
+    /** A bare "remote" with one commit on main, by file URL. */
+    private fun remote(name: String): String {
+        val remote = File(work, "$name.git")
+        val seed = File(work, "$name-seed").apply { mkdirs() }
+        git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
+        git(seed, "init", "--quiet", "--initial-branch=main")
+        File(seed, "README.md").writeText("app\n")
+        git(seed, "add", ".")
+        git(seed, "commit", "--quiet", "-m", "init")
+        git(remote, "fetch", "--quiet", seed.absolutePath, "main:main")
+        return fileUrl(remote)
+    }
 
-            fun git(
-                dir: File,
-                vararg args: String,
-            ) = check(
-                ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
-                    .directory(dir)
-                    .apply { environment().forgetInheritedRepository() }
-                    .redirectErrorStream(true)
-                    .start()
-                    .waitFor() == 0,
-            ) { args.joinToString(" ") }
-            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
-            git(seed, "init", "--quiet", "--initial-branch=main")
-            File(seed, "README.md").writeText("app\n")
-            git(seed, "add", ".")
-            git(seed, "commit", "--quiet", "-m", "init")
-            git(seed, "push", "--quiet", remote.absolutePath, "main")
-            val clean = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Clean", agentId = "claude")
-            val dirty = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Dirty", agentId = "claude")
-            val repo = File(dirty.dir, dirty.repos.single().name)
-            File(repo, "work.txt").writeText("not pushed\n")
+    private fun git(
+        dir: File,
+        vararg args: String,
+    ) = check(
+        ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
+            .directory(dir)
+            .apply { environment().forgetInheritedRepository() }
+            .redirectErrorStream(true)
+            .start()
+            .waitFor() == 0,
+    ) { args.joinToString(" ") }
+
+    /** A saved session that ran in [cwd]. */
+    private fun sessionIn(
+        sessionId: String,
+        cwd: String,
+    ) {
+        val escaped = cwd.replace("\\", "\\\\")
+        File(config, "projects/-ws-$sessionId").apply { mkdirs() }.resolve("$sessionId.jsonl").writeText(
+            """{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"$sessionId","cwd":"$escaped","message":{"role":"user","content":"start"}}""" + "\n",
+        )
+    }
+
+    @Test
+    fun cleaningUpFreesFinishedWorkspacesAndKeepsWorkNotCommitted() =
+        runBlocking {
+            val url = remote("remote")
+            val clean = service.agentWorkspaces.create(listOf(url), "Clean", agentId = "claude")
+            val committed = service.agentWorkspaces.create(listOf(url), "Committed", agentId = "claude")
+            val committedRepo = File(committed.dir, committed.repos.single().name)
+            File(committedRepo, "work.txt").writeText("not pushed\n")
+            git(committedRepo, "add", ".")
+            git(committedRepo, "commit", "--quiet", "-m", "work")
+            val dirty = service.agentWorkspaces.create(listOf(url), "Dirty", agentId = "claude")
+            val dirtyRepo = File(dirty.dir, dirty.repos.single().name)
+            File(dirtyRepo, "work.txt").writeText("not committed\n")
+
+            val freed = service.cleanUp(listOf(clean, committed, dirty))
+            // A commit on no remote is kept in the bundle: freeing it loses nothing.
+            assertEquals(setOf(clean.id, committed.id), freed.map { it.id }.toSet())
+            assertFalse(File(clean.dir, clean.repos.single().name).exists())
+            assertFalse(committedRepo.exists())
+            assertTrue(File(dirtyRepo, "work.txt").isFile)
+        }
+
+    @Test
+    fun archivingAWorkstreamsSessionFreesItsClonesAndUnarchivingBringsThemBack() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("archived")), "Archived", branch = "agent/a", agentId = "claude")
+            val repo = File(ws.dir, ws.repos.single().name)
+            File(repo, "work.txt").writeText("done\n")
             git(repo, "add", ".")
             git(repo, "commit", "--quiet", "-m", "work")
+            val session = "33333333-2222-3333-4444-555555555555"
+            sessionIn(session, ws.dir)
+            service.refresh()
 
-            val removed = service.cleanUp(listOf(clean, dirty))
-            assertEquals(listOf(clean.id), removed.map { it.id })
-            assertFalse(File(clean.dir).exists())
-            assertTrue(File(dirty.dir).exists())
+            service.archive(service.rows.value.single { it.sessionId == session }, true)
+            assertFalse(repo.exists())
+            val archived = service.rows.value.single { it.sessionId == session }
+            assertTrue(archived.archived)
+            assertTrue(archived.userArchived)
+            assertEquals(true, archived.workspace?.isFreed)
+            assertNull(archived.workspaceSize)
+
+            service.archive(archived, false)
+            assertEquals("done\n", File(repo, "work.txt").readText())
+            val back = service.rows.value.single { it.sessionId == session }
+            assertFalse(back.archived)
+            assertEquals(false, back.workspace?.isFreed)
+        }
+
+    @Test
+    fun aWorkstreamIsFreedOnlyOnceEverySessionInItIsArchived() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("shared")), "Shared", agentId = "claude")
+            val first = "44444444-2222-3333-4444-555555555555"
+            val second = "55555555-2222-3333-4444-555555555555"
+            sessionIn(first, ws.dir)
+            sessionIn(second, ws.dir)
+            service.refresh()
+            val repo = File(ws.dir, ws.repos.single().name)
+
+            service.archive(service.rows.value.single { it.sessionId == first }, true)
+            assertTrue(repo.isDirectory, "the other session still works in it")
+            service.archive(service.rows.value.single { it.sessionId == second }, true)
+            assertFalse(repo.exists())
+        }
+
+    @Test
+    fun aMessageToAFreedWorkstreamBringsItsClonesBackFirst() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("resumed")), "Resumed", branch = "agent/r", agentId = "claude")
+            val repo = File(ws.dir, ws.repos.single().name)
+            val session = "66666666-2222-3333-4444-555555555555"
+            sessionIn(session, ws.dir)
+            service.refresh()
+            service.cleanUp(listOf(ws))
+            assertFalse(repo.exists())
+
+            val chat = assertNotNull(service.chat(session))
+            waitFor { chat.state.value.historyLoaded }
+            chat.send("go on")
+            // The CLI never starts in tests: the clones are back before it is asked to.
+            waitFor { chat.state.value.error != null }
+            assertFalse(chat.state.value.error is ChatError.CloneFailed, "${chat.state.value.error}")
+            assertEquals("agent/r", File(repo, ".git/HEAD").readText().trim().removePrefix("ref: refs/heads/"))
+            assertFalse(
+                service.agentWorkspaces
+                    .list()
+                    .single()
+                    .isFreed,
+            )
         }
 
     @Test
@@ -432,7 +524,7 @@ class ClaudeCodeServiceTest {
             File(seed, "README.md").writeText("app\n")
             git(seed, "add", ".")
             git(seed, "commit", "--quiet", "-m", "init")
-            git(seed, "push", "--quiet", remote.absolutePath, "main")
+            git(remote, "fetch", "--quiet", seed.absolutePath, "main:main")
 
             val chat = service.newWorkstream(listOf(fileUrl(remote)), "Greeting")
             // The chat is there before the clone: in the workstream's folder, hands-off.

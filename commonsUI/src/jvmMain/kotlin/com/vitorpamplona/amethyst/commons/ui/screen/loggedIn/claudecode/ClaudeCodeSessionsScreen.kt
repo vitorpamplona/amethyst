@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget_group
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_freed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
@@ -584,6 +585,10 @@ private fun SessionRow(
                 // What the workspace's clones take on disk, once measured.
                 row.workspaceSize?.let { size ->
                     Text(" • " + formatFileSize(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
+                }
+                // Its clones were freed: the next message (or Unarchive) makes them again.
+                if (row.workspace?.isFreed == true) {
+                    Text(" • " + stringRes(Res.string.claude_code_workspace_freed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
                 }
                 Text(
                     timeAgo(row.lastModified / 1000, prefix = if (where != null) " • " else ""),
