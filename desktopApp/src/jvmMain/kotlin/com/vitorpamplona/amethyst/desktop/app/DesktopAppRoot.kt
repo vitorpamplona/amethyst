@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestination
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.desktopOnlyDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
@@ -144,6 +145,10 @@ class DesktopAppRoot(
         LaunchedEffect(windowInfo) {
             snapshotFlow { windowInfo.isWindowFocused }.collect { modules.mainWindowFocused.value = it }
         }
+        DisposableEffect(Unit) {
+            val job = modules.notifications.watchClaudeCode(modules.mainWindowFocused)
+            onDispose { job.cancel() }
+        }
 
         // Each account publishes only its own scheduled posts, to its outbox relays.
         DisposableEffect(accountViewModel.account) {
@@ -195,6 +200,7 @@ class DesktopAppRoot(
         accountViewModel: AccountViewModel,
     ) {
         destinations.jvmDestinations(accountViewModel)
+        destinations.desktopOnlyDestinations(accountViewModel)
         // A web page, a napplet and an nSite are screens like any other: the layout puts each on the
         // stack, in a deck column, a tab or a window.
         nappletHost?.let { host ->

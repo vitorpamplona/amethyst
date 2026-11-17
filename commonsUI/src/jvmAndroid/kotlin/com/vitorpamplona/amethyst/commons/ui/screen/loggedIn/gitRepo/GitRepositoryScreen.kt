@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.WorkWithClaudeAction
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
@@ -353,6 +354,7 @@ private fun GitRepositoryHome(
                     }
                 },
                 actions = {
+                    WorkWithClaudeAction(note.address, nav)
                     val bookmarkedSet by accountViewModel.account.gitRepositoryListState.repositoryAddressSet
                         .collectAsStateWithLifecycle()
                     val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }

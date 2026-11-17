@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -120,6 +121,8 @@ fun GitDiffView(
     lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)? = null,
     /** Whether [lineAnnotations] draws anything under a line; the code around such a line scrolls on its own. */
     hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
+    /** The "N files changed" line and the unified/split switch; off where the diff sits inside something that already says so. */
+    showSummary: Boolean = true,
 ) {
     if (!parsed.hasDiff) return
     // Side by side needs the width of a large window; a phone keeps the unified view.
@@ -127,36 +130,75 @@ fun GitDiffView(
     var split by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { GitDiffStatSummary(parsed) }
-            if (wide) {
-                FilterChip(selected = !split, onClick = { split = false }, label = { Text(stringResource(Res.string.git_diff_unified)) })
-                Spacer(Modifier.width(6.dp))
-                FilterChip(selected = split, onClick = { split = true }, label = { Text(stringResource(Res.string.git_diff_split)) })
-            }
-        }
-        val highlighted =
-            remember(parsed) {
-                var left = DIFF_HIGHLIGHT_BUDGET
-                parsed.files.map { file ->
-                    val size = file.hunks.sumOf { it.lines.size }
-                    when {
-                        size > FILE_HIGHLIGHT_LIMIT -> false
-                        // A folded file pays only when the user opens it, one at a time: it costs the budget nothing.
-                        size > FOLD_LINES -> true
-                        size <= left -> {
-                            left -= size
-                            true
-                        }
-                        else -> false
-                    }
-                }
-            }
+        if (showSummary) GitDiffHeader(parsed, split) { split = it }
+        val highlighted = rememberDiffHighlights(parsed)
         parsed.files.forEachIndexed { index, file ->
             DiffFileCard(file, split && wide, highlighted[index], onLineClick, lineAnnotations, hasAnnotations)
         }
     }
 }
+
+/**
+ * The diff's files as lazy-list items, for a screen whose diff can run to hundreds of files:
+ * a card is built only as it scrolls in. Put [GitDiffHeader] above it for the summary and the
+ * unified/split switch; [split] applies on a large screen only, as in [GitDiffView].
+ */
+fun LazyListScope.gitDiffItems(
+    parsed: ParsedPatch,
+    split: Boolean,
+    highlighted: List<Boolean>,
+    onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)? = null,
+    lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)? = null,
+    hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
+) {
+    items(parsed.files.size, key = { "diff-file-$it-${parsed.files[it].displayPath}" }) { index ->
+        val wide = LocalScreenLayout.current.isLargeScreen
+        Box(Modifier.padding(top = 8.dp)) {
+            DiffFileCard(parsed.files[index], split && wide, highlighted.getOrElse(index) { false }, onLineClick, lineAnnotations, hasAnnotations)
+        }
+    }
+}
+
+/** "N files changed", with the unified/split switch on a large screen. */
+@Composable
+fun GitDiffHeader(
+    parsed: ParsedPatch,
+    split: Boolean,
+    onSplit: (Boolean) -> Unit,
+) {
+    val wide = LocalScreenLayout.current.isLargeScreen
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { GitDiffStatSummary(parsed) }
+        if (wide) {
+            FilterChip(selected = !split, onClick = { onSplit(false) }, label = { Text(stringResource(Res.string.git_diff_unified)) })
+            Spacer(Modifier.width(6.dp))
+            FilterChip(selected = split, onClick = { onSplit(true) }, label = { Text(stringResource(Res.string.git_diff_split)) })
+        }
+    }
+}
+
+/**
+ * Which files get syntax highlighting: none over [FILE_HIGHLIGHT_LIMIT] lines, and the small
+ * ones open at once until [DIFF_HIGHLIGHT_BUDGET] lines are spent.
+ */
+@Composable
+fun rememberDiffHighlights(parsed: ParsedPatch): List<Boolean> =
+    remember(parsed) {
+        var left = DIFF_HIGHLIGHT_BUDGET
+        parsed.files.map { file ->
+            val size = file.hunks.sumOf { it.lines.size }
+            when {
+                size > FILE_HIGHLIGHT_LIMIT -> false
+                // A folded file pays only when the user opens it, one at a time: it costs the budget nothing.
+                size > FOLD_LINES -> true
+                size <= left -> {
+                    left -= size
+                    true
+                }
+                else -> false
+            }
+        }
+    }
 
 /** "3 files changed +12 -4", the line that heads a diff and stands for it where the diff isn't drawn. */
 @Composable

@@ -743,6 +743,55 @@ sealed class Route {
         val url: String? = null,
     ) : Route()
 
+    /** The Claude Code sessions on this computer (desktop only: it runs the user's `claude`). */
+    @Serializable object ClaudeCode : Route()
+
+    /**
+     * The settings assistant: a Claude Code chat that can only read and (with approval) change
+     * Amethyst's settings. [question], when given, is its first message.
+     */
+    @Serializable data class ClaudeCodeSettingsAssistant(
+        val question: String? = null,
+    ) : Route()
+
+    /** One Claude Code chat; [key] is its session id, or the temporary id of a new chat. */
+    @Serializable data class ClaudeCodeChat(
+        val key: String,
+    ) : Route()
+
+    /**
+     * What a Claude Code chat's branch changed: its commits and diff. In a workspace of several
+     * repositories, [repo] names the one (its folder in the workspace).
+     */
+    @Serializable data class ClaudeCodeChanges(
+        val key: String,
+        val repo: String? = null,
+    ) : Route()
+
+    /** Publishes a Claude Code chat's branch as a NIP-34 proposal, or a new version of one. */
+    @Serializable data class ClaudeCodePropose(
+        val key: String,
+        /** A repository's folder in the chat's workspace of several, or null for the chat's own folder. */
+        val repo: String? = null,
+    ) : Route()
+
+    /** A workspace session's repositories: their branches, and the GitHub pull requests the user opens. */
+    @Serializable data class ClaudeCodePullRequests(
+        val key: String,
+    ) : Route()
+
+    /**
+     * Starts a Claude Code session on a NIP-34 repository, from the repository itself, one of its
+     * issues ([issueId]) or one of its proposals ([proposalId]).
+     */
+    @Serializable data class ClaudeCodeStart(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+        val issueId: HexKey? = null,
+        val proposalId: HexKey? = null,
+    ) : Route()
+
     @Serializable object RequestToVanish : Route()
 
     @Serializable object VanishEvents : Route()

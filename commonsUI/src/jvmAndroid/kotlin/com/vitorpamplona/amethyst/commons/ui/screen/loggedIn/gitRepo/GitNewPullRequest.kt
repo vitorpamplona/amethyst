@@ -168,7 +168,7 @@ private fun OpenWhenPublished(
  * maintainers' signed state load, so a screen opened cold does not keep the first, empty answer.
  */
 @Composable
-private fun rememberGitProposalTarget(
+internal fun rememberGitProposalTarget(
     repoNote: AddressableNote,
     viewModel: GitProposalViewModel,
     accountViewModel: AccountViewModel,
