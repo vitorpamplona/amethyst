@@ -9962,8 +9962,6 @@
     <string name="media_studio_h265_description">Some older apps can't play it</string>
     <string name="media_studio_gif_description">Usually much smaller</string>
     <string name="media_studio_encrypt_description">Only this chat can open them</string>
-    <string name="media_gif_edit_hint">A cropped GIF is sent as a video</string>
-    <string name="media_gif_edited_note">Sent as a video</string>
     <string name="media_crop_hint">Drag the corners or move the frame</string>
     <string name="media_crop_reset">Reset</string>
     <string name="media_studio_tool_crop">Crop</string>

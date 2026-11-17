@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
-import com.vitorpamplona.amethyst.commons.resources.media_gif_edited_note
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_suggested
@@ -223,7 +222,7 @@ fun studioToolsFor(
     support: VideoCompressionSupport,
     /** The platform can trim a video ([MediaUploader.videoTrim]). */
     trim: Boolean = false,
-    /** The platform can crop or trim a GIF, which then goes up as a video ([MediaUploader.gifCrop], [MediaUploader.gifTrim]). */
+    /** The platform can crop or trim a GIF, which stays a GIF ([MediaUploader.gifCrop], [MediaUploader.gifTrim]). */
     gifCrop: Boolean = false,
     gifTrim: Boolean = false,
 ): List<StudioTool> =
@@ -834,19 +833,10 @@ private fun QualityTool(
         isVideo && support == VideoCompressionSupport.NeedsFfmpeg ->
             Text(stringRes(Res.string.video_compression_needs_ffmpeg), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
 
-        media.isGif() -> {
-            // A cropped or trimmed GIF goes up as a video whatever this says, so it says so.
-            val edited = item.options.crop != null || item.options.trim != null
-            SwitchRow(
-                stringRes(Res.string.convert_gif_to_mp4_label),
-                stringRes(if (edited) Res.string.media_gif_edited_note else Res.string.media_studio_gif_description),
-                item.options.convertGifToMp4 || edited,
-                MaterialSymbols.Movie,
-                enabled = !edited,
-            ) {
+        media.isGif() ->
+            SwitchRow(stringRes(Res.string.convert_gif_to_mp4_label), stringRes(Res.string.media_studio_gif_description), item.options.convertGifToMp4, MaterialSymbols.Movie) {
                 item.options = item.options.copy(convertGifToMp4 = it)
             }
-        }
 
         isVideo -> VideoQuality(item, uploader)
 

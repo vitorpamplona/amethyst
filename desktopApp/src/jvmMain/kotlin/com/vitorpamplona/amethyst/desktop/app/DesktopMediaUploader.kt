@@ -55,12 +55,14 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
+import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
@@ -514,27 +516,36 @@ class DesktopMediaUploader(
 
     override val videoTrim: Boolean get() = videoCompressor.available
 
-    // ffmpeg reads a GIF like a video: its length and frames, and it cuts and crops it in the encode.
-    override val gifCrop: Boolean get() = videoCompressor.available
+    // GIFs are edited, timed and drawn by the shared GifEditor: no ffmpeg needed.
+    override val gifCrop: Boolean get() = true
 
-    override val gifTrim: Boolean get() = videoCompressor.available
+    override val gifTrim: Boolean get() = true
 
     override suspend fun editGif(
         uri: MediaUri,
         crop: ImageCrop?,
         trim: VideoTrim?,
-    ): MediaCompressorResult? {
-        val file =
-            videoCompressor.editGif(
-                fileOf(uri),
-                crop?.let { floatArrayOf(it.left, it.top, it.width, it.height) },
-                trim?.startMs,
-                trim?.durationMs,
-            ) ?: return null
-        return MediaCompressorResult(StringMediaUri(file.absolutePath), MP4_CONTENT_TYPE, file.length())
-    }
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.Default) {
+            val edited = GifEditor.edit(fileOf(uri).readBytes(), crop, trim) ?: return@withContext null
+            val file = AmethystTempDir.createTempFile("amethyst_gif_", ".gif")
+            try {
+                file.writeBytes(edited)
+            } catch (e: Exception) {
+                file.deleteOrWarn(TAG, "failed GIF edit")
+                throw e
+            }
+            MediaCompressorResult(StringMediaUri(file.absolutePath), GIF_CONTENT_TYPE, file.length())
+        }
 
-    override suspend fun videoDurationMs(uri: MediaUri): Long? = videoCompressor.durationMs(fileOf(uri))
+    override suspend fun videoDurationMs(uri: MediaUri): Long? = gifBytes(uri)?.let(PictureHeaders::gifDurationMs) ?: videoCompressor.durationMs(fileOf(uri))
+
+    /** The whole file when [uri] is a GIF, else null. */
+    private suspend fun gifBytes(uri: MediaUri): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val header = readRange(uri, 0, PictureHeaders.GIF_HEADER_BYTES) ?: return@withContext null
+            if (PictureHeaders.gifSize(header) == null) null else fileOf(uri).readBytes()
+        }
 
     override suspend fun trimVideo(
         uri: MediaUri,
@@ -549,7 +560,7 @@ class DesktopMediaUploader(
         uri: MediaUri,
         atMs: Long,
         maxEdge: Int,
-    ): ByteArray? = videoCompressor.frame(fileOf(uri), atMs, maxEdge)
+    ): ByteArray? = gifBytes(uri)?.let { GifEditor.frameAt(it, atMs, maxEdge) } ?: videoCompressor.frame(fileOf(uri), atMs, maxEdge)
 
     override suspend fun cropImage(
         uri: MediaUri,
@@ -664,6 +675,7 @@ class DesktopMediaUploader(
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
         const val OCTET_STREAM = "application/octet-stream"
         const val MP4_CONTENT_TYPE = "video/mp4"
+        const val GIF_CONTENT_TYPE = "image/gif"
 
         // Compression progress climbs from the floor to the level where the upload stage starts,
         // so the bar never jumps backwards.

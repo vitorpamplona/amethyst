@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
+import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
@@ -864,47 +865,28 @@ class AndroidMediaUploader(
 
     override val videoTrim: Boolean get() = true
 
-    // A GIF is cut after the platform converter makes it an MP4. No crop: that converter takes no
-    // crop, and Android has no other encoder here to draw one.
+    // GIFs are edited, timed and drawn by the shared GifEditor, which stays a GIF.
+    override val gifCrop: Boolean get() = true
+
     override val gifTrim: Boolean get() = true
 
     override suspend fun editGif(
         uri: MediaUri,
         crop: ImageCrop?,
         trim: VideoTrim?,
-    ): MediaCompressorResult? {
-        if (crop != null || trim == null) return null
-        val converted = MediaCompressor().compress(uri, "image/gif", CompressorQuality.UNCOMPRESSED, appContext, convertGifToMp4 = true)
-        if (converted.uri == uri) return null
-        return try {
-            trimVideo(converted.uri, converted.contentType, trim)
-        } finally {
-            discardTempFile(converted.uri)
-        }
-    }
-
-    override suspend fun videoDurationMs(uri: MediaUri): Long? = withContext(Dispatchers.IO) { VideoTrimmer.durationMs(appContext, uri) }
-
-    override suspend fun trimVideo(
-        uri: MediaUri,
-        mimeType: String?,
-        trim: VideoTrim,
     ): MediaCompressorResult? =
         withContext(Dispatchers.IO) {
-            val file = File.createTempFile("trim_", ".mp4", appContext.cacheDir)
-            if (VideoTrimmer.trim(appContext, uri, trim.startMs, trim.endMs, file)) {
-                MediaCompressorResult(Uri.fromFile(file), "video/mp4", file.length())
-            } else {
+            val bytes = appContext.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
+            val edited = GifEditor.edit(bytes, crop, trim) ?: return@withContext null
+            val file = File.createTempFile("gif_", ".gif", appContext.cacheDir)
+            try {
+                file.writeBytes(edited)
+            } catch (e: Exception) {
                 if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
-                null
+                throw e
             }
+            MediaCompressorResult(Uri.fromFile(file), "image/gif", file.length())
         }
-
-    override suspend fun videoFrame(
-        uri: MediaUri,
-        atMs: Long,
-        maxEdge: Int,
-    ): ByteArray? = withContext(Dispatchers.IO) { VideoTrimmer.frame(appContext, uri, atMs, maxEdge) }
 
     override suspend fun cropImage(
         uri: MediaUri,

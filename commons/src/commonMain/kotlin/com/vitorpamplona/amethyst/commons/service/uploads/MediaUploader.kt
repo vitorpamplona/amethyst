@@ -110,9 +110,10 @@ interface MediaUploader {
     val gifTrim: Boolean get() = false
 
     /**
-     * The GIF at [uri] as an MP4 holding only its [crop] and [trim] (either may be null), for a GIF
-     * the user edited: a GIF left alone goes up as it is. Null when it could not be written, or
-     * when this platform can't apply what was asked ([gifCrop], [gifTrim]). The caller owns the file.
+     * The GIF at [uri] holding only its [crop] and [trim] (either may be null), still a GIF
+     * (`GifEditor`), for a GIF the user edited: a GIF left alone goes up as it is. Null when it
+     * could not be written, or when this platform can't apply what was asked ([gifCrop],
+     * [gifTrim]). The caller owns the file.
      */
     suspend fun editGif(
         uri: MediaUri,

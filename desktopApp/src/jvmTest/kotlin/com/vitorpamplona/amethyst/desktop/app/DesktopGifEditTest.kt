@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
+import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
@@ -52,7 +53,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** GIFs in the media Studio on the desktop, with the real ffmpeg: left alone they go up as they are; cropped or trimmed, as an MP4. */
+/** GIFs in the media Studio on the desktop, checked with the real ffmpeg: left alone they go up as they are; cropped or trimmed, still as GIFs. */
 class DesktopGifEditTest {
     private val dir = Files.createTempDirectory("gif-edit").toFile()
     private val compressor = FfmpegVideoCompressor()
@@ -88,21 +89,45 @@ class DesktopGifEditTest {
     }
 
     @Test
-    fun aCroppedAndTrimmedGifBecomesThatPartAsAVideo() {
+    fun aCroppedAndTrimmedGifIsThatPartPixelForPixel() {
         assumeFfmpeg()
-        val uri = StringMediaUri(gif().absolutePath)
-        // The left half, from 1 s to 3 s.
-        val result = assertNotNull(runBlocking { uploader.editGif(uri, ImageCrop(0f, 0f, 0.5f, 1f), VideoTrim(1_000, 3_000)) })
-        val mp4 = File(result.uri.toString())
+        val source = gif()
+        // The left half, from 1 s to 3 s: frames 8 to 23 of 8 a second.
+        val result = assertNotNull(runBlocking { uploader.editGif(StringMediaUri(source.absolutePath), ImageCrop(0f, 0f, 0.5f, 1f), VideoTrim(1_000, 3_000)) })
+        val edited = File(result.uri.toString())
         try {
-            assertEquals("video/mp4", result.contentType)
-            val probe = assertNotNull(runBlocking { FfmpegProbe(FfmpegLocator.default.ffprobe).probe(mp4) })
+            assertEquals("image/gif", result.contentType)
+            assertEquals("GIF89a", edited.readBytes().copyOf(6).decodeToString())
+            val probe = assertNotNull(runBlocking { FfmpegProbe(FfmpegLocator.default.ffprobe).probe(edited) })
             assertEquals(160 to 180, probe.info.resolution.width to probe.info.resolution.height)
             val seconds = assertNotNull(probe.durationSeconds)
-            assertTrue(seconds in 1.8..2.2, "about 2 s, got $seconds")
+            assertTrue(seconds in 1.9..2.1, "about 2 s, got $seconds")
+
+            // ffmpeg, decoding both on its own, sees the same pixels.
+            val before = decodeFrames(source, "src")
+            val after = decodeFrames(edited, "out")
+            assertEquals(16, after.size)
+            after.forEachIndexed { n, frame ->
+                val expected = before[8 + n].getSubimage(0, 0, 160, 180)
+                for (y in 0 until 180) {
+                    for (x in 0 until 160) {
+                        assertEquals(expected.getRGB(x, y), frame.getRGB(x, y), "frame $n at $x,$y")
+                    }
+                }
+            }
         } finally {
-            mp4.delete()
+            edited.delete()
         }
+    }
+
+    /** Every frame of [gif] as ffmpeg composes it. */
+    private fun decodeFrames(
+        gif: File,
+        name: String,
+    ): List<BufferedImage> {
+        val out = File(dir, name).apply { mkdirs() }
+        ffmpeg("-i", gif.absolutePath, "-vsync", "0", File(out, "%03d.png").absolutePath)
+        return out.listFiles()!!.sortedBy { it.name }.map { ImageIO.read(it) }
     }
 
     @Test
@@ -114,10 +139,11 @@ class DesktopGifEditTest {
         runBlocking { media.uploadEach(ServerName("one", "https://one.example"), mockk<Account>(), recorder) }
         assertEquals<List<Pair<String, String?>>>(listOf(gif.absolutePath to "image/gif"), recorder.sent)
 
-        // Edited, the same file goes up as the video editGif made.
+        // Edited, it goes up as the GIF editGif made, still a GIF.
         media.get(0).options = media.get(0).options.copy(trim = VideoTrim(0, 2_000))
         runBlocking { media.uploadEach(ServerName("one", "https://one.example"), mockk<Account>(), recorder) }
-        assertEquals("video/mp4", recorder.sent.last().second)
+        assertEquals("image/gif", recorder.sent.last().second)
+        assertTrue(recorder.sent.last().first != gif.absolutePath, "the edited copy, not the original")
         assertTrue(!File(recorder.sent.last().first).exists(), "the edited copy is deleted after the upload")
     }
 

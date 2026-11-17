@@ -98,26 +98,6 @@ class FfmpegVideoCompressor(
         }
     }
 
-    override suspend fun editGif(
-        source: File,
-        crop: FloatArray?,
-        startMs: Long?,
-        durationMs: Long?,
-    ): File? {
-        val ffmpeg = locator.ffmpeg ?: return null
-        // As convertGif: the MEDIUM row's bitrate for the GIF's standard, at its own (cropped) size.
-        val plan = plan(source, CompressorQuality.MEDIUM)
-        val candidates = FfmpegEncoders.candidates(encoders(ffmpeg), useH265 = false)
-        if (candidates.isEmpty()) return null
-        return when (val outcome = encodeWith(ffmpeg, source, candidates, shortSide = null, plan, {}, crop, startMs, durationMs)) {
-            is EncodeOutcome.Encoded -> outcome.file
-            is EncodeOutcome.Failed -> {
-                Log.w(TAG) { "GIF edit of ${source.name} failed: ${outcome.lastStderr}" }
-                null
-            }
-        }
-    }
-
     // Under the gate like an encode, so one ffmpeg runs at a time; never called while a permit is held.
     override suspend fun strip(source: File): File? {
         val ffmpeg = locator.ffmpeg ?: return null
@@ -262,9 +242,6 @@ class FfmpegVideoCompressor(
         shortSide: Int?,
         plan: EncodePlan,
         onProgress: (Double) -> Unit,
-        crop: FloatArray? = null,
-        startMs: Long? = null,
-        durationMs: Long? = null,
     ): EncodeOutcome =
         gate.withPermit {
             var lastStderr: String? = null
@@ -272,8 +249,8 @@ class FfmpegVideoCompressor(
                 val bitrate = plan.bitrate(FfmpegEncoders.isHevc(candidate))
                 val encoded =
                     withTempOutput("$candidate on ${source.name}") { out ->
-                        val parser = FfmpegProgressParser(durationMs?.let { it / 1000.0 } ?: plan.durationSeconds)
-                        val command = FfmpegCommandBuilder.encode(ffmpeg, source, out, candidate, bitrate, shortSide, crop, startMs, durationMs)
+                        val parser = FfmpegProgressParser(plan.durationSeconds)
+                        val command = FfmpegCommandBuilder.encode(ffmpeg, source, out, candidate, bitrate, shortSide)
                         Log.d(TAG) { "Encoding ${source.name} with $candidate at $bitrate bps, short side ${shortSide ?: "kept"}" }
                         val outcome = runner.run(command, { line -> parser.onLine(line)?.let(onProgress) }, stallTimeoutMs)
                         if (outcome.exitCode == 0) {

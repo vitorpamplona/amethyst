@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Movie
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
@@ -31,9 +29,9 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
+import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -161,30 +159,14 @@ object VideoTrimmer {
             null
         }
 
-    /** The GIF [bytes] drawn at [atMs], at most [maxEdge] on its long side. */
-    @Suppress("DEPRECATION") // Movie is the platform's only GIF decoder that seeks to a time.
-    private fun gifFrame(
-        bytes: ByteArray,
-        atMs: Long,
-        maxEdge: Int,
-    ): Bitmap? {
-        val movie = Movie.decodeByteArray(bytes, 0, bytes.size) ?: return null
-        if (movie.width() <= 0 || movie.height() <= 0) return null
-        val length = movie.duration().takeIf { it > 0 } ?: 1
-        movie.setTime((atMs.coerceAtLeast(0) % length).toInt())
-        val frame = createBitmap(movie.width(), movie.height())
-        movie.draw(Canvas(frame), 0f, 0f)
-        return fitWithin(frame, maxEdge)
-    }
-
-    /** A JPEG of the frame near [atMs], as it displays, at most [maxEdge] on its long side. */
+    /** The frame near [atMs], as it displays, at most [maxEdge] on its long side: a JPEG, or a one-frame GIF for a GIF. */
     fun frame(
         context: Context,
         uri: Uri,
         atMs: Long,
         maxEdge: Int,
     ): ByteArray? =
-        gifBytes(context, uri)?.let { gif -> gifFrame(gif, atMs, maxEdge)?.let(::toJpeg) } ?: retrieve(context, uri) { retriever ->
+        gifBytes(context, uri)?.let { gif -> GifEditor.frameAt(gif, atMs, maxEdge) } ?: retrieve(context, uri) { retriever ->
             val us = atMs.coerceAtLeast(0) * 1000
             val bitmap =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
