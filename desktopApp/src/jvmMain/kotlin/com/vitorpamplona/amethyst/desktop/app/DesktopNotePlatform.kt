@@ -75,7 +75,9 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
+import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -291,7 +294,7 @@ object DesktopNotePlatform : NotePlatform {
                         DisplayBlurHash(content.blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = content.thumbhash)
                     }
                     // With no known shape the image itself sizes the card, so it must not just match it.
-                    MediaImage(url, content.description, contentScale, if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth())
+                    MediaImage(url, content.description, contentScale, if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(), shapeUnknown = ratio == null)
                 }
             }
         }
@@ -301,19 +304,26 @@ object DesktopNotePlatform : NotePlatform {
         }
     }
 
-    /** An inline image, animated when it is a GIF, filling [modifier]. */
+    /**
+     * An inline image, animated when it is a GIF, filling [modifier]. With [shapeUnknown] nothing
+     * sizes the slot until the image decodes, so it would be zero pixels tall while loading and stay
+     * so when the load fails: the URL with a loading symbol, then the URL alone, holds the place, as
+     * on Android.
+     */
     @Composable
     private fun MediaImage(
         url: String,
         description: String?,
         contentScale: ContentScale,
         modifier: Modifier,
+        shapeUnknown: Boolean = false,
     ) {
         if (isAnimatedGifUrl(url)) {
             AnimatedGifImage(url = url, contentDescription = description, modifier = modifier, contentScale = contentScale)
         } else {
             // Null outside a share-as-image capture.
             val captureTracker = rememberCaptureLoadingTracker(url)
+            var loadState by remember(url) { mutableStateOf<AsyncImagePainter.State?>(null) }
             AsyncImage(
                 model = url,
                 contentDescription = description,
@@ -324,9 +334,17 @@ object DesktopNotePlatform : NotePlatform {
                         val image = state.result.image
                         MediaAspectRatioCache.add(url, image.width, image.height)
                     }
+                    loadState = state
                     captureTracker?.invoke(state)
                 },
             )
+            if (shapeUnknown) {
+                when (loadState) {
+                    is AsyncImagePainter.State.Success -> {}
+                    is AsyncImagePainter.State.Error -> ClickableUrlOrBlossom(urlText = "$url ", url = url)
+                    else -> WaitAndDisplay { DisplayUrlWithLoadingSymbol(url) }
+                }
+            }
         }
     }
 
@@ -422,7 +440,7 @@ object DesktopNotePlatform : NotePlatform {
                 DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = thumbhash)
             }
             // With no known shape the image itself sizes the box, so it must not just match it.
-            MediaImage(videoUri, contentDescription, contentScale, if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth())
+            MediaImage(videoUri, contentDescription, contentScale, if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(), shapeUnknown = !fillsSlot && ratio == null)
         }
     }
 
