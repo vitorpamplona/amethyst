@@ -270,14 +270,14 @@ class ClaudeCodeSessionsViewModel(
     }
 
     /**
-     * A new job called [name] on fresh clones of [urls]: its chat opens at once ([onReady]) while
+     * A new workstream called [name] on fresh clones of [urls]: its chat opens at once ([onReady]) while
      * they clone, which can take minutes the first time a repository is used.
      */
-    fun newJob(
+    fun newWorkstream(
         urls: List<String>,
         name: String,
         agentId: String? = null,
-        /** Null for the job's own hands-off mode ([jobModeOf]). */
+        /** Null for the workstream's own hands-off mode ([workstreamModeOf]). */
         permissionMode: PermissionMode? = null,
         onReady: (String) -> Unit,
     ) {
@@ -287,9 +287,9 @@ class ClaudeCodeSessionsViewModel(
         viewModelScope.launch {
             try {
                 val agent = agentId?.let { service.backend(it) } ?: service.backend
-                onReady(service.newJob(urls, name.trim(), agent, permissionMode ?: jobModeOf(agent.capabilities.modes)).key)
+                onReady(service.newWorkstream(urls, name.trim(), agent, permissionMode ?: workstreamModeOf(agent.capabilities.modes)).key)
             } catch (e: IOException) {
-                Log.w(TAG, "Could not create the job", e)
+                Log.w(TAG, "Could not create the workstream", e)
                 _newChatError.value = NewChatError.CloneFailed(e.message)
             } finally {
                 _creating.value = false

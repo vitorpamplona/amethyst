@@ -72,13 +72,13 @@ data class AgentWorkspace(
     val agentId: String? = null,
 ) {
     /**
-     * What the agent is told about the job: its folder holds one clone per repository and is not
+     * What the agent is told about the workstream: its folder holds one clone per repository and is not
      * a repository itself, so git runs inside them; and the push is the user's.
      */
     val brief: String
         get() =
             buildString {
-                appendLine("This folder is a job with one clone per repository; it is not a git repository itself. Run git inside the clones:")
+                appendLine("This folder is a workstream with one clone per repository; it is not a git repository itself. Run git inside the clones:")
                 repos.forEach { appendLine("- ${it.name}/: ${it.url}, on branch ${it.branch} (from ${it.baseBranch})") }
                 append("Commit your work on those branches. Pushing and opening pull requests are the user's to do from the app; they are blocked here.")
             }
@@ -153,9 +153,9 @@ data class WorkspaceRepoStatus(
  *
  * ```
  * mirrors/<host>-<owner>-<name>.git   a bare mirror of each repository, fetched before each use
- * jobs/<job>/<name>/                  a job's clones, made from the mirrors
- * meta/<job>.json                     what each job holds (outside the agent's folder)
- * meta/<job>.gone                     a job that was removed: its name is not given out again
+ * workstreams/<workstream>/<name>/                  a workstream's clones, made from the mirrors
+ * meta/<workstream>.json                     what each workstream holds (outside the agent's folder)
+ * meta/<workstream>.gone                     a workstream that was removed: its name is not given out again
  * groups.json                         the repository groups the user saved
  * ```
  *
@@ -167,7 +167,7 @@ class AgentWorkspaces(
     val root: File = File(System.getProperty("user.home"), ".amethyst/agents"),
 ) {
     val mirrorsDir = File(root, "mirrors")
-    val jobsDir = File(root, "jobs")
+    val workstreamsDir = File(root, "workstreams")
     private val metaDir = File(root, "meta")
     private val groupsFile = File(root, "groups.json")
     private val lastAgentFile = File(metaDir, "last-agent.txt")
@@ -238,12 +238,12 @@ class AgentWorkspaces(
     suspend fun create(
         urls: List<String>,
         title: String?,
-        /** Every repository's branch; by default `agent/<job>`, made unique in each repository. */
+        /** Every repository's branch; by default `agent/<workstream>`, made unique in each repository. */
         branch: String? = null,
         agentId: String? = null,
         /** The NIP-34 repository each URL belongs to, when it is one: its branch is linked to it, to propose back. */
         nostrRepos: Map<String, NostrRepoRef> = emptyMap(),
-        /** The job's folder, from [claim]; claimed here when null. */
+        /** The workstream's folder, from [claim]; claimed here when null. */
         claimed: File? = null,
     ): AgentWorkspace {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
@@ -301,25 +301,25 @@ class AgentWorkspaces(
     }
 
     /**
-     * Makes the folder of a new job called [name] (or after its first repository), and returns
-     * it: `jobs/<name>`, or `<name>-2` and on when that one is taken or was used by a removed job,
+     * Makes the folder of a new workstream called [name] (or after its first repository), and returns
+     * it: `workstreams/<name>`, or `<name>-2` and on when that one is taken or was used by a removed workstream,
      * whose archived conversations would otherwise show up in the new one.
      */
     suspend fun claim(
         name: String?,
         urls: List<String>,
     ): File {
-        val stem = slug(name?.takeIf { it.isNotBlank() } ?: urls.firstOrNull()?.let(::repoName) ?: "job")
+        val stem = slug(name?.takeIf { it.isNotBlank() } ?: urls.firstOrNull()?.let(::repoName) ?: "workstream")
         return withContext(Dispatchers.IO) {
-            if (!jobsDir.mkdirs() && !jobsDir.isDirectory) throw IOException("Could not create $jobsDir")
-            // Jobs started together with the same name each get a folder: mkdir is the claim.
+            if (!workstreamsDir.mkdirs() && !workstreamsDir.isDirectory) throw IOException("Could not create $workstreamsDir")
+            // Workstreams started together with the same name each get a folder: mkdir is the claim.
             var n = 1
             var id = stem
-            while (File(metaDir, "$id$GONE").exists() || !File(jobsDir, id).mkdir()) {
+            while (File(metaDir, "$id$GONE").exists() || !File(workstreamsDir, id).mkdir()) {
                 if (++n > 1000) throw IOException("Could not create a folder for $stem")
                 id = "$stem-$n"
             }
-            File(jobsDir, id)
+            File(workstreamsDir, id)
         }
     }
 
@@ -347,7 +347,7 @@ class AgentWorkspaces(
     /** The workspace [dir] is in (its folder or one inside it), or null. */
     fun of(dir: File): AgentWorkspace? {
         val path = dir.absoluteFile.normalize().path
-        if (!path.startsWith(jobsDir.absoluteFile.normalize().path + File.separator)) return null
+        if (!path.startsWith(workstreamsDir.absoluteFile.normalize().path + File.separator)) return null
         return list().firstOrNull { path == it.dir || path.startsWith(it.dir + File.separator) }
     }
 
@@ -410,7 +410,7 @@ class AgentWorkspaces(
             if (dir.exists() && !deleteTree(dir)) throw IOException("Could not remove $dir")
             val meta = File(metaDir, "${workspace.id}.json")
             if (meta.exists() && !meta.delete()) Log.w(TAG) { "Could not remove $meta" }
-            // Its conversations stay, archived, and Claude files them by folder: a new job in this
+            // Its conversations stay, archived, and Claude files them by folder: a new workstream in this
             // folder would show them as its own.
             try {
                 File(metaDir, "${workspace.id}$GONE").writeText(workspace.title)
@@ -655,7 +655,7 @@ class AgentWorkspaces(
         private const val TAG = "AgentWorkspaces"
         private const val NETWORK_TIMEOUT = 900L
 
-        /** The mark a removed job leaves in `meta/`, so its name is not given to a new one. */
+        /** The mark a removed workstream leaves in `meta/`, so its name is not given to a new one. */
         private const val GONE = ".gone"
 
         /** Files operating systems drop in folders: never anyone's work. */
@@ -772,6 +772,6 @@ class AgentWorkspaces(
                 .replace(Regex("[^a-z0-9._-]+"), "-")
                 .trim('-', '.')
                 .take(40)
-                .ifEmpty { "job" }
+                .ifEmpty { "workstream" }
     }
 }

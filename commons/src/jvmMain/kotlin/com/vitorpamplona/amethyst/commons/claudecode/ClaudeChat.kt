@@ -93,7 +93,7 @@ sealed interface ChatError {
     /** Another Claude Code has the session open: a second process would mix its turns in. */
     data object HeldElsewhere : ChatError
 
-    /** The job's repositories could not be cloned; [message] is git's. */
+    /** The workstream's repositories could not be cloned; [message] is git's. */
     data class CloneFailed(
         val message: String?,
     ) : ChatError
@@ -144,7 +144,7 @@ data class ClaudeChatState(
     val models: List<ModelChoice> = emptyList(),
     /** The model the user picked ([ModelChoice.value]), or null for the CLI's default. */
     val modelChoice: String? = null,
-    /** How many repositories a new job is still cloning; a message sent meanwhile waits for them. */
+    /** How many repositories a new workstream is still cloning; a message sent meanwhile waits for them. */
     val cloning: Int? = null,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
@@ -171,7 +171,7 @@ class ClaudeChat internal constructor(
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
     /** Whether [File] is a workspace whose pushes and pull requests only the user makes. */
     private val publishingIsTheUsers: (File) -> Boolean = { false },
-    /** What to tell the agent about the folder it works in (a job's clones), if anything. */
+    /** What to tell the agent about the folder it works in (a workstream's clones), if anything. */
     private val folderBrief: (File) -> String? = { null },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
     fork: Boolean = false,
@@ -216,7 +216,7 @@ class ClaudeChat internal constructor(
     @Volatile
     private var killed = false
 
-    /** Set while a new job's repositories clone ([waitFor]): the agent starts in the folder once they are in. */
+    /** Set while a new workstream's repositories clone ([waitFor]): the agent starts in the folder once they are in. */
     @Volatile
     private var preparation: Deferred<Unit>? = null
 
@@ -290,7 +290,7 @@ class ClaudeChat internal constructor(
     }
 
     /**
-     * Makes the chat wait for [cloning] before the agent starts: the job's [repositories] are
+     * Makes the chat wait for [cloning] before the agent starts: the workstream's [repositories] are
      * cloning into its folder. A failure ends the chat with git's words.
      */
     fun waitFor(
@@ -347,7 +347,7 @@ class ClaudeChat internal constructor(
                 transcript.addPrompt(trimmed, sent)
                 publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
             }
-            // A job still cloning: the prompt shows now, and goes out once its folder is ready.
+            // A workstream still cloning: the prompt shows now, and goes out once its folder is ready.
             try {
                 preparation?.await()
             } catch (e: CancellationException) {

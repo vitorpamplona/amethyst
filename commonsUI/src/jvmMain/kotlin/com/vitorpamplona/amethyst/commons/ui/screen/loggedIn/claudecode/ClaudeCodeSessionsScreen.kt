@@ -110,7 +110,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.NostrWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.RepoCandidate
 import com.vitorpamplona.amethyst.commons.claudecode.RepoGroup
 import com.vitorpamplona.amethyst.commons.claudecode.expandHome
-import com.vitorpamplona.amethyst.commons.claudecode.jobModeOf
+import com.vitorpamplona.amethyst.commons.claudecode.workstreamModeOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -129,12 +129,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_error_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_folder
 import com.vitorpamplona.amethyst.commons.resources.claude_code_install_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_install_title
-import com.vitorpamplona.amethyst.commons.resources.claude_code_job_go
-import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name
-import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name_desc
-import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name_hint
-import com.vitorpamplona.amethyst.commons.resources.claude_code_new_job
 import com.vitorpamplona.amethyst.commons.resources.claude_code_new_session
+import com.vitorpamplona.amethyst.commons.resources.claude_code_new_workstream
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_matches
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_sessions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_warning
@@ -178,6 +174,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_u
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_save_group
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_go
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_name_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_name_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
 import com.vitorpamplona.amethyst.commons.resources.refresh
@@ -297,8 +297,8 @@ private fun SessionsPane(
                 HoverTooltip(stringRes(Res.string.refresh)) {
                     IconButton(onClick = { viewModel.refresh() }) { Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.refresh)) }
                 }
-                HoverTooltip(stringRes(Res.string.claude_code_new_job)) {
-                    IconButton(onClick = { showNew = true }) { Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.claude_code_new_job)) }
+                HoverTooltip(stringRes(Res.string.claude_code_new_workstream)) {
+                    IconButton(onClick = { showNew = true }) { Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.claude_code_new_workstream)) }
                 }
             }
         },
@@ -446,7 +446,7 @@ private fun SessionList(
             }
             -1
         }
-    // A list kept its place when rows arrive above it: a job just started would sit out of
+    // A list kept its place when rows arrive above it: a workstream just started would sit out of
     // sight. When the open chat changes, or its row first shows up, it scrolls into view.
     LaunchedEffect(selectedKey, selectedIndex >= 0) {
         if (selectedIndex < 0) return@LaunchedEffect
@@ -714,8 +714,8 @@ private fun EmptyState(text: String) {
 }
 
 /**
- * A new job: pick the repositories, name it, go. Each job gets fresh clones of its own, so the
- * agent runs hands-off ([jobModeOf]). A faint button in the corner opens the rest: a folder
+ * A new workstream: pick the repositories, name it, go. Each workstream gets fresh clones of its own, so the
+ * agent runs hands-off ([workstreamModeOf]). A faint button in the corner opens the rest: a folder
  * already on this computer instead of clones, the agent, and the permission mode.
  */
 @Composable
@@ -736,11 +736,11 @@ private fun NewSessionDialog(
     val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
     // Fresh clones, unless the user asks (in Advanced) to work in a folder of their own.
     var inFolder by remember { mutableStateOf(false) }
-    // Null until the user picks one: then the way a job or a folder starts on this agent.
+    // Null until the user picks one: then the way a workstream or a folder starts on this agent.
     var pickedMode by remember { mutableStateOf<PermissionMode?>(null) }
-    val mode = pickedMode?.takeIf { it in modes } ?: if (inFolder) defaultModeOf(modes) else jobModeOf(modes)
+    val mode = pickedMode?.takeIf { it in modes } ?: if (inFolder) defaultModeOf(modes) else workstreamModeOf(modes)
     val groups by viewModel.repoGroups.collectAsStateWithLifecycle()
-    // The repositories of the last job to start with: most jobs continue where the last left off.
+    // The repositories of the last workstream to start with: most workstreams continue where the last left off.
     val repos = remember { mutableStateListOf<String>().apply { addAll((groups.firstOrNull { it.name == ClaudeCodeService.LAST_GROUP } ?: groups.firstOrNull())?.urls.orEmpty()) } }
     var adding by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -759,7 +759,7 @@ private fun NewSessionDialog(
     val searchingGitHub by viewModel.searchingGitHub.collectAsStateWithLifecycle()
     // Lists the mirrors and runs `gh`: once, when the dialog opens.
     LaunchedEffect(Unit) { viewModel.loadRepoCatalog() }
-    // With the last job's repositories already in, the name is all that is left to type.
+    // With the last workstream's repositories already in, the name is all that is left to type.
     LaunchedEffect(Unit) { if (repos.isNotEmpty()) nameFocus.requestFocus() }
 
     // What Go clones: the chosen ones, and a URL still in the field (not a search).
@@ -781,8 +781,8 @@ private fun NewSessionDialog(
             viewModel.newChat(folder, worktree && inRepository != false, mode, agent?.id, onStarted)
         } else {
             addTyped()
-            // Simple: the job's own hands-off mode; Advanced: the one the user chose.
-            viewModel.newJob(repos.toList(), name, agent?.id, mode.takeIf { advanced }, onStarted)
+            // Simple: the workstream's own hands-off mode; Advanced: the one the user chose.
+            viewModel.newWorkstream(repos.toList(), name, agent?.id, mode.takeIf { advanced }, onStarted)
         }
     }
 
@@ -793,7 +793,7 @@ private fun NewSessionDialog(
         containerColor = formDialogColor(),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringRes(Res.string.claude_code_new_job), modifier = Modifier.weight(1f))
+                Text(stringRes(Res.string.claude_code_new_workstream), modifier = Modifier.weight(1f))
                 AdvancedToggle(advanced) {
                     advanced = !advanced
                     viewModel.clearNewChatError()
@@ -857,11 +857,11 @@ private fun NewSessionDialog(
                             },
                         )
                     }
-                    LabeledField(Res.string.claude_code_job_name, helper = stringRes(Res.string.claude_code_job_name_desc)) {
+                    LabeledField(Res.string.claude_code_workstream_name, helper = stringRes(Res.string.claude_code_workstream_name_desc)) {
                         FormTextField(
                             value = name,
                             onValueChange = { name = it },
-                            placeholder = stringRes(Res.string.claude_code_job_name_hint),
+                            placeholder = stringRes(Res.string.claude_code_workstream_name_hint),
                             modifier = Modifier.focusRequester(nameFocus),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                             keyboardActions = KeyboardActions(onGo = { go() }),
@@ -869,14 +869,14 @@ private fun NewSessionDialog(
                     }
                 }
                 if (advanced) {
-                    // Which agent works on it, when more than one is installed; remembered for the next job.
+                    // Which agent works on it, when more than one is installed; remembered for the next workstream.
                     AgentPicker(installed, agent?.id) { agentId = it }
                     PermissionField(modes, mode) { pickedMode = it }
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = canGo, onClick = ::go) { Text(stringRes(if (folderMode) Res.string.claude_code_start else Res.string.claude_code_job_go)) }
+            TextButton(enabled = canGo, onClick = ::go) { Text(stringRes(if (folderMode) Res.string.claude_code_start else Res.string.claude_code_workstream_go)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )

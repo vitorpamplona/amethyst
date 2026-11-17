@@ -108,11 +108,11 @@ data class ProjectInfo(
 )
 
 /**
- * The mode a job runs in: Claude's Auto; Codex, which has none, works freely inside its sandbox
- * and asks only to leave it. A job's clones are its own and pushes are blocked, so neither asks
+ * The mode a workstream runs in: Claude's Auto; Codex, which has none, works freely inside its sandbox
+ * and asks only to leave it. A workstream's clones are its own and pushes are blocked, so neither asks
  * about edits in them.
  */
-fun jobModeOf(modes: List<PermissionMode>): PermissionMode =
+fun workstreamModeOf(modes: List<PermissionMode>): PermissionMode =
     when {
         PermissionMode.AUTO in modes -> PermissionMode.AUTO
         PermissionMode.ACCEPT_EDITS in modes -> PermissionMode.ACCEPT_EDITS
@@ -519,23 +519,23 @@ class ClaudeCodeService(
     }
 
     /**
-     * A new job called [name]: a chat in a folder of its own, open at once, while fresh clones of
+     * A new workstream called [name]: a chat in a folder of its own, open at once, while fresh clones of
      * [urls] are made into it on a new branch each. The agent starts once they are in, in its
-     * most hands-off mode ([jobModeOf]): the clones are the job's alone, and pushes are the user's.
+     * most hands-off mode ([workstreamModeOf]): the clones are the workstream's alone, and pushes are the user's.
      * Throws [IOException] only when the folder can't be made; a failed clone shows in the chat.
      */
-    suspend fun newJob(
+    suspend fun newWorkstream(
         urls: List<String>,
         name: String,
         agent: AgentBackend = backend,
-        permissionMode: PermissionMode = jobModeOf(agent.capabilities.modes),
+        permissionMode: PermissionMode = workstreamModeOf(agent.capabilities.modes),
     ): ClaudeChat {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
         val dir = agentWorkspaces.claim(name, clean)
         agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, clean))
         val chat = newChat(dir, permissionMode, title = name, agent = agent)
-        // On the service's scope: the job keeps cloning while the user reads something else.
+        // On the service's scope: the workstream keeps cloning while the user reads something else.
         val cloning =
             scope.async(Dispatchers.IO) {
                 // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
