@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_folder_gone
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_job_cloning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_loading_history
 import com.vitorpamplona.amethyst.commons.resources.claude_code_message_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_accept_edits
@@ -225,6 +226,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtitle
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
@@ -372,7 +374,8 @@ fun ClaudeCodeChatScreen(
         )
     }
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
-    val workspace = remember(state.cwd) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) }
+    // A job's record is written once its clones are in: read again when they are.
+    val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) }
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         Scaffold(
@@ -429,6 +432,7 @@ fun ClaudeCodeChatScreen(
             ) {
                 Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
                     state.error?.let { ErrorBanner(it) }
+                    state.cloning?.let { CloningNote(it) }
                     if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
                     runError?.let { Banner(stringRes(Res.string.claude_code_run_failed, it)) }
 
@@ -1109,6 +1113,16 @@ private fun CenterNote(text: String) {
     )
 }
 
+/** A new job's repositories still cloning: what was typed meanwhile goes out once they are in. */
+@Composable
+private fun CloningNote(repositories: Int) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.grayText)
+        Spacer(Modifier.width(InlineGap))
+        Text(pluralStringRes(Res.plurals.claude_code_job_cloning, repositories, repositories), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+    }
+}
+
 @Composable
 private fun InlineNote(text: String) {
     Text(
@@ -1569,6 +1583,7 @@ private fun ErrorBanner(error: ChatError) {
         is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, LocalAgentName.current, error.message ?: ""))
         ChatError.FolderGone -> Banner(stringRes(Res.string.claude_code_folder_gone))
         ChatError.HeldElsewhere -> Banner(stringRes(Res.string.claude_code_open_elsewhere_readonly))
+        is ChatError.CloneFailed -> Banner(stringRes(Res.string.claude_code_workspace_clone_failed, error.message ?: ""))
         is ChatError.Exited ->
             Column {
                 Banner(stringRes(Res.string.claude_code_error_exited, LocalAgentName.current, error.code?.toString() ?: "?"))

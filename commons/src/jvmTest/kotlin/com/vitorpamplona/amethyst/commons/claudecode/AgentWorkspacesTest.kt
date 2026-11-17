@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.PermissionMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -72,7 +73,7 @@ class AgentWorkspacesTest {
     @BeforeTest
     fun setUp() {
         tmp = Files.createTempDirectory("agent-workspaces").toFile()
-        workspaces = AgentWorkspaces(File(tmp, "AmethystAgents"))
+        workspaces = AgentWorkspaces(File(tmp, "agents"))
         appUrl = remote("app")
         libUrl = remote("lib")
     }
@@ -151,7 +152,7 @@ class AgentWorkspacesTest {
             val failed = runCatching { workspaces.create(listOf(appUrl, fileUrl(File(tmp, "missing.git"))), "broken") }
             assertTrue(failed.isFailure)
             assertTrue(
-                workspaces.sessionsDir
+                workspaces.jobsDir
                     .listFiles()
                     .orEmpty()
                     .isEmpty(),
@@ -168,7 +169,7 @@ class AgentWorkspacesTest {
             delay(500)
             starting.cancelAndJoin()
             assertTrue(
-                workspaces.sessionsDir
+                workspaces.jobsDir
                     .listFiles()
                     .orEmpty()
                     .isEmpty(),
@@ -457,7 +458,7 @@ class AgentWorkspacesTest {
             workspaces.delete(gone)
             assertTrue(workspaces.unusedMirrors().isEmpty())
             // The lib mirror's last use, long ago; app's workspace still uses its own.
-            val usage = File(tmp, "AmethystAgents/usage.json")
+            val usage = File(tmp, "agents/usage.json")
             val old = System.currentTimeMillis() - 90 * 24 * 60 * 60_000L
             usage.writeText("""{"$appUrl":{"count":1,"lastUsed":$old},"$libUrl":{"count":1,"lastUsed":$old}}""".replace("\\", "\\\\"))
             assertEquals(listOf(workspaces.mirrorDir(libUrl).absolutePath), workspaces.unusedMirrors().map { it.absolutePath })
@@ -474,7 +475,7 @@ class AgentWorkspacesTest {
     fun cleanupLeavesAMirrorANewWorkspaceIsFetchingInto() =
         runBlocking {
             workspaces.delete(workspaces.create(listOf(libUrl), null))
-            val usage = File(tmp, "AmethystAgents/usage.json")
+            val usage = File(tmp, "agents/usage.json")
             val old = System.currentTimeMillis() - 90 * 24 * 60 * 60_000L
             usage.writeText("""{"$libUrl":{"count":1,"lastUsed":$old}}""".replace("\\", "\\\\"))
             val mirror = workspaces.mirrorDir(libUrl)
@@ -534,8 +535,64 @@ class AgentWorkspacesTest {
     fun preferencesAreKept() {
         assertTrue(workspaces.preferences().autoCleanup)
         workspaces.updatePreferences { it.copy(autoCleanup = false, archivedSessions = setOf("s1")) }
-        val reread = AgentWorkspaces(File(tmp, "AmethystAgents")).preferences()
+        val reread = AgentWorkspaces(File(tmp, "agents")).preferences()
         assertFalse(reread.autoCleanup)
         assertEquals(setOf("s1"), reread.archivedSessions)
+    }
+
+    @Test
+    fun aJobIsNamedForItsFolderAndBranch() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), "Fix the relay list")
+            assertEquals("fix-the-relay-list", ws.id)
+            assertEquals(File(workspaces.jobsDir, "fix-the-relay-list").absolutePath, ws.dir)
+            assertEquals("agent/fix-the-relay-list", ws.repos.single().branch)
+            // The agent is told where the clones are, since the job's folder is no repository.
+            assertTrue(ws.brief.contains("- app/: $appUrl, on branch agent/fix-the-relay-list (from main)"), ws.brief)
+            // A second job with the same name gets a folder of its own.
+            assertEquals("fix-the-relay-list-2", workspaces.create(listOf(libUrl), "Fix the relay list").id)
+        }
+
+    @Test
+    fun aRemovedJobsNameIsNotGivenOutAgain() =
+        runBlocking {
+            // Its conversations stay, filed under its folder: a new job there would show them.
+            workspaces.delete(workspaces.create(listOf(appUrl), "relays"))
+            assertEquals("relays-2", workspaces.create(listOf(appUrl), "relays").id)
+        }
+
+    @Test
+    fun aBranchTheRepositoryAlreadyHasIsNotReused() =
+        runBlocking {
+            // The branch of an earlier job, pushed and merged long ago.
+            val seed = File(tmp, "seed-app")
+            git(seed, "push", "--quiet", File(tmp, "remotes/app.git").absolutePath, "main:agent/relays")
+            val ws = workspaces.create(listOf(appUrl), "relays")
+            assertEquals("agent/relays-2", ws.repos.single().branch)
+        }
+
+    @Test
+    fun aClaimedFolderIsWhereTheClonesGo() =
+        runBlocking {
+            val dir = workspaces.claim("later", listOf(appUrl))
+            assertTrue(dir.isDirectory)
+            val ws = workspaces.create(listOf(appUrl), "later", claimed = dir)
+            assertEquals(dir.absolutePath, ws.dir)
+            assertTrue(File(dir, "app/.git").isDirectory)
+        }
+
+    @Test
+    fun aFailedCloneRemovesTheClaimedFolder() =
+        runBlocking {
+            val dir = workspaces.claim("broken", listOf(appUrl))
+            assertTrue(runCatching { workspaces.create(listOf(fileUrl(File(tmp, "missing.git"))), "broken", claimed = dir) }.isFailure)
+            assertFalse(dir.exists())
+        }
+
+    @Test
+    fun aJobRunsHandsOffInTheAgentsOwnWay() {
+        assertEquals(PermissionMode.AUTO, jobModeOf(listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN, PermissionMode.AUTO)))
+        // Codex has no Auto: it works freely inside its sandbox and asks to leave it.
+        assertEquals(PermissionMode.ACCEPT_EDITS, jobModeOf(listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN)))
     }
 }

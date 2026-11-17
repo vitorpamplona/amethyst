@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import com.vitorpamplona.agents.LineTransport
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
@@ -44,6 +45,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -370,5 +372,56 @@ class ClaudeCodeServiceTest {
             assertEquals(listOf(clean.id), removed.map { it.id })
             assertFalse(File(clean.dir).exists())
             assertTrue(File(dirty.dir).exists())
+        }
+
+    @Test
+    fun aJobOpensAtOnceAndClonesBehindIt() =
+        runBlocking {
+            val remote = File(work, "job.git")
+            val seed = File(work, "job-seed").apply { mkdirs() }
+
+            fun git(
+                dir: File,
+                vararg args: String,
+            ) = check(
+                ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
+                    .directory(dir)
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor() == 0,
+            ) { args.joinToString(" ") }
+            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
+            git(seed, "init", "--quiet", "--initial-branch=main")
+            File(seed, "README.md").writeText("app\n")
+            git(seed, "add", ".")
+            git(seed, "commit", "--quiet", "-m", "init")
+            git(seed, "push", "--quiet", remote.absolutePath, "main")
+
+            val chat = service.newJob(listOf(fileUrl(remote)), "Greeting")
+            // The chat is there before the clone: in the job's folder, hands-off.
+            assertEquals(File(service.agentWorkspaces.jobsDir, "greeting").absolutePath, chat.state.value.cwd)
+            assertEquals(PermissionMode.AUTO, chat.state.value.permissionMode)
+            waitFor { chat.state.value.cloning == null }
+            assertNull(chat.state.value.error)
+            assertTrue(File(chat.state.value.cwd, "job/.git").isDirectory)
+            // Listed as a job, under the chat's own key.
+            waitFor { service.rows.value.any { it.key == chat.key && it.workspace != null } }
+            assertEquals(
+                "Greeting",
+                service.agentWorkspaces
+                    .list()
+                    .single()
+                    .title,
+            )
+        }
+
+    @Test
+    fun aJobThatCannotCloneSaysSoInItsChat() =
+        runBlocking {
+            val chat = service.newJob(listOf(fileUrl(File(work, "missing.git"))), "Nowhere")
+            waitFor { chat.state.value.error != null }
+            assertIs<ChatError.CloneFailed>(chat.state.value.error)
+            assertFalse(File(chat.state.value.cwd).exists())
+            assertTrue(service.agentWorkspaces.list().isEmpty())
         }
 }

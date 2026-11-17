@@ -9695,12 +9695,7 @@
     <string name="claude_code_step_check">Run the checks</string>
     <string name="claude_code_step_confirm">Confirm</string>
     <string name="claude_code_browse">Choose a folder</string>
-    <string name="claude_code_where_folder">Folder</string>
-    <string name="claude_code_where_clones">Fresh clones</string>
-    <string name="claude_code_where_clones_desc">The session gets its own clone of each repository, on a new branch, in %1$s. You open the pull requests.</string>
     <string name="claude_code_workspace_repos">Repositories</string>
-    <string name="claude_code_workspace_name">Name</string>
-    <string name="claude_code_workspace_cloning">Cloning the repositories…</string>
     <string name="claude_code_workspace_clone_failed">Couldn’t clone: %1$s</string>
     <string name="claude_code_pull_requests">Pull requests</string>
     <string name="claude_code_pr_branch">%1$s into %2$s</string>
@@ -9726,7 +9721,7 @@
     <string name="claude_code_pr_failed">Couldn’t open the pull request: %1$s</string>
     <string name="claude_code_pr_no_gh">Install the GitHub CLI (gh) and sign in with gh auth login to open pull requests from here.</string>
     <string name="claude_code_pr_rules">The agent can’t push or open pull requests: you do, from here.</string>
-    <string name="claude_code_workspace_delete">Delete workspace</string>
+    <string name="claude_code_workspace_delete">Delete job</string>
     <string name="claude_code_workspace_delete_body">Removes this session’s clones from this computer. Branches you pushed stay on GitHub.</string>
     <string name="claude_code_workspace_none">This session isn’t in a workspace of its own.</string>
     <string name="claude_code_agent">Agent</string>
@@ -9742,7 +9737,7 @@
     <string name="claude_code_attach_pick">Choose images to send</string>
     <string name="claude_code_attach_remove">Remove %1$s</string>
     <string name="claude_code_attach_failed">Couldn’t attach %1$s: images must be PNG, JPEG, GIF or WebP.</string>
-    <string name="claude_code_section_workspaces">Workspaces</string>
+    <string name="claude_code_section_workspaces">Jobs</string>
     <plurals name="claude_code_pr_badge_open">
         <item quantity="one">%1$d PR open</item>
         <item quantity="other">%1$d PRs open</item>
@@ -9777,9 +9772,6 @@
     <string name="claude_code_pr_send_proposal">Send proposal</string>
     <string name="claude_code_pr_nostr_hint">A Nostr repository: its changes go back as a proposal.</string>
     <string name="claude_code_pr_via_fork">You can’t push to %1$s: the branch goes to your fork, and the pull request opens from there.</string>
-    <string name="claude_code_where">Where it works</string>
-    <string name="claude_code_where_folder_desc">A folder already on this computer, as it is.</string>
-    <string name="claude_code_workspace_name_hint">Optional</string>
     <string name="claude_code_workspace_remove_repo">Remove %1$s</string>
     <string name="claude_code_repo_add">Add %1$s</string>
     <string name="claude_code_mode_short_default">Ask</string>
@@ -10248,6 +10240,18 @@
     <string name="nip_catalog_on_nostr">On Nostr</string>
     <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
     <string name="nip_catalog_empty">No NIPs match your search.</string>
+    <string name="claude_code_new_job">New job</string>
+    <string name="claude_code_job_name">Name</string>
+    <string name="claude_code_job_name_hint">What it’s for</string>
+    <string name="claude_code_job_name_desc">Names the job’s folder and branch.</string>
+    <string name="claude_code_job_go">Go</string>
+    <plurals name="claude_code_job_cloning">
+        <item quantity="one">Cloning %1$d repository. A message sent now goes out once it’s in.</item>
+        <item quantity="other">Cloning %1$d repositories. A message sent now goes out once they’re in.</item>
+    </plurals>
+    <string name="claude_code_open_folder">Open a folder instead</string>
+    <string name="claude_code_open_folder_title">Open a folder</string>
+    <string name="claude_code_use_clones">Start a job with fresh clones instead</string>
     <string name="claude_code_storage">Storage</string>
     <plurals name="claude_code_storage_workspaces">
         <item quantity="one">%1$d workspace · %2$s</item>

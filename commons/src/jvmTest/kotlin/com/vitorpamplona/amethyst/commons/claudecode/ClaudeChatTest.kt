@@ -26,6 +26,7 @@ import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -37,6 +38,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
@@ -312,6 +314,51 @@ class ClaudeChatTest {
 
             assertEquals(ChatError.FolderGone, chat.state.value.error)
             assertTrue(cli.written.isEmpty(), "the agent was started: ${cli.written}")
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aMessageSentWhileTheJobClonesWaitsForTheClones() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli)
+            val cloning = CompletableDeferred<Unit>()
+            chat.waitFor(cloning, repositories = 2)
+            advanceUntilIdle()
+            assertEquals(2, chat.state.value.cloning)
+
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            // The prompt shows at once; the agent isn't started before its folder has the clones.
+            assertEquals(
+                "Create hello.txt",
+                (
+                    chat.state.value.items
+                        .first() as ChatItem.UserText
+                ).text,
+            )
+            assertTrue(cli.written.isEmpty(), "the agent started before the clones: ${cli.written}")
+
+            cloning.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(null, chat.state.value.cloning)
+            assertEquals(ChatStatus.NEEDS_APPROVAL, chat.state.value.status)
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aFailedCloneEndsTheChatWithGitsWords() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli)
+            val cloning = CompletableDeferred<Unit>()
+            chat.waitFor(cloning, repositories = 1)
+            chat.send("Create hello.txt")
+            cloning.completeExceptionally(IOException("repository not found"))
+            advanceUntilIdle()
+            assertEquals(ChatError.CloneFailed("repository not found"), chat.state.value.error)
+            assertEquals(ChatStatus.ENDED, chat.state.value.status)
+            assertTrue(cli.written.isEmpty())
             chatScope.cancel()
         }
 }

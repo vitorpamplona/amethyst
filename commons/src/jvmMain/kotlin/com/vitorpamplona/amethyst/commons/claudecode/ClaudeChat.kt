@@ -36,8 +36,10 @@ import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +92,11 @@ sealed interface ChatError {
 
     /** Another Claude Code has the session open: a second process would mix its turns in. */
     data object HeldElsewhere : ChatError
+
+    /** The job's repositories could not be cloned; [message] is git's. */
+    data class CloneFailed(
+        val message: String?,
+    ) : ChatError
 }
 
 /** What a chat is for: work on code in a folder, or the settings assistant (no files, only settings tools). */
@@ -137,6 +144,8 @@ data class ClaudeChatState(
     val models: List<ModelChoice> = emptyList(),
     /** The model the user picked ([ModelChoice.value]), or null for the CLI's default. */
     val modelChoice: String? = null,
+    /** How many repositories a new job is still cloning; a message sent meanwhile waits for them. */
+    val cloning: Int? = null,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -162,6 +171,8 @@ class ClaudeChat internal constructor(
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
     /** Whether [File] is a workspace whose pushes and pull requests only the user makes. */
     private val publishingIsTheUsers: (File) -> Boolean = { false },
+    /** What to tell the agent about the folder it works in (a job's clones), if anything. */
+    private val folderBrief: (File) -> String? = { null },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
     fork: Boolean = false,
     /** Whether another Claude Code process has this session open now. Called off the main thread. */
@@ -204,6 +215,10 @@ class ClaudeChat internal constructor(
     /** Set by [kill]: a process that finishes starting afterwards is stopped at once. */
     @Volatile
     private var killed = false
+
+    /** Set while a new job's repositories clone ([waitFor]): the agent starts in the folder once they are in. */
+    @Volatile
+    private var preparation: Deferred<Unit>? = null
 
     /** Done once a resumed session's history is in: a prompt sent earlier waits, so it lands after it. */
     private val historyReady = CompletableDeferred<Unit>().apply { if (resumeSessionId == null) complete(Unit) }
@@ -274,6 +289,29 @@ class ClaudeChat internal constructor(
         }
     }
 
+    /**
+     * Makes the chat wait for [cloning] before the agent starts: the job's [repositories] are
+     * cloning into its folder. A failure ends the chat with git's words.
+     */
+    fun waitFor(
+        cloning: Deferred<Unit>,
+        repositories: Int,
+    ) {
+        preparation = cloning
+        publish { it.copy(cloning = repositories) }
+        scope.launch {
+            try {
+                cloning.await()
+                publish { it.copy(cloning = null) }
+                refreshGit()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                publish { it.copy(cloning = null, status = ChatStatus.ENDED, error = ChatError.CloneFailed(e.message)) }
+            }
+        }
+    }
+
     /** Re-reads the folder's git state: after a turn, and when the chat is shown. */
     fun refreshGit() {
         scope.launch {
@@ -308,6 +346,16 @@ class ClaudeChat internal constructor(
             lock.withLock {
                 transcript.addPrompt(trimmed, sent)
                 publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
+            }
+            // A job still cloning: the prompt shows now, and goes out once its folder is ready.
+            try {
+                preparation?.await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Said here too: this prompt marked the chat as working after [waitFor] ended it.
+                publish { it.copy(cloning = null, status = ChatStatus.ENDED, error = ChatError.CloneFailed(e.message)) }
+                return@launch
             }
             val c = ensureStarted() ?: return@launch
             try {
@@ -466,6 +514,7 @@ class ClaudeChat internal constructor(
                     blockedCommands = if (nostrCheckout) NO_PUBLISHING else emptyList(),
                     environment = if (nostrCheckout) noPushEnvironment(remoteUrls = withContext(Dispatchers.IO) { remoteUrls(workDir) }) else emptyMap(),
                     hostTools = mcpServers,
+                    instructions = folderBrief(workDir),
                 ).let(launchOptions)
             val started =
                 try {

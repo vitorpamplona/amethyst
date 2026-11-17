@@ -37,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,6 +106,18 @@ data class ProjectInfo(
     val name: String,
     val repo: NostrRepoRef?,
 )
+
+/**
+ * The mode a job runs in: Claude's Auto; Codex, which has none, works freely inside its sandbox
+ * and asks only to leave it. A job's clones are its own and pushes are blocked, so neither asks
+ * about edits in them.
+ */
+fun jobModeOf(modes: List<PermissionMode>): PermissionMode =
+    when {
+        PermissionMode.AUTO in modes -> PermissionMode.AUTO
+        PermissionMode.ACCEPT_EDITS in modes -> PermissionMode.ACCEPT_EDITS
+        else -> PermissionMode.DEFAULT
+    }
 
 /**
  * Claude Code on this computer: the sessions it saved and the chats open in the app. One per
@@ -506,22 +519,32 @@ class ClaudeCodeService(
     }
 
     /**
-     * A new chat in a workspace of its own: fresh clones of [urls], each on a new branch. Blocks
-     * while the mirrors fetch and the clones are made; throws [IOException] when one fails.
+     * A new job called [name]: a chat in a folder of its own, open at once, while fresh clones of
+     * [urls] are made into it on a new branch each. The agent starts once they are in, in its
+     * most hands-off mode ([jobModeOf]): the clones are the job's alone, and pushes are the user's.
+     * Throws [IOException] only when the folder can't be made; a failed clone shows in the chat.
      */
-    suspend fun newWorkspaceChat(
+    suspend fun newJob(
         urls: List<String>,
-        title: String?,
-        permissionMode: PermissionMode,
+        name: String,
         agent: AgentBackend = backend,
-        folderKnown: Boolean = true,
     ): ClaudeChat {
-        // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
-        val nostrRepos = urls.mapNotNull { url -> RepoCatalog.nostrRepoOf(url)?.let { url.trim() to it } }.toMap()
-        val workspace = agentWorkspaces.create(urls, title, agentId = agent.id, nostrRepos = nostrRepos)
-        agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
-        knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
-        return newChat(File(workspace.dir), permissionMode, title = workspace.title, agent = agent)
+        val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        if (clean.isEmpty()) throw IOException("No repositories")
+        val dir = agentWorkspaces.claim(name, clean)
+        agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, clean))
+        val chat = newChat(dir, jobModeOf(agent.capabilities.modes), title = name, agent = agent)
+        // On the service's scope: the job keeps cloning while the user reads something else.
+        val cloning =
+            scope.async(Dispatchers.IO) {
+                // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
+                val nostrRepos = clean.mapNotNull { url -> RepoCatalog.nostrRepoOf(url)?.let { url to it } }.toMap()
+                val workspace = agentWorkspaces.create(clean, name, agentId = agent.id, nostrRepos = nostrRepos, claimed = dir)
+                knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
+                rebuildRows()
+            }
+        chat.waitFor(cloning, clean.size)
+        return chat
     }
 
     /**
@@ -607,6 +630,7 @@ class ClaudeCodeService(
                 kind = kind,
                 forkBefore = forkBefore,
                 publishingIsTheUsers = { agentWorkspaces.of(it) != null },
+                folderBrief = { agentWorkspaces.of(it)?.brief },
                 folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }

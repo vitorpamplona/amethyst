@@ -38,8 +38,6 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import com.vitorpamplona.agents.deleteTree as removeTree
 
@@ -73,6 +71,18 @@ data class AgentWorkspace(
     /** The agent it was made for ([com.vitorpamplona.agents.AgentBackend.id]): a chat reopened in it uses the same. */
     val agentId: String? = null,
 ) {
+    /**
+     * What the agent is told about the job: its folder holds one clone per repository and is not
+     * a repository itself, so git runs inside them; and the push is the user's.
+     */
+    val brief: String
+        get() =
+            buildString {
+                appendLine("This folder is a job with one clone per repository; it is not a git repository itself. Run git inside the clones:")
+                repos.forEach { appendLine("- ${it.name}/: ${it.url}, on branch ${it.branch} (from ${it.baseBranch})") }
+                append("Commit your work on those branches. Pushing and opening pull requests are the user's to do from the app; they are blocked here.")
+            }
+
     /** The repositories, as the user knows them: `owner/name` from each URL. */
     val repoLabels: List<String> get() = repos.map { AgentWorkspaces.ownerAndName(it.url) }
 
@@ -143,8 +153,9 @@ data class WorkspaceRepoStatus(
  *
  * ```
  * mirrors/<host>-<owner>-<name>.git   a bare mirror of each repository, fetched before each use
- * sessions/<id>/<name>/               a session's clones, made from the mirrors
- * meta/<id>.json                      what each workspace holds (outside the agent's folder)
+ * jobs/<job>/<name>/                  a job's clones, made from the mirrors
+ * meta/<job>.json                     what each job holds (outside the agent's folder)
+ * meta/<job>.gone                     a job that was removed: its name is not given out again
  * groups.json                         the repository groups the user saved
  * ```
  *
@@ -153,10 +164,10 @@ data class WorkspaceRepoStatus(
  * worktree's. Its `origin` points at the real remote, where the user's push and pull request go.
  */
 class AgentWorkspaces(
-    val root: File = File(System.getProperty("user.home"), "AmethystAgents"),
+    val root: File = File(System.getProperty("user.home"), ".amethyst/agents"),
 ) {
     val mirrorsDir = File(root, "mirrors")
-    val sessionsDir = File(root, "sessions")
+    val jobsDir = File(root, "jobs")
     private val metaDir = File(root, "meta")
     private val groupsFile = File(root, "groups.json")
     private val lastAgentFile = File(metaDir, "last-agent.txt")
@@ -227,26 +238,21 @@ class AgentWorkspaces(
     suspend fun create(
         urls: List<String>,
         title: String?,
-        branch: String = defaultBranchName(),
+        /** Every repository's branch; by default `agent/<job>`, made unique in each repository. */
+        branch: String? = null,
         agentId: String? = null,
         /** The NIP-34 repository each URL belongs to, when it is one: its branch is linked to it, to propose back. */
         nostrRepos: Map<String, NostrRepoRef> = emptyMap(),
+        /** The job's folder, from [claim]; claimed here when null. */
+        claimed: File? = null,
     ): AgentWorkspace {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
         clean.firstOrNull { !GitWorkspace.isSafeRemoteUrl(it) }?.let { throw IOException("Not a repository URL: $it") }
-        if (!GitWorkspace.isSafeBranchName(branch)) throw IOException("Not a branch name: $branch")
-        val stem = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + "-" + slug(title ?: repoName(clean.first()))
+        if (branch != null && !GitWorkspace.isSafeBranchName(branch)) throw IOException("Not a branch name: $branch")
+        val dir = claimed ?: claim(title, clean)
+        val id = dir.name
         return withContext(Dispatchers.IO) {
-            if (!sessionsDir.mkdirs() && !sessionsDir.isDirectory) throw IOException("Could not create $sessionsDir")
-            // Sessions started in the same second with the same name each get a folder: mkdir is the claim.
-            var n = 1
-            var id = stem
-            while (!File(sessionsDir, id).mkdir()) {
-                if (++n > 100) throw IOException("Could not create a folder for $stem")
-                id = "$stem-$n"
-            }
-            val dir = File(sessionsDir, id)
             try {
                 val names = HashSet<String>()
                 val repos =
@@ -256,18 +262,22 @@ class AgentWorkspaces(
                         while (!names.add(name)) name += "-2"
                         val target = File(dir, name)
                         // Hardlinks the mirror's objects: seconds, so other sessions barely wait.
-                        withMirror(url) { mirror -> git(dir, "clone", "--quiet", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
+                        val repoBranch =
+                            withMirror(url) { mirror ->
+                                git(dir, "clone", "--quiet", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT)
+                                branch ?: unusedBranch(mirror, "agent/" + id)
+                            }
                         git(target, "remote", "set-url", "origin", url)
                         val base =
                             GitWorkspace
                                 .git(target, "symbolic-ref", "--short", "HEAD")
                                 ?.trim()
                                 ?.takeIf { it.isNotEmpty() } ?: "main"
-                        git(target, "checkout", "--quiet", "-b", branch)
+                        git(target, "checkout", "--quiet", "-b", repoBranch)
                         // A NIP-34 repository: the branch remembers it and its base, as a checkout
                         // made from the repository's own screen does, so the Propose screen works here.
-                        nostrRepos[url]?.let { GitWorkspace.link(target, branch, repo = it, base = "origin/$base") }
-                        WorkspaceRepo(url, name, base, branch)
+                        nostrRepos[url]?.let { GitWorkspace.link(target, repoBranch, repo = it, base = "origin/$base") }
+                        WorkspaceRepo(url, name, base, repoBranch)
                     }
                 val workspace =
                     AgentWorkspace(
@@ -290,6 +300,42 @@ class AgentWorkspaces(
         }
     }
 
+    /**
+     * Makes the folder of a new job called [name] (or after its first repository), and returns
+     * it: `jobs/<name>`, or `<name>-2` and on when that one is taken or was used by a removed job,
+     * whose archived conversations would otherwise show up in the new one.
+     */
+    suspend fun claim(
+        name: String?,
+        urls: List<String>,
+    ): File {
+        val stem = slug(name?.takeIf { it.isNotBlank() } ?: urls.firstOrNull()?.let(::repoName) ?: "job")
+        return withContext(Dispatchers.IO) {
+            if (!jobsDir.mkdirs() && !jobsDir.isDirectory) throw IOException("Could not create $jobsDir")
+            // Jobs started together with the same name each get a folder: mkdir is the claim.
+            var n = 1
+            var id = stem
+            while (File(metaDir, "$id$GONE").exists() || !File(jobsDir, id).mkdir()) {
+                if (++n > 1000) throw IOException("Could not create a folder for $stem")
+                id = "$stem-$n"
+            }
+            File(jobsDir, id)
+        }
+    }
+
+    /** [wanted], or `wanted-2` and on: a branch [mirror] doesn't have, so the push never meets an old one. */
+    private fun unusedBranch(
+        mirror: File,
+        wanted: String,
+    ): String {
+        var n = 1
+        var name = wanted
+        while (GitWorkspace.run(mirror, listOf("git", "show-ref", "--verify", "--quiet", "refs/heads/$name")).code == 0) {
+            name = "$wanted-${++n}"
+        }
+        return name
+    }
+
     /** Every workspace, newest first. */
     fun list(): List<AgentWorkspace> =
         metaDir
@@ -301,7 +347,7 @@ class AgentWorkspaces(
     /** The workspace [dir] is in (its folder or one inside it), or null. */
     fun of(dir: File): AgentWorkspace? {
         val path = dir.absoluteFile.normalize().path
-        if (!path.startsWith(sessionsDir.absoluteFile.normalize().path + File.separator)) return null
+        if (!path.startsWith(jobsDir.absoluteFile.normalize().path + File.separator)) return null
         return list().firstOrNull { path == it.dir || path.startsWith(it.dir + File.separator) }
     }
 
@@ -364,6 +410,13 @@ class AgentWorkspaces(
             if (dir.exists() && !deleteTree(dir)) throw IOException("Could not remove $dir")
             val meta = File(metaDir, "${workspace.id}.json")
             if (meta.exists() && !meta.delete()) Log.w(TAG) { "Could not remove $meta" }
+            // Its conversations stay, archived, and Claude files them by folder: a new job in this
+            // folder would show them as its own.
+            try {
+                File(metaDir, "${workspace.id}$GONE").writeText(workspace.title)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not mark ${workspace.id} as removed", e)
+            }
         }
 
     fun groups(): List<RepoGroup> =
@@ -602,6 +655,9 @@ class AgentWorkspaces(
         private const val TAG = "AgentWorkspaces"
         private const val NETWORK_TIMEOUT = 900L
 
+        /** The mark a removed job leaves in `meta/`, so its name is not given to a new one. */
+        private const val GONE = ".gone"
+
         /** Files operating systems drop in folders: never anyone's work. */
         private val OS_CLUTTER = setOf(".DS_Store", "Thumbs.db", "desktop.ini")
 
@@ -710,14 +766,12 @@ class AgentWorkspaces(
             return total
         }
 
-        fun defaultBranchName(): String = "agent/" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-
         fun slug(text: String): String =
             text
                 .lowercase()
                 .replace(Regex("[^a-z0-9._-]+"), "-")
                 .trim('-', '.')
                 .take(40)
-                .ifEmpty { "workspace" }
+                .ifEmpty { "job" }
     }
 }

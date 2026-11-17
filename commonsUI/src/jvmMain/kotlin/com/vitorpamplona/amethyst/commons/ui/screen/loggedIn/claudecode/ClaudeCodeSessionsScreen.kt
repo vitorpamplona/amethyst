@@ -38,15 +38,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -85,6 +89,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,10 +127,17 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_error_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_folder
 import com.vitorpamplona.amethyst.commons.resources.claude_code_install_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_install_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_job_go
+import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_job_name_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_new_job
 import com.vitorpamplona.amethyst.commons.resources.claude_code_new_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_matches
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_sessions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_warning
+import com.vitorpamplona.amethyst.commons.resources.claude_code_open_folder
+import com.vitorpamplona.amethyst.commons.resources.claude_code_open_folder_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pick_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
@@ -151,23 +163,16 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_storage
 import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_unarchive
-import com.vitorpamplona.amethyst.commons.resources.claude_code_where
-import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
-import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones_desc
-import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder
-import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_use_clones
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
-import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_cloning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget_group
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
-import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name
-import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_save_group
@@ -290,8 +295,8 @@ private fun SessionsPane(
                 HoverTooltip(stringRes(Res.string.refresh)) {
                     IconButton(onClick = { viewModel.refresh() }) { Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.refresh)) }
                 }
-                HoverTooltip(stringRes(Res.string.claude_code_new_session)) {
-                    IconButton(onClick = { showNew = true }) { Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.claude_code_new_session)) }
+                HoverTooltip(stringRes(Res.string.claude_code_new_job)) {
+                    IconButton(onClick = { showNew = true }) { Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.claude_code_new_job)) }
                 }
             }
         },
@@ -418,6 +423,35 @@ private fun SessionList(
                 .toList()
         }
     var showArchived by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    // Where the open chat's row sits in the list, headers counted, as laid out below.
+    val selectedIndex =
+        remember(needsYou, inWorkspaces, sections, archived, showArchived, selectedKey) {
+            selectedKey ?: return@remember -1
+            val groups =
+                buildList {
+                    if (needsYou.isNotEmpty()) add(needsYou)
+                    if (inWorkspaces.isNotEmpty()) add(inWorkspaces)
+                    sections.forEach { add(it.second) }
+                    if (archived.isNotEmpty()) add(if (showArchived) archived else emptyList())
+                }
+            var index = 0
+            for (group in groups) {
+                index++ // its header
+                val at = group.indexOfFirst { it.key == selectedKey }
+                if (at >= 0) return@remember index + at
+                index += group.size
+            }
+            -1
+        }
+    // A list kept its place when rows arrive above it: a job just started would sit out of
+    // sight. When the open chat changes, or its row first shows up, it scrolls into view.
+    LaunchedEffect(selectedKey, selectedIndex >= 0) {
+        if (selectedIndex < 0) return@LaunchedEffect
+        val visible = listState.layoutInfo.visibleItemsInfo
+        val shown = visible.any { it.index == selectedIndex && it.offset >= 0 && it.offset + it.size <= listState.layoutInfo.viewportEndOffset }
+        if (!shown) listState.animateScrollToItem((selectedIndex - 1).coerceAtLeast(0))
+    }
 
     @Composable
     fun Item(row: ClaudeSessionRow) =
@@ -431,7 +465,7 @@ private fun SessionList(
             onArchive = { onArchive(row, !row.userArchived) },
         )
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Gutter)) {
+    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = Gutter)) {
         // The first header sits under the top bar; every later one starts a section, a clear break.
         var first = true
 
@@ -677,6 +711,11 @@ private fun EmptyState(text: String) {
     }
 }
 
+/**
+ * A new job: pick the repositories, name it, go. Each job gets fresh clones of its own, so the
+ * agent runs hands-off ([jobModeOf]); "Open a folder instead" is the way to work in a folder
+ * already on this computer.
+ */
 @Composable
 private fun NewSessionDialog(
     viewModel: ClaudeCodeSessionsViewModel,
@@ -687,39 +726,27 @@ private fun NewSessionDialog(
     val error by viewModel.newChatError.collectAsStateWithLifecycle()
     val creating by viewModel.creating.collectAsStateWithLifecycle()
     val loaded by viewModel.loaded.collectAsStateWithLifecycle()
-    var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
-    // A folder in a repository starts on its own branch in a worktree, keeping the user's checkout
-    // as it is; the switch is there to work in the folder itself.
-    var worktree by remember { mutableStateOf(true) }
-    // Null while git looks. A folder outside any repository has no worktree to offer.
-    val inRepository by produceState<Boolean?>(null, folder) {
-        value = null
-        value = GitWorktrees.repositoryRoot(File(expandHome(folder))) != null
-    }
-    // Null until the user picks one: then the agent's default, which follows an agent switch.
-    var pickedMode by remember { mutableStateOf<PermissionMode?>(null) }
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     // The agent the last session started with, until the user picks another.
     var agentId by remember { mutableStateOf(viewModel.preferredAgentId()) }
     val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
-    val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
-    val mode = pickedMode?.takeIf { it in modes } ?: defaultModeOf(modes)
-    // A folder already on this computer, or a workspace of fresh clones made for the session.
-    var clones by remember { mutableStateOf(false) }
+    // Fresh clones, unless the user asks to work in a folder of their own.
+    var inFolder by remember { mutableStateOf(false) }
     val groups by viewModel.repoGroups.collectAsStateWithLifecycle()
-    // The repositories of the last workspace to start with: most sessions continue where the last left off.
+    // The repositories of the last job to start with: most jobs continue where the last left off.
     val repos = remember { mutableStateListOf<String>().apply { addAll((groups.firstOrNull { it.name == ClaudeCodeService.LAST_GROUP } ?: groups.firstOrNull())?.urls.orEmpty()) } }
     var adding by remember { mutableStateOf("") }
-    var workspaceName by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    val browseTitle = stringRes(Res.string.claude_code_browse)
+    var name by remember { mutableStateOf("") }
+    val nameFocus = remember { FocusRequester() }
 
     val candidates by viewModel.repoCandidates.collectAsStateWithLifecycle()
     val searchingGitHub by viewModel.searchingGitHub.collectAsStateWithLifecycle()
-    // Read once the user asks for clones: it lists mirrors and runs `gh`.
-    LaunchedEffect(clones) { if (clones) viewModel.loadRepoCatalog() }
+    // Lists the mirrors and runs `gh`: once, when the dialog opens.
+    LaunchedEffect(Unit) { viewModel.loadRepoCatalog() }
+    // With the last job's repositories already in, the name is all that is left to type.
+    LaunchedEffect(Unit) { if (repos.isNotEmpty()) nameFocus.requestFocus() }
 
-    // What a click on Start clones: the chosen ones, and a URL still in the field (not a search).
+    // What Go clones: the chosen ones, and a URL still in the field (not a search).
     fun pendingRepos(): List<String> = (repos + if (looksLikeUrl(adding)) splitUrls(adding) else emptyList()).distinct()
 
     fun addTyped() {
@@ -729,140 +756,182 @@ private fun NewSessionDialog(
         viewModel.clearNewChatError()
     }
 
+    val canGo = !creating && pendingRepos().isNotEmpty() && name.isNotBlank()
+
+    fun go() {
+        if (!canGo) return
+        addTyped()
+        viewModel.newJob(repos.toList(), name, agent?.id, onStarted)
+    }
+
+    if (inFolder) {
+        OpenFolderDialog(viewModel, suggestedFolders, loaded, installed, agent, { agentId = it }, onBack = { inFolder = false }, onDismiss, onStarted)
+        return
+    }
+
     val errorText = error?.let { newChatErrorText(it) }
-    val folderError = errorText.takeIf { !clones && error !is NewChatError.CloneFailed }
-    val cloneError = errorText.takeIf { clones && error is NewChatError.CloneFailed }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = formDialogColor(),
-        title = { Text(stringRes(Res.string.claude_code_new_session)) },
+        title = { Text(stringRes(Res.string.claude_code_new_job)) },
         text = {
-            // Scrolls on a short window: the Start button must never be pushed off screen.
+            // Scrolls on a short window: the Go button must never be pushed off screen.
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(FormGap)) {
-                // Which agent works on it, when more than one is installed.
-                AgentPicker(installed, agent?.id) { agentId = it }
-                LabeledField(
-                    Res.string.claude_code_where,
-                    helper = if (clones) stringRes(Res.string.claude_code_where_clones_desc, viewModel.workspacesRoot) else stringRes(Res.string.claude_code_where_folder_desc),
-                ) {
-                    SegmentedChoice(
-                        options = listOf(false, true),
-                        selected = clones,
-                        label = { stringRes(if (it) Res.string.claude_code_where_clones else Res.string.claude_code_where_folder) },
-                        onSelect = {
-                            clones = it
+                LabeledField(Res.string.claude_code_workspace_repos, helper = errorText, isError = errorText != null) {
+                    RepoPicker(
+                        repos = repos,
+                        candidates = candidates,
+                        groups = groups,
+                        searchingGitHub = searchingGitHub,
+                        adding = adding,
+                        onAddingChange = {
+                            adding = it
+                            viewModel.searchRepos(it)
                             viewModel.clearNewChatError()
+                        },
+                        onAdd = ::addTyped,
+                        onPick = { url ->
+                            if (url !in repos) repos.add(url)
+                            viewModel.clearNewChatError()
+                        },
+                        onRemove = { repos.remove(it) },
+                        onUseGroup = { group ->
+                            repos.clear()
+                            repos.addAll(group.urls)
+                            viewModel.clearNewChatError()
+                        },
+                        onForgetGroup = { viewModel.deleteGroup(it.name) },
+                        onSaveGroup = { groupName ->
+                            addTyped()
+                            viewModel.saveGroup(groupName, repos.toList())
                         },
                     )
                 }
-                if (clones) {
-                    LabeledField(Res.string.claude_code_workspace_repos, helper = cloneError, isError = cloneError != null) {
-                        RepoPicker(
-                            repos = repos,
-                            candidates = candidates,
-                            groups = groups,
-                            searchingGitHub = searchingGitHub,
-                            adding = adding,
-                            onAddingChange = {
-                                adding = it
-                                viewModel.searchRepos(it)
-                                viewModel.clearNewChatError()
-                            },
-                            onAdd = ::addTyped,
-                            onPick = { url ->
-                                if (url !in repos) repos.add(url)
-                                viewModel.clearNewChatError()
-                            },
-                            onRemove = { repos.remove(it) },
-                            onUseGroup = { group ->
-                                repos.clear()
-                                repos.addAll(group.urls)
-                                viewModel.clearNewChatError()
-                            },
-                            onForgetGroup = { viewModel.deleteGroup(it.name) },
-                            onSaveGroup = { name ->
-                                addTyped()
-                                viewModel.saveGroup(name, repos.toList())
-                            },
-                        )
+                LabeledField(Res.string.claude_code_job_name, helper = stringRes(Res.string.claude_code_job_name_desc)) {
+                    FormTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        placeholder = stringRes(Res.string.claude_code_job_name_hint),
+                        modifier = Modifier.focusRequester(nameFocus),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { go() }),
+                    )
+                }
+                // Which agent works on it, when more than one is installed.
+                AgentPicker(installed, agent?.id) { agentId = it }
+                Box(Modifier.offset(x = (-8).dp)) {
+                    InlineAction(stringRes(Res.string.claude_code_open_folder)) {
+                        viewModel.clearNewChatError()
+                        inFolder = true
                     }
-                    LabeledField(Res.string.claude_code_workspace_name) {
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = canGo, onClick = ::go) { Text(stringRes(Res.string.claude_code_job_go)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+    )
+}
+
+/** The other way to start: in a folder already on this computer, on its own branch in a worktree when it is a repository. */
+@Composable
+private fun OpenFolderDialog(
+    viewModel: ClaudeCodeSessionsViewModel,
+    suggestedFolders: List<String>,
+    loaded: Boolean,
+    installed: List<AgentBackend>,
+    agent: AgentBackend?,
+    onAgent: (String) -> Unit,
+    onBack: () -> Unit,
+    onDismiss: () -> Unit,
+    onStarted: (String) -> Unit,
+) {
+    val error by viewModel.newChatError.collectAsStateWithLifecycle()
+    val creating by viewModel.creating.collectAsStateWithLifecycle()
+    var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
+    // A folder in a repository starts on its own branch in a worktree, keeping the user's checkout
+    // as it is; the switch is there to work in the folder itself.
+    var worktree by remember { mutableStateOf(true) }
+    // Null while git looks. A folder outside any repository has no worktree to offer.
+    val inRepository by produceState<Boolean?>(null, folder) {
+        value = null
+        value = GitWorktrees.repositoryRoot(File(expandHome(folder))) != null
+    }
+    val scope = rememberCoroutineScope()
+    val browseTitle = stringRes(Res.string.claude_code_browse)
+    val folderError = error?.let { newChatErrorText(it) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = formDialogColor(),
+        title = { Text(stringRes(Res.string.claude_code_open_folder_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(FormGap)) {
+                LabeledField(Res.string.claude_code_folder, helper = folderError, isError = folderError != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         FormTextField(
-                            value = workspaceName,
-                            onValueChange = { workspaceName = it },
-                            placeholder = stringRes(Res.string.claude_code_workspace_name_hint),
+                            value = folder,
+                            onValueChange = {
+                                folder = it
+                                viewModel.clearNewChatError()
+                            },
+                            isError = folderError != null,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                            trailingIcon = {
+                                HoverTooltip(browseTitle) {
+                                    IconButton(onClick = {
+                                        scope.launch {
+                                            pickFolder(browseTitle, folder)?.let {
+                                                folder = it
+                                                viewModel.clearNewChatError()
+                                            }
+                                        }
+                                    }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
+                                }
+                            },
                         )
-                    }
-                    if (creating) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Text(stringRes(Res.string.claude_code_workspace_cloning), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
-                } else {
-                    LabeledField(Res.string.claude_code_folder, helper = folderError, isError = folderError != null) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FormTextField(
-                                value = folder,
-                                onValueChange = {
-                                    folder = it
-                                    viewModel.clearNewChatError()
-                                },
-                                isError = folderError != null,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                                trailingIcon = {
-                                    HoverTooltip(browseTitle) {
-                                        IconButton(onClick = {
-                                            scope.launch {
-                                                pickFolder(browseTitle, folder)?.let {
-                                                    folder = it
-                                                    viewModel.clearNewChatError()
-                                                }
-                                            }
-                                        }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
-                                    }
-                                },
-                            )
-                            // The folders sessions ran in, one row that scrolls sideways. Its height is
-                            // kept while the list loads, so the dialog doesn't jump under the pointer.
-                            if (!loaded) {
-                                Spacer(Modifier.height(32.dp))
-                            } else if (suggestedFolders.size > 1) {
-                                Dense {
-                                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(InlineGap)) {
-                                        suggestedFolders.take(12).forEach { cwd ->
-                                            HoverTooltip(cwd) {
-                                                FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
-                                            }
+                        // The folders sessions ran in, one row that scrolls sideways. Its height is
+                        // kept while the list loads, so the dialog doesn't jump under the pointer.
+                        if (!loaded) {
+                            Spacer(Modifier.height(32.dp))
+                        } else if (suggestedFolders.size > 1) {
+                            Dense {
+                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(InlineGap)) {
+                                    suggestedFolders.take(12).forEach { cwd ->
+                                        HoverTooltip(cwd) {
+                                            FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    if (inRepository != false) {
-                        ToggleRow(
-                            title = stringRes(Res.string.claude_code_worktree),
-                            description = stringRes(Res.string.claude_code_worktree_desc),
-                            checked = worktree,
-                            onChange = { worktree = it },
-                        )
+                }
+                if (inRepository != false) {
+                    ToggleRow(
+                        title = stringRes(Res.string.claude_code_worktree),
+                        description = stringRes(Res.string.claude_code_worktree_desc),
+                        checked = worktree,
+                        onChange = { worktree = it },
+                    )
+                }
+                AgentPicker(installed, agent?.id, onAgent)
+                Box(Modifier.offset(x = (-8).dp)) {
+                    InlineAction(stringRes(Res.string.claude_code_use_clones)) {
+                        viewModel.clearNewChatError()
+                        onBack()
                     }
                 }
-                PermissionField(modes, mode) { pickedMode = it }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = !creating && (if (clones) pendingRepos().isNotEmpty() else folder.isNotBlank()),
+                enabled = !creating && folder.isNotBlank(),
                 onClick = {
-                    if (clones) {
-                        addTyped()
-                        viewModel.newWorkspaceChat(repos.toList(), workspaceName, mode, agent?.id, onStarted)
-                    } else {
-                        viewModel.newChat(folder, worktree && inRepository != false, mode, agent?.id, onStarted)
-                    }
+                    val modes = agent?.capabilities?.modes ?: PICKABLE_MODES
+                    viewModel.newChat(folder, worktree && inRepository != false, defaultModeOf(modes), agent?.id, onStarted)
                 },
             ) {
                 Text(stringRes(Res.string.claude_code_start))

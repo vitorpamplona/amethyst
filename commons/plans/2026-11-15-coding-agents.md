@@ -98,12 +98,11 @@ an OpenAI login or API key in the environment that records the fixtures.
 
 ## Workspaces: many sessions, one group of repositories
 
-For running many sessions (15+) on the same GitHub repositories at once, each session can work in
-a workspace of its own instead of a folder: New session › Fresh clones, with the repositories'
-URLs (the last list is offered again).
+For running many sessions (15+) on the same GitHub repositories at once, each one is a **job**
+with clones of its own (see "Jobs" below for how one starts).
 
-- `AgentWorkspaces` keeps, under `~/AmethystAgents`: `mirrors/` (a bare mirror per repository,
-  fetched before each new workspace, one fetch at a time per mirror), `sessions/<id>/<repo>/`
+- `AgentWorkspaces` keeps, under `~/.amethyst/agents`: `mirrors/` (a bare mirror per repository,
+  fetched before each new workspace, one fetch at a time per mirror), `jobs/<name>/<repo>/`
   (each session's clones) and `meta/` (what each workspace holds, outside the agent's folder).
 - A clone from the local mirror hardlinks the mirror's packs (seconds, almost no disk) yet is a
   whole repository: config, hooks, refs and stashes of its own, unlike a git worktree, whose
@@ -133,7 +132,7 @@ URLs (the last list is offered again).
 
 ### Picking repositories, proposals and forks
 
-- **Picker:** New session › Fresh clones has one searchable list with checkboxes (`RepoCatalog`), from:
+- **Picker:** New job has one searchable list with checkboxes (`RepoCatalog`), from:
   - the mirrors on this computer, most cloned first (`usage.json` counts each clone and outlives
     the workspace);
   - the user's GitHub repositories (`gh repo list`);
@@ -149,6 +148,33 @@ URLs (the last list is offered again).
   (`viewerPermission`). Without write access the app runs `gh repo fork`, pushes the branch to a
   `fork` remote, and opens the PR with `--repo upstream --head user:branch`. The PR's state is
   looked up on the upstream by branch, so it works whether or not a fork was used.
+
+### Jobs: pick the repositories, name it, go
+
+Starting work had too many choices (agent, folder or clones, worktree, permission mode). The
+default is now a job, and New job asks for two things:
+
+- **Repositories**, the picker above, with the last job's set already chosen.
+- **A name.** It names the folder (`jobs/<name>`) and every repository's branch (`agent/<name>`).
+  Focus starts there, so a repeat job is a name and Enter. A name already taken, or once used by a
+  removed job (`meta/<name>.gone`), gets `-2`: Claude files conversations by folder, so a reused
+  folder would show a removed job's archived conversations. A branch the repository already has
+  gets `-2` too, so the user's push never meets an old one.
+
+Go opens the chat at once. The clones are made behind it ("Cloning 2 repositories…"), a message
+sent meanwhile shows and goes out once they are in, and a failed clone ends the chat with git's
+words and leaves no folder. The agent runs hands-off (`jobModeOf`): Claude in Auto; Codex, which
+has no Auto, in accept-edits, free inside its sandbox and asking only to leave it. The chat's mode
+menu still switches one job to asking first. The agent is told the job's layout (its folder holds
+one clone per repository and is not a repository itself, each clone's branch, and that pushes and
+pull requests are the user's), since otherwise its first `git` runs in the job's folder and fails.
+
+The agent stays a choice in the dialog when both are installed. "Open a folder instead" is the old
+path, for work in a folder already on the computer (with its worktree switch).
+
+Checked in the app (1600×1000 and 480×900): a job on a local repository opened at once in Auto,
+listed under Jobs and scrolled into view; the agent answered `git branch --show-current` with
+`agent/<name>` from inside the clone, without asking.
 
 ### Disk: archive, clean up, tidy
 

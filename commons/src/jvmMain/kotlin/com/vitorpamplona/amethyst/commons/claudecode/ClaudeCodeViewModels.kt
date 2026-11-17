@@ -269,17 +269,13 @@ class ClaudeCodeSessionsViewModel(
         }
     }
 
-    /** Where workspaces live, to show the user. */
-    val workspacesRoot: String = service.agentWorkspaces.root.absolutePath
-
     /**
-     * A session in a workspace of its own: a fresh clone of each repository in [urls], each on a
-     * new branch. Cloning can take minutes the first time a repository is used.
+     * A new job called [name] on fresh clones of [urls]: its chat opens at once ([onReady]) while
+     * they clone, which can take minutes the first time a repository is used.
      */
-    fun newWorkspaceChat(
+    fun newJob(
         urls: List<String>,
-        title: String,
-        permissionMode: PermissionMode,
+        name: String,
         agentId: String? = null,
         onReady: (String) -> Unit,
     ) {
@@ -289,9 +285,9 @@ class ClaudeCodeSessionsViewModel(
         viewModelScope.launch {
             try {
                 val agent = agentId?.let { service.backend(it) } ?: service.backend
-                onReady(service.newWorkspaceChat(urls, title.trim().ifEmpty { null }, permissionMode, agent).key)
+                onReady(service.newJob(urls, name.trim(), agent).key)
             } catch (e: IOException) {
-                Log.w(TAG, "Could not create the workspace", e)
+                Log.w(TAG, "Could not create the job", e)
                 _newChatError.value = NewChatError.CloneFailed(e.message)
             } finally {
                 _creating.value = false
