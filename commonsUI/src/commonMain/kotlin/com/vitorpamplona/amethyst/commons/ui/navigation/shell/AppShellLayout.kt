@@ -515,6 +515,12 @@ val PanelFreeRoutes: Set<KClass<out Route>> =
         Route.FrontPage::class,
         Route.NostrApp::class,
         Route.Browser::class,
+        // Coding sessions want the width: the list beside the chat, and long diffs.
+        Route.ClaudeCode::class,
+        Route.ClaudeCodeChat::class,
+        Route.ClaudeCodeChanges::class,
+        Route.ClaudeCodePropose::class,
+        Route.ClaudeCodePullRequests::class,
     )
 
 /**

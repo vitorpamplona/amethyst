@@ -9534,6 +9534,7 @@
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>
     <string name="claude_code_session_missing">This session isn't on this computer anymore.</string>
+    <string name="claude_code_pick_session">Pick a session on the left, or start a new one.</string>
     <string name="claude_code_tool_input">Input</string>
     <string name="claude_code_tool_output">Output</string>
     <string name="claude_code_working">Working</string>

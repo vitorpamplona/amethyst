@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * screens) hides, since [canOpen] finds no screen for the route.
  */
 fun NavDestinations.desktopOnlyDestinations(accountViewModel: AccountViewModel) {
-    composableFromEnd<Route.ClaudeCode> { ClaudeCodeSessionsScreen(nav) }
+    composableFromEnd<Route.ClaudeCode>(capWidth = false) { ClaudeCodeSessionsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ClaudeCodeChat>(capWidth = false) { ClaudeCodeChatScreen(it.key, accountViewModel, nav) }
     composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav, it.repo) }
     composableFromEndArgs<Route.ClaudeCodePropose>(capWidth = false) { ClaudeCodeProposeScreen(it.key, accountViewModel, nav, it.repo) }

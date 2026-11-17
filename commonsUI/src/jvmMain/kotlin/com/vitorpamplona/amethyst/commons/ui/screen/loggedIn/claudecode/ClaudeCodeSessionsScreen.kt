@@ -29,6 +29,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -126,6 +127,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_no_matches
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_sessions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pick_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
@@ -182,13 +184,23 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.HorizontalTwoPane
+import com.vitorpamplona.amethyst.commons.ui.layouts.WidthClass
+import com.vitorpamplona.amethyst.commons.ui.layouts.widthClassOf
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.DetailPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.TwoPaneNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberDetailPaneSelection
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.CollapseOpenChatToFullScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.PaneScopedChat
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.listDetailSplit
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.util.formatFileSize
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.claudecode.ClaudeBackend
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
@@ -201,7 +213,51 @@ import javax.swing.JFileChooser
  * included), newest first, with the chats this app runs marked by what they are doing.
  */
 @Composable
-fun ClaudeCodeSessionsScreen(nav: INav) {
+fun ClaudeCodeSessionsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Above the size switch, so the open chat outlives a collapse to one pane (handed over below).
+    val selection = rememberDetailPaneSelection()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val widthClass = widthClassOf(maxWidth)
+        if (widthClass == WidthClass.Compact) {
+            CollapseOpenChatToFullScreen(selection, nav)
+            SessionsPane(nav, selectedKey = null, inPane = false)
+        } else {
+            // The sessions beside the open chat, as Messages lays out its chats: a click on a
+            // session opens it on the right; Changes, Propose and the rest still take the screen.
+            val scope = rememberCoroutineScope()
+            val twoPaneNav = remember(nav, selection) { TwoPaneNav(nav, scope, { it is Route.ClaudeCodeChat }, selection) }
+            val detailNav = remember(twoPaneNav) { DetailPaneNav(twoPaneNav) }
+            val split = listDetailSplit(widthClass, maxWidth.value)
+            val open = selection.value as? Route.ClaudeCodeChat
+            HorizontalTwoPane(
+                first = { SessionsPane(twoPaneNav, selectedKey = open?.key, inPane = true) },
+                second = {
+                    if (open != null) {
+                        PaneScopedChat(open) { ClaudeCodeChatScreen(open.key, accountViewModel, detailNav) }
+                    } else {
+                        Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text(stringRes(Res.string.claude_code_pick_session), color = MaterialTheme.colorScheme.grayText)
+                        }
+                    }
+                },
+                splitFraction = split.fraction,
+                modifier = Modifier.fillMaxSize(),
+                onDividerDrag = split.onDrag,
+            )
+        }
+    }
+}
+
+/** The sessions list with its top bar; [selectedKey] is the chat open beside it, if any. */
+@Composable
+private fun SessionsPane(
+    nav: INav,
+    selectedKey: String?,
+    inPane: Boolean,
+) {
     val viewModel = rememberViewModel(key = "ClaudeCodeSessions") { ClaudeCodeSessionsViewModel(ClaudeCodeService.shared) }
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val projects by viewModel.projects.collectAsStateWithLifecycle()
@@ -241,7 +297,8 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
+            // Alone it keeps a readable column; beside a chat it fills its pane.
+            Column(Modifier.then(if (inPane) Modifier else Modifier.widthIn(max = ChatColumnMaxWidth)).fillMaxSize()) {
                 if (searching) {
                     OutlinedTextField(
                         value = query,
@@ -258,7 +315,7 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
                     !loaded -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     executable == null && rows.isEmpty() -> InstallState()
                     rows.isEmpty() -> EmptyState(stringRes(if (query.isBlank()) Res.string.claude_code_no_sessions else Res.string.claude_code_no_matches))
-                    else -> SessionList(rows, nav, onRename = { renaming = it }, onDelete = { deleting = it }, onDeleteWorkspace = { deletingWorkspace = it }, onArchive = viewModel::archive)
+                    else -> SessionList(rows, nav, selectedKey, onRename = { renaming = it }, onDelete = { deleting = it }, onDeleteWorkspace = { deletingWorkspace = it }, onArchive = viewModel::archive)
                 }
             }
         }
@@ -340,6 +397,7 @@ internal fun DeleteWorkspaceDialog(
 private fun SessionList(
     rows: List<ClaudeSessionRow>,
     nav: INav,
+    selectedKey: String?,
     onRename: (ClaudeSessionRow) -> Unit,
     onDelete: (ClaudeSessionRow) -> Unit,
     onDeleteWorkspace: (ClaudeSessionRow) -> Unit,
@@ -365,6 +423,7 @@ private fun SessionList(
     fun Item(row: ClaudeSessionRow) =
         SessionRow(
             row = row,
+            selected = row.key == selectedKey,
             onOpen = { nav.nav(Route.ClaudeCodeChat(row.key)) },
             onRename = { onRename(row) },
             onDelete = { onDelete(row) },
@@ -437,6 +496,7 @@ private fun SectionHeader(
 @Composable
 private fun SessionRow(
     row: ClaudeSessionRow,
+    selected: Boolean,
     onOpen: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -449,6 +509,7 @@ private fun SessionRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
             .hoverable(hover)
             .clickable(onClick = onOpen)
             .padding(start = Gutter, top = RowPaddingV, bottom = RowPaddingV, end = 4.dp),
