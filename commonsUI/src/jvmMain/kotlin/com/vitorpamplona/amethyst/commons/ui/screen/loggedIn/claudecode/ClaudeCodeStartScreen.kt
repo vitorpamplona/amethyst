@@ -145,12 +145,13 @@ fun ClaudeCodeStartScreen(
             proposal?.branchName()?.let { if (it.startsWith("pr/")) it else "pr/$it" } ?: NostrWorkspaces.branchFor(itemTitle),
         )
     }
-    var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
+    // Null until the user picks one: then the agent's default, which follows an agent switch.
+    var pickedMode by remember { mutableStateOf<PermissionMode?>(null) }
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     var agentId by remember { mutableStateOf<String?>(null) }
     val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
     val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
-    if (mode !in modes) mode = PermissionMode.DEFAULT
+    val mode = pickedMode?.takeIf { it in modes } ?: defaultModeOf(modes)
 
     val issuePrompt =
         issue?.let {
@@ -199,7 +200,7 @@ fun ClaudeCodeStartScreen(
                 }
 
                 AgentPicker(installed, agent?.id) { agentId = it }
-                PermissionField(modes, mode) { mode = it }
+                PermissionField(modes, mode) { pickedMode = it }
 
                 LabeledField(Res.string.claude_code_first_message) {
                     FormTextField(

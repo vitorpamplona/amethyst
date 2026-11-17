@@ -1579,6 +1579,9 @@ private fun ErrorBanner(error: ChatError) {
 
 internal val PICKABLE_MODES = listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN, PermissionMode.AUTO)
 
+/** A new session's mode: Auto where the agent has it (Claude Code), else asking first. */
+internal fun defaultModeOf(modes: List<PermissionMode>): PermissionMode = if (PermissionMode.AUTO in modes) PermissionMode.AUTO else PermissionMode.DEFAULT
+
 @Composable
 internal fun modeLabel(mode: PermissionMode): String =
     when (mode) {

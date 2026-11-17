@@ -66,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -97,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeSessionRow
+import com.vitorpamplona.amethyst.commons.claudecode.GitWorktrees
 import com.vitorpamplona.amethyst.commons.claudecode.NewChatError
 import com.vitorpamplona.amethyst.commons.claudecode.NostrWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.RepoCandidate
@@ -625,14 +627,22 @@ private fun NewSessionDialog(
     val creating by viewModel.creating.collectAsStateWithLifecycle()
     val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
-    var worktree by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
+    // A folder in a repository starts on its own branch in a worktree, keeping the user's checkout
+    // as it is; the switch is there to work in the folder itself.
+    var worktree by remember { mutableStateOf(true) }
+    // Null while git looks. A folder outside any repository has no worktree to offer.
+    val inRepository by produceState<Boolean?>(null, folder) {
+        value = null
+        value = GitWorktrees.repositoryRoot(File(expandHome(folder))) != null
+    }
+    // Null until the user picks one: then the agent's default, which follows an agent switch.
+    var pickedMode by remember { mutableStateOf<PermissionMode?>(null) }
     val installed by viewModel.installed.collectAsStateWithLifecycle()
     // The agent the last session started with, until the user picks another.
     var agentId by remember { mutableStateOf(viewModel.preferredAgentId()) }
     val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
     val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
-    if (mode !in modes) mode = PermissionMode.DEFAULT
+    val mode = pickedMode?.takeIf { it in modes } ?: defaultModeOf(modes)
     // A folder already on this computer, or a workspace of fresh clones made for the session.
     var clones by remember { mutableStateOf(false) }
     val groups by viewModel.repoGroups.collectAsStateWithLifecycle()
@@ -770,14 +780,16 @@ private fun NewSessionDialog(
                             }
                         }
                     }
-                    ToggleRow(
-                        title = stringRes(Res.string.claude_code_worktree),
-                        description = stringRes(Res.string.claude_code_worktree_desc),
-                        checked = worktree,
-                        onChange = { worktree = it },
-                    )
+                    if (inRepository != false) {
+                        ToggleRow(
+                            title = stringRes(Res.string.claude_code_worktree),
+                            description = stringRes(Res.string.claude_code_worktree_desc),
+                            checked = worktree,
+                            onChange = { worktree = it },
+                        )
+                    }
                 }
-                PermissionField(modes, mode) { mode = it }
+                PermissionField(modes, mode) { pickedMode = it }
             }
         },
         confirmButton = {
@@ -788,7 +800,7 @@ private fun NewSessionDialog(
                         addTyped()
                         viewModel.newWorkspaceChat(repos.toList(), workspaceName, mode, agent?.id, onStarted)
                     } else {
-                        viewModel.newChat(folder, worktree, mode, agent?.id, onStarted)
+                        viewModel.newChat(folder, worktree && inRepository != false, mode, agent?.id, onStarted)
                     }
                 },
             ) {
