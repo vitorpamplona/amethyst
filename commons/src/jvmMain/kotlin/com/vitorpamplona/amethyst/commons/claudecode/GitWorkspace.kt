@@ -345,6 +345,11 @@ object GitWorkspace {
         branch: String?,
     ): String? {
         branch?.let { git(dir, "config", "--get", "branch.$it.$KEY_BASE")?.trim()?.takeIf { v -> v.isNotEmpty() } }?.let { return it }
+        // What the user's own main follows: with several remotes, `origin` may be a mirror that
+        // lags (a nostr remote), and comparing with it showed hundreds of commits already merged.
+        listOf("main", "master")
+            .firstNotNullOfOrNull { local -> git(dir, "rev-parse", "--abbrev-ref", "--verify", "--quiet", "$local@{upstream}")?.trim()?.takeIf { it.isNotEmpty() } }
+            ?.let { return it }
         git(dir, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
         return listOf("origin/main", "origin/master", "main", "master")
             .firstOrNull { git(dir, "rev-parse", "--verify", "--quiet", it) != null }
