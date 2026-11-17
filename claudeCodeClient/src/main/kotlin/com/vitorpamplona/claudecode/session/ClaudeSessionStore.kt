@@ -117,8 +117,13 @@ class ClaudeSessionStore(
                 .flatMap { dir -> dir.listFiles { f -> f.isFile && f.name.endsWith(".jsonl") }.orEmpty().toList() }
         val seen = files.mapTo(HashSet()) { it.absolutePath }
         cache.keys.retainAll(seen)
+        // Files are read side by side: a first look reads all of them, close to a gigabyte for
+        // someone with long sessions, and each is its own cache entry.
         return files
-            .mapNotNull { info(it) }
+            .parallelStream()
+            .map { info(it) }
+            .toList()
+            .filterNotNull()
             .filter { cwd == null || it.cwd == cwd }
             .sortedByDescending { it.lastModified }
     }
@@ -274,24 +279,50 @@ class ClaudeSessionStore(
     private fun scanLine(
         line: String,
         state: Scan,
-    ): Scan =
-        when {
-            line.contains("\"type\":\"custom-title\"") -> parseObject(line)?.string("customTitle")?.let { state.copy(customTitle = it) } ?: state
-            line.contains("\"type\":\"ai-title\"") -> parseObject(line)?.string("aiTitle")?.let { state.copy(aiTitle = it) } ?: state
-            line.contains("\"type\":\"summary\"") -> parseObject(line)?.string("summary")?.let { state.copy(summary = it) } ?: state
-            line.contains("\"type\":\"last-prompt\"") -> parseObject(line)?.string("lastPrompt")?.let { state.copy(lastPrompt = it) } ?: state
-            line.contains("\"type\":\"user\"") || line.contains("\"type\":\"assistant\"") ->
-                state.copy(
-                    hasMessages = true,
-                    cwd = CWD.find(line)?.let { unescape(it.groupValues[1]) } ?: state.cwd,
-                    gitBranch = BRANCH.find(line)?.let { unescape(it.groupValues[1]) } ?: state.gitBranch,
-                    createdAt = state.createdAt ?: TIMESTAMP.find(line)?.let { parseInstant(it.groupValues[1]) },
-                    firstPrompt =
-                        state.firstPrompt
-                            ?: if (line.contains("\"type\":\"user\"")) parseObject(line)?.let(::promptText) else null,
-                )
-            else -> state
+    ): Scan {
+        // Title lines name their type first, the CLI's and ours alike; searching every line for
+        // four markers cost a pass over the whole history each. A short line is still searched,
+        // in case a writer orders its keys otherwise.
+        if (line.startsWith(TYPE_FIRST) || line.length <= SHORT_LINE) {
+            when {
+                line.contains("\"type\":\"custom-title\"") -> return parseObject(line)?.string("customTitle")?.let { state.copy(customTitle = it) } ?: state
+                line.contains("\"type\":\"ai-title\"") -> return parseObject(line)?.string("aiTitle")?.let { state.copy(aiTitle = it) } ?: state
+                line.contains("\"type\":\"summary\"") -> return parseObject(line)?.string("summary")?.let { state.copy(summary = it) } ?: state
+                line.contains("\"type\":\"last-prompt\"") -> return parseObject(line)?.string("lastPrompt")?.let { state.copy(lastPrompt = it) } ?: state
+            }
         }
+        val user = line.contains("\"type\":\"user\"")
+        if (!user && !line.contains("\"type\":\"assistant\"")) return state
+        return state.copy(
+            hasMessages = true,
+            cwd = stringField(line, CWD_KEY) ?: state.cwd,
+            gitBranch = stringField(line, BRANCH_KEY) ?: state.gitBranch,
+            createdAt = state.createdAt ?: stringField(line, TIMESTAMP_KEY)?.let(::parseInstant),
+            firstPrompt = state.firstPrompt ?: if (user) parseObject(line)?.let(::promptText) else null,
+        )
+    }
+
+    /**
+     * The string value after the first [key] (`"name":"`), unescaped. A plain search: a regex
+     * over lines that run to megabytes was a third of the time the session list took to load.
+     */
+    private fun stringField(
+        line: String,
+        key: String,
+    ): String? {
+        val start = line.indexOf(key)
+        if (start < 0) return null
+        val from = start + key.length
+        var i = from
+        while (i < line.length) {
+            when (line[i]) {
+                '\\' -> i += 2
+                '"' -> return unescape(line.substring(from, i))
+                else -> i++
+            }
+        }
+        return null
+    }
 
     private fun toInfo(
         file: File,
@@ -442,9 +473,13 @@ class ClaudeSessionStore(
     companion object {
         private const val TITLE_MAX = 120
         private const val NEWLINE = '\n'.code.toByte()
-        private val CWD = Regex("\"cwd\":\"((?:[^\"\\\\]|\\\\.)*)\"")
-        private val BRANCH = Regex("\"gitBranch\":\"((?:[^\"\\\\]|\\\\.)*)\"")
-        private val TIMESTAMP = Regex("\"timestamp\":\"([^\"]*)\"")
+        private const val CWD_KEY = "\"cwd\":\""
+        private const val BRANCH_KEY = "\"gitBranch\":\""
+        private const val TIMESTAMP_KEY = "\"timestamp\":\""
+        private const val TYPE_FIRST = "{\"type\":\""
+
+        /** Longer than any title line the CLI writes, far shorter than a message with tool output. */
+        private const val SHORT_LINE = 4096
         private val SAFE_ID = Regex("[A-Za-z0-9-]+")
 
         /** `CLAUDE_CONFIG_DIR` when set, else `~/.claude`, where the CLI keeps its files. */
