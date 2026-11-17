@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,9 +34,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
@@ -47,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ChangesScope
 import com.vitorpamplona.amethyst.commons.claudecode.ChangesState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChangesViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.GitCommitLine
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -82,7 +85,9 @@ import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
+import com.vitorpamplona.amethyst.commons.ui.note.GitDiffHeader
+import com.vitorpamplona.amethyst.commons.ui.note.gitDiffItems
+import com.vitorpamplona.amethyst.commons.ui.note.rememberDiffHighlights
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -128,30 +133,47 @@ fun ClaudeCodeChangesScreen(
                 Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             is ChangesState.Loaded ->
                 Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                    Column(
+                    // Lazy: a branch can carry hundreds of commits and files, and building every
+                    // row and diff line up front made the screen slow to open and to scroll.
+                    var split by rememberSaveable { mutableStateOf(false) }
+                    val highlighted = rememberDiffHighlights(s.patch)
+                    val commits = s.info?.commits.orEmpty()
+                    val unseen = remember(s.untracked, s.patch) { s.untracked.filter { path -> s.patch.files.none { it.displayPath == path } } }
+                    LazyColumn(
                         Modifier
                             .widthIn(max = 1100.dp)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(Gutter),
-                        verticalArrangement = Arrangement.spacedBy(GroupGap),
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(Gutter),
                     ) {
-                        ScopePicker(s.info, s.scope, viewModel::show)
-                        if (s.patch.hasDiff) {
-                            // The hint belongs to the diff under it, not to the commits above: no gap of its
-                            // own, since the diff's summary row is taller than its text and brings the room.
-                            Column {
-                                Text(stringRes(Res.string.claude_code_ask_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                                GitDiffView(s.patch, onLineClick = { file, line -> asking = file to line })
+                        item(key = "scope") { ScopePicker(s.scope, viewModel::show) }
+                        if (commits.isNotEmpty()) {
+                            item(key = "commits-title") {
+                                Box(Modifier.padding(top = PartGap, bottom = 4.dp)) {
+                                    SectionTitle(pluralStringRes(Res.plurals.claude_code_commits, commits.size, commits.size))
+                                }
                             }
+                            items(commits, key = { "commit-" + it.sha }) { commit ->
+                                CommitRow(commit, selected = (s.scope as? ChangesScope.Commit)?.sha == commit.sha) { viewModel.show(ChangesScope.Commit(commit.sha)) }
+                            }
+                        }
+                        if (s.patch.hasDiff) {
+                            // The hint belongs to the diff under it, not to the commits above.
+                            item(key = "diff-head") {
+                                Column(Modifier.padding(top = GroupGap)) {
+                                    Text(stringRes(Res.string.claude_code_ask_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                                    GitDiffHeader(s.patch, split) { split = it }
+                                }
+                            }
+                            gitDiffItems(s.patch, split, highlighted, onLineClick = { file, line -> asking = file to line })
                         } else {
-                            Text(stringRes(Res.string.claude_code_no_changes), color = MaterialTheme.colorScheme.grayText)
+                            item(key = "no-changes") {
+                                Text(stringRes(Res.string.claude_code_no_changes), color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(top = GroupGap))
+                            }
                         }
                         // Binary or large new files the diff can't show.
-                        val unseen = s.untracked.filter { path -> s.patch.files.none { it.displayPath == path } }
                         if (unseen.isNotEmpty()) {
-                            SectionTitle(stringRes(Res.string.claude_code_untracked))
-                            unseen.forEach { Mono(it) }
+                            item(key = "untracked-title") { Box(Modifier.padding(top = GroupGap)) { SectionTitle(stringRes(Res.string.claude_code_untracked)) } }
+                            items(unseen, key = { "untracked-$it" }) { Mono(it) }
                         }
                     }
                 }
@@ -173,46 +195,43 @@ fun ClaudeCodeChangesScreen(
     }
 }
 
-/** Which changes to show: the uncommitted ones, the whole branch, or one of its commits. */
+/** Which changes to show: the uncommitted ones or the whole branch; a commit row below is the third way. */
 @Composable
 private fun ScopePicker(
-    info: GitWorkInfo?,
     scope: ChangesScope,
     onPick: (ChangesScope) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(PartGap)) {
-        // A commit picked below leaves both segments unselected: it is a third way to look.
-        SegmentedChoice(
-            options = listOf<ChangesScope>(ChangesScope.Uncommitted, ChangesScope.Branch),
-            selected = scope,
-            label = { stringRes(if (it == ChangesScope.Uncommitted) Res.string.claude_code_scope_uncommitted else Res.string.claude_code_scope_branch) },
-            onSelect = onPick,
-            modifier = Modifier.widthIn(max = 420.dp),
-        )
-        val commits = info?.commits.orEmpty()
-        if (commits.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SectionTitle(pluralStringRes(Res.plurals.claude_code_commits, commits.size, commits.size))
-                commits.forEach { commit ->
-                    val selected = (scope as? ChangesScope.Commit)?.sha == commit.sha
-                    Row(
-                        Modifier
-                            // The highlight reaches into the gutter; the text stays on the column's edge.
-                            .offset(x = (-8).dp)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                            .clickable { onPick(ChangesScope.Commit(commit.sha)) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(commit.sha.take(7), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(InlineGap))
-                        Text(commit.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
+    // A commit picked below leaves both segments unselected: it is a third way to look.
+    SegmentedChoice(
+        options = listOf<ChangesScope>(ChangesScope.Uncommitted, ChangesScope.Branch),
+        selected = scope,
+        label = { stringRes(if (it == ChangesScope.Uncommitted) Res.string.claude_code_scope_uncommitted else Res.string.claude_code_scope_branch) },
+        onSelect = onPick,
+        modifier = Modifier.widthIn(max = 420.dp),
+    )
+}
+
+@Composable
+private fun CommitRow(
+    commit: GitCommitLine,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            // The highlight reaches into the gutter; the text stays on the column's edge.
+            .offset(x = (-8).dp)
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(commit.sha.take(7), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(InlineGap))
+        Text(commit.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
