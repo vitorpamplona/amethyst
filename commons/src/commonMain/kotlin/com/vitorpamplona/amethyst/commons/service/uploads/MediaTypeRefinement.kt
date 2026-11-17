@@ -35,11 +35,11 @@ suspend fun MediaUploader.refineMediaType(media: SelectedMedia): SelectedMedia {
     // An animated WebP says image/webp like a photo: only its header says it moves.
     if (media.mimeType.equals(WEBP, ignoreCase = true) && !media.animated) {
         val header = readRange(media.uri, 0, PictureHeaders.WEBP_HEADER_BYTES) ?: return media
-        return if (PictureHeaders.isAnimatedWebp(header)) SelectedMedia(media.uri, media.mimeType, animated = true) else media
+        return if (PictureHeaders.isAnimatedWebp(header)) SelectedMedia(media.uri, media.mimeType, animated = true, temporary = media.temporary) else media
     }
     if (!mayHoldVideo(media.mimeType, media.uri.toString())) return media
     val audioOnly = probeMp4AudioOnly { offset, length -> readRange(media.uri, offset, length) }
-    return if (audioOnly == true) SelectedMedia(media.uri, AUDIO_MP4) else media
+    return if (audioOnly == true) SelectedMedia(media.uri, AUDIO_MP4, temporary = media.temporary) else media
 }
 
 private const val AUDIO_MP4 = "audio/mp4"

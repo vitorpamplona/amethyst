@@ -99,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -127,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFil
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -1056,8 +1059,6 @@ private suspend fun sendAttachment(
     if (orchestrator == null || orchestrator.size() == 0) return
 
     val item = orchestrator.get(0)
-    val uri = item.media.uri
-    val declaredMime = item.media.mimeType ?: uploader.mimeType(uri) ?: CordnBlobUpload.OPAQUE
 
     // Marks the dialog busy: its Send button reads canPost(), which is false while a
     // tracker says an upload is running. Without this the button stayed live for the
@@ -1065,64 +1066,74 @@ private suspend fun sendAttachment(
     state.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
     try {
-        // The file's quality, chosen in the media studio.
-        //
-        // Off the main thread, like the strip and the read below it:
-        // `sendAttachment` is called from the composition's scope, so it
-        // inherits Main, and compression blocks. The voice path posts its
-        // recording already encoded and skips compression entirely.
-        val compressed =
-            withContext(Dispatchers.IO) {
-                item.orchestrator.compressIfNeeded(
-                    uri = uri,
-                    mimeType = declaredMime,
-                    compressionQuality = item.options.quality,
-                    uploader = uploader,
-                )
-            }
-        val mime = compressed.contentType ?: declaredMime
+        // The Studio's edits first (crop, trim, an edited GIF): what is compressed, stripped and
+        // sent below is the edited copy, which withEdits deletes once the send returns.
+        var editFailed: UploadError? = null
+        item.withEdits(uploader, onFailed = { editFailed = it }) { uri, editedType ->
+            val declaredMime = editedType ?: uploader.mimeType(uri) ?: CordnBlobUpload.OPAQUE
 
-        // The file's strip-metadata switch. A file type the stripper does not handle comes back
-        // untouched and says so, which is not a failure — there was nothing to strip.
-        val finalUri =
-            if (item.options.stripMetadata) {
-                uploader.stripMetadata(compressed.uri, mime)
-            } else {
-                compressed.uri
-            }
-
-        try {
-            // The name the picker reported (Android's DISPLAY_NAME): `uri.lastPathSegment` is a
-            // document id on a content:// URI, not a filename. The query is a disk read, so it
-            // goes off the main thread with the rest — StrictMode flags it otherwise.
-            val name = withContext(Dispatchers.IO) { uploader.displayName(uri) } ?: uri.lastPathSegmentOrNull() ?: "file"
-            val bytes =
-                uploader.readBytes(finalUri)
-                    ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_unreadable))
-
-            // Null means the chosen host has no base URL, which is a setting the person can
-            // change — the one failure here that is entirely actionable.
-            val tag =
-                CordnMediaService(accountViewModel.account, accountViewModel.httpClientBuilder)
-                    .upload(group, bytes, mime, name, state.selectedServer.baseUrl)
-                    ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
-
-            // Into the room as well, for the same reason every other send is: an
-            // attachment of your own echoes back as an Echo and would otherwise be
-            // invisible to the person who sent it.
+            // The file's quality, chosen in the media studio.
             //
-            // The file's description (its alt text in the studio) is the message's own content, so an attachment with
-            // something written about it is one message rather than two.
-            room.add(session.manager.send(room.gid, content = (item.options.altOrNull ?: state.caption).trim(), tags = arrayOf(tag)))
-        } finally {
-            // Compressing and stripping each write a new file, and both hold the
-            // attachment in the clear. Leaving them in the cache would keep plaintext
-            // copies of a message that is end-to-end encrypted everywhere else — the
-            // same reason the voice path deletes its recording. Both calls no-op on the
-            // user's own file.
-            if (finalUri != uri) uploader.discardTempFile(finalUri)
-            if (compressed.uri != finalUri && compressed.uri != uri) uploader.discardTempFile(compressed.uri)
+            // Off the main thread, like the strip and the read below it:
+            // `sendAttachment` is called from the composition's scope, so it
+            // inherits Main, and compression blocks. The voice path posts its
+            // recording already encoded and skips compression entirely.
+            val compressed =
+                withContext(Dispatchers.IO) {
+                    item.orchestrator.compressIfNeeded(
+                        uri = uri,
+                        mimeType = declaredMime,
+                        compressionQuality = item.options.quality,
+                        uploader = uploader,
+                    )
+                }
+            val mime = compressed.contentType ?: declaredMime
+
+            // The file's strip-metadata switch. A file type the stripper does not handle comes back
+            // untouched and says so, which is not a failure — there was nothing to strip.
+            val finalUri =
+                if (item.options.stripMetadata) {
+                    uploader.stripMetadata(compressed.uri, mime)
+                } else {
+                    compressed.uri
+                }
+
+            try {
+                // The name the picker reported (Android's DISPLAY_NAME): `uri.lastPathSegment` is a
+                // document id on a content:// URI, not a filename. The query is a disk read, so it
+                // goes off the main thread with the rest — StrictMode flags it otherwise.
+                // The picked file's name, not the edited temp copy's.
+                val picked = item.media.uri
+                val name = withContext(Dispatchers.IO) { uploader.displayName(picked) } ?: picked.lastPathSegmentOrNull() ?: "file"
+                val bytes =
+                    uploader.readBytes(finalUri)
+                        ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_unreadable))
+
+                // Null means the chosen host has no base URL, which is a setting the person can
+                // change — the one failure here that is entirely actionable.
+                val tag =
+                    CordnMediaService(accountViewModel.account, accountViewModel.httpClientBuilder)
+                        .upload(group, bytes, mime, name, state.selectedServer.baseUrl)
+                        ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
+
+                // Into the room as well, for the same reason every other send is: an
+                // attachment of your own echoes back as an Echo and would otherwise be
+                // invisible to the person who sent it.
+                //
+                // The file's description (its alt text in the studio) is the message's own content, so an attachment with
+                // something written about it is one message rather than two.
+                room.add(session.manager.send(room.gid, content = (item.options.altOrNull ?: state.caption).trim(), tags = arrayOf(tag)))
+            } finally {
+                // Compressing and stripping each write a new file, and both hold the
+                // attachment in the clear. Leaving them in the cache would keep plaintext
+                // copies of a message that is end-to-end encrypted everywhere else — the
+                // same reason the voice path deletes its recording. Both calls no-op on the
+                // user's own file.
+                if (finalUri != uri) uploader.discardTempFile(finalUri)
+                if (compressed.uri != finalUri && compressed.uri != uri) uploader.discardTempFile(compressed.uri)
+            }
         }
+        editFailed?.let { throw CordnAttachmentException(loadStringRes(UploadingState.Error(it, emptyArray()).errorResource)) }
     } finally {
         // Always, not just on success: a failure leaves the dialog up to retry from,
         // and a tracker stuck "uploading" would keep its Send button dead forever.

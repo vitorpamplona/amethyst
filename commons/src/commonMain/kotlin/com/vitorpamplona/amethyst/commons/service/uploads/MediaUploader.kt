@@ -145,7 +145,23 @@ interface MediaUploader {
         trim: VideoTrim,
     ): MediaCompressorResult? = null
 
-    /** One frame of the video at [uri] near [atMs], as JPEG bytes no larger than [maxEdge] on its long side; null when unavailable. */
+    /**
+     * [videoFrame] at each of [times], for the Trim tool's filmstrip. A platform that decodes a
+     * file from its start (a GIF) overrides it to make one pass for all of them.
+     */
+    suspend fun videoFrames(
+        uri: MediaUri,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> = times.map { videoFrame(uri, it, maxEdge) }
+
+    /** Whether [cropImage] can read [media] here: a still this platform decodes (a desktop can't read HEIC). */
+    fun canCrop(media: SelectedMedia): Boolean = media.canCrop()
+
+    /**
+     * One frame of the video (or GIF) at [uri] near [atMs], no larger than [maxEdge] on its long
+     * side, as image bytes any loader draws (a JPEG, or a one-frame GIF for a GIF); null when unavailable.
+     */
     suspend fun videoFrame(
         uri: MediaUri,
         atMs: Long,

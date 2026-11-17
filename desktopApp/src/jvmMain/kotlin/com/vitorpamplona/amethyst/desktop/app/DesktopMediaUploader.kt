@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
@@ -78,10 +79,13 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.RandomAccessFile
+import java.lang.ref.SoftReference
 import java.net.URI
 import java.nio.file.Files
 import javax.imageio.ImageIO
@@ -527,7 +531,9 @@ class DesktopMediaUploader(
         trim: VideoTrim?,
     ): MediaCompressorResult? =
         withContext(Dispatchers.Default) {
-            val edited = GifEditor.edit(fileOf(uri).readBytes(), crop, trim) ?: return@withContext null
+            val bytes = gifBytes(uri) ?: return@withContext null
+            val active = currentCoroutineContext()
+            val edited = GifEditor.edit(bytes, crop, trim) { active.isActive } ?: return@withContext null
             val file = AmethystTempDir.createTempFile("amethyst_gif_", ".gif")
             try {
                 file.writeBytes(edited)
@@ -538,13 +544,26 @@ class DesktopMediaUploader(
             MediaCompressorResult(StringMediaUri(file.absolutePath), GIF_CONTENT_TYPE, file.length())
         }
 
-    override suspend fun videoDurationMs(uri: MediaUri): Long? = gifBytes(uri)?.let(PictureHeaders::gifDurationMs) ?: videoCompressor.durationMs(fileOf(uri))
+    override suspend fun videoDurationMs(uri: MediaUri): Long? = gifBytes(uri)?.let { withContext(Dispatchers.Default) { PictureHeaders.gifDurationMs(it) } } ?: videoCompressor.durationMs(fileOf(uri))
 
-    /** The whole file when [uri] is a GIF, else null. */
+    // The last GIF read, kept for the Trim tool's many frame requests on the same file. Soft, so a
+    // short heap can take it back.
+    @Volatile
+    private var lastGif: Pair<String, SoftReference<ByteArray>>? = null
+
+    /** The whole file when [uri] is a GIF of at most [GifEditor.MAX_FILE_BYTES], else null. */
     private suspend fun gifBytes(uri: MediaUri): ByteArray? =
         withContext(Dispatchers.IO) {
+            val file = fileOf(uri)
+            val key = "${file.absolutePath}:${file.length()}:${file.lastModified()}"
+            lastGif
+                ?.takeIf { it.first == key }
+                ?.second
+                ?.get()
+                ?.let { return@withContext it }
             val header = readRange(uri, 0, PictureHeaders.GIF_HEADER_BYTES) ?: return@withContext null
-            if (PictureHeaders.gifSize(header) == null) null else fileOf(uri).readBytes()
+            if (PictureHeaders.gifSize(header) == null || file.length() > GifEditor.MAX_FILE_BYTES) return@withContext null
+            file.readBytes().also { lastGif = key to SoftReference(it) }
         }
 
     override suspend fun trimVideo(
@@ -560,7 +579,24 @@ class DesktopMediaUploader(
         uri: MediaUri,
         atMs: Long,
         maxEdge: Int,
-    ): ByteArray? = gifBytes(uri)?.let { GifEditor.frameAt(it, atMs, maxEdge) } ?: videoCompressor.frame(fileOf(uri), atMs, maxEdge)
+    ): ByteArray? = videoFrames(uri, listOf(atMs), maxEdge).firstOrNull()
+
+    // A GIF is decoded off the UI thread, all asked moments in one pass, and stops when the caller
+    // is cancelled (a drag moved on); a video asks ffmpeg for each.
+    override suspend fun videoFrames(
+        uri: MediaUri,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> {
+        val gif = gifBytes(uri) ?: return times.map { videoCompressor.frame(fileOf(uri), it, maxEdge) }
+        return withContext(Dispatchers.Default) {
+            val active = currentCoroutineContext()
+            GifEditor.framesAt(gif, times, maxEdge) { active.isActive }
+        }
+    }
+
+    // ImageIO and Skia read neither: the Studio offers no crop for them here.
+    override fun canCrop(media: SelectedMedia): Boolean = media.canCrop() && media.mimeType?.lowercase()?.let { "heic" in it || "heif" in it } != true
 
     override suspend fun cropImage(
         uri: MediaUri,

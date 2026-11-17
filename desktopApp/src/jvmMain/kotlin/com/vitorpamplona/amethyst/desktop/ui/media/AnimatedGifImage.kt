@@ -108,6 +108,9 @@ fun AnimatedGifImage(
     contentScale: ContentScale = ContentScale.Fit,
     // Called when neither the GIF decoder nor the image loader can draw [url].
     onError: (() -> Unit)? = null,
+    // [url] is a file the user picked (the media Studio), read from disk. Off for anything a note
+    // names, so remote content never makes the client read a local file.
+    local: Boolean = false,
 ) {
     var gif by remember(url) { mutableStateOf(GifSourceCache.get(url)) }
     var loadFailed by remember(url) { mutableStateOf(false) }
@@ -116,7 +119,7 @@ fun AnimatedGifImage(
     LaunchedEffect(url) {
         loadFailed = false
         if (gif != null) return@LaunchedEffect
-        gif = withContext(Dispatchers.IO) { loadGif(url)?.also { GifSourceCache.put(url, it) } }
+        gif = withContext(Dispatchers.IO) { loadGif(url, local)?.also { GifSourceCache.put(url, it) } }
         if (gif == null) loadFailed = true
     }
 
@@ -267,9 +270,12 @@ internal class GifPlayer(
  * media caches, nothing that went over Tor or was encrypted is written to disk. Null when the
  * download fails: an error page is not a GIF.
  */
-private suspend fun gifBytes(url: String): ByteArray? {
+private suspend fun gifBytes(
+    url: String,
+    local: Boolean,
+): ByteArray? {
     // A file the user picked to post (the media Studio, the composer's card): read it in place.
-    localFile(url)?.let { return it.readBytes() }
+    if (local) return localFile(url)?.readBytes()
 
     val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
     val key = "gif:$url"
@@ -295,9 +301,12 @@ private suspend fun gifBytes(url: String): ByteArray? {
     return bytes
 }
 
-private suspend fun loadGif(url: String): GifSource? =
+private suspend fun loadGif(
+    url: String,
+    local: Boolean,
+): GifSource? =
     try {
-        val bytes = gifBytes(url) ?: return null
+        val bytes = gifBytes(url, local) ?: return null
 
         Data.makeFromBytes(bytes).use { skData ->
             Codec.makeFromData(skData).use { codec ->

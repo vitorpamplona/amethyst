@@ -137,7 +137,7 @@ class MultiOrchestrator(
                     item.sentEncrypted = null
                     val p = plans.getValue(item)
                     launch(Dispatchers.IO) {
-                        item.withEdits(p.settings.crop, p.settings.trim, uploader) { uri, mimeType ->
+                        item.withEdits(uploader, p.settings.crop, p.settings.trim, onFailed = item.orchestrator::error) { uri, mimeType ->
                             item.orchestrator.upload(
                                 uri,
                                 mimeType,
@@ -285,7 +285,7 @@ class MultiOrchestrator(
                     .map { (item, cipher) ->
                         val p = plans.getValue(item)
                         async(Dispatchers.IO) {
-                            item.withEdits(p.settings.crop, p.settings.trim, uploader) { uri, mimeType ->
+                            item.withEdits(uploader, p.settings.crop, p.settings.trim, onFailed = item.orchestrator::error) { uri, mimeType ->
                                 item.orchestrator.uploadEncrypted(
                                     uri,
                                     mimeType,
@@ -394,7 +394,7 @@ class MultiOrchestrator(
                         val options = item.options
                         async(Dispatchers.IO) {
                             options to
-                                item.withEdits(options.crop, options.trim, uploader) { uri, mimeType ->
+                                item.withEdits(uploader, options.crop, options.trim, onFailed = item.orchestrator::error) { uri, mimeType ->
                                     item.orchestrator.upload(
                                         uri,
                                         mimeType,
@@ -437,36 +437,6 @@ class MultiOrchestrator(
         val remaining = items.filter { it in list }
         val successful = remaining.mapNotNull { item -> finished[item]?.let { Uploaded(item, it) } }
         return EachResult(successful.size == remaining.size, successful, remaining.mapNotNull { errors[it] })
-    }
-
-    /**
-     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture, [trim] of a video,
-     * or either of a GIF (still a GIF) when there is one (deleted once [send] returns), else the picked file. An edit that
-     * cannot be written fails the file ([UploadError.CROP_FAILED], [UploadError.TRIM_FAILED])
-     * rather than sending all of it.
-     */
-    private suspend fun SelectedMediaProcessing.withEdits(
-        crop: ImageCrop?,
-        trim: VideoTrim?,
-        uploader: MediaUploader,
-        send: suspend (MediaUri, String?) -> UploadingState.UploadingFinalState,
-    ): UploadingState.UploadingFinalState {
-        // A video that is really sound goes up as audio, even when no Studio looked at it first.
-        checkType(uploader)
-        val edited =
-            when {
-                // An edited GIF stays a GIF; "Convert GIF to MP4" still applies to it afterwards.
-                media.isGif() && (crop != null || trim != null) ->
-                    uploader.editGif(media.uri, crop, trim) ?: return orchestrator.error(if (crop != null) UploadError.CROP_FAILED else UploadError.TRIM_FAILED)
-                crop != null && media.canCrop() -> uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)
-                trim != null && media.isVideo() == true -> uploader.trimVideo(media.uri, media.mimeType, trim) ?: return orchestrator.error(UploadError.TRIM_FAILED)
-                else -> return send(media.uri, media.mimeType)
-            }
-        return try {
-            send(edited.uri, edited.contentType)
-        } finally {
-            uploader.discardTempFile(edited.uri)
-        }
     }
 
     /** Every file, in order. */

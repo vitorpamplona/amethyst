@@ -202,10 +202,9 @@ private fun Filmstrip(
         val total = duration ?: return@LaunchedEffect
         if (frames.isNotEmpty()) return@LaunchedEffect
         repeat(STRIP_FRAMES) { frames.add(null) }
-        // One at a time, left to right, so the strip fills in order.
-        for (i in 0 until STRIP_FRAMES) {
-            frames[i] = uploader.videoFrame(item.media.uri, total * (2 * i + 1) / (2 * STRIP_FRAMES), STRIP_FRAME_EDGE)
-        }
+        // All at once: a GIF is decoded from its start, so one pass serves the whole strip.
+        val times = List(STRIP_FRAMES) { i -> total * (2 * i + 1) / (2 * STRIP_FRAMES) }
+        uploader.videoFrames(item.media.uri, times, STRIP_FRAME_EDGE).forEachIndexed { i, bytes -> frames[i] = bytes }
     }
 
     val density = LocalDensity.current

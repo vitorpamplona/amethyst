@@ -122,6 +122,8 @@ fun CreateGroupScreen(
                             { gid -> accountViewModel.uploadMarmotGroupIcon(gid, media.uri, media.mimeType, accountViewModel.mediaUploader) }
                         },
                 )
+                // Created: a crop made for the icon is ours to remove.
+                icon?.let { if (it.temporary) accountViewModel.mediaUploader.discardTempFile(it.uri) }
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
                 isCreating = false

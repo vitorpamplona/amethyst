@@ -75,49 +75,56 @@ class MarmotFileUploader(
         for (i in 0 until count) {
             val item = multiOrchestrator.get(i)
             val media = item.media
-            val mimeType = media.mimeType ?: "application/octet-stream"
-            val filename = uploader.displayName(media.uri) ?: fallbackFilename(mimeType)
+            val filename = uploader.displayName(media.uri) ?: fallbackFilename(media.mimeType ?: "application/octet-stream")
+            var cipher: EncryptedMediaV2Cipher? = null
 
-            // v2 puts `m` inside both the key derivation and the AEAD
-            // associated data, so it has to be the canonical form and not
-            // whatever the content resolver reported.
-            //
-            // Always v2, whatever the group carries. This used to be gated on
-            // the group holding the `encrypted-media-v2` policy, and groups are
-            // created without it on purpose (epoch 0 has to match the reference
-            // implementation byte for byte), so in practice every attachment
-            // went out in the MIP-era dialect -- `url`/`x`/`n`/`v mip04-v2` --
-            // which no shipping Marmot implementation reads: MDK 0.9.21 knows
-            // only `encrypted-media-v1|v2` and drops anything else at the
-            // typed parser, silently. Receivers do not gate on the policy
-            // either (MDK's own test pins that an out-of-policy locator is
-            // "kept, not dropped on ingest"), so writing v2 into a group that
-            // never committed the component is read correctly; it is only the
-            // SENDER's own policy validation that a component would constrain.
-            //
-            // A media type too malformed to canonicalize becomes the generic
-            // octet-stream rather than falling back to the old dialect: an
-            // attachment nobody can render is worse than one labelled
-            // imprecisely.
-            val canonicalMediaType = MarmotMediaType.canonicalize(mimeType) ?: GENERIC_MEDIA_TYPE
-            val cipher = EncryptedMediaV2Cipher(exporterSecret, canonicalMediaType, filename)
+            // Through the Studio's edits (crop, trim, an edited GIF): the cipher is made for the
+            // file actually sent, whose type an edit can change.
+            item.withEdits(uploader, onFailed = item.orchestrator::error) { uri, editedType ->
+                val mimeType = editedType ?: "application/octet-stream"
+                // v2 puts `m` inside both the key derivation and the AEAD
+                // associated data, so it has to be the canonical form and not
+                // whatever the content resolver reported.
+                //
+                // Always v2, whatever the group carries. This used to be gated on
+                // the group holding the `encrypted-media-v2` policy, and groups are
+                // created without it on purpose (epoch 0 has to match the reference
+                // implementation byte for byte), so in practice every attachment
+                // went out in the MIP-era dialect -- `url`/`x`/`n`/`v mip04-v2` --
+                // which no shipping Marmot implementation reads: MDK 0.9.21 knows
+                // only `encrypted-media-v1|v2` and drops anything else at the
+                // typed parser, silently. Receivers do not gate on the policy
+                // either (MDK's own test pins that an out-of-policy locator is
+                // "kept, not dropped on ingest"), so writing v2 into a group that
+                // never committed the component is read correctly; it is only the
+                // SENDER's own policy validation that a component would constrain.
+                //
+                // A media type too malformed to canonicalize becomes the generic
+                // octet-stream rather than falling back to the old dialect: an
+                // attachment nobody can render is worse than one labelled
+                // imprecisely.
+                val canonicalMediaType = MarmotMediaType.canonicalize(mimeType) ?: GENERIC_MEDIA_TYPE
+                val v2 = EncryptedMediaV2Cipher(exporterSecret, canonicalMediaType, filename)
+                cipher = v2
 
-            item.orchestrator.uploadEncrypted(
-                uri = media.uri,
-                mimeType = mimeType,
-                alt = item.captionIn(viewState),
-                contentWarningReason = item.contentWarningIn(viewState),
-                compressionQuality = item.options.quality,
-                encrypt = cipher,
-                server = viewState.selectedServer,
-                account = account,
-                uploader = uploader,
-                stripMetadata = item.options.stripMetadata,
-            )
+                item.orchestrator.uploadEncrypted(
+                    uri = uri,
+                    mimeType = mimeType,
+                    alt = item.captionIn(viewState),
+                    contentWarningReason = item.contentWarningIn(viewState),
+                    compressionQuality = item.options.quality,
+                    encrypt = v2,
+                    server = viewState.selectedServer,
+                    account = account,
+                    uploader = uploader,
+                    stripMetadata = item.options.stripMetadata,
+                )
+            }
 
             val state = item.orchestrator.progressState.value
             val serverResult = (state as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult
-            if (serverResult != null) {
+            val usedCipher = cipher
+            if (serverResult != null && usedCipher != null) {
                 // The reference is built from what the cipher recorded while
                 // encrypting the bytes the pipeline actually uploaded — after
                 // compression and metadata stripping — because that is what the
@@ -128,10 +135,10 @@ class MarmotFileUploader(
                             listOf(
                                 MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, serverResult.url),
                             ),
-                        ciphertextSha256 = cipher.ciphertextSha256,
-                        plaintextSha256 = cipher.plaintextSha256,
-                        nonce = cipher.nonce,
-                        mediaType = cipher.mediaType,
+                        ciphertextSha256 = usedCipher.ciphertextSha256,
+                        plaintextSha256 = usedCipher.plaintextSha256,
+                        nonce = usedCipher.nonce,
+                        mediaType = usedCipher.mediaType,
                         filename = filename,
                         dim = serverResult.fileHeader.dim?.toString(),
                         thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,

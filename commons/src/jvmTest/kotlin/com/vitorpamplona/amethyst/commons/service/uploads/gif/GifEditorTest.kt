@@ -239,6 +239,49 @@ class GifEditorTest {
     }
 
     @Test
+    fun framesAtMatchesFrameAtInTheOrderAsked() {
+        val gif = jdkGif(frames = 4, delayCs = 25)
+        // Out of order and past the end: each still lands where frameAt would put it.
+        val times = listOf(900L, 0L, 1600L, 300L, 600L)
+        val all = GifEditor.framesAt(gif, times, maxEdge = 20)
+        assertEquals(times.size, all.size)
+        times.zip(all).forEach { (atMs, bytes) ->
+            val one = ImageIO.read(ByteArrayInputStream(assertNotNull(GifEditor.frameAt(gif, atMs, 20))))
+            assertContentEquals(rgb(one), rgb(ImageIO.read(ByteArrayInputStream(assertNotNull(bytes)))), "at $atMs ms")
+        }
+    }
+
+    @Test
+    fun aCancelledCallerGetsNothing() {
+        val gif = jdkGif(frames = 4, delayCs = 25)
+        assertEquals(null, GifEditor.edit(gif, null, VideoTrim(0, 500)) { false })
+        assertEquals(listOf(null, null), GifEditor.framesAt(gif, listOf(0, 600), 20) { false })
+    }
+
+    @Test
+    fun aCanvasTooLargeToDecodeIsRefused() {
+        val gif = jdkGif(frames = 2, delayCs = 25)
+        // Claim a 4096x4096 screen: 64 MB of pixels per canvas, past the cap, so nothing is allocated.
+        val huge =
+            gif.copyOf().apply {
+                this[6] = 0
+                this[7] = 0x10
+                this[8] = 0
+                this[9] = 0x10
+            }
+        assertEquals(null, GifEditor.edit(huge, null, VideoTrim(0, 100)))
+        assertEquals(null, GifEditor.frameAt(huge, 0, 20))
+    }
+
+    @Test
+    fun aFileOverTheCapIsRefused() {
+        val gif = jdkGif(frames = 2, delayCs = 25)
+        val padded = gif.copyOf((GifEditor.MAX_FILE_BYTES + 1).toInt())
+        assertEquals(null, GifEditor.edit(padded, null, VideoTrim(0, 100)))
+        assertEquals(null, GifEditor.frameAt(padded, 0, 20))
+    }
+
+    @Test
     fun notAGifIsNull() {
         assertEquals(null, GifEditor.edit(ByteArray(50), null, VideoTrim(0, 100)))
         assertEquals(null, GifEditor.frameAt("PNG".encodeToByteArray(), 0, 10))

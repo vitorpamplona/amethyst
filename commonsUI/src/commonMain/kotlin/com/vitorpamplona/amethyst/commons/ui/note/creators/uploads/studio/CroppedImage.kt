@@ -90,11 +90,11 @@ private fun AnimatedCroppedImage(
     modifier: Modifier,
 ) {
     if (crop == null || imageAspect == null || imageAspect <= 0f) {
-        AnimatedImage(url, contentDescription = null, contentScale = contentScale, modifier = modifier, onError = {})
+        AnimatedImage(url, contentDescription = null, contentScale = contentScale, modifier = modifier, onError = {}, local = true)
         return
     }
     Box(modifier.clipToBounds()) {
-        AnimatedImage(url, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.cropPlacement(crop, imageAspect, contentScale), onError = {})
+        AnimatedImage(url, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.cropPlacement(crop, imageAspect, contentScale), onError = {}, local = true)
     }
 }
 

@@ -31,6 +31,11 @@ class SelectedMedia(
      * [refineMediaType]. It is never cropped or re-encoded, which would keep only its first frame.
      */
     val animated: Boolean = false,
+    /**
+     * A copy made for this upload (a crop the avatar, banner or icon step wrote), deleted once it
+     * has gone up; never the user's own file.
+     */
+    val temporary: Boolean = false,
 ) {
     /** A picture that plays: a GIF, or one found [animated]. */
     fun isAnimated() = isGif() || animated

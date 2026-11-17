@@ -87,4 +87,39 @@ class SelectedMediaProcessing(
      */
     @Volatile
     internal var sentEncrypted: MultiOrchestrator.SentEncrypted? = null
+
+    /**
+     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture, [trim] of a
+     * video, or either of a GIF (still a GIF) when there is one, deleted once [send] returns; else
+     * the picked file. [checkType] runs first, so a voice memo goes up as audio even when no Studio
+     * looked at it. An edit that cannot be written ends in [onFailed] with
+     * [UploadError.CROP_FAILED] or [UploadError.TRIM_FAILED] instead of sending all of it.
+     *
+     * Every upload of a Studio file goes through here: [MultiOrchestrator] for most screens, and the
+     * chats that run their own upload (Marmot, cordn).
+     */
+    suspend fun <T> withEdits(
+        uploader: MediaUploader,
+        crop: ImageCrop? = options.crop,
+        trim: VideoTrim? = options.trim,
+        onFailed: (UploadError) -> T,
+        send: suspend (MediaUri, String?) -> T,
+    ): T {
+        checkType(uploader)
+        val picked = media
+        val edited =
+            when {
+                // An edited GIF stays a GIF; "Convert GIF to MP4" still applies to it afterwards.
+                picked.isGif() && (crop != null || trim != null) ->
+                    uploader.editGif(picked.uri, crop, trim) ?: return onFailed(if (crop != null) UploadError.CROP_FAILED else UploadError.TRIM_FAILED)
+                crop != null && picked.canCrop() -> uploader.cropImage(picked.uri, picked.mimeType, crop) ?: return onFailed(UploadError.CROP_FAILED)
+                trim != null && picked.isVideo() == true -> uploader.trimVideo(picked.uri, picked.mimeType, trim) ?: return onFailed(UploadError.TRIM_FAILED)
+                else -> return send(picked.uri, picked.mimeType)
+            }
+        return try {
+            send(edited.uri, edited.contentType)
+        } finally {
+            uploader.discardTempFile(edited.uri)
+        }
+    }
 }

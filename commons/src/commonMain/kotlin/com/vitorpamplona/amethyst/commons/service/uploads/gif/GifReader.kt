@@ -54,6 +54,8 @@ internal class GifReader(
         width = u16(6)
         height = u16(8)
         require(width > 0 && height > 0) { "empty GIF" }
+        // The canvas and the writer's few copies of it stay a few tens of MB, even on a phone.
+        require(width.toLong() * height <= MAX_CANVAS_PIXELS) { "GIF too large: ${width}x$height" }
         val flags = bytes[10].toInt() and 0xFF
         var at = 13
         globalTable =
@@ -76,8 +78,15 @@ internal class GifReader(
         val delayCs: Int,
     )
 
-    /** Calls [onFrame] with each frame in order; the canvas array is reused, so copy it to keep it. Stops when [onFrame] returns false. */
-    fun forEachFrame(onFrame: (Frame) -> Boolean) {
+    /**
+     * Calls [onFrame] with each frame in order; the canvas array is reused, so copy it to keep it.
+     * Stops when [onFrame] returns false, or before the next frame once [keepGoing] says so (a
+     * cancelled caller).
+     */
+    fun forEachFrame(
+        keepGoing: () -> Boolean = { true },
+        onFrame: (Frame) -> Boolean,
+    ) {
         val canvas = IntArray(width * height)
         var restore: IntArray? = null
         var delay = 0
@@ -103,11 +112,13 @@ internal class GifReader(
                 }
 
                 0x2C -> {
-                    if (at + 10 > bytes.size) return
+                    if (at + 10 > bytes.size || !keepGoing()) return
                     val left = u16(at + 1)
                     val top = u16(at + 3)
                     val w = u16(at + 5)
                     val h = u16(at + 7)
+                    // A frame larger than any canvas allowed is a broken or hostile file.
+                    if (w.toLong() * h > MAX_CANVAS_PIXELS) return
                     val flags = bytes[at + 9].toInt() and 0xFF
                     at += 10
                     val table =
@@ -279,5 +290,8 @@ internal class GifReader(
 
     companion object {
         const val OPAQUE_BLACK = 0xFF000000.toInt()
+
+        /** The largest canvas read: 2048x2048, past any GIF people post. */
+        const val MAX_CANVAS_PIXELS = 2048L * 2048L
     }
 }

@@ -31,20 +31,28 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
  * shortened to the part that is kept, so the cut lands where it was asked.
  */
 object GifEditor {
-    /** [gif] cropped to [crop] (null: all of it) and trimmed to [trim] (null: all of it), or null when [gif] can't be read. */
+    /** The largest GIF file edited or read for frames; past it, the Studio's GIF edits fail rather than fill memory. */
+    const val MAX_FILE_BYTES = 50L * 1024 * 1024
+
+    /**
+     * [gif] cropped to [crop] (null: all of it) and trimmed to [trim] (null: all of it), or null when
+     * [gif] can't be read, is too large, or [keepGoing] turned false (a cancelled caller).
+     */
     fun edit(
         gif: ByteArray,
         crop: ImageCrop?,
         trim: VideoTrim?,
+        keepGoing: () -> Boolean = { true },
     ): ByteArray? =
         runCatching {
+            if (gif.size > MAX_FILE_BYTES) return@runCatching null
             val reader = GifReader(gif)
             val (x, y, w, h) = crop?.pixels(reader.width, reader.height)?.toList() ?: listOf(0, 0, reader.width, reader.height)
             val writer = GifWriter(w, h, reader.loopCount, reader.sharedPalette)
             val cut = IntArray(w * h)
             var startMs = 0L
             var written = 0
-            reader.forEachFrame { frame ->
+            reader.forEachFrame(keepGoing) { frame ->
                 val lengthMs = shownMs(frame.delayCs)
                 val endMs = startMs + lengthMs
                 val keptFrom = maxOf(startMs, trim?.startMs ?: Long.MIN_VALUE)
@@ -59,41 +67,53 @@ object GifEditor {
                 startMs = endMs
                 trim == null || startMs < trim.endMs
             }
-            if (written == 0) null else writer.finish()
+            if (written == 0 || !keepGoing()) null else writer.finish()
         }.getOrNull()
 
-    /**
-     * The frame of [gif] shown at [atMs] (past its end, as it loops), no larger than [maxEdge] on its
-     * long side, as a one-frame GIF, which every image loader draws. Null when [gif] can't be read.
-     */
+    /** [framesAt] for one moment. */
     fun frameAt(
         gif: ByteArray,
         atMs: Long,
         maxEdge: Int,
-    ): ByteArray? =
+        keepGoing: () -> Boolean = { true },
+    ): ByteArray? = framesAt(gif, listOf(atMs), maxEdge, keepGoing).firstOrNull()
+
+    /**
+     * The frames of [gif] shown at each of [times] (past its end, as it loops), no larger than
+     * [maxEdge] on their long side, each as a one-frame GIF, which every image loader draws. One
+     * pass over the file for all of them. Nulls when [gif] can't be read or [keepGoing] turned false.
+     */
+    fun framesAt(
+        gif: ByteArray,
+        times: List<Long>,
+        maxEdge: Int,
+        keepGoing: () -> Boolean = { true },
+    ): List<ByteArray?> =
         runCatching {
+            if (gif.size > MAX_FILE_BYTES || times.isEmpty()) return@runCatching null
             val reader = GifReader(gif)
-            var shown: IntArray? = null
-            var startMs = 0L
             val total = PictureHeaders.gifDurationMs(gif) ?: 0L
-            val at = if (total > 0) atMs.coerceAtLeast(0) % total else 0L
-            reader.forEachFrame { frame ->
-                val endMs = startMs + shownMs(frame.delayCs)
-                if (at < endMs) {
-                    shown = frame.pixels.copyOf()
-                    return@forEachFrame false
-                }
-                startMs = endMs
-                true
-            }
-            val pixels = shown ?: return@runCatching null
+            val wanted = times.map { if (total > 0) it.coerceAtLeast(0) % total else 0L }
+            val order = wanted.indices.sortedBy { wanted[it] }
+            val out = arrayOfNulls<ByteArray>(times.size)
             val scale = minOf(1f, maxEdge.toFloat() / maxOf(reader.width, reader.height))
             val w = (reader.width * scale).toInt().coerceAtLeast(1)
             val h = (reader.height * scale).toInt().coerceAtLeast(1)
-            // Nearest neighbour: no new colors, so the frame keeps its palette.
-            val small = IntArray(w * h) { i -> pixels[((i / w) * reader.height / h) * reader.width + (i % w) * reader.width / w] }
-            GifWriter(w, h, loopCount = null, reader.sharedPalette).apply { add(small, 0) }.finish()
-        }.getOrNull()
+            var next = 0
+            var startMs = 0L
+            reader.forEachFrame(keepGoing) { frame ->
+                val endMs = startMs + shownMs(frame.delayCs)
+                while (next < order.size && wanted[order[next]] < endMs) {
+                    // Nearest neighbour: no new colors, so the frame keeps its palette.
+                    val small = IntArray(w * h) { i -> frame.pixels[((i / w) * reader.height / h) * reader.width + (i % w) * reader.width / w] }
+                    out[order[next]] = GifWriter(w, h, loopCount = null, reader.sharedPalette).apply { add(small, 0) }.finish()
+                    next++
+                }
+                startMs = endMs
+                next < order.size
+            }
+            if (!keepGoing()) null else out.toList()
+        }.getOrNull() ?: List(times.size) { null }
 
     /** How long a frame with [delayCs] shows, as browsers draw it: under 2 hundredths, a tenth of a second. */
     internal fun shownMs(delayCs: Int): Long = if (delayCs < MIN_DELAY_CS) DEFAULT_DELAY_MS else delayCs * 10L

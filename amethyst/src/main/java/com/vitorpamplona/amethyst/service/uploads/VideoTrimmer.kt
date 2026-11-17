@@ -30,11 +30,15 @@ import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import androidx.core.graphics.scale
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
+import java.lang.ref.SoftReference
 import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -138,26 +142,61 @@ object VideoTrimmer {
         gifBytes(context, uri)?.let(PictureHeaders::gifDurationMs)
             ?: retrieve(context, uri) { it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() }
 
-    /** The whole file when [uri] is a GIF (the retriever can't open one), else null. */
+    /**
+     * The whole file when [uri] is a GIF (the retriever can't open one) no larger than
+     * [GifEditor.MAX_FILE_BYTES], else null. The last one read is kept while memory allows: the
+     * Trim strip, the stage and the duration all ask for the same file.
+     */
     private fun gifBytes(
         context: Context,
         uri: Uri,
-    ): ByteArray? =
-        try {
+    ): ByteArray? {
+        val key = uri.toString()
+        lastGif?.get()?.takeIf { it.first == key }?.let { return it.second }
+        return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 val header = ByteArray(PictureHeaders.GIF_HEADER_BYTES)
-                var read = 0
-                while (read < header.size) {
-                    val n = stream.read(header, read, header.size - read)
+                val read = stream.readFully(header, header.size)
+                if (PictureHeaders.gifSize(header.copyOf(read)) == null) return@use null
+                val rest = ByteArrayOutputStream()
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    val n = stream.read(buffer)
                     if (n < 0) break
-                    read += n
+                    rest.write(buffer, 0, n)
+                    if (read + rest.size() > GifEditor.MAX_FILE_BYTES) return@use null
                 }
-                if (PictureHeaders.gifSize(header.copyOf(read)) == null) null else header.copyOf(read) + stream.readBytes()
+                (header.copyOf(read) + rest.toByteArray()).also { lastGif = SoftReference(key to it) }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Could not read $uri", e)
             null
         }
+    }
+
+    @Volatile private var lastGif: SoftReference<Pair<String, ByteArray>>? = null
+
+    private fun InputStream.readFully(
+        into: ByteArray,
+        length: Int,
+    ): Int {
+        var read = 0
+        while (read < length) {
+            val n = read(into, read, length - read)
+            if (n < 0) break
+            read += n
+        }
+        return read
+    }
+
+    /** The GIF at [uri] cropped and trimmed, or null when it isn't a GIF, is too large, or [keepGoing] turned false. */
+    fun editGif(
+        context: Context,
+        uri: Uri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+        keepGoing: () -> Boolean,
+    ): ByteArray? = gifBytes(context, uri)?.let { GifEditor.edit(it, crop, trim, keepGoing) }
 
     /** The frame near [atMs], as it displays, at most [maxEdge] on its long side: a JPEG, or a one-frame GIF for a GIF. */
     fun frame(
@@ -165,17 +204,31 @@ object VideoTrimmer {
         uri: Uri,
         atMs: Long,
         maxEdge: Int,
-    ): ByteArray? =
-        gifBytes(context, uri)?.let { gif -> GifEditor.frameAt(gif, atMs, maxEdge) } ?: retrieve(context, uri) { retriever ->
-            val us = atMs.coerceAtLeast(0) * 1000
-            val bitmap =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    retriever.getScaledFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, maxEdge, maxEdge)
-                } else {
-                    retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { fitWithin(it, maxEdge) }
-                } ?: return@retrieve null
-            toJpeg(bitmap)
-        }
+    ): ByteArray? = frames(context, uri, listOf(atMs), maxEdge) { true }.firstOrNull()
+
+    /** [frame] at each of [times]: a GIF in one decoding pass, a video through one retriever. */
+    fun frames(
+        context: Context,
+        uri: Uri,
+        times: List<Long>,
+        maxEdge: Int,
+        keepGoing: () -> Boolean,
+    ): List<ByteArray?> {
+        gifBytes(context, uri)?.let { gif -> return GifEditor.framesAt(gif, times, maxEdge, keepGoing) }
+        return retrieve(context, uri) { retriever ->
+            times.map { atMs ->
+                if (!keepGoing()) return@map null
+                val us = atMs.coerceAtLeast(0) * 1000
+                val bitmap =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        retriever.getScaledFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, maxEdge, maxEdge)
+                    } else {
+                        retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { fitWithin(it, maxEdge) }
+                    }
+                bitmap?.let(::toJpeg)
+            }
+        } ?: times.map { null }
+    }
 
     /** [bitmap] as JPEG bytes; recycles it. */
     private fun toJpeg(bitmap: Bitmap): ByteArray =

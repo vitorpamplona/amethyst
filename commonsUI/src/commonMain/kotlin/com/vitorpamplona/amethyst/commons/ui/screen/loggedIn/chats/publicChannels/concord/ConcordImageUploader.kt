@@ -91,6 +91,9 @@ class ConcordImageUploader(
                 result as? UploadOrchestrator.OrchestratorResult.ServerResult
                     ?: throw IllegalStateException("Encrypted community image upload did not return a server URL")
 
+            // A crop made for this field is ours to remove once it is up.
+            if (media.temporary) uploader.discardTempFile(media.uri)
+
             ImagePointer(
                 url = server.url,
                 key = cipher.keyBytes.toHexKey(),

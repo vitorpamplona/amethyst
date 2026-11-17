@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +81,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.util.formatFileSize
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
 /** "Photo 2", "Video 1", "File 3": what a file's marker and its tile are called. */
 @Composable
@@ -214,8 +218,10 @@ fun AttachedMediaCard(
                 )
             media.isVideo() == true -> {
                 // The first frame that will be sent, where the platform decodes frames (desktop has no thumbnail otherwise).
-                val sentFrame = if (uploader != null && uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, CARD_FRAME_EDGE) else null
-                val frame = if (sentFrame == null) rememberVideoThumbnail(media) else null
+                val decodesFrames = uploader != null && uploader.videoTrim
+                val sentFrame = if (decodesFrames) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, CARD_FRAME_EDGE) else null
+                // The platform's thumbnail only where it can't decode frames itself: not both.
+                val frame = if (!decodesFrames) rememberVideoThumbnail(media) else null
                 if (frame != null && frame.width > 0 && frame.height > 0) {
                     SideEffect { item.displayAspectRatio = frame.width.toFloat() / frame.height }
                 }
@@ -331,8 +337,10 @@ private fun FileRowContent(
     modifier: Modifier,
 ) {
     val media = item.media
-    val name = remember(media, uploader) { uploader?.displayName(media.uri) ?: media.uri.toString().substringAfterLast('/') }
-    val size = remember(media, uploader) { uploader?.fileSize(media.uri) }
+    // Content-resolver queries on Android: off the main thread.
+    val fallbackName = media.uri.toString().substringAfterLast('/')
+    val name by produceState(fallbackName, media, uploader) { uploader?.let { value = withContext(Dispatchers.IO) { it.displayName(media.uri) } ?: fallbackName } }
+    val size by produceState<Long?>(null, media, uploader) { value = uploader?.let { withContext(Dispatchers.IO) { it.fileSize(media.uri) } } }
     val kind = name.substringAfterLast('.', "").takeIf { it.length in 1..5 }?.uppercase() ?: media.mimeType?.substringAfter('/')?.uppercase()
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(

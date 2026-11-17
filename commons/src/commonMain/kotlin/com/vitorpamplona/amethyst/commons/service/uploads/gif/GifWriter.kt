@@ -181,8 +181,19 @@ internal class GifWriter(
         val shared = global?.takeIf { it.covers(canvas, left, top, w, h, width) }
         val palette = shared ?: Palette.of(canvas, left, top, w, h, width)
         val indices = ByteArray(w * h)
+        // Neighbouring pixels repeat: the last color's index skips most lookups.
+        var lastColor = 0
+        var lastIndex = palette.indexOf(0)
         for (y in 0 until h) {
-            for (x in 0 until w) indices[y * w + x] = palette.indexOf(canvas[(top + y) * width + left + x]).toByte()
+            val row = (top + y) * width + left
+            for (x in 0 until w) {
+                val c = canvas[row + x]
+                if (c != lastColor) {
+                    lastColor = c
+                    lastIndex = palette.indexOf(c)
+                }
+                indices[y * w + x] = lastIndex.toByte()
+            }
         }
 
         // Graphic control extension: disposal, delay, the transparent index.
@@ -233,7 +244,7 @@ internal class GifWriter(
     private class Palette(
         val colors: IntArray,
         val transparentIndex: Int,
-        private val lookup: HashMap<Int, Int>,
+        private val lookup: IntIntMap,
     ) {
         /** Color-table bits: the table holds `1 shl bits` entries. */
         val bits: Int =
@@ -255,7 +266,7 @@ internal class GifWriter(
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val c = canvas[(top + y) * stride + left + x]
-                    if (c ushr 24 != 0 && !lookup.containsKey(c)) return false
+                    if (c ushr 24 != 0 && lookup.get(c) < 0) return false
                 }
             }
             return true
@@ -263,7 +274,8 @@ internal class GifWriter(
 
         fun indexOf(argb: Int): Int {
             if (argb ushr 24 == 0) return transparentIndex.coerceAtLeast(0)
-            lookup[argb]?.let { return it }
+            val known = lookup.get(argb)
+            if (known >= 0) return known
             // Only past 256 colors: the nearest of the kept ones.
             var best = 0
             var bestDistance = Int.MAX_VALUE
@@ -275,15 +287,15 @@ internal class GifWriter(
                     best = i
                 }
             }
-            lookup[argb] = best
+            lookup.put(argb, best)
             return best
         }
 
         companion object {
             /** [colors] as they are, plus a transparent slot after them. */
             fun shared(colors: IntArray): Palette {
-                val lookup = HashMap<Int, Int>()
-                colors.forEachIndexed { i, c -> lookup.getOrPut(c) { i } }
+                val lookup = IntIntMap(colors.size)
+                colors.forEachIndexed { i, c -> if (c ushr 24 != 0 && lookup.get(c) < 0) lookup.put(c, i) }
                 return Palette(colors + 0, colors.size, lookup)
             }
 
@@ -295,37 +307,33 @@ internal class GifWriter(
                 h: Int,
                 stride: Int,
             ): Palette {
-                val counts = HashMap<Int, Int>()
+                val counts = IntIntMap(256)
                 var anyTransparent = false
                 for (y in 0 until h) {
+                    val row = (top + y) * stride + left
                     for (x in 0 until w) {
-                        val c = canvas[(top + y) * stride + left + x]
+                        val c = canvas[row + x]
                         if (c ushr 24 == 0) {
                             anyTransparent = true
                         } else {
-                            counts[c] = (counts[c] ?: 0) + 1
+                            counts.increment(c)
                         }
                     }
                 }
                 val room = if (anyTransparent) 255 else 256
-                val kept =
-                    if (counts.size <= room) {
-                        counts.keys.toList()
-                    } else {
-                        counts.entries
-                            .sortedByDescending { it.value }
-                            .take(room)
-                            .map { it.key }
-                    }
+                val all = ArrayList<Long>(counts.size)
+                // Count in the high half, color in the low: sorting the longs ranks by use.
+                counts.forEach { color, count -> all.add((count.toLong() shl 32) or (color.toLong() and 0xFFFFFFFFL)) }
+                val kept = if (all.size <= room) all.map { it.toInt() } else all.sortedDescending().take(room).map { it.toInt() }
                 val colors = ArrayList<Int>(kept.size + 1)
-                val lookup = HashMap<Int, Int>()
+                val lookup = IntIntMap(kept.size)
                 var transparentIndex = -1
                 if (anyTransparent) {
                     transparentIndex = 0
                     colors.add(0)
                 }
                 for (c in kept) {
-                    lookup[c] = colors.size
+                    lookup.put(c, colors.size)
                     colors.add(c)
                 }
                 if (colors.isEmpty()) colors.add(GifReader.OPAQUE_BLACK)

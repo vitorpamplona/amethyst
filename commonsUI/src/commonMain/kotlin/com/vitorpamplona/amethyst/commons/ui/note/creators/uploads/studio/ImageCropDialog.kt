@@ -125,13 +125,13 @@ fun GallerySelectSingleCropped(
         LaunchedEffect(unchecked) {
             val media = uploader.refineMediaType(unchecked)
             checking = null
-            if (media.canCrop()) picked = media else onImage(media)
+            if (uploader.canCrop(media)) picked = media else onImage(media)
         }
     } else if (cropping == null) {
         GallerySelectSingle(imagesOnly = imagesOnly) { media ->
             when {
                 media == null -> onImage(null)
-                media.canCrop() -> checking = media
+                uploader.canCrop(media) -> checking = media
                 else -> onImage(media)
             }
         }
@@ -211,7 +211,7 @@ fun ImageCropStudio(
             if (result == null) {
                 failed = true
             } else {
-                onDone(SelectedMedia(result.uri, result.contentType))
+                onDone(SelectedMedia(result.uri, result.contentType, temporary = true))
             }
         }
     }

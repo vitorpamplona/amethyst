@@ -225,6 +225,8 @@ fun studioToolsFor(
     /** The platform can crop or trim a GIF, which stays a GIF ([MediaUploader.gifCrop], [MediaUploader.gifTrim]). */
     gifCrop: Boolean = false,
     gifTrim: Boolean = false,
+    /** The platform can decode this still to crop it ([MediaUploader.canCrop]). */
+    cropStill: Boolean = true,
 ): List<StudioTool> =
     buildList {
         val hasQuality =
@@ -234,7 +236,7 @@ fun studioToolsFor(
                 else -> media.isCompressible()
             }
         if (hasQuality) add(StudioTool.QUALITY)
-        if ((media.canCrop() && media.isCompressible()) || (gifCrop && media.isGif())) add(StudioTool.CROP)
+        if ((cropStill && media.canCrop() && media.isCompressible()) || (gifCrop && media.isGif())) add(StudioTool.CROP)
         if ((trim && media.isVideo() == true) || (gifTrim && media.isGif())) add(StudioTool.TRIM)
         if (media.isImage() == true || media.isVideo() == true) add(StudioTool.ALT)
         add(StudioTool.PRIVACY)
@@ -279,7 +281,7 @@ fun MediaStudio(
     val cropped = rememberCroppedSources(uploader, previews)
     // The shape each picture's crop is held to while this studio is open.
     val cropAspects = remember { mutableStateMapOf<SelectedMediaProcessing, CropAspect>() }
-    val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim, uploader.gifCrop, uploader.gifTrim)
+    val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim, uploader.gifCrop, uploader.gifTrim, uploader.canCrop(current.media))
     val trimSession = remember(current) { TrimSession() }
     var picked by remember(current) { mutableStateOf(initialTool) }
     // The tools can change under the user: a "video" found to be sound loses its video tools.
@@ -625,9 +627,10 @@ private fun VideoPreview(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ) {
-    val thumbnail = rememberVideoThumbnail(item.media)
-    // Where the platform can decode frames, the stage opens on the first frame that will be sent.
+    // Where the platform can decode frames, the stage opens on the first frame that will be sent;
+    // elsewhere its thumbnail. Not both: each is a decode.
     val frame = if (uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, 1280) else null
+    val thumbnail = if (!uploader.videoTrim) rememberVideoThumbnail(item.media) else null
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (frame != null) {
             AsyncImage(model = frame, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
