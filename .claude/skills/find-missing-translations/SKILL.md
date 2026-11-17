@@ -29,6 +29,20 @@ Each is its own Crowdin source in `crowdin.yml`, so each count reconciles agains
 `values-cs`, `values-de-rDE`, `values-sv-rSE`, `values-pt-rBR` (unless the user names others).
 Czech is on the base qualifier because `crowdin.yml` maps `cs: cs` (in both sources); there is no `values-cs-rCZ`.
 
+House conventions of the existing translations. Follow them, and grep the locale file for a term before
+coining one:
+
+| Locale | Addresses the user as | relay / signer | Also |
+|--|--|--|--|
+| cs | formal *vy* (`vaše`, `Zkuste`) | relé (or relay) / podepisovač | masculine past tense (`se připojil`), never `připojil(a)` doublets |
+| de-rDE | *du* (`deine`) | Relay / Signierer | dev loanwords stay (Commit, Branch, Repository) |
+| sv-rSE | *du* (`dina`) | relä / signerare | |
+| pt-rBR | *você* (`seus`) | relay / assinador | `one` also covers 0, so a `one` item keeps the number |
+
+In all four, decimals take a comma (`~1,2 km`). cs, de and sv typography puts a space before `%`
+(`5 %`), though the existing files are mixed; pt-BR writes `5%`. Brand and tool names stay as they are
+(Claude Code, GitHub, ngit, Amethyst).
+
 ## Crowdin rules that decide what sticks
 
 - `.github/workflows/crowdin.yml` passes `import_eq_suggestions: true`, so the upload seeds Crowdin with whatever is in the repo locale files, values identical to the source included, as **pending** (unapproved) suggestions. So:
@@ -50,13 +64,17 @@ for base in commonsUI/src/commonMain/composeResources amethyst/src/main/res; do
   for l in cs de-rDE sv-rSE pt-rBR; do
     for t in string plurals; do
       m=$(comm -23 <(keys $base/values/strings.xml $t) <(keys $base/values-$l/strings.xml $t))
-      echo "$l $t: $(printf '%s' "$m" | grep -c .)"; printf '%s\n' "$m" | sed '/^$/d;s/^/    /'
+      echo "$l $t: $(printf '%s' "$m" | grep -c .)"
     done
   done
 done
 ```
 
-The `strings + plurals` total per locale should match Crowdin's "N untranslated". Pull English values with `grep "name=\"$key\""` for strings; a `<plurals>` is a multi-line block (opening tag through `</plurals>`).
+The `strings + plurals` total per locale should match Crowdin's "N untranslated". It prints counts only:
+a big gap lists hundreds of keys. To see them, run `tools/strings-translate/batch.py extract` (step 4).
+It writes each locale's missing English to a file and prints the top key prefixes, the summary to show
+the user. For a handful of keys, `grep "name=\"$key\""` pulls a `<string>`; a `<plurals>` is a multi-line
+block (opening tag through `</plurals>`).
 
 ## 2. Audit before translating
 
@@ -170,21 +188,41 @@ Every locale's `<plurals>` needs **every** category its language uses, not Engli
 # the Babel venv from step 2
 "$TMPDIR/cldr/bin/python" -c "
 from babel import Locale
-for c in ['lv','ar','cs','pl','ru','de','pt_BR']:
-    r = Locale.parse(c).plural_form; print(c, sorted({r(n) for n in range(10001)}))"
+for c in ['lv','ar','cs','pl','ru','de','pt_BR']:   # fractions too: Czech many is 1.5
+    r = Locale.parse(c).plural_form; print(c, sorted({r(n) for n in list(range(10001)) + [0.5, 1.5, 2.5]}))"
 ```
+
+Recent CLDR also gives pt, fr, es and it a `many` that only whole millions reach ("1 milhão de"). It
+falls back to `other` and lint doesn't ask for it, so leave it out; the snippet above doesn't list it.
 
 Call-site patterns for plurals: `amethyst/src/main/res/AGENTS.md` "Plural call-site patterns".
 
 ## 4. Present, then insert (if approved)
 
-Show the missing entries as copy-paste-ready XML lines, flag the plural-shaped ones, then ask: "Translate these into [locales]?"
+Show the missing entries, flag the plural-shaped ones, then ask: "Translate these into [locales]?" A
+few entries go in the reply as copy-paste-ready XML. Past a few dozen, show the counts and prefixes
+from `extract` and point to its files instead.
 
 When inserting:
 
 - **Append** before `</resources>`; don't try to order (Crowdin reorders on sync).
 - **Per-locale insert rule:** insert into each locale **only the keys missing from that locale** (its own diff from step 1), never one union block pasted into every file — that duplicates keys in locales that already had some.
 - Skip `translatable="false"` keys.
+- **Re-diff right before inserting.** The user enters Crowdin translations too, and a sync can land
+  keys mid-session.
+
+**Large batches** (dozens of keys, or several locales) go through `tools/strings-translate/batch.py`
+(its README has the commands). It does all of the above and rejects a bad file before it touches the
+repo:
+
+1. `extract` writes `<locale>.en.xml` per locale into a scratch dir.
+2. Write one shared brief: what the feature is (its screens, its terms), the escaping rules (AGENTS.md
+   "Strings"), the `--verbatim` keys, the plural categories per locale (step 3), and the conventions
+   table above.
+3. Translate each `<locale>.en.xml` into `<locale>.xml`. One subagent per locale, in parallel, works
+   well; they write only to the scratch dir.
+4. `validate`, fix, repeat. Then spot-read a sample yourself: the checks catch structure, not meaning.
+5. `insert`, then the gates.
 
 ## 5. Gates, in order
 
@@ -200,7 +238,11 @@ When inserting:
 
 2. **`tools/agent-hooks/orphan_strings_check.py`** — sub-second; fails on any locale key the default no longer has (both catalogs). Renaming or removing a source key means deleting it from every locale in the same commit; Crowdin's later cleanup is partial. Details: `amethyst/src/main/res/AGENTS.md` "Renaming or removing a string key".
 3. **`tools/agent-hooks/compose_escaping_check.py`** — Android-only escaping or `tools:` attributes in the commonsUI catalog.
-4. **`./gradlew :amethyst:lintPlayBenchmark`** — the final gate, the task CI runs (`.github/workflows/build.yml`, beside `lintFdroidBenchmark`; the pre-push hook runs its debug twin, `lintPlayDebug`, on every push). Android lint polices only the Android `res/` trees (not composeResources — so for commonsUI the plural categories above are on you). There is **no lint baseline** and only `MissingTranslation` is disabled (`amethyst/build.gradle.kts`), so any error fails CI:
+4. **commonsUI edits: `./gradlew :commonsUI:convertXmlValueResourcesForCommonMain`** — the build step
+   that parses the catalog, the one that fails on a duplicate key. Android lint never reads
+   composeResources, so this is the only build check a commonsUI-only pass gets. The plural categories
+   are on you (step 3, or `batch.py validate`).
+5. **Android `res/` edits: `./gradlew :amethyst:lintPlayBenchmark`** — the task CI runs (`.github/workflows/build.yml`, beside `lintFdroidBenchmark`; the pre-push hook runs its debug twin, `lintPlayDebug`, on every push). Run it when you changed `amethyst/src/main/res`; for a commonsUI-only change it proves nothing about your strings. There is **no lint baseline** and only `MissingTranslation` is disabled (`amethyst/build.gradle.kts`), so any error fails CI:
 
    | Rule | Fires when | Severity |
    |--|--|--|
