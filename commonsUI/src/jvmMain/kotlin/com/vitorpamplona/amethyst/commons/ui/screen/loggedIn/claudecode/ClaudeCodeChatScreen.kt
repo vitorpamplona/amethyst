@@ -608,15 +608,32 @@ private fun Messages(
     val listState = rememberLazyListState()
     val rows = remember(state.items) { state.items.toChatRows() }
     val busy = state.isBusy
-    val count = rows.size + (if (state.streamingText.isNotEmpty()) 1 else 0) + (if (busy) 1 else 0)
+    val showIntro = state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()
+    val showResume = state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly
+    // Every item the list below emits, in the same order, so the last index is the list's own.
+    val itemCount =
+        (if (!state.historyLoaded || showIntro) 1 else 0) +
+            rows.size +
+            (if (state.streamingText.isNotEmpty()) 1 else 0) +
+            (if (busy) 1 else 0) +
+            (if (showResume) 1 else 0)
+    // Opening a chat lands on its newest message: the history arrives after the first frame,
+    // when the only row in view is the loading note at the top.
+    val landed = remember { booleanArrayOf(false) }
     // Follows the conversation while its end is in view; someone scrolled up to read is left there.
-    LaunchedEffect(count, state.streamingText.length / 200) {
-        if (count == 0) return@LaunchedEffect
+    LaunchedEffect(itemCount, state.streamingText.length / 200) {
+        if (!state.historyLoaded || itemCount == 0) return@LaunchedEffect
+        val last = itemCount - 1
+        if (!landed[0]) {
+            landed[0] = true
+            listState.scrollToItem(last)
+            return@LaunchedEffect
+        }
         val lastVisible =
             listState.layoutInfo.visibleItemsInfo
                 .lastOrNull()
                 ?.index
-        if (lastVisible == null || lastVisible >= count - FOLLOW_SLACK) listState.animateScrollToItem(count - 1)
+        if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last)
     }
     val uriHandler = LocalUriHandler.current
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
@@ -631,7 +648,7 @@ private fun Messages(
         if (!state.historyLoaded) {
             item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
         }
-        if (state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()) {
+        if (showIntro) {
             item(key = "intro") { EmptyChatIntro(state, onStarter) }
         }
         // A call the user stopped never gets a result: it only spins while the turn runs, and
@@ -665,7 +682,7 @@ private fun Messages(
         if (busy) {
             item(key = "status") { LiveStatus(state) }
         }
-        if (state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly) {
+        if (showResume) {
             // A fork looks like its source until it starts: say what the first message does.
             item(key = "resume") { CenterNote(stringRes(if (state.forking) Res.string.claude_code_fork_hint else Res.string.claude_code_resume_hint)) }
         }
