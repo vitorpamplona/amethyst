@@ -113,7 +113,7 @@ class ClaudeCodeWorkspaceViewModel(
                                 ?.filter { it.isNotBlank() }
                                 .orEmpty()
                         val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
-                        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub)
+                        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
                         // The session list shows it from the saved record, without asking GitHub.
                         if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
                         WorkspaceRepoRow(

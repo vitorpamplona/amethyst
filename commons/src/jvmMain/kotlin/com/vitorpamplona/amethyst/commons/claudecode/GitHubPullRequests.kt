@@ -181,27 +181,45 @@ object GitHubPullRequests {
             ?: Regex("""([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)\s+already exists""").find(output)?.groupValues?.get(1)
 
     /**
-     * The pull request [branch] opened, or null when it has none (or `gh` can't say). With
-     * [upstream], it is looked up there by branch, whether the branch was pushed to the
-     * repository itself or to a fork.
+     * The pull request [branch] opened, or null when it has none (or `gh` can't say). One seen
+     * before ([knownUrl]) is asked for by its URL. Otherwise, with [upstream], it is looked up
+     * there by branch, whether the branch was pushed to the repository itself or to a fork; and
+     * only among heads in the repository or the user's fork, since anyone's fork may have a
+     * branch of the same name.
      */
     suspend fun state(
         dir: File,
         branch: String,
         gh: File? = find(),
         upstream: String? = null,
+        knownUrl: String? = null,
     ): PullRequestInfo? =
         withContext(Dispatchers.IO) {
             gh ?: return@withContext null
+            val owners = if (knownUrl == null && upstream != null) headOwners(dir, upstream) else null
             val command =
-                if (upstream != null) {
-                    listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "1", "--json", "url,state,isDraft")
-                } else {
-                    listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft")
+                when {
+                    knownUrl != null -> listOf(gh.path, "pr", "view", knownUrl, "--json", "url,state,isDraft")
+                    upstream != null -> listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "30", "--json", "url,state,isDraft,headRepositoryOwner")
+                    else -> listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft")
                 }
             val result = runGh(dir, command, 60)
-            if (result.code != 0) null else parseState(result.output)
+            if (result.code != 0) null else parseState(result.output, owners)
         }
+
+    /** Whose branches can be [dir]'s pull request head: [upstream]'s owner, and the owner of the clone's fork, if it has one. */
+    internal fun headOwners(
+        dir: File,
+        upstream: String,
+    ): Set<String> =
+        listOfNotNull(
+            upstream.substringBefore('/'),
+            GitWorkspace
+                .git(dir, "remote", "get-url", FORK_REMOTE)
+                ?.trim()
+                ?.let(::gitHubRepo)
+                ?.substringBefore('/'),
+        ).mapTo(HashSet()) { it.lowercase() }
 
     /** `owner/name` of a GitHub repository URL, or null for any other host. */
     fun gitHubRepo(url: String): String? {
@@ -213,6 +231,8 @@ object GitHubPullRequests {
     /** How `gh` runs: the user's program. Tests stand in for it; git itself always runs for real. */
     @Volatile
     internal var runGh: (File, List<String>, Long) -> GitWorkspace.Result = { dir, command, timeout -> GitWorkspace.run(dir, command, timeoutSeconds = timeout) }
+
+    private fun headOwnerOf(pr: JsonObject): String? = ((pr["headRepositoryOwner"] as? JsonObject)?.get("login") as? JsonPrimitive)?.content
 
     private const val FORK_REMOTE = "fork"
     private val PUSH_PERMISSIONS = setOf("ADMIN", "MAINTAIN", "WRITE")
@@ -226,8 +246,14 @@ object GitHubPullRequests {
         return if (code == 0 && url != null) Result.Opened(url) else Result.Failed(output.trim().ifEmpty { "gh exited with code $code" }.takeLast(2000))
     }
 
-    /** `gh pr view`'s object, or the first of `gh pr list`'s array. */
-    internal fun parseState(output: String): PullRequestInfo? {
+    /**
+     * `gh pr view`'s object, or the first of `gh pr list`'s array whose head is in a repository
+     * one of [owners] owns (any, when null).
+     */
+    internal fun parseState(
+        output: String,
+        owners: Set<String>? = null,
+    ): PullRequestInfo? {
         val start = output.indexOfFirst { it == '{' || it == '[' }
         if (start < 0) return null
         val element =
@@ -236,7 +262,10 @@ object GitHubPullRequests {
             } catch (e: IllegalArgumentException) {
                 null
             }
-        val obj = (element as? JsonObject) ?: ((element as? JsonArray)?.firstOrNull() as? JsonObject) ?: return null
+        val obj =
+            (element as? JsonObject) ?: (element as? JsonArray)
+                ?.filterIsInstance<JsonObject>()
+                ?.firstOrNull { pr -> owners == null || headOwnerOf(pr)?.lowercase() in owners } ?: return null
         val url = (obj["url"] as? JsonPrimitive)?.content ?: return null
         return PullRequestInfo(url, (obj["state"] as? JsonPrimitive)?.content ?: "OPEN", (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false)
     }

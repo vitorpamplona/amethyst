@@ -214,6 +214,9 @@ class ClaudeCodeService(
     @Volatile
     private var knownWorkspaces: List<AgentWorkspace> = emptyList()
 
+    /** The workstream [cwd] is in, as of the last refresh or change; for screens, which must not read the disk. */
+    fun workspaceAt(cwd: String?): AgentWorkspace? = workspaceOf(cwd)
+
     private fun workspaceOf(cwd: String?): AgentWorkspace? {
         cwd ?: return null
         val path = File(cwd).absoluteFile.normalize().path
@@ -246,12 +249,14 @@ class ClaudeCodeService(
                 due.forEach { workspace ->
                     prCheckedAt[workspace.id] = System.currentTimeMillis()
                     workspace.repos.forEach { repo ->
+                        // Only GitHub has pull requests to ask `gh` about.
+                        val upstream = GitHubPullRequests.gitHubRepo(repo.url) ?: return@forEach
                         val dir = File(workspace.dir, repo.name)
                         val saved = workspace.pullRequests[repo.name]
                         // A branch never pushed has no pull request to look for.
                         val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
                         if (pushed && saved?.isOpen != false) {
-                            val pr = GitHubPullRequests.state(dir, repo.branch, gh, GitHubPullRequests.gitHubRepo(repo.url))
+                            val pr = GitHubPullRequests.state(dir, repo.branch, gh, upstream, knownUrl = saved?.url)
                             // No answer is not "no pull request": gh may be offline. Keep what was seen.
                             if (pr != null && (saved?.state != pr.state || saved.url != pr.url || saved.isDraft != pr.isDraft)) {
                                 recordPullRequest(workspace.id, repo.name, pr, notify = false)
@@ -280,7 +285,11 @@ class ClaudeCodeService(
      * Ends the chats working in [workspace] and removes its clones and record; the mirrors stay.
      * The sessions' histories stay too, listed with the archived ones.
      */
-    suspend fun deleteWorkspace(workspace: AgentWorkspace) {
+    suspend fun deleteWorkspace(
+        workspace: AgentWorkspace,
+        /** False when the caller removes several and refreshes once after. */
+        thenRefresh: Boolean = true,
+    ) {
         val inside =
             chats.value.values.filter { chat ->
                 val path = File(chat.state.value.cwd).absoluteFile.normalize().path
@@ -295,7 +304,7 @@ class ClaudeCodeService(
         recountNeedsYou()
         agentWorkspaces.delete(workspace)
         knownWorkspaces = knownWorkspaces.filter { it.id != workspace.id }
-        refresh()
+        if (thenRefresh) refresh()
     }
 
     /** The agent to offer first for a new session: the one the last session started with, if installed. */
@@ -359,13 +368,14 @@ class ClaudeCodeService(
         for (workspace in workspaces) {
             if (isBusy(workspace) || agentWorkspaces.hasUnsavedWork(workspace)) continue
             try {
-                deleteWorkspace(workspace)
+                deleteWorkspace(workspace, thenRefresh = false)
                 workspaceSizes.remove(workspace.id)
                 removed.add(workspace)
             } catch (e: IOException) {
                 Log.w(TAG, "Could not clean up ${workspace.dir}", e)
             }
         }
+        if (removed.isNotEmpty()) refresh()
         return removed
     }
 
@@ -499,7 +509,8 @@ class ClaudeCodeService(
             .firstOrNull { it.state.value.cwd == workspace.dir }
             ?.let { return it }
         val agent = workspace.agentId?.let { backend(it) } ?: backend
-        return newChat(File(workspace.dir), title = workspace.title, agent = agent)
+        // Hands-off, as when it was made: its clones are its own.
+        return newChat(File(workspace.dir), workstreamModeOf(agent.capabilities.modes), title = workspace.title, agent = agent)
     }
 
     /**
@@ -533,7 +544,6 @@ class ClaudeCodeService(
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
         val dir = agentWorkspaces.claim(name, clean)
-        agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, clean))
         val chat = newChat(dir, permissionMode, title = name, agent = agent)
         // On the service's scope: the workstream keeps cloning while the user reads something else.
         val cloning =
@@ -541,6 +551,8 @@ class ClaudeCodeService(
                 // A repository Amethyst knows from a NIP-34 announcement can take a proposal back.
                 val nostrRepos = clean.mapNotNull { url -> RepoCatalog.nostrRepoOf(url)?.let { url to it } }.toMap()
                 val workspace = agentWorkspaces.create(clean, name, agentId = agent.id, nostrRepos = nostrRepos, claimed = dir)
+                // Offered first next time; only once they cloned, so a mistyped URL isn't.
+                agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
                 knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
                 rebuildRows()
             }

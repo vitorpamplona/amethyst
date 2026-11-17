@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -126,9 +127,10 @@ object RepoCatalog {
         query: String,
         gh: File? = GitHubPullRequests.find(),
     ): List<RepoCandidate> =
-        withContext(Dispatchers.IO) {
-            gh ?: return@withContext emptyList()
-            if (query.isBlank() || query.startsWith("-")) return@withContext emptyList()
+        // Interruptible: newer typing cancels this search, and its `gh` goes with it.
+        runInterruptible(Dispatchers.IO) {
+            gh ?: return@runInterruptible emptyList()
+            if (query.isBlank() || query.startsWith("-")) return@runInterruptible emptyList()
             val result = GitWorkspace.run(File(System.getProperty("user.home")), listOf(gh.path, "search", "repos", "--limit", "20", "--json", "fullName,url,description", "--", query), timeoutSeconds = 60)
             if (result.code != 0) emptyList() else parseGitHub(result.output, "fullName")
         }

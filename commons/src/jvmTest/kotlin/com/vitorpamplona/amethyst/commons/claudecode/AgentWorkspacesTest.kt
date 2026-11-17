@@ -28,6 +28,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
 import java.io.File
 import java.net.URI
 import java.nio.file.FileSystems
@@ -594,5 +595,49 @@ class AgentWorkspacesTest {
         assertEquals(PermissionMode.AUTO, workstreamModeOf(listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN, PermissionMode.AUTO)))
         // Codex has no Auto: it works freely inside its sandbox and asks to leave it.
         assertEquals(PermissionMode.ACCEPT_EDITS, workstreamModeOf(listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN)))
+    }
+
+    @Test
+    fun aPullRequestFromSomeoneElsesForkIsNotThisWorkstreams() {
+        // Workstream names make branch names anyone may pick: `gh pr list --head` matches them all.
+        val listed =
+            """[{"headRepositoryOwner":{"login":"someone"},"isDraft":false,"state":"MERGED","url":"https://github.com/o/app/pull/1"},
+               {"headRepositoryOwner":{"login":"Me"},"isDraft":false,"state":"OPEN","url":"https://github.com/o/app/pull/2"}]"""
+        assertEquals("https://github.com/o/app/pull/2", GitHubPullRequests.parseState(listed, setOf("me", "o"))?.url)
+        assertEquals(null, GitHubPullRequests.parseState(listed, setOf("o")))
+    }
+
+    @Test
+    fun aClonesPullRequestHeadsAreTheRepositorysOwnersAndItsForks() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), "owners")
+            val dir = File(ws.dir, "app")
+            assertEquals(setOf("o"), GitHubPullRequests.headOwners(dir, "O/app"))
+            git(dir, "remote", "add", "fork", "https://github.com/Me/app.git")
+            assertEquals(setOf("o", "me"), GitHubPullRequests.headOwners(dir, "O/app"))
+        }
+
+    @Test
+    fun anyNameMakesABranchGitTakes() {
+        listOf("Fix... relay list", "release 1.0.", "x".repeat(39) + ".y", "drop the lock.lock", "..", "日本語").forEach { name ->
+            val branch = "agent/" + AgentWorkspaces.slug(name)
+            assertTrue(GitWorkspace.isSafeBranchName(branch), branch)
+            assertEquals(0, GitWorkspace.run(tmp, listOf("git", "check-ref-format", "--branch", branch)).code, branch)
+        }
+    }
+
+    @Test
+    fun aCancelledCommandStopsItsProcess() {
+        if (System.getProperty("os.name").orEmpty().startsWith("Windows")) return
+        val marker = File(tmp, "still-running")
+        val started = System.currentTimeMillis()
+        runBlocking {
+            val search = launch(Dispatchers.IO) { runInterruptible { GitWorkspace.run(tmp, listOf("sh", "-c", "sleep 3; touch ${marker.absolutePath}")) } }
+            delay(300)
+            search.cancelAndJoin()
+        }
+        assertTrue(System.currentTimeMillis() - started < 2_000, "the cancel waited for the command")
+        Thread.sleep(3_500)
+        assertFalse(marker.exists(), "the command kept running after its caller gave up")
     }
 }

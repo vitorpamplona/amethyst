@@ -374,8 +374,8 @@ fun ClaudeCodeChatScreen(
         )
     }
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
-    // A workstream's record is written once its clones are in: read again when they are.
-    val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) }
+    // From the service's own list, not the disk; a new workstream is in it once its clones are.
+    val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         Scaffold(

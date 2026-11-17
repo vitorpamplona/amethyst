@@ -302,6 +302,8 @@ class ClaudeCodeServiceTest {
             // Opening it gives a chat in the workspace, the same one each time.
             val chat = assertNotNull(service.chat(row.key))
             assertEquals(ws.dir, chat.state.value.cwd)
+            // Hands-off, as a new workstream is.
+            assertEquals(PermissionMode.AUTO, chat.state.value.permissionMode)
             assertEquals(chat, service.chat(row.key))
             // The chat's own row stands for the workspace now.
             waitFor { service.rows.value.none { it.key == row.key } }
@@ -421,6 +423,8 @@ class ClaudeCodeServiceTest {
             val chat = service.newWorkstream(listOf(fileUrl(File(work, "missing.git"))), "Nowhere")
             waitFor { chat.state.value.error != null }
             assertIs<ChatError.CloneFailed>(chat.state.value.error)
+            // A URL that didn't clone isn't offered first next time.
+            assertTrue(service.agentWorkspaces.groups().none { it.name == ClaudeCodeService.LAST_GROUP })
             assertFalse(File(chat.state.value.cwd).exists())
             assertTrue(service.agentWorkspaces.list().isEmpty())
         }

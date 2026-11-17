@@ -254,6 +254,8 @@ class AgentWorkspaces(
         val id = dir.name
         return withContext(Dispatchers.IO) {
             try {
+                // Checked here, in the cleanup's reach: a refused name leaves no folder behind.
+                if (branch == null && !GitWorkspace.isSafeBranchName("agent/$id")) throw IOException("Not a branch name: agent/$id")
                 val names = HashSet<String>()
                 val repos =
                     clean.map { url ->
@@ -346,9 +348,12 @@ class AgentWorkspaces(
 
     /** The workspace [dir] is in (its folder or one inside it), or null. */
     fun of(dir: File): AgentWorkspace? {
-        val path = dir.absoluteFile.normalize().path
-        if (!path.startsWith(workstreamsDir.absoluteFile.normalize().path + File.separator)) return null
-        return list().firstOrNull { path == it.dir || path.startsWith(it.dir + File.separator) }
+        val root = workstreamsDir.absoluteFile.normalize().toPath()
+        val path = dir.absoluteFile.normalize().toPath()
+        if (!path.startsWith(root) || path == root) return null
+        // workstreams/<id>/…: its record is meta/<id>.json, read alone.
+        val id = root.relativize(path).getName(0).toString()
+        return read(File(metaDir, "$id.json"))?.takeIf { File(it.dir).absoluteFile.normalize().toPath() == root.resolve(id) }
     }
 
     /**
@@ -770,8 +775,13 @@ class AgentWorkspaces(
             text
                 .lowercase()
                 .replace(Regex("[^a-z0-9._-]+"), "-")
+                // Git refuses `..` in a branch name, and one ending in `.` or `.lock`.
+                .replace(Regex("\\.{2,}"), ".")
                 .trim('-', '.')
                 .take(40)
+                .trimEnd('-', '.')
+                .removeSuffix(".lock")
+                .trimEnd('-', '.')
                 .ifEmpty { "workstream" }
     }
 }

@@ -9723,7 +9723,7 @@
     <string name="claude_code_pr_rules">The agent can’t push or open pull requests: you do, from here.</string>
     <string name="claude_code_workspace_delete">Delete workstream</string>
     <string name="claude_code_workspace_delete_body">Removes this session’s clones from this computer. Branches you pushed stay on GitHub.</string>
-    <string name="claude_code_workspace_none">This session isn’t in a workspace of its own.</string>
+    <string name="claude_code_workspace_none">This session isn’t in a workstream of its own.</string>
     <string name="claude_code_agent">Agent</string>
     <string name="claude_code_edit_message">Edit and ask again from here</string>
     <string name="claude_code_model_tooltip">The model for the next message</string>
@@ -9742,7 +9742,7 @@
         <item quantity="one">%1$d PR open</item>
         <item quantity="other">%1$d PRs open</item>
     </plurals>
-    <string name="claude_code_workspace_delete_title">Delete this workspace?</string>
+    <string name="claude_code_workspace_delete_title">Delete this workstream?</string>
     <string name="claude_code_workspace_last_used">Last used</string>
     <string name="claude_code_workspace_forget_group">Forget %1$s</string>
     <string name="claude_code_workspace_add_repo">Search or paste a URL</string>
@@ -10255,8 +10255,8 @@
     </plurals>
     <string name="claude_code_storage">Storage</string>
     <plurals name="claude_code_storage_workspaces">
-        <item quantity="one">%1$d workspace · %2$s</item>
-        <item quantity="other">%1$d workspaces · %2$s</item>
+        <item quantity="one">%1$d workstream · %2$s</item>
+        <item quantity="other">%1$d workstreams · %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_mirrors">
         <item quantity="one">%1$d mirror · %2$s</item>
@@ -10267,17 +10267,17 @@
         <item quantity="other">%1$d not used in %2$d days</item>
     </plurals>
     <string name="claude_code_storage_auto">Clean up on its own</string>
-    <string name="claude_code_storage_auto_desc">A day after a workspace’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
-    <string name="claude_code_storage_finished">Finished workspaces</string>
-    <string name="claude_code_storage_none_finished">None yet: a workspace is finished when every repository’s pull request is merged or closed.</string>
+    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_finished">Finished workstreams</string>
+    <string name="claude_code_storage_none_finished">None yet: a workstream is finished when every repository’s pull request is merged or closed.</string>
     <string name="claude_code_storage_unsaved">Kept: work not pushed</string>
     <plurals name="claude_code_storage_clean_up">
         <item quantity="one">Clean up %1$d · frees %2$s</item>
         <item quantity="other">Clean up %1$d · frees %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_cleaned">
-        <item quantity="one">Removed %1$d workspace, freed %2$s</item>
-        <item quantity="other">Removed %1$d workspaces, freed %2$s</item>
+        <item quantity="one">Removed %1$d workstream, freed %2$s</item>
+        <item quantity="other">Removed %1$d workstreams, freed %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_tidied">
         <item quantity="one">Tidied the mirrors and removed %1$d unused one, freed %2$s</item>
@@ -10286,7 +10286,7 @@
     <string name="claude_code_storage_tidied_none">Tidied the mirrors, freed %1$s</string>
     <string name="claude_code_storage_mirrors_title">Mirrors</string>
     <string name="claude_code_storage_tidy">Tidy mirrors</string>
-    <string name="claude_code_storage_tidy_desc">New workspaces clone from these. Tidying repacks them and removes the ones no workspace has used in %1$d days.</string>
+    <string name="claude_code_storage_tidy_desc">New workstreams clone from these. Tidying repacks them and removes the ones no workstream has used in %1$d days.</string>
     <string name="claude_code_storage_measuring">Measuring…</string>
     <string name="claude_code_archive">Archive</string>
     <string name="claude_code_unarchive">Unarchive</string>

@@ -208,6 +208,9 @@ class ClaudeCodeSessionsViewModel(
     private val nostrRepos = MutableStateFlow<List<RepoCandidate>>(emptyList())
     private var searchJob: Job? = null
 
+    /** When [loadRepoCatalog] last read the sources, to read them again only after [CATALOG_TTL_MS]. */
+    private var catalogLoadedAt = 0L
+
     private val _searchingGitHub = MutableStateFlow(false)
 
     /** Whether GitHub is being searched for what was typed. */
@@ -224,6 +227,10 @@ class ClaudeCodeSessionsViewModel(
 
     /** Reads what the picker offers: the mirrors and their use, the NIP-34 repositories seen, the user's GitHub ones. */
     fun loadRepoCatalog() {
+        // `gh repo list` goes to the network: once in a while, not on every New workstream.
+        val now = System.currentTimeMillis()
+        if (now - catalogLoadedAt < CATALOG_TTL_MS) return
+        catalogLoadedAt = now
         viewModelScope.launch {
             localRepos.value = withContext(Dispatchers.IO) { RepoCatalog.local(service.agentWorkspaces) }
             nostrRepos.value = withContext(Dispatchers.Default) { RepoCatalog.nostr() }
@@ -249,7 +256,8 @@ class ClaudeCodeSessionsViewModel(
                 try {
                     foundGitHubRepos.value = RepoCatalog.searchGitHub(query)
                 } finally {
-                    _searchingGitHub.value = false
+                    // A search the typing replaced must not hide the spinner of the one now running.
+                    if (searchJob === currentCoroutineContext()[Job]) _searchingGitHub.value = false
                 }
             }
     }
@@ -344,6 +352,7 @@ class ClaudeCodeSessionsViewModel(
         private const val TAG = "ClaudeCodeSessions"
         private const val REFRESH_MS = 5_000L
         private const val SEARCH_DELAY_MS = 400L
+        private const val CATALOG_TTL_MS = 5 * 60_000L
     }
 }
 

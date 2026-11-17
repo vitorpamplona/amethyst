@@ -432,7 +432,16 @@ object GitWorkspace {
                 isDaemon = true
                 start()
             }
-        if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+        val finished =
+            try {
+                process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                // The caller gave up (a cancelled, interruptible coroutine): the command goes too.
+                process.descendants().forEach { it.destroyForcibly() }
+                process.destroyForcibly()
+                throw e
+            }
+        if (!finished) {
             process.descendants().forEach { it.destroyForcibly() }
             process.destroyForcibly()
             reader.join(1_000)
