@@ -26,10 +26,33 @@ import androidx.compose.runtime.setValue
 import kotlin.concurrent.Volatile
 
 class SelectedMediaProcessing(
-    val media: SelectedMedia,
+    media: SelectedMedia,
     val orchestrator: UploadOrchestrator = UploadOrchestrator(),
     options: MediaUploadOptions = MediaUploadOptions.defaultFor(media),
 ) {
+    /**
+     * The picked file, labelled by what it holds once [checkType] has looked: a voice memo saved as
+     * `.mp4` is picked as `video/mp4` and becomes `audio/mp4`. Snapshot state, so the Studio's tools
+     * and the composer's card follow.
+     */
+    var media: SelectedMedia by mutableStateOf(media)
+        private set
+
+    @Volatile
+    private var typeChecked = false
+
+    /**
+     * Relabels [media] by its content, once: an MP4-family file whose tracks are all sound is audio.
+     * The Studio runs it as it opens, and every upload runs it first, so nothing is sent as a video
+     * that has no picture.
+     */
+    suspend fun checkType(uploader: MediaUploader) {
+        if (typeChecked) return
+        val refined = uploader.refineMediaType(media)
+        typeChecked = true
+        if (refined.mimeType != media.mimeType) media = refined
+    }
+
     /** This file's own upload options, edited in the media studio; snapshot state so its UI follows. */
     var options: MediaUploadOptions by mutableStateOf(options)
 

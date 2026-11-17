@@ -371,4 +371,23 @@ class MultiOrchestratorUploadEachTest {
         assertEquals(null, VideoTrim(20, 9_990).orNullIfWhole(10_000))
         assertEquals(VideoTrim(500, 10_000), VideoTrim(500, 10_000).orNullIfWhole(10_000))
     }
+
+    @Test
+    fun aDocumentOwesNoMetadataStrip() =
+        runTest {
+            // Neither platform can strip a PDF: owing it ends in "couldn't remove it, upload anyway?".
+            val pdf = SelectedMedia(StringMediaUri("/doc.pdf"), "application/pdf")
+            assertFalse(MediaUploadOptions.defaultFor(pdf, stripMetadata = true).stripMetadata)
+
+            val media = MultiOrchestrator(listOf(pdf, SelectedMedia(StringMediaUri("/a.jpg"), "image/jpeg")))
+            // Even when something set it on.
+            media.get(0).options = media.get(0).options.copy(stripMetadata = true)
+            val uploader = RecordingUploader()
+
+            media.uploadEach(server, account, uploader)
+            media.uploadEncryptedOwnOptions({ AESGCM() }, server, account, uploader)
+
+            assertEquals(listOf(false, false), uploader.sent.filter { it.path.endsWith(".pdf") }.map { it.stripMetadata })
+            assertTrue(uploader.sent.filter { it.path.endsWith(".jpg") }.all { it.stripMetadata })
+        }
 }

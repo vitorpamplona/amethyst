@@ -114,6 +114,33 @@ class FfmpegVideoCompressor(
         }
     }
 
+    // Under the gate like [strip]: a remux, one ffmpeg at a time.
+    override suspend fun stripAudio(source: File): File? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        val extension = source.extension.lowercase().takeIf { it in AUDIO_CONTAINERS } ?: return null
+        return gate.withPermit {
+            var out: File? = null
+            try {
+                out = AmethystTempDir.createTempFile("amethyst_audio_", ".$extension")
+                val outcome = runner.run(FfmpegCommandBuilder.stripAudio(ffmpeg, source, out), {}, stallTimeoutMs)
+                if (outcome.exitCode == 0 && out.length() > 0) {
+                    out
+                } else {
+                    Log.w(TAG) { "Audio strip of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                    out.deleteOrWarn(TAG, "failed audio strip")
+                    null
+                }
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) { out?.deleteOrWarn(TAG, "cancelled audio strip") }
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Audio strip of ${source.name} failed", e)
+                out?.deleteOrWarn(TAG, "failed audio strip")
+                null
+            }
+        }
+    }
+
     override suspend fun trim(
         source: File,
         startMs: Long,
@@ -277,3 +304,6 @@ class FfmpegVideoCompressor(
         const val TAG = "FfmpegVideoCompressor"
     }
 }
+
+/** Containers [FfmpegVideoCompressor.stripAudio] writes back as they came: the ones the gallery offers. */
+private val AUDIO_CONTAINERS = setOf("mp3", "m4a", "mp4", "aac", "ogg", "oga", "opus", "flac", "wav")

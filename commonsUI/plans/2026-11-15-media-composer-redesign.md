@@ -145,6 +145,25 @@ for videos and AVIF. Before, an `imeta` from desktop had no `dim` for any video 
 AVIF sent as the original. Hooked in through `UploadOrchestrator(readMetadata = …)`. Tested on
 real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get none.
 
+**Sound files and documents.**
+- **No strip owed for documents.** A PDF or an archive never asks for a metadata strip
+  (`MediaUploadOptions.defaultFor`, and `MultiOrchestrator` refuses one when it sends). No platform
+  can strip such a file, and with the Studio hiding the switch, Android asked "couldn't remove
+  metadata, upload anyway?" on every PDF.
+- **Voice memos saved as `.mp4` are audio.** `SelectedMediaProcessing.checkType` runs as the Studio
+  opens and before every upload. It reads the file's track list (`refineMediaType`, through
+  `probeMp4AudioOnly` and the new `MediaUploader.readRange`). An MP4-family file whose tracks are all
+  sound becomes `audio/mp4`: no video tools, no failed encode, no strip prompt.
+- **Desktop strips sound files.** ffmpeg remuxes them without tags (artist, title, location, cover
+  art, chapters; no ID3 block for MP3), the way it already remuxed video. The prompt is only shown
+  when that fails. "Remove location" now says "And title, artist and other tags" for sound.
+- **Cards for files with no picture.** Sound files and documents are a 64 dp row: an icon (sound,
+  PDF, file), the name, its type and size, and a CW badge. They were 220 dp boxes showing only the
+  MIME type. Their markers read "Audio N".
+- **Tests:** `MediaTypeRefinementTest`, `MultiOrchestratorUploadEachTest.aDocumentOwesNoMetadataStrip`,
+  `DesktopAudioUploadTest` (real ffmpeg), `MediaStudioRenderTest` (`audio`, `pdf`, `file-cards`).
+- **Still open:** desktop's Files button is a stub, so a PDF can't be attached there.
+
 Not yet:
 - rotate and mirror in the crop; playing the trimmed part in the Studio (the stage shows frames, not playback)
 - the long-form preview shows the text without the attached media until it is posted

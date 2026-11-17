@@ -9942,11 +9942,13 @@
     <string name="media_studio_sensitive_description">Blurred until tapped</string>
     <string name="media_studio_remove_location">Remove location</string>
     <string name="media_studio_remove_location_description">And camera details</string>
+    <string name="media_studio_remove_location_audio_description">And title, artist and other tags</string>
     <string name="media_studio_long_edge">%1$d px</string>
     <string name="media_studio_no_options">Uploaded as it is</string>
     <string name="media_studio_done">Done</string>
     <string name="media_marker_photo">Photo %1$d</string>
     <string name="media_marker_video">Video %1$d</string>
+    <string name="media_marker_audio">Audio %1$d</string>
     <string name="media_marker_file">File %1$d</string>
     <string name="media_marker_missing">Missing file</string>
     <string name="media_alt_badge">ALT</string>

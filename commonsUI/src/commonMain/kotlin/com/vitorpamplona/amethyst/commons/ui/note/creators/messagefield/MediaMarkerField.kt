@@ -63,6 +63,8 @@ class MediaBlocks(
     val defaultHeight: Dp = 220.dp,
     val minHeight: Dp = 120.dp,
     val maxHeight: Dp = 420.dp,
+    /** A height that doesn't follow the width: a sound file or a document is one row, not a picture. */
+    val fixedHeight: (id: Int) -> Dp? = { null },
     val card: @Composable (id: Int, selected: Boolean, modifier: Modifier) -> Unit,
 ) {
     /** The card's height in a field [widthDp] wide. */
@@ -70,6 +72,7 @@ class MediaBlocks(
         id: Int,
         widthDp: Float,
     ): Dp {
+        fixedHeight(id)?.let { return it }
         val ratio = aspectRatio(id)?.takeIf { it > 0f }
         if (ratio == null || widthDp <= 0f) return defaultHeight
         return (widthDp / ratio).dp.coerceIn(minHeight, maxHeight)

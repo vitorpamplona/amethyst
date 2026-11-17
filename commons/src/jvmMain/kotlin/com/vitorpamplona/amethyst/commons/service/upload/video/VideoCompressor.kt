@@ -74,6 +74,9 @@ interface VideoCompressor {
     /** A remuxed copy of [source] with no metadata, chapters, subtitle or data tracks; null when unavailable or failed. */
     suspend fun strip(source: File): File?
 
+    /** The sound of [source] in its own container with no tags (artist, title, location); null when it could not be written. */
+    suspend fun stripAudio(source: File): File? = null
+
     /** [source] from [startMs] to [endMs], stream-copied into a temp MP4 without metadata; null when it could not be written. */
     suspend fun trim(
         source: File,

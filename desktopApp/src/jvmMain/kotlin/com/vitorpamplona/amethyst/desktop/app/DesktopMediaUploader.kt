@@ -79,6 +79,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.io.File
+import java.io.RandomAccessFile
 import java.net.URI
 import java.nio.file.Files
 import javax.imageio.ImageIO
@@ -390,6 +391,8 @@ class DesktopMediaUploader(
                 isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, onProgress)
                 // The dialog promised a strip; without an encode only the remux can keep it.
                 isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
+                // Sound keeps its tags (artist, title, a phone's location) unless ffmpeg drops them.
+                isAudio(mime) && stripMetadata -> VideoCompressionResult.Original(videoCompressor.stripAudio(source))
                 else -> return null
             }
         when (result) {
@@ -400,6 +403,8 @@ class DesktopMediaUploader(
     }
 
     private fun isVideo(mime: String?) = mime?.startsWith("video/") == true
+
+    private fun isAudio(mime: String?) = mime?.startsWith("audio/") == true
 
     /** Maps the encoder's 0..1 into the Compressing band of the bar, which ends where the upload stage starts. */
     private fun compressingProgress(
@@ -437,7 +442,7 @@ class DesktopMediaUploader(
             is VideoCompressionResult.Original -> {
                 val stripped = result.stripped
                 if (stripped == null) {
-                    val stripOwed = stripMetadata && isVideo(mime)
+                    val stripOwed = stripMetadata && (isVideo(mime) || isAudio(mime))
                     if (stripOwed && !onStrippingFailed()) return progress.error(UploadError.UPLOAD_CANCELLED)
                     return block(source, false)
                 }
@@ -589,8 +594,8 @@ class DesktopMediaUploader(
 
     override fun fileSize(uri: MediaUri): Long? = fileOf(uri).takeIf { it.isFile }?.length()
 
-    // A video is remuxed without its tags when ffmpeg is at hand; otherwise the JVM pipeline's
-    // EXIF strip: JPEGs lose their tags, other formats come back as they were.
+    // A video or a sound file is remuxed without its tags when ffmpeg is at hand; otherwise the
+    // JVM pipeline's EXIF strip: JPEGs lose their tags, other formats come back as they were.
     override suspend fun stripMetadata(
         uri: MediaUri,
         mimeType: String?,
@@ -600,9 +605,29 @@ class DesktopMediaUploader(
         if (isVideo(mime) && videoCompressor.available) {
             return videoCompressor.strip(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
         }
+        if (isAudio(mime) && videoCompressor.available) {
+            return videoCompressor.stripAudio(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
+        }
         val stripped = withContext(Dispatchers.IO) { MediaCompressor.stripExif(source) }
         return if (stripped == source) uri else StringMediaUri(stripped.absolutePath)
     }
+
+    override suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                RandomAccessFile(fileOf(uri), "r").use { file ->
+                    if (offset >= file.length()) return@use ByteArray(0)
+                    file.seek(offset)
+                    val out = ByteArray(minOf(length.toLong(), file.length() - offset).toInt())
+                    file.readFully(out)
+                    out
+                }
+            }.getOrNull()
+        }
 
     override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { fileOf(uri).takeIf { it.isFile }?.readBytes() }
 

@@ -76,6 +76,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.io.File
+import java.io.FileInputStream
+import java.nio.ByteBuffer
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -834,6 +836,31 @@ class AndroidMediaUploader(
             throw e
         }
     }
+
+    override suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? =
+        withContext(Dispatchers.IO) {
+            try {
+                appContext.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                    FileInputStream(descriptor.fileDescriptor).channel.use { channel ->
+                        val buffer = ByteBuffer.allocate(length)
+                        var position = offset
+                        while (buffer.hasRemaining()) {
+                            val read = channel.read(buffer, position)
+                            if (read <= 0) break
+                            position += read
+                        }
+                        buffer.array().copyOf(buffer.position())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("AndroidMediaUploader", "Could not read $uri", e)
+                null
+            }
+        }
 
     override val videoTrim: Boolean get() = true
 

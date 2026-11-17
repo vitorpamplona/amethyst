@@ -90,7 +90,16 @@ fun rememberAttachedMediaBlocks(
     isUploading: () -> Boolean,
 ): MediaBlocks =
     remember(state, uploader) {
-        MediaBlocks(aspectRatio = { id -> state.items[id]?.sentAspectRatio }) { id, selected, modifier ->
+        MediaBlocks(
+            aspectRatio = { id -> state.items[id]?.sentAspectRatio },
+            // Sound and documents have no picture to show: a row with the name is enough.
+            fixedHeight = { id ->
+                state.items[id]
+                    ?.media
+                    ?.takeIf { it.isImage() != true && it.isVideo() != true }
+                    ?.let { FILE_CARD_HEIGHT }
+            },
+        ) { id, selected, modifier ->
             val item = state.items[id]
             if (item != null) {
                 AttachedMediaCard(

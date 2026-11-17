@@ -103,6 +103,13 @@ interface MediaUploader {
         crop: ImageCrop,
     ): MediaCompressorResult? = null
 
+    /** [length] bytes of the file at [uri] from [offset] (fewer at its end); null when it can't be read. */
+    suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? = null
+
     /** Whether [trimVideo] works here (desktop needs ffmpeg). The Studio hides its Trim tool otherwise. */
     val videoTrim: Boolean get() = false
 

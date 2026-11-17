@@ -51,14 +51,15 @@ data class MediaUploadOptions(
     companion object {
         /**
          * The starting options for [media]: the platform's default quality, or uncompressed for a
-         * file the compressor doesn't touch (a PDF, an archive).
+         * file the compressor doesn't touch (a PDF, an archive). No platform strips metadata from
+         * such a file, so none is owed for it: asking would only end in "couldn't remove it".
          */
         fun defaultFor(
             media: SelectedMedia,
             stripMetadata: Boolean = true,
         ) = MediaUploadOptions(
             quality = if (media.isNotMedia()) CompressorQuality.UNCOMPRESSED else CompressorQuality.fromSlider(CompressorQuality.defaultSliderPosition),
-            stripMetadata = stripMetadata,
+            stripMetadata = stripMetadata && !media.isNotMedia(),
         )
     }
 }

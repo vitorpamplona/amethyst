@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_long_edge
 import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
 import com.vitorpamplona.amethyst.commons.resources.media_studio_position
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location
+import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location_audio_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_retry
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive
@@ -277,7 +278,13 @@ fun MediaStudio(
     val cropAspects = remember { mutableStateMapOf<SelectedMediaProcessing, CropAspect>() }
     val tools = studioToolsFor(current.media, uploader.videoCompression, uploader.videoTrim)
     val trimSession = remember(current) { TrimSession() }
-    var tool by remember(current) { mutableStateOf(if (initialTool in tools) initialTool else tools.first()) }
+    var picked by remember(current) { mutableStateOf(initialTool) }
+    // The tools can change under the user: a "video" found to be sound loses its video tools.
+    val tool = if (picked in tools) picked else tools.first()
+
+    // Labels every file by what it holds before anything is offered for it (a voice memo saved as
+    // .mp4 is audio, not a silent video).
+    LaunchedEffect(items, uploader) { items.forEach { it.checkType(uploader) } }
 
     // Opening Crop on a picture cropped earlier holds the shape that crop has, once, so a free drag
     // passing through 1:1 doesn't lock it.
@@ -370,7 +377,7 @@ fun MediaStudio(
                     Box(Modifier.weight(1f)) {
                         ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
                     }
-                    tools.forEach { t -> ToolTab(t, t == tool) { tool = t } }
+                    tools.forEach { t -> ToolTab(t, t == tool) { picked = t } }
                 }
             }
         }
@@ -505,7 +512,7 @@ private fun StudioPreview(
 
         else ->
             FilePreviewPlaceholder(
-                icon = if (media.isAudio() == true) MaterialSymbols.AudioFile else MaterialSymbols.AutoMirrored.InsertDriveFile,
+                icon = fileSymbol(media),
                 label = uploader.displayName(media.uri) ?: media.mimeType ?: "",
             )
     }
@@ -703,7 +710,7 @@ private fun Thumbnail(
                     onAspect = { item.displayAspectRatio = it },
                 )
             media.isVideo() == true -> rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-            else -> Icon(MaterialSymbols.AutoMirrored.InsertDriveFile, contentDescription = null)
+            else -> Icon(fileSymbol(media), contentDescription = null)
         }
         when (state) {
             is UploadingState.Error -> Icon(MaterialSymbols.ErrorOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
@@ -991,7 +998,8 @@ private fun PrivacyTool(
             }
         }
         if (!media.isNotMedia() && !videoReencoded) {
-            SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(Res.string.media_studio_remove_location_description), item.options.stripMetadata, MaterialSymbols.LocationOff) {
+            val what = if (media.isAudio() == true) Res.string.media_studio_remove_location_audio_description else Res.string.media_studio_remove_location_description
+            SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(what), item.options.stripMetadata, MaterialSymbols.LocationOff) {
                 item.options = item.options.copy(stripMetadata = it)
             }
         }

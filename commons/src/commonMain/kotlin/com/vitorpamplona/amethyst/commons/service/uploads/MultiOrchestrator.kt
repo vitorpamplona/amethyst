@@ -148,7 +148,7 @@ class MultiOrchestrator(
                                 account,
                                 uploader,
                                 p.settings.useH265,
-                                p.settings.stripMetadata,
+                                p.settings.stripMetadata && !item.media.isNotMedia(),
                                 onStrippingFailed,
                                 convertGifToMp4 = p.settings.convertGifToMp4,
                                 forcedSigner = forcedSigner,
@@ -297,7 +297,7 @@ class MultiOrchestrator(
                                     account,
                                     uploader,
                                     p.settings.useH265,
-                                    p.settings.stripMetadata,
+                                    p.settings.stripMetadata && !item.media.isNotMedia(),
                                     onStrippingFailed,
                                     convertGifToMp4 = p.settings.convertGifToMp4,
                                     forcedSigner = forcedSigner,
@@ -405,7 +405,8 @@ class MultiOrchestrator(
                                         account,
                                         uploader,
                                         options.useH265,
-                                        options.stripMetadata,
+                                        // Nothing strips a PDF or an archive; owing it would only ask "upload anyway?".
+                                        options.stripMetadata && !item.media.isNotMedia(),
                                         onStrippingFailed,
                                         convertGifToMp4 = options.convertGifToMp4,
                                         forcedSigner = forcedSigner,
@@ -450,6 +451,8 @@ class MultiOrchestrator(
         uploader: MediaUploader,
         send: suspend (MediaUri, String?) -> UploadingState.UploadingFinalState,
     ): UploadingState.UploadingFinalState {
+        // A video that is really sound goes up as audio, even when no Studio looked at it first.
+        checkType(uploader)
         val edited =
             when {
                 crop != null && media.canCrop() -> uploader.cropImage(media.uri, media.mimeType, crop) ?: return orchestrator.error(UploadError.CROP_FAILED)

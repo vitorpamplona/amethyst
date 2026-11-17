@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -215,6 +222,30 @@ class MediaStudioRenderTest {
 
     @Test
     fun altLight() = render("alt-light", dark = false) { Studio(photos(), tool = StudioTool.ALT, withSuggester = true) }
+
+    @Test
+    fun audio() = render("audio") { Studio(MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/song.mp3"), "audio/mpeg")))) }
+
+    @Test
+    fun pdf() = render("pdf") { Studio(MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/report.pdf"), "application/pdf")))) }
+
+    @Test
+    fun fileCards() =
+        render("file-cards") {
+            val fake = FakeUploader()
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(
+                    SelectedMedia(StringMediaUri("/tmp/song.mp3"), "audio/mpeg"),
+                    // A voice memo saved as .mp4, once the Studio found it is sound.
+                    SelectedMedia(StringMediaUri("/tmp/voice-memo-2026-11-17.mp4"), "audio/mp4"),
+                    SelectedMedia(StringMediaUri("/tmp/Quarterly report with a long name.pdf"), "application/pdf"),
+                ).forEachIndexed { index, media ->
+                    val item = MultiOrchestrator(listOf(media)).get(0)
+                    if (index == 2) item.options = item.options.copy(sensitive = true)
+                    AttachedMediaCard(item, selected = index == 1, locked = false, onOpen = {}, onRemove = {}, modifier = Modifier.fillMaxWidth().height(FILE_CARD_HEIGHT), uploader = fake)
+                }
+            }
+        }
 
     @Test
     fun privacy() = render("privacy") { Studio(photos(), tool = StudioTool.PRIVACY) }

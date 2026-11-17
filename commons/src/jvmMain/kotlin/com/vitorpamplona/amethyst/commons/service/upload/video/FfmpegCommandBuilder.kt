@@ -132,6 +132,28 @@ object FfmpegCommandBuilder {
             output.path,
         )
 
+    /**
+     * Copies the sound of [input] into [output] (same container, by its extension) with no tags:
+     * no artist, title or location, no chapters, no cover art (`-map 0:a`), and, for MP3, no ID3
+     * block at all. `+bitexact` keeps ffmpeg from writing its own name and version into the tags.
+     */
+    fun stripAudio(
+        ffmpeg: String,
+        input: File,
+        output: File,
+    ): List<String> =
+        buildList {
+            addAll(prefix(ffmpeg, input))
+            addAll(listOf("-map", "0:a", "-c", "copy"))
+            addAll(STRIP_METADATA)
+            addAll(listOf("-map_chapters", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact"))
+            when (output.extension.lowercase()) {
+                "mp3" -> addAll(listOf("-id3v2_version", "0", "-write_id3v1", "0"))
+                "m4a", "mp4" -> addAll(listOf("-movflags", "+faststart"))
+            }
+            addAll(listOf("-progress", "pipe:1", output.path))
+        }
+
     /** [ms] as ffmpeg's seconds, always with a dot. */
     private fun seconds(ms: Long): String = "${ms / 1000}.${(ms % 1000).toString().padStart(3, '0')}"
 

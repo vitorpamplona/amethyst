@@ -53,13 +53,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_alt_badge
 import com.vitorpamplona.amethyst.commons.resources.media_cw_badge
+import com.vitorpamplona.amethyst.commons.resources.media_marker_audio
 import com.vitorpamplona.amethyst.commons.resources.media_marker_file
 import com.vitorpamplona.amethyst.commons.resources.media_marker_missing
 import com.vitorpamplona.amethyst.commons.resources.media_marker_photo
@@ -76,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbn
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
 
 /** "Photo 2", "Video 1", "File 3": what a file's marker and its tile are called. */
 @Composable
@@ -86,6 +90,7 @@ fun mediaLabel(
     when {
         media.isVideo() == true -> stringRes(Res.string.media_marker_video, ordinal)
         media.isImage() == true -> stringRes(Res.string.media_marker_photo, ordinal)
+        media.isAudio() == true -> stringRes(Res.string.media_marker_audio, ordinal)
         else -> stringRes(Res.string.media_marker_file, ordinal)
     }
 
@@ -178,6 +183,7 @@ fun AttachedMediaCard(
     val media = item.media
     val failed = state is UploadingState.Error
     val label = mediaLabel(media, 1)
+    val isPicture = media.isImage() == true || media.isVideo() == true
     Box(
         modifier
             .clip(shape)
@@ -232,7 +238,7 @@ fun AttachedMediaCard(
                     )
                 }
             }
-            else -> FileCardContent(item, Modifier.align(Alignment.Center))
+            else -> FileRowContent(item, uploader, Modifier.fillMaxSize().padding(start = 12.dp, end = 48.dp))
         }
 
         if (!locked && state !is UploadingState.Finished) {
@@ -242,7 +248,7 @@ fun AttachedMediaCard(
                 tint = Color.White,
                 modifier =
                     Modifier
-                        .align(Alignment.TopEnd)
+                        .align(if (isPicture) Alignment.TopEnd else Alignment.CenterEnd)
                         .padding(8.dp)
                         .size(30.dp)
                         .clip(CircleShape)
@@ -252,24 +258,25 @@ fun AttachedMediaCard(
             )
         }
 
-        Row(Modifier.align(Alignment.BottomStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (media.isImage() == true || media.isVideo() == true) {
+        // A file's row carries its own content-warning badge; the badges here sit on pictures.
+        if (isPicture) {
+            Row(Modifier.align(Alignment.BottomStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 val hasAlt = item.options.altOrNull != null
                 Pill(
                     stringRes(Res.string.media_alt_badge),
                     background = if (hasAlt) Color.Black.copy(alpha = 0.6f) else Color(0xFFFFB74D),
                     color = if (hasAlt) Color.White else Color.Black,
                 )
+                if (item.options.sensitive) Pill(stringRes(Res.string.media_cw_badge))
+                if (media.isCompressible()) Pill(qualityName(item.options.quality))
+                item.options.trim?.let { Pill(formatLength(it.durationMs)) }
             }
-            if (item.options.sensitive) Pill(stringRes(Res.string.media_cw_badge))
-            if (media.isCompressible()) Pill(qualityName(item.options.quality))
-            item.options.trim?.let { Pill(formatLength(it.durationMs)) }
         }
 
         when (state) {
             is UploadingState.Ready, is UploadingState.Error -> Unit
             is UploadingState.Finished ->
-                Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).size(24.dp))
+                Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(if (isPicture) Alignment.BottomEnd else Alignment.CenterEnd).padding(8.dp).size(24.dp))
             else ->
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(44.dp))
@@ -307,21 +314,53 @@ fun MissingMediaCard(
     }
 }
 
+/** The icon for a file with no picture to show: sound, a PDF, anything else. */
+internal fun fileSymbol(media: SelectedMedia): MaterialSymbol =
+    when {
+        media.isAudio() == true -> MaterialSymbols.AudioFile
+        media.isDocument() -> MaterialSymbols.PictureAsPdf
+        else -> MaterialSymbols.AutoMirrored.InsertDriveFile
+    }
+
+/** A sound file or a document as one row: what it is, its name, and its type and size. */
 @Composable
-private fun FileCardContent(
+private fun FileRowContent(
     item: SelectedMediaProcessing,
+    uploader: MediaUploader?,
     modifier: Modifier,
 ) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            if (item.media.isAudio() == true) MaterialSymbols.AudioFile else MaterialSymbols.AutoMirrored.InsertDriveFile,
-            contentDescription = null,
-            modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        item.media.mimeType?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+    val media = item.media
+    val name = remember(media, uploader) { uploader?.displayName(media.uri) ?: media.uri.toString().substringAfterLast('/') }
+    val size = remember(media, uploader) { uploader?.fileSize(media.uri) }
+    val kind = name.substringAfterLast('.', "").takeIf { it.length in 1..5 }?.uppercase() ?: media.mimeType?.substringAfter('/')?.uppercase()
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(fileSymbol(media), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    listOfNotNull(kind, size?.let(::formatFileSize)).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+                if (item.options.sensitive) {
+                    Spacer(Modifier.width(6.dp))
+                    Pill(stringRes(Res.string.media_cw_badge))
+                }
+            }
+        }
     }
 }
+
+/** How tall a file's row is in the text: [FileRowContent] and its padding. */
+internal val FILE_CARD_HEIGHT = 64.dp
 
 @Composable
 private fun Pill(
