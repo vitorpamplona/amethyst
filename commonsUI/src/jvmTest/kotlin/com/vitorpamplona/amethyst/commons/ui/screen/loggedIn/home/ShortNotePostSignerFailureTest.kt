@@ -177,6 +177,27 @@ class ShortNotePostSignerFailureTest {
         }
 
     @Test
+    fun anEarlierPostsJobEndingLateLeavesTheNextPostRunning() =
+        runTest {
+            bunker.failWith = SignerExceptions.TimedOutException("Could not sign: User didn't accept or reject in time.")
+            postViewModel.message.setTextAndPlaceCursorAtEnd("pressed twice")
+
+            assertTrue(postViewModel.tryStartPosting())
+            val first = postViewModel.postingGeneration
+            assertFalse(postViewModel.sendPostSync())
+
+            // Post pressed again before the first post's coroutine has quite finished...
+            assertTrue(postViewModel.tryStartPosting())
+            val second = postViewModel.postingGeneration
+            // ...and that coroutine's completion arrives now, while the second post signs.
+            postViewModel.postingJobFinished(first)
+            assertTrue(postViewModel.isPosting, "the first post's job ended the second post")
+
+            postViewModel.postingJobFinished(second)
+            assertFalse(postViewModel.isPosting)
+        }
+
+    @Test
     fun aFailedPostSavesTheDraftItSkipped() =
         runTest {
             // Fails the note only, so the draft that follows can still be signed and encrypted.

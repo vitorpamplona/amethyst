@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 
 /**
@@ -32,18 +33,29 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
  * [held] is asked at the moment of closing, not when this recomposes, so a screen that ends the
  * hold and closes itself in the same step is let go.
  *
+ * The hold lasts as long as [owner], the ViewModel whose state [held] reads, not as long as the
+ * composition: a background tab is not composed, yet its ViewModel and the work [held] is about
+ * live on, and closing that tab would drop them. So [held] must read only [owner]'s state.
+ *
  * Only the tab and window layouts close screens this way. The screen still blocks its own Close
  * button and back (`PlatformBackHandler`) itself.
  */
 @Composable
-fun HoldOpenWhile(held: () -> Boolean) {
+fun HoldOpenWhile(
+    owner: ViewModel,
+    held: () -> Boolean,
+) {
     val entry = LocalNavStackEntry.current ?: return
     val current by rememberUpdatedState(held)
-    DisposableEffect(entry) {
+    DisposableEffect(entry, owner) {
         val hold = { current() }
         entry.holdOpen = hold
-        // A tab moving out to a window composes the screen again there, and the new hold can
-        // arrive before this one is disposed: drop only our own.
-        onDispose { if (entry.holdOpen === hold) entry.holdOpen = null }
+        // Released when the ViewModel is cleared. The key replaces (and closes) the registration
+        // from an earlier composition of this screen, and every release drops only its own hold:
+        // the screen composed again, or moved out to a window, may have set a newer one.
+        owner.addCloseable("$HOLD_KEY${entry.id}", AutoCloseable { if (entry.holdOpen === hold) entry.holdOpen = null })
+        onDispose { }
     }
 }
+
+private const val HOLD_KEY = "HoldOpenWhile:"

@@ -1139,9 +1139,18 @@ open class ShortNotePostViewModel :
     // does not go out.
     @Volatile private var draftSaveSkipped = false
 
+    /**
+     * Which press of Post [isPosting] belongs to, counted up by [tryStartPosting]. The coroutine of
+     * a post ends it with [postingJobFinished] and this number, so a post pressed again once the
+     * first failed is not ended by the first one's coroutine finishing a moment later.
+     */
+    @Volatile var postingGeneration = 0
+        private set
+
     /** Marks the composer as posting. False when a post is already under way. UI thread only. */
     fun tryStartPosting(): Boolean {
         if (isPosting) return false
+        postingGeneration++
         isPosting = true
         draftSaveSkipped = false
         return true
@@ -1149,10 +1158,11 @@ open class ShortNotePostViewModel :
 
     /**
      * Ends posting once the coroutine started for it has finished, in case it never got to run
-     * [sendPostSync] (its scope already gone), which would leave the composer locked. Any thread.
+     * [sendPostSync] (its scope already gone), which would leave the composer locked. Only the post
+     * it was started for: [generation] is [postingGeneration] read when Post was pressed. Any thread.
      */
-    fun postingJobFinished() {
-        if (isPosting) isPosting = false
+    fun postingJobFinished(generation: Int) {
+        if (isPosting && generation == postingGeneration) isPosting = false
     }
 
     /**

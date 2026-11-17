@@ -267,10 +267,11 @@ internal fun NewPostScreenInner(
 
     PlatformBackHandler(onBack = onClose)
     // Its tab or window can't be closed either, by its × or the tab menu: that would drop the text too.
-    HoldOpenWhile { postViewModel.isPosting }
+    HoldOpenWhile(postViewModel) { postViewModel.isPosting }
 
     val onPost: () -> Unit = {
         if (postViewModel.tryStartPosting()) {
+            val generation = postViewModel.postingGeneration
             // Read-only while posting, keyboard included: what is shown is what is being sent.
             focusManager.clearFocus()
             // uses the accountViewModel scope to avoid cancelling this
@@ -279,7 +280,7 @@ internal fun NewPostScreenInner(
                 .launchSigner {
                     // Not sent: stay, with the text, so Post can be pressed again.
                     postViewModel.sendPostSync(onSent = { nav.popBack() })
-                }.invokeOnCompletion { postViewModel.postingJobFinished() }
+                }.invokeOnCompletion { postViewModel.postingJobFinished(generation) }
         }
     }
 
