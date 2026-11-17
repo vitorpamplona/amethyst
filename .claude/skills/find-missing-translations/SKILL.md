@@ -13,13 +13,13 @@ diff locales against their default, fill the gaps, and pass the gates.
 
 Each is its own Crowdin source in `crowdin.yml`, so each count reconciles against its own Crowdin UI number.
 
-| Catalog | Default file | Size |
+| Catalog | Default file | Holds |
 |--|--|--|
-| **commonsUI** (Compose resources, Android + Desktop) | `commonsUI/src/commonMain/composeResources/values/strings.xml` | ~6,155 `<string>` + ~198 `<plurals>` |
-| **amethyst** (Android `res/`) | `amethyst/src/main/res/values/strings.xml` | ~191 `<string>` + ~13 `<plurals>` — the synchronous-platform tier only |
+| **commonsUI** (Compose resources, Android + Desktop) | `commonsUI/src/commonMain/composeResources/values/strings.xml` | Every feature string: the large catalog, where nearly all gaps are |
+| **amethyst** (Android `res/`) | `amethyst/src/main/res/values/strings.xml` | The synchronous-platform tier only: small, and shrinking as keys move out |
 
 - New keys always go in commonsUI. A feature key found in the amethyst tree belongs in commonsUI: move it with `tools/strings-migrate/migrate.py <keys…>` (moves every locale byte-for-byte), don't translate it in place.
-- Locale dirs differ between the trees (56 vs 57) — enumerate `values-*` under each base, don't assume.
+- The two trees' locale dirs need not match: enumerate `values-*` under each base, don't assume.
 - A key name present in both trees does **not** mean the same English. Copy an existing translation across trees only when the two English values are byte-identical; otherwise translate fresh (or copy from the key whose *value* matches).
 - The trees escape differently. commonsUI authors edge whitespace raw, never quote-wrapped, and `\'` renders literally there; copying Android-style `"replying to "` or `\'` into commonsUI is a bug. `tools/agent-hooks/compose_escaping_check.py` catches it (CI and pre-push).
 - Same English repeated under many keys (`Cancel`, `Save`, …) across the trees is expected. Don't dedupe during a translation pass.
