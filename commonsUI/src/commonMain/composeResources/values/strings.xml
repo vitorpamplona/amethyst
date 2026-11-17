@@ -10245,13 +10245,14 @@
     <string name="claude_code_job_name_hint">What it’s for</string>
     <string name="claude_code_job_name_desc">Names the job’s folder and branch.</string>
     <string name="claude_code_job_go">Go</string>
+    <string name="claude_code_advanced">Advanced</string>
+    <string name="claude_code_where">Where</string>
+    <string name="claude_code_where_clones">Fresh clones</string>
+    <string name="claude_code_where_folder">A folder on this computer</string>
     <plurals name="claude_code_job_cloning">
         <item quantity="one">Cloning %1$d repository. A message sent now goes out once it’s in.</item>
         <item quantity="other">Cloning %1$d repositories. A message sent now goes out once they’re in.</item>
     </plurals>
-    <string name="claude_code_open_folder">Open a folder instead</string>
-    <string name="claude_code_open_folder_title">Open a folder</string>
-    <string name="claude_code_use_clones">Start a job with fresh clones instead</string>
     <string name="claude_code_storage">Storage</string>
     <plurals name="claude_code_storage_workspaces">
         <item quantity="one">%1$d workspace · %2$s</item>

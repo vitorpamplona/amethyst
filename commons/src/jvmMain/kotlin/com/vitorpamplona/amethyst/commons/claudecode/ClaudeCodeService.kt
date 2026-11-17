@@ -528,12 +528,13 @@ class ClaudeCodeService(
         urls: List<String>,
         name: String,
         agent: AgentBackend = backend,
+        permissionMode: PermissionMode = jobModeOf(agent.capabilities.modes),
     ): ClaudeChat {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
         val dir = agentWorkspaces.claim(name, clean)
         agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, clean))
-        val chat = newChat(dir, jobModeOf(agent.capabilities.modes), title = name, agent = agent)
+        val chat = newChat(dir, permissionMode, title = name, agent = agent)
         // On the service's scope: the job keeps cloning while the user reads something else.
         val cloning =
             scope.async(Dispatchers.IO) {

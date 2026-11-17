@@ -169,8 +169,9 @@ menu still switches one job to asking first. The agent is told the job's layout 
 one clone per repository and is not a repository itself, each clone's branch, and that pushes and
 pull requests are the user's), since otherwise its first `git` runs in the job's folder and fails.
 
-The agent stays a choice in the dialog when both are installed. "Open a folder instead" is the old
-path, for work in a folder already on the computer (with its worktree switch).
+Everything else sits behind a faint tune icon in the dialog's corner (Advanced): fresh clones or
+a folder already on the computer (with its worktree switch), the agent, and the permission mode.
+The agent picked there is remembered for the next simple job.
 
 Checked in the app (1600×1000 and 480×900): a job on a local repository opened at once in Auto,
 listed under Jobs and scrolled into view; the agent answered `git branch --show-current` with

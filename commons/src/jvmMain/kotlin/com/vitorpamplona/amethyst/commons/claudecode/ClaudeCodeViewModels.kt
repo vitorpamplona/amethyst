@@ -277,6 +277,8 @@ class ClaudeCodeSessionsViewModel(
         urls: List<String>,
         name: String,
         agentId: String? = null,
+        /** Null for the job's own hands-off mode ([jobModeOf]). */
+        permissionMode: PermissionMode? = null,
         onReady: (String) -> Unit,
     ) {
         if (_creating.value) return
@@ -285,7 +287,7 @@ class ClaudeCodeSessionsViewModel(
         viewModelScope.launch {
             try {
                 val agent = agentId?.let { service.backend(it) } ?: service.backend
-                onReady(service.newJob(urls, name.trim(), agent).key)
+                onReady(service.newJob(urls, name.trim(), agent, permissionMode ?: jobModeOf(agent.capabilities.modes)).key)
             } catch (e: IOException) {
                 Log.w(TAG, "Could not create the job", e)
                 _newChatError.value = NewChatError.CloneFailed(e.message)
