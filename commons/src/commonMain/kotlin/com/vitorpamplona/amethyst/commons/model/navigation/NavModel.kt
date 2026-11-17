@@ -174,8 +174,23 @@ sealed class SingleScreenModel(
     /** Shows the screen [id]: the tab, the main window's section, or raises its window. */
     abstract fun activate(id: Long)
 
-    /** Closes the screen [id]; it can come back with [reopenClosed]. */
-    abstract fun close(id: Long): Boolean
+    /**
+     * Closes the screen [id]; it can come back with [reopenClosed]. A screen held open
+     * ([NavStackEntry.holdOpen]) stays, and its tab flashes, whichever way the close was asked for:
+     * its own ×, the tab menu's bulk closes, a window's title bar or back.
+     */
+    fun close(id: Long): Boolean {
+        val entry = entries.firstOrNull { it.id == id } ?: return false
+        if (entry.isHeldOpen()) {
+            flash(id)
+            return false
+        }
+        remove(entry)
+        return true
+    }
+
+    /** Takes [entry], which is open and not held, out of the layout. */
+    protected abstract fun remove(entry: NavStackEntry)
 
     override fun back(from: NavStackEntry?): Boolean = close((from ?: top).id)
 
