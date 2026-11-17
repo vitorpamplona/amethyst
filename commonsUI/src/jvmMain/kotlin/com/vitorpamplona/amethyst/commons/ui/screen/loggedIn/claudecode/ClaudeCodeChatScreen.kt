@@ -1,0 +1,1616 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
+import com.vitorpamplona.agents.PermissionSuggestion
+import com.vitorpamplona.agents.SlashCommand
+import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
+import com.vitorpamplona.amethyst.commons.claudecode.ChatError
+import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
+import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
+import com.vitorpamplona.amethyst.commons.claudecode.ChatRow
+import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
+import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
+import com.vitorpamplona.amethyst.commons.claudecode.SentImage
+import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
+import com.vitorpamplona.amethyst.commons.claudecode.ToolView
+import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
+import com.vitorpamplona.amethyst.commons.claudecode.firstPromptLine
+import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
+import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
+import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_dirs
+import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_mode
+import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_project
+import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_session
+import com.vitorpamplona.amethyst.commons.resources.claude_code_app_running
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_pick
+import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used_little
+import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_edit_message
+import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
+import com.vitorpamplona.amethyst.commons.resources.claude_code_error_exited
+import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_folder_gone
+import com.vitorpamplona.amethyst.commons.resources.claude_code_fork
+import com.vitorpamplona.amethyst.commons.resources.claude_code_fork_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_loading_history
+import com.vitorpamplona.amethyst.commons.resources.claude_code_message_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_accept_edits
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_accept_edits_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_auto
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_auto_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_default
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_default_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_plan
+import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_plan_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_new_session
+import com.vitorpamplona.amethyst.commons.resources.claude_code_not_installed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_interrupted
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_process_ended
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_turn_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_readonly
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_edit
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setting
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
+import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
+import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
+import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
+import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_resume_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_comments
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_general
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_inline
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_inline_removed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_prompt_header
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
+import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
+import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_data
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_notifications
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_text
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain_repos
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_branch
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_uncommitted
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_tests
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_tests_repos
+import com.vitorpamplona.amethyst.commons.resources.claude_code_stop
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_agent
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_command
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_edit
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_other
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_settings
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
+import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
+import com.vitorpamplona.amethyst.commons.resources.claude_code_working
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtitle
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_cloning
+import com.vitorpamplona.amethyst.commons.resources.rename
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
+import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.io.File
+
+/** The widest a chat column gets: past this, lines are too long to read. */
+internal val ChatColumnMaxWidth = 760.dp
+
+private const val LIVE_REFRESH_MS = 5_000L
+
+/** The agent a chat talks to, as its sentences name it. */
+internal val LocalAgentName = staticCompositionLocalOf { "Claude" }
+
+/** How many rows from the end the view may be and still follow new ones. */
+private const val FOLLOW_SLACK = 3
+
+/** One Claude Code session: its history, the live turn, and the approvals it waits on. */
+@Composable
+fun ClaudeCodeChatScreen(
+    key: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val viewModel = rememberViewModel(key = "ClaudeCodeChat-$key") { ClaudeCodeChatViewModel(ClaudeCodeService.shared, key) }
+    val chat = viewModel.chat
+    if (chat == null) {
+        Scaffold(topBar = { ChatTopBar(stringRes(Res.string.claude_code_new_session), null, nav) {} }) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                Text(stringRes(Res.string.claude_code_session_missing), color = MaterialTheme.colorScheme.grayText)
+            }
+        }
+        return
+    }
+    val state by chat.state.collectAsStateWithLifecycle()
+    val runningApp by viewModel.runningApp.collectAsStateWithLifecycle()
+    val runError by viewModel.runError.collectAsStateWithLifecycle()
+    val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
+    val rows by ClaudeCodeService.shared.rows.collectAsStateWithLifecycle()
+    // A fork still carries its source's id until it starts, but it is not that session.
+    val openElsewhere = !state.forking && rows.any { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }
+    val canRunApp = remember(state.cwd) { viewModel.canRunApp() }
+    val folderGone = remember(state.cwd, state.status) { !File(state.cwd).isDirectory }
+
+    LaunchedEffect(Unit) { chat.refreshGit() }
+    // Whether a terminal holds the session decides the read-only bar: kept current while shown.
+    LaunchedEffect(Unit) {
+        while (true) {
+            ClaudeCodeService.shared.refreshLive()
+            delay(LIVE_REFRESH_MS)
+        }
+    }
+
+    val composerText = rememberTextFieldState()
+    val attachments = remember { ComposerAttachments() }
+    var dropHover by remember { mutableStateOf(false) }
+    val dropTarget = rememberImageDropTarget(attachments) { dropHover = it }
+    val composerFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        // A message opened to be asked again arrives with its text, ready to change.
+        viewModel.takeDraft()?.let { composerText.setTextAndPlaceCursorAtEnd(it) }
+        // The settings assistant has no commands of its own to offer.
+        if (state.kind == ChatKind.CODE) viewModel.loadCliInfo()
+    }
+    // Typing goes straight to the composer, and the keys below work, without a click first.
+    LaunchedEffect(Unit) { composerFocus.requestFocus() }
+    val pending = state.pendingPermissions.firstOrNull()
+    var switching by remember { mutableStateOf(false) }
+    val keys =
+        Modifier.onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when {
+                // Ctrl/Cmd+K: jump to another session.
+                event.key == Key.K && (event.isCtrlPressed || event.isMetaPressed) -> {
+                    switching = true
+                    true
+                }
+                // An approval waits: Esc denies; Enter, with nothing typed, gives the default answer.
+                pending != null && event.key == Key.Escape -> {
+                    viewModel.deny(pending)
+                    true
+                }
+                pending != null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
+                    if (pending.defaultToNo) viewModel.deny(pending) else viewModel.approve(pending, always = false)
+                    true
+                }
+                // Otherwise Esc stops the turn, as in the terminal.
+                pending == null && event.key == Key.Escape && state.isBusy -> {
+                    viewModel.interrupt()
+                    true
+                }
+                else -> false
+            }
+        }
+
+    if (switching) {
+        SessionSwitcher(
+            rows = rows.filter { it.key != key && !it.archived },
+            onDismiss = { switching = false },
+            onPick = { row ->
+                switching = false
+                nav.popBack()
+                nav.nav(Route.ClaudeCodeChat(row.key))
+            },
+        )
+    }
+
+    var renaming by remember { mutableStateOf(false) }
+    val shownTitle = state.title?.takeIf { it.isNotBlank() } ?: state.items.firstPromptLine() ?: stringRes(Res.string.claude_code_new_session)
+    if (renaming) {
+        RenameDialog(
+            // A chat with no name yet starts from an empty field, not its placeholder.
+            initial = state.title?.takeIf { it.isNotBlank() } ?: state.items.firstPromptLine().orEmpty(),
+            onDismiss = { renaming = false },
+            onSave = {
+                viewModel.rename(it)
+                renaming = false
+            },
+        )
+    }
+    // A workspace of fresh clones: its name and repositories stand for the folder's id.
+    // From the service's own list, not the disk; a new workstream is in it once its clones are.
+    val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
+    // Sentences in the chat name the agent ("Codex wants to run a command").
+    CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
+        Scaffold(
+            topBar = {
+                ChatTopBar(
+                    title = shownTitle,
+                    subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state, workspace),
+                    nav = nav,
+                    onTitleClick = { renaming = true },
+                ) {
+                    // A workspace of fresh clones: its repositories' pull requests, which the user opens.
+                    if (workspace != null) {
+                        TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
+                    }
+                    val git = state.git
+                    if (git != null && git.hasChanges) {
+                        // A narrow window keeps the title readable: the counts alone stand for the button.
+                        val wide = LocalScreenLayout.current.isLargeScreen
+                        HoverTooltip(stringRes(Res.string.claude_code_changes)) {
+                            TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
+                                if (wide) {
+                                    Text(stringRes(Res.string.claude_code_changes))
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                DiffStat(git.insertions, git.deletions)
+                            }
+                        }
+                        // A merged or closed proposal takes no new version.
+                        val ended = git.proposalId?.let { proposalEnded(it) } ?: false
+                        if (git.repo != null && git.ahead > 0 && !ended) {
+                            FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
+                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_proposal else Res.string.claude_code_propose))
+                            }
+                        }
+                    }
+                    ChatMenu(
+                        canRunApp = canRunApp && !runningApp,
+                        canEnd = state.status != ChatStatus.NOT_STARTED && state.status != ChatStatus.ENDED,
+                        onRename = { renaming = true },
+                        onRunApp = { viewModel.runApp() },
+                        onEnd = { viewModel.endSession() },
+                    )
+                }
+            },
+        ) { padding ->
+            Box(
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .imePadding()
+                    .then(keys)
+                    .dragAndDropTarget(shouldStartDragAndDrop = { it.hasFiles() }, target = dropTarget),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
+                    state.error?.let { ErrorBanner(it) }
+                    state.cloning?.let { CloningNote(it) }
+                    if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
+                    runError?.let { Banner(stringRes(Res.string.claude_code_run_failed, it)) }
+
+                    state.git?.proposalId?.let { proposalId ->
+                        ProposalActivity(
+                            proposalId = proposalId,
+                            chat = chat,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onRemoveWorktree = { viewModel.removeWorktree { nav.popBack() } },
+                        )
+                    }
+                    cleanupError?.let {
+                        Banner(stringRes(Res.string.claude_code_remove_worktree_failed, it), stringRes(Res.string.claude_code_remove_anyway)) {
+                            viewModel.removeWorktree(force = true) { nav.popBack() }
+                        }
+                    }
+
+                    Messages(
+                        state = state,
+                        readOnly = openElsewhere || folderGone,
+                        nav = nav,
+                        modifier = Modifier.weight(1f),
+                        onEditFrom =
+                            if (state.kind == ChatKind.CODE && state.sessionId != null && !folderGone && chat.backend.capabilities.editFromMessage) {
+                                { item -> viewModel.editFrom(item) { key -> nav.nav(Route.ClaudeCodeChat(key)) } }
+                            } else {
+                                null
+                            },
+                        onStarter = {
+                            composerText.setTextAndPlaceCursorAtEnd(it)
+                            composerFocus.requestFocus()
+                        },
+                    )
+
+                    state.pendingPermissions.firstOrNull()?.let { request ->
+                        PermissionCard(
+                            request = request,
+                            note = state.permissionNotes[request.requestId],
+                            cwd = state.cwd,
+                            onAllow = { viewModel.approve(request, always = false) },
+                            onAllowAlways = { viewModel.approve(request, always = true) },
+                            onDeny = { viewModel.deny(request) },
+                        )
+                    }
+
+                    if (folderGone && !state.isBusy) {
+                        // A removed worktree: its history reads, but there is nowhere to continue it.
+                        InlineNote(stringRes(Res.string.claude_code_folder_gone))
+                    } else if (openElsewhere && !state.isBusy) {
+                        // Two processes writing one session would interleave their turns: this one reads.
+                        OpenElsewhereBar {
+                            viewModel.fork { forked ->
+                                nav.popBack()
+                                nav.nav(Route.ClaudeCodeChat(forked))
+                            }
+                        }
+                    } else {
+                        Composer(
+                            text = composerText,
+                            commands = state.commands,
+                            attachments = attachments,
+                            dropHover = dropHover,
+                            focusRequester = composerFocus,
+                            busy = state.isBusy,
+                            onSend = { text, images ->
+                                if (images.isEmpty()) viewModel.send(text) else viewModel.send(text, images.map { it.input }, images.map { it.file })
+                            },
+                            onStop = { viewModel.interrupt() },
+                        )
+                        ComposerFooter(
+                            state = state,
+                            onMode = { viewModel.setPermissionMode(it) },
+                            onModel = { viewModel.setModel(it) },
+                            modes = chat.backend.capabilities.modes,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The workspace the chat works in, for the parts of the screen that name where it works. */
+internal val LocalWorkspace = staticCompositionLocalOf<AgentWorkspace?> { null }
+
+/**
+ * `amethyst · pr/feat/x` when the folder is a checkout; `webapp + corelib · 2 repositories` in a
+ * workspace; else the folder's name.
+ */
+@Composable
+private fun subtitle(
+    state: ClaudeChatState,
+    workspace: AgentWorkspace?,
+): String {
+    if (workspace != null) {
+        val names = workspace.repos.joinToString(" + ") { it.name }
+        return pluralStringRes(Res.plurals.claude_code_workspace_subtitle, workspace.repos.size, names, workspace.repos.size)
+    }
+    val git = state.git ?: return folderName(state.cwd)
+    val name = git.repo?.identifier ?: folderName(git.root)
+    return listOfNotNull(name, git.branch).joinToString(" · ")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ChatTopBar(
+    title: String,
+    subtitle: String?,
+    nav: INav,
+    onTitleClick: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit,
+) {
+    ShorterTopAppBar(
+        title = {
+            Column {
+                if (onTitleClick != null) {
+                    // A click on the name renames the session; a pencil on hover says it can.
+                    val hover = remember { MutableInteractionSource() }
+                    val hovered by hover.collectIsHoveredAsState()
+                    HoverTooltip(stringRes(Res.string.rename)) {
+                        Row(
+                            Modifier.clip(RoundedCornerShape(6.dp)).hoverable(hover).clickable(onClick = onTitleClick),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Icon(
+                                MaterialSymbols.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.grayText,
+                                modifier = Modifier.padding(start = 4.dp).size(16.dp).alpha(if (hovered) 1f else 0f),
+                            )
+                        }
+                    }
+                } else {
+                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                subtitle?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        },
+        navigationIcon = {
+            if (nav.canPop()) IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+        },
+        actions = actions,
+    )
+}
+
+@Composable
+internal fun DiffStat(
+    insertions: Int,
+    deletions: Int,
+) {
+    Text("+" + compactCount(insertions.toLong()), color = AddedColor, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
+    Spacer(Modifier.width(4.dp))
+    Text("−" + compactCount(deletions.toLong()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
+}
+
+internal val AddedColor = Color(0xFF3FB950)
+
+@Composable
+private fun Messages(
+    state: ClaudeChatState,
+    readOnly: Boolean,
+    nav: INav,
+    modifier: Modifier,
+    onEditFrom: ((ChatItem.UserText) -> Unit)?,
+    onStarter: (String) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val rows = remember(state.items) { state.items.toChatRows() }
+    val busy = state.isBusy
+    val showIntro = state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()
+    val showResume = state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly
+    // Every item the list below emits, in the same order, so the last index is the list's own.
+    val itemCount =
+        (if (!state.historyLoaded || showIntro) 1 else 0) +
+            rows.size +
+            (if (state.streamingText.isNotEmpty()) 1 else 0) +
+            (if (busy) 1 else 0) +
+            (if (showResume) 1 else 0)
+    // Opening a chat lands on its newest message: the history arrives after the first frame,
+    // when the only row in view is the loading note at the top.
+    val landed = remember { booleanArrayOf(false) }
+    // Follows the conversation while its end is in view; someone scrolled up to read is left there.
+    LaunchedEffect(itemCount, state.streamingText.length / 200) {
+        if (!state.historyLoaded || itemCount == 0) return@LaunchedEffect
+        val last = itemCount - 1
+        if (!landed[0]) {
+            landed[0] = true
+            listState.scrollToItem(last)
+            return@LaunchedEffect
+        }
+        val lastVisible =
+            listState.layoutInfo.visibleItemsInfo
+                .lastOrNull()
+                ?.index
+        if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last)
+    }
+    val uriHandler = LocalUriHandler.current
+    val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
+    val markdownStyle = rememberChatMarkdownStyle()
+    val textStyle = ChatTextStyle
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = Gutter, vertical = Gutter),
+        verticalArrangement = Arrangement.spacedBy(PartGap),
+    ) {
+        if (!state.historyLoaded) {
+            item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
+        }
+        if (showIntro) {
+            item(key = "intro") { EmptyChatIntro(state, onStarter) }
+        }
+        // A call the user stopped never gets a result: it only spins while the turn runs, and
+        // not while it waits for the user.
+        val turnRunning = state.status == ChatStatus.WORKING
+        items(rows, key = { it.key }) { row ->
+            when (row) {
+                is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
+                is ChatRow.Single ->
+                    when (val item = row.item) {
+                        // A new turn: more room above it than between the parts of a reply.
+                        is ChatItem.UserText ->
+                            Box(Modifier.padding(top = GroupGap - PartGap)) {
+                                UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                            }
+                        is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
+                        is ChatItem.ToolCall ->
+                            if (ToolKind.of(item.name) == ToolKind.EDIT) {
+                                FileChangeRow(item, state.cwd, turnRunning)
+                            } else {
+                                ToolCallRow(item, state.cwd, turnRunning)
+                            }
+                        is ChatItem.Notice -> NoticeRow(item)
+                    }
+            }
+        }
+        if (state.streamingText.isNotEmpty()) {
+            // Plain until the message is complete: markdown would re-parse on every delta.
+            item(key = "streaming") { SelectionContainer { Text(state.streamingText, style = textStyle) } }
+        }
+        if (busy) {
+            item(key = "status") { LiveStatus(state) }
+        }
+        if (showResume) {
+            // A fork looks like its source until it starts: say what the first message does.
+            item(key = "resume") { CenterNote(stringRes(if (state.forking) Res.string.claude_code_fork_hint else Res.string.claude_code_resume_hint)) }
+        }
+    }
+}
+
+/**
+ * What happened to the branch's proposal on nostr since the session last looked: reviewers'
+ * comments (sent to Claude on request) and a merge (the worktree can go).
+ */
+@Composable
+private fun ProposalActivity(
+    proposalId: String,
+    chat: ClaudeChat,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onRemoveWorktree: () -> Unit,
+) {
+    // Keeps the proposal's thread (comments, statuses, updates) loading while the chat is open.
+    ThreadFilterAssemblerSubscription(proposalId, accountViewModel)
+    val note = remember(proposalId) { LocalCache.getOrCreateNote(proposalId) }
+    val replies by remember(note) { note.flow().replies.stateFlow }.collectAsStateWithLifecycle()
+    val status = observeGitStatus(note)
+    val reviewed by chat.reviewed.collectAsStateWithLifecycle()
+    val me = accountViewModel.account.signer.pubKey
+    val repo =
+        chat.state.value.git
+            ?.repo
+    val comments =
+        remember(replies, reviewed, repo) {
+            // A reply goes to Claude as a review only from the repository's maintainers or someone
+            // the user follows: anyone can reply to a proposal, and the text becomes a prompt.
+            val trusted = trustedReviewers(repo)
+            note.replies.filter { reply ->
+                val event = reply.event ?: return@filter false
+                if (event.pubKey == me || reply.idHex in reviewed) return@filter false
+                if (event.pubKey !in trusted && !accountViewModel.account.isFollowing(event.pubKey)) return@filter false
+                when (event) {
+                    is CommentEvent, is GitReplyEvent -> event.content.isNotBlank()
+                    // A verdict counts when it asks for something or says why.
+                    is GitReviewEvent -> event.content.isNotBlank() || event.verdict() in ACTIONABLE_VERDICTS
+                    else -> false
+                }
+            }
+        }
+
+    when (status) {
+        is GitStatusAppliedEvent ->
+            ActionBanner(stringRes(Res.string.claude_code_proposal_merged), stringRes(Res.string.claude_code_remove_worktree), onRemoveWorktree)
+        is GitStatusClosedEvent ->
+            ActionBanner(stringRes(Res.string.claude_code_proposal_closed), stringRes(Res.string.claude_code_view_proposal)) { nav.nav(Route.Note(proposalId)) }
+        else -> {}
+    }
+    if (comments.isNotEmpty()) {
+        val header = stringRes(Res.string.claude_code_review_prompt_header)
+        // Worded here, in composition; the code each inline comment is about is read when sent.
+        val items = comments.map { reviewItem(it) }
+        val scope = rememberCoroutineScope()
+        ActionBanner(
+            pluralStringRes(Res.plurals.claude_code_review_comments, comments.size, comments.size),
+            stringRes(Res.string.claude_code_address_review),
+        ) {
+            scope.launch {
+                val prompt = ReviewPrompt.render(File(chat.state.value.cwd), header, items)
+                chat.addressReview(items.map { it.id }, prompt)
+            }
+        }
+    }
+}
+
+/**
+ * Who may review [repo]'s proposals: its confirmed maintainers, as the repository screen counts
+ * them, or the announcement's own owner and list until those load.
+ */
+private fun trustedReviewers(repo: NostrRepoRef?): Set<String> {
+    if (repo == null) return emptySet()
+    val address = Address(repo.kind, repo.pubKeyHex, repo.identifier)
+    val confirmed = LocalCache.gitAuthority.membership(address)?.confirmedMaintainers
+    if (!confirmed.isNullOrEmpty()) return confirmed.toSet()
+    val announcement = LocalCache.getAddressableNoteIfExists(address)?.event as? GitRepositoryEvent
+    return (listOf(repo.pubKeyHex) + announcement?.maintainers().orEmpty()).toSet()
+}
+
+/** Whether the proposal was merged or closed. */
+@Composable
+private fun proposalEnded(proposalId: String): Boolean {
+    val note = remember(proposalId) { LocalCache.getOrCreateNote(proposalId) }
+    val status = observeGitStatus(note)
+    return status is GitStatusAppliedEvent || status is GitStatusClosedEvent
+}
+
+private val ACTIONABLE_VERDICTS = setOf(GitReviewEvent.Verdict.NACK, GitReviewEvent.Verdict.CONCEPT_NACK, GitReviewEvent.Verdict.CHANGES_REQUIRED)
+
+/** A reviewer's comment, headed by who wrote it and, for an inline one, the file and lines. */
+@Composable
+private fun reviewItem(note: Note): ReviewItem {
+    val event = note.event
+    val name = note.author?.toBestDisplayName() ?: event?.pubKey?.take(8).orEmpty()
+    val location = (event as? CommentEvent)?.gitCodeLocation()
+    val heading =
+        when {
+            event is GitReviewEvent && event.verdict() != null -> stringRes(Res.string.claude_code_review_verdict, name, verdictLabel(event.verdict()!!))
+            location != null -> {
+                val start = location.startLine ?: location.endLine ?: 0
+                val end = location.endLine ?: start
+                val lines = if (end > start) "$start\u2013$end" else "$start"
+                stringRes(
+                    if (location.removedSide) Res.string.claude_code_review_inline_removed else Res.string.claude_code_review_inline,
+                    name,
+                    location.path,
+                    lines,
+                )
+            }
+            else -> stringRes(Res.string.claude_code_review_general, name)
+        }
+    return ReviewItem(
+        id = note.idHex,
+        heading = heading,
+        body = event?.content.orEmpty(),
+        location =
+            location?.let {
+                val start = it.startLine ?: it.endLine ?: 1
+                ReviewLocation(it.path, start, it.endLine ?: start, it.removedSide, it.commit)
+            },
+        createdAt = note.createdAt() ?: 0,
+    )
+}
+
+@Composable
+private fun ActionBanner(
+    text: String,
+    action: String,
+    onAction: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp),
+    ) {
+        Row(Modifier.padding(start = CardPadding, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.weight(1f))
+            TextButton(onClick = onAction) { Text(action) }
+        }
+    }
+}
+
+/** Spinner, what the CLI says it is doing, and for how long. */
+@Composable
+private fun LiveStatus(state: ClaudeChatState) {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(state.turnStartedAt) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+    val seconds = state.turnStartedAt?.let { ((now - it) / 1000).coerceAtLeast(0) }
+    // While a call waits for an answer, the CLI's last activity is stale: the turn is on the user.
+    val waiting = state.status == ChatStatus.NEEDS_APPROVAL
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+        if (waiting) {
+            Icon(MaterialSymbols.HourglassEmpty, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+        } else {
+            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (waiting) {
+                stringRes(Res.string.claude_code_waiting_approval)
+            } else {
+                listOfNotNull(state.activity ?: stringRes(Res.string.claude_code_working), seconds?.let { elapsed(it) }).joinToString(" · ")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private fun elapsed(seconds: Long): String = if (seconds < 60) "${seconds}s" else "${seconds / 60}m ${seconds % 60}s"
+
+/** A new chat: where it will work, and a few ways to begin that fill the composer. */
+@Composable
+private fun EmptyChatIntro(
+    state: ClaudeChatState,
+    onStarter: (String) -> Unit,
+) {
+    if (state.kind == ChatKind.SETTINGS) {
+        SettingsAssistantIntro(onStarter)
+        return
+    }
+    Column(
+        Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(PartGap),
+    ) {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
+        }
+        val workspace = LocalWorkspace.current
+        Text(stringRes(Res.string.claude_code_intro_title, workspace?.title ?: subtitle(state, null)), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            listOf(ToolViews.relative(state.cwd, File(System.getProperty("user.home"))).let { if (it != state.cwd) "~/$it" else it }, modeLabel(state.permissionMode)).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.grayText,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.size(4.dp))
+        val starters =
+            buildList {
+                // A workspace of several repositories asks about all of them.
+                val several = (workspace?.repos?.size ?: 0) > 1
+                add(stringRes(if (several) Res.string.claude_code_starter_explain_repos else Res.string.claude_code_starter_explain))
+                add(stringRes(if (several) Res.string.claude_code_starter_tests_repos else Res.string.claude_code_starter_tests))
+                val git = state.git
+                if (git != null && git.ahead > 0) add(stringRes(Res.string.claude_code_starter_review_branch, git.base ?: "main"))
+                if (git != null && git.uncommitted > 0) add(stringRes(Res.string.claude_code_starter_review_uncommitted))
+            }
+        starters.forEach { text ->
+            Surface(
+                onClick = { onStarter(text) },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+            ) {
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = CardPadding, vertical = 12.dp))
+            }
+        }
+    }
+}
+
+/** The settings assistant before its first message: what it can do, and a few ways to start. */
+@Composable
+private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(PartGap),
+    ) {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
+        }
+        Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            stringRes(Res.string.claude_code_settings_assistant_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = 420.dp),
+        )
+        Spacer(Modifier.size(4.dp))
+        listOf(
+            stringRes(Res.string.claude_code_settings_starter_data),
+            stringRes(Res.string.claude_code_settings_starter_text),
+            stringRes(Res.string.claude_code_settings_starter_notifications),
+            stringRes(Res.string.claude_code_settings_starter_privacy),
+        ).forEach { text ->
+            Surface(
+                onClick = { onStarter(text) },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+            ) {
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = CardPadding, vertical = 12.dp))
+            }
+        }
+    }
+}
+
+/** What the user wrote: a quiet rounded block on the right, in the reply's own type. */
+@Composable
+private fun UserBubble(
+    text: String,
+    images: List<SentImage>,
+    textStyle: TextStyle,
+    onLink: (String) -> Unit,
+    onEdit: (() -> Unit)?,
+) {
+    if (images.isNotEmpty()) {
+        Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+            SentImageRow(images)
+        }
+    }
+    if (text.isEmpty()) return
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    Row(
+        Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 0.dp else 4.dp).hoverable(hover),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Ask this again differently, in a copy of the session cut just before it. Faint until
+        // the message is hovered or the button has the keyboard's focus, but always there: a
+        // touch screen or a keyboard reaches it too.
+        Box(Modifier.width(48.dp), contentAlignment = Alignment.Center) {
+            if (onEdit != null) {
+                val label = stringRes(Res.string.claude_code_edit_message)
+                val buttonInteractions = remember { MutableInteractionSource() }
+                val focused by buttonInteractions.collectIsFocusedAsState()
+                HoverTooltip(label) {
+                    IconButton(onClick = onEdit, interactionSource = buttonInteractions, modifier = Modifier.size(32.dp).alpha(if (hovered || focused) 1f else 0.35f)) {
+                        Icon(MaterialSymbols.Edit, contentDescription = label, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+        Surface(
+            modifier = Modifier.weight(1f, fill = false),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(18.dp),
+        ) {
+            val padding = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+            // Typed text stays as typed (markdown would join its lines); pasted code and review
+            // prompts carry fences, which read better as code blocks.
+            if (text.contains("```")) {
+                val style = rememberChatMarkdownStyle(codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest)
+                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle)
+            } else {
+                SelectionContainer { Text(text, padding, style = textStyle) }
+            }
+        }
+    }
+}
+
+/** A run of tool calls as one quiet line: "Ran 6 commands · read 2 files", opened on click. */
+@Composable
+private fun ToolGroupRow(
+    group: ChatRow.ToolGroup,
+    cwd: String,
+    turnRunning: Boolean,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val parts =
+        group.counts.map { (kind, n) ->
+            pluralStringRes(
+                when (kind) {
+                    ToolKind.COMMAND -> Res.plurals.claude_code_tool_group_command
+                    ToolKind.READ -> Res.plurals.claude_code_tool_group_read
+                    ToolKind.EDIT -> Res.plurals.claude_code_tool_group_edit
+                    ToolKind.SEARCH -> Res.plurals.claude_code_tool_group_search
+                    ToolKind.WEB -> Res.plurals.claude_code_tool_group_web
+                    ToolKind.AGENT -> Res.plurals.claude_code_tool_group_agent
+                    ToolKind.SETTINGS -> Res.plurals.claude_code_tool_group_settings
+                    ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
+                },
+                n,
+                n,
+            )
+        }
+    val failed = group.failed.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_tool_group_failed, it, it) }
+    val summary = (parts + listOfNotNull(failed)).joinToString(" · ").replaceFirstChar { it.uppercase() }
+    Column {
+        ToolLine(
+            symbol = ToolKind.of(group.calls.first().name).symbol(),
+            text = summary,
+            running = turnRunning && group.running != null,
+            error = false,
+            expanded = expanded,
+            monospace = false,
+            onClick = { expanded = !expanded },
+        )
+        group.running?.takeIf { turnRunning && !expanded }?.let { running ->
+            Text(
+                running.summary?.let { ToolViews.relative(it, File(cwd)) } ?: running.name,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 26.dp),
+            )
+        }
+        AnimatedVisibility(expanded) {
+            Column(Modifier.padding(start = 14.dp)) {
+                group.calls.forEach { ToolCallRow(it, cwd, turnRunning) }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun CodeBlock(
+    text: String,
+    color: Color = Color.Unspecified,
+    maxHeight: Int = 320,
+) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(6.dp), modifier = Modifier.fillMaxWidth()) {
+        SelectionContainer {
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = color,
+                modifier = Modifier.heightIn(max = maxHeight.dp).verticalScroll(rememberScrollState()).padding(8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoticeRow(notice: ChatItem.Notice) {
+    val text =
+        when (notice.kind) {
+            NoticeKind.INTERRUPTED -> stringRes(Res.string.claude_code_notice_interrupted)
+            NoticeKind.TURN_FAILED -> stringRes(Res.string.claude_code_notice_turn_failed) + (notice.detail?.let { ": $it" } ?: "")
+            NoticeKind.PROCESS_ENDED -> stringRes(Res.string.claude_code_notice_process_ended, LocalAgentName.current)
+            NoticeKind.CLI_NOTE -> notice.detail ?: ""
+        }
+    CenterNote(text)
+}
+
+@Composable
+private fun CenterNote(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.grayText,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    )
+}
+
+/** A new workstream's repositories still cloning: what was typed meanwhile goes out once they are in. */
+@Composable
+private fun CloningNote(repositories: Int) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.grayText)
+        Spacer(Modifier.width(InlineGap))
+        Text(pluralStringRes(Res.plurals.claude_code_workstream_cloning, repositories, repositories), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+    }
+}
+
+@Composable
+private fun InlineNote(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 4.dp),
+    )
+}
+
+/** What "don't ask again" will allow, in words, from the CLI's own suggestion. */
+@Composable
+private fun alwaysLabel(request: PermissionRequest): String? {
+    if (request.suppressAlwaysAllow) return null
+    val suggestion = request.parsedSuggestions.firstOrNull() ?: return null
+    return when (suggestion) {
+        is PermissionSuggestion.SetMode -> suggestion.mode?.let { stringRes(Res.string.claude_code_allow_mode, modeLabel(it)) }
+        is PermissionSuggestion.AddRules -> {
+            val rules = suggestion.rules.joinToString(", ")
+            if (rules.isEmpty()) {
+                null
+            } else if (suggestion.destination == "session") {
+                stringRes(Res.string.claude_code_allow_rule_session, rules)
+            } else {
+                stringRes(Res.string.claude_code_allow_rule_project, rules)
+            }
+        }
+        is PermissionSuggestion.AddDirectories -> stringRes(Res.string.claude_code_allow_dirs, suggestion.directories.joinToString(", ") { folderName(it) })
+        is PermissionSuggestion.Other -> null
+    }
+}
+
+/**
+ * What Claude asks to do, shown as what it would do: the diff of an edit, the command it would
+ * run. Enter answers with the default and Esc denies (see the screen's key handler).
+ */
+@Composable
+private fun PermissionCard(
+    request: PermissionRequest,
+    /** What the call would do, from the chat's own tool (a setting's before and after). */
+    note: String?,
+    cwd: String,
+    onAllow: () -> Unit,
+    onAllowAlways: () -> Unit,
+    onDeny: () -> Unit,
+) {
+    val view = rememberToolView(request.toolName, request.input, cwd, pending = true)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp),
+    ) {
+        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(PartGap)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    when {
+                        note != null -> stringRes(Res.string.claude_code_permission_setting)
+                        view is ToolView.FileChange ->
+                            stringRes(if (view.newFile) Res.string.claude_code_permission_create else Res.string.claude_code_permission_edit, LocalAgentName.current, view.path)
+                        view is ToolView.Command -> stringRes(Res.string.claude_code_permission_run, LocalAgentName.current)
+                        else -> stringRes(Res.string.claude_code_permission_title, LocalAgentName.current, request.displayName ?: request.toolName)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            when {
+                note != null ->
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Text(note, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp))
+                    }
+                view is ToolView.FileChange ->
+                    Box(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) { FileChangeDiff(view) }
+                view is ToolView.Command -> {
+                    view.description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
+                    CodeBlock("$ " + view.command, maxHeight = 200)
+                }
+                else -> CodeBlock(ToolViews.relative(request.summary, File(cwd)), maxHeight = 160)
+            }
+            request.decisionReason?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+            }
+            // The app's own tools (a setting) are approved one change at a time: "always" would let
+            // the assistant change any setting unasked.
+            val always = if (note != null) null else alwaysLabel(request)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (request.defaultToNo) {
+                    Button(onClick = onDeny) { Text(stringRes(Res.string.claude_code_deny)) }
+                    OutlinedButton(onClick = onAllow) { Text(stringRes(Res.string.claude_code_allow)) }
+                } else {
+                    Button(onClick = onAllow) { Text(stringRes(Res.string.claude_code_allow)) }
+                    OutlinedButton(onClick = onDeny) { Text(stringRes(Res.string.claude_code_deny)) }
+                }
+                // The rule can be a whole command line: one line, cut, with the full text in a tooltip.
+                Box(Modifier.weight(1f)) {
+                    if (always != null) {
+                        HoverTooltip(always) {
+                            TextButton(onClick = onAllowAlways) { Text(always, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        }
+                    }
+                }
+                Text(
+                    stringRes(if (request.defaultToNo) Res.string.claude_code_permission_keys_deny else Res.string.claude_code_permission_keys),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** The app's chat composer: a rounded field with the send button inside; Stop while a turn runs. */
+@Composable
+private fun Composer(
+    text: TextFieldState,
+    commands: List<SlashCommand>,
+    attachments: ComposerAttachments,
+    dropHover: Boolean,
+    focusRequester: FocusRequester,
+    busy: Boolean,
+    onSend: (String, List<ComposerImage>) -> Unit,
+    onStop: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val canSend = text.text.isNotBlank() || attachments.images.isNotEmpty()
+    val send = {
+        val value = text.text.toString()
+        if (value.isNotBlank() || attachments.images.isNotEmpty()) {
+            onSend(value, attachments.take())
+            text.clearText()
+        }
+    }
+    val pickTitle = stringRes(Res.string.claude_code_attach_pick)
+    // Typing `/` offers the CLI's commands; Esc puts the menu away until the text changes.
+    val typed = text.text.toString()
+    var dismissedFor by remember { mutableStateOf<String?>(null) }
+    val matches = remember(typed, commands) { slashMatches(typed, commands) }
+    val showMenu = matches.isNotEmpty() && dismissedFor != typed
+    var selected by remember(matches) { mutableStateOf(0) }
+    val pick = { command: SlashCommand ->
+        text.setTextAndPlaceCursorAtEnd("/" + command.name + " ")
+        dismissedFor = null
+    }
+    if (showMenu) {
+        SlashCommandMenu(matches, selected.coerceIn(0, matches.lastIndex), pick, Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp))
+    }
+    if (attachments.images.isNotEmpty()) {
+        ComposerImageRow(attachments, Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp))
+    }
+    attachments.refused?.let { name ->
+        Text(
+            stringRes(Res.string.claude_code_attach_failed, name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(start = Gutter, end = Gutter, top = 8.dp),
+        )
+    }
+    ThinPaddingTextField(
+        state = text,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = Gutter, end = Gutter, top = 8.dp)
+                // Files dragged over the chat land here.
+                .then(if (dropHover) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, EditFieldBorder) else Modifier)
+                .focusRequester(focusRequester)
+                .onPreviewKeyEvent { event ->
+                    when {
+                        event.type != KeyEventType.KeyDown -> false
+                        // The command menu: arrows move, Tab or Enter takes the command (Enter sends
+                        // one already typed in full), Esc closes it.
+                        showMenu && event.key == Key.DirectionDown -> {
+                            selected = (selected + 1) % matches.size
+                            true
+                        }
+                        showMenu && event.key == Key.DirectionUp -> {
+                            selected = (selected - 1 + matches.size) % matches.size
+                            true
+                        }
+                        showMenu && event.key == Key.Escape -> {
+                            dismissedFor = typed
+                            true
+                        }
+                        showMenu && (event.key == Key.Tab || (event.key == Key.Enter && !event.isShiftPressed)) &&
+                            !(event.key == Key.Enter && typed == "/" + matches[selected.coerceIn(0, matches.lastIndex)].name) -> {
+                            pick(matches[selected.coerceIn(0, matches.lastIndex)])
+                            true
+                        }
+                        // Enter sends; Shift+Enter is a new line.
+                        event.key == Key.Enter && !event.isShiftPressed -> {
+                            send()
+                            true
+                        }
+                        // Pasting a screenshot or image files attaches them; pasting text goes on as usual.
+                        event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) && attachments.clipboardHasImage() -> {
+                            scope.launch { attachments.pasteFromClipboard() }
+                            true
+                        }
+                        else -> false
+                    }
+                },
+        shape = EditFieldBorder,
+        textStyle = ChatTextStyle,
+        maxLines = 10,
+        placeholder = { Text(stringRes(Res.string.claude_code_message_hint, LocalAgentName.current), color = MaterialTheme.colorScheme.placeholderText) },
+        colors =
+            TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        leadingIcon = {
+            val attach = stringRes(Res.string.claude_code_attach)
+            HoverTooltip(attach) {
+                IconButton(onClick = { scope.launch { attachments.add(pickFiles(pickTitle, multiple = true, ImageInput.EXTENSIONS)) } }) {
+                    Icon(MaterialSymbols.AddPhotoAlternate, contentDescription = attach, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(22.dp))
+                }
+            }
+        },
+        trailingIcon = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (busy) {
+                    HoverTooltip(stringRes(Res.string.claude_code_stop)) {
+                        IconButton(onClick = onStop) {
+                            Box(Modifier.size(32.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), CircleShape), contentAlignment = Alignment.Center) {
+                                Icon(MaterialSymbols.Stop, contentDescription = stringRes(Res.string.claude_code_stop), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+                ThinSendButton(isActive = canSend, modifier = Modifier) { send() }
+            }
+        },
+    )
+}
+
+/** Under the composer: the permission mode, and how full the context is. */
+@Composable
+private fun ComposerFooter(
+    state: ClaudeChatState,
+    onMode: (PermissionMode) -> Unit,
+    onModel: (String?) -> Unit,
+    modes: List<PermissionMode>,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The settings assistant asks before every change whatever the mode: no mode to pick.
+        if (state.kind != ChatKind.SETTINGS) ModeChip(state.permissionMode, onMode, modes.filter { it in PICKABLE_MODES })
+        ModelChip(state, onModel)
+        Spacer(Modifier.weight(1f))
+        val used = state.contextTokens
+        val window = state.contextWindow
+        if (used != null && window != null && window > 0) ContextMeter(used, window)
+    }
+}
+
+/**
+ * How much of the model's context the conversation fills. Near full, Claude Code summarizes
+ * the conversation to go on, and details from early on can be lost.
+ */
+@Composable
+private fun ContextMeter(
+    used: Long,
+    window: Long,
+) {
+    val fraction = (used.toFloat() / window).coerceIn(0f, 1f)
+    val percent = (fraction * 100).toInt()
+    val color =
+        when {
+            fraction >= 0.85f -> MaterialTheme.colorScheme.error
+            fraction >= 0.6f -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.grayText
+        }
+    HoverTooltip(stringRes(Res.string.claude_code_context_tooltip, compactCount(used), compactCount(window))) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(
+                progress = { fraction.coerceAtLeast(0.02f) },
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 2.dp,
+                color = color,
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (percent == 0 && used > 0) stringRes(Res.string.claude_code_context_used_little) else stringRes(Res.string.claude_code_context_used, percent),
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+            )
+        }
+    }
+}
+
+/** 950, 12.4k, 1.2M: counts that fit a narrow bar. */
+internal fun compactCount(n: Long): String =
+    when {
+        n < 1_000 -> n.toString()
+        n < 10_000 -> "%.1fk".format(n / 1_000.0).replace(".0k", "k")
+        n < 1_000_000 -> "${n / 1_000}k"
+        else -> "%.1fM".format(n / 1_000_000.0).replace(".0M", "M")
+    }
+
+/** In place of the composer while a terminal holds the session: why, and the way to go on. */
+@Composable
+private fun OpenElsewhereBar(onFork: () -> Unit) {
+    // Side by side on a wide window; stacked on a narrow one, where the text would wrap to a column.
+    val wide = LocalScreenLayout.current.isLargeScreen
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp),
+    ) {
+        val note: @Composable (Modifier) -> Unit = { modifier ->
+            Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringRes(Res.string.claude_code_open_elsewhere_readonly), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+            }
+        }
+        val fork: @Composable () -> Unit = {
+            FilledTonalButton(onClick = onFork) {
+                Icon(MaterialSymbols.ForkRight, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(InlineGap))
+                Text(stringRes(Res.string.claude_code_fork))
+            }
+        }
+        if (wide) {
+            Row(Modifier.padding(start = CardPadding, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                note(Modifier.weight(1f))
+                Spacer(Modifier.width(InlineGap))
+                fork()
+            }
+        } else {
+            Column(Modifier.padding(start = CardPadding, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(InlineGap)) {
+                note(Modifier)
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { fork() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeChip(
+    mode: PermissionMode,
+    onMode: (PermissionMode) -> Unit,
+    modes: List<PermissionMode>,
+) {
+    var open by remember { mutableStateOf(false) }
+    // The mode decides what Claude may do unasked: the more it may, the louder the chip.
+    val color =
+        when (mode) {
+            PermissionMode.AUTO, PermissionMode.BYPASS -> MaterialTheme.colorScheme.error
+            PermissionMode.ACCEPT_EDITS -> MaterialTheme.colorScheme.tertiary
+            PermissionMode.PLAN -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.grayText
+        }
+    Box {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(color.copy(alpha = 0.12f))
+                .clickable { open = true }
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.Security, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(modeLabel(mode), style = MaterialTheme.typography.labelMedium, color = color)
+            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        }
+        RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            RoundedMenuSection {
+                modes.forEach { option ->
+                    MenuRow(
+                        title = modeLabel(option),
+                        description = modeDescription(option),
+                        selected = option == mode,
+                    ) {
+                        open = false
+                        onMode(option)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun MenuRow(
+    title: String,
+    description: String? = null,
+    selected: Boolean = false,
+    enabled: Boolean = true,
+    descriptionMaxLines: Int = Int.MAX_VALUE,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .widthIn(min = 220.dp, max = 340.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
+            )
+            description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = descriptionMaxLines, overflow = TextOverflow.Ellipsis) }
+        }
+        if (selected) {
+            Spacer(Modifier.width(8.dp))
+            Icon(MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun ChatMenu(
+    canRunApp: Boolean,
+    canEnd: Boolean,
+    onRename: () -> Unit,
+    onRunApp: () -> Unit,
+    onEnd: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null) }
+        RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            RoundedMenuSection {
+                MenuRow(stringRes(Res.string.rename)) {
+                    open = false
+                    onRename()
+                }
+                MenuRow(stringRes(Res.string.claude_code_run_app), enabled = canRunApp) {
+                    open = false
+                    onRunApp()
+                }
+                MenuRow(stringRes(Res.string.claude_code_end_session), enabled = canEnd) {
+                    open = false
+                    onEnd()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorBanner(error: ChatError) {
+    when (error) {
+        ChatError.NotInstalled -> Banner(stringRes(Res.string.claude_code_not_installed))
+        is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, LocalAgentName.current, error.message ?: ""))
+        ChatError.FolderGone -> Banner(stringRes(Res.string.claude_code_folder_gone))
+        ChatError.HeldElsewhere -> Banner(stringRes(Res.string.claude_code_open_elsewhere_readonly))
+        is ChatError.CloneFailed -> Banner(stringRes(Res.string.claude_code_workspace_clone_failed, error.message ?: ""))
+        is ChatError.Exited ->
+            Column {
+                Banner(stringRes(Res.string.claude_code_error_exited, LocalAgentName.current, error.code?.toString() ?: "?"))
+                if (error.stderr.isNotBlank()) Box(Modifier.padding(horizontal = 16.dp)) { CodeBlock(error.stderr, maxHeight = 160) }
+            }
+    }
+}
+
+internal val PICKABLE_MODES = listOf(PermissionMode.DEFAULT, PermissionMode.ACCEPT_EDITS, PermissionMode.PLAN, PermissionMode.AUTO)
+
+/** A new session's mode: Auto where the agent has it (Claude Code), else asking first. */
+internal fun defaultModeOf(modes: List<PermissionMode>): PermissionMode = if (PermissionMode.AUTO in modes) PermissionMode.AUTO else PermissionMode.DEFAULT
+
+@Composable
+internal fun modeLabel(mode: PermissionMode): String =
+    when (mode) {
+        PermissionMode.ACCEPT_EDITS -> stringRes(Res.string.claude_code_mode_accept_edits)
+        PermissionMode.PLAN -> stringRes(Res.string.claude_code_mode_plan)
+        PermissionMode.AUTO -> stringRes(Res.string.claude_code_mode_auto)
+        else -> stringRes(Res.string.claude_code_mode_default)
+    }
+
+@Composable
+internal fun modeDescription(mode: PermissionMode): String =
+    when (mode) {
+        PermissionMode.ACCEPT_EDITS -> stringRes(Res.string.claude_code_mode_accept_edits_desc)
+        PermissionMode.PLAN -> stringRes(Res.string.claude_code_mode_plan_desc)
+        PermissionMode.AUTO -> stringRes(Res.string.claude_code_mode_auto_desc)
+        else -> stringRes(Res.string.claude_code_mode_default_desc)
+    }

@@ -31,10 +31,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 fun CloseButton(
     onPress: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     OutlinedButton(
         onClick = onPress,
         modifier = modifier,
+        enabled = enabled,
         contentPadding = PaddingValues(horizontal = Size5dp),
     ) {
         CloseIcon()

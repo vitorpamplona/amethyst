@@ -24,6 +24,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip34Git.git.GitObject
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -136,6 +138,25 @@ class GitProposalViewModel(
         content: String,
         message: String,
     ) = launchWork { proposals.proposeEdit(target, sourceClones, branch, parent, mapOf(path to content.encodeToByteArray()), message, "") }
+
+    /** Opens (or, with [pullRequest], updates) a pull request of commits that exist only on this computer. */
+    fun publishFromLocal(
+        target: GitProposalTarget,
+        pullRequest: Note?,
+        objects: suspend () -> List<GitObject>,
+        tip: String,
+        mergeBase: String?,
+        sourceBranch: String?,
+        title: String,
+        description: String,
+    ) = launchWork {
+        val prHint = pullRequest?.let { it.toEventHint<GitPullRequestEvent>() ?: return@launchWork GitProposalResult.Failed("not a pull request") }
+        if (prHint != null) {
+            proposals.updatePullRequestFromLocal(prHint, target, objects(), tip, mergeBase)
+        } else {
+            proposals.openPullRequestFromLocal(target, objects(), tip, mergeBase, title, description, branchName = sourceBranch)
+        }
+    }
 
     fun reset() {
         if (_state.value !is GitProposalUiState.Working) _state.value = GitProposalUiState.Idle

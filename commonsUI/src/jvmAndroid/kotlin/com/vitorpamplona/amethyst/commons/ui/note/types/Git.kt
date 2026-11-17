@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTriageBar
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.MarkGitItemRead
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.WorkWithClaudeButton
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitThreadRoot
@@ -702,6 +703,7 @@ private fun RenderGitIssueEvent(
         if (!makeItShort && isGitThreadRoot(note)) {
             GitTriageBar(note, accountViewModel)
             GitStatusActions(note, accountViewModel)
+            noteEvent.repositoryAddress()?.let { WorkWithClaudeButton(it, nav, issueId = note.idHex) }
         }
     }
 }
@@ -806,6 +808,7 @@ private fun RenderGitPullRequestEvent(
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
             val repositoryNote = remember(noteEvent) { noteEvent.repositoryAddress()?.let { LocalCache.getOrCreateAddressableNote(it) } }
             GitPullRequestUpdateButton(note, repositoryNote, currentCommit, cloneUrls, accountViewModel, nav)
+            noteEvent.repositoryAddress()?.let { WorkWithClaudeButton(it, nav, proposalId = note.idHex) }
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)

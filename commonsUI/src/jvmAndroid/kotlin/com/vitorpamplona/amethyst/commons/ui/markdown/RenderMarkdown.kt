@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.markdown
 
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
@@ -53,6 +55,10 @@ fun RenderMarkdown(
     modifier: Modifier = Modifier,
     fontScale: Float = 1.0f,
     highlightedTexts: List<String> = emptyList(),
+    /** Spacing, code and heading styles; the library's defaults when null. */
+    style: RichTextStyle? = null,
+    /** The body text style; the surrounding one when null. */
+    textStyle: TextStyle? = null,
 ) {
     val processedContent =
         remember(content, highlightedTexts) {
@@ -105,11 +111,14 @@ fun RenderMarkdown(
         LocalUriHandler provides uriHandler,
         LocalDensity provides scaledDensity,
     ) {
-        RichText(
-            modifier = modifier,
-            style = RichTextStyle(),
-        ) {
-            BasicMarkdown(astNode)
+        val render: @Composable () -> Unit = {
+            RichText(
+                modifier = modifier,
+                style = style ?: RichTextStyle(),
+            ) {
+                BasicMarkdown(astNode)
+            }
         }
+        if (textStyle != null) ProvideTextStyle(textStyle, render) else render()
     }
 }

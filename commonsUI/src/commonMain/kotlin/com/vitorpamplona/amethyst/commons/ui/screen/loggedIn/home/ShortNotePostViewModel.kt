@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
@@ -97,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
+import com.vitorpamplona.amethyst.commons.util.ownNotice
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -114,6 +116,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -172,6 +175,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -179,7 +183,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okio.Path
+import kotlin.concurrent.Volatile
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -1121,11 +1127,84 @@ open class ShortNotePostViewModel :
     }
 
     /**
-     * Uploads the attached files, then publishes. False when an upload failed: nothing was posted,
-     * the text and the files are as they were, and the failed file says why; Post tries again and
-     * resends only what failed. True when the composer is done (posted, or had nothing to post).
+     * True from the moment Post is pressed until the note is signed and on its way (or queued
+     * for mining), or until that fails. Meanwhile the Post button shows a spinner and the composer
+     * can be neither edited nor closed: what is shown is exactly what is being sent, and its text
+     * has nowhere else to go if the signer does not sign it (a draft needs the same signer).
+     * Afterwards Post comes back, so a post the signer did not sign can be sent again.
      */
-    suspend fun sendPostSync(): Boolean {
+    var isPosting by mutableStateOf(false)
+        private set
+
+    // An auto-save that came due while posting and was skipped, owed to the draft if the post
+    // does not go out.
+    @Volatile private var draftSaveSkipped = false
+
+    /**
+     * Which press of Post [isPosting] belongs to, counted up by [tryStartPosting]. The coroutine of
+     * a post ends it with [postingJobFinished] and this number, so a post pressed again once the
+     * first failed is not ended by the first one's coroutine finishing a moment later.
+     */
+    @Volatile var postingGeneration = 0
+        private set
+
+    /** Marks the composer as posting. False when a post is already under way. UI thread only. */
+    fun tryStartPosting(): Boolean {
+        if (isPosting) return false
+        postingGeneration++
+        isPosting = true
+        draftSaveSkipped = false
+        return true
+    }
+
+    /**
+     * Ends posting once the coroutine started for it has finished, in case it never got to run
+     * [sendPostSync] (its scope already gone), which would leave the composer locked. Only the post
+     * it was started for: [generation] is [postingGeneration] read when Post was pressed. Any thread.
+     */
+    fun postingJobFinished(generation: Int) {
+        if (isPosting && generation == postingGeneration) isPosting = false
+    }
+
+    /**
+     * Sends the note started by [tryStartPosting]. Returns true once it has left the composer,
+     * which is then cleared. Returns false when it was not sent: the text stays and, when the signer
+     * did not sign it, the user is told why (a NIP-46 bunker that is offline only gives up after its
+     * request timeout and one retry, and launchSigner would just log that).
+     *
+     * The composer is cleared, [isPosting] ends and [onSent] runs in one UI-thread step, so nothing
+     * (a Close in particular) can land between the post going out and the composer leaving.
+     */
+    suspend fun sendPostSync(onSent: () -> Unit = {}): Boolean {
+        var sent = false
+        try {
+            sent = publishPost()
+        } catch (e: SignerExceptions) {
+            Log.w("ShortNotePostViewModel", "Post not sent: the signer did not sign it", e)
+            accountViewModel.notices.notify(e.ownNotice() ?: PostNotSent.of(e))
+        } finally {
+            withContext(NonCancellable) {
+                onUiThread {
+                    isPosting = false
+                    if (sent) {
+                        cancel()
+                        try {
+                            onSent()
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.w("ShortNotePostViewModel", "Post sent, but leaving the composer failed", e)
+                        }
+                    }
+                }
+            }
+            if (!sent && draftSaveSkipped) draftTag.newVersion()
+        }
+        return sent
+    }
+
+    private suspend fun publishPost(): Boolean {
+        // Upload the attached files first. One that fails says why on its card and nothing is
+        // posted: the text and the files stay, and Post resends only what failed.
         val uploaded =
             media.uploadAll(
                 defaultServer = account.settings.defaultFileServer,
@@ -1137,24 +1216,19 @@ open class ShortNotePostViewModel :
             ) { result, options -> attach(result, options.altOrNull, options.contentWarningReason) }
         if (!uploaded) return false
         urlPreviews.update(MediaMarkers.strip(message.text.toString()))
-        publishPostSync()
-        return true
-    }
 
-    private suspend fun publishPostSync() {
         // Upload voice message first if it hasn't been uploaded yet
         if (voiceRecording != null && voiceMetadata == null) {
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
-            uploadVoiceMessageSync(
-                serverToUse,
-            ) { _, _ -> } // Error handling is done by checking voiceMetadata below
+            uploadVoiceMessageSync(serverToUse) { title, message ->
+                accountViewModel.toastManager.toast(title, message)
+            }
 
-            // Abort if upload failed - don't post without voice data
+            // Not uploaded: don't post without the voice data. The recording stays, so Post can
+            // try the upload again; cancel() deletes its files once the composer is done with it.
             if (voiceMetadata == null) {
-                Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
-                deleteVoiceLocalFile()
-                voiceAnonymization.deleteDistortedFiles()
-                return
+                Log.w("ShortNotePostViewModel", "Voice upload failed, post not sent")
+                return false
             }
             // Update default server if voice message was successfully uploaded
             voiceSelectedServer?.let {
@@ -1162,15 +1236,16 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val template = createTemplate() ?: return
+        val template = createTemplate() ?: return false
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
 
         // A mined post leaves the phone minutes after this returns — much later if the
         // app is backgrounded and frozen — and the draft is its only user-visible copy
-        // until then. The auto-save is debounced and cancel() below drops the pending
-        // save, so the last second of typing would never reach it: flush it now.
+        // until then. The auto-save is debounced and skipped while posting, and cancel()
+        // below drops the pending save, so the last second of typing would never reach it:
+        // flush it now.
         // A private note mines its gift wraps, not the kind-1 itself.
         val minedKind = if (wantsPrivateNote && template.kind == TextNoteEvent.KIND) GiftWrapEvent.KIND else template.kind
         if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
@@ -1184,8 +1259,26 @@ open class ShortNotePostViewModel :
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
-        onUiThread { cancel() }
 
+        // When the post is not mined, the signer signs inside sendTemplate, and one that times out
+        // or refuses throws out of it before sendPostSync clears the composer.
+        sendTemplate(template, chosenPow, draftToDelete, anonymous, scheduledFor, privately, threadTarget)
+        return true
+    }
+
+    /**
+     * Signs (or queues for mining) and dispatches [template] down the path the composer chose.
+     * Throws when the signer does not sign an event it signs inline.
+     */
+    private suspend fun sendTemplate(
+        template: EventTemplate<out Event>,
+        chosenPow: Int?,
+        draftToDelete: AddressableNote?,
+        anonymous: Boolean,
+        scheduledFor: Long?,
+        privately: Boolean,
+        threadTarget: GroupThreadTarget?,
+    ) {
         // Draft deletion lives INSIDE each publish continuation: when the post
         // is mined first, the draft must survive until the mined event is
         // actually signed and dispatched — a cancelled or process-killed
@@ -1323,6 +1416,15 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendDraftSync() {
+        // The post being sent owns the text now. A draft saved meanwhile could land after the post
+        // deletes its draft and outlive it. If the post fails, sendPostSync asks for this save again.
+        if (isPosting) {
+            draftSaveSkipped = true
+            // Posting may have ended between the check and the flag, after sendPostSync looked at
+            // it: then nobody will ask again, so save now.
+            if (isPosting) return
+        }
+
         val text = message.text.toString()
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
@@ -1855,17 +1957,17 @@ open class ShortNotePostViewModel :
                     }
                 }
 
+                // The recording is kept on failure, so posting again retries the upload.
                 is UploadingState.Error -> {
                     onError(uploadErrorTitle, uploadVoiceFailed)
-                    voiceRecording = null
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError(
                 uploadErrorTitle,
                 loadStringRes(Res.string.upload_error_voice_message_exception, e.message ?: e::class.simpleName.orEmpty()),
             )
-            voiceRecording = null
         } finally {
             isUploadingVoice = false
             voiceOrchestrator = null

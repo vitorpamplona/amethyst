@@ -132,25 +132,22 @@ class TabsModel(
     }
 
     /**
-     * Closes the tab (or moved-out window) [id]: the active tab moves to its opener, else to its
-     * left neighbour. The last tab is replaced by Home.
+     * Closes the tab (or moved-out window) [entry]: the active tab moves to its opener, else to
+     * its left neighbour. The last tab is replaced by Home.
      */
-    override fun close(id: Long): Boolean {
-        val index = tabs.indexOfFirst { it.id == id }
-        if (index < 0) return false
-        val closing = tabs[index]
-        val opener = openerOf(closing)
+    override fun remove(entry: NavStackEntry) {
+        val index = tabs.indexOf(entry)
+        val opener = openerOf(entry)
         tabs.removeAt(index)
-        pinned.remove(id)
-        detached.remove(id)
-        forget(closing)
+        pinned.remove(entry.id)
+        detached.remove(entry.id)
+        forget(entry)
         if (tabs.none(::isMainScreen)) {
             tabs.add(0, ids.entry(Route.Home, tabRoute = Route.Home).also { pinned[it.id] = true })
         }
         if (tabs.none { it.id == activeId && isMainScreen(it) }) {
             activeId = (opener?.takeIf(::isMainScreen) ?: tabs.getOrNull(index - 1)?.takeIf(::isMainScreen) ?: tabs.first(::isMainScreen)).id
         }
-        return true
     }
 
     /** Closes every tab but [id] and the pinned ones. */
