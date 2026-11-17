@@ -105,6 +105,11 @@ class QuicWebTransportFactory(
      */
     private val webTransportSubProtocols: List<String> =
         listOf(MoqLiteAlpn.LITE_04, MoqLiteAlpn.LITE_03),
+    /**
+     * Sent as the `user-agent` header of the Extended CONNECT request, so the relay sees the
+     * same app name every other request of the app carries. Null sends none.
+     */
+    private val userAgent: String? = null,
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -198,12 +203,7 @@ class QuicWebTransportFactory(
 
             // Open the Extended CONNECT request stream.
             val requestStream = conn.openBidiStream()
-            val extraHeaders =
-                if (webTransportSubProtocols.isNotEmpty()) {
-                    listOf("wt-available-protocols" to encodeSfStringList(webTransportSubProtocols))
-                } else {
-                    emptyList()
-                }
+            val extraHeaders = connectExtraHeaders()
             val headers = buildExtendedConnectHeaders(authority, path, bearerToken, extraHeaders)
             requestStream.send.enqueue(encodeHeadersFrame(headers))
             driver.wakeup()
@@ -376,6 +376,17 @@ class QuicWebTransportFactory(
         // moq-lite values are bare ASCII; just strip the quotes.
         return firstItem.substring(1, firstItem.length - 1)
     }
+
+    /**
+     * The headers the Extended CONNECT request carries after the pseudo-headers and
+     * `authorization`: the sub-protocols it offers and the app's [userAgent]. HTTP/3 field names
+     * are lowercase (RFC 9114 §4.2).
+     */
+    internal fun connectExtraHeaders(): List<Pair<String, String>> =
+        buildList {
+            if (webTransportSubProtocols.isNotEmpty()) add("wt-available-protocols" to encodeSfStringList(webTransportSubProtocols))
+            if (!userAgent.isNullOrBlank()) add("user-agent" to userAgent)
+        }
 
     /**
      * Encode [items] as an RFC 8941 Structured Field List of bare strings

@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1795,7 +1796,7 @@ class AmethystAppFunctions {
         // Compute the LNURL-pay endpoint so we can ask the privacy-aware
         // HttpClient builder for the right OkHttpClient for that host.
         val endpointUrl =
-            LightningAddressResolver(httpClient = okhttp3.OkHttpClient()).assembleUrl(lnAddress)
+            LnurlForm.toUrl(lnAddress)
                 ?: throw AppFunctionInvalidArgumentException("Couldn't resolve LN address '$lnAddress' to an LNURL-pay URL.")
         val client = Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForMoney(endpointUrl)
         val resolver = LightningAddressResolver(httpClient = client)

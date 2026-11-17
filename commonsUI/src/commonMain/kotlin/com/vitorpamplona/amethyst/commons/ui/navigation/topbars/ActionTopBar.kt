@@ -58,6 +58,7 @@ fun ActionTopBar(
     onCancel: () -> Unit,
     onPost: () -> Unit,
     isBusy: () -> Boolean = { false },
+    canCancel: () -> Boolean = { true },
     additionalActions: @Composable (() -> Unit)? = null,
 ) = ActionTopBar(
     postLabel = stringRes(postRes),
@@ -66,14 +67,16 @@ fun ActionTopBar(
     onCancel = onCancel,
     onPost = onPost,
     isBusy = isBusy,
+    canCancel = canCancel,
     additionalActions = additionalActions,
 )
 
 /**
  * A composer's top bar: Close on the left, the title in the middle, and the main action on the
  * right, labelled [postLabel] for a label worked out at the call site (a plural, a count). While
- * [isBusy] the action shows a spinner instead of its label and cannot be pressed again. In a
- * composer's dialog, on a platform with windows, a Pop out button moves it to a window of its own.
+ * [isBusy] the action shows a spinner instead of its label and cannot be pressed again. Close
+ * is greyed out while [canCancel] is false. In a composer's dialog, on a platform with windows, a
+ * Pop out button moves it to a window of its own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +87,7 @@ fun ActionTopBar(
     onCancel: () -> Unit,
     onPost: () -> Unit,
     isBusy: () -> Boolean = { false },
+    canCancel: () -> Boolean = { true },
     additionalActions: @Composable (() -> Unit)? = null,
 ) {
     ShorterTopAppBar(
@@ -102,6 +106,7 @@ fun ActionTopBar(
             CloseButton(
                 modifier = HalfHorzPadding,
                 onPress = onCancel,
+                enabled = canCancel(),
             )
         },
         actions = {
@@ -143,12 +148,17 @@ fun PostingTopBar(
     // A private note is not posted, it is sealed and delivered to a named set of
     // people. The button says which of the two is about to happen.
     postRes: StringResource = Res.string.post,
+    // While true the button shows a spinner and cannot be pressed again, and Close is greyed out:
+    // a post on its way keeps the composer open.
+    isBusy: () -> Boolean = { false },
 ) = ActionTopBar(
     titleRes = titleRes,
     postRes = postRes,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,
+    isBusy = isBusy,
+    canCancel = { !isBusy() },
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

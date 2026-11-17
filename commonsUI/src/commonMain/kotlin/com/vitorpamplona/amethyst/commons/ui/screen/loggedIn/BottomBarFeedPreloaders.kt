@@ -217,6 +217,8 @@ private fun PreloadFor(
         NavBarItem.NOSTR_SIGNER,
         NavBarItem.FAVORITE_ALGO_FEEDS,
         NavBarItem.SETTINGS,
+        // Local sessions on this computer, no relay feed.
+        NavBarItem.CLAUDE_CODE,
         -> Unit
     }
 }

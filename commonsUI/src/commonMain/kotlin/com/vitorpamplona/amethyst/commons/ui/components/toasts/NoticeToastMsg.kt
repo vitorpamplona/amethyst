@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 
@@ -41,6 +42,6 @@ class NoticeToastMsg(
 private fun UserNotice.severity(): ToastSeverity =
     when (this) {
         Bolt12OfferNotice.PaymentSent, ConcordNotice.ChannelKeyRotated, is CashuRedeemNotice.Redeemed -> ToastSeverity.INFO
-        is SignerNotice.Failed, is ActionFailed -> ToastSeverity.ERROR
+        is SignerNotice.Failed, is ActionFailed, is PostNotSent -> ToastSeverity.ERROR
         else -> ToastSeverity.WARNING
     }

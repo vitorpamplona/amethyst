@@ -52,7 +52,7 @@ internal class NestViewModelFactory(
             // function reference must be passed explicitly to the
             // `httpClient` slot rather than as the first positional arg.
             httpClient = OkHttpNestsClient(httpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForVideo),
-            transport = QuicWebTransportFactory(),
+            transport = QuicWebTransportFactory(userAgent = Amethyst.instance.appAgent),
             decoderFactory = { channelCount, sampleRate ->
                 MediaCodecOpusDecoder(channelCount = channelCount, sampleRate = sampleRate)
             },

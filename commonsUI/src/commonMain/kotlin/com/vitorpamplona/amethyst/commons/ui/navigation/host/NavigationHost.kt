@@ -145,7 +145,9 @@ fun NavigationHost(
         key(entry.id) {
             ComposerDialog(
                 size = size,
-                onDismissRequest = { currentNavFor.value(entry).popBack() },
+                // Esc reaches the dialog before the composer's own back handler: a composer whose post
+                // is still waiting for the signer holds itself open, and stays.
+                onDismissRequest = { if (!entry.isHeldOpen()) currentNavFor.value(entry).popBack() },
                 popOut = popOut?.let { { it(entry) } },
             ) {
                 content.Content()

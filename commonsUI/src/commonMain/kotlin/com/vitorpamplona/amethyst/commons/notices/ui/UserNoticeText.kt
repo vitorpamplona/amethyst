@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.NwcFailure
+import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
 import com.vitorpamplona.amethyst.commons.notices.ResolvedNotice
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
@@ -112,6 +113,10 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_not_supported
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
+import com.vitorpamplona.amethyst.commons.resources.post_not_sent_signer_failed
+import com.vitorpamplona.amethyst.commons.resources.post_not_sent_signer_refused
+import com.vitorpamplona.amethyst.commons.resources.post_not_sent_signer_timed_out
+import com.vitorpamplona.amethyst.commons.resources.post_not_sent_title
 import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
@@ -223,6 +228,18 @@ fun UserNotice.text(): NoticeText =
         is SignerNotice.Failed ->
             NoticeText(Res.string.signer_not_found_exception, str(Res.string.signer_illegal_state_exception_description), cause)
         is ActionFailed -> NoticeText(Res.string.action_failed_title, str(Res.string.action_failed_description), cause)
+        is PostNotSent ->
+            NoticeText(
+                Res.string.post_not_sent_title,
+                str(
+                    when (reason) {
+                        PostNotSent.Reason.SignerTimedOut -> Res.string.post_not_sent_signer_timed_out
+                        PostNotSent.Reason.SignerRefused -> Res.string.post_not_sent_signer_refused
+                        PostNotSent.Reason.SignerFailed -> Res.string.post_not_sent_signer_failed
+                    },
+                ),
+                cause,
+            )
 
         EmojiListNotice.NotLoaded -> text(Res.string.emoji_list_not_loaded_title, Res.string.emoji_list_not_loaded_description)
 

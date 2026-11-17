@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,8 +60,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -106,9 +109,11 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.submitOnCtrlEnter
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.HoldOpenWhile
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -245,20 +250,37 @@ internal fun NewPostScreenInner(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    PlatformBackHandler {
-        accountViewModel.launchSigner {
-            postViewModel.sendDraftSync()
-            onUiThread { postViewModel.cancel() }
+    val focusManager = LocalFocusManager.current
+
+    val onClose: () -> Unit = {
+        // Does nothing while posting: the composer must stay open (see isPosting).
+        if (!postViewModel.isPosting) {
+            // uses the accountViewModel scope to avoid cancelling this
+            // function when the postViewModel is released
+            accountViewModel.launchSigner {
+                postViewModel.sendDraftSync()
+                onUiThread { postViewModel.cancel() }
+            }
+            nav.popBack()
         }
-        nav.popBack()
     }
 
+    PlatformBackHandler(onBack = onClose)
+    // Its tab or window can't be closed either, by its × or the tab menu: that would drop the text too.
+    HoldOpenWhile(postViewModel) { postViewModel.isPosting }
+
     val onPost: () -> Unit = {
-        // uses the accountViewModel scope to avoid cancelling this
-        // function when the postViewModel is released
-        accountViewModel.launchSigner {
-            postViewModel.sendPostSync()
-            nav.popBack()
+        if (postViewModel.tryStartPosting()) {
+            val generation = postViewModel.postingGeneration
+            // Read-only while posting, keyboard included: what is shown is what is being sent.
+            focusManager.clearFocus()
+            // uses the accountViewModel scope to avoid cancelling this
+            // function when the postViewModel is released
+            accountViewModel
+                .launchSigner {
+                    // Not sent: stay, with the text, so Post can be pressed again.
+                    postViewModel.sendPostSync(onSent = { nav.popBack() })
+                }.invokeOnCompletion { postViewModel.postingJobFinished(generation) }
         }
     }
 
@@ -269,15 +291,8 @@ internal fun NewPostScreenInner(
                 isActive = postViewModel::canPost,
                 postRes = if (postViewModel.wantsPrivateNote) Res.string.audience_send_privately else Res.string.post,
                 onPost = onPost,
-                onCancel = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendDraftSync()
-                        onUiThread { postViewModel.cancel() }
-                    }
-                    nav.popBack()
-                },
+                onCancel = onClose,
+                isBusy = { postViewModel.isPosting },
             )
         },
     ) { pad ->
@@ -288,10 +303,17 @@ internal fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePaddingSafe(),
         ) {
-            NewPostScreenBody(postViewModel, accountViewModel, nav)
+            // Read-only while posting: no taps, and no keyboard focus (Tab would reach the fields).
+            // Drags still pass, so the text can be scrolled.
+            Box(if (postViewModel.isPosting) Modifier.blockInteractions().refuseFocus() else Modifier) {
+                NewPostScreenBody(postViewModel, accountViewModel, nav)
+            }
         }
     }
 }
+
+/** Keeps keyboard focus out of everything inside, Tab included. */
+private fun Modifier.refuseFocus(): Modifier = focusProperties { onEnter = { cancelFocusChange() } }.focusGroup()
 
 @Composable
 private fun NewPostScreenBody(

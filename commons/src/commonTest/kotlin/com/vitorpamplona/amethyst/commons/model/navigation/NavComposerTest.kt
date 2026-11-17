@@ -300,6 +300,38 @@ class NavComposerTest {
     }
 
     @Test
+    fun aComposerWaitingOnItsPostStaysOpenOverTheTabs() {
+        val stacks = stacks(NavArrangement.TABS)
+        stacks.push(note)
+        val composer = stacks.tabs.overlays.single()
+        var posting = true
+        composer.holdOpen = { posting }
+
+        assertFalse(stacks.back())
+        assertFalse(stacks.close(composer.id))
+        // A place asked for from it opens, and the composer stays behind it with its post.
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Section, origin = composer.id))
+        assertEquals(listOf(composer), stacks.tabs.overlays.toList())
+
+        posting = false
+        assertTrue(stacks.close(composer.id))
+        assertTrue(stacks.tabs.overlays.isEmpty())
+    }
+
+    @Test
+    fun aPoppedOutComposerWaitingOnItsPostKeepsItsWindow() {
+        val stacks = stacks()
+        stacks.push(note)
+        val composer = stacks.top
+        stacks.popOut(composer.id)
+        composer.holdOpen = { true }
+
+        assertFalse(stacks.close(composer.id))
+        assertFalse(stacks.back(composer))
+        assertEquals(listOf(composer), stacks.windows())
+    }
+
+    @Test
     fun withoutDestinationsNothingIsAComposer() {
         val stacks = NavBackStacks().apply { changeArrangement(NavArrangement.TABS) }
         stacks.push(note)

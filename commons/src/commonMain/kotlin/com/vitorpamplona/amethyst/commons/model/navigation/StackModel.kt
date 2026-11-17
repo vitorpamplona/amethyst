@@ -119,7 +119,12 @@ class StackModel(
     }
 
     /** Closes the moved-out composer [id]; a screen in the stack is popped, not closed. */
-    override fun close(id: Long): Boolean = screenWindows.removeAll { it.id == id }
+    override fun close(id: Long): Boolean {
+        val window = screenWindows.firstOrNull { it.id == id } ?: return false
+        // A composer whose post is still waiting for the signer stays ([NavStackEntry.holdOpen]).
+        if (window.isHeldOpen()) return false
+        return screenWindows.remove(window)
+    }
 
     override fun shown(wide: Boolean): List<NavStackEntry> = stack.toList()
 

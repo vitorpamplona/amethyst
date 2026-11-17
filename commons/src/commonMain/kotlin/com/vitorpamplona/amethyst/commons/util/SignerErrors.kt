@@ -51,6 +51,19 @@ suspend inline fun <T> logSignerErrors(
     }
 
 /**
+ * The notice a signer failure is reported with wherever it happens: a read-only key, a missing
+ * signer app, or a decryption the user did not allow. Null for the answers that are only logged in
+ * general (a timeout, a refusal), which a caller can word for what it was doing.
+ */
+fun SignerExceptions.ownNotice(): SignerNotice? =
+    when (this) {
+        is SignerExceptions.ReadOnlyException -> SignerNotice.ReadOnly
+        is SignerExceptions.UnauthorizedDecryptionException -> SignerNotice.UnauthorizedDecryption
+        is SignerExceptions.SignerNotFoundException -> SignerNotice.SignerNotFound
+        else -> null
+    }
+
+/**
  * Runs [action] and tells the user, through [notices], why it failed when that is something they
  * can act on (a read-only key, a missing signer app, a refusal, data it could not use); quieter
  * signer answers are only logged. Cancellation still propagates.
@@ -71,27 +84,14 @@ suspend fun notifySignerErrors(
         // "JobCancellationException: StandaloneCoroutine was cancelled". Cancellation is not a
         // signer failure and must propagate for structured concurrency to work.
         throw e
-    } catch (_: SignerExceptions.ReadOnlyException) {
-        notices.notify(SignerNotice.ReadOnly)
-    } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
-        notices.notify(SignerNotice.UnauthorizedDecryption)
-    } catch (_: SignerExceptions.SignerNotFoundException) {
-        notices.notify(SignerNotice.SignerNotFound)
-    } catch (e: SignerExceptions.TimedOutException) {
-        Log.w(TAG, "TimedOutException", e)
-    } catch (e: SignerExceptions.NothingToDecrypt) {
-        Log.w(TAG, "NothingToDecrypt", e)
-    } catch (e: SignerExceptions.CouldNotPerformException) {
-        Log.w(TAG, "CouldNotPerformException", e)
-    } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-        Log.w(TAG, "ManuallyUnauthorizedException", e)
-    } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
-        Log.w(TAG, "AutomaticallyUnauthorizedException", e)
-    } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
-        Log.w(TAG, "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
     } catch (e: SignerExceptions) {
-        // Any other refusal (e.g. a bunker without the method): the signer's answer, not a crash.
-        Log.w(TAG, "SignerExceptions", e)
+        // A timeout, a refusal, a bunker without the method: the signer's answer, not a crash.
+        val notice = e.ownNotice()
+        if (notice != null) {
+            notices.notify(notice)
+        } else {
+            Log.w(TAG, e::class.simpleName ?: "SignerExceptions", e)
+        }
     } catch (e: IllegalStateException) {
         notices.notify(SignerNotice.Failed(e))
     } catch (e: IllegalArgumentException) {

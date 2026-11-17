@@ -419,8 +419,9 @@ interface NotePlatform {
     ) {}
 
     /**
-     * Plays back a voice message before it is sent: [localFile] while it is only on the device,
-     * else [voiceMetadata]'s URL. [onReRecord] replaces it with a new recording.
+     * Plays back a voice message before it is sent, from [localFile] only (there is nothing to play
+     * without it); [voiceMetadata] gives its duration and waveform. [onReRecord] replaces it with a
+     * new recording.
      */
     @Composable
     fun VoiceMessagePreview(
