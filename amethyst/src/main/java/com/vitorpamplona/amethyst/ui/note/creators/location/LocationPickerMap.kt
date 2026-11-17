@@ -36,7 +36,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
-import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -111,7 +110,7 @@ fun LocationPickerMap(
 
     val mapView =
         remember(context) {
-            Configuration.getInstance().userAgentValue = context.packageName
+            useAppUserAgentForMapTiles()
 
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)

@@ -40,6 +40,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -124,13 +125,22 @@ internal val MUTED_TILE_FILTER: ColorFilter =
     )
 
 /**
+ * Makes osmdroid's tile downloads send the app's User-Agent, the one every other request carries.
+ * OSM's tile servers reject osmdroid's default ("osmdroid") with HTTP 403. Call it before creating
+ * a MapView: osmdroid reads the value when it builds its tile downloader.
+ */
+fun useAppUserAgentForMapTiles() {
+    Configuration.getInstance().userAgentValue = Amethyst.instance.appAgent
+}
+
+/**
  * A small OpenStreetMap (osmdroid) preview centered on [latitude]/[longitude]
  * with a single pin at that point.
  *
  * Used by the Roadstr road event cards (kind 1315/1316) in place of a
  * reverse-geocoded city name. Tiles are fetched from the public OSM tile
- * servers, which requires the app's package name as the User-Agent (set on
- * [Configuration] below) — without it OSM returns HTTP 403.
+ * servers, which require a User-Agent naming the app ([useAppUserAgentForMapTiles])
+ * — osmdroid's default is rejected with HTTP 403.
  *
  * When [pinColor] and [pinEmoji] are supplied the marker becomes a colored
  * teardrop with the category emoji on it (see [roadEventPinBitmap]); otherwise
@@ -169,9 +179,8 @@ fun LocationPreviewMap(
 
     val mapView =
         remember(context) {
-            // Must be set before the MapView is created so OSM tile requests
-            // carry a valid User-Agent (the default "osmdroid" is rejected).
-            Configuration.getInstance().userAgentValue = context.packageName
+            // Before the MapView is created, so its tile requests carry it.
+            useAppUserAgentForMapTiles()
 
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)

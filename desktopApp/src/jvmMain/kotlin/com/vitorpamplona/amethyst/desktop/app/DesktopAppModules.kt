@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
@@ -209,6 +210,11 @@ class DesktopAppModules(
     private val startupLocalRelays: List<String> = emptyList(),
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
+
+    init {
+        // The napplet blob clients are built outside the factories below, so they take the agent here.
+        NappletBlobHttp.userAgent = appAgent
+    }
 
     private val exceptionHandler =
         CoroutineExceptionHandler { _, throwable ->

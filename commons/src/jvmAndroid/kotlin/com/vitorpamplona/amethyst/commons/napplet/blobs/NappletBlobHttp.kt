@@ -36,6 +36,7 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.Volatile
 
 /**
  * Shared Blossom-blob HTTP fetcher, used by the hosts' blob stores and the prefetcher on Android and
@@ -45,6 +46,15 @@ import java.util.concurrent.TimeUnit
  */
 object NappletBlobHttp {
     const val MAX_BLOB_BYTES = 20L * 1024 * 1024
+
+    /**
+     * The app's User-Agent, sent on every blob request that doesn't name one itself (the browser's
+     * downloads carry the WebView's). These clients are built outside the app's HTTP factories, and
+     * the sandboxed `:napplet` process has no app modules to ask, so each front end sets it once at
+     * startup, in every process, before the first client is built. Null sends OkHttp's default.
+     */
+    @Volatile
+    var userAgent: String? = null
 
     /**
      * An OkHttp client routed through the Tor SOCKS proxy when [proxyPort] > 0, else direct.
@@ -66,6 +76,16 @@ object NappletBlobHttp {
                 // the 10s read timeout) must not block the WebView worker thread that called serve()
                 // indefinitely.
                 .callTimeout(BLOB_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        userAgent?.let { agent ->
+            builder.addInterceptor { chain ->
+                val request = chain.request()
+                if (request.header(USER_AGENT) != null) {
+                    chain.proceed(request)
+                } else {
+                    chain.proceed(request.newBuilder().header(USER_AGENT, agent).build())
+                }
+            }
+        }
         if (proxyPort > 0) builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", proxyPort)))
         if (publicOnly) {
             builder
@@ -97,6 +117,7 @@ object NappletBlobHttp {
     }
 
     private const val BLOB_CALL_TIMEOUT_SECONDS = 45L
+    private const val USER_AGENT = "User-Agent"
 
     /** What one fetch brought: the body ([bytes], null when refused or failed) and how much of it came in. */
     class Download(
