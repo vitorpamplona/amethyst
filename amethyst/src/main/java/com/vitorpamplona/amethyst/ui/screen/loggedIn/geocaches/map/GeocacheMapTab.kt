@@ -66,10 +66,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.rememberM
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.creators.location.roadEventPinBitmap
+import com.vitorpamplona.amethyst.ui.note.creators.location.useAppUserAgentForMapTiles
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -118,7 +118,7 @@ fun GeocacheMapTab(
 
     val mapView =
         remember(context) {
-            Configuration.getInstance().userAgentValue = context.packageName
+            useAppUserAgentForMapTiles()
 
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
