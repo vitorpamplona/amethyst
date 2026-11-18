@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
@@ -29,7 +30,9 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -51,6 +54,7 @@ class ClaudeCodeChangesViewModelTest {
     private lateinit var tmp: File
     private lateinit var repo: File
     private lateinit var scope: CoroutineScope
+    private var viewModel: ClaudeCodeChangesViewModel? = null
 
     // One thread, as the UI's main thread is.
     private val main: ExecutorCoroutineDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
@@ -74,6 +78,13 @@ class ClaudeCodeChangesViewModelTest {
 
     @AfterTest
     fun tearDown() {
+        // Its reads come back to Main: they must end before Main goes, or they fail in a later test.
+        viewModel?.let {
+            runBlocking {
+                it.viewModelScope.coroutineContext.job
+                    .cancelAndJoin()
+            }
+        }
         scope.cancel()
         Dispatchers.resetMain()
         main.close()
@@ -112,6 +123,7 @@ class ClaudeCodeChangesViewModelTest {
                 )
             val chat = service.newChat(repo)
             val viewModel = withContext(main) { ClaudeCodeChangesViewModel(service, chat.key) }
+            this@ClaudeCodeChangesViewModelTest.viewModel = viewModel
 
             // Opens on what isn't committed: there is some.
             val uncommitted = viewModel.loaded(ChangesScope.Uncommitted)
