@@ -126,7 +126,7 @@ class DesktopGifEditTest {
         name: String,
     ): List<BufferedImage> {
         val out = File(dir, name).apply { mkdirs() }
-        ffmpeg("-i", gif.absolutePath, "-vsync", "0", File(out, "%03d.png").absolutePath)
+        ffmpeg("-i", gif.absolutePath, "-fps_mode", "passthrough", File(out, "%03d.png").absolutePath)
         return out.listFiles()!!.sortedBy { it.name }.map { ImageIO.read(it) }
     }
 
