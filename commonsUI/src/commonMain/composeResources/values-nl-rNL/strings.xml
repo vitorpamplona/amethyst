@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Welkom bij Amethyst</string>
-    <string name="login_subtitle">Meld je aan bij je Nostr-account</string>
-    <string name="login_subtitle_desktop">Een Nostr-client voor desktop</string>
-    <string name="login_card_title">Inloggen met je Nostr-sleutel</string>
-    <string name="login_card_subtitle">nsec voor volledige toegang, bunker:// voor remote signer, of npub voor alleen-lezen</string>
-    <string name="login_with_key">Inloggen met sleutel</string>
-    <string name="login_button">Inloggen</string>
-    <string name="login_generate_new">Nieuwe sleutel genereren</string>
-    <string name="login_generate_button">Nieuwe genereren</string>
-    <string name="login_key_hint">Voer je privésleutel (nsec) of openbare sleutel (npub) in</string>
-    <string name="login_key_label">nsec, bunker:// of npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Sleutel tonen</string>
-    <string name="login_hide_key">Sleutel verbergen</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">BELANGRIJK: Bewaar je sleutels!</string>
-    <string name="new_key_warning_message">Je geheime sleutel (nsec) is de ENIGE manier om toegang te krijgen tot je account. Als je hem kwijtraakt, is je account voorgoed weg. Bewaar hem op een veilige plek!</string>
-    <string name="new_key_public_label">Openbare sleutel (deelbaar):</string>
-    <string name="new_key_secret_label">Geheime sleutel (deel dit NOOIT!):</string>
-    <string name="new_key_continue_button">Ik heb mijn sleutels bewaard, doorgaan</string>
-    <string name="new_key_saved_checkbox">Ik heb mijn sleutels op een veilige plek bewaard</string>
-    <string name="new_key_copy_encrypted_button">Versleuteld kopiëren (aanbevolen)</string>
-    <string name="new_key_encrypt_password_label">Wachtwoord voor versleutelde back-up</string>
-    <string name="new_key_step_indicator">Stap %1$d van %2$d</string>
-    <string name="new_key_next">Volgende</string>
-    <string name="new_key_back">Terug</string>
-    <string name="new_key_cancel">Annuleren</string>
-    <string name="new_key_step_intro_title">Bewaar je sleutels voordat je verdergaat</string>
-    <string name="new_key_step_intro_npub">Je openbare sleutel (npub) is je deelbare adres. Geef hem gerust aan iedereen, zodat mensen je kunnen vinden en volgen.</string>
-    <string name="new_key_step_intro_nsec">Je geheime sleutel (nsec) is een wachtwoord dat NOOIT opnieuw ingesteld kan worden. Dit is de enige keer dat hij getoond wordt — bewaar hem nu, anders verlies je voorgoed de toegang tot dit account.</string>
-    <string name="new_key_keys_title">Jouw sleutels</string>
-    <string name="new_key_confirm_title">Nog één ding</string>
-    <string name="new_key_confirm_recap">Bewaar je geheime sleutel in een wachtwoordmanager. Raak je hem kwijt, dan kan niemand hem voor je herstellen.</string>
-    <string name="new_key_readonly_info">Dit is een alleen-lezen account. Er is geen geheime sleutel aangemaakt, dus er is niets om een back-up van te maken.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Back-up sleutels</string>
-    <string name="backup_keys_public_label">Openbare sleutel (npub)</string>
-    <string name="backup_keys_public_help">Je openbare sleutel kun je veilig delen. Geef hem aan mensen, zodat ze je kunnen vinden en volgen.</string>
-    <string name="backup_keys_show_qr">QR tonen</string>
-    <string name="backup_keys_hide_qr">QR verbergen</string>
     <string name="backup_keys_secret_label">Geheime sleutel (nsec)</string>
-    <string name="backup_keys_secret_warning">Je geheime sleutel is als een wachtwoord dat NOOIT opnieuw ingesteld of hersteld kan worden. Wie hem heeft, heeft voorgoed de controle over je account. Deel hem nooit; bewaar hem in een wachtwoordmanager.</string>
-    <string name="backup_keys_secret_hidden">Geheime sleutel is verborgen</string>
     <string name="backup_keys_reveal">Geheime sleutel tonen</string>
     <string name="backup_keys_hide">Geheime sleutel verbergen</string>
-    <string name="backup_keys_copy_plain">Geheime sleutel kopiëren</string>
-    <string name="backup_keys_copy_plain_warning">Kopieert de nsec in leesbare tekst. Plak hem alleen in een vertrouwde wachtwoordmanager.</string>
-    <string name="backup_keys_copy_encrypted">Versleuteld kopiëren (aanbevolen)</string>
-    <string name="backup_keys_encrypt_password_label">Wachtwoord voor versleutelde back-up</string>
-    <string name="backup_keys_encrypt_failed">Kon de sleutel niet versleutelen. Probeer het opnieuw.</string>
     <string name="backup_keys_external_signer">Dit account gebruikt een externe signer — hier wordt geen geheime sleutel bewaard.</string>
-    <string name="backup_keys_copied">Gekopieerd!</string>
     <string name="backup_keys_copy">Kopiëren</string>
-    <string name="backup_keys_unlock_title">Geheime sleutel tonen</string>
-    <string name="backup_keys_unlock_subtitle">Voer je privacyslot-wachtwoord in om je geheime sleutel te tonen.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Kopiëren</string>
     <string name="action_paste">Plakken</string>
     <string name="action_cancel">Annuleren</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Opslaan</string>
-    <string name="action_delete">Verwijderen</string>
-    <string name="action_share">Delen</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Ongeldig sleutelformaat. Controleer het en probeer opnieuw.</string>
-    <string name="error_network">Netwerkfout. Controleer je verbinding.</string>
-    <string name="error_generic">Er is een fout opgetreden. Probeer het opnieuw.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Vernieuwen</string>
     <string name="action_try_again">Opnieuw proberen</string>
@@ -124,8 +69,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">antwoordt op </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Waar het toegang toe heeft</string>
@@ -206,10 +149,7 @@
     <string name="geocache_verified_find">Geverifieerde vondst</string>
     <string name="geocache_invalid_proof">Bewijs klopt niet</string>
     <string name="geocache_loading">Cache laden…</string>
-    <string name="geocache_hidden_by">Verstopt door %1$s</string>
     <string name="geocache_navigate">Navigeren</string>
-    <string name="geocache_copy_coordinates">Coördinaten kopiëren</string>
-    <string name="geocache_coordinates_copied">Coördinaten gekopieerd</string>
     <string name="geocache_photos_section">Foto's</string>
     <string name="geocache_mission_section">Key Quest-missie</string>
     <string name="geocache_logs_section">Logs</string>
@@ -230,7 +170,6 @@
     <string name="geocache_archived_notice">Deze cache is gearchiveerd en doet niet meer mee.</string>
     <string name="geocache_ftf_won_by">Eerste vinder: %1$s</string>
     <string name="geocache_ftf_available">Eerste vinder is nog te winnen</string>
-    <string name="geocache_owner_actions">Eigenaar</string>
     <string name="geocache_owner_edit">Deze cache bewerken</string>
     <string name="geocache_owner_archive">Deze cache archiveren</string>
     <string name="geocache_owner_archive_confirm">Archiveer hem. Vinders zien dat hij niet meer meedoet, en de vermelding blijft leesbaar.</string>
@@ -242,7 +181,6 @@
     <string name="geocache_log_type_dnf">Niet gevonden</string>
     <string name="geocache_log_type_note">Notitie</string>
     <string name="geocache_log_type_maintenance">Onderhoud nodig</string>
-    <string name="geocache_log_title">Vondst loggen</string>
     <string name="geocache_log_cache_label">Cache</string>
     <string name="geocache_log_your_log">Jouw log</string>
     <string name="geocache_log_placeholder">Hoe ging het?</string>
@@ -264,11 +202,6 @@
     <string name="geocache_tab_hunts">Speurtochten</string>
     <string name="geocache_tab_finds">Vondsten</string>
     <string name="geocache_tab_mine">Van mij</string>
-    <string name="geocache_filter_unfound">Niet gevonden</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Met prijs</string>
-    <string name="geocache_filter_verified_only">Bewijs vereist</string>
     <string name="geocache_use_my_location">Mijn locatie gebruiken</string>
     <string name="geocache_sorted_by_distance">Gesorteerd op afstand</string>
     <string name="geocache_sorted_by_recent">Nieuwste eerst</string>
@@ -277,25 +210,17 @@
     <string name="geocache_empty_finds">Je hebt nog geen vondst gelogd.</string>
     <string name="geocache_empty_mine">Je hebt nog geen cache verstopt.</string>
     <string name="geocache_empty_hunts">Nog geen speurtochten.</string>
-    <string name="geocache_stat_finds">Vondsten</string>
-    <string name="geocache_stat_ftf">Eerste vondsten</string>
-    <string name="geocache_stat_verified">Geverifieerd</string>
-    <string name="geocache_stat_hidden">Verstopt</string>
-    <string name="geocache_map_recenter">Centreren op mij</string>
     <string name="geocache_map_long_press">Druk lang op de kaart om daar een cache te verstoppen</string>
     <string name="geocache_map_open">Openen</string>
     <string name="geocache_new_section_where">Waar</string>
     <string name="geocache_new_section_what">Wat</string>
     <string name="geocache_new_section_extras">Extra's</string>
     <string name="geocache_new_section_proof">Bewijs</string>
-    <string name="geocache_new_section_relays">Relays</string>
     <string name="geocache_new_location_warning">Dit publiceert een openbare locatie, nauwkeurig tot op ongeveer 5 meter. Iedereen op Nostr kan die zien, en een gepubliceerd event kan niet worden teruggehaald.</string>
     <string name="geocache_new_pick_location">Kies de plek</string>
     <string name="geocache_new_ladder">Publiceert %1$s, plus grovere cellen tot 3 tekens voor zoeken in de buurt.</string>
     <string name="geocache_new_name">Naam</string>
     <string name="geocache_new_description">Omschrijving</string>
-    <string name="geocache_new_type">Type</string>
-    <string name="geocache_new_size">Grootte</string>
     <string name="geocache_new_difficulty">Moeilijkheid</string>
     <string name="geocache_new_terrain">Terrein</string>
     <string name="geocache_new_hint">Hint</string>
@@ -305,10 +230,7 @@
     <string name="geocache_new_modifiers">Modifiers</string>
     <string name="geocache_new_require_proof">Bewijs van aanwezigheid vereisen</string>
     <string name="geocache_new_proof_ready">Er is een verificatiesleutel voor deze cache gegenereerd.</string>
-    <string name="geocache_new_log_relays">Waar vinders moeten loggen</string>
     <string name="geocache_new_publish">Publiceren</string>
-    <string name="geocache_new_needs_name">Geef de cache een naam.</string>
-    <string name="geocache_new_needs_location">Kies waar de cache verstopt is.</string>
     <string name="geocache_hunt_progress">%1$d van %2$d gevonden</string>
     <string name="geocache_hunt_start">Speurtocht starten</string>
     <plurals name="geocache_hunt_caches">
@@ -319,15 +241,10 @@
     <string name="geocache_hunt_description">Omschrijving</string>
     <string name="geocache_hunt_banner">Bannerafbeelding</string>
     <string name="geocache_hunt_pick_caches">Caches, op volgorde</string>
-    <string name="geocache_hunt_add_cache">Cache toevoegen</string>
     <string name="geocache_hunt_move_up">Omhoog</string>
     <string name="geocache_hunt_move_down">Omlaag</string>
     <string name="geocache_hunt_remove">Verwijderen</string>
-    <string name="geocache_hunt_theme">Paginathema</string>
-    <string name="geocache_hunt_map_style">Kaartstijl</string>
-    <string name="geocache_hunt_needs_title">Geef de speurtocht een titel.</string>
     <string name="geocache_hunt_needs_caches">Voeg minstens één cache toe.</string>
-    <string name="geocache_publish_failed">Publiceren mislukt. Controleer je relayverbinding en probeer het opnieuw.</string>
     <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
@@ -403,7 +320,6 @@
     <string name="qr_scanner_label_hex_key">Ruwe sleutel (publiek of privé)</string>
     <string name="qr_scanner_open_link">Link openen</string>
     <string name="qr_scanner_copy">Kopiëren</string>
-    <string name="qr_scanner_copied">Gekopieerd</string>
     <string name="qr_scanner_try_again">Opnieuw scannen</string>
     <string name="show_qr">Toon QR-code</string>
     <string name="profile_image">Profielfoto</string>
@@ -459,7 +375,6 @@
     <string name="quote">Citaat</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nieuw bedrag in sats</string>
-    <string name="and"> en </string>
     <string name="following">Volgend</string>
     <string name="followers">Volgers</string>
     <string name="number_following">%1$s volgend</string>
@@ -722,7 +637,6 @@
     <string name="channel_created">Kanaal aangemaakt</string>
     <string name="channel_information_changed_to">Kanaalinformatie gewijzigd in</string>
     <string name="new_public_chat">Een nieuwe publieke chat aanmaken</string>
-    <string name="marmot_group_no_messages_yet">Nog geen berichten</string>
     <string name="paid_relay">Betaalde relay</string>
     <string name="tor_relay">Forceer Tor bij verbinden</string>
     <string name="posts_received">berichten ontvangen</string>
@@ -961,36 +875,22 @@
     <string name="health_connect_rationale_limit_optional">De hele functie is optioneel. Trek de rechten op elk moment in via Health Connect — Mijn fitness gaat dan terug naar de uitnodiging — of zet de suggesties in het opstelscherm uit via Instellingen → Opstel-instellingen. De rest van Amethyst blijft werken.</string>
     <string name="health_connect_rationale_privacy_policy">Lees het volledige privacybeleid</string>
     <string name="my_fitness_title">Mijn fitness</string>
-    <string name="my_fitness_window">Afgelopen 4 weken</string>
     <string name="my_fitness_loading_metrics">Afstand, calorieën en hartslag laden…</string>
-    <string name="my_fitness_window_note">De laatste vier volledige weken van je training: de workouts die je hebt gepubliceerd, plus alles wat Health Connect op deze telefoon registreert. Amethyst berekent het overzicht op het apparaat en publiceert er niets van.</string>
     <string name="my_fitness_this_week">Deze week</string>
-    <string name="my_fitness_vs_last_week">t.o.v. vorige week</string>
-    <string name="my_fitness_weekly_average">Weekgemiddelde</string>
     <string name="my_fitness_workouts">Workouts</string>
     <string name="my_fitness_active_days">Actieve dagen</string>
-    <string name="my_fitness_streak">Dagenreeks</string>
-    <string name="my_fitness_time">Tijd</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$du %2$dm</string>
     <string name="my_fitness_duration_minutes">%1$dm</string>
     <string name="my_fitness_duration_seconds">%1$ds</string>
     <string name="my_fitness_distance">Afstand</string>
-    <string name="my_fitness_calories">Calorieën</string>
-    <string name="my_fitness_steps">Stappen</string>
-    <string name="my_fitness_elevation">Klim</string>
-    <string name="my_fitness_avg_heart_rate">Gem. HS</string>
-    <string name="my_fitness_max_heart_rate">Max. HS</string>
-    <string name="my_fitness_by_activity">Per activiteit</string>
-    <string name="my_fitness_bests">Beste prestaties</string>
     <string name="my_fitness_best_longest_distance">Langste afstand</string>
     <string name="my_fitness_best_longest_duration">Langste workout</string>
     <string name="my_fitness_best_biggest_climb">Grootste klim</string>
     <string name="my_fitness_best_most_steps">Meeste stappen</string>
     <string name="my_fitness_best_highest_heart_rate">Hoogste hartslag</string>
     <string name="my_fitness_recent">Recente workouts</string>
-    <string name="my_fitness_empty">Niets gelogd in de afgelopen 4 weken. Workouts die je post, en workouts die je horloge registreert, verschijnen hier.</string>
     <string name="my_fitness_connect_title">Volg je training</string>
     <string name="my_fitness_connect_message">Koppel Health Connect om je weektotalen, trend per week, beste prestaties en trainingsreeks te zien. Alles blijft op je telefoon.</string>
     <string name="my_fitness_connect_banner">Koppel Health Connect om de workouts die je horloge registreert toe te voegen, met hartslag, stappen en klim.</string>
@@ -1062,7 +962,6 @@
         <item quantity="other">Beste: %1$d weken</item>
     </plurals>
     <string name="nsite_none_found">Nog geen nSites gevonden.</string>
-    <string name="browser_reload">Herladen</string>
     <string name="browser_unsupported">De ingebouwde browser vereist Android 11 of nieuwer.</string>
     <string name="embedded_tab_load_failed">Deze app kon niet worden geladen.</string>
     <string name="page_error_not_found_title">Deze site kan niet worden gevonden</string>
@@ -1096,10 +995,6 @@
     <string name="browser_recent_options">Opties</string>
     <string name="browser_recent_remove">Verwijderen uit geschiedenis</string>
     <string name="favorite_apps_empty">Nog geen favoriete apps. Open een webclient of nsite en tik op de ster om deze hier vast te zetten.</string>
-    <string name="favorite_app_open_window">Openen in een eigen venster</string>
-    <string name="favorite_app_access_title">Waartoe deze app toegang heeft</string>
-    <string name="favorite_app_access_static">Draait in een sandbox zonder speciale toegang tot je account.</string>
-    <string name="favorite_app_access_show">Waartoe het toegang heeft</string>
     <string name="favorite_app_unavailable">Deze app is nog niet geladen. Open hem via zijn kaart, of probeer het over een moment opnieuw.</string>
     <string name="napplet_manage_permissions">Machtigingen beheren</string>
     <string name="napplet_permissions_ask_each_time">Elke keer vragen</string>
@@ -1200,8 +1095,6 @@
     <string name="relay_auth_remember_relay">Onthouden voor deze relay</string>
     <string name="relay_auth_log_in">Aanmelden</string>
     <string name="relay_auth_not_now">Niet nu</string>
-    <string name="relay_auth_never_allow">Nooit toestaan</string>
-    <string name="relay_auth_how_we_decide">Hoe Amethyst beslist</string>
     <string name="relay_auth_exceptions">Uitzonderingen</string>
     <string name="relay_auth_no_exceptions">Nog geen uitzonderingen. Elke relay volgt de regels hierboven.</string>
     <string name="relay_auth_segment_always">Altijd</string>
@@ -1562,7 +1455,6 @@
     <string name="pledge_amount_in_sats">Bedrag in sats</string>
     <string name="poll_zap_value_min">Minimum zap-bedrag</string>
     <string name="poll_zap_value_max">Maximum zap-bedrag</string>
-    <string name="poll_consensus_threshold">Consensusdrempel</string>
     <string name="looking_for_event">Zoeken naar bericht %1$s</string>
     <string name="looking_for_event_title">Laden</string>
     <string name="looking_for_private_event">Wachten tot je privéberichten zijn geladen…</string>
@@ -1572,11 +1464,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Bericht bij invoice toevoegen</string>
     <string name="custom_zaps_add_a_message_example">Bedankt voor al jullie werk!</string>
     <string name="lightning_create_and_add_invoice">Aanmaken en toevoegen</string>
-    <string name="add_content">Toevoegen aan bericht</string>
-    <string name="add_caption">Bijschrift toevoegen</string>
-    <string name="add_caption_example">Mijn goede vriend</string>
-    <string name="content_description">Inhoudsbeschrijving</string>
-    <string name="content_description_example">Een blauwe boot op een wit zandstrand bij zonsondergang</string>
     <string name="ai_suggested_alt_text_hint">AI-suggestie, bewerk mij</string>
     <string name="ai_suggested_alt_text_dismiss">AI-suggestie negeren</string>
     <string name="zap_type">Zap-type</string>
@@ -2077,8 +1964,6 @@
         <item quantity="one">Tor maakt geen verbinding. %1$d relay wacht erop.</item>
         <item quantity="other">Tor maakt geen verbinding. %1$d relays wachten erop.</item>
     </plurals>
-    <string name="tor_splash_error">Tor-fout: %1$s</string>
-    <string name="tor_splash_explainer">Amethyst gebruikt Tor om je IP-adres te verbergen voor relays. Het starten van Tor kan een minuut duren en vereist internettoegang.</string>
     <string name="notification_settings_categories_explainer">Tik op een categorie om de Android-meldingsinstellingen te openen — geluid, prioriteit, badges en Niet storen zijn daar te vinden.</string>
     <string name="notification_channel_status_on">Aan</string>
     <string name="notification_channel_status_silent">Stil</string>
@@ -2165,7 +2050,6 @@
     <string name="wallet_filter_all">Alles</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Niet-zaps</string>
-    <string name="wallet_add">Wallet toevoegen</string>
     <string name="wallet_default">Standaard</string>
     <string name="wallet_set_default">Als standaard instellen</string>
     <string name="wallet_remove">Verwijderen</string>
@@ -2293,8 +2177,6 @@
     <string name="cashu_redeemed_amount">%1$s sats ingewisseld in je wallet.</string>
     <string name="wallet_paste_uri">Plak nostr+walletconnect:// URI</string>
     <string name="wallet_save">Opslaan</string>
-    <string name="wallet_rename">Hernoemen</string>
-    <string name="wallet_rename_title">Wallet hernoemen</string>
     <string name="wallet_onchain_transactions">On-chain-transacties</string>
     <string name="wallet_onchain_no_address">Geen on-chain adres beschikbaar voor dit account.</string>
     <string name="wallet_onchain_no_backend">Geen chain-backend geconfigureerd.</string>
@@ -2661,7 +2543,6 @@
     <string name="git_repo_filter_open">Open</string>
     <string name="git_repo_filter_closed">Gesloten &amp; opgelost</string>
     <string name="git_repo_label_all">Alle</string>
-    <string name="git_repo_bookmark">Repository bookmarken</string>
     <string name="git_repo_stat_branches">Branches</string>
     <string name="git_repo_stat_tags">Tags</string>
     <string name="git_repo_stat_files">Bestanden</string>
@@ -2694,7 +2575,6 @@
     <string name="git_new_issue_button">Nieuw</string>
     <string name="git_new_issue_title">Nieuw issue</string>
     <string name="git_new_issue_subject">Titel</string>
-    <string name="git_new_issue_body">Omschrijving</string>
     <string name="git_new_issue_create">Aanmaken</string>
     <string name="git_new_issue_cancel">Annuleren</string>
     <string name="git_new_issue_labels">Labels</string>
@@ -2706,7 +2586,6 @@
     <string name="git_pr_loading_changes">Wijzigingen laden…</string>
     <string name="git_pr_no_changes">Geen bestandswijzigingen gevonden.</string>
     <string name="git_pr_changes_retry">Wijzigingen opnieuw laden</string>
-    <string name="git_pr_revised">Herzien</string>
     <string name="git_cover_note">Begeleidende notitie</string>
     <string name="git_ci_success">CI geslaagd</string>
     <string name="git_ci_failure">CI mislukt</string>
@@ -2779,7 +2658,6 @@
     <string name="accessibility_play_username">Gebruikersnaam als audio afspelen</string>
     <string name="accessibility_pushpin">Punaise</string>
     <string name="accessibility_scan_qr_code">QR-code scannen</string>
-    <string name="accessibility_select_date">Datum selecteren</string>
     <string name="draft">Concept</string>
     <string name="bounty_label">Bounty</string>
     <string name="load_from_text">Van bericht</string>
@@ -2915,9 +2793,7 @@
     <string name="closing_time">Sluitingstijd</string>
     <string name="confirm">Bevestigen</string>
     <string name="next">Volgende</string>
-    <string name="go_back">Terug</string>
     <string name="approve">Goedkeuren</string>
-    <string name="connected">Verbonden</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
@@ -3536,7 +3412,6 @@
     <string name="add_a_nip96_server">NIP-96-server toevoegen</string>
     <string name="add_client_tag_explainer">Wanneer ingeschakeld voegt Amethyst een NIP-89 client-tag toe aan events die je publiceert.</string>
     <string name="add_client_tag_title">Client-tag toevoegen aan mijn events</string>
-    <string name="add_sensitive_content_description">Voegt een waarschuwing toe voordat de inhoud wordt getoond</string>
     <string name="add_sensitive_content_label">Gevoelige inhoud</string>
     <string name="add_to_messages">Aan Berichten toevoegen</string>
     <string name="add_to_public_bookmarks">Toevoegen aan publieke bladwijzers</string>
@@ -3752,8 +3627,6 @@
     <string name="browser">Browser</string>
     <string name="browser_favorites">Favorieten</string>
     <string name="browser_suggested">Web-apps ontdekken</string>
-    <string name="browser_tor_off">Laden via het open web. Tik om Tor te gebruiken.</string>
-    <string name="browser_tor_on">Laden via Tor. Tik om het open web te gebruiken.</string>
     <string name="buzz_channel_archive">Kanaal archiveren</string>
     <string name="buzz_channel_create_title">Nieuw kanaal</string>
     <string name="buzz_channel_delete">Kanaal verwijderen</string>
@@ -4045,15 +3918,10 @@
     <string name="connectivity_type_never">Nooit</string>
     <string name="connectivity_type_unmetered_wifi_only">Alleen onbeperkt wifi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Document toevoegen</string>
-    <string name="content_description_add_image">Afbeelding toevoegen</string>
-    <string name="content_description_add_media">Media toevoegen</string>
-    <string name="content_description_add_video">Video toevoegen</string>
     <string name="content_warning_hide_all_sensitive_content_option">Verbergen</string>
     <string name="content_warning_see_warnings_option">Waarschuwen</string>
     <string name="content_warning_show_all_sensitive_content_option">Tonen</string>
     <string name="conversations">Discussies</string>
-    <string name="convert_gif_to_mp4_description">Converteert geanimeerde GIF naar MP4-video voor kleinere bestandsgrootte en betere afspeelcompatibiliteit.</string>
     <string name="convert_gif_to_mp4_label">GIF converteren naar MP4</string>
     <string name="copied_note_id_to_clipboard">Note-ID (@note1…) gekopieerd naar klembord</string>
     <string name="copied_note_text_to_clipboard">Note-tekst gekopieerd naar klembord</string>
@@ -4144,7 +4012,6 @@
     <string name="emoji_private_explainer">Privé-emoji's worden versleuteld opgeslagen op relays en zijn alleen zichtbaar voor jou. Ze verschijnen in je reactiemenu en ":" autocomplete net als openbare emoji's.</string>
     <string name="emoji_public_explainer">Openbare emoji's zijn zichtbaar voor iedereen en verschijnen in je reactiemenu en ":" autocomplete-picker wanneer dit pakket in je emoji-lijst staat.</string>
     <string name="emoji_sets">Emoji's</string>
-    <string name="encrypt_files_description">Versleutel bestanden voordat ze worden geüpload. Sommige servers accepteren geen versleutelde bestanden op gratis accounts.</string>
     <string name="encrypt_files_label">Bestanden versleutelen</string>
     <string name="ephemeral_relay_chat">Tijdelijke chat</string>
     <string name="error">Fout</string>
@@ -4193,8 +4060,6 @@
     <string name="failed_to_upload_media_no_details">Uploaden van media mislukt</string>
     <string name="failed_to_upload_to_server_with_message">Uploaden naar %1$s mislukt: %2$s</string>
     <string name="favorite_app_add">Toevoegen aan favorieten</string>
-    <string name="favorite_app_network_open">Wordt geladen via het open web.</string>
-    <string name="favorite_app_network_tor">Wordt geladen via Tor.</string>
     <string name="favorite_app_recent">Recent</string>
     <string name="favorite_app_remove">Verwijderen uit favorieten</string>
     <string name="favorite_app_still_loading">Die app is nog niet geladen. Probeer het over een moment opnieuw.</string>
@@ -4707,10 +4572,6 @@
         <item quantity="other">%1$d leden</item>
     </plurals>
     <string name="marmot_member_removed">Lid verwijderd</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d bericht</item>
-        <item quantity="other">%1$d berichten</item>
-    </plurals>
     <string name="marmot_not_a_member">Geen lid van deze groep</string>
     <string name="marmot_admin_delete_message">Voor iedereen verwijderen</string>
     <string name="room_remove_for_everyone_title">Voor iedereen verwijderen?</string>
@@ -4926,14 +4787,7 @@
     <string name="nest_lower_hand">Hand laten zakken</string>
     <string name="nest_mic_mute">Microfoon dempen</string>
     <string name="nest_mic_unmute">Microfoon aan</string>
-    <string name="nest_mute">Dempen</string>
     <string name="nest_no_server_save_failed">Kon je nest-serverlijst niet opslaan. Probeer het opnieuw.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Houdt audio afspelen terwijl een ruimte open is.</string>
-    <string name="nest_notification_listening">Nest verbonden</string>
-    <string name="nest_notification_stop">Stoppen</string>
-    <string name="nest_notification_text">Tik om terug te keren.</string>
     <string name="nest_participant_follow">Volgen</string>
     <string name="nest_participant_mute">Dempen</string>
     <string name="nest_participant_unfollow">Ontvolgen</string>
@@ -4944,7 +4798,6 @@
     <string name="nest_presence_raised_hand">heeft hand opgestoken</string>
     <string name="nest_presence_speaking">is aan het woord</string>
     <string name="nest_raise_hand">Hand opsteken</string>
-    <string name="nest_unmute">Dempen opheffen</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Opgeslagen als kind-10112 vervangbaar event zodat andere clients je voorkeur kunnen lezen.</string>
     <string name="nests_servers_my_section">Jouw servers</string>
@@ -5119,10 +4972,6 @@
         <item quantity="one">%1$d download</item>
         <item quantity="other">%1$d downloads</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d asset gebundeld</item>
-        <item quantity="other">%1$d assets gebundeld</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Geen Blossom-app gevonden. Installeer een lokale Blossom-app om dit bestand te bekijken.</string>
     <string name="no_blossom_apps_found_title">Kan Blossom-link niet openen</string>
     <string name="no_camera_app_found">Geen camera-app gevonden op dit apparaat</string>
@@ -5134,7 +4983,6 @@
     <string name="no_wallet_found">Geen wallet gevonden om Lightning-invoice te betalen. Installeer een Lightning-wallet om zaps te kunnen gebruiken.</string>
     <string name="pay_elsewhere_title">Betalen met een andere wallet</string>
     <string name="pay_elsewhere_description">Geen enkele app op deze computer kan dit betalen. Scan de code met een wallet op je telefoon, of kopieer hem naar een willekeurige Lightning-wallet.</string>
-    <string name="no_wallet_found_with_error">Geen wallet gevonden om Lightning-invoice te betalen (fout: %1$s). Installeer een Lightning-wallet om zaps te kunnen gebruiken.</string>
     <string name="no_zap_amount_setup_long_press_to_change">Geen zap-bedrag ingesteld. Houd ingedrukt om te wijzigen.</string>
     <string name="notification_service_accounts_title">Accounts die op de achtergrond actief zijn</string>
     <string name="notification_service_master_description">Hoofdschakelaar voor realtime achtergrondmeldingen. Zet uit om batterij te sparen — net als een vliegtuigmodus. Wanneer uit, blijft geen enkel account op de achtergrond verbonden, en het blijft uit (ook na herstart) totdat je het weer aanzet.</string>
@@ -5271,7 +5119,6 @@
     <string name="podcast_value_stream_requires_wallet">Verbind een Nostr Wallet Connect- of debit-wallet om sats te streamen tijdens het luisteren.</string>
     <string name="podcast_value_user_no_lnaddress">Deze gebruiker heeft geen Lightning-adres</string>
     <string name="poll_author_no_vote">Poll-auteurs kunnen niet stemmen in hun eigen poll.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Deze poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_multiple_choice">Meerdere keuzes</string>
     <plurals name="poll_results_backdated_votes">
@@ -5896,8 +5743,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker %1$s heeft geen Lightning-adres ingesteld om sats te ontvangen</string>
     <string name="vanish_history">Verdwijn-geschiedenis</string>
     <string name="vanish_request_sent">Verzoek tot verdwijnen verstuurd</string>
-    <string name="video_codec_h265_description">Betere kwaliteit in kleinere bestanden, maar niet alle apparaten ondersteunen H.265 afspelen.</string>
-    <string name="video_codec_h265_label">H.265/HEVC-codec gebruiken</string>
     <string name="video_collaboration_accepted_on">Heeft een samenwerkingsvermelding geaccepteerd</string>
     <string name="video_collaboration_declined_on">Heeft een samenwerkingsvermelding afgewezen</string>
     <string name="video_credit_accepted">Vermelding geaccepteerd</string>
@@ -6024,13 +5869,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Cordn-groepslink</string>
-    <string name="cordn_link_search_keywords">cordn coördinator coordinator groep link uitnodiging invite mls chat metadata privacy blootstelling</string>
     <string name="cordn_coordinators_title">Cordn-coördinatoren</string>
-    <string name="cordn_coordinators_search_keywords">cordn coördinator coordinator toevoegen verwijderen opschonen status server mls chat volgorde</string>
     <string name="cordn_keypackages_title">Cordn-sleutelpakketten</string>
-    <string name="cordn_keypackages_search_keywords">cordn sleutelpakket key package keypackage publiceren uitnodiging laatste redmiddel coördinator mls</string>
     <string name="cordn_backup_title">Cordn-back-up</string>
-    <string name="cordn_backup_search_keywords">cordn back-up backup herstellen exporteren importeren wachtwoordzin groepen herstel</string>
     <string name="chat_type_cordn_title">Cordn-groepen</string>
     <string name="chat_type_cordn_desc">End-to-end versleutelde groepen, geordend door een coördinator die jij kiest in plaats van door relays.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6608,7 +6449,6 @@
     <string name="cordn_backup_restore_body">Herstellen vervangt de cordn-groepen op dit apparaat door die in het bestand. Het is bedoeld voor een telefoon die het van een andere heeft overgenomen — niet om dezelfde groepen tegelijk op twee apparaten te gebruiken.</string>
     <string name="cordn_backup_restore_confirm_body">Elke cordn-groep die nu op dit apparaat staat, wordt verwijderd en vervangen door die in het bestand.\n\nHerstel niet op een tweede telefoon terwijl de eerste nog in gebruik is. Beide zouden dan dezelfde groepssleutels hebben, en zodra beide een bericht hebben verstuurd, gaat de groep voor iedereen kapot — ongemerkt, en zonder weg terug.</string>
     <string name="cordn_backup_restore_confirm_title">Cordn-groepen op dit apparaat vervangen?</string>
-    <string name="cordn_backup_restore_title">Herstellen</string>
     <string name="cordn_backup_restored">Hersteld.</string>
     <string name="cordn_chat_empty_description">Alles wat je hier verstuurt, is versleuteld voor deze groep. De coördinator stuurt het door zonder het te kunnen lezen.</string>
     <string name="cordn_chat_empty_title">Nog geen berichten</string>
@@ -6647,7 +6487,6 @@
     <string name="cordn_coordinators_purge">Wissen</string>
     <string name="cordn_coordinators_purge_body">Verwijderen houdt de groepen op dit apparaat, dus als je de coördinator weer toevoegt, komen ze mee terug. Wissen verwijdert ze: de groepssleutels, de leesposities en je sleutelpakketten verdwijnen allemaal, en die groepen kun je alleen nog via een nieuwe uitnodiging betreden.\n\nDe coördinator wordt niet ingelicht en houdt wat hij al had.</string>
     <string name="cordn_coordinators_purge_title">Deze coördinator wissen?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Antwoordt op</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d meer</string>
     <string name="cordn_coordinators_remove">Verwijderen</string>
@@ -6673,9 +6512,7 @@
         <item quantity="one">%1$d persoon kan toevoegen en verwijderen</item>
         <item quantity="other">%1$d mensen kunnen toevoegen en verwijderen</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Alleen ik beheer deze groep</string>
     <string name="cordn_create_admin_only_me_on">Alleen jij kunt uitnodigen, leden verwijderen of de groepsgegevens wijzigen. Je kunt dat later aan iemand anders overdragen.</string>
-    <string name="cordn_create_coordinator">Coördinator</string>
     <string name="cordn_create_coordinator_change">Wijzigen</string>
     <string name="cordn_create_coordinator_discover">Coördinators zoeken</string>
     <string name="cordn_create_coordinator_hide">Klaar</string>
@@ -6740,7 +6577,6 @@
     <string name="cordn_groups_menu_invitations">Uitnodigingen</string>
     <string name="cordn_groups_none">Nog geen cordn-groepen</string>
     <string name="cordn_groups_none_detail">Een cordn-groep staat op één coördinator die het lidmaatschap bijhoudt en berichten doorgeeft, zonder ooit te zien wat iemand schrijft.</string>
-    <string name="cordn_groups_start">Begin er een</string>
     <string name="cordn_info_add_member">Iemand toevoegen</string>
     <string name="cordn_info_add_member_none">Niemand gevonden met die naam.</string>
     <string name="cordn_info_add_member_note">Iemand kan alleen worden toegevoegd als diegene een sleutelpakket bij deze coördinator heeft gepubliceerd.</string>
@@ -6837,14 +6673,12 @@
     <string name="cordn_requests_failed">Kon de verzoeken niet lezen.</string>
     <string name="cordn_requests_none">Niemand wacht om lid te worden.</string>
     <string name="cordn_requests_title">Verzoeken om lid te worden</string>
-    <string name="cordn_send">Versturen</string>
     <string name="cordn_send_failed">Dat is niet verstuurd.</string>
     <string name="cordn_send_no_session">De coördinator van deze groep is niet geopend, dus er kan nog niets worden verstuurd.</string>
     <string name="cordn_share_copied">Gekopieerd</string>
     <string name="cordn_share_copy">Link kopiëren</string>
     <string name="cordn_share_explainer">Iedereen met deze link kan vragen om lid te worden. Een admin moet ze nog wel toelaten.</string>
     <string name="cordn_share_title">Deze groep delen</string>
-    <string name="cordn_voice_play">Spraakbericht afspelen</string>
     <string name="cordn_voice_record">Spraakbericht opnemen</string>
     <string name="cordn_voice_stop">Stoppen en versturen</string>
     <string name="browser_address_hint">Zoek of voer een adres in</string>
@@ -7188,7 +7022,6 @@
     <string name="custom_feeds_remove">Verwijderen</string>
     <string name="custom_feeds_search_people">Zoek op naam, NIP-05 of npub</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">Toon in brede vensters extra kolommen naast het hoofdscherm, elk met een eigen scherm en geschiedenis. Sla sets kolommen op als workspaces.</string>
     <string name="deck_workspaces">Workspaces</string>
     <string name="deck_workspace_number">Workspace %1$d</string>
     <string name="deck_save_workspace">Opslaan als nieuwe workspace</string>
@@ -8032,10 +7865,6 @@
     <plurals name="kc_list_server_count">
         <item quantity="one">%1$d server</item>
         <item quantity="other">%1$d servers</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d emoji-pakket</item>

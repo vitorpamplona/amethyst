@@ -89,7 +89,6 @@
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nieuw bedrag in sats</string>
     <string name="replying_to">reageert op </string>
-    <string name="and"> en </string>
     <string name="following"> Volgend</string>
     <string name="followers"> Volgers</string>
     <string name="number_following">%1$s volgend</string>
@@ -240,7 +239,6 @@
     <string name="refresh">verversen</string>
     <string name="channel_created">Kanaal gemaakt</string>
     <string name="channel_information_changed_to">Kanaalinformatie veranderd naar</string>
-    <string name="marmot_group_no_messages_yet">Nog geen berichten</string>
     <string name="paid_relay">Betaalde relay</string>
     <string name="tor_relay">Forceer Tor bij verbinden</string>
     <string name="posts_received">berichten ontvangen</string>
@@ -412,7 +410,6 @@
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Van Health Connect</string>
     <string name="nsite_none_found">Nog geen nSites gevonden.</string>
-    <string name="browser_reload">Herladen</string>
     <string name="browser_unsupported">De ingebouwde browser vereist Android 11 of nieuwer.</string>
     <string name="embedded_tab_load_failed">Deze app kon niet worden geladen.</string>
     <string name="browser_go">Openen</string>
@@ -420,10 +417,6 @@
     <string name="browser_recent_options">Opties</string>
     <string name="browser_recent_remove">Verwijderen uit geschiedenis</string>
     <string name="favorite_apps_empty">Nog geen favoriete apps. Open een webclient of nsite en tik op de ster om deze hier vast te zetten.</string>
-    <string name="favorite_app_open_window">Openen in een eigen venster</string>
-    <string name="favorite_app_access_title">Waartoe deze app toegang heeft</string>
-    <string name="favorite_app_access_static">Wordt gesandboxed uitgevoerd zonder speciale toegang tot uw account.</string>
-    <string name="favorite_app_access_show">Waartoe het toegang heeft</string>
     <string name="favorite_app_unavailable">Deze app is nog niet geladen. Open hem via zijn kaart, of probeer het over een moment opnieuw.</string>
     <string name="napplet_manage_permissions">Machtigingen beheren</string>
     <string name="napplet_none_found">Nog geen nApplets gevonden.</string>
@@ -647,7 +640,6 @@
     <string name="pledge_amount_in_sats">Bedrag in sats</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
-    <string name="poll_consensus_threshold">Consensus</string>
     <string name="looking_for_event">Zoeken naar event %1$s</string>
     <string name="send_zap">Zap versturen</string>
     <string name="custom_zaps_add_a_message">Een openbaar bericht toevoegen</string>
@@ -655,11 +647,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Een invoice bericht toevoegen</string>
     <string name="custom_zaps_add_a_message_example">Bedankt voor al jullie werk!</string>
     <string name="lightning_create_and_add_invoice">Maken en toevoegen</string>
-    <string name="add_content">Voeg toe aan bericht</string>
-    <string name="add_caption">Onderschrift toevoegen</string>
-    <string name="add_caption_example">Mijn goede vriend</string>
-    <string name="content_description">Beschrijving van de inhoud</string>
-    <string name="content_description_example">Een blauwe boot in een wit zandstrand bij zonsondergang</string>
     <string name="ai_suggested_alt_text_hint">AI-suggestie, bewerk mij</string>
     <string name="ai_suggested_alt_text_dismiss">AI-suggestie negeren</string>
     <string name="zap_type">Zap type</string>
@@ -995,7 +982,6 @@
     <string name="wallet_filter_all">Alles</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>
-    <string name="wallet_add">Wallet toevoegen</string>
     <string name="wallet_default">Standaard</string>
     <string name="wallet_set_default">Als standaard instellen</string>
     <string name="wallet_remove">Verwijderen</string>
@@ -1090,8 +1076,6 @@
     <string name="cashu_redeemed_amount">%1$s sats ingewisseld in je wallet.</string>
     <string name="wallet_paste_uri">Plak nostr+walletconnect:// URI</string>
     <string name="wallet_save">Opslaan</string>
-    <string name="wallet_rename">Hernoemen</string>
-    <string name="wallet_rename_title">Wallet hernoemen</string>
     <string name="wallet_onchain_transactions">Onchain-transacties</string>
     <string name="wallet_onchain_no_address">Geen on-chain adres beschikbaar voor dit account.</string>
     <string name="wallet_onchain_no_backend">Geen chain-backend geconfigureerd.</string>
@@ -1341,7 +1325,6 @@
     <string name="accessibility_play_username">Speel gebruikersnaam af als audio</string>
     <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan de QR-code</string>
-    <string name="accessibility_select_date">Datum selecteren</string>
     <string name="load_from_text">Van Msg</string>
     <string name="dvm_looking_for_app">Zoeken naar applicatie</string>
     <string name="dvm_waiting_status">Taak aangevraagd, wachten op een antwoord</string>
@@ -1444,9 +1427,7 @@
     <string name="closing_time">Sluitingstijd</string>
     <string name="confirm">Bevestigen</string>
     <string name="next">Volgende</string>
-    <string name="go_back">Terug</string>
     <string name="approve">Goedkeuren</string>
-    <string name="connected">Verbonden</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
@@ -1787,11 +1768,9 @@
     <string name="dvm_pay_invoice_from_dvm">Factuur betalen van de DVM</string>
     <string name="dvm_pay_amount_to_dvm">%1$s sats betalen aan de DVM</string>
     <string name="use_direct_url">Directe URL gebruiken</string>
-    <string name="nsite_title">Statische website: %1$s</string>
     <string name="nsite_root_site">Root-site</string>
     <string name="nsite_source">Bron:</string>
     <string name="nsite_servers">Servers:</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Machtigingen:</string>
     <string name="nsite_open">Openen</string>
     <string name="about_legal">Over &amp; Juridisch</string>
@@ -1801,7 +1780,6 @@
     <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
     <string name="add_client_tag_explainer">Wanneer ingeschakeld voegt Amethyst een NIP-89 client-tag toe aan events die je publiceert.</string>
     <string name="add_client_tag_title">Client-tag toevoegen aan mijn events</string>
-    <string name="add_sensitive_content_description">Voegt waarschuwing voor gevoelige content toe voordat deze content wordt weergegeven</string>
     <string name="add_sensitive_content_label">Gevoelige content</string>
     <string name="add_to_public_bookmarks">Toevoegen aan publieke bladwijzers</string>
     <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
@@ -1880,8 +1858,6 @@
     <string name="broadcast_section_explainer">Relays die gespecialiseerd zijn in het doorsturen van je notities naar andere relays, zoals sendit.nosflare.com. Amethyst voegt deze automatisch toe aan nieuwe berichten.</string>
     <string name="browser">Browser</string>
     <string name="browser_favorites">Favorieten</string>
-    <string name="browser_tor_off">Laden via het open web. Tik om Tor te gebruiken.</string>
-    <string name="browser_tor_on">Laden via Tor. Tik om het open web te gebruiken.</string>
     <plurals name="calendar_day_a11y_events">
     <item quantity="one">%1$s, %2$d evenement</item>
     <item quantity="other">%1$s, %2$d evenementen</item>
@@ -2008,15 +1984,10 @@
     <string name="connectivity_type_always">Altijd</string>
     <string name="connectivity_type_never">Nooit</string>
     <string name="connectivity_type_unmetered_wifi_only">Geen datalimiet</string>
-    <string name="content_description_add_document">Document toevoegen</string>
-    <string name="content_description_add_image">Afbeelding toevoegen</string>
-    <string name="content_description_add_media">Voeg media toe</string>
-    <string name="content_description_add_video">Video toevoegen</string>
     <string name="content_warning_hide_all_sensitive_content_option">Verbergen</string>
     <string name="content_warning_see_warnings_option">Waarschuwen</string>
     <string name="content_warning_show_all_sensitive_content_option">Tonen</string>
     <string name="conversations">Discussies</string>
-    <string name="convert_gif_to_mp4_description">Converteert geanimeerde GIF naar MP4-video voor kleinere bestandsgrootte en betere afspeelcompatibiliteit.</string>
     <string name="convert_gif_to_mp4_label">GIF converteren naar MP4</string>
     <string name="copied_note_id_to_clipboard">Note ID (@note1) gekopieerd naar klembord</string>
     <string name="copied_note_text_to_clipboard">Note tekst gekopieerd naar klembord</string>
@@ -2090,7 +2061,6 @@
     <string name="emoji_private_explainer">Privé-emoji's worden versleuteld opgeslagen op relays en zijn alleen zichtbaar voor jou. Ze verschijnen in je reactiemenu en ":" autocomplete net als openbare emoji's.</string>
     <string name="emoji_public_explainer">Openbare emoji's zijn zichtbaar voor iedereen en verschijnen in je reactiemenu en ":" autocomplete-picker wanneer dit pakket in je emoji-lijst staat.</string>
     <string name="emoji_sets">Emoji's</string>
-    <string name="encrypt_files_description">Versleutel bestanden voordat ze worden geüpload. Sommige servers accepteren geen versleutelde bestanden op gratis accounts.</string>
     <string name="encrypt_files_label">Bestanden versleutelen</string>
     <string name="ephemeral_relay_chat">Tijdelijke chat</string>
     <string name="error">Fout</string>
@@ -2138,8 +2108,6 @@
     <string name="failed_to_upload_media_no_details">Uploaden van media mislukt</string>
     <string name="failed_to_upload_to_server_with_message">Mislukt om naar %1$s te uploaden: %2$s</string>
     <string name="favorite_app_add">Toevoegen aan favorieten</string>
-    <string name="favorite_app_network_open">Wordt geladen via het open web.</string>
-    <string name="favorite_app_network_tor">Wordt geladen via Tor.</string>
     <string name="favorite_app_recent">Recent</string>
     <string name="favorite_app_remove">Verwijderen uit favorieten</string>
     <string name="favorite_app_still_loading">Die app is nog niet geladen. Probeer het over een moment opnieuw.</string>
@@ -2431,10 +2399,6 @@
     <item quantity="other">%1$d leden</item>
 </plurals>
     <string name="marmot_member_removed">Lid verwijderd</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d bericht</item>
-    <item quantity="other">%1$d berichten</item>
-</plurals>
     <string name="marmot_not_a_member">Geen lid van deze groep</string>
     <string name="marmot_unknown_error">onbekende fout</string>
     <string name="media_added">Media toegevoegd</string>
@@ -2526,14 +2490,7 @@
     <string name="nest_lower_hand">Hand laten zakken</string>
     <string name="nest_mic_mute">Microfoon dempen</string>
     <string name="nest_mic_unmute">Microfoon aan</string>
-    <string name="nest_mute">Dempen</string>
     <string name="nest_no_server_save_failed">Kon je nest-serverlijst niet opslaan. Probeer het opnieuw.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Houdt audio afspelen terwijl een ruimte open is.</string>
-    <string name="nest_notification_listening">Nest verbonden</string>
-    <string name="nest_notification_stop">Stoppen</string>
-    <string name="nest_notification_text">Tik om terug te keren.</string>
     <string name="nest_participant_follow">Volgen</string>
     <string name="nest_participant_mute">Dempen</string>
     <string name="nest_participant_unfollow">Ontvolgen</string>
@@ -2544,7 +2501,6 @@
     <string name="nest_presence_raised_hand">heeft hand opgestoken</string>
     <string name="nest_presence_speaking">is aan het woord</string>
     <string name="nest_raise_hand">Hand opsteken</string>
-    <string name="nest_unmute">Dempen opheffen</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Opgeslagen als kind-10112 vervangbaar event zodat andere clients je voorkeur kunnen lezen.</string>
     <string name="nests_servers_my_section">Jouw servers</string>
@@ -2578,10 +2534,6 @@
     <string name="new_requests">Nieuw verzoek</string>
     <string name="new_threads">Nieuwe onderwerpen</string>
     <string name="new_workout">Nieuwe workout</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d asset gebundeld</item>
-    <item quantity="other">%1$d assets gebundeld</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Geen Blossom-app gevonden. Installeer een lokale Blossom-app om dit bestand te bekijken.</string>
     <string name="no_blossom_apps_found_title">Kan Blossom-link niet openen</string>
     <string name="no_camera_app_found">Geen camera-app gevonden op dit apparaat</string>
@@ -2591,7 +2543,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Geen reactietypes geselecteerd. Lang indrukken om te wijzigen</string>
     <string name="no_reactions_setup">Geen reacties setup</string>
     <string name="no_wallet_found">Geen wallets gevonden om een Lightning Invoice te betalen. Installeer een Lightning wallet om zaps te gebruiken</string>
-    <string name="no_wallet_found_with_error">Geen wallets gevonden om een Lightning Invoice te betalen (Error: %1$s). Installeer een Lightning wallet om zaps te gebruiken</string>
     <string name="no_zap_amount_setup_long_press_to_change">Geen Zap bedrag. Houdt ingedrukt om te veranderen</string>
     <string name="notification_settings">Meldingen</string>
     <string name="notification_settings_section_categories">Categorieën</string>
@@ -2678,7 +2629,6 @@
     <item quantity="other">%1$d afleveringen</item>
 </plurals>
     <string name="poll_author_no_vote">Poll auteurs kunnen niet stemmen in hun eigen poll.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_multiple_choice">Meerdere keuzes</string>
     <string name="poll_single_choice">Enkele keuze</string>
@@ -2944,8 +2894,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker %1$s heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
     <string name="vanish_history">Verdwijn-geschiedenis</string>
     <string name="vanish_request_sent">Verzoek tot verdwijnen verstuurd</string>
-    <string name="video_codec_h265_description">Betere kwaliteit in kleinere bestanden, maar niet alle apparaten ondersteunen H.265 afspelen.</string>
-    <string name="video_codec_h265_label">H.265/HEVC-codec gebruiken</string>
     <string name="video_download_has_started_toast">Video download is gestart…</string>
     <string name="video_player_settings">Videospeler-knoppen</string>
     <string name="video_saved_to_the_gallery">Video's opgeslagen in galerij</string>

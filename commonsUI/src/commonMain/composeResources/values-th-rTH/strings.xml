@@ -105,7 +105,6 @@
     <string name="quote">โควท</string>
     <string name="fork">สำเนาโน๊ต</string>
     <string name="new_amount_in_sats">ตั้งค่าจำนวนในหน่วย sat</string>
-    <string name="and"> และ </string>
     <string name="following"> กำลังติดตาม</string>
     <string name="followers"> ผู้ติดตาม</string>
     <string name="number_following">%1$s กำลังติดตาม</string>
@@ -250,7 +249,6 @@
     <string name="refresh">รีเฟรช</string>
     <string name="channel_created">สร้าง Channel</string>
     <string name="channel_information_changed_to">ข้อมูลของ Channel เปลี่ยนเป็น</string>
-    <string name="marmot_group_no_messages_yet">ยังไม่มีข้อความ</string>
     <string name="paid_relay">relay แบบชำระเงิน</string>
     <string name="tor_relay">บังคับใช้ Tor เมื่อเชื่อมต่อ</string>
     <string name="posts_received">ได้รับโพสต์แล้ว</string>
@@ -421,7 +419,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">ยังไม่พบ nSites</string>
-    <string name="browser_reload">โหลดใหม่</string>
     <string name="browser_unsupported">เบราว์เซอร์ในแอปต้องใช้ Android 11 หรือใหม่กว่า</string>
     <string name="embedded_tab_load_failed">ไม่สามารถโหลดแอปนี้ได้</string>
     <string name="browser_go">เปิด</string>
@@ -429,10 +426,6 @@
     <string name="browser_recent_options">ตัวเลือก</string>
     <string name="browser_recent_remove">ลบออกจากประวัติ</string>
     <string name="favorite_apps_empty">ยังไม่มีแอปโปรด เปิดเว็บไคลเอนต์หรือ nSite แล้วแตะดาวเพื่อปักหมุดที่นี่</string>
-    <string name="favorite_app_open_window">เปิดในหน้าต่างของตัวเอง</string>
-    <string name="favorite_app_access_title">สิ่งที่แอปนี้สามารถเข้าถึงได้</string>
-    <string name="favorite_app_access_static">ทำงานในแซนด์บ็อกซ์โดยไม่มีสิทธิ์พิเศษในการเข้าถึงบัญชีของคุณ</string>
-    <string name="favorite_app_access_show">สิ่งที่สามารถเข้าถึงได้</string>
     <string name="favorite_app_unavailable">แอปนี้ยังไม่ได้โหลด เปิดจากการ์ดของแอป หรือลองอีกครั้งในอีกสักครู่</string>
     <string name="napplet_manage_permissions">จัดการสิทธิ์</string>
     <string name="napplet_none_found">ยังไม่พบ nApplets</string>
@@ -644,7 +637,6 @@
     <string name="pledge_amount_in_sats">จำนวนเงินที่นำเข้าในหน่วย sat</string>
     <string name="poll_zap_value_min">Zap ขั้นต่ำ</string>
     <string name="poll_zap_value_max">Zap สูงสุด</string>
-    <string name="poll_consensus_threshold">ฉันทามติ</string>
     <string name="looking_for_event">กำลังมองหา Event %1$s</string>
     <string name="send_zap">ส่ง Zap</string>
     <string name="custom_zaps_add_a_message">เพิ่มในข้อความสาธรณะ</string>
@@ -652,11 +644,6 @@
     <string name="custom_zaps_add_a_message_nonzap">เพิ่มใน invoice message</string>
     <string name="custom_zaps_add_a_message_example">ขอบคุณสำหรับทุกงานของคุณ!</string>
     <string name="lightning_create_and_add_invoice">สร้างและเพิ่ม</string>
-    <string name="add_content">เพิ่มไปยังข้อความ</string>
-    <string name="add_caption">เพิ่มคำอธิบาย</string>
-    <string name="add_caption_example">เพื่อนรักของฉัน</string>
-    <string name="content_description">คำอธิบายของเนื้อหา</string>
-    <string name="content_description_example">เรือสีฟ้าในหาดทรายสีขาวยามพระอาทิตย์ตก</string>
     <string name="ai_suggested_alt_text_hint">แนะนำโดย AI แก้ไขได้</string>
     <string name="ai_suggested_alt_text_dismiss">ปิดคำแนะนำ AI</string>
     <string name="zap_type">ประเภทการ Zap</string>
@@ -988,7 +975,6 @@
     <string name="wallet_refresh">รีเฟรช</string>
     <string name="wallet_filter_all">ทั้งหมด</string>
     <string name="wallet_filter_non_zaps">ไม่ใช่ Zaps</string>
-    <string name="wallet_add">เพิ่มกระเป๋าเงิน</string>
     <string name="wallet_default">ค่าเริ่มต้น</string>
     <string name="wallet_set_default">ตั้งเป็นค่าเริ่มต้น</string>
     <string name="wallet_remove">ลบ</string>
@@ -1080,8 +1066,6 @@
     <string name="cashu_redeemed_amount">แลก %1$s sats เข้ากระเป๋าของคุณแล้ว</string>
     <string name="wallet_paste_uri">วาง URI nostr+walletconnect://</string>
     <string name="wallet_save">บันทึก</string>
-    <string name="wallet_rename">เปลี่ยนชื่อ</string>
-    <string name="wallet_rename_title">เปลี่ยนชื่อกระเป๋า</string>
     <string name="wallet_onchain_transactions">ธุรกรรม Onchain</string>
     <string name="wallet_onchain_no_address">ไม่มีที่อยู่ on-chain สำหรับบัญชีนี้</string>
     <string name="wallet_onchain_no_backend">ไม่ได้ตั้งค่า chain backend ไว้</string>
@@ -1315,7 +1299,6 @@
     <string name="accessibility_play_username">อ่านชื่อผู้ใช้เป็นเสียง</string>
     <string name="accessibility_pushpin">หมุดปักผ้า</string>
     <string name="accessibility_scan_qr_code">สแกนคิวอาร์โค้ด</string>
-    <string name="accessibility_select_date">เลือกวันที่</string>
     <string name="dvm_looking_for_app">กำลังค้นหาแอพพลิเคชั่น Dvm</string>
     <string name="dvm_waiting_status">ส่งคำขอเรียบร้อย และกำลังรอการตอบกลับ</string>
     <string name="dvm_requesting_job">กำลังรองานจาก DVM</string>
@@ -1412,9 +1395,7 @@
     <string name="closing_time">เวลาปิด</string>
     <string name="confirm">ยืนยัน</string>
     <string name="next">ถัดไป</string>
-    <string name="go_back">ย้อนกลับ</string>
     <string name="approve">อนุมัติ</string>
-    <string name="connected">เชื่อมต่อแล้ว</string>
     <string name="social_proof">หลักฐานทางสังคม</string>
     <string name="poll_submit">ส่ง</string>
     <string name="poll_view_results">ดูผลลัพธ์</string>
@@ -1747,7 +1728,6 @@
     <string name="add_a_nip96_server">เพิ่ม เซิร์ฟเวอร์ NIP-96</string>
     <string name="add_client_tag_explainer">เมื่อเปิดใช้งาน Amethyst จะเพิ่มแท็กไคลเอนต์ NIP-89 ในกิจกรรมที่คุณเผยแพร่</string>
     <string name="add_client_tag_title">เพิ่มแท็กไคลเอนต์ในกิจกรรมของฉัน</string>
-    <string name="add_sensitive_content_description">เพิ่มการแจ้งเตือนเนื้อหาที่ละเอียดอ่อนก่อนโชว์เนื้อหานี้</string>
     <string name="add_sensitive_content_label">เนื้อหาที่ละเอียดอ่อน</string>
     <string name="add_to_public_bookmarks">เพิ่มไปยังบุ๊คมาร์คสาธรณะ</string>
     <string name="ai_writing_setting_description">ใช้โมเดล AI บนอุปกรณ์เพื่อเสนอการแก้ไขข้อความและการเปลี่ยนแปลงโทนเสียง</string>
@@ -1824,8 +1804,6 @@
     <string name="broadcast_section_explainer">Relays ที่เชี่ยวชาญในการส่งโน้ตของคุณไปยัง relay อื่นๆ ทั้งหมด เช่น sendit.nosflare.com Amethyst จะเพิ่ม relay นี้ในเหตุการณ์ใหม่ทั้งหมดที่คุณสร้าง</string>
     <string name="browser">เบราว์เซอร์</string>
     <string name="browser_favorites">รายการโปรด</string>
-    <string name="browser_tor_off">กำลังโหลดผ่านเว็บแบบเปิด แตะเพื่อใช้ Tor</string>
-    <string name="browser_tor_on">กำลังโหลดผ่าน Tor แตะเพื่อใช้เว็บแบบเปิด</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s, %2$d กิจกรรม</item>
     </plurals>
@@ -1942,15 +1920,10 @@
     <string name="connectivity_type_always">ตลอดเวลา</string>
     <string name="connectivity_type_never">ไม่ต้องแสดง</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
-    <string name="content_description_add_document">เพิ่มเอกสาร</string>
-    <string name="content_description_add_image">เพิ่มรูปภาพ</string>
-    <string name="content_description_add_media">เพิ่มสื่อ</string>
-    <string name="content_description_add_video">เพิ่มวีดีโอ</string>
     <string name="content_warning_hide_all_sensitive_content_option">ซ่อน</string>
     <string name="content_warning_see_warnings_option">เตือน</string>
     <string name="content_warning_show_all_sensitive_content_option">แสดง</string>
     <string name="conversations">การสนทนา</string>
-    <string name="convert_gif_to_mp4_description">แปลง GIF เคลื่อนไหวเป็นวิดีโอ MP4 เพื่อลดขนาดไฟล์และเพิ่มความเข้ากันได้ในการเล่น</string>
     <string name="convert_gif_to_mp4_label">แปลง GIF เป็น MP4</string>
     <string name="copied_note_id_to_clipboard">คัดลอกโน้ต ID (@note1)ลงคลิปบอร์ด</string>
     <string name="copied_note_text_to_clipboard">คัดลอกข่้อความในโน้ตลงคลิปบอร์ด</string>
@@ -2016,7 +1989,6 @@
     <string name="emoji_private_explainer">Emoji ส่วนตัวถูกจัดเก็บแบบเข้ารหัสบน relay และมองเห็นได้เฉพาะคุณเท่านั้น Emoji เหล่านี้ปรากฏในเมนูรีแอคชันและ ":" autocomplete เช่นเดียวกับ emoji สาธารณะ</string>
     <string name="emoji_public_explainer">Emoji สาธารณะมองเห็นได้โดยทุกคนและปรากฏในเมนูรีแอคชันและตัวเลือก ":" autocomplete ของคุณเมื่อแพ็คนี้อยู่ในรายการ emoji ของคุณ</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">เข้ารหัสไฟล์ก่อนอัปโหลดเพื่อความเป็นส่วนตัว บางเซิร์ฟเวอร์อาจไม่รับไฟล์ที่เข้ารหัสในบัญชีฟรี</string>
     <string name="encrypt_files_label">เข้ารหัสไฟล์</string>
     <string name="ephemeral_relay_chat">แชทชั่วคราว</string>
     <string name="error">ข้อผิดพลาด</string>
@@ -2062,8 +2034,6 @@
     <string name="failed_to_upload_media_no_details">ไม่สามารถโหลดสื่อได้</string>
     <string name="failed_to_upload_to_server_with_message">อัปโหลดไปยัง %1$s ล้มเหลว: %2$s</string>
     <string name="favorite_app_add">เพิ่มในรายการโปรด</string>
-    <string name="favorite_app_network_open">โหลดผ่านเว็บแบบเปิด</string>
-    <string name="favorite_app_network_tor">โหลดผ่าน Tor</string>
     <string name="favorite_app_recent">ล่าสุด</string>
     <string name="favorite_app_remove">ลบออกจากรายการโปรด</string>
     <string name="favorite_app_still_loading">แอปนั้นยังไม่ได้โหลด ลองอีกครั้งในอีกสักครู่</string>
@@ -2227,9 +2197,6 @@
         <item quantity="other">%1$d สมาชิก</item>
     </plurals>
     <string name="marmot_member_removed">ลบสมาชิกออกแล้ว</string>
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d ข้อความ</item>
-    </plurals>
     <string name="marmot_not_a_member">ไม่ได้เป็นสมาชิกของกลุ่มนี้</string>
     <string name="marmot_unknown_error">ข้อผิดพลาดที่ไม่ทราบสาเหตุ</string>
     <string name="media_added">เพิ่มสื่อแล้ว</string>
@@ -2311,12 +2278,7 @@
     <string name="nest_lower_hand">ลดมือ</string>
     <string name="nest_mic_mute">ปิดไมค์</string>
     <string name="nest_mic_unmute">เปิดไมค์</string>
-    <string name="nest_mute">ปิดเสียง</string>
     <string name="nest_no_server_save_failed">ไม่สามารถบันทึกรายการเซิร์ฟเวอร์ nest ของคุณได้ ลองอีกครั้ง</string>
-    <string name="nest_notification_channel_description">เปิดเสียงต่อเนื่องขณะที่ห้องเปิดอยู่</string>
-    <string name="nest_notification_listening">Nest เชื่อมต่อแล้ว</string>
-    <string name="nest_notification_stop">หยุด</string>
-    <string name="nest_notification_text">แตะเพื่อกลับ</string>
     <string name="nest_participant_follow">ติดตาม</string>
     <string name="nest_participant_mute">ปิดเสียง</string>
     <string name="nest_participant_unfollow">เลิกติดตาม</string>
@@ -2327,7 +2289,6 @@
     <string name="nest_presence_raised_hand">ยกมือขึ้น</string>
     <string name="nest_presence_speaking">กำลังพูด</string>
     <string name="nest_raise_hand">ยกมือ</string>
-    <string name="nest_unmute">เปิดเสียง</string>
     <string name="nests_servers_my_explainer">บันทึกเป็นอีเวนต์ที่แทนที่ได้ kind-10112 เพื่อให้ไคลเอนต์อื่นอ่านการตั้งค่าของคุณได้</string>
     <string name="nests_servers_my_section">เซิร์ฟเวอร์ของคุณ</string>
     <string name="nests_servers_recommended_explainer">ข้อเสนอแนะในตัวที่คุณสามารถเพิ่มลงในรายการด้วยการแตะครั้งเดียว</string>
@@ -2359,9 +2320,6 @@
     <string name="new_requests">ส่งคำขอใหม่</string>
     <string name="new_threads">เธรดใหม่</string>
     <string name="new_workout">การออกกำลังกายใหม่</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">%1$d ไฟล์แนบ</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">ไม่พบแอป Blossom กรุณาติดตั้งแอป Blossom ในเครื่องเพื่อดูไฟล์นี้</string>
     <string name="no_blossom_apps_found_title">ไม่สามารถเปิดลิงก์ Blossom ได้</string>
     <string name="no_camera_app_found">ไม่พบแอปกล้องในอุปกรณ์นี้</string>
@@ -2371,7 +2329,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">ไม่มีการเลือกประเภทของ reaction กดค้างเพื่อเปลี่ยน</string>
     <string name="no_reactions_setup">ไม่มีรายการ reaction</string>
     <string name="no_wallet_found">ไม่พบกระเป๋า Lightning โปรดติดตั้งแอพกระเป๋า Lightning ก่อน</string>
-    <string name="no_wallet_found_with_error">ไม่พบกระเป๋า Lightning (Error: %1$s) โปรดติดตั้งแอพกระเป๋า Lightning ก่อน</string>
     <string name="no_zap_amount_setup_long_press_to_change">ไม่มีการตั้งค่าจำนวนเพื่อ zap กดค้างเพื่อตั้งค่า</string>
     <string name="notification_settings">การแจ้งเตือน</string>
     <string name="notification_settings_section_categories">หมวดหมู่</string>
@@ -2448,7 +2405,6 @@
         <item quantity="other">%1$d ตอน</item>
     </plurals>
     <string name="poll_author_no_vote">ผู้เขียนโพลล์ไม่สามารถลงคะแนนในโพล์ของตนเองได้</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
     <string name="poll_multiple_choice">หลายตัวเลือก</string>
     <string name="poll_single_choice">ตัวเลือกเดียว</string>
@@ -2702,8 +2658,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">ผู้ใช้ %1$s ไม่ได้ตั้งค่า lightning address เพื่อรับ sats</string>
     <string name="vanish_history">ประวัติการลบข้อมูล</string>
     <string name="vanish_request_sent">ส่งคำขอให้ลบข้อมูลแล้ว</string>
-    <string name="video_codec_h265_description">คุณภาพดีกว่าที่ขนาดไฟล์เล็กกว่า แต่ไม่ใช่ทุกอุปกรณ์รองรับการเล่น H.265</string>
-    <string name="video_codec_h265_label">ใช้ Codec H.265/HEVC</string>
     <string name="video_download_has_started_toast">เริ่มดาวน์โหลดวิดีโอแล้ว…</string>
     <string name="video_player_settings">ปุ่มเครื่องเล่นวิดีโอ</string>
     <string name="video_saved_to_the_gallery">บันทึกวิดีโอลงแกลเลอรีในโทรศัพท์แล้ว</string>

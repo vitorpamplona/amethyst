@@ -106,7 +106,6 @@
     <string name="quote">Iqtibos qilish</string>
     <string name="fork">Nusxa olish</string>
     <string name="new_amount_in_sats">Sats dagi yangi miqdor</string>
-    <string name="and"> va </string>
     <string name="following"> Kuzatilmoqda</string>
     <string name="followers"> Kuzatuvchilar</string>
     <string name="number_following">%1$s Kuzatilmoqda</string>
@@ -254,7 +253,6 @@
     <string name="refresh">Yangilash</string>
     <string name="channel_created">Kanal yaratildi</string>
     <string name="channel_information_changed_to">Kanal ma'lumotlari o'zgartirildi</string>
-    <string name="marmot_group_no_messages_yet">Hali xabarlar yo'q</string>
     <string name="paid_relay">Pullik relay</string>
     <string name="tor_relay">Ulanishda Tor ni majburlaydi</string>
     <string name="posts_received">postlar qabul qilindi</string>
@@ -424,7 +422,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Hali nSite topilmadi.</string>
-    <string name="browser_reload">Qayta yuklash</string>
     <string name="browser_unsupported">Ilova ichidagi brauzer Android 11 yoki yangroq versiyasini talab qiladi.</string>
     <string name="embedded_tab_load_failed">Bu ilovani yuklab bo'lmadi.</string>
     <string name="browser_go">Ochish</string>
@@ -432,10 +429,6 @@
     <string name="browser_recent_options">Parametrlar</string>
     <string name="browser_recent_remove">Tarixdan o'chirish</string>
     <string name="favorite_apps_empty">Hali sevimli ilovalar yo'q. Veb-mijoz yoki nsite oching va uni shu yerga qo'shish uchun yulduzchani bosing.</string>
-    <string name="favorite_app_open_window">O'z oynasida ochish</string>
-    <string name="favorite_app_access_title">Bu ilova nimaga kirish huquqiga ega</string>
-    <string name="favorite_app_access_static">Hisobingizga maxsus kirish huquqisiz, izolyatsiyalangan muhitda ishlaydi.</string>
-    <string name="favorite_app_access_show">Nimaga kirish mumkinligi</string>
     <string name="favorite_app_unavailable">Bu ilova hali yuklanmagan. Uni kartasidan oching yoki bir ozdan so'ng qayta urinib ko'ring.</string>
     <string name="napplet_manage_permissions">Ruxsatlarni boshqarish</string>
     <string name="napplet_none_found">Hali nApplet topilmadi.</string>
@@ -651,7 +644,6 @@
     <string name="pledge_amount_in_sats">Sats da Majburiyat Miqdori</string>
     <string name="poll_zap_value_min">Zap minimumi</string>
     <string name="poll_zap_value_max">Zap maksimumi</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
     <string name="looking_for_event">Voqea %1$s qidirilmoqda</string>
     <string name="send_zap">Zap Yuborish</string>
     <string name="custom_zaps_add_a_message">Ommaviy xabar qo'shish</string>
@@ -659,11 +651,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Hisob-faktura xabari qo'shish</string>
     <string name="custom_zaps_add_a_message_example">Barcha ishlaringiz uchun rahmat!</string>
     <string name="lightning_create_and_add_invoice">Yaratish va Qo'shish</string>
-    <string name="add_content">Xabarga Qo'shish</string>
-    <string name="add_caption">Sarlavha Qo'shish</string>
-    <string name="add_caption_example">Mening yoqimli do'stim</string>
-    <string name="content_description">Kontent tavsifi</string>
-    <string name="content_description_example">Quyosh botishida oq qumli plyajda ko'k qayiq</string>
     <string name="ai_suggested_alt_text_hint">AI taklif qildi, tahrirlang</string>
     <string name="ai_suggested_alt_text_dismiss">AI taklifini rad etish</string>
     <string name="zap_type">Zap Turi</string>
@@ -994,7 +981,6 @@
     <string name="wallet_refresh">Yangilash</string>
     <string name="wallet_filter_all">Barchasi</string>
     <string name="wallet_filter_non_zaps">Zaps bo'lmaganlar</string>
-    <string name="wallet_add">Hamyon qo'shish</string>
     <string name="wallet_default">Standart</string>
     <string name="wallet_set_default">Standart sifatida o'rnatish</string>
     <string name="wallet_remove">O'chirish</string>
@@ -1085,8 +1071,6 @@
     <string name="cashu_redeemed_amount">%1$s sats hamyoningizga qo'lga kiritildi.</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URI joylashtiring</string>
     <string name="wallet_save">Saqlash</string>
-    <string name="wallet_rename">Qayta nomlash</string>
-    <string name="wallet_rename_title">Hamyonni qayta nomlash</string>
     <string name="wallet_onchain_transactions">Zanjir tranzaksiyalari</string>
     <string name="wallet_onchain_no_address">Ushbu hisob uchun zanjirdagi manzil mavjud emas.</string>
     <string name="wallet_onchain_no_backend">Zanjir backend sozlanmagan.</string>
@@ -1328,7 +1312,6 @@
     <string name="accessibility_play_username">Foydalanuvchi nomini audio sifatida ijro etish</string>
     <string name="accessibility_pushpin">Mahkamlash</string>
     <string name="accessibility_scan_qr_code">QR kodni skanerlash</string>
-    <string name="accessibility_select_date">Sanani tanlash</string>
     <string name="load_from_text">Xabardan</string>
     <string name="dvm_looking_for_app">Ilova Qidirilmoqda</string>
     <string name="dvm_waiting_status">Ish so'raldi, javob kutilmoqda</string>
@@ -1428,9 +1411,7 @@
     <string name="closing_time">Yopish vaqti</string>
     <string name="confirm">Tasdiqlash</string>
     <string name="next">Keyingi</string>
-    <string name="go_back">Orqaga qaytish</string>
     <string name="approve">Tasdiqlash</string>
-    <string name="connected">Ulangan</string>
     <string name="social_proof">Ijtimoiy tasdiqlash</string>
     <string name="poll_submit">Yuborish</string>
     <string name="poll_view_results">Natijalarni ko'rish</string>
@@ -1767,7 +1748,6 @@
     <string name="add_a_nip96_server">NIP-96 Serveri Qo'shish</string>
     <string name="add_client_tag_explainer">Yoqilganda, Amethyst siz nashr etgan voqealarga NIP-89 mijoz tegini qo'shadi.</string>
     <string name="add_client_tag_title">Voqealarimga mijoz tegi qo'shish</string>
-    <string name="add_sensitive_content_description">Bu kontentni ko'rsatishdan oldin sezgir kontent ogohlantirishini qo'shadi</string>
     <string name="add_sensitive_content_label">Sezgir kontent</string>
     <string name="add_to_public_bookmarks">Ommaviy Xatcho'plarga qo'shish</string>
     <string name="ai_writing_setting_description">Matn tuzatishlar va ohang o'zgarishlarini taklif qilish uchun qurilmadagi AI modelidan foydalanadi.</string>
@@ -1845,8 +1825,6 @@
     <string name="broadcast_section_explainer">Sizning eslatmalaringizni boshqa barcha relay larga yuborishda ixtisoslashgan relay lar, masalan sendit.nosflare.com. Amethyst ushbu relay ni siz tomonidan qilingan barcha yangi hodisalarga qo'shadi</string>
     <string name="browser">Brauzer</string>
     <string name="browser_favorites">Sevimlilar</string>
-    <string name="browser_tor_off">Ochiq internet orqali yuklanmoqda. Tor dan foydalanish uchun bosing.</string>
-    <string name="browser_tor_on">Tor orqali yuklanmoqda. Ochiq internetdan foydalanish uchun bosing.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d tadbir</item>
         <item quantity="other">%1$s, %2$d tadbir</item>
@@ -1965,15 +1943,10 @@
     <string name="connectivity_type_always">Doimo</string>
     <string name="connectivity_type_never">Hech qachon</string>
     <string name="connectivity_type_unmetered_wifi_only">Hisoblanmagan WiFi</string>
-    <string name="content_description_add_document">Hujjat Qo'shish</string>
-    <string name="content_description_add_image">Rasm Qo'shish</string>
-    <string name="content_description_add_media">Media Qo'shish</string>
-    <string name="content_description_add_video">Video Qo'shish</string>
     <string name="content_warning_hide_all_sensitive_content_option">Yashirish</string>
     <string name="content_warning_see_warnings_option">Ogohlantirish</string>
     <string name="content_warning_show_all_sensitive_content_option">Ko'rsatish</string>
     <string name="conversations">Suhbatlar</string>
-    <string name="convert_gif_to_mp4_description">Kichikroq fayl hajmi va yaxshiroq ijro mosligini ta'minlash uchun animatsion GIF ni MP4 videoga aylantiradi.</string>
     <string name="convert_gif_to_mp4_label">GIF ni MP4 ga aylantirish</string>
     <string name="copied_note_id_to_clipboard">Eslatma identifikatori (@note1) buferga nusxalandi</string>
     <string name="copied_note_text_to_clipboard">Eslatma matni buferga nusxalandi</string>
@@ -2047,7 +2020,6 @@
     <string name="emoji_private_explainer">Shaxsiy emojilar relay'larda shifrlangan holda saqlanadi va faqat sizga ko'rinadi. Ular ommaviy emojilar kabi munosabat menyungizda va ":" avtoto'ldiruvchida ko'rsatiladi.</string>
     <string name="emoji_public_explainer">Ommaviy emojilar hammaga ko'rinadi va bu to'plam emoji ro'yxatingizda bo'lsa, munosabat menyungizda va ":" avtoto'ldirish tanlagichida ko'rsatiladi.</string>
     <string name="emoji_sets">Emojilar</string>
-    <string name="encrypt_files_description">Maxfiylik uchun yuklamasdan oldin fayllarni shifrlang. Ba'zi serverlar bepul hisoblarda shifrlangan fayllarni qabul qilmasligi mumkin.</string>
     <string name="encrypt_files_label">Fayllarni shifrlash</string>
     <string name="ephemeral_relay_chat">Yo'qoladigan chat</string>
     <string name="error">Xato</string>
@@ -2092,8 +2064,6 @@
     <string name="failed_to_upload_media_no_details">Media yuklash muvaffaqiyatsiz tugadi</string>
     <string name="failed_to_upload_to_server_with_message">%1$s serveriga yuklash muvaffaqiyatsiz tugadi: %2$s</string>
     <string name="favorite_app_add">Sevimlilarga qo'shish</string>
-    <string name="favorite_app_network_open">Ochiq internet orqali yuklanadi.</string>
-    <string name="favorite_app_network_tor">Tor orqali yuklanadi.</string>
     <string name="favorite_app_recent">So'nggi</string>
     <string name="favorite_app_remove">Sevimlilardan o'chirish</string>
     <string name="favorite_app_still_loading">Bu ilova hali yuklanmagan. Bir ozdan so'ng qayta urinib ko'ring.</string>
@@ -2372,10 +2342,6 @@
         <item quantity="other">%1$d a'zo</item>
     </plurals>
     <string name="marmot_member_removed">A'zo olib tashlandi</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d xabar</item>
-        <item quantity="other">%1$d xabar</item>
-    </plurals>
     <string name="marmot_not_a_member">Ushbu guruh a'zosi emas</string>
     <string name="marmot_unknown_error">noma'lum xato</string>
     <string name="media_added">Media qo'shildi</string>
@@ -2466,14 +2432,7 @@
     <string name="nest_lower_hand">Qo'lni tushirish</string>
     <string name="nest_mic_mute">Mikrofon ovozini o'chirish</string>
     <string name="nest_mic_unmute">Mikrofon ovozini yoqish</string>
-    <string name="nest_mute">Ovozni o'chirish</string>
     <string name="nest_no_server_save_failed">Nest server ro'yxatingizni saqlash muvaffaqiyatsiz tugadi. Qayta urinib ko'ring.</string>
-    <string name="nest_notification_broadcasting">Nest — Jonli</string>
-    <string name="nest_notification_channel">Nestlar</string>
-    <string name="nest_notification_channel_description">Xona ochiq bo'lganda audio ijrosini davom ettiradi.</string>
-    <string name="nest_notification_listening">Nest ulandi</string>
-    <string name="nest_notification_stop">To'xtatish</string>
-    <string name="nest_notification_text">Qaytish uchun bosing.</string>
     <string name="nest_participant_follow">Kuzatish</string>
     <string name="nest_participant_mute">Ovozini o'chirish</string>
     <string name="nest_participant_unfollow">Kuzatishni to'xtatish</string>
@@ -2484,7 +2443,6 @@
     <string name="nest_presence_raised_hand">qo'lini ko'tardi</string>
     <string name="nest_presence_speaking">gapiryapti</string>
     <string name="nest_raise_hand">Qo'l ko'tarish</string>
-    <string name="nest_unmute">Ovozni yoqish</string>
     <string name="nests">Nestlar</string>
     <string name="nests_servers_my_explainer">Boshqa mijozlar sozlamasini o'qiy olishi uchun kind-10112 almashtiriladigan voqea sifatida saqlanadi.</string>
     <string name="nests_servers_my_section">Sizning serverlaringiz</string>
@@ -2518,10 +2476,6 @@
     <string name="new_requests">Yangi so'rovlar</string>
     <string name="new_threads">Yangi mavzular</string>
     <string name="new_workout">Yangi mashq</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d ta aktivni o'z ichiga oladi</item>
-        <item quantity="other">%1$d ta aktivni o'z ichiga oladi</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom ilovalari topilmadi. Bu faylni ko'rish uchun mahalliy Blossom ilovasini o'rnating</string>
     <string name="no_blossom_apps_found_title">Blossom havolalarini ochib bo'lmaydi</string>
     <string name="no_camera_app_found">Bu qurilmada kamera ilovasi topilmadi</string>
@@ -2531,7 +2485,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Bu foydalanuvchi uchun reaktsiya turlari oldindan tanlanmagan. O'zgartirish uchun yurak tugmasini uzoq bosib turing</string>
     <string name="no_reactions_setup">Reaktsiyalar sozlanmagan</string>
     <string name="no_wallet_found">Lightning hisob-fakturasini to'lash uchun hamyon topilmadi. Zap lardan foydalanish uchun Lightning hamyonini o'rnating</string>
-    <string name="no_wallet_found_with_error">Lightning hisob-fakturasini to'lash uchun hamyon topilmadi (Xato: %1$s). Zap lardan foydalanish uchun Lightning hamyonini o'rnating</string>
     <string name="no_zap_amount_setup_long_press_to_change">Zap miqdori o'rnatilmagan. O'zgartirish uchun uzoq bosing</string>
     <string name="notification_settings">Bildirishnomalar</string>
     <string name="notification_settings_section_categories">Kategoriyalar</string>
@@ -2878,8 +2831,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s foydalanuvchisining sat larni qabul qilish uchun lightning manzili sozlanmagan</string>
     <string name="vanish_history">Yo'q bo'lib ketish tarixi</string>
     <string name="vanish_request_sent">Yo'q bo'lib ketish so'rovi yuborildi</string>
-    <string name="video_codec_h265_description">Kichikroq fayl hajmida yaxshiroq sifat, lekin barcha qurilmalar H.265 ni qo'llab-quvvatlamaydi.</string>
-    <string name="video_codec_h265_label">H.265/HEVC kodekidan foydalanish</string>
     <string name="video_download_has_started_toast">Video yuklab olish boshlandi…</string>
     <string name="video_player_settings">Video o'ynatuvchi tugmalari</string>
     <string name="video_saved_to_the_gallery">Video telefon video galereysiga saqlandi</string>

@@ -106,7 +106,6 @@
     <string name="quote">উদ্ধৃতি দিন</string>
     <string name="fork">ফোর্ক</string>
     <string name="new_amount_in_sats">স্যাটে নতুন পরিমাণ যুক্ত হয়েছে</string>
-    <string name="and"> এবং </string>
     <string name="following"> অনুসরণ</string>
     <string name="followers"> অনুসারী</string>
     <string name="number_following">%1$s অনুসরণ</string>
@@ -253,7 +252,6 @@
     <string name="refresh">রিফ্রেশ করুন</string>
     <string name="channel_created">চ্যানেলটি তৈরি করা হয়েছে</string>
     <string name="channel_information_changed_to">চ্যানেলের তথ্যের পরিবর্তিত চেহারা</string>
-    <string name="marmot_group_no_messages_yet">এখনও কোনো বার্তা নেই</string>
     <string name="paid_relay">পেইড relay</string>
     <string name="tor_relay">সংযোগ করার সময় Tor বাধ্য করে</string>
     <string name="posts_received">পেশকৃত আধেয় গৃহীত হয়েছে</string>
@@ -424,7 +422,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">এখনো কোনো nSite পাওয়া যায়নি।</string>
-    <string name="browser_reload">পুনরায় লোড করুন</string>
     <string name="browser_unsupported">ইন-অ্যাপ ব্রাউজারের জন্য Android 11 বা নতুন সংস্করণ প্রয়োজন।</string>
     <string name="embedded_tab_load_failed">এই অ্যাপটি লোড করা যায়নি।</string>
     <string name="browser_go">খুলুন</string>
@@ -432,10 +429,6 @@
     <string name="browser_recent_options">বিকল্প</string>
     <string name="browser_recent_remove">ইতিহাস থেকে সরিয়ে দিন</string>
     <string name="favorite_apps_empty">এখনো কোনো প্রিয় অ্যাপ নেই। একটি ওয়েব ক্লায়েন্ট বা nsite খুলুন এবং এখানে পিন করতে তারাটিতে ট্যাপ করুন।</string>
-    <string name="favorite_app_open_window">নিজস্ব উইন্ডোতে খুলুন</string>
-    <string name="favorite_app_access_title">এই অ্যাপটি কী অ্যাক্সেস করতে পারে</string>
-    <string name="favorite_app_access_static">আপনার অ্যাকাউন্টে কোনো বিশেষ অ্যাক্সেস ছাড়াই স্যান্ডবক্সে চলে।</string>
-    <string name="favorite_app_access_show">এটি কী অ্যাক্সেস করতে পারে</string>
     <string name="favorite_app_unavailable">এই অ্যাপটি এখনো লোড হয়নি। এর কার্ড থেকে খুলুন, অথবা একটু পরে আবার চেষ্টা করুন।</string>
     <string name="napplet_manage_permissions">অনুমতি পরিচালনা করুন</string>
     <string name="napplet_none_found">এখনো কোনো nApplet পাওয়া যায়নি।</string>
@@ -652,7 +645,6 @@
     <string name="pledge_amount_in_sats">প্রতিশ্রুত পরিমাণ স্যাট দ্বারা জানান</string>
     <string name="poll_zap_value_min">ন্যূনতম জ্যাপ</string>
     <string name="poll_zap_value_max">সর্বোচ্চ জ্যাপ</string>
-    <string name="poll_consensus_threshold">ঐক্যমত</string>
     <string name="looking_for_event">ইভেন্ট খোঁজা হচ্ছে %1$s</string>
     <string name="send_zap">Zap পাঠান</string>
     <string name="custom_zaps_add_a_message">একটি সর্বজনীন বার্তা পাঠান</string>
@@ -660,11 +652,6 @@
     <string name="custom_zaps_add_a_message_nonzap">একটি ইনভয়েস বার্তা পাঠান</string>
     <string name="custom_zaps_add_a_message_example">আপনার সকল কাজের জন্য আপনাকে অসংখ্য ধন্যবাদ!</string>
     <string name="lightning_create_and_add_invoice">তৈরি করুন এবং যোগ করুন</string>
-    <string name="add_content">বার্তায় যোগ করুন</string>
-    <string name="add_caption">একটি ক্যাপশন যোগ করুন</string>
-    <string name="add_caption_example">আমার প্রিয় বন্ধু</string>
-    <string name="content_description">বিষয়বস্তুর বিবরণ</string>
-    <string name="content_description_example">সূর্যাস্তের সময় সাদা বালুকাময় সমুদ্র সৈকতে একটি নীল নৌকা</string>
     <string name="ai_suggested_alt_text_hint">AI-প্রস্তাবিত, সম্পাদনা করুন</string>
     <string name="ai_suggested_alt_text_dismiss">AI পরামর্শ খারিজ করুন</string>
     <string name="zap_type">জ্যাপের ধরন</string>
@@ -994,7 +981,6 @@
     <string name="wallet_outgoing">পাঠানো</string>
     <string name="wallet_refresh">রিফ্রেশ করুন</string>
     <string name="wallet_filter_all">সব</string>
-    <string name="wallet_add">ওয়ালেট যোগ করুন</string>
     <string name="wallet_default">ডিফল্ট</string>
     <string name="wallet_set_default">ডিফল্ট হিসেবে সেট করুন</string>
     <string name="wallet_remove">সরান</string>
@@ -1085,8 +1071,6 @@
     <string name="cashu_redeemed_amount">আপনার ওয়ালেটে %1$s sats রিডিম করা হয়েছে।</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URI পেস্ট করুন</string>
     <string name="wallet_save">সংরক্ষণ করুন</string>
-    <string name="wallet_rename">নাম পরিবর্তন করুন</string>
-    <string name="wallet_rename_title">ওয়ালেটের নাম পরিবর্তন করুন</string>
     <string name="wallet_onchain_transactions">অনচেইন লেনদেন</string>
     <string name="wallet_onchain_no_address">এই অ্যাকাউন্টের জন্য কোনো অন-চেইন ঠিকানা উপলব্ধ নেই।</string>
     <string name="wallet_onchain_no_backend">কোনো চেইন ব্যাকএন্ড কনফিগার করা নেই।</string>
@@ -1328,7 +1312,6 @@
     <string name="accessibility_play_username">ব্যবহারকারীর নাম অডিও হিসেবে চালান</string>
     <string name="accessibility_pushpin">পুশপিন</string>
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
-    <string name="accessibility_select_date">তারিখ নির্বাচন করুন</string>
     <string name="load_from_text">বার্তা থেকে</string>
     <string name="dvm_looking_for_app">অ্যাপ্লিকেশন খোঁজা হচ্ছে</string>
     <string name="dvm_waiting_status">কাজের অনুরোধ করা হয়েছে, উত্তরের জন্য অপেক্ষা করা হচ্ছে</string>
@@ -1429,9 +1412,7 @@
     <string name="closing_time">সমাপ্তির সময়</string>
     <string name="confirm">নিশ্চিত করুন</string>
     <string name="next">পরবর্তী</string>
-    <string name="go_back">পিছনে যান</string>
     <string name="approve">অনুমোদন করুন</string>
-    <string name="connected">সংযুক্ত</string>
     <string name="social_proof">সামাজিক প্রমাণ</string>
     <string name="poll_submit">জমা দিন</string>
     <string name="poll_view_results">ফলাফল দেখুন</string>
@@ -1770,7 +1751,6 @@
     <string name="add_a_nip96_server">একটি NIP-96 সার্ভার যোগ করুন</string>
     <string name="add_client_tag_explainer">সক্ষম করলে, Amethyst আপনার প্রকাশিত ইভেন্টে একটি NIP-89 ক্লায়েন্ট ট্যাগ যোগ করে।</string>
     <string name="add_client_tag_title">আমার ইভেন্টে ক্লায়েন্ট ট্যাগ যোগ করুন</string>
-    <string name="add_sensitive_content_description">সংবেদনশীল আধেয় দেখানোর আগে এ সম্পর্কিত সতর্কতা প্রদর্শন করে</string>
     <string name="add_sensitive_content_label">সংবেদনশীল আধেয়</string>
     <string name="add_to_public_bookmarks">সর্বজনীন বুকমার্কে যুক্ত করুন</string>
     <string name="ai_writing_setting_description">পাঠ্য সংশোধন এবং সুরের পরিবর্তন প্রস্তাব করতে ডিভাইসে AI মডেল ব্যবহার করে।</string>
@@ -1849,8 +1829,6 @@
     <string name="broadcast_section_explainer">Relay যেগুলো আপনার নোটগুলো অন্য সব relay-এ পুশ করতে বিশেষজ্ঞ, যেমন sendit.nosflare.com। Amethyst আপনার তৈরি সব নতুন ইভেন্টে এই relay যোগ করবে</string>
     <string name="browser">ব্রাউজার</string>
     <string name="browser_favorites">প্রিয়</string>
-    <string name="browser_tor_off">উন্মুক্ত ওয়েবের মাধ্যমে লোড হচ্ছে। Tor ব্যবহার করতে ট্যাপ করুন।</string>
-    <string name="browser_tor_on">Tor-এর মাধ্যমে লোড হচ্ছে। উন্মুক্ত ওয়েব ব্যবহার করতে ট্যাপ করুন।</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d টি ইভেন্ট</item>
         <item quantity="other">%1$s, %2$d টি ইভেন্ট</item>
@@ -1975,15 +1953,10 @@
     <string name="connectivity_type_always">সবসময়</string>
     <string name="connectivity_type_never">কখনো না</string>
     <string name="connectivity_type_unmetered_wifi_only">আনমিটার্ড WiFi</string>
-    <string name="content_description_add_document">নথি যোগ করুন</string>
-    <string name="content_description_add_image">ছবি যোগ করুন</string>
-    <string name="content_description_add_media">মিডিয়া যোগ করুন</string>
-    <string name="content_description_add_video">ভিডিও যোগ করুন</string>
     <string name="content_warning_hide_all_sensitive_content_option">লুকান</string>
     <string name="content_warning_see_warnings_option">সতর্ক করুন</string>
     <string name="content_warning_show_all_sensitive_content_option">দেখান</string>
     <string name="conversations">কথোপকথন</string>
-    <string name="convert_gif_to_mp4_description">ছোট ফাইল সাইজ এবং ভালো প্লেব্যাক সামঞ্জস্যের জন্য অ্যানিমেটেড GIF কে MP4 ভিডিওতে রূপান্তর করে।</string>
     <string name="convert_gif_to_mp4_label">GIF কে MP4 তে রূপান্তর করুন</string>
     <string name="copied_note_id_to_clipboard">নোট আইডিটি (@note1) ক্লিপবোর্ডে কপি করা হয়েছে</string>
     <string name="copied_note_text_to_clipboard">নোটের রচনাটি ক্লিপবোর্ডে কপি করা হয়েছে</string>
@@ -2056,7 +2029,6 @@
     <string name="emoji_private_explainer">ব্যক্তিগত ইমোজি relay-গুলোতে এনক্রিপ্টেড অবস্থায় সংরক্ষিত এবং শুধুমাত্র আপনার কাছে দৃশ্যমান। এগুলো পাবলিক ইমোজির মতোই আপনার রিঅ্যাকশন মেনু এবং ":" অটোকমপ্লিটে দেখা যায়।</string>
     <string name="emoji_public_explainer">পাবলিক ইমোজি সবার কাছে দৃশ্যমান এবং এই প্যাকটি আপনার ইমোজি তালিকায় থাকলে আপনার রিঅ্যাকশন মেনু এবং ":" অটোকমপ্লিট পিকারে প্রদর্শিত হয়।</string>
     <string name="emoji_sets">ইমোজি</string>
-    <string name="encrypt_files_description">গোপনীয়তার জন্য আপলোডের আগে ফাইল এনক্রিপ্ট করুন। কিছু সার্ভার বিনামূল্যের অ্যাকাউন্টে এনক্রিপ্টেড ফাইল গ্রহণ নাও করতে পারে।</string>
     <string name="encrypt_files_label">ফাইল এনক্রিপ্ট করুন</string>
     <string name="ephemeral_relay_chat">অদৃশ্য হওয়া চ্যাট</string>
     <string name="error">ত্রুটি</string>
@@ -2102,8 +2074,6 @@
     <string name="failed_to_upload_media_no_details">মিডিয়া আপলোড করতে ব্যর্থ</string>
     <string name="failed_to_upload_to_server_with_message">%1$s তে আপলোড করতে ব্যর্থ: %2$s</string>
     <string name="favorite_app_add">প্রিয়তে যোগ করুন</string>
-    <string name="favorite_app_network_open">উন্মুক্ত ওয়েবের মাধ্যমে লোড হয়।</string>
-    <string name="favorite_app_network_tor">Tor-এর মাধ্যমে লোড হয়।</string>
     <string name="favorite_app_recent">সাম্প্রতিক</string>
     <string name="favorite_app_remove">প্রিয় থেকে সরিয়ে দিন</string>
     <string name="favorite_app_still_loading">সেই অ্যাপটি এখনো লোড হয়নি। একটু পরে আবার চেষ্টা করুন।</string>
@@ -2386,10 +2356,6 @@
         <item quantity="other">%1$d জন সদস্য</item>
     </plurals>
     <string name="marmot_member_removed">সদস্য সরানো হয়েছে</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d টি বার্তা</item>
-        <item quantity="other">%1$d টি বার্তা</item>
-    </plurals>
     <string name="marmot_not_a_member">এই গ্রুপের সদস্য নন</string>
     <string name="marmot_unknown_error">অজানা ত্রুটি</string>
     <string name="media_added">মিডিয়া যোগ হয়েছে</string>
@@ -2478,13 +2444,7 @@
     <string name="nest_lower_hand">হাত নামান</string>
     <string name="nest_mic_mute">মাইক মিউট করুন</string>
     <string name="nest_mic_unmute">মাইক আনমিউট করুন</string>
-    <string name="nest_mute">মিউট করুন</string>
     <string name="nest_no_server_save_failed">নেস্ট সার্ভার তালিকা সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।</string>
-    <string name="nest_notification_broadcasting">Nest — লাইভ</string>
-    <string name="nest_notification_channel_description">একটি রুম খোলা থাকলে অডিও চালু রাখে।</string>
-    <string name="nest_notification_listening">Nest সংযুক্ত</string>
-    <string name="nest_notification_stop">থামুন</string>
-    <string name="nest_notification_text">ফিরে যেতে ট্যাপ করুন।</string>
     <string name="nest_participant_follow">অনুসরণ করুন</string>
     <string name="nest_participant_mute">মিউট করুন</string>
     <string name="nest_participant_unfollow">অনুসরণ বন্ধ করুন</string>
@@ -2495,7 +2455,6 @@
     <string name="nest_presence_raised_hand">হাত তুলেছে</string>
     <string name="nest_presence_speaking">কথা বলছে</string>
     <string name="nest_raise_hand">হাত তুলুন</string>
-    <string name="nest_unmute">আনমিউট করুন</string>
     <string name="nests_servers_my_explainer">kind-10112 রিপ্লেসযোগ্য ইভেন্ট হিসেবে সংরক্ষিত যাতে অন্য ক্লায়েন্টরা আপনার পছন্দ পড়তে পারে।</string>
     <string name="nests_servers_my_section">আপনার সার্ভার</string>
     <string name="nests_servers_recommended_explainer">বিল্ট-ইন পরামর্শ যা এক ট্যাপে আপনার তালিকায় যোগ করা যাবে।</string>
@@ -2528,10 +2487,6 @@
     <string name="new_requests">নয়া অনুরোধসমূহ</string>
     <string name="new_threads">নতুন থ্রেড</string>
     <string name="new_workout">নতুন ওয়ার্কআউট</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d টি সম্পদ একত্রিত</item>
-        <item quantity="other">%1$d টি সম্পদ একত্রিত</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom অ্যাপ পাওয়া যায়নি। এই ফাইলটি দেখতে একটি স্থানীয় Blossom অ্যাপ ইনস্টল করুন</string>
     <string name="no_blossom_apps_found_title">Blossom লিংক খোলা যাচ্ছে না</string>
     <string name="no_camera_app_found">এই ডিভাইসে কোনো ক্যামেরা অ্যাপ পাওয়া যায়নি</string>
@@ -2541,7 +2496,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">প্রতিক্রিয়ার কোনো ধরন বেছে নেওয়া হয়নি। পরিবর্তন করতে দীর্ঘক্ষণ চাপুন</string>
     <string name="no_reactions_setup">কোন প্রতিক্রিয়া সেটআপ</string>
     <string name="no_wallet_found">Lightning ইনভয়েস পরিশোধ করার জন্য কোনো ওয়ালেট পাওয়া যায়নি। Zap ব্যবহার করতে একটি Lightning ওয়ালেট ইনস্টল করুন</string>
-    <string name="no_wallet_found_with_error">Lightning ইনভয়েস পরিশোধ করার জন্য কোনো ওয়ালেট পাওয়া যায়নি (ত্রুটি: %1$s)। Zap ব্যবহার করতে একটি Lightning ওয়ালেট ইনস্টল করুন</string>
     <string name="no_zap_amount_setup_long_press_to_change">জ্যাপের কোনো পরিমাণ নির্দিষ্ট করা নেই। এটি পরিবর্তন করতে চাইলে দীর্ঘক্ষণ চাপুন</string>
     <string name="notification_settings">বিজ্ঞপ্তি</string>
     <string name="notification_settings_section_categories">বিভাগ</string>
@@ -2626,7 +2580,6 @@
         <item quantity="other">%1$d টি এপিসোড</item>
     </plurals>
     <string name="poll_author_no_vote">পোল-রচয়িতারা নিজেদের পোলে ভোট দিতে পারবেন না।</string>
-    <string name="poll_consensus_threshold_percent">(০–১০০)%</string>
     <string name="poll_is_closed_explainer">পোল নতুন ভোটের জন্য বন্ধ</string>
     <string name="poll_multiple_choice">একাধিক পছন্দ</string>
     <string name="poll_single_choice">একক পছন্দ</string>
@@ -2889,8 +2842,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s ব্যবহারকারীর স্যাট গ্রহণের উপযোগী কোনো বিজলি ঠিকানা সেট করা নেই</string>
     <string name="vanish_history">মুছে ফেলার ইতিহাস</string>
     <string name="vanish_request_sent">মুছে ফেলার অনুরোধ পাঠানো হয়েছে</string>
-    <string name="video_codec_h265_description">ছোট ফাইলে ভালো মান, কিন্তু সব ডিভাইস H.265 প্লেব্যাক সমর্থন করে না।</string>
-    <string name="video_codec_h265_label">H.265/HEVC কোডেক ব্যবহার করুন</string>
     <string name="video_download_has_started_toast">ভিডিও ডাউনলোড শুরু হয়েছে…</string>
     <string name="video_player_settings">ভিডিও প্লেয়ার বোতাম</string>
     <string name="video_saved_to_the_gallery">ফোনের ভিডিও গ্যালারিতে ভিডিও সেভ করা হয়েছে</string>

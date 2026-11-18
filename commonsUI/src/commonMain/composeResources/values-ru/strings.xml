@@ -93,7 +93,6 @@
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Новая сумма в sat</string>
     <string name="replying_to">ответ на </string>
-    <string name="and"> и </string>
     <string name="following"> Подписок</string>
     <string name="followers"> Подписчиков</string>
     <string name="number_following">%1$s подписок</string>
@@ -244,7 +243,6 @@
     <string name="refresh">Обновить</string>
     <string name="channel_created">Канал создан</string>
     <string name="channel_information_changed_to">Информация о канале изменена на</string>
-    <string name="marmot_group_no_messages_yet">Сообщений пока нет</string>
     <string name="paid_relay">Платный relay</string>
     <string name="tor_relay">При подключении всегда через Tor</string>
     <string name="posts_received">записей получено</string>
@@ -416,7 +414,6 @@
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">Из Health Connect</string>
     <string name="nsite_none_found">nSites пока не найдены.</string>
-    <string name="browser_reload">Обновить</string>
     <string name="browser_unsupported">Встроенный браузер требует Android 11 или новее.</string>
     <string name="embedded_tab_load_failed">Не удалось загрузить это приложение.</string>
     <string name="browser_go">Открыть</string>
@@ -424,10 +421,6 @@
     <string name="browser_recent_options">Параметры</string>
     <string name="browser_recent_remove">Удалить из истории</string>
     <string name="favorite_apps_empty">Нет избранных приложений. Откройте веб-клиент или nsite и нажмите на звёздочку, чтобы закрепить его здесь.</string>
-    <string name="favorite_app_open_window">Открыть в отдельном окне</string>
-    <string name="favorite_app_access_title">К чему это приложение имеет доступ</string>
-    <string name="favorite_app_access_static">Запускается в изолированной среде без специального доступа к вашему аккаунту.</string>
-    <string name="favorite_app_access_show">К чему оно имеет доступ</string>
     <string name="favorite_app_unavailable">Это приложение ещё не загружено. Откройте его через карточку или повторите попытку через мгновение.</string>
     <string name="napplet_manage_permissions">Управление разрешениями</string>
     <string name="napplet_none_found">nApplets пока не найдены.</string>
@@ -651,7 +644,6 @@
     <string name="pledge_amount_in_sats">Сумма взноса в sat</string>
     <string name="poll_zap_value_min">Минимальный зап</string>
     <string name="poll_zap_value_max">Максимальный зап</string>
-    <string name="poll_consensus_threshold">Консенсус</string>
     <string name="looking_for_event">Поиск события %1$s</string>
     <string name="send_zap">Отправить зап</string>
     <string name="custom_zaps_add_a_message">Добавить публичное сообщение</string>
@@ -659,11 +651,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Добавить примечание к инвойсу</string>
     <string name="custom_zaps_add_a_message_example">Спасибо всем вам за работу!</string>
     <string name="lightning_create_and_add_invoice">Создать и Добавить</string>
-    <string name="add_content">Добавить к сообщению</string>
-    <string name="add_caption">Добавить подпись</string>
-    <string name="add_caption_example">Мой замечательный друг</string>
-    <string name="content_description">Описание содержимого</string>
-    <string name="content_description_example">Компания весёлых молодых людей</string>
     <string name="ai_suggested_alt_text_hint">Предложено ИИ, отредактируйте</string>
     <string name="ai_suggested_alt_text_dismiss">Отклонить предложение ИИ</string>
     <string name="zap_type">Тип запа</string>
@@ -999,7 +986,6 @@
     <string name="wallet_filter_all">Все</string>
     <string name="wallet_filter_zaps">Зап</string>
     <string name="wallet_filter_non_zaps">Не-Зап</string>
-    <string name="wallet_add">Добавить кошелёк</string>
     <string name="wallet_default">По умолчанию</string>
     <string name="wallet_set_default">Сделать по умолчанию</string>
     <string name="wallet_remove">Удалить</string>
@@ -1094,8 +1080,6 @@
     <string name="cashu_redeemed_amount">Зачислено %1$s sats в ваш кошелёк.</string>
     <string name="wallet_paste_uri">Вставить nostr+walletconnect:// URI</string>
     <string name="wallet_save">Сохранить</string>
-    <string name="wallet_rename">Переименовать</string>
-    <string name="wallet_rename_title">Переименовать кошелёк</string>
     <string name="wallet_onchain_transactions">Транзакции в блокчейне</string>
     <string name="wallet_onchain_no_address">Нет адреса в блокчейне для этого аккаунта.</string>
     <string name="wallet_onchain_no_backend">Блокчейн-бэкенд не настроен.</string>
@@ -1345,7 +1329,6 @@
     <string name="accessibility_play_username">Воспроизвести имя пользователя как аудио</string>
     <string name="accessibility_pushpin">Булавка</string>
     <string name="accessibility_scan_qr_code">Сканировать QR-код</string>
-    <string name="accessibility_select_date">Выбрать дату</string>
     <string name="load_from_text">Из сообщения</string>
     <string name="dvm_looking_for_app">Поиск приложения</string>
     <string name="dvm_waiting_status">Задание запрошено, ожидание ответа</string>
@@ -1448,9 +1431,7 @@
     <string name="closing_time">Время закрытия</string>
     <string name="confirm">Подтвердить</string>
     <string name="next">Далее</string>
-    <string name="go_back">Назад</string>
     <string name="approve">Одобрить</string>
-    <string name="connected">Подключено</string>
     <string name="social_proof">Социальное подтверждение</string>
     <string name="poll_submit">Отправить</string>
     <string name="poll_view_results">Посмотреть результаты</string>
@@ -1790,8 +1771,6 @@
     <string name="ots_explorer_api_label">Базовый URL API обозревателя</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатить счёт от DVM</string>
     <string name="dvm_pay_amount_to_dvm">Оплатить %1$s sats DVM</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Разрешения:</string>
     <string name="nsite_root_site">Корневой сайт</string>
     <string name="nsite_source">Источник:</string>
@@ -1805,7 +1784,6 @@
     <string name="add_a_nip96_server">Добавить NIP-96 сервер</string>
     <string name="add_client_tag_explainer">При включении Amethyst добавляет NIP-89 клиентский тег к публикуемым вами событиям.</string>
     <string name="add_client_tag_title">Добавлять клиентский тег к моим событиям</string>
-    <string name="add_sensitive_content_description">Добавляет предупреждение о чувствительном содержимом перед показом</string>
     <string name="add_sensitive_content_label">Чувствительный контент</string>
     <string name="add_to_public_bookmarks">Добавить в Публичные закладки</string>
     <string name="ai_writing_setting_description">Использует модель ИИ на устройстве для предложения исправлений текста и изменения тональности.</string>
@@ -1884,8 +1862,6 @@
     <string name="broadcast_section_explainer">Relay-серверы, специализирующиеся на рассылке ваших заметок на все остальные relay-серверы, например sendit.nosflare.com. Amethyst будет добавлять этот relay ко всем новым событиям, созданным вами.</string>
     <string name="browser">Браузер</string>
     <string name="browser_favorites">Избранное</string>
-    <string name="browser_tor_off">Загрузка через открытую сеть. Нажмите, чтобы использовать Tor.</string>
-    <string name="browser_tor_on">Загрузка через Tor. Нажмите, чтобы использовать открытую сеть.</string>
     <plurals name="calendar_day_a11y_events">
     <item quantity="one">%1$s, %2$d событие</item>
     <item quantity="few">%1$s, %2$d события</item>
@@ -2028,15 +2004,10 @@
     <string name="connectivity_type_always">Всегда</string>
     <string name="connectivity_type_never">Никогда</string>
     <string name="connectivity_type_unmetered_wifi_only">Безлимитный Wi-Fi</string>
-    <string name="content_description_add_document">Добавить документ</string>
-    <string name="content_description_add_image">Добавить фото</string>
-    <string name="content_description_add_media">Добавить медиа</string>
-    <string name="content_description_add_video">Добавить видео</string>
     <string name="content_warning_hide_all_sensitive_content_option">Скрыть</string>
     <string name="content_warning_see_warnings_option">Предупреждать</string>
     <string name="content_warning_show_all_sensitive_content_option">Показать</string>
     <string name="conversations">Обсуждения</string>
-    <string name="convert_gif_to_mp4_description">Конвертирует анимированный GIF в видео MP4 для уменьшения размера файла и лучшей совместимости воспроизведения.</string>
     <string name="convert_gif_to_mp4_label">Конвертировать GIF в MP4</string>
     <string name="copied_note_id_to_clipboard">ID записи (note1) скопирован</string>
     <string name="copied_note_text_to_clipboard">Копировать текст</string>
@@ -2122,7 +2093,6 @@
     <string name="emoji_private_explainer">Приватные эмодзи хранятся в зашифрованном виде на relay и видны только вам. Они отображаются в вашем меню реакций и автодополнении «:» так же, как и публичные.</string>
     <string name="emoji_public_explainer">Публичные эмодзи видны всем и отображаются в вашем меню реакций и автодополнении «:», когда этот набор добавлен в ваш список.</string>
     <string name="emoji_sets">Эмодзи</string>
-    <string name="encrypt_files_description">Шифровать файлы перед загрузкой для защиты конфиденциальности. Некоторые серверы могут не принимать зашифрованные файлы на бесплатных аккаунтах.</string>
     <string name="encrypt_files_label">Шифровать файлы</string>
     <string name="ephemeral_relay_chat">Исчезающий чат</string>
     <string name="error">Ошибка</string>
@@ -2170,8 +2140,6 @@
     <string name="failed_to_upload_media_no_details">Не удалось загрузить медиа</string>
     <string name="failed_to_upload_to_server_with_message">Не удалось загрузить на %1$s: %2$s</string>
     <string name="favorite_app_add">Добавить в избранное</string>
-    <string name="favorite_app_network_open">Загружается через открытую сеть.</string>
-    <string name="favorite_app_network_tor">Загружается через Tor.</string>
     <string name="favorite_app_recent">Недавние</string>
     <string name="favorite_app_remove">Удалить из избранного</string>
     <string name="favorite_app_still_loading">Это приложение ещё не загружено. Повторите попытку через мгновение.</string>
@@ -2465,12 +2433,6 @@
     <item quantity="other">%1$d участника</item>
 </plurals>
     <string name="marmot_member_removed">Участник удалён</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d сообщ.</item>
-    <item quantity="few">%1$d сообщ.</item>
-    <item quantity="many">%1$d сообщ.</item>
-    <item quantity="other">%1$d сообщ.</item>
-</plurals>
     <string name="marmot_not_a_member">Не является участником этой группы</string>
     <string name="marmot_unknown_error">неизвестная ошибка</string>
     <string name="media_added">Медиа добавлено</string>
@@ -2572,14 +2534,7 @@
     <string name="nest_lower_hand">Опустить руку</string>
     <string name="nest_mic_mute">Выключить микрофон</string>
     <string name="nest_mic_unmute">Включить микрофон</string>
-    <string name="nest_mute">Выключить микрофон</string>
     <string name="nest_no_server_save_failed">Не удалось сохранить список nest-серверов. Повторите попытку.</string>
-    <string name="nest_notification_broadcasting">Nest — в эфире</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Позволяет воспроизводить звук, пока комната открыта.</string>
-    <string name="nest_notification_listening">Nest подключён</string>
-    <string name="nest_notification_stop">Стоп</string>
-    <string name="nest_notification_text">Нажмите, чтобы вернуться.</string>
     <string name="nest_participant_follow">Подписаться</string>
     <string name="nest_participant_mute">Заглушить</string>
     <string name="nest_participant_unfollow">Отписаться</string>
@@ -2590,7 +2545,6 @@
     <string name="nest_presence_raised_hand">поднял руку</string>
     <string name="nest_presence_speaking">говорит</string>
     <string name="nest_raise_hand">Поднять руку</string>
-    <string name="nest_unmute">Включить микрофон</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Сохраняется как заменяемое событие kind:10112, чтобы другие клиенты могли прочитать ваши настройки.</string>
     <string name="nests_servers_my_section">Ваши серверы</string>
@@ -2624,12 +2578,6 @@
     <string name="new_requests">Новые запросы</string>
     <string name="new_threads">Новые треды</string>
     <string name="new_workout">Новая тренировка</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d вложение в комплекте</item>
-    <item quantity="few">%1$d вложения в комплекте</item>
-    <item quantity="many">%1$d вложений в комплекте</item>
-    <item quantity="other">%1$d вложения в комплекте</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Blossom-приложения не найдены. Установите локальное Blossom-приложение для просмотра этого файла</string>
     <string name="no_blossom_apps_found_title">Не удаётся открыть Blossom-ссылки</string>
     <string name="no_camera_app_found">На этом устройстве не найдено приложение камеры</string>
@@ -2639,7 +2587,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Типы реакций для этого пользователя не выбраны. Удерживайте кнопку сердечка, чтобы изменить</string>
     <string name="no_reactions_setup">Реакции не настроены</string>
     <string name="no_wallet_found">Не найдено кошельков для оплаты Lightning-счёта. Установите Lightning-кошелёк для использования зап</string>
-    <string name="no_wallet_found_with_error">Не найдено кошельков для оплаты Lightning-счёта (Ошибка: %1$s). Установите Lightning-кошелёк для использования зап</string>
     <string name="no_zap_amount_setup_long_press_to_change">Не настроены запы. Нажмите и удерживайте для настройки</string>
     <string name="notification_settings">Уведомления</string>
     <string name="notification_settings_section_categories">Категории</string>
@@ -2738,7 +2685,6 @@
     <item quantity="other">%1$d эпизода</item>
 </plurals>
     <string name="poll_author_no_vote">Автор опроса не может голосовать</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Опрос закрыт</string>
     <string name="poll_multiple_choice">Множественный выбор</string>
     <string name="poll_single_choice">Одиночный выбор</string>
@@ -3018,8 +2964,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">У пользователя %1$s не настроен Lightning-адрес для получения sats</string>
     <string name="vanish_history">История запросов на удаление</string>
     <string name="vanish_request_sent">Запрос на удаление отправлен</string>
-    <string name="video_codec_h265_description">Лучшее качество при меньшем размере файла, но не все устройства поддерживают воспроизведение H.265.</string>
-    <string name="video_codec_h265_label">Использовать кодек H.265/HEVC</string>
     <string name="video_download_has_started_toast">Загрузка видео начата…</string>
     <string name="video_player_settings">Кнопки видеоплеера</string>
     <string name="video_saved_to_the_gallery">Видео сохранено в видеогалерею телефона</string>

@@ -107,7 +107,6 @@
     <string name="edited">izmenjeno</string>
     <string name="quote">Citat</string>
     <string name="new_amount_in_sats">Novi iznos u Sats</string>
-    <string name="and"> i </string>
     <string name="following"> Praćeni</string>
     <string name="followers"> Pratioci</string>
     <string name="number_following">%1$s praćenih</string>
@@ -252,7 +251,6 @@
     <string name="refresh">Osveži</string>
     <string name="channel_created">Kanal kreiran</string>
     <string name="channel_information_changed_to">Informacije o kanalu promenjene na</string>
-    <string name="marmot_group_no_messages_yet">Još nema poruka</string>
     <string name="paid_relay">Plaćeni relay</string>
     <string name="tor_relay">Primorava Tor pri povezivanju</string>
     <string name="posts_received">primljenih objava</string>
@@ -422,7 +420,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Još uvek nema pronađenih nSites.</string>
-    <string name="browser_reload">Ponovo učitaj</string>
     <string name="browser_unsupported">Pregledač unutar aplikacije zahteva Android 11 ili noviji.</string>
     <string name="embedded_tab_load_failed">Nije moguće učitati ovu aplikaciju.</string>
     <string name="browser_go">Otvori</string>
@@ -430,10 +427,6 @@
     <string name="browser_recent_options">Opcije</string>
     <string name="browser_recent_remove">Ukloni iz istorije</string>
     <string name="favorite_apps_empty">Još nema omiljenih aplikacija. Otvorite veb klijent ili nsite i dodirnite zvezdu da biste ga zakačili ovde.</string>
-    <string name="favorite_app_open_window">Otvori u sopstvenom prozoru</string>
-    <string name="favorite_app_access_title">Čemu ova aplikacija može da pristupi</string>
-    <string name="favorite_app_access_static">Pokreće se u peščaniku bez posebnog pristupa vašem nalogu.</string>
-    <string name="favorite_app_access_show">Čemu može da pristupi</string>
     <string name="favorite_app_unavailable">Ova aplikacija još nije učitana. Otvorite je iz njene kartice ili pokušajte ponovo za trenutak.</string>
     <string name="napplet_manage_permissions">Upravljaj dozvolama</string>
     <string name="napplet_none_found">Još uvek nema pronađenih nApplets.</string>
@@ -648,7 +641,6 @@
     <string name="see_relay_feed">Pogledaj Relay feed</string>
     <string name="pledge_amount_in_sats">Iznos pledža u Sats</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
-    <string name="poll_consensus_threshold">Konsenzus</string>
     <string name="looking_for_event">Traženje događaja %1$s</string>
     <string name="send_zap">Pošalji Zap</string>
     <string name="custom_zaps_add_a_message">Dodaj javnu poruku</string>
@@ -656,11 +648,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Dodaj poruku uz fakturu</string>
     <string name="custom_zaps_add_a_message_example">Hvala vam na svem vašem radu!</string>
     <string name="lightning_create_and_add_invoice">Kreiraj i dodaj</string>
-    <string name="add_content">Dodaj u poruku</string>
-    <string name="add_caption">Dodaj natpis</string>
-    <string name="add_caption_example">Moj dragi prijatelj</string>
-    <string name="content_description">Opis sadržaja</string>
-    <string name="content_description_example">Plavi čamac na beloj peščanoj plaži u zalasku sunca</string>
     <string name="ai_suggested_alt_text_hint">Predloženo od AI, uredite me</string>
     <string name="ai_suggested_alt_text_dismiss">Odbaci AI predlog</string>
     <string name="zap_type">Tip Zap-a</string>
@@ -991,7 +978,6 @@
     <string name="wallet_refresh">Osveži</string>
     <string name="wallet_filter_all">Sve</string>
     <string name="wallet_filter_non_zaps">Bez Zaps</string>
-    <string name="wallet_add">Dodaj novčanik</string>
     <string name="wallet_default">Podrazumevano</string>
     <string name="wallet_set_default">Postavi kao podrazumevano</string>
     <string name="wallet_remove">Ukloni</string>
@@ -1083,8 +1069,6 @@
     <string name="cashu_redeemed_amount">Iskupljeno %1$s sats u vaš novčanik.</string>
     <string name="wallet_paste_uri">Nalepi nostr+walletconnect:// URI</string>
     <string name="wallet_save">Sačuvaj</string>
-    <string name="wallet_rename">Preimenuj</string>
-    <string name="wallet_rename_title">Preimenuj novčanik</string>
     <string name="wallet_onchain_transactions">Onchain transakcije</string>
     <string name="wallet_onchain_no_address">Nema onchain adrese dostupne za ovaj nalog.</string>
     <string name="wallet_onchain_no_backend">Nije konfigurisan nijedan chain backend.</string>
@@ -1328,7 +1312,6 @@
     <string name="accessibility_play_username">Reprodukuj korisničko ime kao audio</string>
     <string name="accessibility_pushpin">Pribadača</string>
     <string name="accessibility_scan_qr_code">Skeniraj QR kod</string>
-    <string name="accessibility_select_date">Odaberi datum</string>
     <string name="load_from_text">Iz poruke</string>
     <string name="dvm_looking_for_app">Traženje aplikacije</string>
     <string name="dvm_waiting_status">Posao zatražen, čekanje na odgovor</string>
@@ -1427,9 +1410,7 @@
     <string name="closing_time">Vreme zatvaranja</string>
     <string name="confirm">Potvrdi</string>
     <string name="next">Sledeće</string>
-    <string name="go_back">Nazad</string>
     <string name="approve">Odobri</string>
-    <string name="connected">Povezan</string>
     <string name="social_proof">Društveni dokaz</string>
     <string name="poll_submit">Pošalji</string>
     <string name="poll_view_results">Pogledaj rezultate</string>
@@ -1767,7 +1748,6 @@
     <string name="add_a_nip96_server">Dodaj NIP-96 server</string>
     <string name="add_client_tag_explainer">Kada je omogućeno, Amethyst dodaje NIP-89 klijentsku oznaku događajima koje objavljujete.</string>
     <string name="add_client_tag_title">Dodaj klijentsku oznaku mojim događajima</string>
-    <string name="add_sensitive_content_description">Dodaje upozorenje o osetljivom sadržaju pre prikazivanja ovog sadržaja</string>
     <string name="add_sensitive_content_label">Osetljiv sadržaj</string>
     <string name="add_to_public_bookmarks">Dodaj u javne oznake</string>
     <string name="ai_writing_setting_description">Koristi AI model na uređaju za predlaganje ispravki teksta i promena tona.</string>
@@ -1844,8 +1824,6 @@
     <string name="broadcast_section_explainer">Relay-i specijalizovani za guranje vaših beleški na sve ostale relay-e, poput sendit.nosflare.com. Amethyst će dodati ovaj relay svim novim događajima koje vi napravite</string>
     <string name="browser">Pregledač</string>
     <string name="browser_favorites">Omiljene</string>
-    <string name="browser_tor_off">Učitavanje putem otvorenog veba. Dodirnite da koristite Tor.</string>
-    <string name="browser_tor_on">Učitavanje putem Tor-a. Dodirnite da koristite otvoreni veb.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d događaj</item>
         <item quantity="few">%1$s, %2$d događaja</item>
@@ -1967,15 +1945,10 @@
     <string name="connectivity_type_always">Uvek</string>
     <string name="connectivity_type_never">Nikad</string>
     <string name="connectivity_type_unmetered_wifi_only">Neograničeni WiFi</string>
-    <string name="content_description_add_document">Dodaj dokument</string>
-    <string name="content_description_add_image">Dodaj sliku</string>
-    <string name="content_description_add_media">Dodaj medije</string>
-    <string name="content_description_add_video">Dodaj video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Sakrij</string>
     <string name="content_warning_see_warnings_option">Upozori</string>
     <string name="content_warning_show_all_sensitive_content_option">Prikaži</string>
     <string name="conversations">Razgovori</string>
-    <string name="convert_gif_to_mp4_description">Konvertuje animirane GIF fajlove u MP4 video za manju veličinu datoteke i bolju kompatibilnost reprodukcije.</string>
     <string name="convert_gif_to_mp4_label">Konvertuj GIF u MP4</string>
     <string name="copied_note_id_to_clipboard">ID beleške (@note1) kopiran u clipboard</string>
     <string name="copied_note_text_to_clipboard">Tekst beleške kopiran u clipboard</string>
@@ -2054,7 +2027,6 @@
     <string name="emoji_private_explainer">Privatni emojiji čuvaju se šifrovano na relay-ima i vidljivi su samo vama. Pojavljuju se u vašem meniju reakcija i automatskom dovršavanju „:" baš kao i javni.</string>
     <string name="emoji_public_explainer">Javni emojiji vidljivi su svima i pojavljuju se u vašem meniju reakcija i automatskom dovršavanju „:" kada je ovaj paket na vašoj emoji listi.</string>
     <string name="emoji_sets">Emojiji</string>
-    <string name="encrypt_files_description">Enkriptujte datoteke pre otpremanja radi privatnosti. Neki serveri možda neće prihvatiti enkriptovane datoteke na besplatnim nalozima.</string>
     <string name="encrypt_files_label">Enkriptuj datoteke</string>
     <string name="ephemeral_relay_chat">Nestajući čet</string>
     <string name="error">Greška</string>
@@ -2100,8 +2072,6 @@
     <string name="failed_to_upload_media_no_details">Otpremanje medija nije uspelo</string>
     <string name="failed_to_upload_to_server_with_message">Otpremanje na %1$s nije uspelo: %2$s</string>
     <string name="favorite_app_add">Dodaj u omiljene</string>
-    <string name="favorite_app_network_open">Učitava se putem otvorenog veba.</string>
-    <string name="favorite_app_network_tor">Učitava se putem Tor-a.</string>
     <string name="favorite_app_recent">Nedavne</string>
     <string name="favorite_app_remove">Ukloni iz omiljenih</string>
     <string name="favorite_app_still_loading">Ta aplikacija još nije učitana. Pokušajte ponovo za trenutak.</string>
@@ -2380,11 +2350,6 @@
         <item quantity="other">%1$d članova</item>
     </plurals>
     <string name="marmot_member_removed">Član uklonjen</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d poruka</item>
-        <item quantity="few">%1$d poruke</item>
-        <item quantity="other">%1$d poruka</item>
-    </plurals>
     <string name="marmot_not_a_member">Niste član ove grupe</string>
     <string name="marmot_unknown_error">nepoznata greška</string>
     <string name="media_added">Medij dodat</string>
@@ -2478,13 +2443,7 @@
     <string name="nest_lower_hand">Spusti ruku</string>
     <string name="nest_mic_mute">Utišaj mikrofon</string>
     <string name="nest_mic_unmute">Uključi mikrofon</string>
-    <string name="nest_mute">Utišaj</string>
     <string name="nest_no_server_save_failed">Nije moguće sačuvati listu nest servera. Pokušajte ponovo.</string>
-    <string name="nest_notification_broadcasting">Nest — Uživo</string>
-    <string name="nest_notification_channel_description">Održava zvuk dok je soba otvorena.</string>
-    <string name="nest_notification_listening">Nest povezan</string>
-    <string name="nest_notification_stop">Zaustavi</string>
-    <string name="nest_notification_text">Dodirnite za povratak.</string>
     <string name="nest_participant_follow">Prati</string>
     <string name="nest_participant_mute">Utišaj</string>
     <string name="nest_participant_unfollow">Prestani pratiti</string>
@@ -2495,7 +2454,6 @@
     <string name="nest_presence_raised_hand">digao ruku</string>
     <string name="nest_presence_speaking">govori</string>
     <string name="nest_raise_hand">Digni ruku</string>
-    <string name="nest_unmute">Uključi zvuk</string>
     <string name="nests_servers_my_explainer">Sačuvano kao kind-10112 zamenljivi događaj kako bi drugi klijenti mogli da pročitaju vaše preference.</string>
     <string name="nests_servers_my_section">Vaši serveri</string>
     <string name="nests_servers_recommended_explainer">Ugrađeni predlozi koje možete dodati na svoju listu jednim dodirom.</string>
@@ -2528,11 +2486,6 @@
     <string name="new_requests">Novi zahtevi</string>
     <string name="new_threads">Nove niti</string>
     <string name="new_workout">Novi trening</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d priloženi resurs</item>
-        <item quantity="few">%1$d priložena resursa</item>
-        <item quantity="other">%1$d priloženih resursa</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom aplikacije nisu pronađene. Instalirajte lokalnu Blossom aplikaciju da biste videli ovu datoteku</string>
     <string name="no_blossom_apps_found_title">Nije moguće otvoriti Blossom veze</string>
     <string name="no_camera_app_found">Na ovom uređaju nije pronađena aplikacija za kameru</string>
@@ -2542,7 +2495,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Nisu unapred odabrani tipovi reakcija za ovog korisnika. Dugo pritisnite dugme srca za promenu</string>
     <string name="no_reactions_setup">Reakcije nisu podešene</string>
     <string name="no_wallet_found">Nisu pronađeni novčanici za plaćanje Lightning fakture. Instalirajte Lightning novčanik da biste koristili Zap-ove</string>
-    <string name="no_wallet_found_with_error">Nisu pronađeni novčanici za plaćanje Lightning fakture (Greška: %1$s). Instalirajte Lightning novčanik da biste koristili Zap-ove</string>
     <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
     <string name="notification_settings">Obaveštenja</string>
     <string name="notification_settings_section_categories">Kategorije</string>
@@ -2899,8 +2851,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Korisnik %1$s nema podešenu Lightning adresu za primanje sats-a</string>
     <string name="vanish_history">Istorija nestanaka</string>
     <string name="vanish_request_sent">Zahtev za nestanak poslat</string>
-    <string name="video_codec_h265_description">Bolji kvalitet uz manje veličine datoteke, ali ne podržavaju svi uređaji reprodukciju H.265.</string>
-    <string name="video_codec_h265_label">Koristi H.265/HEVC kodek</string>
     <string name="video_download_has_started_toast">Preuzimanje videa je počelo…</string>
     <string name="video_player_settings">Dugmad video plejera</string>
     <string name="video_saved_to_the_gallery">Video je sačuvan u galeriji videa telefona</string>

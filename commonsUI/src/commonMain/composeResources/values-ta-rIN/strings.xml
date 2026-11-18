@@ -106,7 +106,6 @@
     <string name="original">அசல்</string>
     <string name="quote">மேற்கோள் காட்டு</string>
     <string name="new_amount_in_sats">புதிய தொகை (ஸாட்களில்)</string>
-    <string name="and">மற்றும்</string>
     <string name="following"> பின்பற்றப்படுவோர்</string>
     <string name="followers"> பின்பற்றுவோர்</string>
     <string name="number_following">%1$s பின்தொடர்கிறார்</string>
@@ -253,7 +252,6 @@
     <string name="refresh">புதுப்பி</string>
     <string name="channel_created">அலைவரிசை உருவாக்கப்பட்டது</string>
     <string name="channel_information_changed_to">அலைவரிசை தகவல் மாற்றப்பட்டது</string>
-    <string name="marmot_group_no_messages_yet">இன்னும் செய்திகள் இல்லை</string>
     <string name="paid_relay">கட்டண relay</string>
     <string name="tor_relay">இணைக்கும்போது Tor ஐ கட்டாயமாக்குகிறது</string>
     <string name="posts_received">குறிப்புகள் பெறப்பட்டன</string>
@@ -425,7 +423,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">இன்னும் nSites எதுவும் கிடைக்கவில்லை.</string>
-    <string name="browser_reload">மீண்டும் ஏற்று</string>
     <string name="browser_unsupported">உள்-பயன்பாட்டு உலாவிக்கு Android 11 அல்லது புதியது தேவை.</string>
     <string name="embedded_tab_load_failed">இந்த பயன்பாட்டை ஏற்ற முடியவில்லை.</string>
     <string name="browser_go">திறக்கவும்</string>
@@ -433,10 +430,6 @@
     <string name="browser_recent_options">விருப்பங்கள்</string>
     <string name="browser_recent_remove">வரலாற்றிலிருந்து அகற்று</string>
     <string name="favorite_apps_empty">இன்னும் விருப்பமான பயன்பாடுகள் இல்லை. ஒரு இணைய கிளையண்ட் அல்லது nsite திறந்து இங்கே பின்னிட நட்சத்திரத்தை தட்டவும்.</string>
-    <string name="favorite_app_open_window">அதன் சொந்த சாளரத்தில் திறக்கவும்</string>
-    <string name="favorite_app_access_title">இந்த பயன்பாடு அணுகக்கூடியவை</string>
-    <string name="favorite_app_access_static">உங்கள் கணக்கிற்கு சிறப்பு அணுகல் இல்லாமல் பாதுகாப்பான சூழலில் இயங்குகிறது.</string>
-    <string name="favorite_app_access_show">அது அணுகக்கூடியவை</string>
     <string name="favorite_app_unavailable">இந்த பயன்பாடு இன்னும் ஏற்றப்படவில்லை. அதன் அட்டையிலிருந்து திறக்கவும், அல்லது ஒரு கணம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
     <string name="napplet_manage_permissions">அனுமதிகளை நிர்வகிக்கவும்</string>
     <string name="napplet_none_found">இன்னும் nApplets எதுவும் கிடைக்கவில்லை.</string>
@@ -654,7 +647,6 @@
     <string name="pledge_amount_in_sats">உறுதிமொழி தொகை (ஸாட்களில்)</string>
     <string name="poll_zap_value_min">குறைந்தளவு ஜாப்</string>
     <string name="poll_zap_value_max">அதிகளவு ஜாப்</string>
-    <string name="poll_consensus_threshold">ஒருமித்த கருத்து</string>
     <string name="looking_for_event">நிகழ்வு %1$s ஐத் தேடி</string>
     <string name="send_zap">Zap அனுப்பு</string>
     <string name="custom_zaps_add_a_message">ஒரு பொது செய்தியைச் சேர்க்கவும்</string>
@@ -662,11 +654,6 @@
     <string name="custom_zaps_add_a_message_nonzap">விலைப்பட்டியல் செய்தியைச் சேர்க்கவும்</string>
     <string name="custom_zaps_add_a_message_example">தங்களின் அனைத்துப் பணிகளுக்கும் நன்றி!</string>
     <string name="lightning_create_and_add_invoice">உருவாக்கிச் சேர்</string>
-    <string name="add_content">உருவாக்கி சேர்க்கவும்</string>
-    <string name="add_caption">தலைப்பு சேர்க்கவும்</string>
-    <string name="add_caption_example">என் அன்பான நண்பர்</string>
-    <string name="content_description">உள்ளடக்க விளக்கம்</string>
-    <string name="content_description_example">சூரியன் மறையும் வேளையில் வெள்ளை மண் நிறைந்த கடற்கரையில் ஒரு நீலப் படகு</string>
     <string name="ai_suggested_alt_text_hint">AI பரிந்துரை, திருத்தவும்</string>
     <string name="ai_suggested_alt_text_dismiss">AI பரிந்துரையை நிராகரி</string>
     <string name="zap_type">ஜாப் வகை</string>
@@ -997,7 +984,6 @@
     <string name="wallet_refresh">புதுப்பிக்கவும்</string>
     <string name="wallet_filter_all">அனைத்தும்</string>
     <string name="wallet_filter_non_zaps">Zap அல்லாதவை</string>
-    <string name="wallet_add">பணப்பை சேர்க்கவும்</string>
     <string name="wallet_default">இயல்புநிலை</string>
     <string name="wallet_set_default">இயல்புநிலையாக அமைக்கவும்</string>
     <string name="wallet_remove">அகற்றவும்</string>
@@ -1088,8 +1074,6 @@
     <string name="cashu_redeemed_amount">%1$s sats உங்கள் பணப்பையில் மீட்டெடுக்கப்பட்டது.</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URI-ஐ ஒட்டவும்</string>
     <string name="wallet_save">சேமிக்கவும்</string>
-    <string name="wallet_rename">பெயர் மாற்றவும்</string>
-    <string name="wallet_rename_title">பணப்பை பெயர் மாற்றவும்</string>
     <string name="wallet_onchain_transactions">ஆன்செயின் பரிவர்த்தனைகள்</string>
     <string name="wallet_onchain_no_address">இந்த கணக்கிற்கு ஆன்-செயின் முகவரி இல்லை.</string>
     <string name="wallet_onchain_no_backend">எந்த செயின் பின்னணியும் கட்டமைக்கப்படவில்லை.</string>
@@ -1331,7 +1315,6 @@
     <string name="accessibility_play_username">பயனர்பெயரை ஆடியோவாக இயக்கு</string>
     <string name="accessibility_pushpin">புஷ்பின்</string>
     <string name="accessibility_scan_qr_code">QR குறியீட்டை ஸ்கேன் செய்யவும்</string>
-    <string name="accessibility_select_date">தேதியைத் தேர்ந்தெடுக்கவும்</string>
     <string name="load_from_text">செய்தியிலிருந்து</string>
     <string name="dvm_looking_for_app">பயன்பாட்டைத் தேடுகிறது</string>
     <string name="dvm_waiting_status">பணி கோரப்பட்டது, பதிலுக்காக காத்திருக்கிறது</string>
@@ -1430,9 +1413,7 @@
     <string name="closing_time">மூடும் நேரம்</string>
     <string name="confirm">உறுதிப்படுத்து</string>
     <string name="next">அடுத்து</string>
-    <string name="go_back">திரும்பு</string>
     <string name="approve">அனுமதி</string>
-    <string name="connected">இணைக்கப்பட்டது</string>
     <string name="social_proof">சமூக சான்று</string>
     <string name="poll_submit">சமர்ப்பி</string>
     <string name="poll_view_results">முடிவுகளைக் காண்</string>
@@ -1767,7 +1748,6 @@
     <string name="add_a_nip96_server">NIP-96 சேவையகம் சேர்க்கவும்</string>
     <string name="add_client_tag_explainer">இயக்கப்படும்போது, Amethyst நீங்கள் வெளியிடும் நிகழ்வுகளில் NIP-89 கிளையண்ட் குறிச்சொல்லை இணைக்கிறது.</string>
     <string name="add_client_tag_title">என் நிகழ்வுகளில் கிளையண்ட் குறிச்சொல் சேர்</string>
-    <string name="add_sensitive_content_description">இந்த உள்ளடக்கத்தை காட்டுவதற்கு முன் உணர்திறன் உள்ளடக்க எச்சரிக்கை சேர்க்கிறது</string>
     <string name="add_sensitive_content_label">உணர்திறன் உள்ளடக்கம்</string>
     <string name="add_to_public_bookmarks">பொது புக்மார்க்குகளில் சேர்க்கவும்</string>
     <string name="ai_writing_setting_description">உரை திருத்தங்கள் மற்றும் தொனி மாற்றங்களை பரிந்துரைக்க சாதனத்திலுள்ள AI மாதிரியை பயன்படுத்துகிறது.</string>
@@ -1846,8 +1826,6 @@
     <string name="broadcast_section_explainer">sendit.nosflare.com போன்ற, உங்கள் குறிப்புகளை மற்ற அனைத்து relays-க்கும் தள்ளுவதில் நிபுணத்துவம் பெற்ற Relays. Amethyst நீங்கள் செய்யும் அனைத்து புதிய நிகழ்வுகளிலும் இந்த relay-ஐ சேர்க்கும்</string>
     <string name="browser">உலாவி</string>
     <string name="browser_favorites">விருப்பங்கள்</string>
-    <string name="browser_tor_off">திறந்த வலை மூலம் ஏற்றுகிறது. Tor ஐ பயன்படுத்த தட்டவும்.</string>
-    <string name="browser_tor_on">Tor மூலம் ஏற்றுகிறது. திறந்த வலையை பயன்படுத்த தட்டவும்.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d நிகழ்வு</item>
         <item quantity="other">%1$s, %2$d நிகழ்வுகள்</item>
@@ -1969,15 +1947,10 @@
     <string name="connectivity_type_always">எப்போதும்</string>
     <string name="connectivity_type_never">ஒருபோதும் இல்லை</string>
     <string name="connectivity_type_unmetered_wifi_only">அளவிடா WiFi</string>
-    <string name="content_description_add_document">ஆவணத்தைச் சேர்க்கவும்</string>
-    <string name="content_description_add_image">படத்தைச் சேர்க்கவும்</string>
-    <string name="content_description_add_media">மீடியா சேர்</string>
-    <string name="content_description_add_video">காணொளியைச் சேர்க்கவும்</string>
     <string name="content_warning_hide_all_sensitive_content_option">மறை</string>
     <string name="content_warning_see_warnings_option">எச்சரி</string>
     <string name="content_warning_show_all_sensitive_content_option">காட்டு</string>
     <string name="conversations">உரையாடல்கள்</string>
-    <string name="convert_gif_to_mp4_description">சிறிய கோப்பு அளவு மற்றும் சிறந்த இயக்க இணக்கத்திற்காக அனிமேட்டட் GIF-ஐ MP4 வீடியோவாக மாற்றுகிறது.</string>
     <string name="convert_gif_to_mp4_label">GIF-ஐ MP4-ஆக மாற்றவும்</string>
     <string name="copied_note_id_to_clipboard">கிளிப்போர்டுக்கு குறிப்பு ஐடி (@note1) நகலெடுக்கப் பட்டது</string>
     <string name="copied_note_text_to_clipboard">குறிப்பு கிளிப்போர்டுக்கு நகலெடுக்கப் பட்டது</string>
@@ -2049,7 +2022,6 @@
     <string name="edit_post">இடுகையைத் திருத்து</string>
     <string name="emoji_private_explainer">தனிப்பட்ட emojis relays-இல் குறியாக்கப்பட்டு சேமிக்கப்படும் மற்றும் உங்களுக்கு மட்டுமே தெரியும். அவை பொது emojis போலவே உங்கள் எதிர்வினை மெனு மற்றும் ":" தானாக நிரப்பியில் தோன்றும்.</string>
     <string name="emoji_public_explainer">பொது emojis அனைவருக்கும் தெரியும் மற்றும் இந்த தொகுப்பு உங்கள் emoji பட்டியலில் இருக்கும்போது உங்கள் எதிர்வினை மெனு மற்றும் ":" தானாக நிரப்பியில் தோன்றும்.</string>
-    <string name="encrypt_files_description">தனியுரிமைக்காக பதிவேற்றுவதற்கு முன் கோப்புகளை குறியாக்கவும். சில சர்வர்கள் இலவச கணக்குகளில் குறியாக்கப்பட்ட கோப்புகளை ஏற்காது.</string>
     <string name="encrypt_files_label">கோப்புகளை குறியாக்கு</string>
     <string name="ephemeral_relay_chat">மறையும் அரட்டை</string>
     <string name="error">பிழை</string>
@@ -2095,8 +2067,6 @@
     <string name="failed_to_upload_media_no_details">மீடியா பதிவேற்றம் தோல்வியடைந்தது</string>
     <string name="failed_to_upload_to_server_with_message">%1$s-க்கு பதிவேற்றம் தோல்வியடைந்தது: %2$s</string>
     <string name="favorite_app_add">விருப்பங்களில் சேர்க்கவும்</string>
-    <string name="favorite_app_network_open">திறந்த வலை மூலம் ஏற்றுகிறது.</string>
-    <string name="favorite_app_network_tor">Tor மூலம் ஏற்றுகிறது.</string>
     <string name="favorite_app_recent">சமீபத்தியவை</string>
     <string name="favorite_app_remove">விருப்பங்களிலிருந்து அகற்று</string>
     <string name="favorite_app_still_loading">அந்த பயன்பாடு இன்னும் ஏற்றப்படவில்லை. ஒரு கணம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
@@ -2364,10 +2334,6 @@
         <item quantity="other">%1$d உறுப்பினர்கள்</item>
     </plurals>
     <string name="marmot_member_removed">உறுப்பினர் நீக்கப்பட்டார்</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d செய்தி</item>
-        <item quantity="other">%1$d செய்திகள்</item>
-    </plurals>
     <string name="marmot_not_a_member">இந்த குழுவின் உறுப்பினர் இல்லை</string>
     <string name="marmot_unknown_error">அறியாத பிழை</string>
     <string name="media_added">மீடியா சேர்க்கப்பட்டது</string>
@@ -2455,13 +2421,7 @@
     <string name="nest_lower_hand">கையை கீழே இறக்கு</string>
     <string name="nest_mic_mute">மைக்கை ஒலியடக்கு</string>
     <string name="nest_mic_unmute">மைக்கை ஒலி திறக்கு</string>
-    <string name="nest_mute">ஒலியடக்கு</string>
     <string name="nest_no_server_save_failed">Nest சேவையக பட்டியலை சேமிக்க முடியவில்லை. மீண்டும் முயற்சி செய்யவும்.</string>
-    <string name="nest_notification_broadcasting">Nest — நேரலை</string>
-    <string name="nest_notification_channel_description">அறை திறந்திருக்கும்போது ஆடியோவை இயக்கிக் கொண்டே இருக்கும்.</string>
-    <string name="nest_notification_listening">Nest இணைக்கப்பட்டது</string>
-    <string name="nest_notification_stop">நிறுத்து</string>
-    <string name="nest_notification_text">திரும்ப திரும்ப தட்டவும்.</string>
     <string name="nest_participant_follow">பின்தொடர்</string>
     <string name="nest_participant_mute">ஒலியடக்கு</string>
     <string name="nest_participant_unfollow">பின்தொடர்வதை நிறுத்து</string>
@@ -2472,7 +2432,6 @@
     <string name="nest_presence_raised_hand">கையை உயர்த்தினார்</string>
     <string name="nest_presence_speaking">பேசுகிறார்</string>
     <string name="nest_raise_hand">கையை உயர்த்தவும்</string>
-    <string name="nest_unmute">ஒலியை மீட்டமை</string>
     <string name="nests_servers_my_explainer">மற்ற கிளையர்கள் உங்கள் விருப்பத்தை படிக்கும் வகையில் kind-10112 மாற்று நிகழ்வாக சேமிக்கப்படும்.</string>
     <string name="nests_servers_my_section">உங்கள் சேவையகங்கள்</string>
     <string name="nests_servers_recommended_explainer">ஒரு தட்டுதலில் உங்கள் பட்டியலில் சேர்க்கக்கூடிய உள்ளமைக்கப்பட்ட பரிந்துரைகள்.</string>
@@ -2504,10 +2463,6 @@
     <string name="new_requests">புதிய கோரிக்கைகள்</string>
     <string name="new_threads">புதிய இழைகள்</string>
     <string name="new_workout">புதிய உடற்பயிற்சி</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d சொத்து தொகுக்கப்பட்டது</item>
-        <item quantity="other">%1$d சொத்துக்கள் தொகுக்கப்பட்டன</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom செயலிகள் கண்டுபிடிக்கப்படவில்லை. இந்த கோப்பை பார்க்க உள்ளூர் Blossom செயலியை நிறுவுக</string>
     <string name="no_blossom_apps_found_title">Blossom இணைப்புகளை திறக்க முடியவில்லை</string>
     <string name="no_camera_app_found">இந்த சாதனத்தில் கேமரா செயலி எதுவும் கண்டுபிடிக்கப்படவில்லை</string>
@@ -2517,7 +2472,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">எந்த ரியாக்ஷனும் தேர்ந்தெடுக்கவில்லை. மாற்ற நீண்ட நேரம் அழுத்தவும்</string>
     <string name="no_reactions_setup">எந்த எதிர்வினையும் அமைக்கப்படவில்லை</string>
     <string name="no_wallet_found">lightning இன்வாய்ஸை செலுத்த வாலட்கள் எதுவும் கிடைக்கவில்லை. Zap களை பயன்படுத்த Lightning வாலட்டை நிறுவுக</string>
-    <string name="no_wallet_found_with_error">lightning இன்வாய்ஸை செலுத்த வாலட்கள் எதுவும் கிடைக்கவில்லை (பிழை: %1$s). Zap களை பயன்படுத்த Lightning வாலட்டை நிறுவுக</string>
     <string name="no_zap_amount_setup_long_press_to_change">ஜாப் தொகை அமைப்பு இல்லை. மாற்ற நீண்ட நேரம் அழுத்தவும்</string>
     <string name="notification_settings">அறிவிப்புகள்</string>
     <string name="notification_settings_section_categories">வகைகள்</string>
@@ -2862,8 +2816,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">பயனர் %1$s க்கு sats பெறுவதற்கான lightning முகவரி அமைப்பு இல்லை</string>
     <string name="vanish_history">மறைவு வரலாறு</string>
     <string name="vanish_request_sent">மறைவு கோரிக்கை அனுப்பப்பட்டது</string>
-    <string name="video_codec_h265_description">சிறிய கோப்பு அளவுகளில் சிறந்த தரம், ஆனால் எல்லா சாதனங்களும் H.265 இயக்கத்தை ஆதரிக்காது.</string>
-    <string name="video_codec_h265_label">H.265/HEVC கோடெக் பயன்படுத்தவும்</string>
     <string name="video_download_has_started_toast">வீடியோ பதிவிறக்கம் தொடங்கியது…</string>
     <string name="video_player_settings">வீடியோ பிளேயர் பொத்தான்கள்</string>
     <string name="video_saved_to_the_gallery">வீடியோ தொலைபேசியின் வீடியோ தொகுப்பில் சேமிக்கப்பட்டது</string>

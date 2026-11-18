@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Bem-vindo ao Amethyst</string>
-    <string name="login_subtitle">Entre na sua conta Nostr</string>
-    <string name="login_subtitle_desktop">Um cliente Nostr para desktop</string>
-    <string name="login_card_title">Entre com sua chave Nostr</string>
-    <string name="login_card_subtitle">nsec para acesso completo, bunker:// para assinador remoto, ou npub para somente leitura</string>
-    <string name="login_with_key">Entrar com chave</string>
-    <string name="login_button">Entrar</string>
-    <string name="login_generate_new">Gerar nova chave</string>
-    <string name="login_generate_button">Gerar nova</string>
-    <string name="login_key_hint">Digite sua chave privada (nsec) ou chave pública (npub)</string>
-    <string name="login_key_label">nsec, bunker:// ou npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Mostrar chave</string>
-    <string name="login_hide_key">Ocultar chave</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">IMPORTANTE: Salve suas chaves!</string>
-    <string name="new_key_warning_message">Sua chave secreta (nsec) é a ÚNICA forma de acessar sua conta. Se você perdê-la, sua conta se perde para sempre. Guarde-a em um lugar seguro!</string>
-    <string name="new_key_public_label">Chave pública (compartilhável):</string>
-    <string name="new_key_secret_label">Chave secreta (NUNCA compartilhe isto!):</string>
-    <string name="new_key_continue_button">Salvei minhas chaves, continuar</string>
-    <string name="new_key_saved_checkbox">Guardei minhas chaves em um lugar seguro</string>
-    <string name="new_key_copy_encrypted_button">Copiar criptografado (recomendado)</string>
-    <string name="new_key_encrypt_password_label">Senha para o backup criptografado</string>
-    <string name="new_key_step_indicator">Etapa %1$d de %2$d</string>
-    <string name="new_key_next">Próximo</string>
-    <string name="new_key_back">Voltar</string>
-    <string name="new_key_cancel">Cancelar</string>
-    <string name="new_key_step_intro_title">Salve suas chaves antes de continuar</string>
-    <string name="new_key_step_intro_npub">Sua chave pública (npub) é seu endereço compartilhável. Distribua-a livremente para que as pessoas possam encontrar e seguir você.</string>
-    <string name="new_key_step_intro_nsec">Sua chave secreta (nsec) é uma senha que NUNCA pode ser redefinida. Esta é a única vez em que ela é exibida — salve-a agora, ou você perderá o acesso a esta conta para sempre.</string>
-    <string name="new_key_keys_title">Suas chaves</string>
-    <string name="new_key_confirm_title">Uma última coisa</string>
-    <string name="new_key_confirm_recap">Guarde sua chave secreta em um gerenciador de senhas. Se você perdê-la, ninguém poderá recuperá-la para você.</string>
-    <string name="new_key_readonly_info">Esta é uma conta somente leitura. Nenhuma chave secreta foi gerada, então não há nada para fazer backup.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Backup das chaves</string>
-    <string name="backup_keys_public_label">Chave pública (npub)</string>
-    <string name="backup_keys_public_help">Sua chave pública pode ser compartilhada sem risco. Passe-a para as pessoas para que possam encontrar e seguir você.</string>
-    <string name="backup_keys_show_qr">Mostrar QR code</string>
-    <string name="backup_keys_hide_qr">Ocultar QR code</string>
     <string name="backup_keys_secret_label">Chave secreta (nsec)</string>
-    <string name="backup_keys_secret_warning">Sua chave secreta é como uma senha que NUNCA pode ser redefinida ou recuperada. Quem a tiver controla sua conta para sempre. Nunca a compartilhe; guarde-a em um gerenciador de senhas.</string>
-    <string name="backup_keys_secret_hidden">A chave secreta está oculta</string>
     <string name="backup_keys_reveal">Revelar chave secreta</string>
     <string name="backup_keys_hide">Ocultar chave secreta</string>
-    <string name="backup_keys_copy_plain">Copiar chave secreta</string>
-    <string name="backup_keys_copy_plain_warning">Copia a nsec em texto puro. Cole somente em um gerenciador de senhas confiável.</string>
-    <string name="backup_keys_copy_encrypted">Copiar criptografado (recomendado)</string>
-    <string name="backup_keys_encrypt_password_label">Senha para o backup criptografado</string>
-    <string name="backup_keys_encrypt_failed">Não foi possível criptografar a chave. Tente novamente.</string>
     <string name="backup_keys_external_signer">Esta conta usa um assinador externo — nenhuma chave secreta é armazenada aqui.</string>
-    <string name="backup_keys_copied">Copiado!</string>
     <string name="backup_keys_copy">Copiar</string>
-    <string name="backup_keys_unlock_title">Revelar chave secreta</string>
-    <string name="backup_keys_unlock_subtitle">Digite a senha do bloqueio de privacidade para revelar sua chave secreta.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Copiar</string>
     <string name="action_paste">Colar</string>
     <string name="action_cancel">Cancelar</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
-    <string name="action_delete">Excluir</string>
-    <string name="action_share">Compartilhar</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Formato de chave inválido. Verifique e tente novamente.</string>
-    <string name="error_network">Erro de rede. Verifique sua conexão.</string>
-    <string name="error_generic">Ocorreu um erro. Tente novamente.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Atualizar</string>
     <string name="action_try_again">Tentar novamente</string>
@@ -124,8 +69,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">respondendo para </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">Site Estático: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Permissões:</string>
@@ -206,10 +149,7 @@
     <string name="geocache_verified_find">Encontro verificado</string>
     <string name="geocache_invalid_proof">A prova não confere</string>
     <string name="geocache_loading">Carregando cache…</string>
-    <string name="geocache_hidden_by">Escondido por %1$s</string>
     <string name="geocache_navigate">Navegar</string>
-    <string name="geocache_copy_coordinates">Copiar coordenadas</string>
-    <string name="geocache_coordinates_copied">Coordenadas copiadas</string>
     <string name="geocache_photos_section">Fotos</string>
     <string name="geocache_mission_section">Missão Key Quest</string>
     <string name="geocache_logs_section">Logs</string>
@@ -230,7 +170,6 @@
     <string name="geocache_archived_notice">Este cache foi arquivado. Ele não está mais em jogo.</string>
     <string name="geocache_ftf_won_by">Primeiro a encontrar: %1$s</string>
     <string name="geocache_ftf_available">O primeiro a encontrar ainda está em aberto</string>
-    <string name="geocache_owner_actions">Dono</string>
     <string name="geocache_owner_edit">Editar este cache</string>
     <string name="geocache_owner_archive">Arquivar este cache</string>
     <string name="geocache_owner_archive_confirm">Arquivar. Quem procurar verá que ele está fora de jogo, e a listagem continua legível.</string>
@@ -242,7 +181,6 @@
     <string name="geocache_log_type_dnf">Não encontrei</string>
     <string name="geocache_log_type_note">Nota</string>
     <string name="geocache_log_type_maintenance">Precisa de manutenção</string>
-    <string name="geocache_log_title">Registrar um encontro</string>
     <string name="geocache_log_cache_label">Cache</string>
     <string name="geocache_log_your_log">Seu log</string>
     <string name="geocache_log_placeholder">Como foi?</string>
@@ -264,11 +202,6 @@
     <string name="geocache_tab_hunts">Caçadas</string>
     <string name="geocache_tab_finds">Encontrados</string>
     <string name="geocache_tab_mine">Meus</string>
-    <string name="geocache_filter_unfound">Não encontrados</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Tem prêmio</string>
-    <string name="geocache_filter_verified_only">Exige prova</string>
     <string name="geocache_use_my_location">Usar minha localização</string>
     <string name="geocache_sorted_by_distance">Ordenado por distância</string>
     <string name="geocache_sorted_by_recent">Mais recentes primeiro</string>
@@ -277,25 +210,17 @@
     <string name="geocache_empty_finds">Você ainda não registrou nenhum encontro.</string>
     <string name="geocache_empty_mine">Você ainda não escondeu nenhum cache.</string>
     <string name="geocache_empty_hunts">Nenhuma caçada ainda.</string>
-    <string name="geocache_stat_finds">Encontros</string>
-    <string name="geocache_stat_ftf">Primeiros a encontrar</string>
-    <string name="geocache_stat_verified">Verificados</string>
-    <string name="geocache_stat_hidden">Escondidos</string>
-    <string name="geocache_map_recenter">Centralizar em mim</string>
     <string name="geocache_map_long_press">Toque e segure no mapa para esconder um cache ali</string>
     <string name="geocache_map_open">Abrir</string>
     <string name="geocache_new_section_where">Onde</string>
     <string name="geocache_new_section_what">O quê</string>
     <string name="geocache_new_section_extras">Extras</string>
     <string name="geocache_new_section_proof">Prova</string>
-    <string name="geocache_new_section_relays">Relays</string>
     <string name="geocache_new_location_warning">Isto publica uma localização pública com precisão de cerca de 5 metros. Qualquer pessoa no Nostr pode vê-la, e um evento publicado não pode ser retirado.</string>
     <string name="geocache_new_pick_location">Escolha o local</string>
     <string name="geocache_new_ladder">Publica %1$s, além de células mais amplas de até 3 caracteres para a busca por proximidade.</string>
     <string name="geocache_new_name">Nome</string>
     <string name="geocache_new_description">Descrição</string>
-    <string name="geocache_new_type">Tipo</string>
-    <string name="geocache_new_size">Tamanho</string>
     <string name="geocache_new_difficulty">Dificuldade</string>
     <string name="geocache_new_terrain">Terreno</string>
     <string name="geocache_new_hint">Dica</string>
@@ -305,10 +230,7 @@
     <string name="geocache_new_modifiers">Modificadores</string>
     <string name="geocache_new_require_proof">Exigir prova de presença</string>
     <string name="geocache_new_proof_ready">Uma chave de verificação foi gerada para este cache.</string>
-    <string name="geocache_new_log_relays">Onde os encontros devem ser registrados</string>
     <string name="geocache_new_publish">Publicar</string>
-    <string name="geocache_new_needs_name">Dê um nome ao cache.</string>
-    <string name="geocache_new_needs_location">Escolha onde o cache está escondido.</string>
     <string name="geocache_hunt_progress">%1$d de %2$d encontrados</string>
     <string name="geocache_hunt_start">Começar a caçada</string>
     <plurals name="geocache_hunt_caches">
@@ -319,15 +241,10 @@
     <string name="geocache_hunt_description">Descrição</string>
     <string name="geocache_hunt_banner">Imagem de capa</string>
     <string name="geocache_hunt_pick_caches">Caches, em ordem</string>
-    <string name="geocache_hunt_add_cache">Adicionar um cache</string>
     <string name="geocache_hunt_move_up">Mover para cima</string>
     <string name="geocache_hunt_move_down">Mover para baixo</string>
     <string name="geocache_hunt_remove">Remover</string>
-    <string name="geocache_hunt_theme">Tema da página</string>
-    <string name="geocache_hunt_map_style">Estilo do mapa</string>
-    <string name="geocache_hunt_needs_title">Dê um título à caçada.</string>
     <string name="geocache_hunt_needs_caches">Adicione pelo menos um cache.</string>
-    <string name="geocache_publish_failed">Não foi possível publicar. Verifique sua conexão com os relays e tente novamente.</string>
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Valor-para-Valor</string>
@@ -403,7 +320,6 @@
     <string name="qr_scanner_label_hex_key">Chave bruta (pública ou privada)</string>
     <string name="qr_scanner_open_link">Abrir link</string>
     <string name="qr_scanner_copy">Copiar</string>
-    <string name="qr_scanner_copied">Copiado</string>
     <string name="qr_scanner_try_again">Ler novamente</string>
     <string name="show_qr">Mostrar QR</string>
     <string name="profile_image">Imagem de perfil</string>
@@ -459,7 +375,6 @@
     <string name="quote">Citar</string>
     <string name="fork">Garfo</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
-    <string name="and"> e </string>
     <string name="following"> Seguindo</string>
     <string name="followers"> Seguidores</string>
     <string name="number_following">%1$s Seguindo</string>
@@ -719,7 +634,6 @@
     <string name="channel_created">Canal criado</string>
     <string name="channel_information_changed_to">Informação do canal mudou para</string>
     <string name="new_public_chat">Criar um novo chat público</string>
-    <string name="marmot_group_no_messages_yet">Nenhuma mensagem ainda</string>
     <string name="paid_relay">Retransmissor pago</string>
     <string name="tor_relay">Forçar uso do Tor ao conectar</string>
     <string name="posts_received">postagens recebidas</string>
@@ -958,36 +872,22 @@
     <string name="health_connect_rationale_limit_optional">O recurso inteiro é opcional. Revogue as permissões no Health Connect a qualquer momento — a Minha Forma Física volta a exibir o convite para conectar — ou desative as sugestões do editor em Configurações → Configurações de composição. O resto do Amethyst continua funcionando.</string>
     <string name="health_connect_rationale_privacy_policy">Ler a política de privacidade completa</string>
     <string name="my_fitness_title">Minha Forma Física</string>
-    <string name="my_fitness_window">Últimas 4 semanas</string>
     <string name="my_fitness_loading_metrics">Carregando distância, calorias e frequência cardíaca…</string>
-    <string name="my_fitness_window_note">As últimas quatro semanas completas do seu treino: os treinos que você publicou, mais tudo o que o Health Connect registra neste celular. O Amethyst calcula o resumo no dispositivo e não publica nada dele.</string>
     <string name="my_fitness_this_week">Esta semana</string>
-    <string name="my_fitness_vs_last_week">vs. semana passada</string>
-    <string name="my_fitness_weekly_average">Média semanal</string>
     <string name="my_fitness_workouts">Treinos</string>
     <string name="my_fitness_active_days">Dias ativos</string>
-    <string name="my_fitness_streak">Dias seguidos</string>
-    <string name="my_fitness_time">Tempo</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$d h %2$d min</string>
     <string name="my_fitness_duration_minutes">%1$d min</string>
     <string name="my_fitness_duration_seconds">%1$d s</string>
     <string name="my_fitness_distance">Distância</string>
-    <string name="my_fitness_calories">Calorias</string>
-    <string name="my_fitness_steps">Passos</string>
-    <string name="my_fitness_elevation">Subida</string>
-    <string name="my_fitness_avg_heart_rate">FC média</string>
-    <string name="my_fitness_max_heart_rate">FC máx.</string>
-    <string name="my_fitness_by_activity">Por atividade</string>
-    <string name="my_fitness_bests">Melhores desempenhos</string>
     <string name="my_fitness_best_longest_distance">Maior distância</string>
     <string name="my_fitness_best_longest_duration">Treino mais longo</string>
     <string name="my_fitness_best_biggest_climb">Maior subida</string>
     <string name="my_fitness_best_most_steps">Mais passos</string>
     <string name="my_fitness_best_highest_heart_rate">Maior frequência cardíaca</string>
     <string name="my_fitness_recent">Treinos recentes</string>
-    <string name="my_fitness_empty">Nada registrado nas últimas 4 semanas. Os treinos que você publicar, e os que seu relógio registrar, aparecem aqui.</string>
     <string name="my_fitness_connect_title">Acompanhe seu treino</string>
     <string name="my_fitness_connect_message">Conecte o Health Connect para ver seus totais semanais, a tendência semana a semana, seus melhores desempenhos e sua sequência de treinos. Tudo fica no seu celular.</string>
     <string name="my_fitness_connect_banner">Conecte o Health Connect para adicionar os treinos que seu relógio registra, com frequência cardíaca, passos e subida.</string>
@@ -1059,7 +959,6 @@
         <item quantity="other">Melhor: %1$d semanas</item>
     </plurals>
     <string name="nsite_none_found">Nenhum nSite encontrado ainda.</string>
-    <string name="browser_reload">Recarregar</string>
     <string name="browser_unsupported">O navegador integrado requer Android 11 ou superior.</string>
     <string name="embedded_tab_load_failed">Não foi possível carregar este app.</string>
     <string name="page_error_not_found_title">Não foi possível encontrar este site</string>
@@ -1093,10 +992,6 @@
     <string name="browser_recent_options">Opções</string>
     <string name="browser_recent_remove">Remover do histórico</string>
     <string name="favorite_apps_empty">Nenhum app favorito ainda. Abra um cliente web ou nsite e toque na estrela para fixá-lo aqui.</string>
-    <string name="favorite_app_open_window">Abrir em sua própria janela</string>
-    <string name="favorite_app_access_title">O que este app pode acessar</string>
-    <string name="favorite_app_access_static">Executa em sandbox sem acesso especial à sua conta.</string>
-    <string name="favorite_app_access_show">O que pode acessar</string>
     <string name="favorite_app_unavailable">Este app ainda não carregou. Abra-o a partir do seu cartão ou tente novamente em um momento.</string>
     <string name="napplet_manage_permissions">Gerenciar permissões</string>
     <string name="napplet_permissions_ask_each_time">Perguntar sempre</string>
@@ -1197,8 +1092,6 @@
     <string name="relay_auth_remember_relay">Lembrar para este relay</string>
     <string name="relay_auth_log_in">Entrar</string>
     <string name="relay_auth_not_now">Agora não</string>
-    <string name="relay_auth_never_allow">Nunca permitir</string>
-    <string name="relay_auth_how_we_decide">Como o Amethyst decide</string>
     <string name="relay_auth_exceptions">Exceções</string>
     <string name="relay_auth_no_exceptions">Nenhuma exceção ainda. Todo relay segue as regras acima.</string>
     <string name="relay_auth_segment_always">Sempre</string>
@@ -1559,7 +1452,6 @@
     <string name="pledge_amount_in_sats">Valor em Sats</string>
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
-    <string name="poll_consensus_threshold">Consenso</string>
     <string name="looking_for_event">Procurando o evento %1$s</string>
     <string name="looking_for_event_title">Carregando</string>
     <string name="looking_for_private_event">Aguardando suas mensagens privadas carregarem…</string>
@@ -1569,11 +1461,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Adicionar uma mensagem</string>
     <string name="custom_zaps_add_a_message_example">Obrigado por todo o seu trabalho!</string>
     <string name="lightning_create_and_add_invoice">Criar e adicionar</string>
-    <string name="add_content">Adicionar à mensagem</string>
-    <string name="add_caption">Adicionar uma legenda</string>
-    <string name="add_caption_example">Meu amável amigo</string>
-    <string name="content_description">Descrição do conteúdo</string>
-    <string name="content_description_example">Um barco azul em uma praia de areia branca ao pôr do sol</string>
     <string name="ai_suggested_alt_text_hint">Sugerido pela IA, edite-me</string>
     <string name="ai_suggested_alt_text_dismiss">Dispensar sugestão da IA</string>
     <string name="zap_type">Tipo de Zap</string>
@@ -2074,8 +1961,6 @@
         <item quantity="one">O Tor não está conectando. %1$d relay está aguardando.</item>
         <item quantity="other">O Tor não está conectando. %1$d relays estão aguardando.</item>
     </plurals>
-    <string name="tor_splash_error">Erro do Tor: %1$s</string>
-    <string name="tor_splash_explainer">O Amethyst usa o Tor para ocultar seu endereço IP dos relays. Iniciar o Tor pode levar um minuto e requer acesso à internet.</string>
     <string name="notification_settings_categories_explainer">Toque em uma categoria para abrir as configurações de notificação do Android — som, importância, selos e Não Perturbe ficam lá.</string>
     <string name="notification_channel_status_on">Ativado</string>
     <string name="notification_channel_status_silent">Silencioso</string>
@@ -2162,7 +2047,6 @@
     <string name="wallet_filter_all">Todos</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Outros</string>
-    <string name="wallet_add">Adicionar carteira</string>
     <string name="wallet_default">Padrão</string>
     <string name="wallet_set_default">Definir como padrão</string>
     <string name="wallet_remove">Remover</string>
@@ -2290,8 +2174,6 @@
     <string name="cashu_redeemed_amount">Resgatado %1$s sats para sua carteira.</string>
     <string name="wallet_paste_uri">Colar URI nostr+walletconnect://</string>
     <string name="wallet_save">Salvar</string>
-    <string name="wallet_rename">Renomear</string>
-    <string name="wallet_rename_title">Renomear carteira</string>
     <string name="wallet_onchain_transactions">Transações on-chain</string>
     <string name="wallet_onchain_no_address">Nenhum endereço on-chain disponível para esta conta.</string>
     <string name="wallet_onchain_no_backend">Nenhum backend on-chain configurado.</string>
@@ -2658,7 +2540,6 @@
     <string name="git_repo_filter_open">Abertos</string>
     <string name="git_repo_filter_closed">Fechados &amp; Resolvidos</string>
     <string name="git_repo_label_all">Todos</string>
-    <string name="git_repo_bookmark">Marcar repositório</string>
     <string name="git_repo_stat_branches">Branches</string>
     <string name="git_repo_stat_tags">Tags</string>
     <string name="git_repo_stat_files">Arquivos</string>
@@ -2691,7 +2572,6 @@
     <string name="git_new_issue_button">Nova</string>
     <string name="git_new_issue_title">Nova issue</string>
     <string name="git_new_issue_subject">Título</string>
-    <string name="git_new_issue_body">Descrição</string>
     <string name="git_new_issue_create">Criar</string>
     <string name="git_new_issue_cancel">Cancelar</string>
     <string name="git_new_issue_labels">Etiquetas</string>
@@ -2703,7 +2583,6 @@
     <string name="git_pr_loading_changes">Carregando alterações…</string>
     <string name="git_pr_no_changes">Nenhuma alteração de arquivo encontrada.</string>
     <string name="git_pr_changes_retry">Tentar carregar alterações novamente</string>
-    <string name="git_pr_revised">Revisado</string>
     <string name="git_cover_note">Nota de apresentação</string>
     <string name="git_ci_success">CI aprovada</string>
     <string name="git_ci_failure">CI falhou</string>
@@ -2776,7 +2655,6 @@
     <string name="accessibility_play_username">Reproduzir nome de usuário como áudio</string>
     <string name="accessibility_pushpin">Piones</string>
     <string name="accessibility_scan_qr_code">Escanear código QR</string>
-    <string name="accessibility_select_date">Selecionar data</string>
     <string name="draft">Rascunho</string>
     <string name="bounty_label">Recompensa</string>
     <string name="load_from_text">Carregar do texto</string>
@@ -2912,9 +2790,7 @@
     <string name="closing_time">Hora de encerramento</string>
     <string name="confirm">Confirmar</string>
     <string name="next">Próximo</string>
-    <string name="go_back">Voltar</string>
     <string name="approve">Aprovar</string>
-    <string name="connected">Conectado</string>
     <string name="social_proof">Prova social</string>
     <string name="poll_submit">Enviar</string>
     <string name="poll_view_results">Ver resultados</string>
@@ -3512,7 +3388,6 @@
     <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
     <string name="add_client_tag_explainer">Quando ativado, o Amethyst anexa uma tag de cliente NIP-89 aos eventos que você publica.</string>
     <string name="add_client_tag_title">Adicionar tag de cliente aos meus eventos</string>
-    <string name="add_sensitive_content_description">Adiciona aviso de conteúdo sensível antes de mostrar este conteúdo</string>
     <string name="add_sensitive_content_label">Conteúdo sensível</string>
     <string name="add_to_messages">Adicionar às Mensagens</string>
     <string name="add_to_public_bookmarks">Adicionar aos Itens Salvos Públicos</string>
@@ -3728,8 +3603,6 @@
     <string name="browser">Navegador</string>
     <string name="browser_favorites">Favoritos</string>
     <string name="browser_suggested">Descobrir web apps</string>
-    <string name="browser_tor_off">Carregando pela web aberta. Toque para usar o Tor.</string>
-    <string name="browser_tor_on">Carregando pelo Tor. Toque para usar a web aberta.</string>
     <string name="buzz_channel_archive">Arquivar canal</string>
     <string name="buzz_channel_create_title">Novo canal</string>
     <string name="buzz_channel_delete">Excluir canal</string>
@@ -4021,15 +3894,10 @@
     <string name="connectivity_type_never">Nunca</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi não medida</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Adicionar Documento</string>
-    <string name="content_description_add_image">Adicionar Imagem</string>
-    <string name="content_description_add_media">Adicionar Mídia</string>
-    <string name="content_description_add_video">Adicionar Vídeo</string>
     <string name="content_warning_hide_all_sensitive_content_option">Ocultar</string>
     <string name="content_warning_see_warnings_option">Avisar</string>
     <string name="content_warning_show_all_sensitive_content_option">Exibir</string>
     <string name="conversations">Conversas</string>
-    <string name="convert_gif_to_mp4_description">Converte GIF animado em vídeo MP4 para menor tamanho de arquivo e melhor compatibilidade de reprodução.</string>
     <string name="convert_gif_to_mp4_label">Converter GIF em MP4</string>
     <string name="copied_note_id_to_clipboard">Copiado ID da nota (@note1)</string>
     <string name="copied_note_text_to_clipboard">Texto copiado</string>
@@ -4120,7 +3988,6 @@
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar ":" assim como os públicos.</string>
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar ":" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_sets">Emojis</string>
-    <string name="encrypt_files_description">Criptografar arquivos antes do upload para privacidade. Alguns servidores podem não aceitar arquivos criptografados em contas gratuitas.</string>
     <string name="encrypt_files_label">Criptografar arquivos</string>
     <string name="ephemeral_relay_chat">Chat Desaparecendo</string>
     <string name="error">Erro</string>
@@ -4169,8 +4036,6 @@
     <string name="failed_to_upload_media_no_details">Não foi possível carregar a multimídia</string>
     <string name="failed_to_upload_to_server_with_message">Falha ao acessar %1$s: %2$s</string>
     <string name="favorite_app_add">Adicionar aos favoritos</string>
-    <string name="favorite_app_network_open">Carrega pela web aberta.</string>
-    <string name="favorite_app_network_tor">Carrega pelo Tor.</string>
     <string name="favorite_app_recent">Recente</string>
     <string name="favorite_app_remove">Remover dos favoritos</string>
     <string name="favorite_app_still_loading">Este app ainda não carregou. Tente novamente em um momento.</string>
@@ -4678,10 +4543,6 @@
         <item quantity="other">%1$d membros</item>
     </plurals>
     <string name="marmot_member_removed">Membro removido</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d msg</item>
-        <item quantity="other">%1$d msgs</item>
-    </plurals>
     <string name="marmot_not_a_member">Não é membro deste grupo</string>
     <string name="marmot_admin_delete_message">Excluir para todos</string>
     <string name="room_remove_for_everyone_title">Excluir para todos?</string>
@@ -4897,14 +4758,7 @@
     <string name="nest_lower_hand">Abaixar mão</string>
     <string name="nest_mic_mute">Silenciar microfone</string>
     <string name="nest_mic_unmute">Ativar microfone</string>
-    <string name="nest_mute">Silenciar</string>
     <string name="nest_no_server_save_failed">Não foi possível salvar sua lista de servidores. Tente novamente.</string>
-    <string name="nest_notification_broadcasting">Nest — Ao vivo</string>
-    <string name="nest_notification_channel">Salas de áudio</string>
-    <string name="nest_notification_channel_description">Mantém o áudio tocando enquanto a sala está aberta.</string>
-    <string name="nest_notification_listening">Nest conectado</string>
-    <string name="nest_notification_stop">Parar</string>
-    <string name="nest_notification_text">Toque para voltar.</string>
     <string name="nest_participant_follow">Seguir</string>
     <string name="nest_participant_mute">Silenciar</string>
     <string name="nest_participant_unfollow">Deixar de seguir</string>
@@ -4915,7 +4769,6 @@
     <string name="nest_presence_raised_hand">levantou a mão</string>
     <string name="nest_presence_speaking">está falando</string>
     <string name="nest_raise_hand">Levantar mão</string>
-    <string name="nest_unmute">Ativar som</string>
     <string name="nests">Salas de áudio</string>
     <string name="nests_servers_my_explainer">Salvo como evento substituível kind-10112 para que outros clientes possam ler sua preferência.</string>
     <string name="nests_servers_my_section">Seus servidores</string>
@@ -5090,10 +4943,6 @@
         <item quantity="one">%1$d download</item>
         <item quantity="other">%1$d downloads</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d recurso incluído</item>
-        <item quantity="other">%1$d recursos incluídos</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Nenhum aplicativo Blossom foi encontrado. Instale um aplicativo Blossom local para visualizar este arquivo</string>
     <string name="no_blossom_apps_found_title">Não é possível abrir links Blossom</string>
     <string name="no_camera_app_found">Nenhum app de câmera encontrado neste dispositivo</string>
@@ -5105,7 +4954,6 @@
     <string name="no_wallet_found">Nenhuma carteira encontrada para pagar uma fatura Lightning. Instale uma carteira Lightning para usar zaps</string>
     <string name="pay_elsewhere_title">Pagar com outra carteira</string>
     <string name="pay_elsewhere_description">Nenhum app neste computador consegue pagar isto. Escaneie o código com uma carteira no seu celular ou copie-o para qualquer carteira Lightning.</string>
-    <string name="no_wallet_found_with_error">Nenhuma carteira encontrada para pagar uma fatura Lightning (Erro: %1$s). Instale uma carteira Lightning para usar zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nenhuma configuração de quantidade de Zap. Pressione e segure para alterar</string>
     <string name="notification_service_accounts_title">Contas ativas em segundo plano</string>
     <string name="notification_service_master_description">Interruptor principal para notificações em tempo real em segundo plano. Desligue para economizar bateria — como um modo avião. Quando desligado, nenhuma conta permanece conectada em segundo plano, e ele continua desligado (mesmo após reinicializações) até você ligá-lo novamente.</string>
@@ -5242,7 +5090,6 @@
     <string name="podcast_value_stream_requires_wallet">Conecte uma carteira Nostr Wallet Connect ou de débito para transmitir sats enquanto ouve.</string>
     <string name="podcast_value_user_no_lnaddress">Este usuário não tem endereço Lightning</string>
     <string name="poll_author_no_vote">Os autores de enquetes não podem votar em suas próprias enquetes.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">A enquete está fechada para novos votos</string>
     <string name="poll_multiple_choice">Múltipla escolha</string>
     <plurals name="poll_results_backdated_votes">
@@ -5867,8 +5714,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">O usuário %1$s não possui um endereço lightning configurado para receber sats</string>
     <string name="vanish_history">Histórico de Desaparecimento</string>
     <string name="vanish_request_sent">Pedido para desaparecer enviado</string>
-    <string name="video_codec_h265_description">Melhor qualidade em arquivos menores, mas nem todos os dispositivos suportam reprodução em H.265.</string>
-    <string name="video_codec_h265_label">Usar codec H.265/HEVC</string>
     <string name="video_collaboration_accepted_on">Aceitou um crédito de colaboração</string>
     <string name="video_collaboration_declined_on">Recusou um crédito de colaboração</string>
     <string name="video_credit_accepted">Crédito aceito</string>
@@ -5995,13 +5840,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Link de grupo Cordn</string>
-    <string name="cordn_link_search_keywords">cordn coordenador grupo link convite mls chat metadados privacidade exposição</string>
     <string name="cordn_coordinators_title">Coordenadores Cordn</string>
-    <string name="cordn_coordinators_search_keywords">cordn coordenador adicionar remover expurgar saúde servidor mls chat ordenação</string>
     <string name="cordn_keypackages_title">Pacotes de chaves Cordn</string>
-    <string name="cordn_keypackages_search_keywords">cordn pacote de chaves publicar convite último recurso coordenador mls</string>
     <string name="cordn_backup_title">Backup do Cordn</string>
-    <string name="cordn_backup_search_keywords">cordn backup restaurar exportar importar senha grupos recuperação</string>
     <string name="chat_type_cordn_title">Grupos Cordn</string>
     <string name="chat_type_cordn_desc">Grupos com criptografia de ponta a ponta, ordenados por um coordenador que você escolhe, em vez de por relays.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6579,7 +6420,6 @@
     <string name="cordn_backup_restore_body">Restaurar substitui os grupos cordn deste dispositivo pelos do arquivo. Serve para um celular que substituiu outro — não é uma forma de usar os mesmos grupos em dois dispositivos ao mesmo tempo.</string>
     <string name="cordn_backup_restore_confirm_body">Todos os grupos cordn atualmente neste dispositivo serão removidos e substituídos pelos do arquivo.\n\nNão restaure em um segundo celular enquanto o primeiro ainda estiver em uso. Ambos teriam as mesmas chaves de grupo e, assim que os dois enviarem uma mensagem, o grupo quebra para todos — silenciosamente e sem volta.</string>
     <string name="cordn_backup_restore_confirm_title">Substituir os grupos cordn deste dispositivo?</string>
-    <string name="cordn_backup_restore_title">Restaurar</string>
     <string name="cordn_backup_restored">Restaurado.</string>
     <string name="cordn_chat_empty_description">Tudo o que for enviado aqui é criptografado para este grupo. O coordenador repassa as mensagens sem conseguir lê-las.</string>
     <string name="cordn_chat_empty_title">Nenhuma mensagem ainda</string>
@@ -6618,7 +6458,6 @@
     <string name="cordn_coordinators_purge">Expurgar</string>
     <string name="cordn_coordinators_purge_body">Remover mantém os grupos neste dispositivo, então adicionar o coordenador de volta os traz junto. Expurgar os exclui: as chaves dos grupos, as posições de leitura e seus pacotes de chaves são apagados, e esses grupos só podem ser reabertos com um novo convite.\n\nO coordenador não é avisado e mantém tudo o que já tinha.</string>
     <string name="cordn_coordinators_purge_title">Expurgar este coordenador?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Responde em</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d mais</string>
     <string name="cordn_coordinators_remove">Remover</string>
@@ -6644,9 +6483,7 @@
         <item quantity="one">%1$d pessoa pode adicionar e remover</item>
         <item quantity="other">%1$d pessoas podem adicionar e remover</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Só eu gerencio este grupo</string>
     <string name="cordn_create_admin_only_me_on">Só você pode convidar, remover membros ou alterar os detalhes do grupo. Você pode passar isso para outra pessoa depois.</string>
-    <string name="cordn_create_coordinator">Coordenador</string>
     <string name="cordn_create_coordinator_change">Alterar</string>
     <string name="cordn_create_coordinator_discover">Encontrar coordenadores</string>
     <string name="cordn_create_coordinator_hide">Concluído</string>
@@ -6711,7 +6548,6 @@
     <string name="cordn_groups_menu_invitations">Convites</string>
     <string name="cordn_groups_none">Nenhum grupo cordn ainda</string>
     <string name="cordn_groups_none_detail">Um grupo cordn fica em um coordenador que guarda a lista de membros e repassa as mensagens, sem nunca ver o que alguém escreve.</string>
-    <string name="cordn_groups_start">Criar um</string>
     <string name="cordn_info_add_member">Adicionar alguém</string>
     <string name="cordn_info_add_member_none">Ninguém encontrado com esse nome.</string>
     <string name="cordn_info_add_member_note">Só é possível adicionar quem publicou um pacote de chaves neste coordenador.</string>
@@ -6808,14 +6644,12 @@
     <string name="cordn_requests_failed">Não foi possível ler os pedidos.</string>
     <string name="cordn_requests_none">Ninguém está esperando para entrar.</string>
     <string name="cordn_requests_title">Pedidos para entrar</string>
-    <string name="cordn_send">Enviar</string>
     <string name="cordn_send_failed">Não foi enviada.</string>
     <string name="cordn_send_no_session">O coordenador deste grupo não está aberto, então ainda não é possível enviar nada.</string>
     <string name="cordn_share_copied">Copiado</string>
     <string name="cordn_share_copy">Copiar link</string>
     <string name="cordn_share_explainer">Qualquer pessoa com este link pode pedir para entrar. Um admin ainda precisa aceitá-la.</string>
     <string name="cordn_share_title">Compartilhar este grupo</string>
-    <string name="cordn_voice_play">Reproduzir mensagem de voz</string>
     <string name="cordn_voice_record">Gravar uma mensagem de voz</string>
     <string name="cordn_voice_stop">Parar e enviar</string>
     <string name="browser_address_hint">Pesquise ou digite um endereço</string>
@@ -7159,7 +6993,6 @@
     <string name="custom_feeds_remove">Remover</string>
     <string name="custom_feeds_search_people">Buscar por nome, NIP-05 ou npub</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">Em janelas largas, mostra colunas extras ao lado da tela principal, cada uma com sua própria tela e histórico. Salve conjuntos de colunas como espaços de trabalho.</string>
     <string name="deck_workspaces">Espaços de trabalho</string>
     <string name="deck_workspace_number">Espaço de trabalho %1$d</string>
     <string name="deck_save_workspace">Salvar como novo espaço de trabalho</string>
@@ -8003,10 +7836,6 @@
     <plurals name="kc_list_server_count">
         <item quantity="one">%1$d servidor</item>
         <item quantity="other">%1$d servidores</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d pacote de emojis</item>
@@ -9030,7 +8859,6 @@
     <string name="wot_nudge_first_body">Respostas, notificações e mensagens de quem você segue e das pessoas em quem eles confiam vêm primeiro.</string>
     <string name="wot_nudge_first_action">Mostrar minha gente primeiro</string>
     <string name="wot_nudge_thread_label">Respostas, seu círculo primeiro</string>
-    <string name="wot_nudge_you_follow">Você segue</string>
     <string name="wot_nudge_thread_title">Amigos primeiro em toda conversa</string>
     <string name="wot_nudge_thread_body">Veja primeiro as pessoas que você conhece. O resto fica a um toque.</string>
     <string name="wot_nudge_friends_title_one">%1$s coloca sua gente em primeiro lugar</string>
@@ -9455,7 +9283,6 @@
     <string name="front_page_step_all_at_once">Escrevendo (este provedor envia a página de uma só vez)</string>
     <string name="front_page_step_check">Verificando citações, imagens e links</string>
     <string name="front_page_step_planning">Planejando o jornal</string>
-    <string name="front_page_edition">Nº %1$s</string>
     <string name="front_page_fixed_once">Corrigido uma vez</string>
     <string name="front_page_download">Baixar</string>
     <string name="front_page_changes_title">Removido da página</string>

@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Vítejte v Amethystu</string>
-    <string name="login_subtitle">Přihlaste se ke svému účtu Nostr</string>
-    <string name="login_subtitle_desktop">Klient Nostr pro počítač</string>
-    <string name="login_card_title">Přihlaste se svým klíčem Nostr</string>
-    <string name="login_card_subtitle">nsec pro plný přístup, bunker:// pro vzdáleného podepisovatele nebo npub pouze pro čtení</string>
-    <string name="login_with_key">Přihlásit se klíčem</string>
-    <string name="login_button">Přihlásit se</string>
-    <string name="login_generate_new">Vygenerovat nový klíč</string>
-    <string name="login_generate_button">Vygenerovat nový</string>
-    <string name="login_key_hint">Zadejte svůj soukromý klíč (nsec) nebo veřejný klíč (npub)</string>
-    <string name="login_key_label">nsec, bunker:// nebo npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Zobrazit klíč</string>
-    <string name="login_hide_key">Skrýt klíč</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">DŮLEŽITÉ: Uložte si klíče!</string>
-    <string name="new_key_warning_message">Váš tajný klíč (nsec) je JEDINÝ způsob přístupu k vašemu účtu. Pokud jej ztratíte, váš účet je navždy ztracen. Uložte jej na bezpečné místo!</string>
-    <string name="new_key_public_label">Veřejný klíč (lze sdílet):</string>
-    <string name="new_key_secret_label">Tajný klíč (NIKDY jej nesdílejte!):</string>
-    <string name="new_key_continue_button">Uložil jsem si klíče, pokračovat</string>
-    <string name="new_key_saved_checkbox">Uložil jsem si klíče na bezpečné místo</string>
-    <string name="new_key_copy_encrypted_button">Kopírovat zašifrovaně (doporučeno)</string>
-    <string name="new_key_encrypt_password_label">Heslo pro zašifrovanou zálohu</string>
-    <string name="new_key_step_indicator">Krok %1$d z %2$d</string>
-    <string name="new_key_next">Další</string>
-    <string name="new_key_back">Zpět</string>
-    <string name="new_key_cancel">Zrušit</string>
-    <string name="new_key_step_intro_title">Než budete pokračovat, uložte si klíče</string>
-    <string name="new_key_step_intro_npub">Váš veřejný klíč (npub) je vaše sdílitelná adresa. Rozdávejte ho bez obav, aby vás lidé mohli najít a sledovat.</string>
-    <string name="new_key_step_intro_nsec">Váš tajný klíč (nsec) je heslo, které NIKDY nelze změnit. Toto je jediný okamžik, kdy se zobrazí — uložte si ho hned, jinak přijdete o přístup k tomuto účtu navždy.</string>
-    <string name="new_key_keys_title">Vaše klíče</string>
-    <string name="new_key_confirm_title">Ještě jedna věc</string>
-    <string name="new_key_confirm_recap">Uložte si tajný klíč do správce hesel. Pokud ho ztratíte, nikdo vám ho nedokáže obnovit.</string>
-    <string name="new_key_readonly_info">Toto je účet jen pro čtení. Nebyl vygenerován žádný tajný klíč, takže není co zálohovat.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Zálohovat klíče</string>
-    <string name="backup_keys_public_label">Veřejný klíč (npub)</string>
-    <string name="backup_keys_public_help">Váš veřejný klíč lze bez obav sdílet. Dejte ho lidem, aby vás mohli najít a sledovat.</string>
-    <string name="backup_keys_show_qr">Zobrazit QR kód</string>
-    <string name="backup_keys_hide_qr">Skrýt QR kód</string>
     <string name="backup_keys_secret_label">Tajný klíč (nsec)</string>
-    <string name="backup_keys_secret_warning">Váš tajný klíč je jako heslo, které NIKDY nelze změnit ani obnovit. Kdokoli ho má, ovládá váš účet navždy. Nikdy ho nesdílejte; uložte si ho do správce hesel.</string>
-    <string name="backup_keys_secret_hidden">Tajný klíč je skrytý</string>
     <string name="backup_keys_reveal">Zobrazit tajný klíč</string>
     <string name="backup_keys_hide">Skrýt tajný klíč</string>
-    <string name="backup_keys_copy_plain">Kopírovat tajný klíč</string>
-    <string name="backup_keys_copy_plain_warning">Zkopíruje nsec v čitelné podobě. Vkládejte ho pouze do důvěryhodného správce hesel.</string>
-    <string name="backup_keys_copy_encrypted">Kopírovat zašifrovaně (doporučeno)</string>
-    <string name="backup_keys_encrypt_password_label">Heslo pro zašifrovanou zálohu</string>
-    <string name="backup_keys_encrypt_failed">Klíč se nepodařilo zašifrovat. Zkuste to prosím znovu.</string>
     <string name="backup_keys_external_signer">Tento účet používá externí podepisovač — žádný tajný klíč zde není uložen.</string>
-    <string name="backup_keys_copied">Zkopírováno!</string>
     <string name="backup_keys_copy">Kopírovat</string>
-    <string name="backup_keys_unlock_title">Zobrazit tajný klíč</string>
-    <string name="backup_keys_unlock_subtitle">Pro zobrazení tajného klíče zadejte heslo zámku soukromí.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Kopírovat</string>
     <string name="action_paste">Vložit</string>
     <string name="action_cancel">Zrušit</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Uložit</string>
-    <string name="action_delete">Smazat</string>
-    <string name="action_share">Sdílet</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Neplatný formát klíče. Zkontrolujte jej prosím a zkuste to znovu.</string>
-    <string name="error_network">Chyba sítě. Zkontrolujte prosím připojení.</string>
-    <string name="error_generic">Došlo k chybě. Zkuste to prosím znovu.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Obnovit</string>
     <string name="action_try_again">Zkusit znovu</string>
@@ -126,8 +71,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">odpovídá na </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">Statický web: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Oprávnění:</string>
@@ -214,10 +157,7 @@
     <string name="geocache_verified_find">Ověřený nález</string>
     <string name="geocache_invalid_proof">Důkaz nesouhlasí</string>
     <string name="geocache_loading">Načítání keše…</string>
-    <string name="geocache_hidden_by">Ukryl %1$s</string>
     <string name="geocache_navigate">Navigovat</string>
-    <string name="geocache_copy_coordinates">Kopírovat souřadnice</string>
-    <string name="geocache_coordinates_copied">Souřadnice zkopírovány</string>
     <string name="geocache_photos_section">Fotky</string>
     <string name="geocache_mission_section">Mise Key Quest</string>
     <string name="geocache_logs_section">Logy</string>
@@ -240,7 +180,6 @@
     <string name="geocache_archived_notice">Tato keš byla archivována. Už není ve hře.</string>
     <string name="geocache_ftf_won_by">Prvním nálezcem se stal %1$s</string>
     <string name="geocache_ftf_available">Místo prvního nálezce je stále volné</string>
-    <string name="geocache_owner_actions">Vlastník</string>
     <string name="geocache_owner_edit">Upravit tuto keš</string>
     <string name="geocache_owner_archive">Archivovat tuto keš</string>
     <string name="geocache_owner_archive_confirm">Archivovat. Nálezci uvidí, že už není ve hře, a listing zůstane čitelný.</string>
@@ -252,7 +191,6 @@
     <string name="geocache_log_type_dnf">Nenalezeno</string>
     <string name="geocache_log_type_note">Poznámka</string>
     <string name="geocache_log_type_maintenance">Potřebuje údržbu</string>
-    <string name="geocache_log_title">Zapsat nález</string>
     <string name="geocache_log_cache_label">Keš</string>
     <string name="geocache_log_your_log">Váš log</string>
     <string name="geocache_log_placeholder">Jak to šlo?</string>
@@ -274,11 +212,6 @@
     <string name="geocache_tab_hunts">Výpravy</string>
     <string name="geocache_tab_finds">Nálezy</string>
     <string name="geocache_tab_mine">Moje</string>
-    <string name="geocache_filter_unfound">Nenalezené</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">S cenou</string>
-    <string name="geocache_filter_verified_only">Vyžaduje důkaz</string>
     <string name="geocache_use_my_location">Použít mou polohu</string>
     <string name="geocache_sorted_by_distance">Seřazeno podle vzdálenosti</string>
     <string name="geocache_sorted_by_recent">Nejnovější první</string>
@@ -287,25 +220,17 @@
     <string name="geocache_empty_finds">Zatím jste nezapsali žádný nález.</string>
     <string name="geocache_empty_mine">Zatím jste neukryli žádnou keš.</string>
     <string name="geocache_empty_hunts">Zatím žádné výpravy.</string>
-    <string name="geocache_stat_finds">Nálezy</string>
-    <string name="geocache_stat_ftf">První nálezy</string>
-    <string name="geocache_stat_verified">Ověřené</string>
-    <string name="geocache_stat_hidden">Ukryté</string>
-    <string name="geocache_map_recenter">Vycentrovat na mě</string>
     <string name="geocache_map_long_press">Dlouhým stiskem na mapě tam ukryjete keš</string>
     <string name="geocache_map_open">Otevřít</string>
     <string name="geocache_new_section_where">Kde</string>
     <string name="geocache_new_section_what">Co</string>
     <string name="geocache_new_section_extras">Doplňky</string>
     <string name="geocache_new_section_proof">Důkaz</string>
-    <string name="geocache_new_section_relays">Relaye</string>
     <string name="geocache_new_location_warning">Tímto zveřejníte veřejnou polohu s přesností asi na 5 metrů. Uvidí ji kdokoli na Nostru a zveřejněnou událost nelze vzít zpět.</string>
     <string name="geocache_new_pick_location">Vyberte místo</string>
     <string name="geocache_new_ladder">Zveřejní %1$s a k tomu hrubší buňky až po 3 znaky pro vyhledávání v okolí.</string>
     <string name="geocache_new_name">Název</string>
     <string name="geocache_new_description">Popis</string>
-    <string name="geocache_new_type">Typ</string>
-    <string name="geocache_new_size">Velikost</string>
     <string name="geocache_new_difficulty">Obtížnost</string>
     <string name="geocache_new_terrain">Terén</string>
     <string name="geocache_new_hint">Nápověda</string>
@@ -315,10 +240,7 @@
     <string name="geocache_new_modifiers">Modifikátory</string>
     <string name="geocache_new_require_proof">Vyžadovat důkaz přítomnosti</string>
     <string name="geocache_new_proof_ready">Pro tuto keš byl vygenerován ověřovací klíč.</string>
-    <string name="geocache_new_log_relays">Kam mají nálezci logovat</string>
     <string name="geocache_new_publish">Zveřejnit</string>
-    <string name="geocache_new_needs_name">Pojmenujte keš.</string>
-    <string name="geocache_new_needs_location">Vyberte, kde je keš ukrytá.</string>
     <string name="geocache_hunt_progress">Nalezeno %1$d z %2$d</string>
     <string name="geocache_hunt_start">Zahájit výpravu</string>
     <plurals name="geocache_hunt_caches">
@@ -331,15 +253,10 @@
     <string name="geocache_hunt_description">Popis</string>
     <string name="geocache_hunt_banner">Obrázek banneru</string>
     <string name="geocache_hunt_pick_caches">Keše v pořadí</string>
-    <string name="geocache_hunt_add_cache">Přidat keš</string>
     <string name="geocache_hunt_move_up">Posunout nahoru</string>
     <string name="geocache_hunt_move_down">Posunout dolů</string>
     <string name="geocache_hunt_remove">Odebrat</string>
-    <string name="geocache_hunt_theme">Motiv stránky</string>
-    <string name="geocache_hunt_map_style">Styl mapy</string>
-    <string name="geocache_hunt_needs_title">Pojmenujte výpravu.</string>
     <string name="geocache_hunt_needs_caches">Přidejte alespoň jednu keš.</string>
-    <string name="geocache_publish_failed">Zveřejnění se nezdařilo. Zkontrolujte připojení k relayům a zkuste to znovu.</string>
     <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
@@ -421,7 +338,6 @@
     <string name="qr_scanner_label_hex_key">Surový klíč (veřejný nebo soukromý)</string>
     <string name="qr_scanner_open_link">Otevřít odkaz</string>
     <string name="qr_scanner_copy">Kopírovat</string>
-    <string name="qr_scanner_copied">Zkopírováno</string>
     <string name="qr_scanner_try_again">Skenovat znovu</string>
     <string name="show_qr">Zobrazit QR kód</string>
     <string name="profile_image">Profilový obrázek</string>
@@ -477,7 +393,6 @@
     <string name="quote">Citovat</string>
     <string name="fork">Rozštěpení</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
-    <string name="and"> a </string>
     <string name="following"> Sleduje</string>
     <string name="followers"> Sledující</string>
     <string name="number_following">%1$s následuje</string>
@@ -739,7 +654,6 @@
     <string name="channel_created">Kanál vytvořen</string>
     <string name="channel_information_changed_to">Informace kanálu změněna na</string>
     <string name="new_public_chat">Vytvořit nový veřejný chat</string>
-    <string name="marmot_group_no_messages_yet">Zatím žádné zprávy</string>
     <string name="paid_relay">Placený Relé</string>
     <string name="tor_relay">Vynutit Tor při připojení</string>
     <string name="posts_received">příspěvků přijato</string>
@@ -980,36 +894,22 @@
     <string name="health_connect_rationale_limit_optional">Celá funkce je volitelná. Oprávnění můžete kdykoli odvolat v Health Connect — Moje kondice se pak vrátí k úvodní výzvě — nebo vypnout návrhy v editoru v Nastavení → Nastavení editoru. Zbytek Amethystu funguje dál.</string>
     <string name="health_connect_rationale_privacy_policy">Přečíst si celé zásady ochrany soukromí</string>
     <string name="my_fitness_title">Moje kondice</string>
-    <string name="my_fitness_window">Poslední 4 týdny</string>
     <string name="my_fitness_loading_metrics">Načítám vzdálenost, kalorie a tepovou frekvenci…</string>
-    <string name="my_fitness_window_note">Poslední čtyři celé týdny vašeho tréninku: tréninky, které jste zveřejnili, a vše, co Health Connect zaznamenává v tomto telefonu. Amethyst přehled počítá v zařízení a nic z něj nezveřejňuje.</string>
     <string name="my_fitness_this_week">Tento týden</string>
-    <string name="my_fitness_vs_last_week">oproti minulému týdnu</string>
-    <string name="my_fitness_weekly_average">Týdenní průměr</string>
     <string name="my_fitness_workouts">Tréninky</string>
     <string name="my_fitness_active_days">Aktivní dny</string>
-    <string name="my_fitness_streak">Série dní</string>
-    <string name="my_fitness_time">Čas</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$d h %2$d min</string>
     <string name="my_fitness_duration_minutes">%1$d min</string>
     <string name="my_fitness_duration_seconds">%1$d s</string>
     <string name="my_fitness_distance">Vzdálenost</string>
-    <string name="my_fitness_calories">Kalorie</string>
-    <string name="my_fitness_steps">Kroky</string>
-    <string name="my_fitness_elevation">Stoupání</string>
-    <string name="my_fitness_avg_heart_rate">Prům. TF</string>
-    <string name="my_fitness_max_heart_rate">Max. TF</string>
-    <string name="my_fitness_by_activity">Podle aktivity</string>
-    <string name="my_fitness_bests">Nejlepší výkony</string>
     <string name="my_fitness_best_longest_distance">Nejdelší vzdálenost</string>
     <string name="my_fitness_best_longest_duration">Nejdelší trénink</string>
     <string name="my_fitness_best_biggest_climb">Největší stoupání</string>
     <string name="my_fitness_best_most_steps">Nejvíce kroků</string>
     <string name="my_fitness_best_highest_heart_rate">Nejvyšší tepová frekvence</string>
     <string name="my_fitness_recent">Nedávné tréninky</string>
-    <string name="my_fitness_empty">Za poslední 4 týdny nic zaznamenáno. Zobrazí se zde tréninky, které zveřejníte, i ty, které zaznamenají vaše hodinky.</string>
     <string name="my_fitness_connect_title">Sledujte svůj trénink</string>
     <string name="my_fitness_connect_message">Připojte Health Connect a uvidíte týdenní součty, vývoj oproti minulému týdnu, nejlepší výkony a tréninkovou sérii. Vše zůstává ve vašem telefonu.</string>
     <string name="my_fitness_connect_banner">Připojte Health Connect a přidejte tréninky zaznamenané hodinkami, včetně tepové frekvence, kroků a stoupání.</string>
@@ -1091,7 +991,6 @@
         <item quantity="other">Nejlepší: %1$d týdnů</item>
     </plurals>
     <string name="nsite_none_found">Zatím nenalezeny žádné nSites.</string>
-    <string name="browser_reload">Obnovit</string>
     <string name="browser_unsupported">Integrovaný prohlížeč vyžaduje Android 11 nebo novější.</string>
     <string name="embedded_tab_load_failed">Tuto aplikaci se nepodařilo načíst.</string>
     <string name="page_error_not_found_title">Tento web nelze najít</string>
@@ -1125,10 +1024,6 @@
     <string name="browser_recent_options">Možnosti</string>
     <string name="browser_recent_remove">Odebrat z historie</string>
     <string name="favorite_apps_empty">Zatím žádné oblíbené aplikace. Otevřete webového klienta nebo nsite a klepnutím na hvězdičku ho připnete sem.</string>
-    <string name="favorite_app_open_window">Otevřít ve vlastním okně</string>
-    <string name="favorite_app_access_title">K čemu má tato aplikace přístup</string>
-    <string name="favorite_app_access_static">Spouští se v sandboxu bez zvláštního přístupu k vašemu účtu.</string>
-    <string name="favorite_app_access_show">K čemu má přístup</string>
     <string name="favorite_app_unavailable">Tato aplikace ještě není načtena. Otevřete ji z její karty nebo to zkuste za chvíli.</string>
     <string name="napplet_manage_permissions">Spravovat oprávnění</string>
     <string name="napplet_permissions_ask_each_time">Zeptat se pokaždé</string>
@@ -1229,8 +1124,6 @@
     <string name="relay_auth_remember_relay">Zapamatovat pro toto relé</string>
     <string name="relay_auth_log_in">Přihlásit se</string>
     <string name="relay_auth_not_now">Teď ne</string>
-    <string name="relay_auth_never_allow">Nikdy nepovolovat</string>
-    <string name="relay_auth_how_we_decide">Jak se Amethyst rozhoduje</string>
     <string name="relay_auth_exceptions">Výjimky</string>
     <string name="relay_auth_no_exceptions">Zatím žádné výjimky. Všechna relé se řídí pravidly výše.</string>
     <string name="relay_auth_segment_always">Vždy</string>
@@ -1591,7 +1484,6 @@
     <string name="pledge_amount_in_sats">Částka záruky v sats</string>
     <string name="poll_zap_value_min">Minimální zaps</string>
     <string name="poll_zap_value_max">Maximální zaps</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
     <string name="looking_for_event">Hledá se událost %1$s</string>
     <string name="looking_for_event_title">Načítání</string>
     <string name="looking_for_private_event">Čekám na načtení vašich soukromých zpráv…</string>
@@ -1601,11 +1493,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Přidat fakturu</string>
     <string name="custom_zaps_add_a_message_example">Děkuji za veškerou práci!</string>
     <string name="lightning_create_and_add_invoice">Vytvořit a přidat</string>
-    <string name="add_content">Přidat do zprávy</string>
-    <string name="add_caption">Přidat titulek</string>
-    <string name="add_caption_example">Můj milý přítel</string>
-    <string name="content_description">Popis obsahu</string>
-    <string name="content_description_example">Modrá loď na bílé písčité pláži při západu slunce</string>
     <string name="ai_suggested_alt_text_hint">Navrženo AI, upravte</string>
     <string name="ai_suggested_alt_text_dismiss">Zavřít AI návrh</string>
     <string name="zap_type">Typ zapsu</string>
@@ -2112,8 +1999,6 @@
         <item quantity="many">Tor se nepřipojuje. Čeká na něj %1$d relaye.</item>
         <item quantity="other">Tor se nepřipojuje. Čeká na něj %1$d relayů.</item>
     </plurals>
-    <string name="tor_splash_error">Chyba Toru: %1$s</string>
-    <string name="tor_splash_explainer">Amethyst používá Tor, aby skryl vaši IP adresu před relayi. Spuštění Toru může trvat až minutu a vyžaduje přístup k internetu.</string>
     <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
     <string name="notification_channel_status_on">Zapnuto</string>
     <string name="notification_channel_status_silent">Ztlumeno</string>
@@ -2200,7 +2085,6 @@
     <string name="wallet_filter_all">Vše</string>
     <string name="wallet_filter_zaps">Zapy</string>
     <string name="wallet_filter_non_zaps">Ostatní</string>
-    <string name="wallet_add">Přidat peněženku</string>
     <string name="wallet_default">Výchozí</string>
     <string name="wallet_set_default">Nastavit jako výchozí</string>
     <string name="wallet_remove">Odebrat</string>
@@ -2328,8 +2212,6 @@
     <string name="cashu_redeemed_amount">Uplatněno %1$s sats do vaší peněženky.</string>
     <string name="wallet_paste_uri">Vložit URI nostr+walletconnect://</string>
     <string name="wallet_save">Uložit</string>
-    <string name="wallet_rename">Přejmenovat</string>
-    <string name="wallet_rename_title">Přejmenovat peněženku</string>
     <string name="wallet_onchain_transactions">On-chain transakce</string>
     <string name="wallet_onchain_no_address">Pro tento účet není k dispozici žádná on-chain adresa.</string>
     <string name="wallet_onchain_no_backend">Není nakonfigurován žádný on-chain backend.</string>
@@ -2696,7 +2578,6 @@
     <string name="git_repo_filter_open">Otevřené</string>
     <string name="git_repo_filter_closed">Uzavřené a vyřešené</string>
     <string name="git_repo_label_all">Vše</string>
-    <string name="git_repo_bookmark">Přidat repozitář do záložek</string>
     <string name="git_repo_stat_branches">Větve</string>
     <string name="git_repo_stat_tags">Značky</string>
     <string name="git_repo_stat_files">Soubory</string>
@@ -2729,7 +2610,6 @@
     <string name="git_new_issue_button">Nový</string>
     <string name="git_new_issue_title">Nový problém</string>
     <string name="git_new_issue_subject">Název</string>
-    <string name="git_new_issue_body">Popis</string>
     <string name="git_new_issue_create">Vytvořit</string>
     <string name="git_new_issue_cancel">Zrušit</string>
     <string name="git_new_issue_labels">Štítky</string>
@@ -2741,7 +2621,6 @@
     <string name="git_pr_loading_changes">Načítání změn…</string>
     <string name="git_pr_no_changes">Nebyly nalezeny žádné změny souborů.</string>
     <string name="git_pr_changes_retry">Zkusit načíst změny znovu</string>
-    <string name="git_pr_revised">Upraveno</string>
     <string name="git_cover_note">Průvodní poznámka</string>
     <string name="git_ci_success">CI prošlo</string>
     <string name="git_ci_failure">CI selhalo</string>
@@ -2816,7 +2695,6 @@
     <string name="accessibility_play_username">Přehrát uživatelské jméno jako audio</string>
     <string name="accessibility_pushpin">Připínáček</string>
     <string name="accessibility_scan_qr_code">Skenovat QR kód</string>
-    <string name="accessibility_select_date">Vyberte datum</string>
     <string name="draft">Koncept</string>
     <string name="bounty_label">Odměna</string>
     <string name="load_from_text">Ze zprávy</string>
@@ -2954,9 +2832,7 @@
     <string name="closing_time">Čas ukončení</string>
     <string name="confirm">Potvrdit</string>
     <string name="next">Další</string>
-    <string name="go_back">Jít zpět</string>
     <string name="approve">Schválit</string>
-    <string name="connected">Připojeno</string>
     <string name="social_proof">Sociální důkaz</string>
     <string name="poll_submit">Odeslat</string>
     <string name="poll_view_results">Zobrazit výsledky</string>
@@ -3566,7 +3442,6 @@
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
     <string name="add_client_tag_explainer">Když je tato možnost zapnutá, Amethyst připojuje k událostem, které publikuješ, klientský tag podle NIP-89.</string>
     <string name="add_client_tag_title">Přidávat klientský tag do mých událostí</string>
-    <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
     <string name="add_sensitive_content_label">Citlivý obsah</string>
     <string name="add_to_messages">Přidat do Zpráv</string>
     <string name="add_to_public_bookmarks">Přidat do veřejných záložek</string>
@@ -3802,8 +3677,6 @@
     <string name="browser">Prohlížeč</string>
     <string name="browser_favorites">Oblíbené</string>
     <string name="browser_suggested">Objevujte webové aplikace</string>
-    <string name="browser_tor_off">Načítání přes otevřený web. Klepnutím použijete Tor.</string>
-    <string name="browser_tor_on">Načítání přes Tor. Klepnutím použijete otevřený web.</string>
     <string name="buzz_channel_archive">Archivovat kanál</string>
     <string name="buzz_channel_create_title">Nový kanál</string>
     <string name="buzz_channel_delete">Smazat kanál</string>
@@ -4125,15 +3998,10 @@
     <string name="connectivity_type_never">Nikdy</string>
     <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Přidat dokument</string>
-    <string name="content_description_add_image">Přidat obrázek</string>
-    <string name="content_description_add_media">Přidat média</string>
-    <string name="content_description_add_video">Přidat video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Skrýt</string>
     <string name="content_warning_see_warnings_option">Varovat</string>
     <string name="content_warning_show_all_sensitive_content_option">Ukázat</string>
     <string name="conversations">Konverzace</string>
-    <string name="convert_gif_to_mp4_description">Převede animovaný GIF na video MP4 pro menší velikost souboru a lepší kompatibilitu přehrávání.</string>
     <string name="convert_gif_to_mp4_label">Převést GIF na MP4</string>
     <string name="copied_note_id_to_clipboard">ID poznámky (@note1) zkopírováno do schránky</string>
     <string name="copied_note_text_to_clipboard">Text poznámky zkopírován do schránky</string>
@@ -4242,7 +4110,6 @@
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování ":" stejně jako veřejná.</string>
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování ":", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Šifrovat soubory před nahráním pro ochranu soukromí. Některé servery nemusí přijímat šifrované soubory na bezplatných účtech.</string>
     <string name="encrypt_files_label">Šifrovat soubory</string>
     <string name="ephemeral_relay_chat">Mizící chat</string>
     <string name="error">Chyba</string>
@@ -4291,8 +4158,6 @@
     <string name="failed_to_upload_media_no_details">Nepodařilo se nahrát média</string>
     <string name="failed_to_upload_to_server_with_message">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="favorite_app_add">Přidat do oblíbených</string>
-    <string name="favorite_app_network_open">Načítá přes otevřený web.</string>
-    <string name="favorite_app_network_tor">Načítá přes Tor.</string>
     <string name="favorite_app_recent">Nedávné</string>
     <string name="favorite_app_remove">Odebrat z oblíbených</string>
     <string name="favorite_app_still_loading">Tato aplikace ještě není načtena. Zkuste to za chvíli.</string>
@@ -4810,12 +4675,6 @@
         <item quantity="other">%1$d členů</item>
     </plurals>
     <string name="marmot_member_removed">Člen odebrán</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d zpráva</item>
-        <item quantity="few">%1$d zprávy</item>
-        <item quantity="many">%1$d zprávy</item>
-        <item quantity="other">%1$d zpráv</item>
-    </plurals>
     <string name="marmot_not_a_member">Nejste členem této skupiny</string>
     <string name="marmot_admin_delete_message">Smazat pro všechny</string>
     <string name="room_remove_for_everyone_title">Smazat pro všechny?</string>
@@ -5069,14 +4928,7 @@
     <string name="nest_lower_hand">Dát ruku dolů</string>
     <string name="nest_mic_mute">Ztlumit mikrofon</string>
     <string name="nest_mic_unmute">Zapnout mikrofon</string>
-    <string name="nest_mute">Ztlumit</string>
     <string name="nest_no_server_save_failed">Seznam nest serverů se nepodařilo uložit. Zkuste to znovu.</string>
-    <string name="nest_notification_broadcasting">Nest — Živě</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Přehrává zvuk, dokud je místnost otevřená.</string>
-    <string name="nest_notification_listening">Nest připojen</string>
-    <string name="nest_notification_stop">Zastavit</string>
-    <string name="nest_notification_text">Klepnutím se vrátíte.</string>
     <string name="nest_participant_follow">Sledovat</string>
     <string name="nest_participant_mute">Ztlumit</string>
     <string name="nest_participant_unfollow">Přestat sledovat</string>
@@ -5087,7 +4939,6 @@
     <string name="nest_presence_raised_hand">zvedl(a) ruku</string>
     <string name="nest_presence_speaking">mluví</string>
     <string name="nest_raise_hand">Přihlásit se</string>
-    <string name="nest_unmute">Zrušit ztlumení</string>
     <string name="nests">Audio místnosti</string>
     <string name="nests_servers_my_explainer">Uloženo jako nahraditelná událost typu kind-10112, aby ostatní klienti mohli číst vaše preference.</string>
     <string name="nests_servers_my_section">Vaše servery</string>
@@ -5284,12 +5135,6 @@
         <item quantity="many">%1$d stažení</item>
         <item quantity="other">%1$d stažení</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d majetek je zbalený</item>
-        <item quantity="few">%1$d majetky jsou zbalený</item>
-        <item quantity="many">%1$d majetků jsou zbalený</item>
-        <item quantity="other">%1$d majetků jsou zbalený</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Nebyly nalezeny žádné aplikace Blossom. Nainstalujte prosím lokální aplikaci Blossom pro zobrazení tohoto souboru</string>
     <string name="no_blossom_apps_found_title">Nelze otevřít Blossom odkazy</string>
     <string name="no_camera_app_found">Na tomto zařízení nebyla nalezena žádná aplikace pro fotoaparát</string>
@@ -5301,7 +5146,6 @@
     <string name="no_wallet_found">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury. Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="pay_elsewhere_title">Zaplatit jinou peněženkou</string>
     <string name="pay_elsewhere_description">Žádná aplikace v tomto počítači tuto platbu neumí zaplatit. Naskenujte kód peněženkou v telefonu, nebo ho zkopírujte do libovolné Lightning peněženky.</string>
-    <string name="no_wallet_found_with_error">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury (Chyba: %1$s). Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="no_zap_amount_setup_long_press_to_change">Není nastaveno množství Zap. Dlouhým stisknutím změňte</string>
     <string name="notification_service_accounts_title">Účty aktivní na pozadí</string>
     <string name="notification_service_master_description">Hlavní vypínač pro oznámení na pozadí v reálném čase. Vypnutím ušetříte baterii — jako režim letadlo. Když je vypnutý, žádný účet nezůstává připojený na pozadí a zůstane vypnutý (i po restartech), dokud jej znovu nezapnete.</string>
@@ -5454,7 +5298,6 @@
     <string name="podcast_value_stream_requires_wallet">Připojte peněženku Nostr Wallet Connect nebo debetní peněženku pro streamování sats během poslechu.</string>
     <string name="podcast_value_user_no_lnaddress">Tento uživatel nemá Lightning adresu</string>
     <string name="poll_author_no_vote">Autoři hlasování nemohou hlasovat ve vlastních hlasováních.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Hlasování je uzavřeno pro nové hlasy</string>
     <string name="poll_multiple_choice">Více možností</string>
     <plurals name="poll_results_backdated_votes">
@@ -6143,8 +5986,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="vanish_history">Historie zmizení</string>
     <string name="vanish_request_sent">Žádost o zmizení odeslána</string>
-    <string name="video_codec_h265_description">Lepší kvalita při menší velikosti souboru, ale ne všechna zařízení podporují přehrávání H.265.</string>
-    <string name="video_codec_h265_label">Použít kodek H.265/HEVC</string>
     <string name="video_collaboration_accepted_on">Přijal uvedení jako spolupracovník</string>
     <string name="video_collaboration_declined_on">Odmítl uvedení jako spolupracovník</string>
     <string name="video_credit_accepted">Uvedení přijato</string>
@@ -6283,13 +6124,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Odkaz na skupinu Cordn</string>
-    <string name="cordn_link_search_keywords">cordn koordinátor skupina odkaz pozvánka mls chat metadata soukromí odhalení coordinator group link invite privacy exposure</string>
     <string name="cordn_coordinators_title">Koordinátoři Cordn</string>
-    <string name="cordn_coordinators_search_keywords">cordn koordinátor přidat odebrat vymazat stav server mls chat pořadí coordinator add remove purge health ordering</string>
     <string name="cordn_keypackages_title">Balíčky klíčů Cordn</string>
-    <string name="cordn_keypackages_search_keywords">cordn balíček klíčů zveřejnit pozvánka záložní koordinátor mls key package publish invite last resort coordinator</string>
     <string name="cordn_backup_title">Záloha Cordn</string>
-    <string name="cordn_backup_search_keywords">cordn záloha obnovení export import heslo skupiny obnova backup restore passphrase groups recovery</string>
     <string name="chat_type_cordn_title">Skupiny Cordn</string>
     <string name="chat_type_cordn_desc">End-to-end šifrované skupiny, jejichž pořadí zpráv určuje vámi zvolený koordinátor, nikoli relé.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6941,7 +6778,6 @@
     <string name="cordn_backup_restore_body">Obnovení nahradí skupiny cordn na tomto zařízení těmi ze souboru. Je určeno pro telefon, který převzal roli jiného — ne k používání stejných skupin na dvou zařízeních zároveň.</string>
     <string name="cordn_backup_restore_confirm_body">Všechny skupiny cordn, které jsou nyní na tomto zařízení, budou odebrány a nahrazeny těmi ze souboru.\n\nNeobnovujte zálohu na druhý telefon, dokud se ten první stále používá. Oba by měly stejné klíče skupin, a jakmile oba odešlou zprávu, skupina se rozbije pro všechny — potichu a nevratně.</string>
     <string name="cordn_backup_restore_confirm_title">Nahradit skupiny cordn na tomto zařízení?</string>
-    <string name="cordn_backup_restore_title">Obnovit</string>
     <string name="cordn_backup_restored">Obnoveno.</string>
     <string name="cordn_chat_empty_description">Vše, co sem pošlete, je zašifrováno pro tuto skupinu. Koordinátor to předává dál, aniž by to mohl přečíst.</string>
     <string name="cordn_chat_empty_title">Zatím žádné zprávy</string>
@@ -6984,7 +6820,6 @@
     <string name="cordn_coordinators_purge">Vymazat</string>
     <string name="cordn_coordinators_purge_body">Odebráním zůstanou skupiny na tomto zařízení, takže po opětovném přidání koordinátora se vrátí s ním. Vymazáním se smažou: klíče skupin, pozice čtení i vaše balíčky klíčů zmizí a do těchto skupin se lze vrátit jen s novou pozvánkou.\n\nKoordinátor se o tom nedozví a ponechá si vše, co už měl.</string>
     <string name="cordn_coordinators_purge_title">Vymazat tohoto koordinátora?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Odpovídá na</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d další</string>
     <string name="cordn_coordinators_remove">Odebrat</string>
@@ -7016,9 +6851,7 @@
         <item quantity="many">%1$d osoby může přidávat a odebírat</item>
         <item quantity="other">%1$d osob může přidávat a odebírat</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Tuto skupinu spravuji jen já</string>
     <string name="cordn_create_admin_only_me_on">Jen vy můžete zvát, odebírat členy nebo měnit údaje skupiny. Později to můžete předat někomu jinému.</string>
-    <string name="cordn_create_coordinator">Koordinátor</string>
     <string name="cordn_create_coordinator_change">Změnit</string>
     <string name="cordn_create_coordinator_discover">Najít koordinátory</string>
     <string name="cordn_create_coordinator_hide">Hotovo</string>
@@ -7091,7 +6924,6 @@
     <string name="cordn_groups_menu_invitations">Pozvánky</string>
     <string name="cordn_groups_none">Zatím žádné skupiny cordn</string>
     <string name="cordn_groups_none_detail">Skupina cordn žije na jednom koordinátoru, který spravuje její členství a předává zprávy, aniž by kdy viděl, co kdo píše.</string>
-    <string name="cordn_groups_start">Založit skupinu</string>
     <string name="cordn_info_add_member">Přidat někoho</string>
     <string name="cordn_info_add_member_none">Pod tímto jménem nikdo nenalezen.</string>
     <string name="cordn_info_add_member_note">Přidat lze jen ty, kdo na tomto koordinátoru zveřejnili balíček klíčů.</string>
@@ -7200,14 +7032,12 @@
     <string name="cordn_requests_failed">Žádosti se nepodařilo načíst.</string>
     <string name="cordn_requests_none">Nikdo nečeká na připojení.</string>
     <string name="cordn_requests_title">Žádosti o připojení</string>
-    <string name="cordn_send">Odeslat</string>
     <string name="cordn_send_failed">Odeslání se nezdařilo.</string>
     <string name="cordn_send_no_session">Koordinátor této skupiny není otevřen, takže zatím nelze nic odeslat.</string>
     <string name="cordn_share_copied">Zkopírováno</string>
     <string name="cordn_share_copy">Kopírovat odkaz</string>
     <string name="cordn_share_explainer">Kdokoli s tímto odkazem může požádat o připojení. Pustit ho dovnitř ale musí administrátor.</string>
     <string name="cordn_share_title">Sdílet tuto skupinu</string>
-    <string name="cordn_voice_play">Přehrát hlasovou zprávu</string>
     <string name="cordn_voice_record">Nahrát hlasovou zprávu</string>
     <string name="cordn_voice_stop">Zastavit a odeslat</string>
     <string name="browser_address_hint">Hledat nebo zadat adresu</string>
@@ -7581,7 +7411,6 @@
     <string name="custom_feeds_remove">Odebrat</string>
     <string name="custom_feeds_search_people">Hledat podle jména, NIP-05 nebo npub</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">V širokých oknech zobrazí vedle hlavní obrazovky další sloupce, každý s vlastní obrazovkou a historií. Sady sloupců si můžete uložit jako pracovní prostory.</string>
     <string name="deck_workspaces">Pracovní prostory</string>
     <string name="deck_workspace_number">Pracovní prostor %1$d</string>
     <string name="deck_save_workspace">Uložit jako nový pracovní prostor</string>
@@ -8511,12 +8340,6 @@
         <item quantity="few">%1$d servery</item>
         <item quantity="many">%1$d serveru</item>
         <item quantity="other">%1$d serverů</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="few">%1$d relaye</item>
-        <item quantity="many">%1$d relaye</item>
-        <item quantity="other">%1$d relayů</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d emoji balíček</item>
@@ -9606,7 +9429,6 @@
     <string name="wot_nudge_first_body">Odpovědi, oznámení a zprávy od lidí, které sledujete, a od lidí, kterým oni důvěřují, budou na prvním místě.</string>
     <string name="wot_nudge_first_action">Zobrazit mé lidi jako první</string>
     <string name="wot_nudge_thread_label">Odpovědi, nejprve váš okruh</string>
-    <string name="wot_nudge_you_follow">Sledujete</string>
     <string name="wot_nudge_thread_title">Přátelé jako první v každém vlákně</string>
     <string name="wot_nudge_thread_body">Čtěte nejdřív lidi, které znáte. Ostatní jsou na jedno klepnutí.</string>
     <string name="wot_nudge_friends_title_one">%1$s dává přednost svým lidem</string>
@@ -10061,7 +9883,6 @@
     <string name="front_page_step_all_at_once">Psaní (tento poskytovatel posílá stránku najednou)</string>
     <string name="front_page_step_check">Kontrola citací, obrázků a odkazů</string>
     <string name="front_page_step_planning">Plánování novin</string>
-    <string name="front_page_edition">Č. %1$s</string>
     <string name="front_page_fixed_once">Jednou opraveno</string>
     <string name="front_page_download">Stáhnout</string>
     <string name="front_page_changes_title">Odstraněno ze stránky</string>

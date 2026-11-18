@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">अमेथिस्ट पर आपका स्वागत है</string>
-    <string name="login_subtitle">आपके नोस्टर लेखा में प्रवेंशांकन करें</string>
-    <string name="login_subtitle_desktop">नोस्टर ग्राहक लेखनपीठ संगणकों के लिए</string>
-    <string name="login_card_title">आपकी नोस्टर कुंचिका के साथ प्रवेशांकन करें</string>
-    <string name="login_card_subtitle">एनसेक पूर्ण अभिगम्यता के लिए। bunker:// दूरस्थ हस्ताक्षरकर्ता के लिए। अथवा एनपुब केवल पठनशक्य के लिए</string>
-    <string name="login_with_key">कुंचिका के साथ प्रवेशांकन</string>
-    <string name="login_button">प्रवेशांकन</string>
-    <string name="login_generate_new">एक नयी कुंचिका बनाएँ</string>
-    <string name="login_generate_button">नया बनाएँ</string>
-    <string name="login_key_hint">आपकी निजी कुंचिका (एनसेक॰) अथवा ख्याप्य कुंचिका (एनपुब॰) प्रविष्ट करें</string>
-    <string name="login_key_label">एनसेक अथवा bunker:// अथवा एनपुब</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">कुंचिका दिखाएँ</string>
-    <string name="login_hide_key">कुंचिका छिपाएँ</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">महत्वपूर्ण। आपके कुंचिकाओं को सुरक्षित रखें।</string>
-    <string name="new_key_warning_message">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द के जैसा है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। पुनःप्राप्त भी नहीं हो सकता। यह एकमात्र विधि है आपके अपने लेखा का अभिगमन करने के लिए। जिस किसी के पास यह है आपकी लेखा का नियन्त्रण करेगा सर्वदा के लिए। यदि आप इसे खो देते हैं तो आपका लेखा भी सर्वदा के लिए चला जाएगा। इसे कभी भी बाँटना नहीं। एक पारणशब्द प्रबन्धक में इसे रखें।</string>
-    <string name="new_key_public_label">ख्याप्य कुंचिका (वितरणशक्य):</string>
-    <string name="new_key_secret_label">गुप्त कुंचिका (इसे कभी ना बाँटें):</string>
-    <string name="new_key_continue_button">मेरे कुंचिकाओं को सुरक्षित रख लिया। आगे</string>
-    <string name="new_key_saved_checkbox">मैंने मेरे कुंचिकाओं को कहीं सुरक्षित रखा है</string>
-    <string name="new_key_copy_encrypted_button">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
-    <string name="new_key_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
-    <string name="new_key_step_indicator">%2$d में से %1$d चरण</string>
-    <string name="new_key_next">आगे</string>
-    <string name="new_key_back">पीछे</string>
-    <string name="new_key_cancel">निरस्त</string>
-    <string name="new_key_step_intro_title">अपने कुंचिकाओं को सुरक्षित रखें आगे बढने से पहले</string>
-    <string name="new_key_step_intro_npub">आपकी ख्याप्य कुंचिका (एनपुब॰) आपका वितरणशक्य पता है। इसे निःसंकोच अन्यों को दें जिससे लोग आपको ढूँढ पाएँ तथा अनुगमन कर सकें।</string>
-    <string name="new_key_step_intro_nsec">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। यह एकमात्र बार दिखाई जाएगी। इसे सुरक्षित रखें अभी इसी समय। अथवा आप इस लेखा का अभिगमन क्षमता सर्वदा के लिए खो देंगे।</string>
-    <string name="new_key_keys_title">आपके कुंचिकाएँ</string>
-    <string name="new_key_confirm_title">एक अन्तिम बात</string>
-    <string name="new_key_confirm_recap">अपने गुप्त कुंचिका को एक पारणशब्द प्रबन्धक में रखें। यदि आप इसे खो देते हैं तो कोई भी आपके लिए इसे पुनःप्राप्त नहीं कर सकेगा।</string>
-    <string name="new_key_readonly_info">यह एक पठनेवशक्य लेखा है। कोई गुप्त कुंचिका का उत्पादन नहीं हआ। इसलिए सुरक्षित रखने के लिए कुछ नहीं।</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">कुंचिकाएँ सुरक्षित रखें</string>
-    <string name="backup_keys_public_label">ख्याप्य कुंचिका (एनपुब॰)</string>
-    <string name="backup_keys_public_help">आपकी ख्याप्य कुंचिका को बाँटना हानिरहित है। इसे लोगों को दें जिससे कि वे आपको ढूँढ पाएँ तथा अनुगमन कर सकें।</string>
-    <string name="backup_keys_show_qr">क्यूआर चित्र दिखाएँ</string>
-    <string name="backup_keys_hide_qr">क्यूआर चित्र छिपाएँ</string>
     <string name="backup_keys_secret_label">गुप्त कुंचिका (एनसेक॰)</string>
-    <string name="backup_keys_secret_warning">आपकी गुप्त कुंचिका एक पारणशब्द के जैसा है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। पुनःप्राप्त भी नहीं हो सकता। जिस किसी के पास यह है आपकी लेखा का नियन्त्रण करेगा सर्वदा के लिए। इसे कभी भी बाँटना नहीं। एक पारणशब्द प्रबन्धक में इसे रखें।</string>
-    <string name="backup_keys_secret_hidden">गुप्त कुंचिका छिपाई गई</string>
     <string name="backup_keys_reveal">गुप्त कुंचिका अनावरण</string>
     <string name="backup_keys_hide">गुप्त कुंचिका छिपाएँ</string>
-    <string name="backup_keys_copy_plain">गुप्त कुंचिका की अनुकृति</string>
-    <string name="backup_keys_copy_plain_warning">स्पष्टलेख एनसेक की अनुकृति करता है। केवल विश्वसनीय पारणशब्द प्रबन्धक में चिपकाएँ।</string>
-    <string name="backup_keys_copy_encrypted">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
-    <string name="backup_keys_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
-    <string name="backup_keys_encrypt_failed">कुंचिका रहस्यीकरण असफल। पुनःप्रयास करें।</string>
     <string name="backup_keys_external_signer">यह लेखा एक बाहरी हस्ताक्षरकर्ता का उपयोग करता है। कोई गुप्त कुंचिका नहीं रखी गई यहाँ।</string>
-    <string name="backup_keys_copied">अनुकृत।</string>
     <string name="backup_keys_copy">अनुकृति</string>
-    <string name="backup_keys_unlock_title">गुप्त कुंचिका अनावरण</string>
-    <string name="backup_keys_unlock_subtitle">अपने गोपनीयता ताला पारणशब्द को प्रविष्ट करें अपने गुप्त कुंचिका का अनावरण करने के लिए।</string>
     <!-- Common Actions -->
-    <string name="action_copy">अनुकृति</string>
     <string name="action_paste">चिपकाएँ</string>
     <string name="action_cancel">निरस्त</string>
-    <string name="action_ok">ठीक</string>
     <string name="action_save">अभिलेखन</string>
-    <string name="action_delete">मिटाएँ</string>
-    <string name="action_share">बाँटें</string>
     <!-- Errors -->
-    <string name="error_invalid_key">अमान्य कुंचिका प्रारूप। कृपया जाँच करें और पुनःप्रयास करें।</string>
-    <string name="error_network">जाल अपक्रम। कृपया आपके संयोजन की जाँच करें।</string>
-    <string name="error_generic">एक अपक्रम हुआ। कृपया पुनःप्रयास करें।</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">नवीकरण</string>
     <string name="action_try_again">पुनःप्रयास करें</string>
@@ -124,8 +69,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">उत्तर इनको </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">नोस्टरस्थान। %1$s</string>
-    <string name="napplet_card_title">नोस्टर संलग्नक्रमक। %1$s</string>
     <string name="napplet_card_kind">नोस्टरसंलग्नक्रमक</string>
     <string name="nsite_website_kind">नोस्टरस्थान</string>
     <string name="napplet_card_permissions">अनुमतियाँ :</string>
@@ -206,10 +149,7 @@
     <string name="geocache_verified_find">सत्यापित खोज</string>
     <string name="geocache_invalid_proof">प्रमाण ठीक नहीं</string>
     <string name="geocache_loading">कोष आवहन…</string>
-    <string name="geocache_hidden_by">छिपाया गया %1$s द्वारा</string>
     <string name="geocache_navigate">मार्गदर्शन</string>
-    <string name="geocache_copy_coordinates">निर्देशांकों की अनुकृति</string>
-    <string name="geocache_coordinates_copied">निर्देशांक अनुकृत</string>
     <string name="geocache_photos_section">चित्र</string>
     <string name="geocache_mission_section">मुख्य खोज अभियान</string>
     <string name="geocache_logs_section">घटनाक्रम अभिलेख</string>
@@ -230,7 +170,6 @@
     <string name="geocache_archived_notice">इस कोष को संगृहीत कर दिया गया। यह अब खेल में नहीं है।</string>
     <string name="geocache_ftf_won_by">सर्वप्रथम खोज का कथन %1$s द्वारा</string>
     <string name="geocache_ftf_available">सर्वप्रथम खोज अभी भी सम्भव</string>
-    <string name="geocache_owner_actions">स्वत्वधारी</string>
     <string name="geocache_owner_edit">कोष सम्पादन</string>
     <string name="geocache_owner_archive">कोष को संगृहीत करें</string>
     <string name="geocache_owner_archive_confirm">संगृहीत करें। खोजकर्ता देखेंगे कि यह खेल के बाहर हो गया है। तथा सूचीकृत विवरण पठनशक्य रहेगा।</string>
@@ -242,7 +181,6 @@
     <string name="geocache_log_type_dnf">खोज असफल</string>
     <string name="geocache_log_type_note">टीका</string>
     <string name="geocache_log_type_maintenance">देखरेख आवश्यक</string>
-    <string name="geocache_log_title">खोज का अभिलेखन</string>
     <string name="geocache_log_cache_label">कोष</string>
     <string name="geocache_log_your_log">आपका घटनाक्रम अभिलेख</string>
     <string name="geocache_log_placeholder">कैसे चला।</string>
@@ -264,11 +202,6 @@
     <string name="geocache_tab_hunts">खोज</string>
     <string name="geocache_tab_finds">सफल खोज</string>
     <string name="geocache_tab_mine">मेरा</string>
-    <string name="geocache_filter_unfound">अप्राप्त</string>
-    <string name="geocache_filter_difficulty">कठिनाई %1$d समन्यूनवा</string>
-    <string name="geocache_filter_terrain">धरा %1$d समन्यूनवा</string>
-    <string name="geocache_filter_has_prize">पुरस्कारयुक्त</string>
-    <string name="geocache_filter_verified_only">प्रमाण आवश्यक</string>
     <string name="geocache_use_my_location">मेरे स्थान का उपयोग करें</string>
     <string name="geocache_sorted_by_distance">दूरी अनुसार क्रमबद्ध</string>
     <string name="geocache_sorted_by_recent">नवीनतम पहले</string>
@@ -277,25 +210,17 @@
     <string name="geocache_empty_finds">आपने किसी खोज का अभिलेखन नहीं किया अब तक।</string>
     <string name="geocache_empty_mine">आपने किसी कोष को छिपाया नहीं अब तक।</string>
     <string name="geocache_empty_hunts">कोई खोज नहीं अब तक।</string>
-    <string name="geocache_stat_finds">सफल खोज</string>
-    <string name="geocache_stat_ftf">सर्वप्रथम खोज</string>
-    <string name="geocache_stat_verified">सत्यापित</string>
-    <string name="geocache_stat_hidden">छिपा हुआ</string>
-    <string name="geocache_map_recenter">मुझ पर मध्यीकरण</string>
     <string name="geocache_map_long_press">मानचित्र पर दीर्घ दबाएँ वहाँ एक कोष छिपाने के लिए</string>
     <string name="geocache_map_open">खोलें</string>
     <string name="geocache_new_section_where">कहाँ</string>
     <string name="geocache_new_section_what">क्या</string>
     <string name="geocache_new_section_extras">अतिरिक्त</string>
     <string name="geocache_new_section_proof">प्रमाण</string>
-    <string name="geocache_new_section_relays">पुनःप्रसारक</string>
     <string name="geocache_new_location_warning">यह एक सार्वजनिक स्थान प्रकाशित करता है जो वास्तविक से पाँच मीटर व्यासार्ध तक की विस्थापन सम्भावना रखता है। नोस्टर पर कोई भी इसे देख सकता है। प्रकाशित घटना को पुनःअप्रकाशित नहीं किया जा सकता।</string>
     <string name="geocache_new_pick_location">स्थल का चयन करें</string>
     <string name="geocache_new_ladder">प्रकाशित करता है %1$s को। तथा स्थूलतर विभाग तीन अक्षरों तक निकटवर्ती खोज के लिए।</string>
     <string name="geocache_new_name">नाम</string>
     <string name="geocache_new_description">विवरण</string>
-    <string name="geocache_new_type">प्रकार</string>
-    <string name="geocache_new_size">आकार</string>
     <string name="geocache_new_difficulty">कठिनाई</string>
     <string name="geocache_new_terrain">धरा</string>
     <string name="geocache_new_hint">सहायक संकेत</string>
@@ -305,10 +230,7 @@
     <string name="geocache_new_modifiers">संशोधक</string>
     <string name="geocache_new_require_proof">उपस्थिति प्रमाण आवश्यक</string>
     <string name="geocache_new_proof_ready">एक सत्यापन कुंचिका उत्पादित इस कोष के लिए।</string>
-    <string name="geocache_new_log_relays">खोजक कहाँ अभिलेखन करना चाहिए</string>
     <string name="geocache_new_publish">प्रकाशन</string>
-    <string name="geocache_new_needs_name">कोष नामकरण।</string>
-    <string name="geocache_new_needs_location">कोष कहाँ छिपाया जाए चयन करें।</string>
     <string name="geocache_hunt_progress">%2$d में से %1$d प्राप्त</string>
     <string name="geocache_hunt_start">खोज आरम्भ करें</string>
     <plurals name="geocache_hunt_caches">
@@ -319,15 +241,10 @@
     <string name="geocache_hunt_description">विवरण</string>
     <string name="geocache_hunt_banner">ध्वज चित्र</string>
     <string name="geocache_hunt_pick_caches">कोष क्रमानुसार</string>
-    <string name="geocache_hunt_add_cache">कोष जोडें</string>
     <string name="geocache_hunt_move_up">ऊर्ध्वगमन</string>
     <string name="geocache_hunt_move_down">अधोगमन</string>
     <string name="geocache_hunt_remove">हटाएँ</string>
-    <string name="geocache_hunt_theme">पृष्ठ शैली</string>
-    <string name="geocache_hunt_map_style">मानचित्र शैली</string>
-    <string name="geocache_hunt_needs_title">खोज का एक शीर्षक रखें।</string>
     <string name="geocache_hunt_needs_caches">न्यूनतम एक कोष जोडें।</string>
-    <string name="geocache_publish_failed">प्रकाशन असफल। पुनःप्रसारक संयोजन का जाँच करें तथा पुनःप्रयास करें।</string>
     <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_value_split_percent">%1$d प्रतिशत</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
@@ -403,7 +320,6 @@
     <string name="qr_scanner_label_hex_key">कच्ची कुंचिका (ख्याप्य अथवा निजी)</string>
     <string name="qr_scanner_open_link">योजक खोलें</string>
     <string name="qr_scanner_copy">अनुकृति</string>
-    <string name="qr_scanner_copied">अनुकृत</string>
     <string name="qr_scanner_try_again">पुनःपरखें</string>
     <string name="show_qr">क्यूआर क्रमचित्र दिखाएँ</string>
     <string name="profile_image">परिचय चित्र</string>
@@ -459,7 +375,6 @@
     <string name="quote">इसपर टीका लिखें</string>
     <string name="fork">पथभेद</string>
     <string name="new_amount_in_sats">साट्स में नयी मात्रा</string>
-    <string name="and"> तथा </string>
     <string name="following"> का अनुचरण</string>
     <string name="followers"> अनुचर</string>
     <string name="number_following">%1$s का अनुचरण</string>
@@ -722,7 +637,6 @@
     <string name="channel_created">प्रणाली बनायी गयी</string>
     <string name="channel_information_changed_to">प्रणाली जानकारी परिवर्तित की गयी</string>
     <string name="new_public_chat">नयी सार्वजनिक चर्चा बनाएँ</string>
-    <string name="marmot_group_no_messages_yet">अभी तक कोई सन्देश नहीं</string>
     <string name="paid_relay">सशुल्क पुनःप्रसारक</string>
     <string name="tor_relay">संयोजन के समय टोर का प्रयोग अवश्य करें</string>
     <string name="posts_received">पत्र प्राप्त</string>
@@ -961,36 +875,22 @@
     <string name="health_connect_rationale_limit_optional">यह सम्पूर्ण सुविधा विकल्पात्मक है। अनुमतियों का निराकरण करें स्वास्थ्य संयोजन में कभी भी। मेरा स्वास्थ्य अपनी आज्ञा अनुरोध अवस्था तक लौट जाएगा। अथवा स्थापना विकल्पों में सम्पादन पटल में सम्पादक सुझाव निष्क्रिय करें। अमेथिस्ट के शेष भाग कार्य करते रहेंगे।</string>
     <string name="health_connect_rationale_privacy_policy">सम्पूर्ण गोपनीयता नीति पढें</string>
     <string name="my_fitness_title">मेरा स्वास्थ्य</string>
-    <string name="my_fitness_window">पिछले चार सप्ताह</string>
     <string name="my_fitness_loading_metrics">दूरी उष्ममानइकाई तथा हृदयस्पन्दन गति का आवहन…</string>
-    <string name="my_fitness_window_note">आपके अभ्यास के अन्तिम चार पूर्ण सप्ताह। व्यायाम जो आपने प्रकाशित किए। तथा जो भी स्वास्थ्यसंयोजन इस सम्वादयन्त्र पर अभिलेखन करता है। अमेथिस्ट इसका साराम्श कर निकालेगा यन्त्र पर तथा कुछ भी प्रकाशित नहीं करेगा।</string>
     <string name="my_fitness_this_week">इस सप्ताह</string>
-    <string name="my_fitness_vs_last_week">पिछले सप्ताह की तुलना में</string>
-    <string name="my_fitness_weekly_average">साप्ताहिक मध्यमान</string>
     <string name="my_fitness_workouts">व्यायाम</string>
     <string name="my_fitness_active_days">सक्रिय दिन</string>
-    <string name="my_fitness_streak">लगातार इतने दिन</string>
-    <string name="my_fitness_time">समय</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$dघं॰ %2$dमि॰</string>
     <string name="my_fitness_duration_minutes">%1$dमि॰</string>
     <string name="my_fitness_duration_seconds">%1$dसे॰</string>
     <string name="my_fitness_distance">दूरी</string>
-    <string name="my_fitness_calories">उष्ममानइकाई</string>
-    <string name="my_fitness_steps">पद</string>
-    <string name="my_fitness_elevation">आरोहण</string>
-    <string name="my_fitness_avg_heart_rate">मध्यमान हृदयगति</string>
-    <string name="my_fitness_max_heart_rate">उच्चतम हृदयगति</string>
-    <string name="my_fitness_by_activity">गतिविधि अनुसार</string>
-    <string name="my_fitness_bests">सर्वोत्तम प्रयास</string>
     <string name="my_fitness_best_longest_distance">दीर्घतम दूरी</string>
     <string name="my_fitness_best_longest_duration">दीर्घतम व्यायाम</string>
     <string name="my_fitness_best_biggest_climb">बृहत्तम आरोहण</string>
     <string name="my_fitness_best_most_steps">अधिकतम पद</string>
     <string name="my_fitness_best_highest_heart_rate">उच्चतम हृदयस्पन्दन गति</string>
     <string name="my_fitness_recent">निकटकाल व्यायाम</string>
-    <string name="my_fitness_empty">पिछले चार सप्ताह में कुछ भी अभिलेखित नहीं। व्यायाम जो आप प्रकाशित करते हैं तथा जो भी आपकी घडी अभिलेखित करती है सब यहाँ दिखेंगे।</string>
     <string name="my_fitness_connect_title">व्यायाम के अभिलेख</string>
     <string name="my_fitness_connect_message">स्वास्थ्यसंयोजन से जोड बनाएँ आपके साप्ताहिक संकलनों को देखने के लिए। तथा सप्ताहोत्तर सप्ताह प्रवृत्ति। तथा सर्वोत्तम प्रयासों को। तथा निरन्तार अभ्यास दिनों को। सब आपके सम्वादयन्त्र पर रहेगा।</string>
     <string name="my_fitness_connect_banner">स्वास्थ्यसंयोजन से जोड बनाएँ आपकी घडी द्वारा अभिलेखित व्यायामों को जोडने के लिए। हृदयस्पन्दन गति तथा पद तथा आरोहण युक्त।</string>
@@ -1062,7 +962,6 @@
         <item quantity="other">सर्वोत्तम। %1$d सप्ताह</item>
     </plurals>
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
-    <string name="browser_reload">पुनःआवहन</string>
     <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
     <string name="embedded_tab_load_failed">इस क्रमक का आवहन असफल।</string>
     <string name="page_error_not_found_title">यह जालस्थान प्राप्त नहीं हुआ</string>
@@ -1096,10 +995,6 @@
     <string name="browser_recent_options">विकल्प</string>
     <string name="browser_recent_remove">इतिहास से हटाएँ</string>
     <string name="favorite_apps_empty">यहाँ कुछ नहीं अब तक। एक जालक्रमक अथवा नोस्टरसंलग्नक्रमक अथवा नोस्टरस्थान खोलें तथा ताराचिह्न दबाएँ यहाँ रखने के लिए।</string>
-    <string name="favorite_app_open_window">अपने गवाक्ष में खोलें</string>
-    <string name="favorite_app_access_title">इस क्रमक के लिए क्या अभिगम्य है</string>
-    <string name="favorite_app_access_static">पृथक्कृत पर्यावरण में चलता है। आपके लेखा तक कोई विशेष अभिगमन अधिकार नहीं।</string>
-    <string name="favorite_app_access_show">इसके लिए क्या अभिगम्य है</string>
     <string name="favorite_app_unavailable">इस क्रमक का आवहन अभी नहीं हुआ है। इसे इसके पत्रक से खोलें अथवा कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="napplet_manage_permissions">अनुमतियाँ प्रबन्धन</string>
     <string name="napplet_permissions_ask_each_time">प्रत्येक बार मुझसे पूछें</string>
@@ -1200,8 +1095,6 @@
     <string name="relay_auth_remember_relay">इस पुनःप्रसारक के लिए स्मृत रखें</string>
     <string name="relay_auth_log_in">प्रवेशांकन</string>
     <string name="relay_auth_not_now">अभी नहीं</string>
-    <string name="relay_auth_never_allow">कभी अनुमत नहीं</string>
-    <string name="relay_auth_how_we_decide">अमेथिस्ट कैसे निर्णय लेता है</string>
     <string name="relay_auth_exceptions">अपवर्ग</string>
     <string name="relay_auth_no_exceptions">कोई अपवर्ग नहीं अब तक। सभी पुनःप्रसारक ऊपर के नियमों का पालन करते हैं।</string>
     <string name="relay_auth_segment_always">सर्वदा</string>
@@ -1562,7 +1455,6 @@
     <string name="pledge_amount_in_sats">प्रतिज्ञा मात्रा साट्स में</string>
     <string name="poll_zap_value_min">ज्साप न्यूनतम</string>
     <string name="poll_zap_value_max">ज्साप अधिकतम</string>
-    <string name="poll_consensus_threshold">सर्वसम्मति</string>
     <string name="looking_for_event">घटना %1$s के लिए खोज चल रहा है</string>
     <string name="looking_for_event_title">आवहन चालू</string>
     <string name="looking_for_private_event">आपके निजी सन्देशों का आवहन की प्रतीक्षा…</string>
@@ -1572,11 +1464,6 @@
     <string name="custom_zaps_add_a_message_nonzap">चालान संदेश जोडें</string>
     <string name="custom_zaps_add_a_message_example">आपके परिश्रम के लिए धन्यवाद!</string>
     <string name="lightning_create_and_add_invoice">बनाएँ तथा जोडें</string>
-    <string name="add_content">संदेश में जोड दें</string>
-    <string name="add_caption">शीर्षक जोडें</string>
-    <string name="add_caption_example">मेरे प्रिय मित्र</string>
-    <string name="content_description">विषयवस्तु का विवरण</string>
-    <string name="content_description_example">एक नीला नाव श्वेत रेतीला तट पर सूर्यास्त पर</string>
     <string name="ai_suggested_alt_text_hint">तर्कणयन्त्र सुझावित। सम्पादन करें</string>
     <string name="ai_suggested_alt_text_dismiss">तर्कणयन्त्र सुझाव हटाएँ</string>
     <string name="zap_type">ज्साप प्रकार</string>
@@ -2077,8 +1964,6 @@
         <item quantity="one">टोर संयोजन नहीं हो रहा। %1$d पुनःप्रसारक उसकी प्रतीक्षा में।</item>
         <item quantity="other">टोर संयोजन नहीं हो रहा। %1$d पुनःप्रसारक उसकी प्रतीक्षा में।</item>
     </plurals>
-    <string name="tor_splash_error">टोर अपक्रम। %1$s</string>
-    <string name="tor_splash_explainer">अमेथिस्ट टोर का उपयोग करता है आपके अंकीय जालपता छिपाने के लिए पुनःप्रसारकों से। टोर को आरम्भ करने के लिए एक मिनुट लग सकता है। इसके लिए सम्वादजाल अभिगमन आवश्यक।</string>
     <string name="notification_settings_categories_explainer">श्रेणि दबाएँ उसके आण्ड्रोइड सूचना स्थापना विकल्पों को खोलने के लिए। ध्वनि महत्व पदक तथा विघ्नविराम वहाँ हैं।</string>
     <string name="notification_channel_status_on">चालू</string>
     <string name="notification_channel_status_silent">मौन</string>
@@ -2165,7 +2050,6 @@
     <string name="wallet_filter_all">सभी</string>
     <string name="wallet_filter_zaps">ज्साप</string>
     <string name="wallet_filter_non_zaps">ज्साप अतिरिक्त</string>
-    <string name="wallet_add">धनकोष जोडें</string>
     <string name="wallet_default">मूलविकल्प</string>
     <string name="wallet_set_default">मूलविकल्पतः स्थापित करें</string>
     <string name="wallet_remove">हटाएँ</string>
@@ -2293,8 +2177,6 @@
     <string name="cashu_redeemed_amount">%1$s साट्स चुकाया गया आपके धनकोष में।</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// पता चिपकाएँ</string>
     <string name="wallet_save">अभिलेखन करें</string>
-    <string name="wallet_rename">पुनःनामकरण</string>
-    <string name="wallet_rename_title">धनकोष पुनःनामकरण</string>
     <string name="wallet_onchain_transactions">खण्डश्रृंखला सत्यापित लेनदेन</string>
     <string name="wallet_onchain_no_address">इस लेखा के लिए कोई खण्डश्रृंखला पता उपलब्ध नहीं।</string>
     <string name="wallet_onchain_no_backend">कोई खण्डश्रृंखला पृष्ठभाग समाकृत नहीं।</string>
@@ -2661,7 +2543,6 @@
     <string name="git_repo_filter_open">खुला</string>
     <string name="git_repo_filter_closed">आवृत तथा सुलझाया गया</string>
     <string name="git_repo_label_all">सभी</string>
-    <string name="git_repo_bookmark">क्रमलेखकोश स्मर्त्तव्यचिह्नित करें</string>
     <string name="git_repo_stat_branches">शाखाएँ</string>
     <string name="git_repo_stat_tags">विषयसूचक</string>
     <string name="git_repo_stat_files">अभिलेख</string>
@@ -2694,7 +2575,6 @@
     <string name="git_new_issue_button">नव्य</string>
     <string name="git_new_issue_title">नया विषय</string>
     <string name="git_new_issue_subject">शीर्षक</string>
-    <string name="git_new_issue_body">विवरण</string>
     <string name="git_new_issue_create">बनाएँ</string>
     <string name="git_new_issue_cancel">निरस्त</string>
     <string name="git_new_issue_labels">नामसूचक</string>
@@ -2706,7 +2586,6 @@
     <string name="git_pr_loading_changes">परिवर्तनों का आवहन…</string>
     <string name="git_pr_no_changes">कोई अभिलेख परिवर्तन प्राप्त नहीं।</string>
     <string name="git_pr_changes_retry">परिवर्तनों का आवहन का पुनःप्रयास</string>
-    <string name="git_pr_revised">सम्शोधित</string>
     <string name="git_cover_note">आवरक टीका</string>
     <string name="git_ci_success">सततसंघटन सफल</string>
     <string name="git_ci_failure">सततसंघटन असफल</string>
@@ -2779,7 +2658,6 @@
     <string name="accessibility_play_username">उपयोगकर्ता नाम को ध्वनि के रूप में चलाएँ</string>
     <string name="accessibility_pushpin">घुण्डी</string>
     <string name="accessibility_scan_qr_code">क्यूआर चित्र अक्षरराशि परखें</string>
-    <string name="accessibility_select_date">दिनांक का चयन करें</string>
     <string name="draft">पाण्डुलिपि</string>
     <string name="bounty_label">पुरस्कार</string>
     <string name="load_from_text">संदेश से</string>
@@ -2915,9 +2793,7 @@
     <string name="closing_time">समापन समय</string>
     <string name="confirm">पुष्टि करें</string>
     <string name="next">अगला</string>
-    <string name="go_back">पीछे जाएँ</string>
     <string name="approve">स्वीकार करें</string>
-    <string name="connected">संयोजित</string>
     <string name="social_proof">सामूहिक प्रमाण</string>
     <string name="poll_submit">उपस्थापन</string>
     <string name="poll_view_results">परिणाम देखें</string>
@@ -3534,7 +3410,6 @@
     <string name="add_a_nip96_server">निप॰छियानवे सेवासंगणक जोडें</string>
     <string name="add_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰नवासी ग्राहक सूचक जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="add_client_tag_title">मेरे घटनाओं में ग्राहक सूचक जोडें</string>
-    <string name="add_sensitive_content_description">इसे दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है</string>
     <string name="add_sensitive_content_label">संवेदनशील विषयवस्तु</string>
     <string name="add_to_messages">सन्देशों में जोडें</string>
     <string name="add_to_public_bookmarks">सार्वजनिक स्मर्तव्य सूची में जोडें</string>
@@ -3750,8 +3625,6 @@
     <string name="browser">जालवीक्षक</string>
     <string name="browser_favorites">इष्टसूची</string>
     <string name="browser_suggested">जाल क्रमक आविष्करण</string>
-    <string name="browser_tor_off">खुले जाल पर आवहन हो रहा है। टोर का उपयोग करने के लिए दबाएँ।</string>
-    <string name="browser_tor_on">टोर पर आवहन हो रहा है। खुले जाल का उपयोग करने के लिए दबाएँ।</string>
     <string name="buzz_channel_archive">प्रणाली संग्रहण</string>
     <string name="buzz_channel_create_title">नयी प्रणाली</string>
     <string name="buzz_channel_delete">प्रणाली मिटाएँ</string>
@@ -4043,15 +3916,10 @@
     <string name="connectivity_type_never">कभी नहीं</string>
     <string name="connectivity_type_unmetered_wifi_only">मात्रांकन रहित वैफै॰</string>
     <string name="connectivity_type_unmetered_wifi_only_short">वैफै॰</string>
-    <string name="content_description_add_document">पत्र जोडें</string>
-    <string name="content_description_add_image">चित्र जोडें</string>
-    <string name="content_description_add_media">श्रव्यदृश्याभिलेख जोडें</string>
-    <string name="content_description_add_video">चलचित्र जोडें</string>
     <string name="content_warning_hide_all_sensitive_content_option">छिपाएँ</string>
     <string name="content_warning_see_warnings_option">चेतावनी दें</string>
     <string name="content_warning_show_all_sensitive_content_option">दिखाएँ</string>
     <string name="conversations">सम्वाद</string>
-    <string name="convert_gif_to_mp4_description">चलन्त जिफ से एमपीचार में परिवर्तित करता है सूक्ष्मतर अभिलेख आकार तथा अधिक चालन अनुकूलता के लिए।</string>
     <string name="convert_gif_to_mp4_label">जिफ से एमपीचार में परिवर्तित करें</string>
     <string name="copied_note_id_to_clipboard">टीका सूचक (@note1) की अनुकृति की गई टाँकाफलक में</string>
     <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति की गई टाँकाफलक में</string>
@@ -4142,7 +4010,6 @@
     <string name="emoji_private_explainer">निजी भावचिह्न रहस्यीकृत रूप में रखे जाते हैं पुनःप्रसारकों में तथा केवल आप के लिए दृश्य हैं। आपके प्रतिक्रिया विकल्पसूची में उपस्थित होते हैं तथा ":" स्वतःसम्पन्न सुविधा में सार्वजनिक भावचिह्नों के जैसे ही।</string>
     <string name="emoji_public_explainer">सार्वजनिक भावचिह्न सब के लिए दृश्य हैं तथा आपके प्रतिक्रिया विकल्पसूची में उपस्थित होते हैं तथा ":" स्वतःसम्पन्न चयनकर्ता में जब यह पोटली आपकी भावचिह्न सूची में है।</string>
     <string name="emoji_sets">भावचिह्न</string>
-    <string name="encrypt_files_description">गोपनीयता के लिए अभिलेखों का रहस्यीकरण करें। कुछ सेवासंगणक रहस्यीकृत अभिलेखों को सम्भाव्यतः अस्वीकार कर सकते हैं निःशुल्क लेखाओं के लिए।</string>
     <string name="encrypt_files_label">अभिलेख रहस्यीकरण</string>
     <string name="ephemeral_relay_chat">नश्वर चर्चा</string>
     <string name="error">अपक्रम</string>
@@ -4191,8 +4058,6 @@
     <string name="failed_to_upload_media_no_details">श्रव्यदृश्याभिलेख आरोहण असफल</string>
     <string name="failed_to_upload_to_server_with_message">%1$s पर आरोहण असफल। %2$s</string>
     <string name="favorite_app_add">इष्टसूची में जोडें</string>
-    <string name="favorite_app_network_open">खुले जाल पर आवहन होता है।</string>
-    <string name="favorite_app_network_tor">टोर पर आवहन होता है।</string>
     <string name="favorite_app_recent">निकटकाल</string>
     <string name="favorite_app_remove">इष्टसूची में से हटाएँ</string>
     <string name="favorite_app_still_loading">उस क्रमक का आवहन अभी नहीं हुआ है। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
@@ -4705,10 +4570,6 @@
         <item quantity="other">%1$d सदस्य</item>
     </plurals>
     <string name="marmot_member_removed">सदस्य हटाया गया</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d सन्देश</item>
-        <item quantity="other">%1$d सन्देश</item>
-    </plurals>
     <string name="marmot_not_a_member">इस समूह का सदस्य नहीं</string>
     <string name="marmot_admin_delete_message">सब के लिए मिटा दें</string>
     <string name="room_remove_for_everyone_title">क्या सब के लिए मिटा दें।</string>
@@ -4924,14 +4785,7 @@
     <string name="nest_lower_hand">हाथ नीचे करें</string>
     <string name="nest_mic_mute">ध्वनिग्राहक मौन</string>
     <string name="nest_mic_unmute">ध्वनिग्राहक सक्रिय</string>
-    <string name="nest_mute">मौन</string>
     <string name="nest_no_server_save_failed">आपकी निलय सेवासंगणक सूची का अभिलेखन असफल। पुनःप्रयास करें।</string>
-    <string name="nest_notification_broadcasting">निलय - वर्तमान</string>
-    <string name="nest_notification_channel">निलय</string>
-    <string name="nest_notification_channel_description">ध्वनि चालू रखता है जब शाला खुला है।</string>
-    <string name="nest_notification_listening">निलय संयोजित</string>
-    <string name="nest_notification_stop">अवरोधन</string>
-    <string name="nest_notification_text">लौटने के लिए दबाएँ।</string>
     <string name="nest_participant_follow">अनुचरण</string>
     <string name="nest_participant_mute">मौन</string>
     <string name="nest_participant_unfollow">अनुचरण ना करें</string>
@@ -4942,7 +4796,6 @@
     <string name="nest_presence_raised_hand">हाथ उठाया</string>
     <string name="nest_presence_speaking">बात कर रहे हैं</string>
     <string name="nest_raise_hand">हाथ उठाएँ</string>
-    <string name="nest_unmute">मौन हटाएँ</string>
     <string name="nests">निलय</string>
     <string name="nests_servers_my_explainer">प्रकार १०११२ प्रतिस्थापनशील घटना के रूप में अभिलेखित जिससे कि अन्य ग्राहक आपके आद्यताओं को पढ सके।</string>
     <string name="nests_servers_my_section">आपके सेवासंगणक</string>
@@ -5117,10 +4970,6 @@
         <item quantity="one">%1$d अवरोहण</item>
         <item quantity="other">%1$d अवरोहण</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d सम्पत्ति समावेशित</item>
-        <item quantity="other">%1$d सम्पत्ति समावेशित</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">ब्लोस्सम क्रमक प्राप्त नहीं। कृपया एक स्थानीय ब्लोस्सम क्रमक की स्थापना करें इस अभिलेख को देखने के लिए</string>
     <string name="no_blossom_apps_found_title">ब्लोस्सम योजक खोला नहीं जा सकता</string>
     <string name="no_camera_app_found">कोई चित्रग्राहक क्रमक उपलब्ध नहीं इस यन्त्र में</string>
@@ -5132,7 +4981,6 @@
     <string name="no_wallet_found">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
     <string name="pay_elsewhere_title">अन्य धनकोष से भुगतान करें</string>
     <string name="pay_elsewhere_description">इस संगणक में किसी भी क्रमक से इसका भुगतान असाध्य। अक्षरराशि को परखें अपने सम्वादयन्त्र पर एक धनकोष से अथवा किसी लैटनिंग धनकोष में इसकी अनुकृति करें।</string>
-    <string name="no_wallet_found_with_error">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए (अपक्रम। %1$s)। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
     <string name="no_zap_amount_setup_long_press_to_change">ज्साप मात्रा स्थापित नहीं किया गया। दीर्घतः दबाएँ परिवर्तन करने के लिए</string>
     <string name="notification_service_accounts_title">पृष्ठभूत सक्रिय लेखाएँ</string>
     <string name="notification_service_master_description">मुख्य विकल्पस्थापक वास्तविकसमय पृष्ठभूत सूचनाओं के लिए। निष्क्रिय करें विद्युतकोष बचाने के लिए। जैसे विमान अवस्था में। जब निष्क्रिय कोई लेखा संयोजित नहीं पृष्ठतल में। तथा निष्क्रिय रहता है (पुनःआरम्भों के पश्चात भी) तब तक कि आप इसे सक्रिय नहीं करते।</string>
@@ -5269,7 +5117,6 @@
     <string name="podcast_value_stream_requires_wallet">एक नोस्टर धनकोष संयोजन अथवा ऋणांकन धनकोष जोडें सुनते समय साट्स प्रवाह चलाने के लिए।</string>
     <string name="podcast_value_user_no_lnaddress">इस प्रयोक्ता का कोई लैटनिंग पता नहीं</string>
     <string name="poll_author_no_vote">मतदानकर्ता अपने ही मतदान में निर्वाचन नहीं कर सकते।</string>
-    <string name="poll_consensus_threshold_percent">(० से १००) प्रतिशत</string>
     <string name="poll_is_closed_explainer">मतदान आवृत है नये निर्वाचनों के लिए</string>
     <string name="poll_multiple_choice">अनेक विकल्प</string>
     <plurals name="poll_results_backdated_votes">
@@ -5894,8 +5741,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता %1$s का कोई लैटनिंग पता स्थापित नही साट्स प्राप्त करने के लिए</string>
     <string name="vanish_history">अदृश्यीकरण इतिहास</string>
     <string name="vanish_request_sent">अदृश्यीकरण अनुरोध भेजा गया</string>
-    <string name="video_codec_h265_description">अधिक गुणवत्ता के साथ सूक्ष्मतर अभिलेख आकार परन्तु एच॰२६५ चालन सभी यन्त्रों द्वारा अवलम्बित नहीं।</string>
-    <string name="video_codec_h265_label">एच॰२६५ अथवा एचईवीसी संकुचनविस्तारणविधि उपयोग करें</string>
     <string name="video_collaboration_accepted_on">सहयोग श्रेय स्वीकृत</string>
     <string name="video_collaboration_declined_on">सहयोग श्रेय अस्वीकृत</string>
     <string name="video_credit_accepted">श्रेय स्वीकृत</string>
@@ -6022,13 +5867,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">कोर्डन समूह योजक</string>
-    <string name="cordn_link_search_keywords">कोर्डन समायोजक समूह योजक आमन्त्रण एमएलएस चर्चा उपतथ्य गोपनीयता अनावरण</string>
     <string name="cordn_coordinators_title">कोर्डन समायोजक</string>
-    <string name="cordn_coordinators_search_keywords">कोर्डन समायोजक जोडें हटाएँ मिटाएँ स्वास्थ्य सेवासंगणक एमएलएस चर्चा अनुक्रमण</string>
     <string name="cordn_keypackages_title">कोर्डन कुंचिका पोटलियाँ</string>
-    <string name="cordn_keypackages_search_keywords">कोर्डन कुंचिका पोटली प्रकाशन आमन्त्रण अन्तिम उपाय समायोजक एमएलएस॰</string>
     <string name="cordn_backup_title">कोर्डन सुरक्षित अनुकृति</string>
-    <string name="cordn_backup_search_keywords">कोर्डन सुरक्षित अनुकृति पुनःस्थापन निर्यात आयात पारणवाक्याम्श समूह पुनःप्राप्ति</string>
     <string name="chat_type_cordn_title">कोर्डन समूह</string>
     <string name="chat_type_cordn_desc">आरम्भ से अन्त तक रहस्यीकृत समूह। तथा आपके द्वारा चयनित समायोजक द्वारा क्रमबद्ध। पुनःप्रसारकों द्वारा नहीं।</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6606,7 +6447,6 @@
     <string name="cordn_backup_restore_body">पुनःस्थापन से इस यन्त्र पर कोर्डन समूह प्रतिस्थापित किए जाएँगे अभिलेखित समूहों के साथ। यह एक सम्वादयन्त्र पर एक अन्य से विस्थापित करने के लिए है। समूहों को दो यन्त्रों पर एक साथ उपयोग करने की विधि नहीं।</string>
     <string name="cordn_backup_restore_confirm_body">सभी कोर्डन समूह जो इस यन्त्र पर हैं हटाए जाएँगे तथा अभिलेख में उपलब्ध से प्रतिस्थापित होंगे।\n\nदूसरे सम्वादयन्त्र में पुनःस्थापन ना करें जब पहला का भी उपयोग हो रहा है। दोनों में समान समूह कुंचिकाएँ होंगी। तथा जब दोनों एक सन्देश भेजेंगे तब समूह सब के लिए टूट जाएगा। मौनतः। तथा पूर्ववत करने की विधि के बिना।</string>
     <string name="cordn_backup_restore_confirm_title">क्या इस यन्त्र के कोर्डन समूहों का प्रतिस्थापन करें।</string>
-    <string name="cordn_backup_restore_title">पुनःस्थापन</string>
     <string name="cordn_backup_restored">पुनःस्थापित।</string>
     <string name="cordn_chat_empty_description">जो भी यहाँ भेजा जाता है रहस्यीकृत होता है समूह के लिए। समायोजक इसका पुनःप्रसारण करता है उसे पढने की क्षमता के बिना।</string>
     <string name="cordn_chat_empty_title">कोई सन्देश नहीं अब तक</string>
@@ -6645,7 +6485,6 @@
     <string name="cordn_coordinators_purge">मिटाएँ</string>
     <string name="cordn_coordinators_purge_body">हटाने से समूह इस यन्त्र पर रहते हैं। इसलिए समायोजक को पुनःजोडने से समूह भी लौट आते हैं। मिटानेसे समूह मिटते हैं। समूह कुंचिकाएँ तथा पठनस्थान तथा आपके सभी कुंचिका पोटलियाँ सभी चले जाते हैं। तथा नए आमन्त्रण से ही उन समूहों में पुनःप्रवेश कर सकते हैं।\n\nसमायोजक को बताया नहीं जाता। तथा जो उसके पास पहले से था वह उसे रखता है।</string>
     <string name="cordn_coordinators_purge_title">क्या इस समायोजक को मिटा दें।</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">उत्तर सक्रिय</string>
     <string name="cordn_coordinators_relays_more">%1$s स %2$d अधिक</string>
     <string name="cordn_coordinators_remove">हटाएँ</string>
@@ -6671,9 +6510,7 @@
         <item quantity="one">%1$d व्यक्ति जोड सकता है तथा हटा सकता है</item>
         <item quantity="other">%1$d व्यक्ति जोड सकते हैं तथा हटा सकते हैं</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">केवल मैं इस समूह का प्रबन्धक</string>
     <string name="cordn_create_admin_only_me_on">केवल आप आमन्त्रण दे सकते हैं। तथा सदस्य हटा सकते हैं। अथवा समूह विवरणों को परिवर्तित कर सकते हैं। आगे इसे किसी अन्य को सौंप सकते हैं।</string>
-    <string name="cordn_create_coordinator">समायोजक</string>
     <string name="cordn_create_coordinator_change">परिवर्तन</string>
     <string name="cordn_create_coordinator_discover">समायोजक ढूँढें</string>
     <string name="cordn_create_coordinator_hide">हो गया</string>
@@ -6738,7 +6575,6 @@
     <string name="cordn_groups_menu_invitations">आमन्त्रण</string>
     <string name="cordn_groups_none">कोई कोर्डन समूह नहीं अब तक</string>
     <string name="cordn_groups_none_detail">एक कोर्डन समूह एक समायोजक पर जीवित है जो उसकी सदस्यता रखता है। तथा सन्देशों को आगे भेजता है। किसी ने क्या लिखा यह कभी भी देखे बिना।</string>
-    <string name="cordn_groups_start">एक का आरम्भ करें</string>
     <string name="cordn_info_add_member">किसी को जोडें</string>
     <string name="cordn_info_add_member_none">उस नाम से कोई प्राप्त नहीं।</string>
     <string name="cordn_info_add_member_note">जब वे एक कुंचिका पोटली इस समायोजक तक प्रकाशित करेंगे तब ही उन्हें जोडा जा सकता है।</string>
@@ -6835,14 +6671,12 @@
     <string name="cordn_requests_failed">अनुरोधों को पढने में असफल।</string>
     <string name="cordn_requests_none">जुडने की प्रतीक्षा में कोई नहीं।</string>
     <string name="cordn_requests_title">जुडने के अनुरोध</string>
-    <string name="cordn_send">भेजें</string>
     <string name="cordn_send_failed">भेजने में असफल।</string>
     <string name="cordn_send_no_session">इस समूह का समायोजक अभी तक खुला नहीं। इसलिए अब तक कुछ भी भेज नहीं सकते।</string>
     <string name="cordn_share_copied">अनुकृत</string>
     <string name="cordn_share_copy">योजक अनुकृति</string>
     <string name="cordn_share_explainer">इस योजक के साथ कोई भी जुडने का अनुरोध कर सकता है। तब भी प्रशासक द्वारा भीतर आने की अनुमति आवश्यक।</string>
     <string name="cordn_share_title">इस समूह को बाँटें</string>
-    <string name="cordn_voice_play">ध्वनि टीका चलाएँ</string>
     <string name="cordn_voice_record">ध्वनि टीका का अभिलेखन करें</string>
     <string name="cordn_voice_stop">रोकें तथा भेजें</string>
     <string name="browser_address_hint">ढूँढें अथवा पता प्रविष्ट करें</string>
@@ -7186,7 +7020,6 @@
     <string name="custom_feeds_remove">हटाएँ</string>
     <string name="custom_feeds_search_people">नाम अथवा निप॰पाँच अथवा एनपुब से खोजें</string>
     <string name="deck_mode">बहुस्तम्भरूप</string>
-    <string name="deck_mode_description">विस्तृत गवाक्षों में मुख्य पटल के पार्श्व में अतिरिक्त स्तम्भों को दिखाएँ। प्रत्येक को अपने ही पटल तथा इतिहास के साथ। स्तम्भों के समुच्चयों को कार्यशालाओं के रूप में अभिलेखन करें।</string>
     <string name="deck_workspaces">कार्यशालाएँ</string>
     <string name="deck_workspace_number">कार्यशाला %1$d</string>
     <string name="deck_save_workspace">नई कार्यशाला के रूप में अभिलेखन</string>
@@ -8030,10 +7863,6 @@
     <plurals name="kc_list_server_count">
         <item quantity="one">%1$d सेवासंगणक</item>
         <item quantity="other">%1$d सेवासंगणक</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d पुनःप्रसारक</item>
-        <item quantity="other">%1$d पुनःप्रसारक</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d भावचिह्न पोटली</item>

@@ -105,7 +105,6 @@
     <string name="original">originale</string>
     <string name="quote">Cita</string>
     <string name="new_amount_in_sats">Nuovo importo in Sats</string>
-    <string name="and"> e </string>
     <string name="following"> Seguiti</string>
     <string name="followers"> Seguaci</string>
     <string name="number_following">%1$s Seguiti</string>
@@ -247,7 +246,6 @@
     <string name="refresh">Aggiorna</string>
     <string name="channel_created">Canale creato</string>
     <string name="channel_information_changed_to">Informazioni del canale modificate in</string>
-    <string name="marmot_group_no_messages_yet">Nessun messaggio ancora</string>
     <string name="paid_relay">Relay a pagamento</string>
     <string name="tor_relay">Forza Tor durante la connessione</string>
     <string name="posts_received">post ricevuti</string>
@@ -416,7 +414,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Nessun nSite trovato ancora.</string>
-    <string name="browser_reload">Ricarica</string>
     <string name="browser_unsupported">Il browser integrato richiede Android 11 o versioni successive.</string>
     <string name="embedded_tab_load_failed">Impossibile caricare questa app.</string>
     <string name="browser_go">Apri</string>
@@ -424,10 +421,6 @@
     <string name="browser_recent_options">Opzioni</string>
     <string name="browser_recent_remove">Rimuovi dalla cronologia</string>
     <string name="favorite_apps_empty">Nessuna app preferita ancora. Apri un client web o un nSite e tocca la stella per aggiungerla qui.</string>
-    <string name="favorite_app_open_window">Apri in una finestra separata</string>
-    <string name="favorite_app_access_title">A cosa può accedere questa app</string>
-    <string name="favorite_app_access_static">Funziona in sandbox senza accesso speciale al tuo account.</string>
-    <string name="favorite_app_access_show">A cosa può accedere</string>
     <string name="favorite_app_unavailable">Questa app non è ancora caricata. Aprila dalla sua scheda o riprova tra un momento.</string>
     <string name="napplet_manage_permissions">Gestisci permessi</string>
     <string name="napplet_none_found">Nessuna nApplet trovata ancora.</string>
@@ -642,7 +635,6 @@
     <string name="pledge_amount_in_sats">Importo in pegno in sats</string>
     <string name="poll_zap_value_min">Zap minimo</string>
     <string name="poll_zap_value_max">Zap massimo</string>
-    <string name="poll_consensus_threshold">Consenso</string>
     <string name="looking_for_event">Cercando l'evento %1$s</string>
     <string name="send_zap">Invia zap</string>
     <string name="custom_zaps_add_a_message">Aggiungi un messaggio pubblico</string>
@@ -650,11 +642,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Aggiungi un messaggio di fattura</string>
     <string name="custom_zaps_add_a_message_example">Grazie per tutto il tuo lavoro!</string>
     <string name="lightning_create_and_add_invoice">Crea e Aggiungi</string>
-    <string name="add_content">Aggiungi al Messaggio</string>
-    <string name="add_caption">Aggiungi una didascalia</string>
-    <string name="add_caption_example">Il mio caro amico</string>
-    <string name="content_description">Descrizione dei contenuti</string>
-    <string name="content_description_example">Una barca blu in una spiaggia di sabbia bianca al tramonto</string>
     <string name="ai_suggested_alt_text_hint">Suggerito dall'IA, modificami</string>
     <string name="ai_suggested_alt_text_dismiss">Ignora suggerimento IA</string>
     <string name="zap_type">Tipo di Zap</string>
@@ -977,7 +964,6 @@
     <string name="wallet_outgoing">Inviato</string>
     <string name="wallet_refresh">Aggiorna</string>
     <string name="wallet_filter_all">Tutti</string>
-    <string name="wallet_add">Aggiungi portafoglio</string>
     <string name="wallet_default">Predefinito</string>
     <string name="wallet_set_default">Imposta come predefinito</string>
     <string name="wallet_remove">Rimuovi</string>
@@ -1070,8 +1056,6 @@
     <string name="cashu_redeemed_amount">Riscattati %1$s sats nel tuo portafoglio.</string>
     <string name="wallet_paste_uri">Incolla URI nostr+walletconnect://</string>
     <string name="wallet_save">Salva</string>
-    <string name="wallet_rename">Rinomina</string>
-    <string name="wallet_rename_title">Rinomina portafoglio</string>
     <string name="wallet_onchain_transactions">Transazioni onchain</string>
     <string name="wallet_onchain_no_address">Nessun indirizzo onchain disponibile per questo account.</string>
     <string name="wallet_onchain_no_backend">Nessun backend blockchain configurato.</string>
@@ -1311,7 +1295,6 @@
     <string name="accessibility_play_username">Riproduci il nome utente come audio</string>
     <string name="accessibility_pushpin">Puntina</string>
     <string name="accessibility_scan_qr_code">Scansiona codice QR</string>
-    <string name="accessibility_select_date">Seleziona data</string>
     <string name="load_from_text">Da messaggio</string>
     <string name="dvm_looking_for_app">Ricerca applicazione in corso</string>
     <string name="dvm_waiting_status">Lavoro richiesto, in attesa di risposta</string>
@@ -1410,9 +1393,7 @@
     <string name="closing_time">Orario di chiusura</string>
     <string name="confirm">Conferma</string>
     <string name="next">Avanti</string>
-    <string name="go_back">Torna indietro</string>
     <string name="approve">Approva</string>
-    <string name="connected">Connesso</string>
     <string name="social_proof">Prova sociale</string>
     <string name="poll_submit">Invia</string>
     <string name="poll_view_results">Visualizza risultati</string>
@@ -1746,7 +1727,6 @@
     <string name="add_a_nip96_server">Aggiungi un server NIP-96</string>
     <string name="add_client_tag_explainer">Quando abilitato, Amethyst aggiunge un tag client NIP-89 agli eventi che pubblichi.</string>
     <string name="add_client_tag_title">Aggiungi tag client ai miei eventi</string>
-    <string name="add_sensitive_content_description">Aggiunge un avviso di contenuto sensibile prima di mostrare questo contenuto</string>
     <string name="add_sensitive_content_label">Contenuto Sensibile</string>
     <string name="add_to_public_bookmarks">Aggiungi ai segnalibri pubblici</string>
     <string name="ai_writing_setting_description">Utilizza un modello AI sul dispositivo per proporre correzioni al testo e modifiche al tono.</string>
@@ -1823,8 +1803,6 @@
     <string name="broadcast_section">Relay broadcast</string>
     <string name="broadcast_section_explainer">Relay specializzati nel diffondere le tue note a tutti gli altri relay, come sendit.nosflare.com. Amethyst aggiungerà questo relay a tutti i nuovi eventi creati da te</string>
     <string name="browser_favorites">Preferiti</string>
-    <string name="browser_tor_off">Caricamento tramite il web aperto. Tocca per usare Tor.</string>
-    <string name="browser_tor_on">Caricamento tramite Tor. Tocca per usare il web aperto.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d evento</item>
         <item quantity="other">%1$s, %2$d eventi</item>
@@ -1939,15 +1917,10 @@
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_never">Mai</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi non a consumo</string>
-    <string name="content_description_add_document">Aggiungi Documento</string>
-    <string name="content_description_add_image">Aggiungi Immagine</string>
-    <string name="content_description_add_media">Aggiungi media</string>
-    <string name="content_description_add_video">Aggiungi Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Nascondi</string>
     <string name="content_warning_see_warnings_option">Avvisa</string>
     <string name="content_warning_show_all_sensitive_content_option">Mostra</string>
     <string name="conversations">Conversazioni</string>
-    <string name="convert_gif_to_mp4_description">Converte le GIF animate in video MP4 per dimensioni di file inferiori e migliore compatibilità di riproduzione.</string>
     <string name="convert_gif_to_mp4_label">Converti GIF in MP4</string>
     <string name="copied_note_id_to_clipboard">ID della nota copiato (@note1) negli appunti</string>
     <string name="copied_note_text_to_clipboard">Testo della nota copiato negli appunti</string>
@@ -2019,7 +1992,6 @@
     <string name="emoji_private_explainer">Le emoji private sono archiviate in modo cifrato sui relay e visibili solo a te. Appaiono nel tuo menu reazioni e nel completamento automatico ":" proprio come quelle pubbliche.</string>
     <string name="emoji_public_explainer">Le emoji pubbliche sono visibili a tutti e appaiono nel tuo menu reazioni e nel selettore di completamento automatico ":" quando questo pacchetto è nella tua lista emoji.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Crittografa i file prima del caricamento per la privacy. Alcuni server potrebbero non accettare file crittografati con account gratuiti.</string>
     <string name="encrypt_files_label">Crittografa i file</string>
     <string name="ephemeral_relay_chat">Chat effimera</string>
     <string name="error">Errore</string>
@@ -2063,8 +2035,6 @@
     <string name="failed_to_upload_media_no_details">Caricamento del media fallito</string>
     <string name="failed_to_upload_to_server_with_message">Caricamento su %1$s fallito: %2$s</string>
     <string name="favorite_app_add">Aggiungi ai preferiti</string>
-    <string name="favorite_app_network_open">Si carica tramite il web aperto.</string>
-    <string name="favorite_app_network_tor">Si carica tramite Tor.</string>
     <string name="favorite_app_recent">Recenti</string>
     <string name="favorite_app_remove">Rimuovi dai preferiti</string>
     <string name="favorite_app_still_loading">Questa app non è ancora caricata. Riprova tra un momento.</string>
@@ -2429,12 +2399,7 @@
     <string name="nest_lower_hand">Abbassa la mano</string>
     <string name="nest_mic_mute">Silenzia microfono</string>
     <string name="nest_mic_unmute">Attiva microfono</string>
-    <string name="nest_mute">Silenzia</string>
     <string name="nest_no_server_save_failed">Impossibile salvare la lista dei server nest. Riprova.</string>
-    <string name="nest_notification_channel_description">Mantiene l'audio attivo mentre una stanza è aperta.</string>
-    <string name="nest_notification_listening">Nest connesso</string>
-    <string name="nest_notification_stop">Ferma</string>
-    <string name="nest_notification_text">Tocca per tornare.</string>
     <string name="nest_participant_follow">Segui</string>
     <string name="nest_participant_mute">Silenzia</string>
     <string name="nest_participant_unfollow">Non seguire più</string>
@@ -2445,7 +2410,6 @@
     <string name="nest_presence_raised_hand">ha alzato la mano</string>
     <string name="nest_presence_speaking">sta parlando</string>
     <string name="nest_raise_hand">Alza la mano</string>
-    <string name="nest_unmute">Attiva audio</string>
     <string name="nests_servers_my_explainer">Salvato come evento kind-10112 sostituibile così altri client possono leggere le tue preferenze.</string>
     <string name="nests_servers_my_section">I tuoi server</string>
     <string name="nests_servers_recommended_explainer">Suggerimenti integrati che puoi aggiungere alla tua lista con un tocco.</string>
@@ -2478,10 +2442,6 @@
     <string name="new_requests">Nuove richieste</string>
     <string name="new_threads">Nuove Discussioni</string>
     <string name="new_workout">Nuovo allenamento</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d asset incluso</item>
-        <item quantity="other">%1$d asset inclusi</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">App Blossom non trovate. Installa un'app Blossom locale per visualizzare questo file</string>
     <string name="no_blossom_apps_found_title">Impossibile aprire i link Blossom</string>
     <string name="no_camera_app_found">Nessuna app fotocamera trovata su questo dispositivo</string>
@@ -2491,7 +2451,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Nessun tipo di reazione selezionato. Premi a lungo per cambiare</string>
     <string name="no_reactions_setup">Nessuna reazione configurata</string>
     <string name="no_wallet_found">Nessun wallet trovato per pagare una fattura Lightning. Installa un wallet Lightning per usare gli zap</string>
-    <string name="no_wallet_found_with_error">Nessun wallet trovato per pagare una fattura Lightning (Errore: %1$s). Installa un wallet Lightning per usare gli zap</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nessun ammontare per gli Zap impostato. Tieni premuto per cambiare</string>
     <string name="notification_settings">Notifiche</string>
     <string name="notification_settings_section_categories">Categorie</string>
@@ -2833,8 +2792,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">L'utente %1$s non ha configurato un indirizzo Lightning per ricevere sats</string>
     <string name="vanish_history">Cronologia Cancellazioni</string>
     <string name="vanish_request_sent">Richiesta di cancellazione inviata</string>
-    <string name="video_codec_h265_description">Migliore qualità a dimensioni di file inferiori, ma non tutti i dispositivi supportano la riproduzione H.265.</string>
-    <string name="video_codec_h265_label">Usa il codec H.265/HEVC</string>
     <string name="video_download_has_started_toast">Download del video avviato…</string>
     <string name="video_player_settings">Pulsanti del Video Player</string>
     <string name="video_saved_to_the_gallery">Video salvato nella galleria video del telefono</string>

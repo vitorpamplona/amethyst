@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Välkommen till Amethyst</string>
-    <string name="login_subtitle">Logga in på ditt Nostr-konto</string>
-    <string name="login_subtitle_desktop">En Nostr-klient för dator</string>
-    <string name="login_card_title">Logga in med din Nostr-nyckel</string>
-    <string name="login_card_subtitle">nsec för full åtkomst, bunker:// för fjärrsignatär, eller npub för skrivskyddat</string>
-    <string name="login_with_key">Logga in med nyckel</string>
-    <string name="login_button">Logga in</string>
-    <string name="login_generate_new">Skapa ny nyckel</string>
-    <string name="login_generate_button">Skapa ny</string>
-    <string name="login_key_hint">Ange din privata nyckel (nsec) eller publika nyckel (npub)</string>
-    <string name="login_key_label">nsec, bunker:// eller npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Visa nyckel</string>
-    <string name="login_hide_key">Dölj nyckel</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">VIKTIGT: Spara dina nycklar!</string>
-    <string name="new_key_warning_message">Din hemliga nyckel (nsec) är det ENDA sättet att komma åt ditt konto. Om du förlorar den är ditt konto borta för alltid. Spara den på ett säkert ställe!</string>
-    <string name="new_key_public_label">Publik nyckel (delbar):</string>
-    <string name="new_key_secret_label">Hemlig nyckel (dela ALDRIG denna!):</string>
-    <string name="new_key_continue_button">Jag har sparat mina nycklar, fortsätt</string>
-    <string name="new_key_saved_checkbox">Jag har sparat mina nycklar på ett säkert ställe</string>
-    <string name="new_key_copy_encrypted_button">Kopiera krypterat (rekommenderas)</string>
-    <string name="new_key_encrypt_password_label">Lösenord för krypterad säkerhetskopia</string>
-    <string name="new_key_step_indicator">Steg %1$d av %2$d</string>
-    <string name="new_key_next">Nästa</string>
-    <string name="new_key_back">Tillbaka</string>
-    <string name="new_key_cancel">Avbryt</string>
-    <string name="new_key_step_intro_title">Spara dina nycklar innan du fortsätter</string>
-    <string name="new_key_step_intro_npub">Din offentliga nyckel (npub) är din delbara adress. Dela ut den fritt så att andra kan hitta och följa dig.</string>
-    <string name="new_key_step_intro_nsec">Din hemliga nyckel (nsec) är ett lösenord som ALDRIG kan återställas. Det här är enda gången den visas — spara den nu, annars förlorar du åtkomsten till det här kontot för alltid.</string>
-    <string name="new_key_keys_title">Dina nycklar</string>
-    <string name="new_key_confirm_title">En sista sak</string>
-    <string name="new_key_confirm_recap">Förvara din hemliga nyckel i en lösenordshanterare. Om du förlorar den kan ingen återskapa den åt dig.</string>
-    <string name="new_key_readonly_info">Det här är ett skrivskyddat konto. Ingen hemlig nyckel skapades, så det finns inget att säkerhetskopiera.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Säkerhetskopiera nycklar</string>
-    <string name="backup_keys_public_label">Offentlig nyckel (npub)</string>
-    <string name="backup_keys_public_help">Din offentliga nyckel är trygg att dela. Ge den till andra så att de kan hitta och följa dig.</string>
-    <string name="backup_keys_show_qr">Visa QR-kod</string>
-    <string name="backup_keys_hide_qr">Dölj QR-kod</string>
     <string name="backup_keys_secret_label">Hemlig nyckel (nsec)</string>
-    <string name="backup_keys_secret_warning">Din hemliga nyckel är som ett lösenord som ALDRIG kan återställas eller återskapas. Den som har den kontrollerar ditt konto för alltid. Dela den aldrig; förvara den i en lösenordshanterare.</string>
-    <string name="backup_keys_secret_hidden">Den hemliga nyckeln är dold</string>
     <string name="backup_keys_reveal">Visa hemlig nyckel</string>
     <string name="backup_keys_hide">Dölj hemlig nyckel</string>
-    <string name="backup_keys_copy_plain">Kopiera hemlig nyckel</string>
-    <string name="backup_keys_copy_plain_warning">Kopierar din nsec i klartext. Klistra bara in den i en betrodd lösenordshanterare.</string>
-    <string name="backup_keys_copy_encrypted">Kopiera krypterat (rekommenderas)</string>
-    <string name="backup_keys_encrypt_password_label">Lösenord för krypterad säkerhetskopia</string>
-    <string name="backup_keys_encrypt_failed">Nyckeln kunde inte krypteras. Försök igen.</string>
     <string name="backup_keys_external_signer">Det här kontot använder en extern signerare — ingen hemlig nyckel lagras här.</string>
-    <string name="backup_keys_copied">Kopierat!</string>
     <string name="backup_keys_copy">Kopiera</string>
-    <string name="backup_keys_unlock_title">Visa hemlig nyckel</string>
-    <string name="backup_keys_unlock_subtitle">Ange lösenordet för integritetslåset för att visa din hemliga nyckel.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Kopiera</string>
     <string name="action_paste">Klistra in</string>
     <string name="action_cancel">Avbryt</string>
-    <string name="action_ok">Ok</string>
     <string name="action_save">Spara</string>
-    <string name="action_delete">Radera</string>
-    <string name="action_share">Dela</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Ogiltigt nyckelformat. Kontrollera och försök igen.</string>
-    <string name="error_network">Nätverksfel. Kontrollera din anslutning.</string>
-    <string name="error_generic">Ett fel uppstod. Försök igen.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Uppdatera</string>
     <string name="action_try_again">Försök igen</string>
@@ -124,8 +69,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">Svarar till </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">Statisk webbplats: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Behörigheter:</string>
@@ -206,10 +149,7 @@
     <string name="geocache_verified_find">Verifierat fynd</string>
     <string name="geocache_invalid_proof">Beviset stämmer inte</string>
     <string name="geocache_loading">Läser in cache…</string>
-    <string name="geocache_hidden_by">Gömd av %1$s</string>
     <string name="geocache_navigate">Navigera</string>
-    <string name="geocache_copy_coordinates">Kopiera koordinater</string>
-    <string name="geocache_coordinates_copied">Koordinater kopierade</string>
     <string name="geocache_photos_section">Foton</string>
     <string name="geocache_mission_section">Key Quest-uppdrag</string>
     <string name="geocache_logs_section">Loggar</string>
@@ -230,7 +170,6 @@
     <string name="geocache_archived_notice">Den här cachen har arkiverats. Den är inte längre i spel.</string>
     <string name="geocache_ftf_won_by">FTF tagen av %1$s</string>
     <string name="geocache_ftf_available">FTF är fortfarande ledig</string>
-    <string name="geocache_owner_actions">Ägare</string>
     <string name="geocache_owner_edit">Redigera den här cachen</string>
     <string name="geocache_owner_archive">Arkivera den här cachen</string>
     <string name="geocache_owner_archive_confirm">Arkivera den. Hittare ser att den är ur spel, och beskrivningen går fortfarande att läsa.</string>
@@ -242,7 +181,6 @@
     <string name="geocache_log_type_dnf">Hittade inte (DNF)</string>
     <string name="geocache_log_type_note">Anteckning</string>
     <string name="geocache_log_type_maintenance">Behöver underhåll</string>
-    <string name="geocache_log_title">Logga ett fynd</string>
     <string name="geocache_log_cache_label">Cache</string>
     <string name="geocache_log_your_log">Din logg</string>
     <string name="geocache_log_placeholder">Hur gick det?</string>
@@ -264,11 +202,6 @@
     <string name="geocache_tab_hunts">Jakter</string>
     <string name="geocache_tab_finds">Fynd</string>
     <string name="geocache_tab_mine">Mina</string>
-    <string name="geocache_filter_unfound">Ej hittade</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Har ett pris</string>
-    <string name="geocache_filter_verified_only">Bevis krävs</string>
     <string name="geocache_use_my_location">Använd min plats</string>
     <string name="geocache_sorted_by_distance">Sorterat efter avstånd</string>
     <string name="geocache_sorted_by_recent">Nyaste först</string>
@@ -277,25 +210,17 @@
     <string name="geocache_empty_finds">Du har inte loggat något fynd ännu.</string>
     <string name="geocache_empty_mine">Du har inte gömt någon cache ännu.</string>
     <string name="geocache_empty_hunts">Inga jakter ännu.</string>
-    <string name="geocache_stat_finds">Fynd</string>
-    <string name="geocache_stat_ftf">FTF</string>
-    <string name="geocache_stat_verified">Verifierade</string>
-    <string name="geocache_stat_hidden">Gömda</string>
-    <string name="geocache_map_recenter">Centrera på mig</string>
     <string name="geocache_map_long_press">Tryck länge på kartan för att gömma en cache där</string>
     <string name="geocache_map_open">Öppna</string>
     <string name="geocache_new_section_where">Var</string>
     <string name="geocache_new_section_what">Vad</string>
     <string name="geocache_new_section_extras">Extra</string>
     <string name="geocache_new_section_proof">Bevis</string>
-    <string name="geocache_new_section_relays">Reläer</string>
     <string name="geocache_new_location_warning">Detta publicerar en offentlig plats med cirka 5 meters noggrannhet. Alla på Nostr kan se den, och en publicerad händelse kan inte återkallas.</string>
     <string name="geocache_new_pick_location">Välj platsen</string>
     <string name="geocache_new_ladder">Publicerar %1$s, plus grövre celler ned till 3 tecken för närhetssökning.</string>
     <string name="geocache_new_name">Namn</string>
     <string name="geocache_new_description">Beskrivning</string>
-    <string name="geocache_new_type">Typ</string>
-    <string name="geocache_new_size">Storlek</string>
     <string name="geocache_new_difficulty">Svårighetsgrad</string>
     <string name="geocache_new_terrain">Terräng</string>
     <string name="geocache_new_hint">Ledtråd</string>
@@ -305,10 +230,7 @@
     <string name="geocache_new_modifiers">Tillägg</string>
     <string name="geocache_new_require_proof">Kräv bevis på närvaro</string>
     <string name="geocache_new_proof_ready">En verifieringsnyckel har skapats för den här cachen.</string>
-    <string name="geocache_new_log_relays">Var hittare ska logga</string>
     <string name="geocache_new_publish">Publicera</string>
-    <string name="geocache_new_needs_name">Ge cachen ett namn.</string>
-    <string name="geocache_new_needs_location">Välj var cachen är gömd.</string>
     <string name="geocache_hunt_progress">%1$d av %2$d hittade</string>
     <string name="geocache_hunt_start">Starta jakten</string>
     <plurals name="geocache_hunt_caches">
@@ -319,15 +241,10 @@
     <string name="geocache_hunt_description">Beskrivning</string>
     <string name="geocache_hunt_banner">Bannerbild</string>
     <string name="geocache_hunt_pick_caches">Cacher, i ordning</string>
-    <string name="geocache_hunt_add_cache">Lägg till en cache</string>
     <string name="geocache_hunt_move_up">Flytta upp</string>
     <string name="geocache_hunt_move_down">Flytta ned</string>
     <string name="geocache_hunt_remove">Ta bort</string>
-    <string name="geocache_hunt_theme">Sidtema</string>
-    <string name="geocache_hunt_map_style">Kartstil</string>
-    <string name="geocache_hunt_needs_title">Ge jakten en titel.</string>
     <string name="geocache_hunt_needs_caches">Lägg till minst en cache.</string>
-    <string name="geocache_publish_failed">Kunde inte publicera. Kontrollera reläanslutningen och försök igen.</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
@@ -403,7 +320,6 @@
     <string name="qr_scanner_label_hex_key">Rå nyckel (publik eller privat)</string>
     <string name="qr_scanner_open_link">Öppna länk</string>
     <string name="qr_scanner_copy">Kopiera</string>
-    <string name="qr_scanner_copied">Kopierat</string>
     <string name="qr_scanner_try_again">Skanna igen</string>
     <string name="show_qr">Visa QR</string>
     <string name="profile_image">Profilbild</string>
@@ -459,7 +375,6 @@
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
-    <string name="and"> och </string>
     <string name="following"> Följer</string>
     <string name="followers"> Följare</string>
     <string name="number_following">%1$s Följande</string>
@@ -719,7 +634,6 @@
     <string name="channel_created">Kanal skapad</string>
     <string name="channel_information_changed_to">Kanalinformation ändrad till</string>
     <string name="new_public_chat">Skapa en ny offentlig chatt</string>
-    <string name="marmot_group_no_messages_yet">Inga meddelanden ännu</string>
     <string name="paid_relay">Betald relä</string>
     <string name="tor_relay">Tvinga Tor vid anslutning</string>
     <string name="posts_received">mottagna inlägg</string>
@@ -958,36 +872,22 @@
     <string name="health_connect_rationale_limit_optional">Hela funktionen är valfri. Återkalla behörigheterna i Health Connect när som helst — Min träning går då tillbaka till sin uppmaning — eller stäng av förslagen i redigeraren under Inställningar → Skrivinställningar. Resten av Amethyst fortsätter att fungera.</string>
     <string name="health_connect_rationale_privacy_policy">Läs hela integritetspolicyn</string>
     <string name="my_fitness_title">Min träning</string>
-    <string name="my_fitness_window">Senaste 4 veckorna</string>
     <string name="my_fitness_loading_metrics">Läser in distans, kalorier och puls…</string>
-    <string name="my_fitness_window_note">De senaste fyra hela veckorna av din träning: passen du har publicerat, plus allt Health Connect registrerar på den här telefonen. Amethyst räknar ut sammanfattningen på enheten och publicerar ingenting av den.</string>
     <string name="my_fitness_this_week">Den här veckan</string>
-    <string name="my_fitness_vs_last_week">jämfört med förra veckan</string>
-    <string name="my_fitness_weekly_average">Veckosnitt</string>
     <string name="my_fitness_workouts">Pass</string>
     <string name="my_fitness_active_days">Aktiva dagar</string>
-    <string name="my_fitness_streak">Dagar i rad</string>
-    <string name="my_fitness_time">Tid</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$d h %2$d min</string>
     <string name="my_fitness_duration_minutes">%1$d min</string>
     <string name="my_fitness_duration_seconds">%1$d s</string>
     <string name="my_fitness_distance">Distans</string>
-    <string name="my_fitness_calories">Kalorier</string>
-    <string name="my_fitness_steps">Steg</string>
-    <string name="my_fitness_elevation">Stigning</string>
-    <string name="my_fitness_avg_heart_rate">Snittpuls</string>
-    <string name="my_fitness_max_heart_rate">Maxpuls</string>
-    <string name="my_fitness_by_activity">Per aktivitet</string>
-    <string name="my_fitness_bests">Bästa prestationer</string>
     <string name="my_fitness_best_longest_distance">Längsta distans</string>
     <string name="my_fitness_best_longest_duration">Längsta pass</string>
     <string name="my_fitness_best_biggest_climb">Största stigning</string>
     <string name="my_fitness_best_most_steps">Flest steg</string>
     <string name="my_fitness_best_highest_heart_rate">Högsta puls</string>
     <string name="my_fitness_recent">Senaste passen</string>
-    <string name="my_fitness_empty">Inget loggat de senaste 4 veckorna. Pass du publicerar, och de som din klocka registrerar, visas här.</string>
     <string name="my_fitness_connect_title">Följ din träning</string>
     <string name="my_fitness_connect_message">Anslut Health Connect för att se dina veckosummor, utvecklingen vecka för vecka, bästa prestationer och träningssvit. Allt stannar på din telefon.</string>
     <string name="my_fitness_connect_banner">Anslut Health Connect för att lägga till passen din klocka registrerar, med puls, steg och stigning.</string>
@@ -1059,7 +959,6 @@
         <item quantity="other">Bästa: %1$d veckor</item>
     </plurals>
     <string name="nsite_none_found">Inga nSites hittades ännu.</string>
-    <string name="browser_reload">Ladda om</string>
     <string name="browser_unsupported">Den inbyggda webbläsaren kräver Android 11 eller senare.</string>
     <string name="embedded_tab_load_failed">Kunde inte ladda den här appen.</string>
     <string name="page_error_not_found_title">Det går inte att hitta webbplatsen</string>
@@ -1093,10 +992,6 @@
     <string name="browser_recent_options">Alternativ</string>
     <string name="browser_recent_remove">Ta bort från historik</string>
     <string name="favorite_apps_empty">Inga favoritappar ännu. Öppna en webbklient eller nsite och tryck på stjärnan för att fästa den här.</string>
-    <string name="favorite_app_open_window">Öppna i eget fönster</string>
-    <string name="favorite_app_access_title">Vad den här appen kan komma åt</string>
-    <string name="favorite_app_access_static">Körs i sandlåda utan särskild åtkomst till ditt konto.</string>
-    <string name="favorite_app_access_show">Vad den kan komma åt</string>
     <string name="favorite_app_unavailable">Den här appen är inte laddad ännu. Öppna den från dess kort eller försök igen om ett ögonblick.</string>
     <string name="napplet_manage_permissions">Hantera behörigheter</string>
     <string name="napplet_permissions_ask_each_time">Fråga mig varje gång</string>
@@ -1197,8 +1092,6 @@
     <string name="relay_auth_remember_relay">Kom ihåg för det här reläet</string>
     <string name="relay_auth_log_in">Logga in</string>
     <string name="relay_auth_not_now">Inte nu</string>
-    <string name="relay_auth_never_allow">Tillåt aldrig</string>
-    <string name="relay_auth_how_we_decide">Så avgör Amethyst</string>
     <string name="relay_auth_exceptions">Undantag</string>
     <string name="relay_auth_no_exceptions">Inga undantag än. Varje relä följer reglerna ovan.</string>
     <string name="relay_auth_segment_always">Alltid</string>
@@ -1559,7 +1452,6 @@
     <string name="pledge_amount_in_sats">Pantbelopp i Sats</string>
     <string name="poll_zap_value_min">Minsta Zap</string>
     <string name="poll_zap_value_max">Maximal Zap</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
     <string name="looking_for_event">Letar efter Event %1$s</string>
     <string name="looking_for_event_title">Läser in</string>
     <string name="looking_for_private_event">Väntar på att dina privata meddelanden ska läsas in…</string>
@@ -1569,11 +1461,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Lägg till ett fakturameddelande</string>
     <string name="custom_zaps_add_a_message_example">Tack för allt ditt arbete!</string>
     <string name="lightning_create_and_add_invoice">Skapa och lägg till</string>
-    <string name="add_content">Lägg till Meddelande</string>
-    <string name="add_caption">Lägg till en rubrik</string>
-    <string name="add_caption_example">Min underbara vän</string>
-    <string name="content_description">Beskrivning av innehållet</string>
-    <string name="content_description_example">En blå båt på en vit sandstrand vid solnedgången</string>
     <string name="ai_suggested_alt_text_hint">AI-föreslagen, redigera mig</string>
     <string name="ai_suggested_alt_text_dismiss">Avfärda AI-förslag</string>
     <string name="zap_type">Zap Typ</string>
@@ -2074,8 +1961,6 @@
         <item quantity="one">Tor ansluter inte. %1$d relä väntar på Tor.</item>
         <item quantity="other">Tor ansluter inte. %1$d reläer väntar på Tor.</item>
     </plurals>
-    <string name="tor_splash_error">Tor-fel: %1$s</string>
-    <string name="tor_splash_explainer">Amethyst använder Tor för att dölja din IP-adress för reläer. Att starta Tor kan ta en minut och kräver internetåtkomst.</string>
     <string name="notification_settings_categories_explainer">Tryck på en kategori för att öppna Androids aviseringsinställningar — ljud, prioritet, märken och Stör ej finns där.</string>
     <string name="notification_channel_status_on">På</string>
     <string name="notification_channel_status_silent">Tyst</string>
@@ -2162,7 +2047,6 @@
     <string name="wallet_filter_all">Alla</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Övriga</string>
-    <string name="wallet_add">Lägg till plånbok</string>
     <string name="wallet_default">Standard</string>
     <string name="wallet_set_default">Ställ in som standard</string>
     <string name="wallet_remove">Ta bort</string>
@@ -2290,8 +2174,6 @@
     <string name="cashu_redeemed_amount">Löste in %1$s sats till din plånbok.</string>
     <string name="wallet_paste_uri">Klistra in nostr+walletconnect://-URI</string>
     <string name="wallet_save">Spara</string>
-    <string name="wallet_rename">Byt namn</string>
-    <string name="wallet_rename_title">Byt namn på plånbok</string>
     <string name="wallet_onchain_transactions">On-chain-transaktioner</string>
     <string name="wallet_onchain_no_address">Ingen on-chain-adress tillgänglig för detta konto.</string>
     <string name="wallet_onchain_no_backend">Ingen on-chain-backend är konfigurerad.</string>
@@ -2658,7 +2540,6 @@
     <string name="git_repo_filter_open">Öppna</string>
     <string name="git_repo_filter_closed">Stängda &amp; lösta</string>
     <string name="git_repo_label_all">Alla</string>
-    <string name="git_repo_bookmark">Bokmärk repository</string>
     <string name="git_repo_stat_branches">Grenar</string>
     <string name="git_repo_stat_tags">Taggar</string>
     <string name="git_repo_stat_files">Filer</string>
@@ -2691,7 +2572,6 @@
     <string name="git_new_issue_button">Ny</string>
     <string name="git_new_issue_title">Nytt ärende</string>
     <string name="git_new_issue_subject">Titel</string>
-    <string name="git_new_issue_body">Beskrivning</string>
     <string name="git_new_issue_create">Skapa</string>
     <string name="git_new_issue_cancel">Avbryt</string>
     <string name="git_new_issue_labels">Etiketter</string>
@@ -2703,7 +2583,6 @@
     <string name="git_pr_loading_changes">Läser in ändringar…</string>
     <string name="git_pr_no_changes">Inga filändringar hittades.</string>
     <string name="git_pr_changes_retry">Försök läsa in ändringar igen</string>
-    <string name="git_pr_revised">Reviderad</string>
     <string name="git_cover_note">Följebrev</string>
     <string name="git_ci_success">CI godkänd</string>
     <string name="git_ci_failure">CI misslyckades</string>
@@ -2776,7 +2655,6 @@
     <string name="accessibility_play_username">Spela upp användarnamn som ljud</string>
     <string name="accessibility_pushpin">Häftstift</string>
     <string name="accessibility_scan_qr_code">Skanna QR-kod</string>
-    <string name="accessibility_select_date">Välj datum</string>
     <string name="draft">Utkast</string>
     <string name="bounty_label">Belöning</string>
     <string name="load_from_text">Från meddelande</string>
@@ -2912,9 +2790,7 @@
     <string name="closing_time">Stängningstid</string>
     <string name="confirm">Bekräfta</string>
     <string name="next">Nästa</string>
-    <string name="go_back">Gå tillbaka</string>
     <string name="approve">Godkänn</string>
-    <string name="connected">Ansluten</string>
     <string name="social_proof">Socialt bevis</string>
     <string name="poll_submit">Skicka</string>
     <string name="poll_view_results">Visa resultat</string>
@@ -3512,7 +3388,6 @@
     <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
     <string name="add_client_tag_explainer">När det är aktiverat lägger Amethyst till en NIP-89-klient-tagg i händelser du publicerar.</string>
     <string name="add_client_tag_title">Lägg till klient-tagg i mina händelser</string>
-    <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
     <string name="add_sensitive_content_label">Känsligt innehåll</string>
     <string name="add_to_messages">Lägg till i Meddelanden</string>
     <string name="add_to_public_bookmarks">Lägg till i Publika Bokmärken</string>
@@ -3728,8 +3603,6 @@
     <string name="browser">Webbläsare</string>
     <string name="browser_favorites">Favoriter</string>
     <string name="browser_suggested">Upptäck webbappar</string>
-    <string name="browser_tor_off">Laddar via det öppna webben. Tryck för att använda Tor.</string>
-    <string name="browser_tor_on">Laddar via Tor. Tryck för att använda det öppna webben.</string>
     <string name="buzz_channel_archive">Arkivera kanal</string>
     <string name="buzz_channel_create_title">Ny kanal</string>
     <string name="buzz_channel_delete">Radera kanal</string>
@@ -4021,15 +3894,10 @@
     <string name="connectivity_type_never">Aldrig</string>
     <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Lägg till Dokument</string>
-    <string name="content_description_add_image">Lägg till Bild</string>
-    <string name="content_description_add_media">Lägg till media</string>
-    <string name="content_description_add_video">Lägg till Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Dölj</string>
     <string name="content_warning_see_warnings_option">Varna</string>
     <string name="content_warning_show_all_sensitive_content_option">Visa</string>
     <string name="conversations">Konversationer</string>
-    <string name="convert_gif_to_mp4_description">Konverterar animerad GIF till MP4-video för mindre filstorlek och bättre uppspelningskompatibilitet.</string>
     <string name="convert_gif_to_mp4_label">Konvertera GIF till MP4</string>
     <string name="copied_note_id_to_clipboard">Kopierade antecknings-ID (@note1) till urklipp</string>
     <string name="copied_note_text_to_clipboard">Kopierade anteckningstext till urklipp</string>
@@ -4120,7 +3988,6 @@
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med ":" precis som offentliga.</string>
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i ":"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_sets">Emojis</string>
-    <string name="encrypt_files_description">Kryptera filer innan uppladdning för integritet. Vissa servrar kanske inte accepterar krypterade filer på gratiskonton.</string>
     <string name="encrypt_files_label">Kryptera filer</string>
     <string name="ephemeral_relay_chat">Försvinnande chatt</string>
     <string name="error">Fel</string>
@@ -4169,8 +4036,6 @@
     <string name="failed_to_upload_media_no_details">Det gick inte att ladda upp media</string>
     <string name="failed_to_upload_to_server_with_message">Det gick inte att nå %1$s: %2$s</string>
     <string name="favorite_app_add">Lägg till i favoriter</string>
-    <string name="favorite_app_network_open">Laddar via det öppna webben.</string>
-    <string name="favorite_app_network_tor">Laddar via Tor.</string>
     <string name="favorite_app_recent">Senaste</string>
     <string name="favorite_app_remove">Ta bort från favoriter</string>
     <string name="favorite_app_still_loading">Den appen är inte laddad ännu. Försök igen om ett ögonblick.</string>
@@ -4678,10 +4543,6 @@
         <item quantity="other">%1$d medlemmar</item>
     </plurals>
     <string name="marmot_member_removed">Medlem borttagen</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d medd</item>
-        <item quantity="other">%1$d medd</item>
-    </plurals>
     <string name="marmot_not_a_member">Inte medlem i den här gruppen</string>
     <string name="marmot_admin_delete_message">Radera för alla</string>
     <string name="room_remove_for_everyone_title">Radera för alla?</string>
@@ -4897,14 +4758,7 @@
     <string name="nest_lower_hand">Sänk handen</string>
     <string name="nest_mic_mute">Stäng av mikrofon</string>
     <string name="nest_mic_unmute">Slå på mikrofon</string>
-    <string name="nest_mute">Tysta</string>
     <string name="nest_no_server_save_failed">Kunde inte spara din nest-serverlista. Försök igen.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Ljudrum</string>
-    <string name="nest_notification_channel_description">Håller ljudet igång medan rummet är öppet.</string>
-    <string name="nest_notification_listening">Nest anslutet</string>
-    <string name="nest_notification_stop">Stoppa</string>
-    <string name="nest_notification_text">Tryck för att återgå.</string>
     <string name="nest_participant_follow">Följ</string>
     <string name="nest_participant_mute">Tysta</string>
     <string name="nest_participant_unfollow">Sluta följa</string>
@@ -4915,7 +4769,6 @@
     <string name="nest_presence_raised_hand">räckte upp handen</string>
     <string name="nest_presence_speaking">talar</string>
     <string name="nest_raise_hand">Räck upp handen</string>
-    <string name="nest_unmute">Slå på ljud</string>
     <string name="nests">Ljudrum</string>
     <string name="nests_servers_my_explainer">Sparas som en utbytbar händelse av typ kind-10112 så andra klienter kan läsa dina inställningar.</string>
     <string name="nests_servers_my_section">Dina servrar</string>
@@ -5090,10 +4943,6 @@
         <item quantity="one">%1$d nedladdning</item>
         <item quantity="other">%1$d nedladdningar</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d tillgång paketerad</item>
-        <item quantity="other">%1$d tillgångar buntade</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Inga Blossom-appar hittades. Installera en lokal Blossom-app för att visa den här filen</string>
     <string name="no_blossom_apps_found_title">Kan inte öppna Blossom-länkar</string>
     <string name="no_camera_app_found">Ingen kameraapp hittades på den här enheten</string>
@@ -5105,7 +4954,6 @@
     <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="pay_elsewhere_title">Betala med en annan plånbok</string>
     <string name="pay_elsewhere_description">Ingen app på den här datorn kan betala detta. Skanna koden med en plånbok i mobilen, eller kopiera den till valfri Lightning-plånbok.</string>
-    <string name="no_wallet_found_with_error">Inga plånböcker hittades för att betala en blixtfaktura (Fel: %1$s). Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Ingen konfiguration av Zap-belopp. Tryck länge för att ändra</string>
     <string name="notification_service_accounts_title">Konton aktiva i bakgrunden</string>
     <string name="notification_service_master_description">Huvudströmbrytare för realtidsaviseringar i bakgrunden. Stäng av för att spara batteri — som ett flygplansläge. När det är avstängt förblir inget konto anslutet i bakgrunden, och det förblir avstängt (även efter omstart) tills du slår på det igen.</string>
@@ -5242,7 +5090,6 @@
     <string name="podcast_value_stream_requires_wallet">Anslut en Nostr Wallet Connect- eller debiteringsplånbok för att streama sats medan du lyssnar.</string>
     <string name="podcast_value_user_no_lnaddress">Den här användaren har ingen Lightning-adress</string>
     <string name="poll_author_no_vote">Omröstningsskapare kan inte rösta i sina egna omröstningar.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Omröstningen är stängd för nya röster</string>
     <string name="poll_multiple_choice">Flerval</string>
     <plurals name="poll_results_backdated_votes">
@@ -5867,8 +5714,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
     <string name="vanish_history">Försvinnande historik</string>
     <string name="vanish_request_sent">Begäran om försvinnande skickad</string>
-    <string name="video_codec_h265_description">Bättre kvalitet med mindre filstorlek, men inte alla enheter stöder H.265-uppspelning.</string>
-    <string name="video_codec_h265_label">Använd H.265/HEVC-codec</string>
     <string name="video_collaboration_accepted_on">Accepterade ett samarbetsomnämnande</string>
     <string name="video_collaboration_declined_on">Avböjde ett samarbetsomnämnande</string>
     <string name="video_credit_accepted">Omnämnande accepterat</string>
@@ -5995,13 +5840,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Cordn-grupplänk</string>
-    <string name="cordn_link_search_keywords">cordn koordinator grupp länk inbjudan mls chatt metadata integritet exponering coordinator group link invite</string>
     <string name="cordn_coordinators_title">Cordn-koordinatorer</string>
-    <string name="cordn_coordinators_search_keywords">cordn koordinator lägg till ta bort rensa hälsa server mls chatt ordning coordinator add remove purge health</string>
     <string name="cordn_keypackages_title">Cordn-nyckelpaket</string>
-    <string name="cordn_keypackages_search_keywords">cordn nyckelpaket publicera inbjudan reserv koordinator mls key package last resort</string>
     <string name="cordn_backup_title">Cordn-säkerhetskopia</string>
-    <string name="cordn_backup_search_keywords">cordn säkerhetskopia återställ exportera importera lösenfras grupper återställning backup restore</string>
     <string name="chat_type_cordn_title">Cordn-grupper</string>
     <string name="chat_type_cordn_desc">End-to-end-krypterade grupper som ordnas av en koordinator du väljer, i stället för av reläer.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6579,7 +6420,6 @@
     <string name="cordn_backup_restore_body">Återställning ersätter cordn-grupperna på den här enheten med dem i filen. Den är till för en telefon som tagit över från en annan — inte ett sätt att använda samma grupper på två enheter samtidigt.</string>
     <string name="cordn_backup_restore_confirm_body">Alla cordn-grupper som nu finns på den här enheten tas bort och ersätts med dem i filen.\n\nÅterställ inte till en andra telefon medan den första fortfarande används. Båda skulle ha samma gruppnycklar, och så snart båda har skickat ett meddelande går gruppen sönder för alla — tyst, och utan väg tillbaka.</string>
     <string name="cordn_backup_restore_confirm_title">Ersätta den här enhetens cordn-grupper?</string>
-    <string name="cordn_backup_restore_title">Återställ</string>
     <string name="cordn_backup_restored">Återställd.</string>
     <string name="cordn_chat_empty_description">Allt som skickas här krypteras för den här gruppen. Koordinatorn förmedlar det utan att kunna läsa det.</string>
     <string name="cordn_chat_empty_title">Inga meddelanden ännu</string>
@@ -6618,7 +6458,6 @@
     <string name="cordn_coordinators_purge">Rensa bort</string>
     <string name="cordn_coordinators_purge_body">Att ta bort behåller grupperna på den här enheten, så om du lägger till koordinatorn igen kommer de tillbaka. Att rensa bort raderar dem: gruppnycklarna, lässtatusen och dina nyckelpaket försvinner, och de grupperna kan bara nås igen via en ny inbjudan.\n\nKoordinatorn meddelas inte och behåller allt den redan hade.</string>
     <string name="cordn_coordinators_purge_title">Rensa bort den här koordinatorn?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Svarar på</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d till</string>
     <string name="cordn_coordinators_remove">Ta bort</string>
@@ -6644,9 +6483,7 @@
         <item quantity="one">%1$d person kan lägga till och ta bort</item>
         <item quantity="other">%1$d personer kan lägga till och ta bort</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Bara jag hanterar den här gruppen</string>
     <string name="cordn_create_admin_only_me_on">Bara du kan bjuda in, ta bort medlemmar eller ändra gruppens uppgifter. Du kan lämna över det till någon annan senare.</string>
-    <string name="cordn_create_coordinator">Koordinator</string>
     <string name="cordn_create_coordinator_change">Ändra</string>
     <string name="cordn_create_coordinator_discover">Hitta koordinatorer</string>
     <string name="cordn_create_coordinator_hide">Klar</string>
@@ -6711,7 +6548,6 @@
     <string name="cordn_groups_menu_invitations">Inbjudningar</string>
     <string name="cordn_groups_none">Inga cordn-grupper ännu</string>
     <string name="cordn_groups_none_detail">En cordn-grupp finns hos en koordinator som håller reda på medlemskapet och skickar meddelanden vidare, utan att någonsin se vad någon skriver.</string>
-    <string name="cordn_groups_start">Starta en</string>
     <string name="cordn_info_add_member">Lägg till någon</string>
     <string name="cordn_info_add_member_none">Ingen hittades med det namnet.</string>
     <string name="cordn_info_add_member_note">De kan bara läggas till om de har publicerat ett nyckelpaket till den här koordinatorn.</string>
@@ -6808,14 +6644,12 @@
     <string name="cordn_requests_failed">Kunde inte läsa förfrågningarna.</string>
     <string name="cordn_requests_none">Ingen väntar på att få gå med.</string>
     <string name="cordn_requests_title">Förfrågningar om att gå med</string>
-    <string name="cordn_send">Skicka</string>
     <string name="cordn_send_failed">Det gick inte att skicka.</string>
     <string name="cordn_send_no_session">Den här gruppens koordinator är inte öppen, så inget kan skickas ännu.</string>
     <string name="cordn_share_copied">Kopierad</string>
     <string name="cordn_share_copy">Kopiera länk</string>
     <string name="cordn_share_explainer">Alla som har den här länken kan be att få gå med. En admin måste fortfarande släppa in dem.</string>
     <string name="cordn_share_title">Dela den här gruppen</string>
-    <string name="cordn_voice_play">Spela upp röstmeddelande</string>
     <string name="cordn_voice_record">Spela in ett röstmeddelande</string>
     <string name="cordn_voice_stop">Stoppa och skicka</string>
     <string name="browser_address_hint">Sök eller ange adress</string>
@@ -7159,7 +6993,6 @@
     <string name="custom_feeds_remove">Ta bort</string>
     <string name="custom_feeds_search_people">Sök på namn, NIP-05 eller npub</string>
     <string name="deck_mode">Kolumnvy</string>
-    <string name="deck_mode_description">I breda fönster visas extra kolumner bredvid huvudskärmen, var och en med sin egen skärm och historik. Spara uppsättningar av kolumner som arbetsytor.</string>
     <string name="deck_workspaces">Arbetsytor</string>
     <string name="deck_workspace_number">Arbetsyta %1$d</string>
     <string name="deck_save_workspace">Spara som ny arbetsyta</string>
@@ -8003,10 +7836,6 @@
     <plurals name="kc_list_server_count">
         <item quantity="one">%1$d server</item>
         <item quantity="other">%1$d servrar</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d relä</item>
-        <item quantity="other">%1$d reläer</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d emoji-paket</item>
@@ -9030,7 +8859,6 @@
     <string name="wot_nudge_first_body">Svar, aviseringar och meddelanden från dem du följer och de personer de litar på kommer först.</string>
     <string name="wot_nudge_first_action">Visa mina personer först</string>
     <string name="wot_nudge_thread_label">Svar, din krets först</string>
-    <string name="wot_nudge_you_follow">Du följer</string>
     <string name="wot_nudge_thread_title">Vänner först i varje tråd</string>
     <string name="wot_nudge_thread_body">Hör från personerna du känner före alla andra. Resten finns ett tryck bort.</string>
     <string name="wot_nudge_friends_title_one">%1$s sätter sina personer först</string>
@@ -9455,7 +9283,6 @@
     <string name="front_page_step_all_at_once">Skriver (den här leverantören skickar hela sidan på en gång)</string>
     <string name="front_page_step_check">Kontrollerar citat, bilder och länkar</string>
     <string name="front_page_step_planning">Planerar tidningen</string>
-    <string name="front_page_edition">Nr %1$s</string>
     <string name="front_page_fixed_once">Rättad en gång</string>
     <string name="front_page_download">Ladda ner</string>
     <string name="front_page_changes_title">Borttaget från sidan</string>

@@ -106,7 +106,6 @@
     <string name="quote">Citi</string>
     <string name="fork">Forko</string>
     <string name="new_amount_in_sats">Nova Kvanto da Satoj</string>
-    <string name="and"> kaj </string>
     <string name="following"> Sekvanti</string>
     <string name="followers"> Sekvantoj</string>
     <string name="number_following">%1$s Sekvata(j)</string>
@@ -254,7 +253,6 @@
     <string name="refresh">Renovigi</string>
     <string name="channel_created">Kanalo kreita</string>
     <string name="channel_information_changed_to">Kanala Informo ŝanĝigita al</string>
-    <string name="marmot_group_no_messages_yet">Ankoraŭ neniuj mesaĝoj</string>
     <string name="paid_relay">Pagata relay</string>
     <string name="tor_relay">Devigas Tor dum konektado</string>
     <string name="posts_received">afiŝojn ricevitaj</string>
@@ -425,7 +423,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Ankoraŭ neniuj nSite-oj trovitaj.</string>
-    <string name="browser_reload">Reŝargi</string>
     <string name="browser_unsupported">La en-aplikaĵa retumilo bezonas Android 11 aŭ pli novan.</string>
     <string name="embedded_tab_load_failed">Ne eblis ŝargi ĉi tiun aplikaĵon.</string>
     <string name="browser_go">Malfermi</string>
@@ -433,10 +430,6 @@
     <string name="browser_recent_options">Opcioj</string>
     <string name="browser_recent_remove">Forigi el historio</string>
     <string name="favorite_apps_empty">Ankoraŭ neniuj plej ŝatataj aplikoj. Malfermu retkliento aŭ nsite-on kaj klaku la stelon por alpinĉi ĝin ĉi tie.</string>
-    <string name="favorite_app_open_window">Malfermi en sia propra fenestro</string>
-    <string name="favorite_app_access_title">Al kio ĉi tiu aplikaĵo povas aliri</string>
-    <string name="favorite_app_access_static">Funkcias sablokestite sen speciala aliro al via konto.</string>
-    <string name="favorite_app_access_show">Al kio ĝi povas aliri</string>
     <string name="favorite_app_unavailable">Ĉi tiu aplikaĵo ankoraŭ ne estas ŝargita. Malfermu ĝin el sia karto, aŭ reprovu post momento.</string>
     <string name="napplet_manage_permissions">Administri permesojn</string>
     <string name="napplet_none_found">Ankoraŭ neniuj nApplet-oj trovitaj.</string>
@@ -656,7 +649,6 @@
     <string name="pledge_amount_in_sats">Promesi Kvanton en Satoj</string>
     <string name="poll_zap_value_min">Minimumo de Zapoj</string>
     <string name="poll_zap_value_max">Maksimumo de Zapoj</string>
-    <string name="poll_consensus_threshold">Interkonsento</string>
     <string name="looking_for_event">Serĉanta Eventon %1$s</string>
     <string name="send_zap">Sendi Zap</string>
     <string name="custom_zaps_add_a_message">Aldoni publikan mesaĝon</string>
@@ -664,11 +656,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Aldoni mesaĝon de fakturo</string>
     <string name="custom_zaps_add_a_message_example">Dankon pro via laboro!</string>
     <string name="lightning_create_and_add_invoice">Krei kaj Aldoni</string>
-    <string name="add_content">Aldoni al Mesaĝo</string>
-    <string name="add_caption">Aldoni Legendon</string>
-    <string name="add_caption_example">Mia kara amiko</string>
-    <string name="content_description">Priskribo de enhavoj</string>
-    <string name="content_description_example">Blua ŝipo en blanka, sabla plaĝo je la sunsubiro</string>
     <string name="ai_suggested_alt_text_hint">Sugestite de AI, redaktu min</string>
     <string name="ai_suggested_alt_text_dismiss">Malakcepti AI-sugeston</string>
     <string name="zap_type">Tipo de Zapo</string>
@@ -1003,7 +990,6 @@
     <string name="wallet_refresh">Refreŝigi</string>
     <string name="wallet_filter_all">Ĉiuj</string>
     <string name="wallet_filter_non_zaps">Ne-Zaps</string>
-    <string name="wallet_add">Aldoni monujon</string>
     <string name="wallet_default">Defaŭlta</string>
     <string name="wallet_set_default">Agordi kiel defaŭltan</string>
     <string name="wallet_remove">Forigi</string>
@@ -1096,8 +1082,6 @@
     <string name="cashu_redeemed_amount">Elaĉetitaj %1$s sats en vian monujon.</string>
     <string name="wallet_paste_uri">Alglui nostr+walletconnect:// URI</string>
     <string name="wallet_save">Konservi</string>
-    <string name="wallet_rename">Renomi</string>
-    <string name="wallet_rename_title">Renomi monujon</string>
     <string name="wallet_onchain_transactions">Ĉentaj transakcioj</string>
     <string name="wallet_onchain_no_address">Neniu onchain-adreso disponebla por ĉi tiu konto.</string>
     <string name="wallet_onchain_no_backend">Neniu ĉena fondaĵo estas agordita.</string>
@@ -1341,7 +1325,6 @@
     <string name="accessibility_play_username">Ludi uzantnomon kiel aŭdion</string>
     <string name="accessibility_pushpin">Pinglilo</string>
     <string name="accessibility_scan_qr_code">Skani QR-kodon</string>
-    <string name="accessibility_select_date">Elekti daton</string>
     <string name="load_from_text">El Mesaĝo</string>
     <string name="dvm_looking_for_app">Serĉante Aplikaĵon</string>
     <string name="dvm_waiting_status">Laboro Petita, atendante respondon</string>
@@ -1442,9 +1425,7 @@
     <string name="closing_time">Ferma Horo</string>
     <string name="confirm">Konfirmi</string>
     <string name="next">Sekva</string>
-    <string name="go_back">Iri Reen</string>
     <string name="approve">Aprobi</string>
-    <string name="connected">Konektita</string>
     <string name="social_proof">Socia pruvo</string>
     <string name="poll_submit">Sendi</string>
     <string name="poll_view_results">Vidi rezultojn</string>
@@ -1783,7 +1764,6 @@
     <string name="add_a_nip96_server">Aldoni NIP-96 Servilon</string>
     <string name="add_client_tag_explainer">Kiam ŝaltita, Amethyst aldonas NIP-89 klientan etikedon al eventoj kiujn vi publikigas.</string>
     <string name="add_client_tag_title">Aldoni klientan etikedon al miaj eventoj</string>
-    <string name="add_sensitive_content_description">Aldonas averton de delikata enhavo antaŭ montri ĉi tiun enhavon</string>
     <string name="add_sensitive_content_label">Delikata Enhavo</string>
     <string name="add_to_public_bookmarks">Aldoni al Publikaj Legosignoj</string>
     <string name="ai_writing_setting_description">Uzas aparatan AI-modelon por proponi tekstajn korektojn kaj tondoŝanĝojn.</string>
@@ -1862,8 +1842,6 @@
     <string name="broadcast_section_explainer">Relay-oj, kiuj specialiĝas pri elsendo de viaj notoj al ĉiuj aliaj relay-oj, ekzemple sendit.nosflare.com. Amethyst aldonos ĉi tiun relay-on al ĉiuj novaj eventoj faritaj de vi</string>
     <string name="browser">Retumilo</string>
     <string name="browser_favorites">Plej ŝatataj</string>
-    <string name="browser_tor_off">Ŝargante per la malferma reto. Klaku por uzi Tor.</string>
-    <string name="browser_tor_on">Ŝargante per Tor. Klaku por uzi la malferma reton.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d evento</item>
         <item quantity="other">%1$s, %2$d eventoj</item>
@@ -1984,15 +1962,10 @@
     <string name="connectivity_type_always">Ĉiam</string>
     <string name="connectivity_type_never">Neniam</string>
     <string name="connectivity_type_unmetered_wifi_only">Senmezura WiFi</string>
-    <string name="content_description_add_document">Aldoni Dokumenton</string>
-    <string name="content_description_add_image">Aldoni Bildon</string>
-    <string name="content_description_add_media">Aldoni Amaskomunikilaron</string>
-    <string name="content_description_add_video">Aldoni Videon</string>
     <string name="content_warning_hide_all_sensitive_content_option">Kaŝi</string>
     <string name="content_warning_see_warnings_option">Averti</string>
     <string name="content_warning_show_all_sensitive_content_option">Montri</string>
     <string name="conversations">Konversacioj</string>
-    <string name="convert_gif_to_mp4_description">Konvertas animacian GIF al MP4-video por pli malgranda dosiero kaj pli bona reproduktad-kongrueco.</string>
     <string name="convert_gif_to_mp4_label">Konverti GIF al MP4</string>
     <string name="copied_note_id_to_clipboard">Kopiita ID de noto (@note1) al tondujo</string>
     <string name="copied_note_text_to_clipboard">Kopiita tekston de noto al tondujo</string>
@@ -2065,7 +2038,6 @@
     <string name="emoji_private_explainer">Privataj emodžioj estas stokitaj ĉifrite sur relay-oj kaj videblaj nur al vi. Ili aperas en via reaga menuo kaj „:" aŭtokompleta same kiel publikaj.</string>
     <string name="emoji_public_explainer">Publikaj emodžioj estas videblaj al ĉiuj kaj aperas en via reaga menuo kaj „:" aŭtokompleta elektilo kiam ĉi tiu pako estas en via emodžio-listo.</string>
     <string name="emoji_sets">Emodžioj</string>
-    <string name="encrypt_files_description">Ĉifri dosierojn antaŭ alŝuto por privateco. Kelkaj serviloj eble ne akceptas ĉifritajn dosierojn en senpagaj kontoj.</string>
     <string name="encrypt_files_label">Ĉifri dosierojn</string>
     <string name="ephemeral_relay_chat">Malapera Babilejo</string>
     <string name="error">Eraro</string>
@@ -2111,8 +2083,6 @@
     <string name="failed_to_upload_media_no_details">Malsukcesis alŝuti amaskomunikilojn</string>
     <string name="failed_to_upload_to_server_with_message">Malsukcesis alŝuti al %1$s: %2$s</string>
     <string name="favorite_app_add">Aldoni al plej ŝatataj</string>
-    <string name="favorite_app_network_open">Ŝargas per la malferma reto.</string>
-    <string name="favorite_app_network_tor">Ŝargas per Tor.</string>
     <string name="favorite_app_recent">Lastaj</string>
     <string name="favorite_app_remove">Forigi el plej ŝatataj</string>
     <string name="favorite_app_still_loading">Tiu aplikaĵo ankoraŭ ne estas ŝargita. Reprovu post momento.</string>
@@ -2480,14 +2450,7 @@
     <string name="nest_lower_hand">Malaltigi manon</string>
     <string name="nest_mic_mute">Silentigi mikrofonon</string>
     <string name="nest_mic_unmute">Masilentigi mikrofonon</string>
-    <string name="nest_mute">Silentigi</string>
     <string name="nest_no_server_save_failed">Ne povis konservi vian nestan servilan liston. Provu denove.</string>
-    <string name="nest_notification_broadcasting">Nesto — Viva</string>
-    <string name="nest_notification_channel">Nestoj</string>
-    <string name="nest_notification_channel_description">Konservas aŭdion luданте dum ĉambro estas malfermita.</string>
-    <string name="nest_notification_listening">Nesto konektita</string>
-    <string name="nest_notification_stop">Halti</string>
-    <string name="nest_notification_text">Tuŝetu por reveni.</string>
     <string name="nest_participant_follow">Sekvi</string>
     <string name="nest_participant_mute">Silentigi</string>
     <string name="nest_participant_unfollow">Malekvi</string>
@@ -2498,7 +2461,6 @@
     <string name="nest_presence_raised_hand">levis sian manon</string>
     <string name="nest_presence_speaking">parolas</string>
     <string name="nest_raise_hand">Levi manon</string>
-    <string name="nest_unmute">Malsilentigi</string>
     <string name="nests_servers_my_explainer">Konservita kiel kind-10112 anstataŭebla evento por ke aliaj klientoj povu legi vian preferon.</string>
     <string name="nests_servers_my_section">Viaj serviloj</string>
     <string name="nests_servers_recommended_explainer">Enkonstruitaj sugestoj kiujn vi povas aldoni al via listo per unu tuŝeto.</string>
@@ -2531,10 +2493,6 @@
     <string name="new_requests">Novaj Petoj</string>
     <string name="new_threads">Novaj Fadenoj</string>
     <string name="new_workout">Nova Ekzercado</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d aktivo enkludita</item>
-        <item quantity="other">%1$d aktivoj enkluditaj</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom-aplikaĵoj ne trovitaj. Bonvolu instali lokan Blossom-aplikaĵon por vidi ĉi tiun dosieron</string>
     <string name="no_blossom_apps_found_title">Ne eblas malfermi Blossom-ligilojn</string>
     <string name="no_camera_app_found">Neniu fotila app trovita sur tiu ĉi aparato</string>
@@ -2544,7 +2502,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Neniaj reagoj selektitaj. Premu longe por ŝanĝi</string>
     <string name="no_reactions_setup">Neniaj reagoj agordita</string>
     <string name="no_wallet_found">Neniuj Monujoj trovitaj por pagi Lightning-fakturon. Bonvolu instali Lightning-monujon por uzi Zaps</string>
-    <string name="no_wallet_found_with_error">Neniuj Monujoj trovitaj por pagi Lightning-fakturon (Eraro: %1$s). Bonvolu instali Lightning-monujon por uzi Zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Neniu kvanto da zapoj agordita. Longe premi por ŝanĝigi</string>
     <string name="notification_settings">Sciigoj</string>
     <string name="notification_settings_section_categories">Kategorioj</string>
@@ -2628,7 +2585,6 @@
         <item quantity="other">%1$d epizodoj</item>
     </plurals>
     <string name="poll_author_no_vote">Aŭtoroj de Enketoj ne povas voĉdoni en siajn proprajn enketojn.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Balotenketo estas fermita al novaj voĉoj</string>
     <string name="poll_multiple_choice">Multobla elekto</string>
     <string name="poll_single_choice">Ununura elekto</string>
@@ -2893,8 +2849,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uzanto %1$s ne havas Lightning-adreson agordita por ricevi sats</string>
     <string name="vanish_history">Historio de Malapero</string>
     <string name="vanish_request_sent">Peto pri malapero sendita</string>
-    <string name="video_codec_h265_description">Pli bona kvalito je pli malgrandaj dosieroj, sed ne ĉiuj aparatoj subtenas H.265-reproduktadon.</string>
-    <string name="video_codec_h265_label">Uzi H.265/HEVC Kodeken</string>
     <string name="video_download_has_started_toast">Videa elŝuto komenciĝis…</string>
     <string name="video_player_settings">Videludilaj Butonoj</string>
     <string name="video_saved_to_the_gallery">Video konservita en la telefona videogalerio</string>

@@ -107,7 +107,6 @@
     <string name="quote">نقل قول</string>
     <string name="fork">فورک</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
-    <string name="and"> و </string>
     <string name="following">دنبال شونده</string>
     <string name="followers">دنبال کننده</string>
     <string name="number_following">%1$s دنبال‌شده</string>
@@ -255,7 +254,6 @@
     <string name="refresh">تازه‌سازی</string>
     <string name="channel_created">کانال ساخته شد</string>
     <string name="channel_information_changed_to">اطلاعات کانال تغییر کرد به</string>
-    <string name="marmot_group_no_messages_yet">هنوز پیامی وجود ندارد</string>
     <string name="paid_relay">relay پولی</string>
     <string name="tor_relay">هنگام اتصال Tor را اجبار می‌کند</string>
     <string name="posts_received">یادداشت های دریافت شده</string>
@@ -427,7 +425,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">هنوز هیچ nSite ای یافت نشد.</string>
-    <string name="browser_reload">بارگذاری مجدد</string>
     <string name="browser_unsupported">مرورگر درون‌برنامه‌ای به Android 11 یا جدیدتر نیاز دارد.</string>
     <string name="embedded_tab_load_failed">بارگذاری این برنامه ممکن نشد.</string>
     <string name="browser_go">باز کردن</string>
@@ -435,10 +432,6 @@
     <string name="browser_recent_options">گزینه‌ها</string>
     <string name="browser_recent_remove">حذف از تاریخچه</string>
     <string name="favorite_apps_empty">هنوز هیچ برنامه موردعلاقه‌ای ندارید. یک کلاینت وب یا nsite را باز کنید و روی ستاره ضربه بزنید تا اینجا پین شود.</string>
-    <string name="favorite_app_open_window">باز کردن در پنجره مستقل</string>
-    <string name="favorite_app_access_title">این برنامه به چه چیزی دسترسی دارد</string>
-    <string name="favorite_app_access_static">در محیط sandbox اجرا می‌شود و دسترسی خاصی به حساب شما ندارد.</string>
-    <string name="favorite_app_access_show">چه چیزی در دسترس دارد</string>
     <string name="favorite_app_unavailable">این برنامه هنوز بارگذاری نشده. آن را از کارت خودش باز کنید، یا لحظه‌ای دیگر دوباره امتحان کنید.</string>
     <string name="napplet_manage_permissions">مدیریت مجوزها</string>
     <string name="napplet_none_found">هنوز هیچ nApplet ای یافت نشد.</string>
@@ -658,7 +651,6 @@
     <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
     <string name="poll_zap_value_min">حداقل زپ</string>
     <string name="poll_zap_value_max">حداکثر زپ</string>
-    <string name="poll_consensus_threshold">توافق نظر</string>
     <string name="looking_for_event">جستجوی رویداد %1$s</string>
     <string name="send_zap">ارسال Zap</string>
     <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
@@ -666,11 +658,6 @@
     <string name="custom_zaps_add_a_message_nonzap">افزودن پیام صورتحساب</string>
     <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
     <string name="lightning_create_and_add_invoice">ساختن و افزودن</string>
-    <string name="add_content">افزودن به پیام</string>
-    <string name="add_caption">افزودن عنوان</string>
-    <string name="add_caption_example">دوست عزیز من</string>
-    <string name="content_description">توصیف محتوا</string>
-    <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
     <string name="ai_suggested_alt_text_hint">پیشنهاد هوش مصنوعی، ویرایش کنید</string>
     <string name="ai_suggested_alt_text_dismiss">رد کردن پیشنهاد هوش مصنوعی</string>
     <string name="zap_type">نوع زپ</string>
@@ -1004,7 +991,6 @@
     <string name="wallet_refresh">بازنشانی</string>
     <string name="wallet_filter_all">همه</string>
     <string name="wallet_filter_non_zaps">غیر Zaps</string>
-    <string name="wallet_add">افزودن کیف پول</string>
     <string name="wallet_default">پیش‌فرض</string>
     <string name="wallet_set_default">تنظیم به عنوان پیش‌فرض</string>
     <string name="wallet_remove">حذف</string>
@@ -1096,8 +1082,6 @@
     <string name="cashu_redeemed_amount">%1$s sats به کیف پول شما بازخرید شد.</string>
     <string name="wallet_paste_uri">جایگذاری URI nostr+walletconnect://</string>
     <string name="wallet_save">ذخیره</string>
-    <string name="wallet_rename">تغییر نام</string>
-    <string name="wallet_rename_title">تغییر نام کیف پول</string>
     <string name="wallet_onchain_transactions">تراکنش‌های Onchain</string>
     <string name="wallet_onchain_no_address">هیچ آدرس on-chain برای این حساب موجود نیست.</string>
     <string name="wallet_onchain_no_backend">هیچ پشتوانه زنجیره‌ای پیکربندی نشده.</string>
@@ -1342,7 +1326,6 @@
     <string name="accessibility_send">ارسال</string>
     <string name="accessibility_play_username">نام کاربری را به شکل صوتی بخوان.</string>
     <string name="accessibility_scan_qr_code">کد QR را اسکن کنید</string>
-    <string name="accessibility_select_date">انتخاب تاریخ</string>
     <string name="load_from_text">از پیام</string>
     <string name="dvm_looking_for_app">جستجوی اپلیکیشن</string>
     <string name="dvm_waiting_status">درخواست شغل ارسال شد، در انتظار پاسخ</string>
@@ -1444,9 +1427,7 @@
     <string name="closing_time">زمان پایان</string>
     <string name="confirm">تأیید</string>
     <string name="next">بعدی</string>
-    <string name="go_back">بازگشت</string>
     <string name="approve">تأیید</string>
-    <string name="connected">متصل</string>
     <string name="social_proof">تأیید اجتماعی</string>
     <string name="poll_submit">ثبت</string>
     <string name="poll_view_results">مشاهده نتایج</string>
@@ -1784,7 +1765,6 @@
     <string name="add_a_nip96_server">یک سرور NIP-96 بیافزایید</string>
     <string name="add_client_tag_explainer">وقتی فعال باشد، Amethyst یک برچسب کلاینت NIP-89 به رویدادهایی که منتشر می‌کنید اضافه می‌کند.</string>
     <string name="add_client_tag_title">افزودن برچسب کلاینت به رویدادهایم</string>
-    <string name="add_sensitive_content_description">هشدار محتوای حساس پیش از نمایش محتوا اضافه می کند</string>
     <string name="add_sensitive_content_label">محتوای حساس</string>
     <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
     <string name="ai_writing_setting_description">از یک مدل هوش مصنوعی روی دستگاه برای پیشنهاد اصلاحات متن و تغییر لحن استفاده می‌کند.</string>
@@ -1863,8 +1843,6 @@
     <string name="broadcast_section_explainer">relay هایی که در ارسال یادداشت‌های شما به سایر relay ها تخصص دارند، مانند sendit.nosflare.com. Amethyst این relay را به همه رویدادهای جدید ساخته شده توسط شما اضافه می‌کند</string>
     <string name="browser">مرورگر</string>
     <string name="browser_favorites">موردعلاقه‌ها</string>
-    <string name="browser_tor_off">بارگذاری از طریق وب باز. برای استفاده از Tor ضربه بزنید.</string>
-    <string name="browser_tor_on">بارگذاری از طریق Tor. برای استفاده از وب باز ضربه بزنید.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s، %2$d رویداد</item>
         <item quantity="other">%1$s، %2$d رویداد</item>
@@ -1985,15 +1963,10 @@
     <string name="connectivity_type_always">همیشه</string>
     <string name="connectivity_type_never">هرگز</string>
     <string name="connectivity_type_unmetered_wifi_only">وای فای بی اندازه</string>
-    <string name="content_description_add_document">افزودن مدارک</string>
-    <string name="content_description_add_image">افزودن تصویر</string>
-    <string name="content_description_add_media">افزودن رسانه</string>
-    <string name="content_description_add_video">افزودن فیلم</string>
     <string name="content_warning_hide_all_sensitive_content_option">پنهان</string>
     <string name="content_warning_see_warnings_option">هشدار</string>
     <string name="content_warning_show_all_sensitive_content_option">نمایش</string>
     <string name="conversations">گفتگوها</string>
-    <string name="convert_gif_to_mp4_description">GIF متحرک را به ویدیوی MP4 تبدیل می‌کند تا حجم فایل کمتر و سازگاری پخش بهتری داشته باشید.</string>
     <string name="convert_gif_to_mp4_label">تبدیل GIF به MP4</string>
     <string name="copied_note_id_to_clipboard">(@note1)شناسه یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
@@ -2067,7 +2040,6 @@
     <string name="emoji_private_explainer">ایموجی‌های خصوصی به صورت رمزنگاری‌شده روی relay‌ها ذخیره می‌شوند و فقط برای شما قابل مشاهده‌اند. درست مانند ایموجی‌های عمومی در منوی واکنش و تکمیل خودکار «:» نمایش داده می‌شوند.</string>
     <string name="emoji_public_explainer">ایموجی‌های عمومی برای همه قابل مشاهده‌اند و در منوی واکنش و انتخابگر «:» تکمیل خودکار ظاهر می‌شوند، البته اگر این بسته در فهرست ایموجی شما باشد.</string>
     <string name="emoji_sets">ایموجی‌ها</string>
-    <string name="encrypt_files_description">فایل‌ها را قبل از آپلود برای حفظ حریم خصوصی رمزگذاری کنید. برخی سرورها ممکن است فایل‌های رمزگذاری شده را در حساب‌های رایگان قبول نکنند.</string>
     <string name="encrypt_files_label">رمزگذاری فایل‌ها</string>
     <string name="ephemeral_relay_chat">گفتگوی ناپایدار</string>
     <string name="error">خطا</string>
@@ -2113,8 +2085,6 @@
     <string name="failed_to_upload_media_no_details">رسانه بارگذاری نشد</string>
     <string name="failed_to_upload_to_server_with_message">بارگذاری نشد %1$s: %2$s</string>
     <string name="favorite_app_add">افزودن به موردعلاقه‌ها</string>
-    <string name="favorite_app_network_open">از طریق وب باز بارگذاری می‌شود.</string>
-    <string name="favorite_app_network_tor">از طریق Tor بارگذاری می‌شود.</string>
     <string name="favorite_app_recent">اخیر</string>
     <string name="favorite_app_remove">حذف از موردعلاقه‌ها</string>
     <string name="favorite_app_still_loading">آن برنامه هنوز بارگذاری نشده. لحظه‌ای دیگر دوباره امتحان کنید.</string>
@@ -2395,10 +2365,6 @@
         <item quantity="other">%1$d عضو</item>
     </plurals>
     <string name="marmot_member_removed">عضو حذف شد</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d پیام</item>
-        <item quantity="other">%1$d پیام</item>
-    </plurals>
     <string name="marmot_not_a_member">عضو این گروه نیستید</string>
     <string name="marmot_unknown_error">خطای ناشناخته</string>
     <string name="media_added">رسانه افزوده شد</string>
@@ -2487,13 +2453,7 @@
     <string name="nest_lower_hand">پایین آوردن دست</string>
     <string name="nest_mic_mute">قطع میکروفون</string>
     <string name="nest_mic_unmute">باصدا کردن میکروفون</string>
-    <string name="nest_mute">بی‌صدا</string>
     <string name="nest_no_server_save_failed">ذخیره لیست سرور nest انجام نشد. دوباره امتحان کنید.</string>
-    <string name="nest_notification_broadcasting">Nest — زنده</string>
-    <string name="nest_notification_channel_description">پخش صدا را هنگام باز بودن اتاق ادامه می‌دهد.</string>
-    <string name="nest_notification_listening">Nest متصل شد</string>
-    <string name="nest_notification_stop">توقف</string>
-    <string name="nest_notification_text">ضربه بزنید تا بازگردید.</string>
     <string name="nest_participant_follow">دنبال کردن</string>
     <string name="nest_participant_mute">بی‌صدا</string>
     <string name="nest_participant_unfollow">لغو دنبال کردن</string>
@@ -2504,7 +2464,6 @@
     <string name="nest_presence_raised_hand">دست بلند کرد</string>
     <string name="nest_presence_speaking">در حال صحبت است</string>
     <string name="nest_raise_hand">دست بلند کردن</string>
-    <string name="nest_unmute">باصدا</string>
     <string name="nests_servers_my_explainer">به عنوان یک رویداد قابل جایگزینی kind-10112 ذخیره می‌شود تا کلاینت‌های دیگر بتوانند ترجیح شما را بخوانند.</string>
     <string name="nests_servers_my_section">سرورهای شما</string>
     <string name="nests_servers_recommended_explainer">پیشنهادات داخلی که می‌توانید با یک ضربه به لیستتان اضافه کنید.</string>
@@ -2537,10 +2496,6 @@
     <string name="new_requests">در خواست جدید</string>
     <string name="new_threads">رشته جدید</string>
     <string name="new_workout">تمرین جدید</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d فایل پیوست شده</item>
-        <item quantity="other">%1$d فایل پیوست شده</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">برنامه‌های Blossom یافت نشدند. لطفاً یک برنامه Blossom محلی نصب کنید تا این فایل را ببینید</string>
     <string name="no_blossom_apps_found_title">باز کردن لینک‌های Blossom ممکن نیست</string>
     <string name="no_camera_app_found">هیچ اپلیکیشن دوربینی در این دستگاه پیدا نشد</string>
@@ -2550,7 +2505,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">هیچ نوع واکنشی انتخاب نشده. نگه دارید تا تغییر دهید</string>
     <string name="no_reactions_setup">هیچ واکنشی تنظیم نشده است</string>
     <string name="no_wallet_found">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد. لطفا یک کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
-    <string name="no_wallet_found_with_error">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد (خطا: %1$s). لطفا کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
     <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
     <string name="notification_settings">اعلان‌ها</string>
     <string name="notification_settings_section_categories">دسته‌بندی‌ها</string>
@@ -2635,7 +2589,6 @@
         <item quantity="other">%1$d قسمت</item>
     </plurals>
     <string name="poll_author_no_vote">سازندگان نظرسنجی نمی توانند در نظر سنجی خود رای دهند.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">این نظرسنجی برای رای جدید بسته شده است</string>
     <string name="poll_multiple_choice">چندانتخابی</string>
     <string name="poll_single_choice">تک‌انتخابی</string>
@@ -2901,8 +2854,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">کاربر %1$s آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
     <string name="vanish_history">تاریخچه ناپدید شدن</string>
     <string name="vanish_request_sent">درخواست ناپدید شدن ارسال شد</string>
-    <string name="video_codec_h265_description">کیفیت بهتر با حجم فایل کمتر، اما همه دستگاه‌ها از پخش H.265 پشتیبانی نمی‌کنند.</string>
-    <string name="video_codec_h265_label">استفاده از کدک H.265/HEVC</string>
     <string name="video_download_has_started_toast">بارگیری ویدئو آغاز شد…</string>
     <string name="video_player_settings">دکمه‌های پخش‌کننده ویدیو</string>
     <string name="video_saved_to_the_gallery">ویدئو در گالری گوشی ذخیره شد</string>

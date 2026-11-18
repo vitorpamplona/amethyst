@@ -1,78 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Login & Auth -->
-    <string name="login_title">Welcome to Amethyst</string>
-    <string name="login_subtitle">Sign in to your Nostr account</string>
-    <string name="login_subtitle_desktop">A Nostr client for desktop</string>
-    <string name="login_card_title">Login with your Nostr key</string>
-    <string name="login_card_subtitle">nsec for full access, bunker:// for remote signer, or npub for read-only</string>
-    <string name="login_with_key">Login with Key</string>
-    <string name="login_button">Login</string>
-    <string name="login_generate_new">Generate New Key</string>
-    <string name="login_generate_button">Generate New</string>
-    <string name="login_key_hint">Enter your private key (nsec) or public key (npub)</string>
-    <string name="login_key_label">nsec, bunker://, or npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Show key</string>
-    <string name="login_hide_key">Hide key</string>
-
-    <!-- New Key Warning -->
-    <string name="new_key_warning_title">IMPORTANT: Save your keys!</string>
-    <string name="new_key_warning_message">Your secret key (nsec) is like a password that can NEVER be reset or recovered. It is the ONLY way to access your account, and anyone who has it controls your account forever. If you lose it, your account is gone for good. Never share it — store it in a password manager.</string>
-    <string name="new_key_public_label">Public Key (shareable):</string>
-    <string name="new_key_secret_label">Secret Key (NEVER share this!):</string>
-    <string name="new_key_continue_button">I've saved my keys, continue</string>
-    <string name="new_key_saved_checkbox">I have saved my keys somewhere safe</string>
-    <string name="new_key_copy_encrypted_button">Copy encrypted (recommended)</string>
-    <string name="new_key_encrypt_password_label">Password for encrypted backup</string>
-    <string name="new_key_step_indicator">Step %1$d of %2$d</string>
-    <string name="new_key_next">Next</string>
-    <string name="new_key_back">Back</string>
-    <string name="new_key_cancel">Cancel</string>
-    <string name="new_key_step_intro_title">Save your keys before you continue</string>
-    <string name="new_key_step_intro_npub">Your public key (npub) is your shareable address. Give it out freely so people can find and follow you.</string>
-    <string name="new_key_step_intro_nsec">Your secret key (nsec) is a password that can NEVER be reset. This is the only time it is shown — save it now, or you will lose access to this account forever.</string>
-    <string name="new_key_keys_title">Your keys</string>
-    <string name="new_key_confirm_title">One last thing</string>
-    <string name="new_key_confirm_recap">Store your secret key in a password manager. If you lose it, no one can recover it for you.</string>
-    <string name="new_key_readonly_info">This is a read-only account. No secret key was generated, so there is nothing to back up.</string>
-
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Backup Keys</string>
-    <string name="backup_keys_public_label">Public key (npub)</string>
-    <string name="backup_keys_public_help">Your public key is safe to share. Give it to people so they can find and follow you.</string>
-    <string name="backup_keys_show_qr">Show QR</string>
-    <string name="backup_keys_hide_qr">Hide QR</string>
     <string name="backup_keys_secret_label">Secret key (nsec)</string>
-    <string name="backup_keys_secret_warning">Your secret key is like a password that can NEVER be reset or recovered. Anyone who has it controls your account forever. Never share it; store it in a password manager.</string>
-    <string name="backup_keys_secret_hidden">Secret key is hidden</string>
     <string name="backup_keys_reveal">Reveal secret key</string>
     <string name="backup_keys_hide">Hide secret key</string>
-    <string name="backup_keys_copy_plain">Copy secret key</string>
-    <string name="backup_keys_copy_plain_warning">Copies the plaintext nsec. Only paste it into a trusted password manager.</string>
-    <string name="backup_keys_copy_encrypted">Copy encrypted (recommended)</string>
-    <string name="backup_keys_encrypt_password_label">Password for encrypted backup</string>
-    <string name="backup_keys_encrypt_failed">Could not encrypt the key. Please try again.</string>
     <string name="backup_keys_external_signer">This account uses an external signer — no secret key is stored here.</string>
-    <string name="backup_keys_copied">Copied!</string>
     <string name="backup_keys_copy">Copy</string>
-    <string name="backup_keys_unlock_title">Reveal secret key</string>
-    <string name="backup_keys_unlock_subtitle">Enter your privacy-lock password to reveal your secret key.</string>
 
     <!-- Common Actions -->
-    <string name="action_copy">Copy</string>
     <string name="action_paste">Paste</string>
     <string name="action_scan">Scan</string>
     <string name="action_cancel">Cancel</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Save</string>
-    <string name="action_delete">Delete</string>
-    <string name="action_share">Share</string>
-
-    <!-- Errors -->
-    <string name="error_invalid_key">Invalid key format. Please check and try again.</string>
-    <string name="error_network">Network error. Please check your connection.</string>
-    <string name="error_generic">An error occurred. Please try again.</string>
 
     <!-- Loading & Empty States -->
     <string name="action_refresh">Refresh</string>
@@ -135,8 +74,6 @@
     <string name="replying_to">replying to </string>
 
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Permissions:</string>
@@ -230,10 +167,7 @@
     <string name="geocache_verified_find">Verified find</string>
     <string name="geocache_invalid_proof">Proof does not check out</string>
     <string name="geocache_loading">Loading cache…</string>
-    <string name="geocache_hidden_by">Hidden by %1$s</string>
     <string name="geocache_navigate">Navigate</string>
-    <string name="geocache_copy_coordinates">Copy coordinates</string>
-    <string name="geocache_coordinates_copied">Coordinates copied</string>
     <string name="geocache_photos_section">Photos</string>
     <string name="geocache_mission_section">Key Quest mission</string>
     <string name="geocache_logs_section">Logs</string>
@@ -254,7 +188,6 @@
     <string name="geocache_archived_notice">This cache has been archived. It is no longer in play.</string>
     <string name="geocache_ftf_won_by">First to find claimed by %1$s</string>
     <string name="geocache_ftf_available">First to find is still up for grabs</string>
-    <string name="geocache_owner_actions">Owner</string>
     <string name="geocache_owner_edit">Edit this cache</string>
     <string name="geocache_owner_archive">Archive this cache</string>
     <string name="geocache_owner_archive_confirm">Archive it. Finders will see it is out of play, and the listing stays readable.</string>
@@ -266,7 +199,6 @@
     <string name="geocache_log_type_dnf">Didn't find</string>
     <string name="geocache_log_type_note">Note</string>
     <string name="geocache_log_type_maintenance">Needs maintenance</string>
-    <string name="geocache_log_title">Log a find</string>
     <string name="geocache_log_cache_label">Cache</string>
     <string name="geocache_log_your_log">Your log</string>
     <string name="geocache_log_placeholder">How did it go?</string>
@@ -288,11 +220,6 @@
     <string name="geocache_tab_hunts">Hunts</string>
     <string name="geocache_tab_finds">Finds</string>
     <string name="geocache_tab_mine">Mine</string>
-    <string name="geocache_filter_unfound">Unfound</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Has a prize</string>
-    <string name="geocache_filter_verified_only">Proof required</string>
     <string name="geocache_use_my_location">Use my location</string>
     <string name="geocache_sorted_by_distance">Sorted by distance</string>
     <string name="geocache_sorted_by_recent">Newest first</string>
@@ -301,25 +228,17 @@
     <string name="geocache_empty_finds">You have not logged a find yet.</string>
     <string name="geocache_empty_mine">You have not hidden a cache yet.</string>
     <string name="geocache_empty_hunts">No hunts yet.</string>
-    <string name="geocache_stat_finds">Finds</string>
-    <string name="geocache_stat_ftf">First finds</string>
-    <string name="geocache_stat_verified">Verified</string>
-    <string name="geocache_stat_hidden">Hidden</string>
-    <string name="geocache_map_recenter">Centre on me</string>
     <string name="geocache_map_long_press">Long-press the map to hide a cache there</string>
     <string name="geocache_map_open">Open</string>
     <string name="geocache_new_section_where">Where</string>
     <string name="geocache_new_section_what">What</string>
     <string name="geocache_new_section_extras">Extras</string>
     <string name="geocache_new_section_proof">Proof</string>
-    <string name="geocache_new_section_relays">Relays</string>
     <string name="geocache_new_location_warning">This publishes a public location accurate to about 5 metres. Anyone on Nostr can see it, and a published event cannot be recalled.</string>
     <string name="geocache_new_pick_location">Pick the spot</string>
     <string name="geocache_new_ladder">Publishes %1$s, plus coarser cells down to 3 characters for proximity search.</string>
     <string name="geocache_new_name">Name</string>
     <string name="geocache_new_description">Description</string>
-    <string name="geocache_new_type">Type</string>
-    <string name="geocache_new_size">Size</string>
     <string name="geocache_new_difficulty">Difficulty</string>
     <string name="geocache_new_terrain">Terrain</string>
     <string name="geocache_new_hint">Hint</string>
@@ -329,10 +248,7 @@
     <string name="geocache_new_modifiers">Modifiers</string>
     <string name="geocache_new_require_proof">Require proof of presence</string>
     <string name="geocache_new_proof_ready">A verification key has been generated for this cache.</string>
-    <string name="geocache_new_log_relays">Where finders should log</string>
     <string name="geocache_new_publish">Publish</string>
-    <string name="geocache_new_needs_name">Give the cache a name.</string>
-    <string name="geocache_new_needs_location">Pick where the cache is hidden.</string>
     <string name="geocache_hunt_progress">%1$d of %2$d found</string>
     <string name="geocache_hunt_start">Start the hunt</string>
     <plurals name="geocache_hunt_caches">
@@ -343,15 +259,10 @@
     <string name="geocache_hunt_description">Description</string>
     <string name="geocache_hunt_banner">Banner image</string>
     <string name="geocache_hunt_pick_caches">Caches, in order</string>
-    <string name="geocache_hunt_add_cache">Add a cache</string>
     <string name="geocache_hunt_move_up">Move up</string>
     <string name="geocache_hunt_move_down">Move down</string>
     <string name="geocache_hunt_remove">Remove</string>
-    <string name="geocache_hunt_theme">Page theme</string>
-    <string name="geocache_hunt_map_style">Map style</string>
-    <string name="geocache_hunt_needs_title">Give the hunt a title.</string>
     <string name="geocache_hunt_needs_caches">Add at least one cache.</string>
-    <string name="geocache_publish_failed">Could not publish. Check your relay connection and try again.</string>
     <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
@@ -427,7 +338,6 @@
     <string name="qr_scanner_label_hex_key">Raw key (public or private)</string>
     <string name="qr_scanner_open_link">Open link</string>
     <string name="qr_scanner_copy">Copy</string>
-    <string name="qr_scanner_copied">Copied</string>
     <string name="qr_scanner_try_again">Scan again</string>
     <string name="show_qr">Show QR</string>
     <string name="profile_image">Profile Picture</string>
@@ -483,7 +393,6 @@
     <string name="quote">Quote</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">New Amount in Sats</string>
-    <string name="and"> and </string>
     <string name="following"> Following</string>
     <string name="followers"> Followers</string>
     <string name="number_following">%1$s Following</string>
@@ -747,7 +656,6 @@
     <string name="channel_created">Channel created</string>
     <string name="channel_information_changed_to">Channel Information changed to</string>
     <string name="new_public_chat">Create a new public chat</string>
-    <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="paid_relay">Paid relay</string>
     <string name="tor_relay">Forces Tor when connecting</string>
     <string name="posts_received">posts received</string>
@@ -990,36 +898,22 @@
     <string name="health_connect_rationale_limit_optional">The whole feature is optional. Revoke the permissions in Health Connect at any time — My Fitness drops back to its prompt — or turn the composer suggestions off under Settings → Compose Settings. The rest of Amethyst keeps working.</string>
     <string name="health_connect_rationale_privacy_policy">Read the full privacy policy</string>
     <string name="my_fitness_title">My Fitness</string>
-    <string name="my_fitness_window">Last 4 weeks</string>
     <string name="my_fitness_loading_metrics">Loading distance, calories and heart rate…</string>
-    <string name="my_fitness_window_note">The last four whole weeks of your training: the workouts you have published, plus anything Health Connect records on this phone. Amethyst works the summary out on the device and publishes none of it.</string>
     <string name="my_fitness_this_week">This week</string>
-    <string name="my_fitness_vs_last_week">vs last week</string>
-    <string name="my_fitness_weekly_average">Weekly average</string>
     <string name="my_fitness_workouts">Workouts</string>
     <string name="my_fitness_active_days">Active days</string>
-    <string name="my_fitness_streak">Day streak</string>
-    <string name="my_fitness_time">Time</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="my_fitness_duration_minutes">%1$dm</string>
     <string name="my_fitness_duration_seconds">%1$ds</string>
     <string name="my_fitness_distance">Distance</string>
-    <string name="my_fitness_calories">Calories</string>
-    <string name="my_fitness_steps">Steps</string>
-    <string name="my_fitness_elevation">Climb</string>
-    <string name="my_fitness_avg_heart_rate">Avg HR</string>
-    <string name="my_fitness_max_heart_rate">Max HR</string>
-    <string name="my_fitness_by_activity">By activity</string>
-    <string name="my_fitness_bests">Best efforts</string>
     <string name="my_fitness_best_longest_distance">Longest distance</string>
     <string name="my_fitness_best_longest_duration">Longest workout</string>
     <string name="my_fitness_best_biggest_climb">Biggest climb</string>
     <string name="my_fitness_best_most_steps">Most steps</string>
     <string name="my_fitness_best_highest_heart_rate">Highest heart rate</string>
     <string name="my_fitness_recent">Recent workouts</string>
-    <string name="my_fitness_empty">Nothing logged in the last 4 weeks. Workouts you post, and any your watch records, show up here.</string>
     <string name="my_fitness_connect_title">Track your training</string>
     <string name="my_fitness_connect_message">Connect Health Connect to see your weekly totals, week-over-week trend, best efforts and training streak. Everything stays on your phone.</string>
     <string name="my_fitness_connect_banner">Connect Health Connect to add the workouts your watch records, with heart rate, steps and climb.</string>
@@ -1091,7 +985,6 @@
         <item quantity="other">Best: %1$d weeks</item>
     </plurals>
     <string name="nsite_none_found">No nSites found yet.</string>
-    <string name="browser_reload">Reload</string>
     <string name="browser_unsupported">The in-app browser needs Android 11 or newer.</string>
     <string name="embedded_tab_load_failed">Couldn't load this app.</string>
     <string name="page_error_not_found_title">This site can't be found</string>
@@ -1125,10 +1018,6 @@
     <string name="browser_recent_options">Options</string>
     <string name="browser_recent_remove">Remove from history</string>
     <string name="favorite_apps_empty">Nothing here yet. Open a web app, nApplet, or nSite and tap the star to keep it here.</string>
-    <string name="favorite_app_open_window">Open in its own window</string>
-    <string name="favorite_app_access_title">What this app can access</string>
-    <string name="favorite_app_access_static">Runs sandboxed with no special access to your account.</string>
-    <string name="favorite_app_access_show">What it can access</string>
     <string name="favorite_app_unavailable">This app isn't loaded yet. Open it from its card, or try again in a moment.</string>
     <string name="napplet_manage_permissions">Manage permissions</string>
     <string name="napplet_permissions_ask_each_time">Ask me each time</string>
@@ -1241,8 +1130,6 @@
     <string name="relay_auth_remember_relay">Remember for this relay</string>
     <string name="relay_auth_log_in">Log in</string>
     <string name="relay_auth_not_now">Not now</string>
-    <string name="relay_auth_never_allow">Never allow</string>
-    <string name="relay_auth_how_we_decide">How Amethyst decides</string>
     <string name="relay_auth_exceptions">Exceptions</string>
     <string name="relay_auth_no_exceptions">No exceptions yet. Every relay follows the rules above.</string>
     <string name="relay_auth_segment_always">Always</string>
@@ -1603,7 +1490,6 @@
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
-    <string name="poll_consensus_threshold">Consensus</string>
     <string name="looking_for_event">Looking for Event %1$s</string>
     <string name="looking_for_event_title">Loading</string>
     <string name="looking_for_private_event">Waiting for your private messages to load…</string>
@@ -1613,11 +1499,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
     <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
     <string name="lightning_create_and_add_invoice">Create and Add</string>
-    <string name="add_content">Add to Message</string>
-    <string name="add_caption">Add a Caption</string>
-    <string name="add_caption_example">My lovely friend</string>
-    <string name="content_description">Description of the contents</string>
-    <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
     <string name="ai_suggested_alt_text_hint">AI-suggested, edit me</string>
     <string name="ai_suggested_alt_text_dismiss">Dismiss AI suggestion</string>
     <string name="zap_type">Zap Type</string>
@@ -2132,8 +2013,6 @@
         <item quantity="one">Tor is not connecting. %1$d relay waits for it.</item>
         <item quantity="other">Tor is not connecting. %1$d relays wait for it.</item>
     </plurals>
-    <string name="tor_splash_error">Tor error: %1$s</string>
-    <string name="tor_splash_explainer">Amethyst uses Tor to hide your IP address from relays. Starting Tor can take a minute and needs internet access.</string>
     <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
     <string name="notification_channel_status_on">On</string>
     <string name="notification_channel_status_silent">Silent</string>
@@ -2237,7 +2116,6 @@
     <string name="wallet_filter_all">All</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>
-    <string name="wallet_add">Add Wallet</string>
     <string name="wallet_default">Default</string>
     <string name="wallet_set_default">Set as Default</string>
     <string name="wallet_remove">Remove</string>
@@ -2418,8 +2296,6 @@
     <string name="cashu_redeemed_amount">Redeemed %1$s sats into your wallet.</string>
     <string name="wallet_paste_uri">Paste nostr+walletconnect:// URI</string>
     <string name="wallet_save">Save</string>
-    <string name="wallet_rename">Rename</string>
-    <string name="wallet_rename_title">Rename Wallet</string>
     <string name="wallet_onchain_transactions">Onchain Transactions</string>
     <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
     <string name="wallet_onchain_no_backend">No chain backend is configured.</string>
@@ -2791,7 +2667,6 @@
     <string name="git_repo_labels">Labels</string>
     <string name="git_repo_readme">README</string>
     <string name="git_repo_maintainers">Maintained by</string>
-    <string name="git_repo_bookmark">Bookmark repository</string>
     <string name="git_repo_stat_branches">Branches</string>
     <string name="git_repo_stat_tags">Tags</string>
     <string name="git_repo_stat_files">Files</string>
@@ -2869,7 +2744,6 @@
     <string name="git_repo_follow">Follow repository</string>
     <string name="git_new_issue_title">New issue</string>
     <string name="git_new_issue_subject">Title</string>
-    <string name="git_new_issue_body">Description</string>
     <string name="git_new_issue_create">Create</string>
     <string name="git_new_issue_cancel">Cancel</string>
     <string name="git_new_issue_labels">Labels</string>
@@ -3006,7 +2880,6 @@
     <string name="git_pr_loading_changes">Loading changes…</string>
     <string name="git_pr_no_changes">No file changes found.</string>
     <string name="git_pr_changes_retry">Retry loading changes</string>
-    <string name="git_pr_revised">Revised</string>
     <string name="git_cover_note">Cover note</string>
     <string name="git_summary_edited_by">Edited by</string>
     <string name="git_pr_pushed">Pushed new commits.</string>
@@ -3098,7 +2971,6 @@
     <string name="accessibility_play_username">Play username as audio</string>
     <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan QR code</string>
-    <string name="accessibility_select_date">Select date</string>
     <string name="draft">Draft</string>
     <string name="bounty_label">Bounty</string>
     <string name="load_from_text">From Msg</string>
@@ -3235,9 +3107,7 @@
     <string name="closing_time">Closing Time</string>
     <string name="confirm">Confirm</string>
     <string name="next">Next</string>
-    <string name="go_back">Go Back</string>
     <string name="approve">Approve</string>
-    <string name="connected">Connected</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
     <string name="poll_view_results">View results</string>
@@ -3871,7 +3741,6 @@
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
     <string name="add_client_tag_explainer">When enabled, Amethyst appends a NIP-89 client tag to events you publish.</string>
     <string name="add_client_tag_title">Add client tag to my events</string>
-    <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
     <string name="add_sensitive_content_label">Sensitive Content</string>
     <string name="add_to_messages">Add to Messages</string>
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
@@ -4110,8 +3979,6 @@
     <string name="browser">Browser</string>
     <string name="browser_favorites">Favorites</string>
     <string name="browser_suggested">Discover web apps</string>
-    <string name="browser_tor_off">Loading over the open web. Tap to use Tor.</string>
-    <string name="browser_tor_on">Loading over Tor. Tap to use the open web.</string>
     <string name="buzz_channel_archive">Archive channel</string>
     <string name="buzz_channel_create_title">New channel</string>
     <string name="buzz_channel_delete">Delete channel</string>
@@ -4407,15 +4274,10 @@
     <string name="connectivity_type_never">Never</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Add Document</string>
-    <string name="content_description_add_image">Add Image</string>
-    <string name="content_description_add_media">Add Media</string>
-    <string name="content_description_add_video">Add Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Hide</string>
     <string name="content_warning_see_warnings_option">Warn</string>
     <string name="content_warning_show_all_sensitive_content_option">Show</string>
     <string name="conversations">Conversations</string>
-    <string name="convert_gif_to_mp4_description">Converts animated GIF to MP4 video for smaller file size and better playback compatibility.</string>
     <string name="convert_gif_to_mp4_label">Convert GIF to MP4</string>
     <string name="copied_note_id_to_clipboard">Copied note ID (@note1) to clipboard</string>
     <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
@@ -4508,7 +4370,6 @@
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and ":" autocomplete just like public ones.</string>
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and ":" autocomplete picker when this pack is in your emoji list.</string>
     <string name="emoji_sets">Emojis</string>
-    <string name="encrypt_files_description">Encrypt files before uploading for privacy. Some servers may not accept encrypted files on free accounts.</string>
     <string name="encrypt_files_label">Encrypt files</string>
     <string name="ephemeral_relay_chat">Disappearing Chat</string>
     <string name="error">Error</string>
@@ -4558,8 +4419,6 @@
     <string name="failed_to_upload_media_no_details">Failed to upload media</string>
     <string name="failed_to_upload_to_server_with_message">Failed to upload to %1$s: %2$s</string>
     <string name="favorite_app_add">Add to favorites</string>
-    <string name="favorite_app_network_open">Loads over the open web.</string>
-    <string name="favorite_app_network_tor">Loads over Tor.</string>
     <string name="favorite_app_recent">Recent</string>
     <string name="favorite_app_remove">Remove from favorites</string>
     <string name="favorite_app_still_loading">That app isn't loaded yet. Try again in a moment.</string>
@@ -5082,10 +4941,6 @@
         <item quantity="other">%1$d members</item>
     </plurals>
     <string name="marmot_member_removed">Member removed</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d msg</item>
-        <item quantity="other">%1$d msgs</item>
-    </plurals>
     <string name="marmot_not_a_member">Not a member of this group</string>
     <string name="marmot_admin_delete_message">Delete for everyone</string>
     <string name="room_remove_for_everyone_title">Delete for everyone?</string>
@@ -5322,14 +5177,7 @@
     <string name="nest_lower_hand">Lower hand</string>
     <string name="nest_mic_mute">Mute mic</string>
     <string name="nest_mic_unmute">Unmute mic</string>
-    <string name="nest_mute">Mute</string>
     <string name="nest_no_server_save_failed">Couldn't save your nest server list. Try again.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
-    <string name="nest_notification_listening">Nest connected</string>
-    <string name="nest_notification_stop">Stop</string>
-    <string name="nest_notification_text">Tap to return.</string>
     <string name="nest_participant_follow">Follow</string>
     <string name="nest_participant_mute">Mute</string>
     <string name="nest_participant_unfollow">Unfollow</string>
@@ -5340,7 +5188,6 @@
     <string name="nest_presence_raised_hand">raised their hand</string>
     <string name="nest_presence_speaking">is speaking</string>
     <string name="nest_raise_hand">Raise hand</string>
-    <string name="nest_unmute">Unmute</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
     <string name="nests_servers_my_section">Your servers</string>
@@ -5516,10 +5363,6 @@
         <item quantity="one">%1$d download</item>
         <item quantity="other">%1$d downloads</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d asset bundled</item>
-        <item quantity="other">%1$d assets bundled</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
     <string name="no_blossom_apps_found_title">Can't open Blossom links</string>
     <string name="no_camera_app_found">No camera app found on this device</string>
@@ -5531,7 +5374,6 @@
     <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
     <string name="pay_elsewhere_title">Pay with another wallet</string>
     <string name="pay_elsewhere_description">No app on this computer can pay this. Scan the code with a wallet on your phone, or copy it into any Lightning wallet.</string>
-    <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
     <string name="notification_service_accounts_title">Accounts active in the background</string>
     <string name="notification_service_master_description">Master switch for real-time background notifications. Turn off to save battery — like an airplane mode. When off, no account stays connected in the background, and it stays off (across restarts) until you turn it back on.</string>
@@ -5671,7 +5513,6 @@
     <string name="podcast_value_stream_requires_wallet">Connect a Nostr Wallet Connect or debit wallet to stream sats while listening.</string>
     <string name="podcast_value_user_no_lnaddress">This user has no Lightning address</string>
     <string name="poll_author_no_vote">Poll authors can't vote in their own polls.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
     <string name="poll_multiple_choice">Multiple choice</string>
     <plurals name="poll_results_backdated_votes">
@@ -6347,8 +6188,6 @@
     <string name="vanish_history">Vanish History</string>
     <string name="vanish_history_search_keywords" translatable="false">deletion, delete events</string>
     <string name="vanish_request_sent">Vanish request sent</string>
-    <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
-    <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
     <string name="video_hdr_kept">Your HDR video stays HDR. Some apps and browsers show HDR video washed out or too dark.</string>
     <string name="video_hdr_converted_codec">Your HDR video is converted to standard (SDR) video. Turn on H.265 to keep HDR.</string>
     <string name="video_hdr_converted">Your HDR video is converted to standard (SDR) video.</string>
@@ -6488,13 +6327,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Cordn group link</string>
-    <string name="cordn_link_search_keywords">cordn coordinator group link invite mls chat metadata privacy exposure</string>
     <string name="cordn_coordinators_title">Cordn coordinators</string>
-    <string name="cordn_coordinators_search_keywords">cordn coordinator add remove purge health server mls chat ordering</string>
     <string name="cordn_keypackages_title">Cordn key packages</string>
-    <string name="cordn_keypackages_search_keywords">cordn key package publish invite last resort coordinator mls</string>
     <string name="cordn_backup_title">Cordn backup</string>
-    <string name="cordn_backup_search_keywords">cordn backup restore export import passphrase groups recovery</string>
     <string name="chat_type_cordn_title">Cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
 
@@ -6548,7 +6383,6 @@
     <string name="cordn_hub_migrate_desc">Hand your groups to a device you are switching to</string>
 
     <string name="cordn_migrate_title">Move to a new phone</string>
-    <string name="cordn_migrate_search_keywords" translatable="false">cordn migrate move new phone device transfer handoff switch qr</string>
     <string name="cordn_migrate_explainer">Your cordn groups live on this device. Moving them takes one code: this phone publishes them, the new phone reads them, and this phone stops.</string>
     <string name="cordn_migrate_sign_in_first">Sign in with the same account on the new phone first. This moves your groups, never your key.</string>
     <string name="cordn_migrate_export">Start the handoff</string>
@@ -7084,7 +6918,6 @@
     <string name="cordn_backup_restore_body">Restoring replaces the cordn groups on this device with the ones in the file. It is for a phone that has taken over from another — not a way to use the same groups on two devices at once.</string>
     <string name="cordn_backup_restore_confirm_body">Every cordn group now on this device will be removed and replaced by the ones in the file.\n\nDo not restore onto a second phone while the first is still in use. Both would hold the same group keys, and once both have sent a message the group breaks for everyone — silently, and with no way back.</string>
     <string name="cordn_backup_restore_confirm_title">Replace this device's cordn groups?</string>
-    <string name="cordn_backup_restore_title">Restore</string>
     <string name="cordn_backup_restored">Restored.</string>
     <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
     <string name="cordn_chat_empty_title">No messages yet</string>
@@ -7122,7 +6955,6 @@
     <string name="cordn_coordinators_purge">Purge</string>
     <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
     <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Answers on</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d more</string>
     <string name="cordn_coordinators_remove">Remove</string>
@@ -7148,9 +6980,7 @@
         <item quantity="one">%1$d person can add and remove</item>
         <item quantity="other">%1$d people can add and remove</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Only I manage this group</string>
     <string name="cordn_create_admin_only_me_on">Only you can invite, remove members or change the group's details. You can hand that to someone else later.</string>
-    <string name="cordn_create_coordinator">Coordinator</string>
     <string name="cordn_create_coordinator_change">Change</string>
     <string name="cordn_create_coordinator_discover">Find coordinators</string>
     <string name="cordn_create_coordinator_hide">Done</string>
@@ -7215,7 +7045,6 @@
     <string name="cordn_groups_menu_invitations">Invitations</string>
     <string name="cordn_groups_none">No cordn groups yet</string>
     <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
-    <string name="cordn_groups_start">Start one</string>
     <string name="cordn_info_add_member">Add someone</string>
     <string name="cordn_info_add_member_none">Nobody found by that name.</string>
     <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
@@ -7312,14 +7141,12 @@
     <string name="cordn_requests_failed">Could not read the requests.</string>
     <string name="cordn_requests_none">Nobody is waiting to join.</string>
     <string name="cordn_requests_title">Requests to join</string>
-    <string name="cordn_send">Send</string>
     <string name="cordn_send_failed">That did not send.</string>
     <string name="cordn_send_no_session">This group's coordinator is not open, so nothing can be sent yet.</string>
     <string name="cordn_share_copied">Copied</string>
     <string name="cordn_share_copy">Copy link</string>
     <string name="cordn_share_explainer">Anyone with this link can ask to join. An admin still has to let them in.</string>
     <string name="cordn_share_title">Share this group</string>
-    <string name="cordn_voice_play">Play voice note</string>
     <string name="cordn_voice_record">Record a voice note</string>
     <string name="cordn_voice_stop">Stop and send</string>
     <string name="browser_address_hint">Search or enter address</string>
@@ -7670,7 +7497,6 @@
     <string name="custom_feeds_remove">Remove</string>
     <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">On wide windows, show extra columns beside the main screen, each with its own screen and history. Save sets of columns as workspaces.</string>
     <string name="navigation_layout">Navigation layout</string>
     <string name="navigation_layout_description">How screens open: on one stack, with deck columns beside it on wide windows, each in its own tab, or each in its own window. Tabs and windows have no back button: close them instead.</string>
     <string name="navigation_layout_stack">Stack</string>
@@ -8545,10 +8371,6 @@
         <item quantity="one">%1$d server</item>
         <item quantity="other">%1$d servers</item>
     </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
-    </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d emoji pack</item>
         <item quantity="other">%1$d emoji packs</item>
@@ -9418,7 +9240,6 @@
     <string name="wot_nudge_first_body">Replies, notifications and messages from your follows and the people they trust come first.</string>
     <string name="wot_nudge_first_action">Show my people first</string>
     <string name="wot_nudge_thread_label">Replies, your circle first</string>
-    <string name="wot_nudge_you_follow">You follow</string>
     <plurals name="wot_nudge_thread_others">
         <item quantity="one">%1$d more from outside your circle</item>
         <item quantity="other">%1$d more from outside your circle</item>
@@ -9901,7 +9722,6 @@
     <string name="front_page_step_all_at_once">Writing (this provider sends the page all at once)</string>
     <string name="front_page_step_check">Checking quotes, pictures and links</string>
     <string name="front_page_step_planning">Planning the paper</string>
-    <string name="front_page_edition">No. %1$s</string>
     <string name="front_page_fixed_once">Fixed once</string>
     <string name="front_page_download">Download</string>
     <string name="front_page_changes_title">Taken out of the page</string>

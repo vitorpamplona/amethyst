@@ -104,7 +104,6 @@
     <string name="original">gốc</string>
     <string name="quote">Trích dẫn</string>
     <string name="new_amount_in_sats">Số tiền mới tính bằng sats</string>
-    <string name="and"> và </string>
     <string name="following"> Đang theo dõi</string>
     <string name="followers"> Người theo dõi</string>
     <string name="number_following">%1$s Đang theo dõi</string>
@@ -248,7 +247,6 @@
     <string name="refresh">Làm mới</string>
     <string name="channel_created">Kênh đã được tạo</string>
     <string name="channel_information_changed_to">Thông tin kênh đã thay đổi thành</string>
-    <string name="marmot_group_no_messages_yet">Chưa có tin nhắn</string>
     <string name="paid_relay">Relay trả phí</string>
     <string name="tor_relay">Bắt buộc dùng Tor khi kết nối</string>
     <string name="posts_received">bài đăng đã nhận</string>
@@ -418,7 +416,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Chưa tìm thấy nSite nào.</string>
-    <string name="browser_reload">Tải lại</string>
     <string name="browser_unsupported">Trình duyệt trong ứng dụng yêu cầu Android 11 trở lên.</string>
     <string name="embedded_tab_load_failed">Không thể tải ứng dụng này.</string>
     <string name="browser_go">Mở</string>
@@ -426,10 +423,6 @@
     <string name="browser_recent_options">Tùy chọn</string>
     <string name="browser_recent_remove">Xóa khỏi lịch sử</string>
     <string name="favorite_apps_empty">Chưa có ứng dụng yêu thích. Mở một web client hoặc nSite và nhấn ngôi sao để ghim vào đây.</string>
-    <string name="favorite_app_open_window">Mở trong cửa sổ riêng</string>
-    <string name="favorite_app_access_title">Những gì ứng dụng này có thể truy cập</string>
-    <string name="favorite_app_access_static">Chạy trong hộp cát không có quyền truy cập đặc biệt vào tài khoản của bạn.</string>
-    <string name="favorite_app_access_show">Những gì nó có thể truy cập</string>
     <string name="favorite_app_unavailable">Ứng dụng này chưa được tải. Mở từ thẻ của nó hoặc thử lại sau giây lát.</string>
     <string name="napplet_manage_permissions">Quản lý quyền</string>
     <string name="napplet_none_found">Chưa tìm thấy nApplet nào.</string>
@@ -648,7 +641,6 @@
     <string name="pledge_amount_in_sats">Số tiền cam kết (Sats)</string>
     <string name="poll_zap_value_min">Zap tối thiểu</string>
     <string name="poll_zap_value_max">Zap tối đa</string>
-    <string name="poll_consensus_threshold">Đồng thuận</string>
     <string name="looking_for_event">Đang tìm kiếm Sự kiện %1$s</string>
     <string name="send_zap">Gửi Zap</string>
     <string name="custom_zaps_add_a_message">Thêm tin nhắn công khai</string>
@@ -656,11 +648,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Thêm tin nhắn hóa đơn</string>
     <string name="custom_zaps_add_a_message_example">Cảm ơn bạn vì tất cả công việc của bạn!</string>
     <string name="lightning_create_and_add_invoice">Tạo và Thêm</string>
-    <string name="add_content">Thêm vào Tin nhắn</string>
-    <string name="add_caption">Thêm Chú thích</string>
-    <string name="add_caption_example">Người bạn thân yêu của tôi</string>
-    <string name="content_description">Mô tả nội dung</string>
-    <string name="content_description_example">Một chiếc thuyền màu xanh trên bãi biển cát trắng lúc hoàng hôn</string>
     <string name="ai_suggested_alt_text_hint">Đề xuất bởi AI, hãy chỉnh sửa</string>
     <string name="ai_suggested_alt_text_dismiss">Bỏ đề xuất AI</string>
     <string name="zap_type">Loại Zap</string>
@@ -987,7 +974,6 @@
     <string name="wallet_filter_all">Tất cả</string>
     <string name="wallet_filter_zaps">Zap</string>
     <string name="wallet_filter_non_zaps">Không phải Zap</string>
-    <string name="wallet_add">Thêm Ví</string>
     <string name="wallet_default">Mặc định</string>
     <string name="wallet_set_default">Đặt làm Mặc định</string>
     <string name="wallet_remove">Xóa</string>
@@ -1080,8 +1066,6 @@
     <string name="cashu_redeemed_amount">Đã đổi %1$s sats vào ví của bạn.</string>
     <string name="wallet_paste_uri">Dán URI nostr+walletconnect://</string>
     <string name="wallet_save">Lưu</string>
-    <string name="wallet_rename">Đổi tên</string>
-    <string name="wallet_rename_title">Đổi tên ví</string>
     <string name="wallet_onchain_transactions">Giao dịch Onchain</string>
     <string name="wallet_onchain_no_address">Không có địa chỉ on-chain cho tài khoản này.</string>
     <string name="wallet_onchain_no_backend">Không có chain backend nào được cấu hình.</string>
@@ -1319,7 +1303,6 @@
     <string name="accessibility_play_username">Phát tên người dùng dạng âm thanh</string>
     <string name="accessibility_pushpin">Ghim</string>
     <string name="accessibility_scan_qr_code">Quét mã QR</string>
-    <string name="accessibility_select_date">Chọn ngày</string>
     <string name="load_from_text">Từ Tin nhắn</string>
     <string name="dvm_looking_for_app">Đang tìm kiếm Ứng dụng</string>
     <string name="dvm_waiting_status">Đã yêu cầu công việc, đang chờ phản hồi</string>
@@ -1419,9 +1402,7 @@
     <string name="closing_time">Thời gian đóng</string>
     <string name="confirm">Xác nhận</string>
     <string name="next">Tiếp theo</string>
-    <string name="go_back">Quay lại</string>
     <string name="approve">Chấp thuận</string>
-    <string name="connected">Đã kết nối</string>
     <string name="social_proof">Bằng chứng xã hội</string>
     <string name="poll_submit">Gửi</string>
     <string name="poll_view_results">Xem kết quả</string>
@@ -1758,7 +1739,6 @@
     <string name="add_a_nip96_server">Thêm máy chủ NIP-96</string>
     <string name="add_client_tag_explainer">Khi bật, Amethyst sẽ thêm thẻ client NIP-89 vào các sự kiện bạn đăng.</string>
     <string name="add_client_tag_title">Thêm thẻ client vào sự kiện của tôi</string>
-    <string name="add_sensitive_content_description">Thêm cảnh báo nội dung nhạy cảm trước khi hiển thị nội dung này</string>
     <string name="add_sensitive_content_label">Nội dung nhạy cảm</string>
     <string name="add_to_public_bookmarks">Thêm vào Dấu trang Công khai</string>
     <string name="ai_writing_setting_description">Sử dụng mô hình AI trên thiết bị để đề xuất sửa lỗi văn bản và thay đổi giọng điệu.</string>
@@ -1835,8 +1815,6 @@
     <string name="broadcast_section_explainer">Các relay chuyên đẩy ghi chú của bạn đến tất cả các relay khác, như sendit.nosflare.com. Amethyst sẽ thêm relay này vào tất cả các sự kiện mới do bạn tạo</string>
     <string name="browser">Trình duyệt</string>
     <string name="browser_favorites">Yêu thích</string>
-    <string name="browser_tor_off">Đang tải qua web mở. Nhấn để dùng Tor.</string>
-    <string name="browser_tor_on">Đang tải qua Tor. Nhấn để dùng web mở.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s, %2$d sự kiện</item>
     </plurals>
@@ -1953,15 +1931,10 @@
     <string name="connectivity_type_always">Luôn luôn</string>
     <string name="connectivity_type_never">Không bao giờ</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi không giới hạn</string>
-    <string name="content_description_add_document">Thêm Tài liệu</string>
-    <string name="content_description_add_image">Thêm Hình ảnh</string>
-    <string name="content_description_add_media">Thêm Phương tiện</string>
-    <string name="content_description_add_video">Thêm Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Ẩn</string>
     <string name="content_warning_see_warnings_option">Cảnh báo</string>
     <string name="content_warning_show_all_sensitive_content_option">Hiện</string>
     <string name="conversations">Cuộc trò chuyện</string>
-    <string name="convert_gif_to_mp4_description">Chuyển đổi GIF động sang video MP4 để giảm kích thước tệp và tương thích phát lại tốt hơn.</string>
     <string name="convert_gif_to_mp4_label">Chuyển đổi GIF sang MP4</string>
     <string name="copied_note_id_to_clipboard">Đã sao chép ID ghi chú (@note1) vào clipboard</string>
     <string name="copied_note_text_to_clipboard">Đã sao chép nội dung ghi chú vào clipboard</string>
@@ -2028,7 +2001,6 @@
     <string name="emoji_private_explainer">Emoji riêng tư được lưu trữ mã hóa trên các relay và chỉ hiển thị với bạn. Chúng xuất hiện trong menu phản ứng và tự động hoàn thành ":" giống như emoji công khai.</string>
     <string name="emoji_public_explainer">Emoji công khai hiển thị với mọi người và xuất hiện trong menu phản ứng và bộ chọn tự động hoàn thành ":" khi gói này có trong danh sách emoji của bạn.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Mã hóa tệp trước khi tải lên để bảo vệ quyền riêng tư. Một số máy chủ có thể không chấp nhận tệp mã hóa trên tài khoản miễn phí.</string>
     <string name="encrypt_files_label">Mã hóa tệp</string>
     <string name="ephemeral_relay_chat">Trò chuyện tạm thời</string>
     <string name="error">Lỗi</string>
@@ -2072,8 +2044,6 @@
     <string name="failed_to_upload_media_no_details">Tải lên media thất bại</string>
     <string name="failed_to_upload_to_server_with_message">Tải lên %1$s thất bại: %2$s</string>
     <string name="favorite_app_add">Thêm vào yêu thích</string>
-    <string name="favorite_app_network_open">Tải qua web mở.</string>
-    <string name="favorite_app_network_tor">Tải qua Tor.</string>
     <string name="favorite_app_recent">Gần đây</string>
     <string name="favorite_app_remove">Xóa khỏi yêu thích</string>
     <string name="favorite_app_still_loading">Ứng dụng đó chưa được tải. Thử lại sau giây lát.</string>
@@ -2344,9 +2314,6 @@
         <item quantity="other">%1$d thành viên</item>
     </plurals>
     <string name="marmot_member_removed">Đã xóa thành viên</string>
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d tin nhắn</item>
-    </plurals>
     <string name="marmot_not_a_member">Không phải thành viên của nhóm này</string>
     <string name="marmot_unknown_error">lỗi không xác định</string>
     <string name="media_added">Đã thêm media</string>
@@ -2430,13 +2397,7 @@
     <string name="nest_lower_hand">Hạ tay</string>
     <string name="nest_mic_mute">Tắt mic</string>
     <string name="nest_mic_unmute">Bật mic</string>
-    <string name="nest_mute">Tắt tiếng</string>
     <string name="nest_no_server_save_failed">Không thể lưu danh sách máy chủ nest. Vui lòng thử lại.</string>
-    <string name="nest_notification_broadcasting">Nest — Trực tiếp</string>
-    <string name="nest_notification_channel_description">Giữ âm thanh phát trong khi phòng đang mở.</string>
-    <string name="nest_notification_listening">Nest đã kết nối</string>
-    <string name="nest_notification_stop">Dừng</string>
-    <string name="nest_notification_text">Nhấn để quay lại.</string>
     <string name="nest_participant_follow">Theo dõi</string>
     <string name="nest_participant_mute">Tắt tiếng</string>
     <string name="nest_participant_unfollow">Bỏ theo dõi</string>
@@ -2447,7 +2408,6 @@
     <string name="nest_presence_raised_hand">đã giơ tay</string>
     <string name="nest_presence_speaking">đang phát biểu</string>
     <string name="nest_raise_hand">Giơ tay</string>
-    <string name="nest_unmute">Bật tiếng</string>
     <string name="nests_servers_my_explainer">Được lưu dưới dạng sự kiện có thể thay thế kind-10112 để các client khác có thể đọc tùy chọn của bạn.</string>
     <string name="nests_servers_my_section">Máy chủ của bạn</string>
     <string name="nests_servers_recommended_explainer">Các đề xuất tích hợp sẵn mà bạn có thể thêm vào danh sách chỉ bằng một lần nhấn.</string>
@@ -2480,9 +2440,6 @@
     <string name="new_requests">Yêu cầu mới</string>
     <string name="new_threads">Chủ đề mới</string>
     <string name="new_workout">Bài tập mới</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">%1$d tài sản đính kèm</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Không tìm thấy ứng dụng Blossom. Vui lòng cài đặt ứng dụng Blossom cục bộ để xem tệp này</string>
     <string name="no_blossom_apps_found_title">Không thể mở liên kết Blossom</string>
     <string name="no_camera_app_found">Không tìm thấy ứng dụng camera trên thiết bị này</string>
@@ -2492,7 +2449,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Chưa có loại phản ứng nào được chọn trước cho người dùng này. Nhấn giữ nút tim để thay đổi</string>
     <string name="no_reactions_setup">Chưa cài đặt phản ứng</string>
     <string name="no_wallet_found">Không tìm thấy Ví nào để thanh toán hóa đơn Lightning. Vui lòng cài đặt ví Lightning để sử dụng zap</string>
-    <string name="no_wallet_found_with_error">Không tìm thấy Ví nào để thanh toán hóa đơn Lightning (Lỗi: %1$s). Vui lòng cài đặt ví Lightning để sử dụng zap</string>
     <string name="no_zap_amount_setup_long_press_to_change">Chưa thiết lập số tiền Zap. Nhấn giữ để thay đổi</string>
     <string name="notification_settings">Thông báo</string>
     <string name="notification_settings_section_categories">Danh mục</string>
@@ -2824,8 +2780,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Người dùng %1$s chưa cài đặt địa chỉ Lightning để nhận sats</string>
     <string name="vanish_history">Lịch sử xóa</string>
     <string name="vanish_request_sent">Đã gửi yêu cầu xóa</string>
-    <string name="video_codec_h265_description">Chất lượng tốt hơn với kích thước tệp nhỏ hơn nhưng không phải tất cả thiết bị đều hỗ trợ phát lại H.265.</string>
-    <string name="video_codec_h265_label">Sử dụng Codec H.265/HEVC</string>
     <string name="video_download_has_started_toast">Đang tải video xuống…</string>
     <string name="video_player_settings">Nút Trình phát Video</string>
     <string name="video_saved_to_the_gallery">Video đã được lưu vào thư viện video của điện thoại</string>

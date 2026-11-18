@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Dobrodošli v Amethyst</string>
-    <string name="login_subtitle">Vpiši se v svoj Nostr račun</string>
-    <string name="login_subtitle_desktop">Nostr odjemalec za namizje</string>
-    <string name="login_card_title">Vpiši se s svojim Nostr ključem</string>
-    <string name="login_card_subtitle">nsec za poln dostop, bunker:// za oddaljeno podpisovanje ali npub samo za branje</string>
-    <string name="login_with_key">Vpiši se z ključem</string>
-    <string name="login_button">Vpis</string>
-    <string name="login_generate_new">Ustvari nov ključ</string>
-    <string name="login_generate_button">Ustvari novega</string>
-    <string name="login_key_hint">Vpiši svoj zasebni ključ (nsec) ali javni ključ (npub)</string>
-    <string name="login_key_label">nsec, bunker://, ali npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Prikaži kključ</string>
-    <string name="login_hide_key">Skrij ključ</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">POMEMBNO: Shrani svoje ključe!</string>
-    <string name="new_key_warning_message">Vaš tajni ključ (nsec) je EDINI način za dostop do vašega računa. Če ga izgubite, je vaš račun za vselej izgubljen. Shranite ga na varno mesto!</string>
-    <string name="new_key_public_label">Javni ključ (za deljenje):</string>
-    <string name="new_key_secret_label">Zasebni ključ (NIKOLI ne deli!)</string>
-    <string name="new_key_continue_button">Shranil sem moje ključe, nadaljuj</string>
-    <string name="new_key_saved_checkbox">Ključe imam shranjene na varnem mestu</string>
-    <string name="new_key_copy_encrypted_button">Kopiraj šifrirano (priporočeno)</string>
-    <string name="new_key_encrypt_password_label">Geslo za šifrirano varnostno kopijo</string>
-    <string name="new_key_step_indicator">Korak %1$d od %2$d</string>
-    <string name="new_key_next">Naprej</string>
-    <string name="new_key_back">Nazaj</string>
-    <string name="new_key_cancel">Prekliči</string>
-    <string name="new_key_step_intro_title">Shranite svoje ključe, preden nadaljujete</string>
-    <string name="new_key_step_intro_npub">Vaš javni ključ (npub) je vaš naslov za deljenje. Brez skrbi ga delite, da vas lahko drugi najdejo in vam sledijo.</string>
-    <string name="new_key_step_intro_nsec">Vaš zasebni ključ (nsec) je geslo, ki ga NI MOGOČE nikoli ponastaviti. To je zadnjič, ko bo prikazan — shranite ga zdaj, sicer boste za vedno izgubili dostop do tega računa.</string>
-    <string name="new_key_keys_title">Vaši ključi</string>
-    <string name="new_key_confirm_title">Še to</string>
-    <string name="new_key_confirm_recap">Shranite svoj tajni ključ v upravitelja gesel. Če ga izgubite, vam ga nihče ne more povrniti.</string>
-    <string name="new_key_readonly_info">Ta račun je samo za branje. Zasebni ključ ni bil ustvarjen, zato ni kaj shraniti.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Varnostno kopiranje ključev</string>
-    <string name="backup_keys_public_label">Javni ključ (npub)</string>
-    <string name="backup_keys_public_help">Vaš javni ključ je varen za deljenje. Dajte ga ljudem, da vas lahko najdejo in vam sledijo.</string>
-    <string name="backup_keys_show_qr">Pokaži QR</string>
-    <string name="backup_keys_hide_qr">Skrij QR</string>
     <string name="backup_keys_secret_label">Zasebni ključ (nsec)</string>
-    <string name="backup_keys_secret_warning">Vaš zasebni ključ je kot geslo, ki ga NI MOGOČE nikoli ponastaviti ali obnoviti. Vsakdo, ki ga ima, ima za vedno nadzor nad vašim računom. Nikoli ga ne delite z drugimi; shranite ga v upravitelja gesel.</string>
-    <string name="backup_keys_secret_hidden">Zasebni kluč je skrit</string>
     <string name="backup_keys_reveal">Prikaži zasebni ključ</string>
     <string name="backup_keys_hide">Skrij zasebni ključ</string>
-    <string name="backup_keys_copy_plain">Kopiraj zasebni ključ</string>
-    <string name="backup_keys_copy_plain_warning">Kopira nešifriran zasebni ključ (nsec). Prilepite ga samo v zaupanja vrednega upravitelja gesel.</string>
-    <string name="backup_keys_copy_encrypted">Kopiraj šifrirano (priporočeno)</string>
-    <string name="backup_keys_encrypt_password_label">Geslo za šifrirano varnostno kopijo</string>
-    <string name="backup_keys_encrypt_failed">Ključa ni bilo mogoče šifrirati. Prosimo, poskusite znova.</string>
     <string name="backup_keys_external_signer">Ta račun uporablja zunanjega podpisnika — tukaj ni shranjenega nobenega zasebnega ključa.</string>
-    <string name="backup_keys_copied">Kopirano!</string>
     <string name="backup_keys_copy">Kopiraj</string>
-    <string name="backup_keys_unlock_title">Prikaži zasebni ključ</string>
-    <string name="backup_keys_unlock_subtitle">Vnesite geslo za zaklepanje zasebnosti, da razkrijete svoj zasebni ključ.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Kopiraj</string>
     <string name="action_paste">Prilepi</string>
     <string name="action_cancel">Prekliči</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Shrani</string>
-    <string name="action_delete">Izbriši</string>
-    <string name="action_share">Deli</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Neveljavna oblika ključa. Preverite vnos in poskusite znova.</string>
-    <string name="error_network">Omrežna napaka. Preverite svojo povezavo.</string>
-    <string name="error_generic">Prišlo je do napake. Prosimo, poskusite znova.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Osveži</string>
     <string name="action_try_again">Poskusi znova</string>
@@ -126,8 +71,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">odgovoriti </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">Statična spletna stran: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Dovoljenja:</string>
@@ -214,10 +157,7 @@
     <string name="geocache_verified_find">Potrjena najdba</string>
     <string name="geocache_invalid_proof">Dokaz se ne ujema</string>
     <string name="geocache_loading">Nalaganje zaklada…</string>
-    <string name="geocache_hidden_by">Skril/a %1$s</string>
     <string name="geocache_navigate">Navigiraj</string>
-    <string name="geocache_copy_coordinates">Kopiraj koordinate</string>
-    <string name="geocache_coordinates_copied">Koordinate kopirane</string>
     <string name="geocache_photos_section">Fotografije</string>
     <string name="geocache_mission_section">Misija Key Quest</string>
     <string name="geocache_logs_section">Vpisi</string>
@@ -240,7 +180,6 @@
     <string name="geocache_archived_notice">Ta zaklad je arhiviran. Ni več v igri.</string>
     <string name="geocache_ftf_won_by">Prvi najditelj: %1$s</string>
     <string name="geocache_ftf_available">Naziv prvega najditelja je še prost</string>
-    <string name="geocache_owner_actions">Lastnik</string>
     <string name="geocache_owner_edit">Uredi ta zaklad</string>
     <string name="geocache_owner_archive">Arhiviraj ta zaklad</string>
     <string name="geocache_owner_archive_confirm">Arhiviraj ga. Iskalci bodo videli, da ni več v igri, opis pa ostane berljiv.</string>
@@ -252,7 +191,6 @@
     <string name="geocache_log_type_dnf">Nisem našel/a</string>
     <string name="geocache_log_type_note">Zapisek</string>
     <string name="geocache_log_type_maintenance">Potrebno vzdrževanje</string>
-    <string name="geocache_log_title">Zabeleži najdbo</string>
     <string name="geocache_log_cache_label">Zaklad</string>
     <string name="geocache_log_your_log">Tvoj vpis</string>
     <string name="geocache_log_placeholder">Kako je šlo?</string>
@@ -274,11 +212,6 @@
     <string name="geocache_tab_hunts">Iskanja</string>
     <string name="geocache_tab_finds">Najdbe</string>
     <string name="geocache_tab_mine">Moji</string>
-    <string name="geocache_filter_unfound">Nenajdeni</string>
-    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
-    <string name="geocache_filter_terrain">T ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Ima nagrado</string>
-    <string name="geocache_filter_verified_only">Zahtevano dokazilo</string>
     <string name="geocache_use_my_location">Uporabi mojo lokacijo</string>
     <string name="geocache_sorted_by_distance">Razvrščeno po razdalji</string>
     <string name="geocache_sorted_by_recent">Najnovejše najprej</string>
@@ -287,25 +220,17 @@
     <string name="geocache_empty_finds">Še nisi zabeležil/a nobene najdbe.</string>
     <string name="geocache_empty_mine">Še nisi skril/a nobenega zaklada.</string>
     <string name="geocache_empty_hunts">Ni še lovov.</string>
-    <string name="geocache_stat_finds">Najdbe</string>
-    <string name="geocache_stat_ftf">Prve najdbe</string>
-    <string name="geocache_stat_verified">Potrjeno</string>
-    <string name="geocache_stat_hidden">Skriti</string>
-    <string name="geocache_map_recenter">Centriraj na mene</string>
     <string name="geocache_map_long_press">Dolgo pritisni na zemljevid, da tam skriješ zaklad</string>
     <string name="geocache_map_open">Odpri</string>
     <string name="geocache_new_section_where">Kje</string>
     <string name="geocache_new_section_what">Kaj</string>
     <string name="geocache_new_section_extras">Dodatki</string>
     <string name="geocache_new_section_proof">Dokaz</string>
-    <string name="geocache_new_section_relays">Releji</string>
     <string name="geocache_new_location_warning">S tem objaviš javno lokacijo, natančno na približno 5 metrov. Vsakdo na Nostru jo lahko vidi, objavljenega dogodka pa ni mogoče preklicati.</string>
     <string name="geocache_new_pick_location">Izberi mesto</string>
     <string name="geocache_new_ladder">Objavi %1$s, poleg tega pa še bolj grobe celice do 3 znakov za iskanje po bližini.</string>
     <string name="geocache_new_name">Ime</string>
     <string name="geocache_new_description">Opis</string>
-    <string name="geocache_new_type">Tip</string>
-    <string name="geocache_new_size">Velikost</string>
     <string name="geocache_new_difficulty">Težavnost</string>
     <string name="geocache_new_terrain">Teren</string>
     <string name="geocache_new_hint">Namig</string>
@@ -315,10 +240,7 @@
     <string name="geocache_new_modifiers">Modifikatorji</string>
     <string name="geocache_new_require_proof">Zahtevaj dokaz o prisotnosti</string>
     <string name="geocache_new_proof_ready">Za ta zaklad je bil ustvarjen ključ za preverjanje.</string>
-    <string name="geocache_new_log_relays">Kam naj najditelji vpišejo najdbo</string>
     <string name="geocache_new_publish">Objavi</string>
-    <string name="geocache_new_needs_name">Daj zakladu ime.</string>
-    <string name="geocache_new_needs_location">Izberi, kje je zaklad skrit.</string>
     <string name="geocache_hunt_progress">%1$d od %2$d najdenih</string>
     <string name="geocache_hunt_start">Začni lov</string>
     <plurals name="geocache_hunt_caches">
@@ -331,15 +253,10 @@
     <string name="geocache_hunt_description">Opis</string>
     <string name="geocache_hunt_banner">Slika pasice</string>
     <string name="geocache_hunt_pick_caches">Zakladi, po vrsti</string>
-    <string name="geocache_hunt_add_cache">Dodaj zaklad</string>
     <string name="geocache_hunt_move_up">Premakni navzgor</string>
     <string name="geocache_hunt_move_down">Premakni navzdol</string>
     <string name="geocache_hunt_remove">Odstrani</string>
-    <string name="geocache_hunt_theme">Tema strani</string>
-    <string name="geocache_hunt_map_style">Slog zemljevida</string>
-    <string name="geocache_hunt_needs_title">Lovu daj naslov.</string>
     <string name="geocache_hunt_needs_caches">Dodaj vsaj en zaklad.</string>
-    <string name="geocache_publish_failed">Objavljanje ni uspelo. Preveri povezavo z relejem in poskusi znova.</string>
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
@@ -421,7 +338,6 @@
     <string name="qr_scanner_label_hex_key">Surov ključ (javni ali zasebni)</string>
     <string name="qr_scanner_open_link">Odpri povezavo</string>
     <string name="qr_scanner_copy">Kopiraj</string>
-    <string name="qr_scanner_copied">Kopirano</string>
     <string name="qr_scanner_try_again">Skeniraj znova</string>
     <string name="show_qr">Pokaži QR kodo</string>
     <string name="profile_image">Slika profila</string>
@@ -477,7 +393,6 @@
     <string name="quote">Citiraj</string>
     <string name="fork">Razcepi</string>
     <string name="new_amount_in_sats">Nova vrednost v Sat</string>
-    <string name="and"> in </string>
     <string name="following"> Sledi</string>
     <string name="followers"> Sledilcev</string>
     <string name="number_following">%1$s Sledim</string>
@@ -742,7 +657,6 @@
     <string name="channel_created">Kanal ustvarjen</string>
     <string name="channel_information_changed_to">Informacije kanala spremenjene v</string>
     <string name="new_public_chat">Ustvari nov javen klepet</string>
-    <string name="marmot_group_no_messages_yet">Še ni sporočil</string>
     <string name="paid_relay">Plačljiv rele</string>
     <string name="tor_relay">Vsili Tor pri povezovanju</string>
     <string name="posts_received">sprejete objave</string>
@@ -983,36 +897,22 @@
     <string name="health_connect_rationale_limit_optional">Celotna funkcija je neobvezna. Dovoljenja v Health Connect lahko kadar koli prekličeš — My Fitness se vrne na svoje pozivno okno — ali izklopiš predloge v urejevalniku pod Nastavitve → Nastavitve urejevalnika. Preostanek Amethysta deluje naprej.</string>
     <string name="health_connect_rationale_privacy_policy">Preberi celotno politiko zasebnosti</string>
     <string name="my_fitness_title">Moja kondicija</string>
-    <string name="my_fitness_window">Zadnje 4 tedne</string>
     <string name="my_fitness_loading_metrics">Nalaganje razdalje, kalorij in utripa…</string>
-    <string name="my_fitness_window_note">Zadnji štirje polni tedni tvoje vadbe: treningi, ki si jih objavil/a, in vse, kar Health Connect zabeleži na tem telefonu. Amethyst povzetek izračuna na napravi in ničesar od tega ne objavi.</string>
     <string name="my_fitness_this_week">Ta teden</string>
-    <string name="my_fitness_vs_last_week">proti prejšnjemu tednu</string>
-    <string name="my_fitness_weekly_average">Tedensko povprečje</string>
     <string name="my_fitness_workouts">Treningi</string>
     <string name="my_fitness_active_days">Dejavni dnevi</string>
-    <string name="my_fitness_streak">Zaporedni dnevi</string>
-    <string name="my_fitness_time">Čas</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$d h %2$d min</string>
     <string name="my_fitness_duration_minutes">%1$d min</string>
     <string name="my_fitness_duration_seconds">%1$d s</string>
     <string name="my_fitness_distance">Razdalja</string>
-    <string name="my_fitness_calories">Kalorije</string>
-    <string name="my_fitness_steps">Koraki</string>
-    <string name="my_fitness_elevation">Vzpon</string>
-    <string name="my_fitness_avg_heart_rate">Povp. srčni utrip</string>
-    <string name="my_fitness_max_heart_rate">Maks. utrip</string>
-    <string name="my_fitness_by_activity">Po dejavnosti</string>
-    <string name="my_fitness_bests">Najboljši dosežki</string>
     <string name="my_fitness_best_longest_distance">Najdaljša razdalja</string>
     <string name="my_fitness_best_longest_duration">Najdaljši trening</string>
     <string name="my_fitness_best_biggest_climb">Največji vzpon</string>
     <string name="my_fitness_best_most_steps">Največ korakov</string>
     <string name="my_fitness_best_highest_heart_rate">Najvišji srčni utrip</string>
     <string name="my_fitness_recent">Nedavni treningi</string>
-    <string name="my_fitness_empty">V zadnjih 4 tednih ni zabeleženega nič. Tukaj se prikažejo treningi, ki jih objaviš, in tisti, ki jih zabeleži tvoja ura.</string>
     <string name="my_fitness_connect_title">Spremljaj svoje treninge</string>
     <string name="my_fitness_connect_message">Poveži Health Connect, da vidiš tedenske vsote, trend glede na prejšnji teden, najboljše dosežke in niz treningov. Vse ostane na tvojem telefonu.</string>
     <string name="my_fitness_connect_banner">Poveži Health Connect, da dodaš treninge, ki jih zabeleži tvoja ura, z utripom, koraki in vzponom.</string>
@@ -1094,7 +994,6 @@
         <item quantity="other">Najbolje: %1$d tednov</item>
     </plurals>
     <string name="nsite_none_found">nSites še niso najdena.</string>
-    <string name="browser_reload">Ponovno naloži</string>
     <string name="browser_unsupported">Vgrajeni brskalnik zahteva Android 11 ali novejši.</string>
     <string name="embedded_tab_load_failed">Te aplikacije ni bilo mogoče naložiti.</string>
     <string name="page_error_not_found_title">Tega spletnega mesta ni mogoče najti</string>
@@ -1128,10 +1027,6 @@
     <string name="browser_recent_options">Možnosti</string>
     <string name="browser_recent_remove">Odstrani iz zgodovine</string>
     <string name="favorite_apps_empty">Še ni priljubljenih aplikacij. Odprite spletni odjemalec ali nsite in tapnite zvezdico za pripenjanje.</string>
-    <string name="favorite_app_open_window">Odpri v novem oknu</string>
-    <string name="favorite_app_access_title">Do česa lahko ta aplikacija dostopa</string>
-    <string name="favorite_app_access_static">Deluje v peskovniku brez posebnega dostopa do vašega računa.</string>
-    <string name="favorite_app_access_show">Dostop do</string>
     <string name="favorite_app_unavailable">Ta aplikacija še ni naložena. Odprite jo s kartice ali poskusite znova čez trenutek.</string>
     <string name="napplet_manage_permissions">Upravljanje dovoljenj</string>
     <string name="napplet_permissions_ask_each_time">Vsakič me vprašaj</string>
@@ -1232,8 +1127,6 @@
     <string name="relay_auth_remember_relay">Zapomni si za ta rele</string>
     <string name="relay_auth_log_in">Vpiši se</string>
     <string name="relay_auth_not_now">Ne zdaj</string>
-    <string name="relay_auth_never_allow">Ne dovoli nikoli</string>
-    <string name="relay_auth_how_we_decide">Kako se Amethyst odloči</string>
     <string name="relay_auth_exceptions">Izjeme</string>
     <string name="relay_auth_no_exceptions">Še ni izjem. Vsak rele sledi zgornjim pravilom.</string>
     <string name="relay_auth_segment_always">Vedno</string>
@@ -1594,7 +1487,6 @@
     <string name="pledge_amount_in_sats">Prispevaj vsoto v sat</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
-    <string name="poll_consensus_threshold">Soglasje</string>
     <string name="looking_for_event">Iskanje dogodka %1$s</string>
     <string name="looking_for_event_title">Nalaganje</string>
     <string name="looking_for_private_event">Čakanje na nalaganje tvojih ZS…</string>
@@ -1604,11 +1496,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Dodaj sporočilo k fakturi</string>
     <string name="custom_zaps_add_a_message_example">Hvala za vso tvoje delo!</string>
     <string name="lightning_create_and_add_invoice">Ustvari in dodaj</string>
-    <string name="add_content">Dodaj v sporočilo</string>
-    <string name="add_caption">Dodaj napis</string>
-    <string name="add_caption_example">Moja draga družba</string>
-    <string name="content_description">Opis vsebine</string>
-    <string name="content_description_example">Modra jadrnica pri beli peščeni plaži ob sončnem zahodu</string>
     <string name="ai_suggested_alt_text_hint">Predlog AI, za urejanje</string>
     <string name="ai_suggested_alt_text_dismiss">Zavrni predloge AI</string>
     <string name="zap_type">Vrsta Zap-a</string>
@@ -2115,8 +2002,6 @@
         <item quantity="few">Tor se ne povezuje. %1$d releji čakajo nanj.</item>
         <item quantity="other">Tor se ne povezuje. %1$d relejev čaka nanj.</item>
     </plurals>
-    <string name="tor_splash_error">Napaka Tora: %1$s</string>
-    <string name="tor_splash_explainer">Amethyst uporablja Tor, da pred releji skrije tvoj naslov IP. Zagon Tora lahko traja minuto in potrebuje dostop do interneta.</string>
     <string name="notification_settings_categories_explainer">Dotakni se kategorije, da odpreš njene nastavitve obvestil v Androidu — tam te čakajo zvok, pomembnost, značke in funkcija Ne moti.</string>
     <string name="notification_channel_status_on">Vklop</string>
     <string name="notification_channel_status_silent">Tiho</string>
@@ -2203,7 +2088,6 @@
     <string name="wallet_filter_all">Vse</string>
     <string name="wallet_filter_zaps">Zapi</string>
     <string name="wallet_filter_non_zaps">Brez zapov</string>
-    <string name="wallet_add">Dodaj denarnico</string>
     <string name="wallet_default">Privzeto</string>
     <string name="wallet_set_default">Nastavi kot privzeto</string>
     <string name="wallet_remove">Odstrani</string>
@@ -2331,8 +2215,6 @@
     <string name="cashu_redeemed_amount">V denarnico si uspešno prejel %1$s satov.</string>
     <string name="wallet_paste_uri">Prilepi nostr+walletconnect:// URI</string>
     <string name="wallet_save">Shrani</string>
-    <string name="wallet_rename">Preimenuj</string>
-    <string name="wallet_rename_title">Preimenuj denarnico</string>
     <string name="wallet_onchain_transactions">On-chain transakcije</string>
     <string name="wallet_onchain_no_address">Za ta račun ni na voljo nobenega on-chain naslova.</string>
     <string name="wallet_onchain_no_backend">Zaledni sistem verige ni nastavljen.</string>
@@ -2699,7 +2581,6 @@
     <string name="git_repo_filter_open">Odprto</string>
     <string name="git_repo_filter_closed">Zaprto in rešeno</string>
     <string name="git_repo_label_all">Vsi</string>
-    <string name="git_repo_bookmark">Zaznamuj repozitorij</string>
     <string name="git_repo_stat_branches">Veje</string>
     <string name="git_repo_stat_tags">Oznake</string>
     <string name="git_repo_stat_files">Datoteke</string>
@@ -2732,7 +2613,6 @@
     <string name="git_new_issue_button">Nov</string>
     <string name="git_new_issue_title">Prijavi težavo</string>
     <string name="git_new_issue_subject">Naslov</string>
-    <string name="git_new_issue_body">Opis</string>
     <string name="git_new_issue_create">Ustvari</string>
     <string name="git_new_issue_cancel">Prekliči</string>
     <string name="git_new_issue_labels">Oznake</string>
@@ -2744,7 +2624,6 @@
     <string name="git_pr_loading_changes">Nalagam spremembe…</string>
     <string name="git_pr_no_changes">Ni najdenih sprememb datotek.</string>
     <string name="git_pr_changes_retry">Ponovno naloži spremembe</string>
-    <string name="git_pr_revised">Popravljeno</string>
     <string name="git_cover_note">Spremno sporočilo</string>
     <string name="git_ci_success">CI uspešen</string>
     <string name="git_ci_failure">CI ni uspel</string>
@@ -2819,7 +2698,6 @@
     <string name="accessibility_play_username">Predvajaj uporabniško ime</string>
     <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Skeniraj QR kodo</string>
-    <string name="accessibility_select_date">Izberi datum</string>
     <string name="draft">Osnutek</string>
     <string name="bounty_label">Nagrada</string>
     <string name="load_from_text">Iz zapiska</string>
@@ -2957,9 +2835,7 @@
     <string name="closing_time">Končni čas</string>
     <string name="confirm">Potrdi</string>
     <string name="next">Naprej</string>
-    <string name="go_back">Nazaj</string>
     <string name="approve">Dovoli</string>
-    <string name="connected">Povezano</string>
     <string name="social_proof">Družbeno dokazilo</string>
     <string name="poll_submit">Oddaj</string>
     <string name="poll_view_results">Preglej rezultate</string>
@@ -3594,7 +3470,6 @@
     <string name="add_a_nip96_server">Dodaj NIP-96 strežnik</string>
     <string name="add_client_tag_explainer">Če je omogočeno, Amethyst vašim objavljenim dogodkom doda NIP-87 oznako Nostr odjemalca.</string>
     <string name="add_client_tag_title">Vključi oznako Nostr odjemalca v moje dogodke</string>
-    <string name="add_sensitive_content_description">Doda opozorilo o občutljivi vsebini pred prikazom te vsebine</string>
     <string name="add_sensitive_content_label">Občutljiva vsebina</string>
     <string name="add_to_messages">Dodaj med sporočila</string>
     <string name="add_to_public_bookmarks">Dodaj v javne zaznamke</string>
@@ -3830,8 +3705,6 @@
     <string name="browser">Brskalnik</string>
     <string name="browser_favorites">Priljubljene</string>
     <string name="browser_suggested">Odkrijte spletne aplikacije</string>
-    <string name="browser_tor_off">Nalaganje prek odprtega spleta. Tapnite za uporabo Tor.</string>
-    <string name="browser_tor_on">Nalaganje prek Tor. Tapnite za uporabo odprtega spleta.</string>
     <string name="buzz_channel_archive">Arhiviraj kanal</string>
     <string name="buzz_channel_create_title">Nov kanal</string>
     <string name="buzz_channel_delete">Izbriši kanal</string>
@@ -4153,15 +4026,10 @@
     <string name="connectivity_type_never">Nikoli</string>
     <string name="connectivity_type_unmetered_wifi_only">Samo z WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Dodaj dokument</string>
-    <string name="content_description_add_image">Dodaj sliko</string>
-    <string name="content_description_add_media">Dodaj medij</string>
-    <string name="content_description_add_video">Dodaj video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Skrij</string>
     <string name="content_warning_see_warnings_option">Opozori</string>
     <string name="content_warning_show_all_sensitive_content_option">Prikaži</string>
     <string name="conversations">Razprave</string>
-    <string name="convert_gif_to_mp4_description">Pretvori animirane slike GIF v video MP4 za manjšo datoteko in boljšo združljivost predvajanja.</string>
     <string name="convert_gif_to_mp4_label">Pretvori GIF v MP4</string>
     <string name="copied_note_id_to_clipboard">Zapiskov ID (@note1) kopiran v odložišče</string>
     <string name="copied_note_text_to_clipboard">Tekst zapiska kopiran v odložišče</string>
@@ -4270,7 +4138,6 @@
     <string name="emoji_private_explainer">Zasebni emojiji so šifrirano shranjeni na relejih in vidni le vam. V meniju za odzive in pri samodejnem dokončanju z »:« se pojavijo enako kot javni.</string>
     <string name="emoji_public_explainer">Javni emojiji so vidni vsem. Ko dodate ta paket, se bodo pojavili v meniju za odzive in v izbirniku ob vpisu dvopičja (":").</string>
     <string name="emoji_sets">Emojiji</string>
-    <string name="encrypt_files_description">Za večjo zasebnost datoteke pred nalaganjem šifrirajte. Nekateri strežniki pri brezplačnih računih morda ne sprejemajo šifriranih datotek.</string>
     <string name="encrypt_files_label">Šifriraj datoteke</string>
     <string name="ephemeral_relay_chat">Izginjajoči klepeti</string>
     <string name="error">Napaka</string>
@@ -4319,8 +4186,6 @@
     <string name="failed_to_upload_media_no_details">Nalaganje medija ni uspelo</string>
     <string name="failed_to_upload_to_server_with_message">Nalaganje na %1$s ni uspelo: %2$s</string>
     <string name="favorite_app_add">dodaj med priljubljene</string>
-    <string name="favorite_app_network_open">Nalaganje prek odprtega spleta</string>
-    <string name="favorite_app_network_tor">Nalaganje prek Tor</string>
     <string name="favorite_app_recent">Nedavno</string>
     <string name="favorite_app_remove">Odstrani iz priljubljenih</string>
     <string name="favorite_app_still_loading">Ta aplikacija še ni naložena. Poskusite znova kasneje.</string>
@@ -4843,12 +4708,6 @@
         <item quantity="other">%1$d članov</item>
     </plurals>
     <string name="marmot_member_removed">Član odstranjen</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d sporočilo</item>
-        <item quantity="two">%1$d sporočili</item>
-        <item quantity="few">%1$d sporočila</item>
-        <item quantity="other">%1$d sporočilo</item>
-    </plurals>
     <string name="marmot_not_a_member">Ni član te skupine</string>
     <string name="marmot_admin_delete_message">Izbriši za vse</string>
     <string name="room_remove_for_everyone_title">Izbriši za vse?</string>
@@ -5102,14 +4961,7 @@
     <string name="nest_lower_hand">Spusti roko</string>
     <string name="nest_mic_mute">Izklopi mikrofon</string>
     <string name="nest_mic_unmute">Vklopi mikrofon</string>
-    <string name="nest_mute">Utišaj</string>
     <string name="nest_no_server_save_failed">Seznama strežnikov gnezda ni bilo mogoče shraniti. Poskusite znova.</string>
-    <string name="nest_notification_broadcasting">Gnezdo — V živo</string>
-    <string name="nest_notification_channel">Gnezda</string>
-    <string name="nest_notification_channel_description">Ohrani predvajanje zvoka, ko je soba odprta.</string>
-    <string name="nest_notification_listening">Gnezdo je povezano</string>
-    <string name="nest_notification_stop">Stop</string>
-    <string name="nest_notification_text">Dotaknite se za vrnitev</string>
     <string name="nest_participant_follow">Sledi</string>
     <string name="nest_participant_mute">Utišaj</string>
     <string name="nest_participant_unfollow">Prenehaj slediti</string>
@@ -5120,7 +4972,6 @@
     <string name="nest_presence_raised_hand">so dvignili roko</string>
     <string name="nest_presence_speaking">govori</string>
     <string name="nest_raise_hand">Dvigni roko</string>
-    <string name="nest_unmute">Vklopi zvok</string>
     <string name="nests">Zvočne sobe</string>
     <string name="nests_servers_my_explainer">Shranjeno kot zamenljiv dogodek kind-10112, da lahko vaše nastavitve berejo tudi drugi odjemalci.</string>
     <string name="nests_servers_my_section">Vaši strežniki</string>
@@ -5317,12 +5168,6 @@
         <item quantity="few">%1$d prenosi</item>
         <item quantity="other">%1$d prenosov</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d sredstvo v paketu</item>
-        <item quantity="two">%1$d sredstva v paketu</item>
-        <item quantity="few">%1$d sredstva v paketu</item>
-        <item quantity="other">%1$d sredstev v paketu</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Aplikacije Blossom niso bile najdene. Za ogled te datoteke namestite lokalno aplikacijo Blossom.</string>
     <string name="no_blossom_apps_found_title">Ne morem odpreti Blossom povezav</string>
     <string name="no_camera_app_found">Na tej napravi ni nameščene nobene aplikacije za kamero</string>
@@ -5334,7 +5179,6 @@
     <string name="no_wallet_found">Denarnica za plačilo z "lightning" ni najdena. Prosimo, namestite "lightning" denarnico da boste lahko Zap-ali ostale</string>
     <string name="pay_elsewhere_title">Plačaj z drugo denarnico</string>
     <string name="pay_elsewhere_description">Nobena aplikacija na tem računalniku tega ne more plačati. Skeniraj kodo z denarnico na telefonu ali jo kopiraj v katero koli Lightning denarnico.</string>
-    <string name="no_wallet_found_with_error">Denarnica za plačilo z "lightning" ni najdena (Napaka: %1$s). Prosimo, namestite "lightning" denarnico da boste lahko Zap-ali ostale</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nimaš nastavljene Zap vsote. Za spremembo uporabi daljši pritisk</string>
     <string name="notification_service_accounts_title">Aktivni računi v ozadju</string>
     <string name="notification_service_master_description">Glavno stikalo za sprotna obvestila v ozadju. Izklopite za varčevanje z baterijo — podobno kot način letenja. Ko je stikalo izklopljeno, noben račun v ozadju ne ostane povezan, nastavitev pa se ohrani (tudi po ponovnem zagonu), dokler je znova ne vklopite.</string>
@@ -5487,7 +5331,6 @@
     <string name="podcast_value_stream_requires_wallet">Povežite denarnico Nostr Wallet Connect ali debetno denarnico za sprotno plačevanje satov med poslušanjem.</string>
     <string name="podcast_value_user_no_lnaddress">Ta uporabnik nima lightning naslova</string>
     <string name="poll_author_no_vote">Avtorji anket ne morejo glasovati v svojih anketah.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Anketa je zaprta za nove glasove</string>
     <string name="poll_multiple_choice">Več izbire</string>
     <plurals name="poll_results_backdated_votes">
@@ -6176,8 +6019,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uporabnik %1$s nima nastavljenega "lightning" naslova za prejemanje satoshi-jev</string>
     <string name="vanish_history">Pregled zahtev za izbris</string>
     <string name="vanish_request_sent">Zahteva za izbris sledi poslana</string>
-    <string name="video_codec_h265_description">Boljša kakovost pri manjših velikostih datotek, vendar predvajanja H.265 ne podpirajo vse naprave.</string>
-    <string name="video_codec_h265_label">Uporabi H.265/HEVC Codec</string>
     <string name="video_collaboration_accepted_on">Sprejeta navedba sodelovanja</string>
     <string name="video_collaboration_declined_on">Zavrnjena navedba sodelovanja</string>
     <string name="video_credit_accepted">Navedba sprejeta</string>
@@ -6316,13 +6157,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Povezava do skupine Cordn</string>
-    <string name="cordn_link_search_keywords">cordn coordinator group link invite mls chat metadata privacy exposure</string>
     <string name="cordn_coordinators_title">Koordinatorji Cordn</string>
-    <string name="cordn_coordinators_search_keywords">cordn coordinator add remove purge health server mls chat ordering</string>
     <string name="cordn_keypackages_title">Ključni paketi Cordn</string>
-    <string name="cordn_keypackages_search_keywords">cordn key package publish invite last resort coordinator mls</string>
     <string name="cordn_backup_title">Varnostna kopija cordn</string>
-    <string name="cordn_backup_search_keywords">cordn backup restore export import passphrase groups recovery</string>
     <string name="chat_type_cordn_title">Skupine Cordn</string>
     <string name="chat_type_cordn_desc">Skupine s šifriranjem od konca do konca, ki jih ureja koordinator po tvoji izbiri, namesto relejev.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6974,7 +6811,6 @@
     <string name="cordn_backup_restore_body">Obnovitev zamenja skupine cordn na tej napravi s tistimi iz datoteke. Namenjena je telefonu, ki je zamenjal drugega — ni način za uporabo istih skupin na dveh napravah hkrati.</string>
     <string name="cordn_backup_restore_confirm_body">Vse skupine cordn na tej napravi bodo odstranjene in zamenjane s tistimi iz datoteke.\n\nNe obnavljaj na drugi telefon, dokler je prvi še v uporabi. Oba bi imela iste skupinske ključe in ko bi oba poslala sporočilo, se skupina pokvari za vse — tiho in brez poti nazaj.</string>
     <string name="cordn_backup_restore_confirm_title">Zamenjam skupine cordn na tej napravi?</string>
-    <string name="cordn_backup_restore_title">Obnovi</string>
     <string name="cordn_backup_restored">Obnovljeno.</string>
     <string name="cordn_chat_empty_description">Vse, kar je poslano sem, je šifrirano za to skupino. Koordinator to posreduje, ne da bi lahko bral.</string>
     <string name="cordn_chat_empty_title">Ni še sporočil</string>
@@ -7017,7 +6853,6 @@
     <string name="cordn_coordinators_purge">Izbriši</string>
     <string name="cordn_coordinators_purge_body">Odstranitev ohrani skupine na tej napravi, zato jih ponovno dodan koordinator prinese s seboj. Brisanje jih izbriše: skupinski ključi, bralna mesta in tvoji paketi ključev gredo, v te skupine pa se lahko vrneš le z novim povabilom.\n\nKoordinator o tem ni obveščen in obdrži, kar je že imel.</string>
     <string name="cordn_coordinators_purge_title">Izbrišem tega koordinatorja?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Odgovarja na</string>
     <string name="cordn_coordinators_relays_more">%1$s +%2$d več</string>
     <string name="cordn_coordinators_remove">Odstrani</string>
@@ -7049,9 +6884,7 @@
         <item quantity="few">%1$d osebe lahko dodajajo in odstranjujejo</item>
         <item quantity="other">%1$d oseb lahko dodaja in odstranjuje</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Skupino upravljam samo jaz</string>
     <string name="cordn_create_admin_only_me_on">Samo ti lahko povabiš, odstraniš člane ali spremeniš podatke skupine. To lahko pozneje prepustiš komu drugemu.</string>
-    <string name="cordn_create_coordinator">Koordinator</string>
     <string name="cordn_create_coordinator_change">Spremeni</string>
     <string name="cordn_create_coordinator_discover">Poišči koordinatorje</string>
     <string name="cordn_create_coordinator_hide">Končano</string>
@@ -7124,7 +6957,6 @@
     <string name="cordn_groups_menu_invitations">Povabila</string>
     <string name="cordn_groups_none">Ni še cordn skupin</string>
     <string name="cordn_groups_none_detail">Cordn skupina živi na enem koordinatorju, ki hrani njeno članstvo in posreduje sporočila, ne da bi kdaj videl, kaj kdo piše.</string>
-    <string name="cordn_groups_start">Začni skupino</string>
     <string name="cordn_info_add_member">Dodaj osebo</string>
     <string name="cordn_info_add_member_none">S tem imenom ni bilo mogoče nikogar najti.</string>
     <string name="cordn_info_add_member_note">Dodati jih je mogoče le, če so na tem koordinatorju objavili ključni paket.</string>
@@ -7233,14 +7065,12 @@
     <string name="cordn_requests_failed">Prošenj ni bilo mogoče prebrati.</string>
     <string name="cordn_requests_none">Nihče ne čaka na pridružitev.</string>
     <string name="cordn_requests_title">Prošnje za pridružitev</string>
-    <string name="cordn_send">Pošlji</string>
     <string name="cordn_send_failed">To ni bilo poslano.</string>
     <string name="cordn_send_no_session">Koordinator te skupine ni odprt, zato še ni mogoče ničesar poslati.</string>
     <string name="cordn_share_copied">Kopirano</string>
     <string name="cordn_share_copy">Kopiraj povezavo</string>
     <string name="cordn_share_explainer">Kdor koli s to povezavo lahko zaprosi za pridružitev. Skrbnik jih mora še vedno sprejeti.</string>
     <string name="cordn_share_title">Deli to skupino</string>
-    <string name="cordn_voice_play">Predvajaj glasovno sporočilo</string>
     <string name="cordn_voice_record">Posnemi glasovno sporočilo</string>
     <string name="cordn_voice_stop">Ustavi in pošlji</string>
     <string name="browser_address_hint">Išči ali vnesi naslov</string>
@@ -7614,7 +7444,6 @@
     <string name="custom_feeds_remove">Odstrani</string>
     <string name="custom_feeds_search_people">Išči po imenu, NIP-05 ali npub</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">V širokih oknih prikaži dodatne stolpce ob glavnem zaslonu, vsak s svojim zaslonom in zgodovino. Nabore stolpcev shrani kot delovne prostore.</string>
     <string name="deck_workspaces">Delovni prostori</string>
     <string name="deck_workspace_number">Delovni prostor %1$d</string>
     <string name="deck_save_workspace">Shrani kot nov delovni prostor</string>
@@ -8544,12 +8373,6 @@
         <item quantity="two">%1$d strežnika</item>
         <item quantity="few">%1$d strežniki</item>
         <item quantity="other">%1$d strežnikov</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d rele</item>
-        <item quantity="two">%1$d releja</item>
-        <item quantity="few">%1$d releji</item>
-        <item quantity="other">%1$d relejev</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d paket emojijev</item>

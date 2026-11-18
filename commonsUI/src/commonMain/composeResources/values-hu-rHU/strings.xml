@@ -1,73 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
-    <string name="login_title">Üdvözöljük az Amethystben</string>
-    <string name="login_subtitle">Jelentkezzen be Nostr a-fiókjába</string>
-    <string name="login_subtitle_desktop">Asztali Nostr-kliens</string>
-    <string name="login_card_title">Jelentkezzen be a Nostr-a kulcsával</string>
-    <string name="login_card_subtitle">nsec a teljes hozzáféréshez, bunker:// a távoli aláíróhoz, vagy npub a csak olvasható módhoz</string>
-    <string name="login_with_key">Bejelentkezés kulccsal</string>
-    <string name="login_button">Bejelentkezés</string>
-    <string name="login_generate_new">Új kulcs előállítása</string>
-    <string name="login_generate_button">Új előállítása</string>
-    <string name="login_key_hint">Adja meg a privát kulcsát (nsec) vagy a nyilvános kulcsát (npub)</string>
-    <string name="login_key_label">nsec, bunker:// vagy npub</string>
-    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
-    <string name="login_show_key">Kulcs megjelenítése</string>
-    <string name="login_hide_key">Kulcs elrejtése</string>
     <!-- New Key Warning -->
-    <string name="new_key_warning_title">FONTOS: Mentse el a kulcsait!</string>
-    <string name="new_key_warning_message">A titkos kulcs (nsec) olyan, mint egy jelszó, amelyet SOHA nem lehet visszaállítani vagy helyrehozni. Ez az EGYETLEN módja a fiókhoz való hozzáférésnek, és aki birtokolja, az örökre irányítja ezt a fiókot. Ha elveszíti, a fiókja végleg elvész. Soha ne adja tovább és tárolja egy jelszókezelőben.</string>
-    <string name="new_key_public_label">Nyilvános kulcs (megosztható):</string>
-    <string name="new_key_secret_label">Titkos kulcs (SOHA ne ossza meg!):</string>
-    <string name="new_key_continue_button">Elmentettem a kulcsaimat, folytatás</string>
-    <string name="new_key_saved_checkbox">Biztonságos helyre mentettem a kulcsaimat</string>
-    <string name="new_key_copy_encrypted_button">Titkosított másolása (ajánlott)</string>
-    <string name="new_key_encrypt_password_label">Jelszó a titkosított biztonsági mentéshez</string>
-    <string name="new_key_step_indicator">%1$d. lépés / %2$d</string>
-    <string name="new_key_next">Következő</string>
-    <string name="new_key_back">Vissza</string>
-    <string name="new_key_cancel">Mégse</string>
-    <string name="new_key_step_intro_title">Mielőtt továbblépne, mentse el a kulcsait</string>
-    <string name="new_key_step_intro_npub">A nyilvános kulcs (npub) az a cím, amelyet megoszthat másokkal. Nyugodtan adja meg másoknak, hogy megtalálhassák és követni tudják Önt.</string>
-    <string name="new_key_step_intro_nsec">A titkos kulcs (nsec) egy jelszó, amelyet SOHA nem lehet visszaállítani. Ez az egyetlen alkalom, amikor megjelenik — mentse el most, különben örökre elveszíti a hozzáférését ehhez a fiókhoz.</string>
-    <string name="new_key_keys_title">Saját kulcsok</string>
-    <string name="new_key_confirm_title">Még valami</string>
-    <string name="new_key_confirm_recap">Tárolja a titkos kulcsát egy jelszókezelőben. Ha elveszíti, akkor senki sem tudja helyrehozni Önnek.</string>
-    <string name="new_key_readonly_info">Ez csak egy olvasásra jogosult fiók. Nem jött létre titkos kulcs, így nincs miről biztonsági mentést készíteni.</string>
     <!-- Key Backup (Desktop settings) -->
-    <string name="backup_keys_title">Kulcsok biztonsági mentése</string>
-    <string name="backup_keys_public_label">Nyilvános kulcs (npub)</string>
-    <string name="backup_keys_public_help">A nyilvános kulcsát nyugodtan megoszthatja másokkal. Adja meg másoknak, hogy megtalálhassák és követni tudják Önt.</string>
-    <string name="backup_keys_show_qr">QR-kód megjelenítése</string>
-    <string name="backup_keys_hide_qr">QR-kód elrejtése</string>
     <string name="backup_keys_secret_label">Titkos kulcs (nsec)</string>
-    <string name="backup_keys_secret_warning">A titkos kulcs egy jelszó, amelyet SOHA nem lehet visszaállítani vagy helyrehozni. Aki ismeri, az örökre irányíthatja ezt a fiókot. Soha ne adja meg senkinek és tárolja egy biztonságos jelszókezelőben.</string>
-    <string name="backup_keys_secret_hidden">A titkos kulcs rejtve van</string>
     <string name="backup_keys_reveal">Titkos kulcs megjelenítése</string>
     <string name="backup_keys_hide">Titkos kulcs elrejtése</string>
-    <string name="backup_keys_copy_plain">Titkos kulcs másolása</string>
-    <string name="backup_keys_copy_plain_warning">Másolja az nsec kulcsot egyszerű szövegként, majd illessze be egy megbízható jelszókezelőbe.</string>
-    <string name="backup_keys_copy_encrypted">Titkosított másolása (ajánlott)</string>
-    <string name="backup_keys_encrypt_password_label">Jelszó a titkosított biztonsági mentéshez</string>
-    <string name="backup_keys_encrypt_failed">Nem sikerült titkosítani a kulcsot. Próbálja újra.</string>
     <string name="backup_keys_external_signer">Ez a fiók külső aláírót használ, itt nincs titkos kulcs tárolva.</string>
-    <string name="backup_keys_copied">Másolva!</string>
     <string name="backup_keys_copy">Másolás</string>
-    <string name="backup_keys_unlock_title">Titkos kulcs megjelenítése</string>
-    <string name="backup_keys_unlock_subtitle">Adja meg az adatvédelmi zár jelszavát a titkos kulcsának megjelenítéséhez.</string>
     <!-- Common Actions -->
-    <string name="action_copy">Másolás</string>
     <string name="action_paste">Beillesztés</string>
     <string name="action_cancel">Mégse</string>
-    <string name="action_ok">OK</string>
     <string name="action_save">Mentés</string>
-    <string name="action_delete">Törlés</string>
-    <string name="action_share">Megosztás</string>
     <!-- Errors -->
-    <string name="error_invalid_key">Érvénytelen kulcsformátum. Ellenőrizze, és próbálja újra.</string>
-    <string name="error_network">Hálózati hiba. Ellenőrizze a kapcsolatot.</string>
-    <string name="error_generic">Hiba történt. Próbálja újra.</string>
     <!-- Loading & Empty States -->
     <string name="action_refresh">Frissítés</string>
     <string name="action_try_again">Próbálja újra</string>
@@ -124,8 +69,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">válasz erre: </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nOldal: %1$s</string>
-    <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
     <string name="napplet_card_kind">nKisalkalmazás</string>
     <string name="nsite_website_kind">nOldal</string>
     <string name="napplet_card_permissions">Engedélyek:</string>
@@ -206,10 +149,7 @@
     <string name="geocache_verified_find">Ellenőrzött megtalálás</string>
     <string name="geocache_invalid_proof">A bizonyíték nem érvényes</string>
     <string name="geocache_loading">Láda betöltése…</string>
-    <string name="geocache_hidden_by">Elrejtette: %1$s</string>
     <string name="geocache_navigate">Navigálás</string>
-    <string name="geocache_copy_coordinates">Koordináták másolása</string>
-    <string name="geocache_coordinates_copied">Koordináták másolva</string>
     <string name="geocache_photos_section">Fényképek</string>
     <string name="geocache_mission_section">Kulcsküldetés küldetés</string>
     <string name="geocache_logs_section">Naplók</string>
@@ -230,7 +170,6 @@
     <string name="geocache_archived_notice">Ezt a ládát archiválták. Már nem játszik.</string>
     <string name="geocache_ftf_won_by">Az első megtalálást %1$s szerezte meg</string>
     <string name="geocache_ftf_available">Az első megtalálás még szabad</string>
-    <string name="geocache_owner_actions">Tulajdonos</string>
     <string name="geocache_owner_edit">Láda szerkesztése</string>
     <string name="geocache_owner_archive">Láda archiválása</string>
     <string name="geocache_owner_archive_confirm">Archiválás. A keresők látni fogják, hogy már nem játszik, de a lista olvasható marad.</string>
@@ -242,7 +181,6 @@
     <string name="geocache_log_type_dnf">Nem találta meg</string>
     <string name="geocache_log_type_note">Megjegyzés</string>
     <string name="geocache_log_type_maintenance">Karbantartást igényel</string>
-    <string name="geocache_log_title">Megtalálás naplózása</string>
     <string name="geocache_log_cache_label">Láda</string>
     <string name="geocache_log_your_log">Saját napló</string>
     <string name="geocache_log_placeholder">Hogy ment?</string>
@@ -264,11 +202,6 @@
     <string name="geocache_tab_hunts">Vadászatok</string>
     <string name="geocache_tab_finds">Megtalálások</string>
     <string name="geocache_tab_mine">Sajátjaim</string>
-    <string name="geocache_filter_unfound">Megtalálatlan</string>
-    <string name="geocache_filter_difficulty">Nehézség ≤ %1$d</string>
-    <string name="geocache_filter_terrain">Terep ≤ %1$d</string>
-    <string name="geocache_filter_has_prize">Van nyereménye</string>
-    <string name="geocache_filter_verified_only">Bizonyíték szükséges</string>
     <string name="geocache_use_my_location">Saját helyzet használata</string>
     <string name="geocache_sorted_by_distance">Rendezés távolság szerint</string>
     <string name="geocache_sorted_by_recent">Legújabb elöl</string>
@@ -277,25 +210,17 @@
     <string name="geocache_empty_finds">Még nem naplózott megtalálást.</string>
     <string name="geocache_empty_mine">Még nem rejtett el ládát.</string>
     <string name="geocache_empty_hunts">Még nincsenek vadászatok.</string>
-    <string name="geocache_stat_finds">Megtalálások</string>
-    <string name="geocache_stat_ftf">Első megtalálások</string>
-    <string name="geocache_stat_verified">Ellenőrzött</string>
-    <string name="geocache_stat_hidden">Elrejtett</string>
-    <string name="geocache_map_recenter">Középre</string>
     <string name="geocache_map_long_press">Egy láda elrejtéséhez nyomja meg hossza a térképet</string>
     <string name="geocache_map_open">Megnyitás</string>
     <string name="geocache_new_section_where">Hol</string>
     <string name="geocache_new_section_what">Mi</string>
     <string name="geocache_new_section_extras">Extrák</string>
     <string name="geocache_new_section_proof">Bizonyíték</string>
-    <string name="geocache_new_section_relays">Átjátszók</string>
     <string name="geocache_new_location_warning">Ez egy nyilvános helyzetet tesz közzé, körülbelül 5 méteres pontossággal. Bárki láthatja a Nostron, ez egy közzétett esemény nem vonható vissza..</string>
     <string name="geocache_new_pick_location">Válassza ki a helyet</string>
     <string name="geocache_new_ladder">Közzéteszi a(z) %1$s értéket, valamint durvább cellákat egészen 3 karakterig a közelségi kereséshez.</string>
     <string name="geocache_new_name">Név</string>
     <string name="geocache_new_description">Leírás</string>
-    <string name="geocache_new_type">Típus</string>
-    <string name="geocache_new_size">Méret</string>
     <string name="geocache_new_difficulty">Nehézség</string>
     <string name="geocache_new_terrain">Terep</string>
     <string name="geocache_new_hint">Tipp</string>
@@ -305,10 +230,7 @@
     <string name="geocache_new_modifiers">Módosítók</string>
     <string name="geocache_new_require_proof">Jelenlét bizonyítékának megkövetelése</string>
     <string name="geocache_new_proof_ready">Ehhez a ládához elő lett állítva egy ellenőrzőkulcs.</string>
-    <string name="geocache_new_log_relays">Hol naplózzanak a keresők</string>
     <string name="geocache_new_publish">Közzététel</string>
-    <string name="geocache_new_needs_name">Adjon nevet a ládának.</string>
-    <string name="geocache_new_needs_location">Válassza ki, hogy hol van elrejtve a láda.</string>
     <string name="geocache_hunt_progress">%2$d / %1$d megtalálva</string>
     <string name="geocache_hunt_start">Vadászat indítása</string>
     <plurals name="geocache_hunt_caches">
@@ -319,15 +241,10 @@
     <string name="geocache_hunt_description">Leírás</string>
     <string name="geocache_hunt_banner">Borítókép</string>
     <string name="geocache_hunt_pick_caches">Ládák sorrendben</string>
-    <string name="geocache_hunt_add_cache">Láda hozzáadása</string>
     <string name="geocache_hunt_move_up">Mozgatás fel</string>
     <string name="geocache_hunt_move_down">Mozgatás le</string>
     <string name="geocache_hunt_remove">Eltávolítás</string>
-    <string name="geocache_hunt_theme">Oldal témája</string>
-    <string name="geocache_hunt_map_style">Térkép stílusa</string>
-    <string name="geocache_hunt_needs_title">Adjon címet a vadászatnak.</string>
     <string name="geocache_hunt_needs_caches">Adjon hozzá legalább egy ládát.</string>
-    <string name="geocache_publish_failed">Nem sikerült közzétenni. Ellenőrizze a kapcsolatot az átjátszóval, és próbálja újra.</string>
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
@@ -403,7 +320,6 @@
     <string name="qr_scanner_label_hex_key">Nyers kulcs (nyilvános vagy privát)</string>
     <string name="qr_scanner_open_link">Hivatkozás megnyitása</string>
     <string name="qr_scanner_copy">Másolás</string>
-    <string name="qr_scanner_copied">Másolva</string>
     <string name="qr_scanner_try_again">Beolvasás újra</string>
     <string name="show_qr">QR-kód megjelenítése</string>
     <string name="profile_image">Profilkép</string>
@@ -459,7 +375,6 @@
     <string name="quote">Idézés</string>
     <string name="fork">Elágaztatás</string>
     <string name="new_amount_in_sats">Új összeg satoshiban</string>
-    <string name="and"> és </string>
     <string name="following"> Követett</string>
     <string name="followers"> Követő</string>
     <string name="number_following">%1$s követett</string>
@@ -722,7 +637,6 @@
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">A csatornainformáció a következőre módosult:</string>
     <string name="new_public_chat">Új nyilvános csevegés létrehozása</string>
-    <string name="marmot_group_no_messages_yet">Még nincs üzenet</string>
     <string name="paid_relay">Fizetős átjátszó</string>
     <string name="tor_relay">Tor kényszerítése kapcsolódáskor</string>
     <string name="posts_received">fogadott bejegyzések</string>
@@ -961,36 +875,22 @@
     <string name="health_connect_rationale_limit_optional">Az egész funkció nem kötelező. Bármikor visszavonhatja az engedélyeket a Health Connectben — a Saját fitnesz visszaáll a beállítására —, vagy kikapcsolhatja a szerkesztő javaslatait a Beállítások → Szerkesztési beállítások alatt. Az Amethyst többi része tovább működik.</string>
     <string name="health_connect_rationale_privacy_policy">Olvassa el a teljes adatvédelmi nyilatkozatot</string>
     <string name="my_fitness_title">Fitnesz</string>
-    <string name="my_fitness_window">Elmúlt 4 hét</string>
     <string name="my_fitness_loading_metrics">Távolság, kalória és pulzusszám betöltése…</string>
-    <string name="my_fitness_window_note">Az edzés utolsó négy teljes hete: a közzétett edzések, valamint minden egyéb adat, amelyet a Health Connect rögzít ezen az eszközön. Az Amethyst az eszközön állítja össze az összefoglalót, és abból semmit sem tesz közzé.</string>
     <string name="my_fitness_this_week">Ezen a héten</string>
-    <string name="my_fitness_vs_last_week">elmúlt héten</string>
-    <string name="my_fitness_weekly_average">Heti átlag</string>
     <string name="my_fitness_workouts">Edzések</string>
     <string name="my_fitness_active_days">Aktív napok</string>
-    <string name="my_fitness_streak">Napi sorozat</string>
-    <string name="my_fitness_time">Idő</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="my_fitness_duration_hours_minutes">%1$dó %2$dp</string>
     <string name="my_fitness_duration_minutes">%1$dp</string>
     <string name="my_fitness_duration_seconds">%1$dmp</string>
     <string name="my_fitness_distance">Távolság</string>
-    <string name="my_fitness_calories">Kalória</string>
-    <string name="my_fitness_steps">Lépések</string>
-    <string name="my_fitness_elevation">Mászás</string>
-    <string name="my_fitness_avg_heart_rate">Átl. szívritmus</string>
-    <string name="my_fitness_max_heart_rate">Max. szívritmus</string>
-    <string name="my_fitness_by_activity">Tevékenység szerint</string>
-    <string name="my_fitness_bests">Legjobb igyekezet</string>
     <string name="my_fitness_best_longest_distance">Leghosszabb távolság</string>
     <string name="my_fitness_best_longest_duration">Leghosszabb edzés</string>
     <string name="my_fitness_best_biggest_climb">Legmagasabb mászás</string>
     <string name="my_fitness_best_most_steps">Legtöbb lépés</string>
     <string name="my_fitness_best_highest_heart_rate">Legmagasabb pulzusszám</string>
     <string name="my_fitness_recent">Legutóbbi edzések</string>
-    <string name="my_fitness_empty">Az elmúlt 4 hétben nem volt rögzítve semmi. A közzétett edzések, valamint az órá által rögzített adatok itt jelennek meg.</string>
     <string name="my_fitness_connect_title">Edzések nyomon követése</string>
     <string name="my_fitness_connect_message">Kapcsolja össze a Health Connecttel, hogy megtekintse a heti összesített adatait, a hétről hétre változó tendenciákat, a legjobb teljesítményeit és az edzéssorozatát. Minden adat az eszközön marad.</string>
     <string name="my_fitness_connect_banner">Kapcsolja össze a Health Connect alkalmazással, hogy hozzáadhassa az órája által rögzített edzéseket, a pulzusszámmal, a lépések számával és a megmászott magassággal együtt.</string>
@@ -1062,7 +962,6 @@
         <item quantity="other">Legjobb: %1$d hét</item>
     </plurals>
     <string name="nsite_none_found">Még nem találhatók nOldalak.</string>
-    <string name="browser_reload">Újratöltés</string>
     <string name="browser_unsupported">Az alkalmazáson belüli böngészőhöz Android 11 vagy újabb verzió szükséges.</string>
     <string name="embedded_tab_load_failed">Nem sikerült betölteni ezt az alkalmazást.</string>
     <string name="page_error_not_found_title">Ez az oldal nem található</string>
@@ -1096,10 +995,6 @@
     <string name="browser_recent_options">Beállítások</string>
     <string name="browser_recent_remove">Eltávolítás az előzmények közül</string>
     <string name="favorite_apps_empty">Még nincs itt semmi. Nyisson meg egy webalkalmazást, nAlkalmazást vagy nOldalt, majd koppintson a csillagra, hogy itt maradjon.</string>
-    <string name="favorite_app_open_window">Megnyitás a saját ablakában</string>
-    <string name="favorite_app_access_title">Mihez férhet hozzá ez az alkalmazás</string>
-    <string name="favorite_app_access_static">Homokozóban fut, különleges hozzáférés nélkül az Ön fiókjához.</string>
-    <string name="favorite_app_access_show">Mihez férhet hozzá</string>
     <string name="favorite_app_unavailable">Ez az alkalmazás még nincs betöltve. Nyissa meg a kártyájáról, vagy próbálja újra egy pillanat múlva.</string>
     <string name="napplet_manage_permissions">Jogosultságok kezelése</string>
     <string name="napplet_permissions_ask_each_time">Rákérdezés minden alkalommal</string>
@@ -1200,8 +1095,6 @@
     <string name="relay_auth_remember_relay">Emlékezzen erre ennél az átjátszónál</string>
     <string name="relay_auth_log_in">Bejelentkezés</string>
     <string name="relay_auth_not_now">Most nem</string>
-    <string name="relay_auth_never_allow">Soha nem engedélyezem</string>
-    <string name="relay_auth_how_we_decide">Hogyan dönt az Amethyst</string>
     <string name="relay_auth_exceptions">Kivételek</string>
     <string name="relay_auth_no_exceptions">Még nincsenek kivételek. Minden átjátszó a fenti szabályokat követi.</string>
     <string name="relay_auth_segment_always">Mindig</string>
@@ -1562,7 +1455,6 @@
     <string name="pledge_amount_in_sats">Hozzájárulás összege satoshiban</string>
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
-    <string name="poll_consensus_threshold">Együttműködés</string>
     <string name="looking_for_event">%1$s esemény keresése</string>
     <string name="looking_for_event_title">Betöltés</string>
     <string name="looking_for_private_event">Várakozás a privát üzenetek betöltésére…</string>
@@ -1572,11 +1464,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Számlaüzenet hozzáadása</string>
     <string name="custom_zaps_add_a_message_example">Köszönöm mindenkinek a munkáját!</string>
     <string name="lightning_create_and_add_invoice">Létrehozás és hozzáadás</string>
-    <string name="add_content">Hozzáadás az üzenethez</string>
-    <string name="add_caption">Képaláírás hozzáadása</string>
-    <string name="add_caption_example">Kedves barátom</string>
-    <string name="content_description">Tartalmi leírás</string>
-    <string name="content_description_example">Egy kék csónak a fehér homokos tengerparton naplementekor</string>
     <string name="ai_suggested_alt_text_hint">LLM által javasolt, szerkessze bátran</string>
     <string name="ai_suggested_alt_text_dismiss">LLM-javaslatok eltüntetése</string>
     <string name="zap_type">Zaptípus</string>
@@ -2077,8 +1964,6 @@
         <item quantity="one">A Tor nem kapcsolódik. %1$d átjátszó vár rá.</item>
         <item quantity="other">A Tor nem kapcsolódik. %1$d átjátszó vár rá.</item>
     </plurals>
-    <string name="tor_splash_error">TOR-hálózati hiba: %1$s</string>
-    <string name="tor_splash_explainer">Az Amethyst a TOR-hálózatot használja, hogy elrejtse az IP-címet az átjátszók elől. A Tor elindítása több percig is eltarthat, és internetkapcsolatra van szükség hozzá.</string>
     <string name="notification_settings_categories_explainer">Koppintson egy kategóriára, hogy megnyissa az ahhoz tartozó Android értesítési beállításokat – itt találhatók a hang-, a fontossági-, az értesítési jelölők- és a „Ne zavarjanak” beállítások.</string>
     <string name="notification_channel_status_on">Be</string>
     <string name="notification_channel_status_silent">Néma</string>
@@ -2165,7 +2050,6 @@
     <string name="wallet_filter_all">Összes</string>
     <string name="wallet_filter_zaps">Zapek</string>
     <string name="wallet_filter_non_zaps">Nem-zapek</string>
-    <string name="wallet_add">Pénztárca hozzáadása</string>
     <string name="wallet_default">Alapértelmezett</string>
     <string name="wallet_set_default">Beállítás alapértelmezettként</string>
     <string name="wallet_remove">Eltávolítás</string>
@@ -2293,8 +2177,6 @@
     <string name="cashu_redeemed_amount">%1$s sat beváltva a pénztárcába.</string>
     <string name="wallet_paste_uri">Illessze be a nostr+walletconnect:// címet</string>
     <string name="wallet_save">Mentés</string>
-    <string name="wallet_rename">Átnevezés</string>
-    <string name="wallet_rename_title">Pénztárca átnevezése</string>
     <string name="wallet_onchain_transactions">Láncon belüli tranzakciók</string>
     <string name="wallet_onchain_no_address">Ehhez a fiókhoz nincs elérhető láncon belüli cím.</string>
     <string name="wallet_onchain_no_backend">Nincs beállítva lánc-háttérprogram.</string>
@@ -2661,7 +2543,6 @@
     <string name="git_repo_filter_open">Megnyitás</string>
     <string name="git_repo_filter_closed">Lezárt és megoldott</string>
     <string name="git_repo_label_all">Összes</string>
-    <string name="git_repo_bookmark">Könyvjelző-tároló</string>
     <string name="git_repo_stat_branches">Ágak</string>
     <string name="git_repo_stat_tags">Címkék</string>
     <string name="git_repo_stat_files">Fájlok</string>
@@ -2694,7 +2575,6 @@
     <string name="git_new_issue_button">Új</string>
     <string name="git_new_issue_title">Új hibajegy</string>
     <string name="git_new_issue_subject">Cím</string>
-    <string name="git_new_issue_body">Leírás</string>
     <string name="git_new_issue_create">Létrehozás</string>
     <string name="git_new_issue_cancel">Mégse</string>
     <string name="git_new_issue_labels">Címkék</string>
@@ -2706,7 +2586,6 @@
     <string name="git_pr_loading_changes">Módosítások betöltése…</string>
     <string name="git_pr_no_changes">Nem találhatók fájlmódosítások.</string>
     <string name="git_pr_changes_retry">Módosítások betöltése újból</string>
-    <string name="git_pr_revised">Felülvizsgált</string>
     <string name="git_cover_note">Kísérő megjegyzés</string>
     <string name="git_ci_success">CI sikeres</string>
     <string name="git_ci_failure">CI sikertelen</string>
@@ -2779,7 +2658,6 @@
     <string name="accessibility_play_username">Felhasználónév lejátszása hangként</string>
     <string name="accessibility_pushpin">Kapcsolatrögzítő (Pushpin)</string>
     <string name="accessibility_scan_qr_code">QR-kód beolvasása</string>
-    <string name="accessibility_select_date">Dátum kiválasztása</string>
     <string name="draft">Piszkozat</string>
     <string name="bounty_label">Fejpénz</string>
     <string name="load_from_text">Üzenet tőle</string>
@@ -2915,9 +2793,7 @@
     <string name="closing_time">Befejezés időpontja</string>
     <string name="confirm">Megerősítés</string>
     <string name="next">Következő</string>
-    <string name="go_back">Vissza</string>
     <string name="approve">Elfogadás</string>
-    <string name="connected">Kapcsolódva</string>
     <string name="social_proof">Közösségi megerősítés</string>
     <string name="poll_submit">Beküldés</string>
     <string name="poll_view_results">Eredmények megtekintése</string>
@@ -3536,7 +3412,6 @@
     <string name="add_a_nip96_server">Egy NIP-96-kiszolgáló hozzáadása</string>
     <string name="add_client_tag_explainer">Ha engedélyezve van, az Amethyst egy NIP-89 klienscímkét fűz hozzá a közzétett eseményekhez.</string>
     <string name="add_client_tag_title">Klienscímke hozzáadása a saját eseményekhez</string>
-    <string name="add_sensitive_content_description">Érzékeny tartalom-figyelmeztetés hozzáadása a tartalom megjelenítése előtt</string>
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_to_messages">Hozzáadás az Üzenetekhez</string>
     <string name="add_to_public_bookmarks">Hozzáadás a nyilvános könyvjelzőkhöz</string>
@@ -3752,8 +3627,6 @@
     <string name="browser">Böngésző</string>
     <string name="browser_favorites">Kedvencek</string>
     <string name="browser_suggested">Webalkalmazások felfedezése</string>
-    <string name="browser_tor_off">Betöltés a nyílt weben keresztül. Koppintson a Tor használatához.</string>
-    <string name="browser_tor_on">Betöltés Tor hálózaton keresztül. Koppintson a nyílt web használatához.</string>
     <string name="buzz_channel_archive">Csatorna archiválása</string>
     <string name="buzz_channel_create_title">Új csatorna</string>
     <string name="buzz_channel_delete">Csatorna törlése</string>
@@ -4045,15 +3918,10 @@
     <string name="connectivity_type_never">Soha</string>
     <string name="connectivity_type_unmetered_wifi_only">Korlátlan Wi-Fi</string>
     <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
-    <string name="content_description_add_document">Dokumentum hozzáadása</string>
-    <string name="content_description_add_image">Kép hozzáadása</string>
-    <string name="content_description_add_media">Média hozzáadása</string>
-    <string name="content_description_add_video">Videó hozzáadása</string>
     <string name="content_warning_hide_all_sensitive_content_option">Elrejtés</string>
     <string name="content_warning_see_warnings_option">Figyelmeztetés</string>
     <string name="content_warning_show_all_sensitive_content_option">Megjelenítés</string>
     <string name="conversations">Beszélgetések</string>
-    <string name="convert_gif_to_mp4_description">Animált GIF-fájlokat MP4-videókká alakít át, így kisebb fájlméretet és jobb lejátszási kompatibilitást biztosít.</string>
     <string name="convert_gif_to_mp4_label">GIF átalakítása MP4 formátumra</string>
     <string name="copied_note_id_to_clipboard">A bejegyzés-azonosító (@note1) a vágólapra másolva</string>
     <string name="copied_note_text_to_clipboard">Bejegyzés szövege a vágólapra másolva</string>
@@ -4144,7 +4012,6 @@
     <string name="emoji_private_explainer">A privát emodzsik titkosítva kerülnek tárolásra az átjátszókon, és csak Önnek láthatók. Ugyanúgy megjelennek a reakciómenüben és a „:” automatikus kiegészítésben, mint a nyilvánosak.</string>
     <string name="emoji_public_explainer">A nyilvános emodzsik mindenki számára láthatók, és megjelennek a reakciómenüben, valamint a „:” automatikus kiegészítő listájában, ha ez a csomag szerepel az emodzsilistában.</string>
     <string name="emoji_sets">Emodzsik</string>
-    <string name="encrypt_files_description">Az adatok védelme érdekében titkosítsa a fájlokat a feltöltés előtt. Egyes kiszolgálók az ingyenes fiókok esetében nem biztos, hogy elfogadják a titkosított fájlokat.</string>
     <string name="encrypt_files_label">Fájlok titkosítása</string>
     <string name="ephemeral_relay_chat">Eltűnő csevegés</string>
     <string name="error">Hiba</string>
@@ -4193,8 +4060,6 @@
     <string name="failed_to_upload_media_no_details">Nem sikerült feltölteni a médiát</string>
     <string name="failed_to_upload_to_server_with_message">Nem sikerült feltölteni a következőre: %1$s: %2$s</string>
     <string name="favorite_app_add">Hozzáadás a kedvencekhez</string>
-    <string name="favorite_app_network_open">Betöltés a nyílt weben keresztül.</string>
-    <string name="favorite_app_network_tor">Betöltés Tor hálózaton keresztül.</string>
     <string name="favorite_app_recent">Legutóbbi</string>
     <string name="favorite_app_remove">Eltávolítás a kedvencekből</string>
     <string name="favorite_app_still_loading">Az az alkalmazás még nincs betöltve. Próbálja újra egy pillanat múlva.</string>
@@ -4707,10 +4572,6 @@
         <item quantity="other">%1$d tag</item>
     </plurals>
     <string name="marmot_member_removed">Tag eltávolítva</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d üzenet</item>
-        <item quantity="other">%1$d üzenet</item>
-    </plurals>
     <string name="marmot_not_a_member">Nem tagja ennek a csoportnak</string>
     <string name="marmot_admin_delete_message">Törlés mindenkinél</string>
     <string name="room_remove_for_everyone_title">Biztosan törli mindenkinél?</string>
@@ -4926,14 +4787,7 @@
     <string name="nest_lower_hand">Kéz leengedése</string>
     <string name="nest_mic_mute">Mikrofon némítása</string>
     <string name="nest_mic_unmute">Mikrofon némításának megszüntetése</string>
-    <string name="nest_mute">Némítás</string>
     <string name="nest_no_server_save_failed">Nem sikerült menteni a hangszoba kiszolgálólistáját. Próbálja újra.</string>
-    <string name="nest_notification_broadcasting">Hangszoba – Élő</string>
-    <string name="nest_notification_channel">Hangszobák</string>
-    <string name="nest_notification_channel_description">Hang lejátszása, amíg a szoba meg van nyitva.</string>
-    <string name="nest_notification_listening">Hangszoba kapcsódott</string>
-    <string name="nest_notification_stop">Leállítás</string>
-    <string name="nest_notification_text">Koppintson ide a visszalépéshez.</string>
     <string name="nest_participant_follow">Követés</string>
     <string name="nest_participant_mute">Némítás</string>
     <string name="nest_participant_unfollow">Követés megszüntetése</string>
@@ -4944,7 +4798,6 @@
     <string name="nest_presence_raised_hand">felemelték a kezüket</string>
     <string name="nest_presence_speaking">beszél</string>
     <string name="nest_raise_hand">Kéz felemelése</string>
-    <string name="nest_unmute">Némítás megszüntetése</string>
     <string name="nests">Hangszobák</string>
     <string name="nests_servers_my_explainer">Kind-10112 típusú cserélhető eseményként mentve, így más kliensek is olvashatják az Ön beállítását.</string>
     <string name="nests_servers_my_section">Saját kiszolgálók</string>
@@ -5119,10 +4972,6 @@
         <item quantity="one">%1$d letöltése</item>
         <item quantity="other">%1$d letöltés</item>
     </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d összetevő egybecsomagolva</item>
-        <item quantity="other">%1$d asset egybecsomagolva</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Nem található Blossom-alkalmazás. Telepítsen egy helyi Blossom-alkalmazást a fájl megtekintéséhez</string>
     <string name="no_blossom_apps_found_title">Nem lehet megnyitni a Blossom-hivatkozásokat</string>
     <string name="no_camera_app_found">Ezen az eszközön nem található kameraalkalmazás</string>
@@ -5134,7 +4983,6 @@
     <string name="no_wallet_found">Nem található pénztárca a Lighning-számla kifizetéséhez. A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
     <string name="pay_elsewhere_title">Fizetés másik pénztárcával</string>
     <string name="pay_elsewhere_description">Ezen a számítógépen egyetlen alkalmazás sem tudja kifizetni ezt. Olvassa be a kódot a telefonján lévő pénztárcával, vagy másolja be bármelyik Lightning-pénztárcába.</string>
-    <string name="no_wallet_found_with_error">Nem található pénztárca a lighning-számla kifizetéséhez (Hiba: %1$s). A zapek használatához telepítsen egy lightning-pénztárcát</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nincs beállítva zapösszeg. Koppintson hosszan a beállításhoz</string>
     <string name="notification_service_accounts_title">Háttérben aktív fiókok</string>
     <string name="notification_service_master_description">Főkapcsoló a valós idejű háttérértesítésekhez. Kapcsolja ki az akkumulátor kímélése érdekében – olyan, mint a repülőgép-üzemmód. Ha ki van kapcsolva, egyetlen fiók sem marad kapcsolatban a háttérben, és kikapcsolva is marad (újraindítások után is), amíg Ön vissza nem kapcsolja.</string>
@@ -5271,7 +5119,6 @@
     <string name="podcast_value_stream_requires_wallet">Párosítson egy Nostr Wallet Connect vagy debit pénztárcát a satok közvetítéséhez hallgatás közben.</string>
     <string name="podcast_value_user_no_lnaddress">Ennek a felhasználónak nincs lightning-címe</string>
     <string name="poll_author_no_vote">A szavazások szerzői nem szavazhatnak a saját szavazásaikon.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">A szavazásra már nem lehet új szavazato(ka)t leadni</string>
     <string name="poll_multiple_choice">Több lehetőség</string>
     <plurals name="poll_results_backdated_votes">
@@ -5896,8 +5743,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A(z) %1$s nevű felhasználó nem rendelkezik a satoshik fogadására beállított lightning-címmel</string>
     <string name="vanish_history">Törlési előzmények</string>
     <string name="vanish_request_sent">Törlési kérés elküldve</string>
-    <string name="video_codec_h265_description">Jobb minőség kisebb fájlméret mellett, de nem minden eszköz támogatja a H.265 lejátszást.</string>
-    <string name="video_codec_h265_label">H.265/HEVC-kodek használata</string>
     <string name="video_collaboration_accepted_on">Elfogadott egy együttműködési kreditet</string>
     <string name="video_collaboration_declined_on">Elutasított egy együttműködési kreditet</string>
     <string name="video_credit_accepted">Kredit elfogadva</string>
@@ -6024,13 +5869,9 @@
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
     <string name="cordn_link_title">Cordn csoporthivatkozás</string>
-    <string name="cordn_link_search_keywords">cordn koordinátor csoporthivatkozás meghívó mls csevegés metaadat adatvédelem kitettség</string>
     <string name="cordn_coordinators_title">Cordn koordinátorok</string>
-    <string name="cordn_coordinators_search_keywords">cordn koordinátor hozzáadás eltávolítás tisztítás állapot kiszolgáló mls csevegés sorbarendezés</string>
     <string name="cordn_keypackages_title">Cordn kulcscsomagok</string>
-    <string name="cordn_keypackages_search_keywords">cordn kulcscsomag közzététel meghívó végsőmegoldás koordinátor mls</string>
     <string name="cordn_backup_title">Cordn biztonsági mentés</string>
-    <string name="cordn_backup_search_keywords">cordn biztonsági mentés helyreállítás exportálás importálás jelmondat csoportok helyrehozás</string>
     <string name="chat_type_cordn_title">Cordn csoportok</string>
     <string name="chat_type_cordn_desc">Végpontok között titkosított csoportok, amelyeket az Ön által választott koordinátor rendez, nem pedig átjátszók.</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
@@ -6608,7 +6449,6 @@
     <string name="cordn_backup_restore_body">A helyreállítás lecseréli az ezen az eszközön lévő cordn csoportokat a fájlban lévőkre. Ez egy olyan eszköznek szól, amely átvett egy másikat; nem arra való, hogy ugyanazokat a csoportokat egyszerre két eszközön használja.</string>
     <string name="cordn_backup_restore_confirm_body">Minden most ezen az eszközön lévő cordn csoport eltávolításra és a fájlban lévőkkel lesz helyettesítve.\n\nNe állítsa helyre egy második eszközre, amíg az elsőt még használja. Mindkettő ugyanazokat a csoportkulcsokat birtokolná, és miután mindkettő küldött egy üzenetet, a csoport mindenki számára végleg használhatatlanná válna.</string>
     <string name="cordn_backup_restore_confirm_title">Lecseréli az eszköz cordn csoportjait?</string>
-    <string name="cordn_backup_restore_title">Helyreállítás</string>
     <string name="cordn_backup_restored">Helyreállítva.</string>
     <string name="cordn_chat_empty_description">Minden ide küldött üzenet titkosítva van ehhez a csoporthoz. A koordinátor továbbítja anélkül, hogy el tudná olvasni.</string>
     <string name="cordn_chat_empty_title">Még nincsenek üzenetek</string>
@@ -6647,7 +6487,6 @@
     <string name="cordn_coordinators_purge">Tisztítás</string>
     <string name="cordn_coordinators_purge_body">Az eltávolítás megtartja a csoportokat ezen az eszközön, így a koordinátor újbóli hozzáadása visszahozza őket. A tisztítás törli őket: a csoportkulcsok, az olvasási pozíciók és a kulcscsomagjai mind eltűnnek, és ezekbe a csoportokba csak friss meghívással lehet újra belépni.\n\nA koordinátort nem értesítik, és megtartja mindazt, amije már volt.</string>
     <string name="cordn_coordinators_purge_title">Tisztítja ezt a koordinátort?</string>
-    <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">Válaszol ezeken</string>
     <string name="cordn_coordinators_relays_more">%1$s és további %2$d</string>
     <string name="cordn_coordinators_remove">Eltávolítás</string>
@@ -6673,9 +6512,7 @@
         <item quantity="one">%1$d személy adhat hozzá és távolíthat el</item>
         <item quantity="other">%1$d személy adhat hozzá és távolíthat el</item>
     </plurals>
-    <string name="cordn_create_admin_only_me">Csak én kezelem ezt a csoportot</string>
     <string name="cordn_create_admin_only_me_on">Csak Ön hívhat meg, távolíthat el tagokat vagy változtathatja meg a csoport adatait. Ezt később átadhatja valaki másnak.</string>
-    <string name="cordn_create_coordinator">Koordinátor</string>
     <string name="cordn_create_coordinator_change">Módosítás</string>
     <string name="cordn_create_coordinator_discover">Koordinátorok keresése</string>
     <string name="cordn_create_coordinator_hide">Kész</string>
@@ -6740,7 +6577,6 @@
     <string name="cordn_groups_menu_invitations">Meghívók</string>
     <string name="cordn_groups_none">Még nincsenek cordn csoportok</string>
     <string name="cordn_groups_none_detail">Egy cordn csoport egyetlen koordinátoron él, amely nyilvántartja a tagságát és továbbítja az üzeneteket, anélkül, hogy valaha is látná, mit írnak.</string>
-    <string name="cordn_groups_start">Indítson egyet</string>
     <string name="cordn_info_add_member">Valaki hozzáadása</string>
     <string name="cordn_info_add_member_none">Senkit sem találtunk azon a néven.</string>
     <string name="cordn_info_add_member_note">Csak akkor adhatók hozzá, ha közzétettek egy kulcscsomagot ehhez a koordinátorhoz.</string>
@@ -6837,14 +6673,12 @@
     <string name="cordn_requests_failed">Nem sikerült beolvasni a kérelmeket.</string>
     <string name="cordn_requests_none">Senki sem vár a csatlakozásra.</string>
     <string name="cordn_requests_title">Csatlakozási kérelmek</string>
-    <string name="cordn_send">Küldés</string>
     <string name="cordn_send_failed">Ez nem került elküldésre.</string>
     <string name="cordn_send_no_session">Ennek a csoportnak a koordinátora nincs nyitva, így még semmit sem lehet küldeni.</string>
     <string name="cordn_share_copied">Másolva</string>
     <string name="cordn_share_copy">Hivatkozás másolása</string>
     <string name="cordn_share_explainer">Bárki, aki rendelkezik ezzel a hivatkozással, kérheti a csatlakozást. Egy adminisztrátornak még mindig be kell engednie.</string>
     <string name="cordn_share_title">Csoport megosztása</string>
-    <string name="cordn_voice_play">Hangfelvétel lejátszása</string>
     <string name="cordn_voice_record">Hangfelvétel készítése</string>
     <string name="cordn_voice_stop">Leállítás és küldés</string>
     <string name="browser_address_hint">Keresés vagy cím megadása</string>
@@ -7188,7 +7022,6 @@
     <string name="custom_feeds_remove">Eltávolítás</string>
     <string name="custom_feeds_search_people">Keresés név, NIP-05 vagy npub alapján</string>
     <string name="deck_mode">Deck</string>
-    <string name="deck_mode_description">Széles ablakokon további oszlopokat jelenít meg a fő képernyő mellett, mindegyiket saját képernyővel és előzményekkel. Az oszlopkészleteket munkaterületekként mentheti.</string>
     <string name="deck_workspaces">Munkaterületek</string>
     <string name="deck_workspace_number">%1$d. munkaterület</string>
     <string name="deck_save_workspace">Mentés új munkaterületként</string>
@@ -8032,10 +7865,6 @@
     <plurals name="kc_list_server_count">
         <item quantity="one">%1$d kiszolgáló</item>
         <item quantity="other">%1$d kiszolgáló</item>
-    </plurals>
-    <plurals name="kc_list_relay_count">
-        <item quantity="one">%1$d átjátszó</item>
-        <item quantity="other">%1$d átjátszó</item>
     </plurals>
     <plurals name="kc_list_emoji_pack_count">
         <item quantity="one">%1$d emodzsicsomag</item>

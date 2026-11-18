@@ -109,7 +109,6 @@
     <string name="quote">Citāts</string>
     <string name="fork">Dakša</string>
     <string name="new_amount_in_sats">Jauna summa sats</string>
-    <string name="and"> un </string>
     <string name="following"> Seko</string>
     <string name="followers"> Sekotāji</string>
     <string name="number_following">%1$s seko</string>
@@ -258,7 +257,6 @@
     <string name="refresh">Atsvaidzināt</string>
     <string name="channel_created">Kanāls izveidots</string>
     <string name="channel_information_changed_to">Kanāla informācija mainīta uz</string>
-    <string name="marmot_group_no_messages_yet">Vēl nav ziņojumu</string>
     <string name="paid_relay">Maksas relay</string>
     <string name="tor_relay">Pieslēdzoties izmanto Tor</string>
     <string name="posts_received">saņemtie ieraksti</string>
@@ -430,7 +428,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites vēl nav atrasti.</string>
-    <string name="browser_reload">Ielādēt atkārtoti</string>
     <string name="browser_unsupported">Lietotnes pārlūkprogrammai nepieciešama Android 11 vai jaunāka versija.</string>
     <string name="embedded_tab_load_failed">Neizdevās ielādēt šo lietotni.</string>
     <string name="browser_go">Atvērt</string>
@@ -438,10 +435,6 @@
     <string name="browser_recent_options">Opcijas</string>
     <string name="browser_recent_remove">Noņemt no vēstures</string>
     <string name="favorite_apps_empty">Izlases lietotņu vēl nav. Atveriet tīmekļa klientu vai nsite un pieskarieties zvaigznei, lai to piespraustu šeit.</string>
-    <string name="favorite_app_open_window">Atvērt savā logā</string>
-    <string name="favorite_app_access_title">Kam šī lietotne var piekļūt</string>
-    <string name="favorite_app_access_static">Darbojas smilšu kastē bez īpašas piekļuves jūsu kontam.</string>
-    <string name="favorite_app_access_show">Kam tā var piekļūt</string>
     <string name="favorite_app_unavailable">Šī lietotne vēl nav ielādēta. Atveriet to no tās kartes vai mēģiniet vēlreiz pēc brīža.</string>
     <string name="napplet_manage_permissions">Pārvaldīt atļaujas</string>
     <string name="napplet_none_found">nApplets vēl nav atrasti.</string>
@@ -659,7 +652,6 @@
     <string name="pledge_amount_in_sats">Solījuma summa sats</string>
     <string name="poll_zap_value_min">Zap minimums</string>
     <string name="poll_zap_value_max">Zap maksimums</string>
-    <string name="poll_consensus_threshold">Vienprātība</string>
     <string name="looking_for_event">Meklē notikumu %1$s</string>
     <string name="send_zap">Sūtīt Zap</string>
     <string name="custom_zaps_add_a_message">Pievienot publisku ziņu</string>
@@ -667,11 +659,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Pievienot rēķina ziņu</string>
     <string name="custom_zaps_add_a_message_example">Paldies par visu jūsu darbu!</string>
     <string name="lightning_create_and_add_invoice">Izveidot un pievienot</string>
-    <string name="add_content">Pievienot ziņai</string>
-    <string name="add_caption">Pievienot aprakstu</string>
-    <string name="add_caption_example">Mans mīļais draugs</string>
-    <string name="content_description">Satura apraksts</string>
-    <string name="content_description_example">Zila laiva baltā smilšainā pludmalē saulrietā</string>
     <string name="ai_suggested_alt_text_hint">AI ieteikts, rediģējiet mani</string>
     <string name="ai_suggested_alt_text_dismiss">Noraidīt AI ieteikumu</string>
     <string name="zap_type">Zap veids</string>
@@ -1002,7 +989,6 @@
     <string name="wallet_refresh">Atsvaidzināt</string>
     <string name="wallet_filter_all">Visi</string>
     <string name="wallet_filter_non_zaps">Ne-Zaps</string>
-    <string name="wallet_add">Pievienot maku</string>
     <string name="wallet_default">Noklusējums</string>
     <string name="wallet_set_default">Iestatīt kā noklusējumu</string>
     <string name="wallet_remove">Noņemt</string>
@@ -1095,8 +1081,6 @@
     <string name="cashu_redeemed_amount">Izpirkts %1$s sats jūsu makā.</string>
     <string name="wallet_paste_uri">Ielīmēt nostr+walletconnect:// URI</string>
     <string name="wallet_save">@string/save</string>
-    <string name="wallet_rename">@string/rename</string>
-    <string name="wallet_rename_title">Pārsaukt maku</string>
     <string name="wallet_onchain_transactions">Onchain darījumi</string>
     <string name="wallet_onchain_no_address">Šim kontam nav pieejama onchain adrese.</string>
     <string name="wallet_onchain_no_backend">Nav konfigurēts ķēdes aizmugures pakalpojums.</string>
@@ -1340,7 +1324,6 @@
     <string name="accessibility_play_username">Atskaņot lietotājvārdu ar skaņu</string>
     <string name="accessibility_pushpin">Piespraudne</string>
     <string name="accessibility_scan_qr_code">Skenēt QR kodu</string>
-    <string name="accessibility_select_date">Izvēlēties datumu</string>
     <string name="load_from_text">No ziņas</string>
     <string name="dvm_looking_for_app">Meklē lietojumprogrammu</string>
     <string name="dvm_waiting_status">Darbs pieprasīts, gaida atbildi</string>
@@ -1441,9 +1424,7 @@
     <string name="closing_time">Slēgšanas laiks</string>
     <string name="confirm">Apstiprināt</string>
     <string name="next">Tālāk</string>
-    <string name="go_back">Atpakaļ</string>
     <string name="approve">Apstiprināt</string>
-    <string name="connected">Savienots</string>
     <string name="social_proof">Sociālais pierādījums</string>
     <string name="poll_submit">Iesniegt</string>
     <string name="poll_view_results">Skatīt rezultātus</string>
@@ -1782,7 +1763,6 @@
     <string name="add_a_nip96_server">Pievienot NIP-96 serveri</string>
     <string name="add_client_tag_explainer">Ja iespējots, Amethyst pievieno NIP-89 klienta atzīmi jūsu publicētajiem notikumiem.</string>
     <string name="add_client_tag_title">Pievienot klienta atzīmi saviem notikumiem</string>
-    <string name="add_sensitive_content_description">Pievieno sensitīvā satura brīdinājumu pirms šī satura rādīšanas</string>
     <string name="add_sensitive_content_label">Sensitīvs saturs</string>
     <string name="add_to_public_bookmarks">Pievienot publiskajām grāmatzīmēm</string>
     <string name="ai_writing_setting_description">Izmanto ierīcē esošu MI modeli, lai piedāvātu teksta labojumus un toņa izmaiņas.</string>
@@ -1860,8 +1840,6 @@
     <string name="broadcast_section_explainer">Relay, kas specializējas jūsu piezīmju pārsūtīšanā uz visiem pārējiem relay, piemēram, sendit.nosflare.com. Amethyst pievienos šo relay visiem jūsu jaunajiem notikumiem</string>
     <string name="browser">Pārlūkprogramma</string>
     <string name="browser_favorites">Izlase</string>
-    <string name="browser_tor_off">Ielāde notiek caur atvērto tīmekli. Pieskarieties, lai izmantotu Tor.</string>
-    <string name="browser_tor_on">Ielāde notiek caur Tor. Pieskarieties, lai izmantotu atvērto tīmekli.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="zero">%1$s, %2$d notikumu</item>
         <item quantity="one">%1$s, %2$d notikums</item>
@@ -1990,15 +1968,10 @@
     <string name="connectivity_type_always">Vienmēr</string>
     <string name="connectivity_type_never">Nekad</string>
     <string name="connectivity_type_unmetered_wifi_only">Nemērīts WiFi</string>
-    <string name="content_description_add_document">Pievienot dokumentu</string>
-    <string name="content_description_add_image">Pievienot attēlu</string>
-    <string name="content_description_add_media">Pievienot mediju</string>
-    <string name="content_description_add_video">Pievienot video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Slēpt</string>
     <string name="content_warning_see_warnings_option">Brīdināt</string>
     <string name="content_warning_show_all_sensitive_content_option">Rādīt</string>
     <string name="conversations">Sarunas</string>
-    <string name="convert_gif_to_mp4_description">Konvertē animēto GIF uz MP4 video mazākam faila izmēram un labākai atskaņošanas saderībai.</string>
     <string name="convert_gif_to_mp4_label">Konvertēt GIF uz MP4</string>
     <string name="copied_note_id_to_clipboard">Piezīmes ID (@note1) nokopēts starpliktuvē</string>
     <string name="copied_note_text_to_clipboard">Piezīmes teksts nokopēts starpliktuvē</string>
@@ -2076,7 +2049,6 @@
     <string name="emoji_private_explainer">Privātie emoji tiek glabāti šifrēti relay serveros un redzami tikai jums. Tie parādās jūsu reakciju izvēlnē un ":" automātiskajā pabeigšanā tāpat kā publiskie.</string>
     <string name="emoji_public_explainer">Publiskie emoji ir redzami visiem un parādās jūsu reakciju izvēlnē un ":" automātiskās pabeigšanas izvēlnē, ja šī pakotne ir jūsu emoji sarakstā.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Šifrēt failus pirms augšupielādes privātumam. Daži serveri var nepieņemt šifrētus failus bezmaksas kontos.</string>
     <string name="encrypt_files_label">Šifrēt failus</string>
     <string name="ephemeral_relay_chat">Pazūdoša tērzēšana</string>
     <string name="error">Kļūda</string>
@@ -2122,8 +2094,6 @@
     <string name="failed_to_upload_media_no_details">Neizdevās augšupielādēt multivides datni</string>
     <string name="failed_to_upload_to_server_with_message">Neizdevās augšupielādēt %1$s: %2$s</string>
     <string name="favorite_app_add">Pievienot izlasei</string>
-    <string name="favorite_app_network_open">Ielādē caur atvērto tīmekli.</string>
-    <string name="favorite_app_network_tor">Ielādē caur Tor.</string>
     <string name="favorite_app_recent">Nesenās</string>
     <string name="favorite_app_remove">Noņemt no izlases</string>
     <string name="favorite_app_still_loading">Šī lietotne vēl nav ielādēta. Mēģiniet vēlreiz pēc brīža.</string>
@@ -2402,11 +2372,6 @@
         <item quantity="other">%1$d dalībnieki</item>
     </plurals>
     <string name="marmot_member_removed">Dalībnieks noņemts</string>
-    <plurals name="marmot_message_count">
-        <item quantity="zero">%1$d ziņas</item>
-        <item quantity="one">%1$d ziņa</item>
-        <item quantity="other">%1$d ziņas</item>
-    </plurals>
     <string name="marmot_not_a_member">Nav šīs grupas dalībnieks</string>
     <string name="marmot_unknown_error">nezināma kļūda</string>
     <string name="media_added">Multivide pievienota</string>
@@ -2499,13 +2464,7 @@
     <string name="nest_lower_hand">Nolaist roku</string>
     <string name="nest_mic_mute">Izslēgt mikrofonu</string>
     <string name="nest_mic_unmute">Ieslēgt mikrofonu</string>
-    <string name="nest_mute">Izslēgt skaņu</string>
     <string name="nest_no_server_save_failed">Neizdevās saglabāt nest serveru sarakstu. Mēģiniet vēlreiz.</string>
-    <string name="nest_notification_broadcasting">Nest — Tiešraide</string>
-    <string name="nest_notification_channel_description">Turpina atskaņot audio, kamēr telpa ir atvērta.</string>
-    <string name="nest_notification_listening">Nest savienots</string>
-    <string name="nest_notification_stop">Apturēt</string>
-    <string name="nest_notification_text">Pieskarieties, lai atgrieztos.</string>
     <string name="nest_participant_follow">Sekot</string>
     <string name="nest_participant_mute">Izslēgt skaņu</string>
     <string name="nest_participant_unfollow">Pārtraukt sekot</string>
@@ -2516,7 +2475,6 @@
     <string name="nest_presence_raised_hand">pacēla roku</string>
     <string name="nest_presence_speaking">runā</string>
     <string name="nest_raise_hand">Pacelt roku</string>
-    <string name="nest_unmute">Ieslēgt skaņu</string>
     <string name="nests_servers_my_explainer">Saglabāts kā kind-10112 aizstājams notikums, lai citi klienti varētu lasīt jūsu preferenci.</string>
     <string name="nests_servers_my_section">Jūsu serveri</string>
     <string name="nests_servers_recommended_explainer">Iebūvētie ieteikumi, ko varat pievienot sarakstam ar vienu pieskārienu.</string>
@@ -2549,11 +2507,6 @@
     <string name="new_requests">Jauni pieprasījumi</string>
     <string name="new_threads">Jaunas diskusijas</string>
     <string name="new_workout">Jauns treniņš</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="zero">%1$d aktīvi iekļauti</item>
-        <item quantity="one">%1$d aktīvs iekļauts</item>
-        <item quantity="other">%1$d aktīvi iekļauti</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom lietotnes netika atrastas. Lūdzu, instalējiet lokālu Blossom lietotni, lai skatītu šo failu</string>
     <string name="no_blossom_apps_found_title">Nevar atvērt Blossom saites</string>
     <string name="no_camera_app_found">Šajā ierīcē nav atrastas kameras lietotnes</string>
@@ -2563,7 +2516,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Šim lietotājam nav iepriekš atlasītu reakciju veidu. Ilgi nospiediet sirds pogu, lai mainītu</string>
     <string name="no_reactions_setup">Nav reakciju iestatījumu</string>
     <string name="no_wallet_found">Nav atrasts neviens maks Lightning rēķina apmaksai. Lūdzu, instalējiet Lightning maku, lai izmantotu zaps</string>
-    <string name="no_wallet_found_with_error">Nav atrasts neviens maks Lightning rēķina apmaksai (Kļūda: %1$s). Lūdzu, instalējiet Lightning maku, lai izmantotu zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Zap summa nav iestatīta. Turiet nospiestu, lai mainītu</string>
     <string name="notification_settings">Paziņojumi</string>
     <string name="notification_settings_section_categories">Kategorijas</string>
@@ -2922,8 +2874,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Lietotājam %1$s nav iestatīta Lightning adrese sats saņemšanai</string>
     <string name="vanish_history">Pazušanas vēsture</string>
     <string name="vanish_request_sent">Pazušanas pieprasījums nosūtīts</string>
-    <string name="video_codec_h265_description">Labāka kvalitāte mazākos failu izmēros, taču ne visas ierīces atbalsta H.265 atskaņošanu.</string>
-    <string name="video_codec_h265_label">Izmantot H.265/HEVC kodeku</string>
     <string name="video_download_has_started_toast">Video lejupielāde ir sākusies…</string>
     <string name="video_player_settings">Video atskaņotāja pogas</string>
     <string name="video_saved_to_the_gallery">Video saglabāts tālruņa video galerijā</string>

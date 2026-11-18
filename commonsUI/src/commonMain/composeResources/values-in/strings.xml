@@ -87,7 +87,6 @@
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Jumlah Baru dalam Sats</string>
     <string name="replying_to">membalas kepada </string>
-    <string name="and"> dan </string>
     <string name="following"> Mengikuti</string>
     <string name="followers"> Pengikut</string>
     <string name="number_following">%1$s Mengikuti</string>
@@ -238,7 +237,6 @@
     <string name="refresh">Perbarui</string>
     <string name="channel_created">Kanal dibuat</string>
     <string name="channel_information_changed_to">Informasi kanal diubah menjadi</string>
-    <string name="marmot_group_no_messages_yet">Belum ada pesan</string>
     <string name="paid_relay">relay berbayar</string>
     <string name="tor_relay">Memaksa Tor saat terhubung</string>
     <string name="posts_received">kiriman diterima</string>
@@ -410,7 +408,6 @@
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Dari Health Connect</string>
     <string name="nsite_none_found">Belum ada nSites ditemukan.</string>
-    <string name="browser_reload">Muat ulang</string>
     <string name="browser_unsupported">Browser dalam aplikasi memerlukan Android 11 atau lebih baru.</string>
     <string name="embedded_tab_load_failed">Tidak dapat memuat aplikasi ini.</string>
     <string name="browser_go">Buka</string>
@@ -418,10 +415,6 @@
     <string name="browser_recent_options">Opsi</string>
     <string name="browser_recent_remove">Hapus dari riwayat</string>
     <string name="favorite_apps_empty">Belum ada aplikasi favorit. Buka klien web atau nsite dan ketuk bintang untuk menyematkannya di sini.</string>
-    <string name="favorite_app_open_window">Buka di jendelanya sendiri</string>
-    <string name="favorite_app_access_title">Apa yang dapat diakses aplikasi ini</string>
-    <string name="favorite_app_access_static">Berjalan dalam sandbox tanpa akses khusus ke akun Anda.</string>
-    <string name="favorite_app_access_show">Apa yang dapat diaksesnya</string>
     <string name="favorite_app_unavailable">Aplikasi ini belum dimuat. Buka dari kartunya, atau coba lagi sebentar lagi.</string>
     <string name="napplet_manage_permissions">Kelola izin</string>
     <string name="napplet_none_found">Belum ada nApplet ditemukan.</string>
@@ -645,7 +638,6 @@
     <string name="pledge_amount_in_sats">Jumlah Dijanjikan dalam Sats</string>
     <string name="poll_zap_value_min">Zap terendah</string>
     <string name="poll_zap_value_max">Zap tertinggi</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
     <string name="looking_for_event">Mencari data event %1$s</string>
     <string name="send_zap">Kirim Zap</string>
     <string name="custom_zaps_add_a_message">Tambah pesan publik</string>
@@ -653,11 +645,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Tambah pesan faktur tagihan</string>
     <string name="custom_zaps_add_a_message_example">Terima kasih atas semua pekerjaan Anda!</string>
     <string name="lightning_create_and_add_invoice">Buat dan Tambah</string>
-    <string name="add_content">Tambahkan ke Pesan</string>
-    <string name="add_caption">Tambah Keterangan</string>
-    <string name="add_caption_example">Teman saya yang menyenangkan</string>
-    <string name="content_description">Deskripsi Konten</string>
-    <string name="content_description_example">Perahu berwarna biru di pantai berpasir putih saat matahari terbenam</string>
     <string name="ai_suggested_alt_text_hint">Disarankan AI, edit saya</string>
     <string name="ai_suggested_alt_text_dismiss">Abaikan saran AI</string>
     <string name="zap_type">Tipe Zap</string>
@@ -993,7 +980,6 @@
     <string name="wallet_filter_all">Semua</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Bukan Zaps</string>
-    <string name="wallet_add">Tambah Dompet</string>
     <string name="wallet_default">Default</string>
     <string name="wallet_set_default">Jadikan Default</string>
     <string name="wallet_remove">Hapus</string>
@@ -1088,8 +1074,6 @@
     <string name="cashu_redeemed_amount">%1$s sats berhasil ditukarkan ke dompet Anda.</string>
     <string name="wallet_paste_uri">Tempel URI nostr+walletconnect://</string>
     <string name="wallet_save">Simpan</string>
-    <string name="wallet_rename">Ubah nama</string>
-    <string name="wallet_rename_title">Ubah Nama Dompet</string>
     <string name="wallet_onchain_transactions">Transaksi Onchain</string>
     <string name="wallet_onchain_no_address">Tidak ada alamat on-chain yang tersedia untuk akun ini.</string>
     <string name="wallet_onchain_no_backend">Tidak ada backend chain yang dikonfigurasi.</string>
@@ -1339,7 +1323,6 @@
     <string name="accessibility_play_username">Putar nama pengguna sebagai audio</string>
     <string name="accessibility_pushpin">Sematkan</string>
     <string name="accessibility_scan_qr_code">Pindai kode QR</string>
-    <string name="accessibility_select_date">Pilih tanggal</string>
     <string name="load_from_text">Dari Pesan</string>
     <string name="dvm_looking_for_app">Mencari Aplikasi</string>
     <string name="dvm_waiting_status">Pekerjaan Diminta, menunggu balasan</string>
@@ -1442,9 +1425,7 @@
     <string name="closing_time">Waktu Penutupan</string>
     <string name="confirm">Konfirmasi</string>
     <string name="next">Berikutnya</string>
-    <string name="go_back">Kembali</string>
     <string name="approve">Setujui</string>
-    <string name="connected">Terhubung</string>
     <string name="social_proof">Bukti sosial</string>
     <string name="poll_submit">Kirim</string>
     <string name="poll_view_results">Lihat hasil</string>
@@ -1785,8 +1766,6 @@
     <string name="dvm_pay_invoice_from_dvm">Bayar Tagihan dari DVM</string>
     <string name="dvm_pay_amount_to_dvm">Bayar %1$s sats ke DVM</string>
     <string name="use_direct_url">Gunakan URL langsung</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Izin:</string>
     <string name="nsite_root_site">Situs Root</string>
     <string name="nsite_source">Sumber:</string>
@@ -1799,7 +1778,6 @@
     <string name="add_a_nip96_server">Tambah Server NIP-96</string>
     <string name="add_client_tag_explainer">Saat diaktifkan, Amethyst menambahkan tag klien NIP-89 ke acara yang Anda publikasikan.</string>
     <string name="add_client_tag_title">Tambahkan tag klien ke acara saya</string>
-    <string name="add_sensitive_content_description">Menambahkan peringatan konten sensitif sebelum menampilkan konten ini</string>
     <string name="add_sensitive_content_label">Konten Sensitif</string>
     <string name="add_to_public_bookmarks">Tambahkan Penanda Publik</string>
     <string name="ai_writing_setting_description">Menggunakan model AI di perangkat untuk mengusulkan koreksi teks dan perubahan nada.</string>
@@ -1878,8 +1856,6 @@
     <string name="broadcast_section_explainer">Relay yang berspesialisasi dalam mendorong catatan Anda ke semua relay lainnya, seperti sendit.nosflare.com. Amethyst akan menambahkan relay ini ke semua event baru yang Anda buat</string>
     <string name="browser">Browser</string>
     <string name="browser_favorites">Favorit</string>
-    <string name="browser_tor_off">Memuat melalui web terbuka. Ketuk untuk menggunakan Tor.</string>
-    <string name="browser_tor_on">Memuat melalui Tor. Ketuk untuk menggunakan web terbuka.</string>
     <plurals name="calendar_day_a11y_events">
     <item quantity="other">%1$s, %2$d acara</item>
 </plurals>
@@ -1998,15 +1974,10 @@
     <string name="connectivity_type_always">Selalu</string>
     <string name="connectivity_type_never">Tidak Pernah</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi Tanpa Kuota</string>
-    <string name="content_description_add_document">Tambah Dokumen</string>
-    <string name="content_description_add_image">Tambah Gambar</string>
-    <string name="content_description_add_media">Tambah Media</string>
-    <string name="content_description_add_video">Tambah Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Sembunyikan</string>
     <string name="content_warning_see_warnings_option">Peringatkan</string>
     <string name="content_warning_show_all_sensitive_content_option">Tampilkan</string>
     <string name="conversations">Percakapan</string>
-    <string name="convert_gif_to_mp4_description">Mengonversi GIF animasi ke video MP4 untuk ukuran file lebih kecil dan kompatibilitas pemutaran yang lebih baik.</string>
     <string name="convert_gif_to_mp4_label">Konversi GIF ke MP4</string>
     <string name="copied_note_id_to_clipboard">Note ID (@note1) disalin ke papan klip</string>
     <string name="copied_note_text_to_clipboard">Teks catatan disalin ke papan klip</string>
@@ -2074,7 +2045,6 @@
     <string name="emoji_private_explainer">Emoji privat disimpan terenkripsi di relay dan hanya terlihat oleh Anda. Mereka muncul di menu reaksi Anda dan pelengkap otomatis ":" seperti emoji publik.</string>
     <string name="emoji_public_explainer">Emoji publik terlihat oleh semua orang dan muncul di menu reaksi Anda dan pemilih pelengkap otomatis ":" saat paket ini ada di daftar emoji Anda.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Enkripsi file sebelum diunggah untuk privasi. Beberapa server mungkin tidak menerima file terenkripsi pada akun gratis.</string>
     <string name="encrypt_files_label">Enkripsi file</string>
     <string name="ephemeral_relay_chat">Obrolan Menghilang</string>
     <string name="error">Kesalahan</string>
@@ -2122,8 +2092,6 @@
     <string name="failed_to_upload_media_no_details">Gagal mengunggah media</string>
     <string name="failed_to_upload_to_server_with_message">Gagal mengunggah ke %1$s: %2$s</string>
     <string name="favorite_app_add">Tambahkan ke favorit</string>
-    <string name="favorite_app_network_open">Memuat melalui web terbuka.</string>
-    <string name="favorite_app_network_tor">Memuat melalui Tor.</string>
     <string name="favorite_app_recent">Terbaru</string>
     <string name="favorite_app_remove">Hapus dari favorit</string>
     <string name="favorite_app_still_loading">Aplikasi itu belum dimuat. Coba lagi sebentar lagi.</string>
@@ -2414,9 +2382,6 @@
     <item quantity="other">%1$d anggota</item>
 </plurals>
     <string name="marmot_member_removed">Anggota dihapus</string>
-    <plurals name="marmot_message_count">
-    <item quantity="other">%1$d pesan</item>
-</plurals>
     <string name="marmot_not_a_member">Bukan anggota grup ini</string>
     <string name="marmot_unknown_error">kesalahan tidak diketahui</string>
     <string name="media_added">Media ditambahkan</string>
@@ -2503,14 +2468,7 @@
     <string name="nest_lower_hand">Turunkan tangan</string>
     <string name="nest_mic_mute">Bisukan mikrofon</string>
     <string name="nest_mic_unmute">Aktifkan mikrofon</string>
-    <string name="nest_mute">Bisukan</string>
     <string name="nest_no_server_save_failed">Gagal menyimpan daftar server nest Anda. Coba lagi.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Menjaga audio tetap berjalan saat ruang terbuka.</string>
-    <string name="nest_notification_listening">Nest terhubung</string>
-    <string name="nest_notification_stop">Berhenti</string>
-    <string name="nest_notification_text">Ketuk untuk kembali.</string>
     <string name="nest_participant_follow">Ikuti</string>
     <string name="nest_participant_mute">Bisukan</string>
     <string name="nest_participant_unfollow">Berhenti mengikuti</string>
@@ -2521,7 +2479,6 @@
     <string name="nest_presence_raised_hand">mengangkat tangan</string>
     <string name="nest_presence_speaking">sedang berbicara</string>
     <string name="nest_raise_hand">Angkat tangan</string>
-    <string name="nest_unmute">Aktifkan suara</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Disimpan sebagai event yang dapat diganti kind-10112 agar klien lain dapat membaca preferensi Anda.</string>
     <string name="nests_servers_my_section">Server Anda</string>
@@ -2555,9 +2512,6 @@
     <string name="new_requests">Permintaan Baru</string>
     <string name="new_threads">Utas Baru</string>
     <string name="new_workout">Latihan Baru</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="other">%1$d aset dibundel</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Aplikasi Blossom tidak ditemukan. Silakan instal aplikasi Blossom lokal untuk melihat file ini</string>
     <string name="no_blossom_apps_found_title">Tidak dapat membuka tautan Blossom</string>
     <string name="no_camera_app_found">Tidak ada aplikasi kamera yang ditemukan di perangkat ini</string>
@@ -2567,7 +2521,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Tidak ada jenis reaksi yang dipilih. Tekan dan tahan untuk mengubah</string>
     <string name="no_reactions_setup">Tidak ada pengaturan reaksi</string>
     <string name="no_wallet_found">Tidak ditemukan Dompet untuk membayar faktur lightning. Silakan instal dompet Lightning untuk menggunakan zaps</string>
-    <string name="no_wallet_found_with_error">Tidak ditemukan Dompet untuk membayar faktur lightning (Kesalahan: %1$s). Silakan instal dompet Lightning untuk menggunakan zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Tidak Ada Pengaturan Jumlah Zap. Tekan dan tahan tombol untuk mengubah</string>
     <string name="notification_settings">Notifikasi</string>
     <string name="notification_settings_section_categories">Kategori</string>
@@ -2648,7 +2601,6 @@
     <item quantity="other">%1$d episode</item>
 </plurals>
     <string name="poll_author_no_vote">Pembuat Pemungutan Suara tidak dapat memberikan suara dalam pemungutan suara sendiri.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Jajak pendapat ditutup untuk suara baru</string>
     <string name="poll_multiple_choice">Pilihan ganda</string>
     <string name="poll_single_choice">Pilihan tunggal</string>
@@ -2907,8 +2859,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna %1$s tidak memiliki alamat lightning yang diatur untuk menerima sats</string>
     <string name="vanish_history">Riwayat Penghapusan</string>
     <string name="vanish_request_sent">Permintaan penghapusan terkirim</string>
-    <string name="video_codec_h265_description">Kualitas lebih baik dengan ukuran file lebih kecil tetapi tidak semua perangkat mendukung pemutaran H.265.</string>
-    <string name="video_codec_h265_label">Gunakan Codec H.265/HEVC</string>
     <string name="video_download_has_started_toast">Unduhan video telah dimulai…</string>
     <string name="video_player_settings">Tombol Pemutar Video</string>
     <string name="video_saved_to_the_gallery">Video disimpan ke galeri video ponsel</string>

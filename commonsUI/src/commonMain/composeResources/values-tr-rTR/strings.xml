@@ -106,7 +106,6 @@
     <string name="original">orijinal</string>
     <string name="quote">Alıntı</string>
     <string name="new_amount_in_sats">Satlarda Yeni Miktar</string>
-    <string name="and">ve</string>
     <string name="following">Takip edilenler</string>
     <string name="followers">Takipçiler</string>
     <string name="number_following">%1$s Takip Edilen</string>
@@ -253,7 +252,6 @@
     <string name="refresh">Yenile</string>
     <string name="channel_created">Kanal oluşturuldu</string>
     <string name="channel_information_changed_to">Kanal Bilgisi şuna değiştirildi</string>
-    <string name="marmot_group_no_messages_yet">Henüz mesaj yok</string>
     <string name="paid_relay">Ücretli relay</string>
     <string name="tor_relay">Bağlanırken Tor'u zorlar</string>
     <string name="posts_received">alınan gönderiler</string>
@@ -423,7 +421,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Henüz hiç nSite bulunamadı.</string>
-    <string name="browser_reload">Yenile</string>
     <string name="browser_unsupported">Uygulama içi tarayıcı Android 11 veya daha yeni bir sürüm gerektirir.</string>
     <string name="embedded_tab_load_failed">Bu uygulama yüklenemedi.</string>
     <string name="browser_go">Aç</string>
@@ -431,10 +428,6 @@
     <string name="browser_recent_options">Seçenekler</string>
     <string name="browser_recent_remove">Geçmişten kaldır</string>
     <string name="favorite_apps_empty">Henüz favori uygulama yok. Bir web istemcisi veya nSite aç ve buraya sabitlemek için yıldıza dokun.</string>
-    <string name="favorite_app_open_window">Kendi penceresinde aç</string>
-    <string name="favorite_app_access_title">Bu uygulamanın erişebildikleri</string>
-    <string name="favorite_app_access_static">Hesabına özel erişim olmadan korumalı alanda çalışır.</string>
-    <string name="favorite_app_access_show">Erişebildikleri</string>
     <string name="favorite_app_unavailable">Bu uygulama henüz yüklenmedi. Kartından aç ya da bir süre sonra tekrar dene.</string>
     <string name="napplet_manage_permissions">İzinleri yönet</string>
     <string name="napplet_none_found">Henüz hiç nApplet bulunamadı.</string>
@@ -655,7 +648,6 @@
     <string name="pledge_amount_in_sats">Taahhüt Miktarı (Sat cinsinden)</string>
     <string name="poll_zap_value_min">Minimum zap</string>
     <string name="poll_zap_value_max">Maksimum zap</string>
-    <string name="poll_consensus_threshold">Uzlaşı</string>
     <string name="looking_for_event">%1$s Etkinliği Aranıyor</string>
     <string name="send_zap">Zap Gönder</string>
     <string name="custom_zaps_add_a_message">Herkese açık mesaj ekle</string>
@@ -663,11 +655,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Fatura mesajı ekle</string>
     <string name="custom_zaps_add_a_message_example">Tüm çalışmaların için teşekkürler!</string>
     <string name="lightning_create_and_add_invoice">Oluştur ve Ekle</string>
-    <string name="add_content">Mesaja Ekle</string>
-    <string name="add_caption">Altyazı Ekle</string>
-    <string name="add_caption_example">Sevgili arkadaşım</string>
-    <string name="content_description">İçeriğin açıklaması</string>
-    <string name="content_description_example">Gün batımında beyaz kumlu bir plajda mavi bir tekne</string>
     <string name="ai_suggested_alt_text_hint">Yapay zeka önerisi, düzenleyebilirsiniz</string>
     <string name="ai_suggested_alt_text_dismiss">Yapay zeka önerisini reddet</string>
     <string name="zap_type">Zap Türü</string>
@@ -999,7 +986,6 @@
     <string name="wallet_filter_all">Tümü</string>
     <string name="wallet_filter_zaps">Zap'lar</string>
     <string name="wallet_filter_non_zaps">Zap Olmayanlar</string>
-    <string name="wallet_add">Cüzdan Ekle</string>
     <string name="wallet_default">Varsayılan</string>
     <string name="wallet_set_default">Varsayılan Olarak Ayarla</string>
     <string name="wallet_remove">Kaldır</string>
@@ -1092,8 +1078,6 @@
     <string name="cashu_redeemed_amount">%1$s sats cüzdanınıza aktarıldı.</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URI'sini yapıştırın</string>
     <string name="wallet_save">Kaydet</string>
-    <string name="wallet_rename">Yeniden adlandır</string>
-    <string name="wallet_rename_title">Cüzdanı Yeniden Adlandır</string>
     <string name="wallet_onchain_transactions">Zincir Üstü İşlemler</string>
     <string name="wallet_onchain_no_address">Bu hesap için zincir üstü adres mevcut değil.</string>
     <string name="wallet_onchain_no_backend">Zincir arka ucu yapılandırılmamış.</string>
@@ -1336,7 +1320,6 @@
     <string name="accessibility_play_username">Kullanıcı adını ses olarak çal</string>
     <string name="accessibility_pushpin">Raptiye</string>
     <string name="accessibility_scan_qr_code">QR kodu tara</string>
-    <string name="accessibility_select_date">Tarih seç</string>
     <string name="load_from_text">Mesajdan</string>
     <string name="dvm_looking_for_app">Uygulama Aranıyor</string>
     <string name="dvm_waiting_status">İş Talep Edildi, yanıt bekleniyor</string>
@@ -1437,9 +1420,7 @@
     <string name="closing_time">Kapanış Saati</string>
     <string name="confirm">Onayla</string>
     <string name="next">İleri</string>
-    <string name="go_back">Geri Git</string>
     <string name="approve">Onayla</string>
-    <string name="connected">Bağlandı</string>
     <string name="social_proof">Sosyal kanıt</string>
     <string name="poll_submit">Gönder</string>
     <string name="poll_view_results">Sonuçları gör</string>
@@ -1777,7 +1758,6 @@
     <string name="add_a_nip96_server">NIP-96 Sunucusu Ekle</string>
     <string name="add_client_tag_explainer">Etkinleştirildiğinde, Amethyst yayımladığınız etkinliklere bir NIP-89 istemci etiketi ekler.</string>
     <string name="add_client_tag_title">Etkinliklerime istemci etiketi ekle</string>
-    <string name="add_sensitive_content_description">Bu içeriği göstermeden önce hassas içerik uyarısı ekler</string>
     <string name="add_sensitive_content_label">Hassas İçerik</string>
     <string name="add_to_public_bookmarks">Herkese Açık Yer İşaretlerine Ekle</string>
     <string name="ai_writing_setting_description">Metin düzeltmeleri ve ton değişiklikleri önermek için cihaz üzerindeki bir yapay zeka modeli kullanır.</string>
@@ -1856,8 +1836,6 @@
     <string name="broadcast_section_explainer">sendit.nosflare.com gibi notlarınızı diğer tüm relay'lere iletmede uzmanlaşmış relay'ler. Amethyst bu relay'i sizin tarafınızdan yapılan tüm yeni etkinliklere ekleyecektir</string>
     <string name="browser">Tarayıcı</string>
     <string name="browser_favorites">Favoriler</string>
-    <string name="browser_tor_off">Açık web üzerinden yükleniyor. Tor'u kullanmak için dokun.</string>
-    <string name="browser_tor_on">Tor üzerinden yükleniyor. Açık web'i kullanmak için dokun.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d etkinlik</item>
         <item quantity="other">%1$s, %2$d etkinlik</item>
@@ -1977,15 +1955,10 @@
     <string name="connectivity_type_always">Her Zaman</string>
     <string name="connectivity_type_never">Hiçbir Zaman</string>
     <string name="connectivity_type_unmetered_wifi_only">Ölçümsüz WiFi</string>
-    <string name="content_description_add_document">Belge Ekle</string>
-    <string name="content_description_add_image">Resim Ekle</string>
-    <string name="content_description_add_media">Medya Ekle</string>
-    <string name="content_description_add_video">Video Ekle</string>
     <string name="content_warning_hide_all_sensitive_content_option">Gizle</string>
     <string name="content_warning_see_warnings_option">Uyar</string>
     <string name="content_warning_show_all_sensitive_content_option">Göster</string>
     <string name="conversations">Diyaloglar</string>
-    <string name="convert_gif_to_mp4_description">Daha küçük dosya boyutu ve daha iyi oynatma uyumluluğu için animasyonlu GIF'i MP4 videoya dönüştürür.</string>
     <string name="convert_gif_to_mp4_label">GIF'i MP4'e Dönüştür</string>
     <string name="copied_note_id_to_clipboard">Not kimliği (@note1) panoya kopyalandı</string>
     <string name="copied_note_text_to_clipboard">Not metni panoya kopyalandı</string>
@@ -2058,7 +2031,6 @@
     <string name="emoji_private_explainer">Özel emojiler relay'lerde şifrelenmiş olarak saklanır ve yalnızca size görünür. Genel emojiler gibi tepki menünüzde ve ":" otomatik tamamlamada görünürler.</string>
     <string name="emoji_public_explainer">Genel emojiler herkese görünür ve bu paket emoji listenizde olduğunda tepki menünüzde ve ":" otomatik tamamlama seçicisinde görünür.</string>
     <string name="emoji_sets">Emojiler</string>
-    <string name="encrypt_files_description">Gizlilik için dosyaları yüklemeden önce şifreleyin. Bazı sunucular ücretsiz hesaplarda şifrelenmiş dosyaları kabul etmeyebilir.</string>
     <string name="encrypt_files_label">Dosyaları şifrele</string>
     <string name="ephemeral_relay_chat">Kaybolan Sohbet</string>
     <string name="error">Hata</string>
@@ -2103,8 +2075,6 @@
     <string name="failed_to_upload_media_no_details">Medya yüklenemedi</string>
     <string name="failed_to_upload_to_server_with_message">%1$s'e yükleme başarısız oldu: %2$s</string>
     <string name="favorite_app_add">Favorilere ekle</string>
-    <string name="favorite_app_network_open">Açık web üzerinden yüklenir.</string>
-    <string name="favorite_app_network_tor">Tor üzerinden yüklenir.</string>
     <string name="favorite_app_recent">Son kullanılan</string>
     <string name="favorite_app_remove">Favorilerden kaldır</string>
     <string name="favorite_app_still_loading">O uygulama henüz yüklenmedi. Bir süre sonra tekrar dene.</string>
@@ -2375,10 +2345,6 @@
         <item quantity="other">%1$d üye</item>
     </plurals>
     <string name="marmot_member_removed">Üye kaldırıldı</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d mesaj</item>
-        <item quantity="other">%1$d mesaj</item>
-    </plurals>
     <string name="marmot_not_a_member">Bu grubun üyesi değilsiniz</string>
     <string name="marmot_unknown_error">bilinmeyen hata</string>
     <string name="media_added">Medya eklendi</string>
@@ -2467,13 +2433,7 @@
     <string name="nest_lower_hand">Eli indir</string>
     <string name="nest_mic_mute">Mikrofonu kapat</string>
     <string name="nest_mic_unmute">Mikrofonu aç</string>
-    <string name="nest_mute">Sessize al</string>
     <string name="nest_no_server_save_failed">Nest sunucu listeniz kaydedilemedi. Tekrar deneyin.</string>
-    <string name="nest_notification_broadcasting">Nest — Canlı</string>
-    <string name="nest_notification_channel_description">Oda açıkken ses çalmayı sürdürür.</string>
-    <string name="nest_notification_listening">Nest bağlandı</string>
-    <string name="nest_notification_stop">Durdur</string>
-    <string name="nest_notification_text">Geri dönmek için dokun.</string>
     <string name="nest_participant_follow">Takip et</string>
     <string name="nest_participant_mute">Sessize al</string>
     <string name="nest_participant_unfollow">Takibi bırak</string>
@@ -2484,7 +2444,6 @@
     <string name="nest_presence_raised_hand">elini kaldırdı</string>
     <string name="nest_presence_speaking">konuşuyor</string>
     <string name="nest_raise_hand">El kaldır</string>
-    <string name="nest_unmute">Sesi aç</string>
     <string name="nests_servers_my_explainer">Diğer istemcilerin tercihinizi okuyabilmesi için kind-10112 değiştirilebilir olay olarak kaydedilir.</string>
     <string name="nests_servers_my_section">Sunucularınız</string>
     <string name="nests_servers_recommended_explainer">Tek dokunuşla listenize ekleyebileceğiniz yerleşik öneriler.</string>
@@ -2517,10 +2476,6 @@
     <string name="new_requests">Yeni İstekler</string>
     <string name="new_threads">Yeni Threadler</string>
     <string name="new_workout">Yeni Egzersiz</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d varlık paketlendi</item>
-        <item quantity="other">%1$d varlık paketlendi</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom uygulamaları bulunamadı. Lütfen bu dosyayı görüntülemek için yerel bir Blossom uygulaması yükleyin</string>
     <string name="no_blossom_apps_found_title">Blossom bağlantıları açılamıyor</string>
     <string name="no_camera_app_found">Bu cihazda kamera uygulaması bulunamadı</string>
@@ -2530,7 +2485,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Bu kullanıcı için önceden seçilmiş tepki türü yok. Değiştirmek için kalp düğmesine uzun basın</string>
     <string name="no_reactions_setup">Tepki kurulumu yok</string>
     <string name="no_wallet_found">Lightning faturası ödemek için cüzdan bulunamadı. Lütfen zap kullanmak için bir Lightning cüzdanı yükleyin</string>
-    <string name="no_wallet_found_with_error">Lightning faturası ödemek için cüzdan bulunamadı (Hata: %1$s). Lütfen zap kullanmak için bir Lightning cüzdanı yükleyin</string>
     <string name="no_zap_amount_setup_long_press_to_change">Zap miktarı belirlenmedi. Değiştirmek için uzun basılı tutun</string>
     <string name="notification_settings">Bildirimler</string>
     <string name="notification_settings_section_categories">Kategoriler</string>
@@ -2869,8 +2823,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s kullanıcısının sat almak için tanımlanmış bir lightning adresi yok</string>
     <string name="vanish_history">Silinme Geçmişi</string>
     <string name="vanish_request_sent">Silinme talebi gönderildi</string>
-    <string name="video_codec_h265_description">Daha küçük dosya boyutlarında daha iyi kalite sunar ancak tüm cihazlar H.265 oynatmayı desteklemez.</string>
-    <string name="video_codec_h265_label">H.265/HEVC Codec'i Kullan</string>
     <string name="video_download_has_started_toast">Video indirme başladı…</string>
     <string name="video_player_settings">Video Oynatıcı Düğmeleri</string>
     <string name="video_saved_to_the_gallery">Video telefonun video galerisine kaydedildi</string>

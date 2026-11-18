@@ -116,7 +116,6 @@
     <string name="quote">إقتباس</string>
     <string name="fork">أشتقاق</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
-    <string name="and"> و </string>
     <string name="following">المتابعون</string>
     <string name="followers">متابِعاً</string>
     <string name="number_following">%1$s متابَع</string>
@@ -263,7 +262,6 @@
     <string name="refresh">تحديث</string>
     <string name="channel_created">تم انشاء القناة</string>
     <string name="channel_information_changed_to">تم تغيير معلومات القناة إلى</string>
-    <string name="marmot_group_no_messages_yet">لا توجد رسائل بعد</string>
     <string name="paid_relay">relay مدفوع</string>
     <string name="tor_relay">يجبر استخدام Tor عند الاتصال</string>
     <string name="posts_received">تم استلام المشاركات</string>
@@ -435,7 +433,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">لم يتم العثور على nSites بعد.</string>
-    <string name="browser_reload">إعادة التحميل</string>
     <string name="browser_unsupported">يحتاج المتصفح المدمج إلى Android 11 أو أحدث.</string>
     <string name="embedded_tab_load_failed">تعذّر تحميل هذا التطبيق.</string>
     <string name="browser_go">فتح</string>
@@ -443,10 +440,6 @@
     <string name="browser_recent_options">خيارات</string>
     <string name="browser_recent_remove">إزالة من السجل</string>
     <string name="favorite_apps_empty">لا توجد تطبيقات مفضلة بعد. افتح عميل ويب أو nsite واضغط على النجمة لتثبيته هنا.</string>
-    <string name="favorite_app_open_window">فتح في نافذة مستقلة</string>
-    <string name="favorite_app_access_title">ما يمكن لهذا التطبيق الوصول إليه</string>
-    <string name="favorite_app_access_static">يعمل في بيئة معزولة بدون وصول خاص إلى حسابك.</string>
-    <string name="favorite_app_access_show">ما يمكنه الوصول إليه</string>
     <string name="favorite_app_unavailable">هذا التطبيق غير محمّل بعد. افتحه من بطاقته، أو حاول مجدداً بعد لحظة.</string>
     <string name="napplet_manage_permissions">إدارة الأذونات</string>
     <string name="napplet_none_found">لم يتم العثور على nApplets بعد.</string>
@@ -667,7 +660,6 @@
     <string name="pledge_amount_in_sats">مبلغ التعهد بالـ Sats</string>
     <string name="poll_zap_value_min">الحد الأدنى</string>
     <string name="poll_zap_value_max">الحد الاقصى</string>
-    <string name="poll_consensus_threshold">توافق الآراء</string>
     <string name="looking_for_event">البحث عن الحدث %1$s</string>
     <string name="send_zap">إرسال Zap</string>
     <string name="custom_zaps_add_a_message">أضف رسالة عامة</string>
@@ -675,11 +667,6 @@
     <string name="custom_zaps_add_a_message_nonzap">أضف رسالة مع الفاتورة</string>
     <string name="custom_zaps_add_a_message_example">شكرا لك على كل مساهمتك!</string>
     <string name="lightning_create_and_add_invoice">إنشاء وإضافة</string>
-    <string name="add_content">أضف إلى الرسالة</string>
-    <string name="add_caption">إضافة شرح توضيحي</string>
-    <string name="add_caption_example">صديقي المميز</string>
-    <string name="content_description">وصف المحتوى/المحتويات</string>
-    <string name="content_description_example">A blue boat in a white sandy beach at sunset (قارب أزرق في شاطئ رملي أبيض عند غروب الشمس)</string>
     <string name="ai_suggested_alt_text_hint">اقتراح من الذكاء الاصطناعي، يمكنك تعديله</string>
     <string name="ai_suggested_alt_text_dismiss">رفض اقتراح الذكاء الاصطناعي</string>
     <string name="zap_type">نوع الزاب</string>
@@ -1011,7 +998,6 @@
     <string name="wallet_refresh">تحديث</string>
     <string name="wallet_filter_all">الكل</string>
     <string name="wallet_filter_non_zaps">غير Zaps</string>
-    <string name="wallet_add">إضافة محفظة</string>
     <string name="wallet_default">افتراضي</string>
     <string name="wallet_set_default">تعيين كافتراضي</string>
     <string name="wallet_remove">إزالة</string>
@@ -1103,8 +1089,6 @@
     <string name="cashu_redeemed_amount">تم استرداد %1$s sats في محفظتك.</string>
     <string name="wallet_paste_uri">الصق nostr+walletconnect:// URI</string>
     <string name="wallet_save">حفظ</string>
-    <string name="wallet_rename">إعادة تسمية</string>
-    <string name="wallet_rename_title">إعادة تسمية المحفظة</string>
     <string name="wallet_onchain_transactions">معاملات على السلسلة</string>
     <string name="wallet_onchain_no_address">لا يوجد عنوان على السلسلة لهذا الحساب.</string>
     <string name="wallet_onchain_no_backend">لم يتم تكوين أي واجهة خلفية للسلسلة.</string>
@@ -1342,7 +1326,6 @@
     <string name="accessibility_play_username">تشغيل اسم المستخدم صوتيًا</string>
     <string name="accessibility_pushpin">دبوس</string>
     <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
-    <string name="accessibility_select_date">اختر تاريخًا</string>
     <string name="load_from_text">من رسالة</string>
     <string name="dvm_looking_for_app">البحث عن تطبيق</string>
     <string name="dvm_waiting_status">تم طلب المهمة، في انتظار الرد</string>
@@ -1443,9 +1426,7 @@
     <string name="closing_time">وقت الإغلاق</string>
     <string name="confirm">تأكيد</string>
     <string name="next">التالي</string>
-    <string name="go_back">رجوع</string>
     <string name="approve">موافقة</string>
-    <string name="connected">متصل</string>
     <string name="social_proof">دليل اجتماعي</string>
     <string name="poll_submit">إرسال</string>
     <string name="poll_view_results">عرض النتائج</string>
@@ -1783,7 +1764,6 @@
     <string name="add_a_nip96_server">إضافة خادم NIP-96</string>
     <string name="add_client_tag_explainer">عند التفعيل، يُضيف Amethyst وسم عميل NIP-89 إلى الأحداث التي تنشرها.</string>
     <string name="add_client_tag_title">إضافة وسم العميل إلى أحداثي</string>
-    <string name="add_sensitive_content_description">يُضيف تحذير محتوى حساس قبل عرض هذا المحتوى</string>
     <string name="add_sensitive_content_label">محتوى حساس</string>
     <string name="add_to_public_bookmarks">إضافة إلى المفضلات العامة</string>
     <string name="ai_writing_setting_description">يستخدم نموذج ذكاء اصطناعي على الجهاز لاقتراح تصحيحات نصية وتغييرات في النبرة.</string>
@@ -1860,8 +1840,6 @@
     <string name="broadcast_section_explainer">الـ relays المتخصصة في دفع ملاحظاتك إلى جميع الـ relays الأخرى، مثل sendit.nosflare.com. سيضيف Amethyst هذا الـ relay إلى جميع الأحداث الجديدة التي تصدر منك</string>
     <string name="browser">المتصفح</string>
     <string name="browser_favorites">المفضلة</string>
-    <string name="browser_tor_off">يتم التحميل عبر الإنترنت المفتوح. اضغط للاستخدام عبر Tor.</string>
-    <string name="browser_tor_on">يتم التحميل عبر Tor. اضغط للاستخدام عبر الإنترنت المفتوح.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="zero">%1$s، لا أحداث</item>
         <item quantity="one">%1$s، %2$d حدث</item>
@@ -2009,15 +1987,10 @@
     <string name="connectivity_type_always">دائماً</string>
     <string name="connectivity_type_never">ابداً</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi غير المحدودة</string>
-    <string name="content_description_add_document">أضف مستند</string>
-    <string name="content_description_add_image">أضف صورة</string>
-    <string name="content_description_add_media">إضافة وسائط</string>
-    <string name="content_description_add_video">اضف فيديو</string>
     <string name="content_warning_hide_all_sensitive_content_option">إخفاء</string>
     <string name="content_warning_see_warnings_option">تحذير</string>
     <string name="content_warning_show_all_sensitive_content_option">إظهار</string>
     <string name="conversations">المحادثات</string>
-    <string name="convert_gif_to_mp4_description">يحوّل ملفات GIF المتحركة إلى فيديو MP4 لحجم ملف أصغر وتوافق تشغيل أفضل.</string>
     <string name="convert_gif_to_mp4_label">تحويل GIF إلى MP4</string>
     <string name="copied_note_id_to_clipboard">تم نسخ رمز الملاحظة/المنشور (note ID) إلى الحافظة</string>
     <string name="copied_note_text_to_clipboard">تم نسخ نص الملاحظة/المنشور إلى الحافظة</string>
@@ -2114,7 +2087,6 @@
     <string name="emoji_private_explainer">الإيموجي الخاصة مخزنة بشكل مشفر على relay ولا تراها إلا أنت. تظهر في قائمة ردود أفعالك ومنتقي ":" تماماً مثل الإيموجي العامة.</string>
     <string name="emoji_public_explainer">الإيموجي العامة مرئية للجميع وتظهر في قائمة ردود أفعالك ومنتقي الإكمال التلقائي ":" عندما تكون هذه الحزمة في قائمة الإيموجي الخاصة بك.</string>
     <string name="emoji_sets">الإيموجي</string>
-    <string name="encrypt_files_description">تشفير الملفات قبل الرفع للحفاظ على الخصوصية. قد لا تقبل بعض الخوادم الملفات المشفرة في الحسابات المجانية.</string>
     <string name="encrypt_files_label">تشفير الملفات</string>
     <string name="ephemeral_relay_chat">محادثة تختفي</string>
     <string name="error">خطأ</string>
@@ -2160,8 +2132,6 @@
     <string name="failed_to_upload_media_no_details">فشل في تحميل الوسائط</string>
     <string name="failed_to_upload_to_server_with_message">فشل الرفع إلى %1$s: %2$s</string>
     <string name="favorite_app_add">إضافة إلى المفضلة</string>
-    <string name="favorite_app_network_open">يتم التحميل عبر الإنترنت المفتوح.</string>
-    <string name="favorite_app_network_tor">يتم التحميل عبر Tor.</string>
     <string name="favorite_app_recent">الأخيرة</string>
     <string name="favorite_app_remove">إزالة من المفضلة</string>
     <string name="favorite_app_still_loading">هذا التطبيق غير محمّل بعد. حاول مجدداً بعد لحظة.</string>
@@ -2440,14 +2410,6 @@
         <item quantity="other">%1$d عضو</item>
     </plurals>
     <string name="marmot_member_removed">تمت إزالة العضو</string>
-    <plurals name="marmot_message_count">
-        <item quantity="zero">لا رسائل</item>
-        <item quantity="one">%1$d رسالة</item>
-        <item quantity="two">%1$d رسالتان</item>
-        <item quantity="few">%1$d رسائل</item>
-        <item quantity="many">%1$d رسالة</item>
-        <item quantity="other">%1$d رسالة</item>
-    </plurals>
     <string name="marmot_not_a_member">لست عضواً في هذه المجموعة</string>
     <string name="marmot_unknown_error">خطأ غير معروف</string>
     <string name="media_added">تمت إضافة الوسائط</string>
@@ -2555,13 +2517,7 @@
     <string name="nest_lower_hand">خفض اليد</string>
     <string name="nest_mic_mute">كتم الميكروفون</string>
     <string name="nest_mic_unmute">إلغاء كتم الميكروفون</string>
-    <string name="nest_mute">كتم الصوت</string>
     <string name="nest_no_server_save_failed">تعذّر حفظ قائمة خوادم nest. حاول مجددًا.</string>
-    <string name="nest_notification_broadcasting">Nest — مباشر</string>
-    <string name="nest_notification_channel_description">يبقي الصوت قيد التشغيل أثناء فتح الغرفة.</string>
-    <string name="nest_notification_listening">Nest متصل</string>
-    <string name="nest_notification_stop">إيقاف</string>
-    <string name="nest_notification_text">اضغط للعودة.</string>
     <string name="nest_participant_follow">متابعة</string>
     <string name="nest_participant_mute">كتم</string>
     <string name="nest_participant_unfollow">إلغاء المتابعة</string>
@@ -2572,7 +2528,6 @@
     <string name="nest_presence_raised_hand">رفع يده</string>
     <string name="nest_presence_speaking">يتحدث</string>
     <string name="nest_raise_hand">رفع اليد</string>
-    <string name="nest_unmute">إلغاء كتم الصوت</string>
     <string name="nests_servers_my_explainer">محفوظ كحدث قابل للاستبدال من النوع kind-10112 حتى يتمكن العملاء الآخرون من قراءة تفضيلاتك.</string>
     <string name="nests_servers_my_section">خوادمك</string>
     <string name="nests_servers_recommended_explainer">اقتراحات مدمجة يمكنك إضافتها إلى قائمتك بنقرة واحدة.</string>
@@ -2604,14 +2559,6 @@
     <string name="new_requests">طلبات جديدة</string>
     <string name="new_threads">المنشورات</string>
     <string name="new_workout">تمرين جديد</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="zero">%1$d أصل مجمَّع</item>
-        <item quantity="one">%1$d أصل مجمَّع</item>
-        <item quantity="two">%1$d أصلَان مجمَّعان</item>
-        <item quantity="few">%1$d أصول مجمَّعة</item>
-        <item quantity="many">%1$d أصلًا مجمَّعًا</item>
-        <item quantity="other">%1$d أصل مجمَّع</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">لم يتم العثور على تطبيقات Blossom. يرجى تثبيت تطبيق Blossom محلي لعرض هذا الملف</string>
     <string name="no_blossom_apps_found_title">تعذّر فتح روابط Blossom</string>
     <string name="no_camera_app_found">لم يتم العثور على تطبيق كاميرا في هذا الجهاز</string>
@@ -2621,7 +2568,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">لم يتم تحديد أي نوع من ردود الفعل. اضغط مطولاً للتغيير</string>
     <string name="no_reactions_setup">لا توجد اعدادات لردود الفعل</string>
     <string name="no_wallet_found">لم يتم العثور على محافظ لدفع فاتورة Lightning. يرجى تثبيت محفظة Lightning لاستخدام الـ zaps</string>
-    <string name="no_wallet_found_with_error">لم يتم العثور على محافظ لدفع فاتورة Lightning (الخطأ: %1$s). يرجى تثبيت محفظة Lightning لاستخدام الـ zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">لا يوجد إعداد لمبلغ Zap. اضغط لفترة طويلة للتغيير</string>
     <string name="notification_settings">الإشعارات</string>
     <string name="notification_settings_section_categories">الفئات</string>
@@ -3013,8 +2959,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">المستخدم %1$s ليس لديه عنوان Lightning مُعدّ لاستقبال sats</string>
     <string name="vanish_history">سجل الاختفاء</string>
     <string name="vanish_request_sent">تم إرسال طلب الاختفاء</string>
-    <string name="video_codec_h265_description">جودة أفضل بأحجام ملفات أصغر لكن ليس كل الأجهزة تدعم تشغيل H.265.</string>
-    <string name="video_codec_h265_label">استخدام ترميز H.265/HEVC</string>
     <string name="video_download_has_started_toast">بدأ تنزيل الفيديو…</string>
     <string name="video_player_settings">أزرار مشغّل الفيديو</string>
     <string name="video_saved_to_the_gallery">تم حفظ الفيديو في الجهاز</string>

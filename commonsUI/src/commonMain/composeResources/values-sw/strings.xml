@@ -106,7 +106,6 @@
     <string name="original">asili</string>
     <string name="quote">Nukuu</string>
     <string name="new_amount_in_sats">Kiasi Kipya kwa Sats</string>
-    <string name="and"> na </string>
     <string name="following"> Kufuatia</string>
     <string name="followers"> Wafuasi</string>
     <string name="number_following">%1$s Wanaofuatwa</string>
@@ -249,7 +248,6 @@
     <string name="refresh">Sasisha</string>
     <string name="channel_created">Kituo kimeundwa</string>
     <string name="channel_information_changed_to">Maelezo ya Kituo yamebadilika hadi</string>
-    <string name="marmot_group_no_messages_yet">Hakuna ujumbe bado</string>
     <string name="paid_relay">Relay ya kulipwa</string>
     <string name="tor_relay">Inalazimisha Tor wakati wa kuunganika</string>
     <string name="posts_received">machapisho yamepokelewa</string>
@@ -420,7 +418,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Bado hakuna nSites zilizopatikana.</string>
-    <string name="browser_reload">Pakia upya</string>
     <string name="browser_unsupported">Kivinjari cha ndani ya programu kinahitaji Android 11 au mpya zaidi.</string>
     <string name="embedded_tab_load_failed">Haikuweza kupakia programu hii.</string>
     <string name="browser_go">Fungua</string>
@@ -428,10 +425,6 @@
     <string name="browser_recent_options">Chaguo</string>
     <string name="browser_recent_remove">Ondoa kutoka kwenye historia</string>
     <string name="favorite_apps_empty">Bado hakuna programu vipendwa. Fungua mteja wa wavuti au nsite na ugonge nyota kuipachika hapa.</string>
-    <string name="favorite_app_open_window">Fungua katika dirisha lake mwenyewe</string>
-    <string name="favorite_app_access_title">Programu hii inaweza kufikia nini</string>
-    <string name="favorite_app_access_static">Inafanya kazi katika sanduku bila ufikiaji maalum kwa akaunti yako.</string>
-    <string name="favorite_app_access_show">Inachoweza kufikia</string>
     <string name="favorite_app_unavailable">Programu hii bado haijapakiwa. Ifungue kutoka kwa kadi yake, au jaribu tena baada ya muda.</string>
     <string name="napplet_manage_permissions">Simamia ruhusa</string>
     <string name="napplet_none_found">Bado hakuna nApplets zilizopatikana.</string>
@@ -649,7 +642,6 @@
     <string name="pledge_amount_in_sats">Kiasi cha Ahadi katika Sats</string>
     <string name="poll_zap_value_min">Kima cha Chini cha Zaps</string>
     <string name="poll_zap_value_max">Kima cha Juu cha Zaps</string>
-    <string name="poll_consensus_threshold">Uamuzi</string>
     <string name="looking_for_event">Inatafuta Tukio %1$s</string>
     <string name="send_zap">Tuma Zap</string>
     <string name="custom_zaps_add_a_message">Ongeza ujumbe wa umma</string>
@@ -657,11 +649,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Ongeza ujumbe wa ankra</string>
     <string name="custom_zaps_add_a_message_example">Asante kwa kazi yako yote!</string>
     <string name="lightning_create_and_add_invoice">Tengeneza na Ongeza</string>
-    <string name="add_content">Ongeza kwenye Ujumbe</string>
-    <string name="add_caption">Ongeza Maelezo</string>
-    <string name="add_caption_example">Rafiki yangu mpendwa</string>
-    <string name="content_description">Maelezo ya yaliyomo</string>
-    <string name="content_description_example">Boti ya buluu kwenye ufukwe mweupe wa mchanga wakati wa jua</string>
     <string name="ai_suggested_alt_text_hint">Inapendekezwa na AI, nihariri</string>
     <string name="ai_suggested_alt_text_dismiss">Ondoa pendekezo la AI</string>
     <string name="zap_type">Aina ya Zap</string>
@@ -993,7 +980,6 @@
     <string name="wallet_refresh">Onyesha upya</string>
     <string name="wallet_filter_all">Yote</string>
     <string name="wallet_filter_non_zaps">Zisizo za Zap</string>
-    <string name="wallet_add">Ongeza Mkoba</string>
     <string name="wallet_default">Chaguo-msingi</string>
     <string name="wallet_set_default">Weka kama Chaguo-msingi</string>
     <string name="wallet_remove">Ondoa</string>
@@ -1085,8 +1071,6 @@
     <string name="cashu_redeemed_amount">Imefidiwa %1$s sats kwenye mkoba wako.</string>
     <string name="wallet_paste_uri">Bandika URI ya nostr+walletconnect://</string>
     <string name="wallet_save">Hifadhi</string>
-    <string name="wallet_rename">Badilisha jina</string>
-    <string name="wallet_rename_title">Badilisha Jina la Mkoba</string>
     <string name="wallet_onchain_transactions">Miamala ya Onchain</string>
     <string name="wallet_onchain_no_address">Hakuna anwani ya on-chain inayopatikana kwa akaunti hii.</string>
     <string name="wallet_onchain_no_backend">Hakuna mfumo wa msururu ulioundwa.</string>
@@ -1327,7 +1311,6 @@
     <string name="accessibility_play_username">Cheza jina la mtumiaji kama sauti</string>
     <string name="accessibility_pushpin">Pini ya Kusimamisha</string>
     <string name="accessibility_scan_qr_code">Skani msimbo wa QR</string>
-    <string name="accessibility_select_date">Chagua tarehe</string>
     <string name="load_from_text">Kutoka kwa Ujumbe</string>
     <string name="dvm_looking_for_app">Inatafuta Programu</string>
     <string name="dvm_waiting_status">Kazi Imeombwa, inasubiri jibu</string>
@@ -1427,9 +1410,7 @@
     <string name="closing_time">Wakati wa Kufunga</string>
     <string name="confirm">Thibitisha</string>
     <string name="next">Ijayo</string>
-    <string name="go_back">Rudi Nyuma</string>
     <string name="approve">Idhini</string>
-    <string name="connected">Imeunganishwa</string>
     <string name="social_proof">Uthibitisho wa kijamii</string>
     <string name="poll_submit">Wasilisha</string>
     <string name="poll_view_results">Tazama matokeo</string>
@@ -1765,7 +1746,6 @@
     <string name="add_a_nip96_server">Ongeza Seva ya NIP-96</string>
     <string name="add_client_tag_explainer">Inapowezesha, Amethyst inaambatanisha lebo ya mteja ya NIP-89 kwenye matukio unayochapisha.</string>
     <string name="add_client_tag_title">Ongeza lebo ya mteja kwenye matukio yangu</string>
-    <string name="add_sensitive_content_description">Inaongeza onyo la yaliyomo nyeti kabla ya kuonyesha yaliyomo hii</string>
     <string name="add_sensitive_content_label">Yaliyomo Nyeti</string>
     <string name="add_to_public_bookmarks">Ongeza kwenye Vialamisho vya Umma</string>
     <string name="ai_writing_setting_description">Hutumia mfano wa AI uliopo kwenye kifaa kupendekeza marekebisho ya maandishi na mabadiliko ya sauti.</string>
@@ -1843,8 +1823,6 @@
     <string name="broadcast_section_explainer">Relay zinazobobea katika kusukuma dokezo zako kwenye relay zote nyingine, kama sendit.nosflare.com. Amethyst itaongeza relay hii kwenye matukio yote mapya yaliyoundwa nawe</string>
     <string name="browser">Kivinjari</string>
     <string name="browser_favorites">Vipendwa</string>
-    <string name="browser_tor_off">Inapakia kupitia wavuti wazi. Gonga kutumia Tor.</string>
-    <string name="browser_tor_on">Inapakia kupitia Tor. Gonga kutumia wavuti wazi.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, tukio %2$d</item>
         <item quantity="other">%1$s, matukio %2$d</item>
@@ -1969,15 +1947,10 @@
     <string name="connectivity_type_always">Daima</string>
     <string name="connectivity_type_never">Kamwe</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi Isiyo na Kipimo</string>
-    <string name="content_description_add_document">Ongeza Hati</string>
-    <string name="content_description_add_image">Ongeza Picha</string>
-    <string name="content_description_add_media">Ongeza Media</string>
-    <string name="content_description_add_video">Ongeza Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Ficha</string>
     <string name="content_warning_see_warnings_option">Onya</string>
     <string name="content_warning_show_all_sensitive_content_option">Onyesha</string>
     <string name="conversations">Mazungumzo</string>
-    <string name="convert_gif_to_mp4_description">Inabadilisha GIF inayosogea kuwa video ya MP4 kwa ukubwa mdogo wa faili na uoanifu bora wa kucheza.</string>
     <string name="convert_gif_to_mp4_label">Badilisha GIF kuwa MP4</string>
     <string name="copied_note_id_to_clipboard">Imesakinishwa ID ya andiko (@note1) kwa ubao wa kunakili</string>
     <string name="copied_note_text_to_clipboard">Maudhui ya dokezo yamenakiliwa kwenye ubao wa kunakili</string>
@@ -2050,7 +2023,6 @@
     <string name="emoji_private_explainer">Emoji za siri zimehifadhiwa zimesimbwa kwenye relay na zinaonekana kwako peke yako. Zinaonekana kwenye menyu yako ya majibu na kukamilisha ":" kama zile za umma.</string>
     <string name="emoji_public_explainer">Emoji za umma zinaonekana kwa kila mtu na zinaonekana kwenye menyu yako ya majibu na kichaguo cha kukamilisha ":" wakati pakiti hii ipo kwenye orodha yako ya emoji.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Simba faili kabla ya kupakia kwa faragha. Seva zingine zinaweza kutokukubali faili zilizosimbwa kwenye akaunti za bure.</string>
     <string name="encrypt_files_label">Simba faili</string>
     <string name="ephemeral_relay_chat">Mazungumzo Yanayopotea</string>
     <string name="error">Hitilafu</string>
@@ -2095,8 +2067,6 @@
     <string name="failed_to_upload_media_no_details">Imeshindwa kupakia media</string>
     <string name="failed_to_upload_to_server_with_message">Imeshindwa kupakia kwa %1$s: %2$s</string>
     <string name="favorite_app_add">Ongeza kwenye vipendwa</string>
-    <string name="favorite_app_network_open">Inapakia kupitia wavuti wazi.</string>
-    <string name="favorite_app_network_tor">Inapakia kupitia Tor.</string>
     <string name="favorite_app_recent">Hivi karibuni</string>
     <string name="favorite_app_remove">Ondoa kutoka kwenye vipendwa</string>
     <string name="favorite_app_still_loading">Programu hiyo bado haijapakiwa. Jaribu tena baada ya muda.</string>
@@ -2375,10 +2345,6 @@
         <item quantity="other">wanachama %1$d</item>
     </plurals>
     <string name="marmot_member_removed">Mwanachama ameondolewa</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">ujumbe %1$d</item>
-        <item quantity="other">ujumbe %1$d</item>
-    </plurals>
     <string name="marmot_not_a_member">Si mwanachama wa kikundi hiki</string>
     <string name="marmot_unknown_error">kosa lisilojulikana</string>
     <string name="media_added">Media imeongezwa</string>
@@ -2467,13 +2433,7 @@
     <string name="nest_lower_hand">Shukisha mkono</string>
     <string name="nest_mic_mute">Zima maikrofoni</string>
     <string name="nest_mic_unmute">Washa maikrofoni</string>
-    <string name="nest_mute">Zima sauti</string>
     <string name="nest_no_server_save_failed">Imeshindwa kuhifadhi orodha yako ya seva za nest. Jaribu tena.</string>
-    <string name="nest_notification_broadcasting">Nest — Moja kwa Moja</string>
-    <string name="nest_notification_channel_description">Inaweka sauti ikicheza wakati chumba kiko wazi.</string>
-    <string name="nest_notification_listening">Nest imeunganishwa</string>
-    <string name="nest_notification_stop">Simama</string>
-    <string name="nest_notification_text">Gonga kurudi.</string>
     <string name="nest_participant_follow">Fuata</string>
     <string name="nest_participant_mute">Nyamazisha</string>
     <string name="nest_participant_unfollow">Acha kufuata</string>
@@ -2484,7 +2444,6 @@
     <string name="nest_presence_raised_hand">ameinua mkono</string>
     <string name="nest_presence_speaking">anazungumza</string>
     <string name="nest_raise_hand">Inua mkono</string>
-    <string name="nest_unmute">Washa sauti</string>
     <string name="nests_servers_my_explainer">Imehifadhiwa kama tukio la aina-10112 linaloweza kubadilishwa ili wateja wengine waweze kusoma upendeleo wako.</string>
     <string name="nests_servers_my_section">Seva zako</string>
     <string name="nests_servers_recommended_explainer">Mapendekezo yaliyojengwa ndani ambayo unaweza kuongeza kwenye orodha yako kwa kubonyeza mara moja.</string>
@@ -2516,10 +2475,6 @@
     <string name="new_requests">Maombi Mapya</string>
     <string name="new_threads">Nyuzi Mpya</string>
     <string name="new_workout">Mazoezi Mapya</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">Rasilimali %1$d imefungwa pamoja</item>
-        <item quantity="other">Rasilimali %1$d zimefungwa pamoja</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Programu za Blossom hazikupatikana. Tafadhali sakinisha programu ya Blossom ya ndani kuona faili hili</string>
     <string name="no_blossom_apps_found_title">Haiwezi kufungua viungo vya Blossom</string>
     <string name="no_camera_app_found">Hakuna programu ya kamera iliyopatikana kwenye kifaa hiki</string>
@@ -2529,7 +2484,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Hakuna aina za majibu zilizochaguliwa. Bonyeza kwa muda mrefu kubadilisha</string>
     <string name="no_reactions_setup">Hakuna mpangilio wa mwitikio</string>
     <string name="no_wallet_found">Hakuna Mikoba iliyopatikana kulipa ankara ya lightning. Tafadhali sakinisha mkoba wa Lightning kutumia zap</string>
-    <string name="no_wallet_found_with_error">Hakuna Mikoba iliyopatikana kulipa ankara ya lightning (Hitilafu: %1$s). Tafadhali sakinisha mkoba wa Lightning kutumia zap</string>
     <string name="no_zap_amount_setup_long_press_to_change">Hakuna Usanidi wa Kiasi cha Zap. Bonyeza kwa Muda mrefu ili kubadilisha</string>
     <string name="notification_settings">Arifa</string>
     <string name="notification_settings_section_categories">Makundi</string>
@@ -2874,8 +2828,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Mtumiaji %1$s hana anwani ya lightning iliyowekwa kupokea sats</string>
     <string name="vanish_history">Historia ya Kutoweka</string>
     <string name="vanish_request_sent">Ombi la kutoweka limetumwa</string>
-    <string name="video_codec_h265_description">Ubora bora kwa ukubwa mdogo wa faili lakini si vifaa vyote vinavyounga mkono uchezaji wa H.265.</string>
-    <string name="video_codec_h265_label">Tumia Codec ya H.265/HEVC</string>
     <string name="video_download_has_started_toast">Upakuaji wa video umeanza…</string>
     <string name="video_player_settings">Vitufe vya Kichezaji Video</string>
     <string name="video_saved_to_the_gallery">Video imehifadhiwa kwenye gallery ya video ya simu</string>

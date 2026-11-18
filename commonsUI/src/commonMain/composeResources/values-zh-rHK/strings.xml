@@ -12,8 +12,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">回覆 </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">静态网站: %1$s</string>
-    <string name="napplet_card_title">nApple: %1$s</string>
     <string name="napplet_card_permissions">权限：</string>
     <string name="nsite_root_site">根站点</string>
     <string name="nsite_source">源：</string>
@@ -108,7 +106,6 @@
     <string name="quote">引用</string>
     <string name="fork">复刻</string>
     <string name="new_amount_in_sats">新的聰金額</string>
-    <string name="and"> 和 </string>
     <string name="following"> 關注</string>
     <string name="followers"> 粉絲</string>
     <string name="number_following">%1$s 正在关注</string>
@@ -257,7 +254,6 @@
     <string name="refresh">刷新</string>
     <string name="channel_created">頻道已創建</string>
     <string name="channel_information_changed_to">頻道信息已更改為</string>
-    <string name="marmot_group_no_messages_yet">尚无消息</string>
     <string name="paid_relay">付费中继</string>
     <string name="tor_relay">强制使用 Tor 进行连接</string>
     <string name="posts_received">收到文章</string>
@@ -430,7 +426,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">尚未找到nSite。</string>
-    <string name="browser_reload">重新加载</string>
     <string name="browser_unsupported">应用内浏览器需要 Android 11 或更高版本。</string>
     <string name="embedded_tab_load_failed">无法加载此应用。</string>
     <string name="browser_go">打开</string>
@@ -438,10 +433,6 @@
     <string name="browser_recent_options">选项</string>
     <string name="browser_recent_remove">从历史记录中删除</string>
     <string name="favorite_apps_empty">还没有喜欢的应用。打开 web 客户端或 nsite 并点击⭐来固定它。</string>
-    <string name="favorite_app_open_window">在自己的窗口打开</string>
-    <string name="favorite_app_access_title">此应用可以访问什么</string>
-    <string name="favorite_app_access_static">在沙盒中运行，没有对账户的特殊访问权。</string>
-    <string name="favorite_app_access_show">此应用可以访问什么</string>
     <string name="favorite_app_unavailable">此应用尚未加载。请从其卡片打开它，或稍后再试。</string>
     <string name="napplet_manage_permissions">管理权限</string>
     <string name="napplet_none_found">尚未找到 nApplets 。</string>
@@ -663,7 +654,6 @@
     <string name="pledge_amount_in_sats">聰數量</string>
     <string name="poll_zap_value_min">打闪最低金额</string>
     <string name="poll_zap_value_max">打闪最高金额</string>
-    <string name="poll_consensus_threshold">共识</string>
     <string name="looking_for_event">“正在查找事件%1$s”</string>
     <string name="send_zap">发送打闪</string>
     <string name="custom_zaps_add_a_message">添加公开消息</string>
@@ -671,11 +661,6 @@
     <string name="custom_zaps_add_a_message_nonzap">添加发票消息</string>
     <string name="custom_zaps_add_a_message_example">感谢你的所有工作！</string>
     <string name="lightning_create_and_add_invoice">创建并添加</string>
-    <string name="add_content">添加到消息</string>
-    <string name="add_caption">添加标题</string>
-    <string name="add_caption_example">我最爱的朋友</string>
-    <string name="content_description">内容描述</string>
-    <string name="content_description_example">日落时分，白色沙滩上的蓝色小船</string>
     <string name="ai_suggested_alt_text_hint">AI建议的，编辑我</string>
     <string name="ai_suggested_alt_text_dismiss">忽略 AI 建议</string>
     <string name="zap_type">打闪类型</string>
@@ -1010,7 +995,6 @@
     <string name="wallet_filter_all">全部</string>
     <string name="wallet_filter_zaps">打闪</string>
     <string name="wallet_filter_non_zaps">非打闪</string>
-    <string name="wallet_add">添加钱包</string>
     <string name="wallet_default">默认</string>
     <string name="wallet_set_default">设为默认</string>
     <string name="wallet_remove">删除</string>
@@ -1103,8 +1087,6 @@
     <string name="cashu_redeemed_amount">将 %1$s sat 兑换到你的钱包。</string>
     <string name="wallet_paste_uri">粘贴nostr+walletconnect:// URI</string>
     <string name="wallet_save">保存</string>
-    <string name="wallet_rename">重命名</string>
-    <string name="wallet_rename_title">重命名钱包</string>
     <string name="wallet_onchain_transactions">链上交易</string>
     <string name="wallet_onchain_no_address">此账户没有链上地址可用。</string>
     <string name="wallet_onchain_no_backend">没有配置链后端。</string>
@@ -1350,7 +1332,6 @@
     <string name="accessibility_play_username">作为音频播放用户名</string>
     <string name="accessibility_pushpin">图钉</string>
     <string name="accessibility_scan_qr_code">扫描二维码</string>
-    <string name="accessibility_select_date">选择日期</string>
     <string name="load_from_text">来自消息</string>
     <string name="dvm_looking_for_app">搜寻应用</string>
     <string name="dvm_waiting_status">数据作业已申请，正在等待回复</string>
@@ -1451,9 +1432,7 @@
     <string name="closing_time">结束时间</string>
     <string name="confirm">确认</string>
     <string name="next">下一个</string>
-    <string name="go_back">返回</string>
     <string name="approve">批准</string>
-    <string name="connected">已连接</string>
     <string name="social_proof">社交证明</string>
     <string name="poll_submit">提交</string>
     <string name="poll_view_results">查看结果</string>
@@ -1791,7 +1770,6 @@
     <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
     <string name="add_client_tag_explainer">启用时，Amethyst 将会附加一个 NIP-89 客户端标签到您发布的事件。</string>
     <string name="add_client_tag_title">将客户端标签添加到我的事件</string>
-    <string name="add_sensitive_content_description">在显示此内容之前添加敏感内容警告</string>
     <string name="add_sensitive_content_label">敏感内容</string>
     <string name="add_to_public_bookmarks">添加到公開書籤</string>
     <string name="ai_writing_setting_description">使用设备上的 AI 模型来提出文本更正和音调更改。</string>
@@ -1870,8 +1848,6 @@
     <string name="broadcast_section_explainer">推送你的帖子到其他中继的中继，例如：sendit.nosflare.com，应用会把这个中继作为提示嵌入到你发送的所有事件的 Json 结构中</string>
     <string name="browser">浏览器</string>
     <string name="browser_favorites">收藏夹</string>
-    <string name="browser_tor_off">正通过 open web 加载 Tor。点击使用 Tor。</string>
-    <string name="browser_tor_on">正通过 Tor 加载。点击使用 open web。</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s, %2$d 个活动</item>
     </plurals>
@@ -1990,15 +1966,10 @@
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_never">从不</string>
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
-    <string name="content_description_add_document">添加文件</string>
-    <string name="content_description_add_image">添加图片</string>
-    <string name="content_description_add_media">添加媒体</string>
-    <string name="content_description_add_video">添加视频</string>
     <string name="content_warning_hide_all_sensitive_content_option">隐藏</string>
     <string name="content_warning_see_warnings_option">警告</string>
     <string name="content_warning_show_all_sensitive_content_option">显示</string>
     <string name="conversations">會話</string>
-    <string name="convert_gif_to_mp4_description">将动画的 GIF 转换为 MP4 视频以获取较小文件大小和更好的播放兼容性。</string>
     <string name="convert_gif_to_mp4_label">转换 GIF 为 MP4</string>
     <string name="copied_note_id_to_clipboard">複製文章ID (@note1) 到剪貼板</string>
     <string name="copied_note_text_to_clipboard">文本已複製到剪貼板</string>
@@ -2066,7 +2037,6 @@
     <string name="emoji_private_explainer">私密表情符号被加密存储在中继上，只对您可见。它们就像公开表情符号一样出现在回应菜单和 ":" 自动完成中。</string>
     <string name="emoji_public_explainer">公开表情符号对所有人可见；当此表情包位于您的表情符号列表中时，它们会显示在您的“反应”菜单及“:”自动补全选择器中。</string>
     <string name="emoji_sets">表情</string>
-    <string name="encrypt_files_description">上传前为了隐私加密文件。有些服务器可能不接受免费账户的加密文件。</string>
     <string name="encrypt_files_label">加密文件</string>
     <string name="ephemeral_relay_chat">临时聊天</string>
     <string name="error">错误</string>
@@ -2112,8 +2082,6 @@
     <string name="failed_to_upload_media_no_details">无法上传媒体</string>
     <string name="failed_to_upload_to_server_with_message">无法上传到%1$s：%2$s</string>
     <string name="favorite_app_add">添加至收藏夹</string>
-    <string name="favorite_app_network_open">通过 open web 加载。</string>
-    <string name="favorite_app_network_tor">通过 Tor 加载。</string>
     <string name="favorite_app_recent">最近</string>
     <string name="favorite_app_remove">从收藏中移除</string>
     <string name="favorite_app_still_loading">该应用尚未加载。稍后再试。</string>
@@ -2400,9 +2368,6 @@
         <item quantity="other">%1$d 位成员</item>
     </plurals>
     <string name="marmot_member_removed">成员已移除</string>
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d 条消息</item>
-    </plurals>
     <string name="marmot_not_a_member">不是此群的成员</string>
     <string name="marmot_unknown_error">未知错误</string>
     <string name="media_added">媒体已添加</string>
@@ -2487,14 +2452,7 @@
     <string name="nest_lower_hand">放下手</string>
     <string name="nest_mic_mute">麦克风静音</string>
     <string name="nest_mic_unmute">取消麦克风静音</string>
-    <string name="nest_mute">静音</string>
     <string name="nest_no_server_save_failed">无法保存您的语音聊天服务器列表。请重试。</string>
-    <string name="nest_notification_broadcasting">语音聊天室 — 在线</string>
-    <string name="nest_notification_channel">语音聊天房</string>
-    <string name="nest_notification_channel_description">当聊天室开放时保持音频播放。</string>
-    <string name="nest_notification_listening">语音聊天室已连接</string>
-    <string name="nest_notification_stop">停止</string>
-    <string name="nest_notification_text">轻触返回。</string>
     <string name="nest_participant_follow">关注</string>
     <string name="nest_participant_mute">静音</string>
     <string name="nest_participant_unfollow">取关</string>
@@ -2505,7 +2463,6 @@
     <string name="nest_presence_raised_hand">举手</string>
     <string name="nest_presence_speaking">正在说话</string>
     <string name="nest_raise_hand">举手</string>
-    <string name="nest_unmute">取消静音</string>
     <string name="nests">音频室</string>
     <string name="nests_servers_my_explainer">保存为 10112 类型的可替换事件，以便其他客户端可以读取您的首选项。</string>
     <string name="nests_servers_my_section">您的服务器</string>
@@ -2539,9 +2496,6 @@
     <string name="new_requests">新請求</string>
     <string name="new_threads">新動態</string>
     <string name="new_workout">新锻炼</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">捆绑了 %1$d 个资产</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">找不到Blossom应用。请安装本地Blossom应用查看此文件</string>
     <string name="no_blossom_apps_found_title">无法打开 Blossom 链接</string>
     <string name="no_camera_app_found">此设备上没有找到相机应用</string>
@@ -2551,7 +2505,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">未选择回应类型。长按可更改</string>
     <string name="no_reactions_setup">没有设置回应</string>
     <string name="no_wallet_found">找不到支付闪电发票的钱包。请安装闪电钱包来使用打闪</string>
-    <string name="no_wallet_found_with_error">找不到支付闪电发票的钱包（错误：%1$s）。请安装闪电钱包来使用打闪</string>
     <string name="no_zap_amount_setup_long_press_to_change">沒有設置Zap金額。長按以更改</string>
     <string name="notification_settings">通知</string>
     <string name="notification_settings_section_categories">分类</string>
@@ -2886,8 +2839,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未设置接收聪的闪电地址</string>
     <string name="vanish_history">消失历史记录</string>
     <string name="vanish_request_sent">消失请求已发送</string>
-    <string name="video_codec_h265_description">文件较小而质量更佳，但不是所有设备都支持 H.265 播放。</string>
-    <string name="video_codec_h265_label">使用 H.265/HEVC 编解码器</string>
     <string name="video_download_has_started_toast">视频下载已开始…</string>
     <string name="video_player_settings">视频播放器按钮</string>
     <string name="video_saved_to_the_gallery">视频已保存到媒体库</string>

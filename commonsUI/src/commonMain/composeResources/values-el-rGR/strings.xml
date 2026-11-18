@@ -106,7 +106,6 @@
     <string name="original">πρωτότυπο</string>
     <string name="quote">Παράθεση</string>
     <string name="new_amount_in_sats">Νέο ποσό σε Sats</string>
-    <string name="and"> και </string>
     <string name="following"> Ακολουθείτε</string>
     <string name="followers"> Ακόλουθοι</string>
     <string name="number_following">%1$s Ακολουθώ</string>
@@ -252,7 +251,6 @@
     <string name="refresh">Ανανέωση</string>
     <string name="channel_created">Το κανάλι δημιουργήθηκε</string>
     <string name="channel_information_changed_to">Οι Πληροφορίες Καναλιού άλλαξαν σε</string>
-    <string name="marmot_group_no_messages_yet">Δεν υπάρχουν ακόμα μηνύματα</string>
     <string name="paid_relay">Επί πληρωμή relay</string>
     <string name="tor_relay">Επιβάλλει Tor κατά τη σύνδεση</string>
     <string name="posts_received">ληφθείσες δημοσιεύσεις</string>
@@ -422,7 +420,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Δεν βρέθηκαν nSites ακόμα.</string>
-    <string name="browser_reload">Ανανέωση</string>
     <string name="browser_unsupported">Ο ενσωματωμένος περιηγητής απαιτεί Android 11 ή νεότερο.</string>
     <string name="embedded_tab_load_failed">Δεν ήταν δυνατή η φόρτωση αυτής της εφαρμογής.</string>
     <string name="browser_go">Άνοιγμα</string>
@@ -430,10 +427,6 @@
     <string name="browser_recent_options">Επιλογές</string>
     <string name="browser_recent_remove">Αφαίρεση από ιστορικό</string>
     <string name="favorite_apps_empty">Δεν υπάρχουν αγαπημένες εφαρμογές ακόμα. Ανοίξτε έναν web client ή nsite και πατήστε το αστέρι για να το καρφιτσώσετε εδώ.</string>
-    <string name="favorite_app_open_window">Άνοιγμα στο δικό του παράθυρο</string>
-    <string name="favorite_app_access_title">Τι μπορεί να προσπελάσει αυτή η εφαρμογή</string>
-    <string name="favorite_app_access_static">Εκτελείται σε sandbox χωρίς ειδική πρόσβαση στον λογαριασμό σας.</string>
-    <string name="favorite_app_access_show">Τι μπορεί να προσπελάσει</string>
     <string name="favorite_app_unavailable">Αυτή η εφαρμογή δεν έχει φορτωθεί ακόμα. Ανοίξτε την από την κάρτα της ή δοκιμάστε ξανά σε λίγο.</string>
     <string name="napplet_manage_permissions">Διαχείριση δικαιωμάτων</string>
     <string name="napplet_none_found">Δεν βρέθηκαν nApplets ακόμα.</string>
@@ -652,7 +645,6 @@
     <string name="pledge_amount_in_sats">Νέο ποσό σε Sats</string>
     <string name="poll_zap_value_min">Ελάχιστο Zap</string>
     <string name="poll_zap_value_max">Μέγιστο Zap</string>
-    <string name="poll_consensus_threshold">Συναίνεση</string>
     <string name="looking_for_event">Αναζήτηση γεγονότος %1$s</string>
     <string name="send_zap">Αποστολή Zap</string>
     <string name="custom_zaps_add_a_message">Προσθήκη δημόσιου μηνύματος</string>
@@ -660,11 +652,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Προσθήκη μηνύματος πληρωμής</string>
     <string name="custom_zaps_add_a_message_example">Σας ευχαριστούμε για το έργο σας!</string>
     <string name="lightning_create_and_add_invoice">Δημιουργία και Προσθήκη</string>
-    <string name="add_content">Προσθήκη στο Μήνυμα</string>
-    <string name="add_caption">Προσθήκη λεζάντας</string>
-    <string name="add_caption_example">Ο αγαπημένος μου φίλος</string>
-    <string name="content_description">Περιγραφή περιεχομένου</string>
-    <string name="content_description_example">Ένας πολιτικός και ένας τραπεζίτης τα ξήνουν ανάλαφρα στην παραλία</string>
     <string name="ai_suggested_alt_text_hint">Προτεινόμενο από AI, επεξεργαστείτε το</string>
     <string name="ai_suggested_alt_text_dismiss">Απόρριψη πρότασης AI</string>
     <string name="zap_type">Τύπος Zap</string>
@@ -994,7 +981,6 @@
     <string name="wallet_refresh">Ανανέωση</string>
     <string name="wallet_filter_all">Όλα</string>
     <string name="wallet_filter_non_zaps">Μη-Zaps</string>
-    <string name="wallet_add">Προσθήκη πορτοφολιού</string>
     <string name="wallet_default">Προεπιλογή</string>
     <string name="wallet_set_default">Ορισμός ως προεπιλογή</string>
     <string name="wallet_remove">Αφαίρεση</string>
@@ -1086,8 +1072,6 @@
     <string name="cashu_redeemed_amount">Εξαργυρώθηκαν %1$s sats στο πορτοφόλι σας.</string>
     <string name="wallet_paste_uri">Επικόλληση URI nostr+walletconnect://</string>
     <string name="wallet_save">Αποθήκευση</string>
-    <string name="wallet_rename">Μετονομασία</string>
-    <string name="wallet_rename_title">Μετονομασία πορτοφολιού</string>
     <string name="wallet_onchain_transactions">Συναλλαγές Onchain</string>
     <string name="wallet_onchain_no_address">Δεν υπάρχει διαθέσιμη on-chain διεύθυνση για αυτόν τον λογαριασμό.</string>
     <string name="wallet_onchain_no_backend">Δεν έχει ρυθμιστεί backend αλυσίδας.</string>
@@ -1323,7 +1307,6 @@
     <string name="accessibility_play_username">Αναπαραγωγή ονόματος χρήστη ως ήχος</string>
     <string name="accessibility_pushpin">Καρφίτσα</string>
     <string name="accessibility_scan_qr_code">Σάρωση κωδικού QR</string>
-    <string name="accessibility_select_date">Επιλογή ημερομηνίας</string>
     <string name="load_from_text">Από Μήνυμα</string>
     <string name="dvm_looking_for_app">Αναζήτηση Εφαρμογής</string>
     <string name="dvm_waiting_status">Εργασία Ζητήθηκε, αναμονή απάντησης</string>
@@ -1422,9 +1405,7 @@
     <string name="closing_time">Ώρα κλεισίματος</string>
     <string name="confirm">Επιβεβαίωση</string>
     <string name="next">Επόμενο</string>
-    <string name="go_back">Επιστροφή</string>
     <string name="approve">Έγκριση</string>
-    <string name="connected">Συνδεδεμένο</string>
     <string name="social_proof">Κοινωνική απόδειξη</string>
     <string name="poll_submit">Υποβολή</string>
     <string name="poll_view_results">Προβολή αποτελεσμάτων</string>
@@ -1761,7 +1742,6 @@
     <string name="add_a_nip96_server">Προσθήκη Διακομιστή NIP-96</string>
     <string name="add_client_tag_explainer">Όταν είναι ενεργοποιημένο, το Amethyst προσαρτά μια ετικέτα πελάτη NIP-89 στα γεγονότα που δημοσιεύετε.</string>
     <string name="add_client_tag_title">Προσθήκη ετικέτας πελάτη στα γεγονότά μου</string>
-    <string name="add_sensitive_content_description">Προσθέτει προειδοποίηση ευαίσθητου περιεχομένου πριν εμφανιστεί αυτό το περιεχόμενο</string>
     <string name="add_sensitive_content_label">Ευαίσθητο Περιεχόμενο</string>
     <string name="add_to_public_bookmarks">Προσθήκη στους Δημόσιους Σελιδοδείκτες</string>
     <string name="ai_writing_setting_description">Χρησιμοποιεί ένα τοπικό μοντέλο AI για να προτείνει διορθώσεις κειμένου και αλλαγές τόνου.</string>
@@ -1839,8 +1819,6 @@
     <string name="broadcast_section_explainer">Relay που ειδικεύονται στην προώθηση των σημειώσεών σας σε όλα τα άλλα relay, όπως sendit.nosflare.com. Το Amethyst θα προσθέτει αυτό το relay σε όλα τα νέα συμβάντα που δημιουργείτε</string>
     <string name="browser">Περιηγητής</string>
     <string name="browser_favorites">Αγαπημένα</string>
-    <string name="browser_tor_off">Φόρτωση μέσω ανοιχτού ιστού. Πατήστε για χρήση Tor.</string>
-    <string name="browser_tor_on">Φόρτωση μέσω Tor. Πατήστε για χρήση ανοιχτού ιστού.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d συμβάν</item>
         <item quantity="other">%1$s, %2$d συμβάντα</item>
@@ -1960,15 +1938,10 @@
     <string name="connectivity_type_always">Πάντα</string>
     <string name="connectivity_type_never">Ποτέ</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi χωρίς μετρητή</string>
-    <string name="content_description_add_document">Προσθήκη Εγγράφου</string>
-    <string name="content_description_add_image">Προσθήκη Εικόνας</string>
-    <string name="content_description_add_media">Προσθήκη μέσου</string>
-    <string name="content_description_add_video">Προσθήκη Βίντεο</string>
     <string name="content_warning_hide_all_sensitive_content_option">Απόκρυψη</string>
     <string name="content_warning_see_warnings_option">Προειδοποίηση</string>
     <string name="content_warning_show_all_sensitive_content_option">Εμφάνιση</string>
     <string name="conversations">Συζητήσεις</string>
-    <string name="convert_gif_to_mp4_description">Μετατρέπει κινούμενα GIF σε βίντεο MP4 για μικρότερο μέγεθος αρχείου και καλύτερη συμβατότητα αναπαραγωγής.</string>
     <string name="convert_gif_to_mp4_label">Μετατροπή GIF σε MP4</string>
     <string name="copied_note_id_to_clipboard">Το ID της δημοσίευσης (@note1) αποθηκεύτηκε στο πρόχειρο</string>
     <string name="copied_note_text_to_clipboard">Το κείμενο της δημοσίευσης αποθηκεύτηκε στο πρόχειρο</string>
@@ -2041,7 +2014,6 @@
     <string name="emoji_private_explainer">Τα ιδιωτικά emoji αποθηκεύονται κρυπτογραφημένα στα relay και είναι ορατά μόνο σε εσάς. Εμφανίζονται στο μενού αντιδράσεών σας και στην αυτόματη συμπλήρωση ":" όπως τα δημόσια.</string>
     <string name="emoji_public_explainer">Τα δημόσια emoji είναι ορατά σε όλους και εμφανίζονται στο μενού αντιδράσεών σας και στον επιλογέα αυτόματης συμπλήρωσης ":" όταν αυτό το πακέτο βρίσκεται στη λίστα emoji σας.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Κρυπτογράφηση αρχείων πριν το ανέβασμα για απόρρητο. Ορισμένοι διακομιστές ενδέχεται να μην δέχονται κρυπτογραφημένα αρχεία σε δωρεάν λογαριασμούς.</string>
     <string name="encrypt_files_label">Κρυπτογράφηση αρχείων</string>
     <string name="ephemeral_relay_chat">Συνομιλία που εξαφανίζεται</string>
     <string name="error">Σφάλμα</string>
@@ -2085,8 +2057,6 @@
     <string name="failed_to_upload_media_no_details">Αποτυχία ανεβάσματος πολυμέσων</string>
     <string name="failed_to_upload_to_server_with_message">Αποτυχία ανεβάσματος στο %1$s: %2$s</string>
     <string name="favorite_app_add">Προσθήκη στα αγαπημένα</string>
-    <string name="favorite_app_network_open">Φορτώνει μέσω του ανοιχτού διαδικτύου.</string>
-    <string name="favorite_app_network_tor">Φορτώνει μέσω Tor.</string>
     <string name="favorite_app_recent">Πρόσφατα</string>
     <string name="favorite_app_remove">Αφαίρεση από αγαπημένα</string>
     <string name="favorite_app_still_loading">Αυτή η εφαρμογή δεν έχει φορτωθεί ακόμα. Δοκιμάστε ξανά σε λίγο.</string>
@@ -2341,10 +2311,6 @@
         <item quantity="other">%1$d μέλη</item>
     </plurals>
     <string name="marmot_member_removed">Το μέλος αφαιρέθηκε</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d μήνυμα</item>
-        <item quantity="other">%1$d μηνύματα</item>
-    </plurals>
     <string name="marmot_not_a_member">Δεν είστε μέλος αυτής της ομάδας</string>
     <string name="marmot_unknown_error">άγνωστο σφάλμα</string>
     <string name="media_added">Τα πολυμέσα προστέθηκαν</string>
@@ -2433,13 +2399,7 @@
     <string name="nest_lower_hand">Κατέβασμα χεριού</string>
     <string name="nest_mic_mute">Σίγαση μικροφώνου</string>
     <string name="nest_mic_unmute">Άρση σίγασης μικροφώνου</string>
-    <string name="nest_mute">Σίγαση</string>
     <string name="nest_no_server_save_failed">Αδυναμία αποθήκευσης της λίστας διακομιστών nest. Δοκιμάστε ξανά.</string>
-    <string name="nest_notification_broadcasting">Nest — Ζωντανά</string>
-    <string name="nest_notification_channel_description">Διατηρεί τον ήχο σε αναπαραγωγή ενώ το δωμάτιο είναι ανοιχτό.</string>
-    <string name="nest_notification_listening">Nest συνδεδεμένο</string>
-    <string name="nest_notification_stop">Διακοπή</string>
-    <string name="nest_notification_text">Πατήστε για επιστροφή.</string>
     <string name="nest_participant_follow">Ακολουθία</string>
     <string name="nest_participant_mute">Σίγαση</string>
     <string name="nest_participant_unfollow">Διακοπή ακολουθίας</string>
@@ -2450,7 +2410,6 @@
     <string name="nest_presence_raised_hand">σήκωσε το χέρι</string>
     <string name="nest_presence_speaking">μιλά</string>
     <string name="nest_raise_hand">Σήκωμα χεριού</string>
-    <string name="nest_unmute">Άρση σίγασης</string>
     <string name="nests_servers_my_explainer">Αποθηκεύεται ως αντικαταστάσιμο συμβάν kind-10112 ώστε άλλοι πελάτες να μπορούν να διαβάσουν την προτίμησή σας.</string>
     <string name="nests_servers_my_section">Οι διακομιστές σας</string>
     <string name="nests_servers_recommended_explainer">Ενσωματωμένες προτάσεις που μπορείτε να προσθέσετε στη λίστα σας με ένα άγγιγμα.</string>
@@ -2482,10 +2441,6 @@
     <string name="new_requests">Νέα Αιτήματα</string>
     <string name="new_threads">Νέα Νήματα</string>
     <string name="new_workout">Νέα Προπόνηση</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d αρχείο συμπεριλήφθηκε</item>
-        <item quantity="other">%1$d αρχεία συμπεριλήφθηκαν</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Δεν βρέθηκαν εφαρμογές Blossom. Εγκαταστήστε μια τοπική εφαρμογή Blossom για να δείτε αυτό το αρχείο</string>
     <string name="no_blossom_apps_found_title">Δεν είναι δυνατό το άνοιγμα συνδέσμων Blossom</string>
     <string name="no_camera_app_found">Δεν βρέθηκε εφαρμογή κάμερας σε αυτή τη συσκευή</string>
@@ -2495,7 +2450,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Δεν έχουν επιλεγεί εικονίδια αντίδρασης. Πατήστε παρατεταμένα το κουμπί της καρδιάς για αλλαγή</string>
     <string name="no_reactions_setup">Καμία ρύθμιση αντιδράσεων</string>
     <string name="no_wallet_found">Δε βρέθηκε ψηφιακό πορτοφόλι για πληρωμή Lightning. Παρακαλώ εγκαταστήστε ένα πορτοφόλι Lightning για να χρησιμοποιήσετε τα zaps</string>
-    <string name="no_wallet_found_with_error">Δε βρέθηκαν πορτοφόλια για να πληρώσετε το τιμολόγιο Lightning (Error: %1$s). Παρακαλώ εγκαταστήστε ένα πορτοφόλι Lightning για να χρησιμοποιήσετε τα zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">Το ποσό του Zap δεν έχει ρυθμιστεί. Πατήστε παρατεταμένα για να το ρυθμίσετε και να Zapάρετε</string>
     <string name="notification_settings">Ειδοποιήσεις</string>
     <string name="notification_settings_section_categories">Κατηγορίες</string>
@@ -2838,8 +2792,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Ο Χρήστης %1$s δεν έχει ορίσει διεύθυνση LN (lightning) για να λαμβάνει sats</string>
     <string name="vanish_history">Ιστορικό Εξαφάνισης</string>
     <string name="vanish_request_sent">Στάλθηκε αίτηση εξαφάνισης</string>
-    <string name="video_codec_h265_description">Καλύτερη ποιότητα σε μικρότερα μεγέθη αρχείων, αλλά δεν υποστηρίζουν όλες οι συσκευές αναπαραγωγή H.265.</string>
-    <string name="video_codec_h265_label">Χρήση κωδικοποιητή H.265/HEVC</string>
     <string name="video_download_has_started_toast">Η λήψη βίντεο ξεκίνησε…</string>
     <string name="video_player_settings">Κουμπιά Αναπαραγωγής Βίντεο</string>
     <string name="video_saved_to_the_gallery">Το βίντεο αποθηκεύτηκε στη γκαλερί βίντεο του τηλεφώνου</string>

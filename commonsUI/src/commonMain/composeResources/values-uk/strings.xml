@@ -93,7 +93,6 @@
     <string name="fork">Форк</string>
     <string name="new_amount_in_sats">Нова сума в sat</string>
     <string name="replying_to">у відповідь </string>
-    <string name="and"> та </string>
     <string name="following"> Підписок</string>
     <string name="followers"> Підписників</string>
     <string name="number_following">%1$s підписок</string>
@@ -244,7 +243,6 @@
     <string name="refresh">Оновити</string>
     <string name="channel_created">Канал створено</string>
     <string name="channel_information_changed_to">Інформацію каналу змінено на</string>
-    <string name="marmot_group_no_messages_yet">Повідомлень ще немає</string>
     <string name="paid_relay">Платний relay</string>
     <string name="tor_relay">Примусово використовує Tor при підключенні</string>
     <string name="posts_received">дописів отримано</string>
@@ -416,7 +414,6 @@
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">З Health Connect</string>
     <string name="nsite_none_found">nSites ще не знайдено.</string>
-    <string name="browser_reload">Оновити</string>
     <string name="browser_unsupported">Вбудований браузер потребує Android 11 або новішої версії.</string>
     <string name="embedded_tab_load_failed">Не вдалося завантажити цей застосунок.</string>
     <string name="browser_go">Відкрити</string>
@@ -424,10 +421,6 @@
     <string name="browser_recent_options">Параметри</string>
     <string name="browser_recent_remove">Видалити з історії</string>
     <string name="favorite_apps_empty">Улюблених застосунків ще немає. Відкрийте веб-клієнт або nsite і натисніть зірочку, щоб закріпити його тут.</string>
-    <string name="favorite_app_open_window">Відкрити у власному вікні</string>
-    <string name="favorite_app_access_title">До чого має доступ цей застосунок</string>
-    <string name="favorite_app_access_static">Запускається в пісочниці без спеціального доступу до вашого акаунта.</string>
-    <string name="favorite_app_access_show">Що він може переглядати</string>
     <string name="favorite_app_unavailable">Цей застосунок ще не завантажено. Відкрийте його з картки або спробуйте ще раз через мить.</string>
     <string name="napplet_manage_permissions">Керувати дозволами</string>
     <string name="napplet_none_found">nApplets ще не знайдено.</string>
@@ -651,7 +644,6 @@
     <string name="pledge_amount_in_sats">Сума внеску в sat</string>
     <string name="poll_zap_value_min">Мінімальний зап</string>
     <string name="poll_zap_value_max">Максимальний зап</string>
-    <string name="poll_consensus_threshold">Консенсус</string>
     <string name="looking_for_event">Пошук події %1$s</string>
     <string name="send_zap">Надіслати зап</string>
     <string name="custom_zaps_add_a_message">Додати публічне повідомлення</string>
@@ -659,11 +651,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Додати примітку до інвойсу</string>
     <string name="custom_zaps_add_a_message_example">Дякую всім вам за роботу!</string>
     <string name="lightning_create_and_add_invoice">Створити та Додати</string>
-    <string name="add_content">Додати до повідомлення</string>
-    <string name="add_caption">Додати підпис</string>
-    <string name="add_caption_example">Мій чудовий друг</string>
-    <string name="content_description">Опис вмісту</string>
-    <string name="content_description_example">Компанія веселих молодих людей</string>
     <string name="ai_suggested_alt_text_hint">Запропоновано ШІ, відредагуйте</string>
     <string name="ai_suggested_alt_text_dismiss">Відхилити пропозицію ШІ</string>
     <string name="zap_type">Тип запу</string>
@@ -999,7 +986,6 @@
     <string name="wallet_filter_all">Усі</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Не-Zaps</string>
-    <string name="wallet_add">Додати гаманець</string>
     <string name="wallet_default">За замовчуванням</string>
     <string name="wallet_set_default">Встановити за замовчуванням</string>
     <string name="wallet_remove">Видалити</string>
@@ -1094,8 +1080,6 @@
     <string name="cashu_redeemed_amount">Обміняно %1$s sats у ваш гаманець.</string>
     <string name="wallet_paste_uri">Вставте nostr+walletconnect:// URI</string>
     <string name="wallet_save">Зберегти</string>
-    <string name="wallet_rename">Перейменувати</string>
-    <string name="wallet_rename_title">Перейменувати гаманець</string>
     <string name="wallet_onchain_transactions">Onchain транзакції</string>
     <string name="wallet_onchain_no_address">Для цього акаунту немає доступної onchain адреси.</string>
     <string name="wallet_onchain_no_backend">Не налаштовано жодного chain бекенду.</string>
@@ -1345,7 +1329,6 @@
     <string name="accessibility_play_username">Відтворити ім'я користувача як аудіо</string>
     <string name="accessibility_pushpin">Шпилька</string>
     <string name="accessibility_scan_qr_code">Сканувати QR-код</string>
-    <string name="accessibility_select_date">Вибрати дату</string>
     <string name="load_from_text">З повідомлення</string>
     <string name="dvm_looking_for_app">Пошук застосунку</string>
     <string name="dvm_waiting_status">Завдання надіслано, очікування відповіді</string>
@@ -1448,9 +1431,7 @@
     <string name="closing_time">Час закриття</string>
     <string name="confirm">Підтвердити</string>
     <string name="next">Далі</string>
-    <string name="go_back">Назад</string>
     <string name="approve">Схвалити</string>
-    <string name="connected">Підключено</string>
     <string name="social_proof">Соціальний доказ</string>
     <string name="poll_submit">Надіслати</string>
     <string name="poll_view_results">Переглянути результати</string>
@@ -1791,8 +1772,6 @@
     <string name="dvm_pay_invoice_from_dvm">Оплатити рахунок від DVM</string>
     <string name="dvm_pay_amount_to_dvm">Сплатити %1$s sats DVM</string>
     <string name="use_direct_url">Використовувати пряме посилання</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Дозволи:</string>
     <string name="nsite_root_site">Кореневий сайт</string>
     <string name="nsite_source">Джерело:</string>
@@ -1805,7 +1784,6 @@
     <string name="add_a_nip96_server">Додати сервер NIP-96</string>
     <string name="add_client_tag_explainer">Коли увімкнено, Amethyst додає NIP-89 клієнтський тег до подій, які ви публікуєте.</string>
     <string name="add_client_tag_title">Додавати клієнтський тег до моїх подій</string>
-    <string name="add_sensitive_content_description">Додає попередження про чутливий контент перед показом цього контенту</string>
     <string name="add_sensitive_content_label">Чутливий контент</string>
     <string name="add_to_public_bookmarks">Додати в Публічні закладки</string>
     <string name="ai_writing_setting_description">Використовує AI-модель на пристрої для пропозиції виправлень тексту та зміни тону.</string>
@@ -1884,8 +1862,6 @@
     <string name="broadcast_section_explainer">Relay-сервери, що спеціалізуються на поширенні ваших нотаток до всіх інших relay-серверів, наприклад sendit.nosflare.com. Amethyst додаватиме цей relay-сервер до всіх нових подій, створених вами</string>
     <string name="browser">Браузер</string>
     <string name="browser_favorites">Вибране</string>
-    <string name="browser_tor_off">Завантаження через відкриту мережу. Торкніться, щоб використати Tor.</string>
-    <string name="browser_tor_on">Завантаження через Tor. Торкніться, щоб використати відкриту мережу.</string>
     <plurals name="calendar_day_a11y_events">
     <item quantity="one">%1$s, %2$d подія</item>
     <item quantity="few">%1$s, %2$d події</item>
@@ -2028,15 +2004,10 @@
     <string name="connectivity_type_always">Завжди</string>
     <string name="connectivity_type_never">Ніколи</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi без ліміту</string>
-    <string name="content_description_add_document">Додати документ</string>
-    <string name="content_description_add_image">Додати фото</string>
-    <string name="content_description_add_media">Додати медіа</string>
-    <string name="content_description_add_video">Додати відео</string>
     <string name="content_warning_hide_all_sensitive_content_option">Приховати</string>
     <string name="content_warning_see_warnings_option">Попереджати</string>
     <string name="content_warning_show_all_sensitive_content_option">Показати</string>
     <string name="conversations">Обговорення</string>
-    <string name="convert_gif_to_mp4_description">Конвертує анімований GIF у відео MP4 для зменшення розміру файлу та кращої сумісності відтворення.</string>
     <string name="convert_gif_to_mp4_label">Конвертувати GIF у MP4</string>
     <string name="copied_note_id_to_clipboard">ID запису (note1) скопійовано</string>
     <string name="copied_note_text_to_clipboard">Скопіювати текст</string>
@@ -2122,7 +2093,6 @@
     <string name="emoji_private_explainer">Приватні емодзі зберігаються зашифровано на relay і видимі лише вам. Вони з'являються в меню реакцій та автодоповненні «:», як і публічні.</string>
     <string name="emoji_public_explainer">Публічні емодзі видимі всім і з'являються в меню реакцій та автодоповненні «:», коли цей пакет знаходиться у вашому списку емодзі.</string>
     <string name="emoji_sets">Емодзі</string>
-    <string name="encrypt_files_description">Шифрувати файли перед вивантаженням для захисту конфіденційності. Деякі сервери можуть не приймати зашифровані файли на безкоштовних акаунтах.</string>
     <string name="encrypt_files_label">Шифрувати файли</string>
     <string name="ephemeral_relay_chat">Тимчасовий чат</string>
     <string name="error">Помилка</string>
@@ -2170,8 +2140,6 @@
     <string name="failed_to_upload_media_no_details">Не вдалося завантажити фото</string>
     <string name="failed_to_upload_to_server_with_message">Не вдалося завантажити на %1$s: %2$s</string>
     <string name="favorite_app_add">Додати до улюблених</string>
-    <string name="favorite_app_network_open">Завантажується через відкриту мережу.</string>
-    <string name="favorite_app_network_tor">Завантажується через Tor.</string>
     <string name="favorite_app_recent">Нещодавні</string>
     <string name="favorite_app_remove">Видалити з улюблених</string>
     <string name="favorite_app_still_loading">Цей застосунок ще не завантажено. Спробуйте ще раз за мить.</string>
@@ -2465,12 +2433,6 @@
     <item quantity="other">%1$d учасників</item>
 </plurals>
     <string name="marmot_member_removed">Учасника видалено</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d повідомлення</item>
-    <item quantity="few">%1$d повідомлення</item>
-    <item quantity="many">%1$d повідомлень</item>
-    <item quantity="other">%1$d повідомлень</item>
-</plurals>
     <string name="marmot_not_a_member">Не є учасником цієї групи</string>
     <string name="marmot_unknown_error">невідома помилка</string>
     <string name="media_added">Медіа додано</string>
@@ -2572,14 +2534,7 @@
     <string name="nest_lower_hand">Опустити руку</string>
     <string name="nest_mic_mute">Вимкнути мікрофон</string>
     <string name="nest_mic_unmute">Увімкнути мікрофон</string>
-    <string name="nest_mute">Вимкнути звук</string>
     <string name="nest_no_server_save_failed">Не вдалося зберегти список nest-серверів. Спробуйте ще раз.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Підтримує відтворення аудіо, поки кімната відкрита.</string>
-    <string name="nest_notification_listening">Nest підключено</string>
-    <string name="nest_notification_stop">Зупинити</string>
-    <string name="nest_notification_text">Торкніться, щоб повернутися.</string>
     <string name="nest_participant_follow">Стежити</string>
     <string name="nest_participant_mute">Вимкнути звук</string>
     <string name="nest_participant_unfollow">Не стежити</string>
@@ -2590,7 +2545,6 @@
     <string name="nest_presence_raised_hand">підняв(-ла) руку</string>
     <string name="nest_presence_speaking">говорить</string>
     <string name="nest_raise_hand">Підняти руку</string>
-    <string name="nest_unmute">Увімкнути звук</string>
     <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Збережено як замінна подія kind:10112, щоб інші клієнти могли читати ваші налаштування.</string>
     <string name="nests_servers_my_section">Ваші сервери</string>
@@ -2624,12 +2578,6 @@
     <string name="new_requests">Нові запити</string>
     <string name="new_threads">Нові треди</string>
     <string name="new_workout">Нове тренування</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d актив у комплекті</item>
-    <item quantity="few">%1$d активи у комплекті</item>
-    <item quantity="many">%1$d активів у комплекті</item>
-    <item quantity="other">%1$d актива у комплекті</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Blossom додатки не знайдено. Встановіть локальний Blossom додаток, щоб переглянути цей файл</string>
     <string name="no_blossom_apps_found_title">Неможливо відкрити Blossom посилання</string>
     <string name="no_camera_app_found">На цьому пристрої не знайдено застосунок камери</string>
@@ -2639,7 +2587,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Для цього користувача не вибрано жодного типу реакції. Довге натискання на кнопку серця, щоб змінити</string>
     <string name="no_reactions_setup">Реакції не налаштовані</string>
     <string name="no_wallet_found">Не знайдено гаманців для оплати Lightning інвойсу. Встановіть Lightning гаманець для використання зап</string>
-    <string name="no_wallet_found_with_error">Не знайдено гаманців для оплати Lightning інвойсу (Помилка: %1$s). Встановіть Lightning гаманець для використання зап</string>
     <string name="no_zap_amount_setup_long_press_to_change">Не налаштовані запи. Натисніть та утримуйте для налаштування</string>
     <string name="notification_settings">Сповіщення</string>
     <string name="notification_settings_section_categories">Категорії</string>
@@ -2738,7 +2685,6 @@
     <item quantity="other">%1$d епізоду</item>
 </plurals>
     <string name="poll_author_no_vote">Автор опитування не може голосувати</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Опитування закрито для нових голосів</string>
     <string name="poll_multiple_choice">Кілька відповідей</string>
     <string name="poll_single_choice">Одна відповідь</string>
@@ -3018,8 +2964,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Користувач %1$s не має налаштованої Lightning адреси для отримання sats</string>
     <string name="vanish_history">Історія зникнень</string>
     <string name="vanish_request_sent">Запит на зникнення надіслано</string>
-    <string name="video_codec_h265_description">Краща якість при менших розмірах файлів, але не всі пристрої підтримують відтворення H.265.</string>
-    <string name="video_codec_h265_label">Використовувати кодек H.265/HEVC</string>
     <string name="video_download_has_started_toast">Завантаження відео розпочато…</string>
     <string name="video_player_settings">Кнопки відеоплеєра</string>
     <string name="video_saved_to_the_gallery">Відео збережено до відеогалереї телефону</string>

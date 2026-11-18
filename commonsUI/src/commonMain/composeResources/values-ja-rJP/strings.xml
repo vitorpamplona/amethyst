@@ -105,7 +105,6 @@
     <string name="quote">引用</string>
     <string name="fork">フォーク</string>
     <string name="new_amount_in_sats">新しいザップ額 (sats)</string>
-    <string name="and"> と </string>
     <string name="following"> フォロー</string>
     <string name="followers"> フォロワー</string>
     <string name="number_following">%1$s フォロー中</string>
@@ -252,7 +251,6 @@
     <string name="refresh">更新</string>
     <string name="channel_created">チャンネルが作成されました</string>
     <string name="channel_information_changed_to">チャンネル情報が次のように変更されました:</string>
-    <string name="marmot_group_no_messages_yet">まだメッセージがありません</string>
     <string name="paid_relay">有料 relay</string>
     <string name="tor_relay">接続時に Tor を強制使用</string>
     <string name="posts_received">投稿を受信</string>
@@ -422,7 +420,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSitesはまだ見つかりません。</string>
-    <string name="browser_reload">再読み込み</string>
     <string name="browser_unsupported">アプリ内ブラウザにはAndroid 11以降が必要です。</string>
     <string name="embedded_tab_load_failed">このアプリを読み込めませんでした。</string>
     <string name="browser_go">開く</string>
@@ -430,10 +427,6 @@
     <string name="browser_recent_options">オプション</string>
     <string name="browser_recent_remove">履歴から削除</string>
     <string name="favorite_apps_empty">お気に入りのアプリはまだありません。ウェブクライアントまたは nSite を開き、星をタップしてここにピン留めしてください。</string>
-    <string name="favorite_app_open_window">独自のウィンドウで開く</string>
-    <string name="favorite_app_access_title">このアプリがアクセスできる内容</string>
-    <string name="favorite_app_access_static">アカウントへの特別なアクセスなしにサンドボックスで実行されます。</string>
-    <string name="favorite_app_access_show">アクセスできる内容</string>
     <string name="favorite_app_unavailable">このアプリはまだ読み込まれていません。カードから開くか、しばらくしてから再試行してください。</string>
     <string name="napplet_manage_permissions">権限を管理</string>
     <string name="napplet_none_found">nApplet はまだ見つかりません。</string>
@@ -654,7 +647,6 @@
     <string name="pledge_amount_in_sats">誓約額 (sats)</string>
     <string name="poll_zap_value_min">最小ザップ額</string>
     <string name="poll_zap_value_max">最大ザップ額</string>
-    <string name="poll_consensus_threshold">コンセンサス</string>
     <string name="looking_for_event">イベント %1$s を探しています</string>
     <string name="send_zap">Zapを送信</string>
     <string name="custom_zaps_add_a_message">公開メッセージを追加</string>
@@ -662,11 +654,6 @@
     <string name="custom_zaps_add_a_message_nonzap">インボイスメッセージを追加</string>
     <string name="custom_zaps_add_a_message_example">おつかれさまでした！</string>
     <string name="lightning_create_and_add_invoice">作成して追加</string>
-    <string name="add_content">メッセージに追加</string>
-    <string name="add_caption">キャプションを追加</string>
-    <string name="add_caption_example">仲良しの友達</string>
-    <string name="content_description">コンテンツの説明</string>
-    <string name="content_description_example">夕暮れの白い砂浜に浮かぶ青いボート</string>
     <string name="ai_suggested_alt_text_hint">AIの提案、編集してください</string>
     <string name="ai_suggested_alt_text_dismiss">AIの提案を閉じる</string>
     <string name="zap_type">ザップの種類</string>
@@ -997,7 +984,6 @@
     <string name="wallet_refresh">更新</string>
     <string name="wallet_filter_all">すべて</string>
     <string name="wallet_filter_non_zaps">Zaps以外</string>
-    <string name="wallet_add">ウォレットを追加</string>
     <string name="wallet_default">デフォルト</string>
     <string name="wallet_set_default">デフォルトに設定</string>
     <string name="wallet_remove">削除</string>
@@ -1088,8 +1074,6 @@
     <string name="cashu_redeemed_amount">%1$s satsをウォレットに換金しました。</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URIを貼り付け</string>
     <string name="wallet_save">保存</string>
-    <string name="wallet_rename">名前を変更</string>
-    <string name="wallet_rename_title">ウォレット名を変更</string>
     <string name="wallet_onchain_transactions">オンチェーントランザクション</string>
     <string name="wallet_onchain_no_address">このアカウントに利用可能なオンチェーンアドレスがありません。</string>
     <string name="wallet_onchain_no_backend">チェーンバックエンドが設定されていません。</string>
@@ -1332,7 +1316,6 @@
     <string name="accessibility_play_username">ユーザー名を音声で再生</string>
     <string name="accessibility_pushpin">画鋲</string>
     <string name="accessibility_scan_qr_code">QR コードをスキャン</string>
-    <string name="accessibility_select_date">日付を選択</string>
     <string name="load_from_text">メッセージから読み込む</string>
     <string name="dvm_looking_for_app">アプリケーションを検索中</string>
     <string name="dvm_waiting_status">ジョブをリクエスト中、返信を待っています</string>
@@ -1431,9 +1414,7 @@
     <string name="closing_time">終了時刻</string>
     <string name="confirm">確認</string>
     <string name="next">次へ</string>
-    <string name="go_back">戻る</string>
     <string name="approve">承認</string>
-    <string name="connected">接続済み</string>
     <string name="social_proof">ソーシャルプルーフ</string>
     <string name="poll_submit">送信</string>
     <string name="poll_view_results">結果を表示</string>
@@ -1773,7 +1754,6 @@
     <string name="add_a_nip96_server">NIP-96 サーバーを追加</string>
     <string name="add_client_tag_explainer">有効にすると、Amethyst は公開するイベントに NIP-89 クライアントタグを付加します。</string>
     <string name="add_client_tag_title">イベントにクライアントタグを追加</string>
-    <string name="add_sensitive_content_description">コンテンツを表示する前に、センシティブなコンテンツであることを示す警告を表示します</string>
     <string name="add_sensitive_content_label">センシティブなコンテンツ</string>
     <string name="add_to_public_bookmarks">公開ブックマークに追加</string>
     <string name="ai_writing_setting_description">デバイス上のAIモデルを使用して、テキストの修正やトーンの変更を提案します。</string>
@@ -1851,8 +1831,6 @@
     <string name="broadcast_section_explainer">sendit.nosflare.com のように、あなたのノートを他のすべての relay にプッシュすることに特化した relay です。Amethyst はあなたが作成するすべての新しいイベントにこの relay を追加します。</string>
     <string name="browser">ブラウザ</string>
     <string name="browser_favorites">お気に入り</string>
-    <string name="browser_tor_off">オープンウェブで読み込み中。タップしてTorを使用します。</string>
-    <string name="browser_tor_on">Tor経由で読み込み中。タップしてオープンウェブを使用します。</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s、%2$dイベント</item>
     </plurals>
@@ -1969,15 +1947,10 @@
     <string name="connectivity_type_always">常に</string>
     <string name="connectivity_type_never">なし</string>
     <string name="connectivity_type_unmetered_wifi_only">従量制なし WiFi</string>
-    <string name="content_description_add_document">ドキュメントを追加</string>
-    <string name="content_description_add_image">画像を追加</string>
-    <string name="content_description_add_media">メディアを追加</string>
-    <string name="content_description_add_video">動画を追加</string>
     <string name="content_warning_hide_all_sensitive_content_option">非表示</string>
     <string name="content_warning_see_warnings_option">警告</string>
     <string name="content_warning_show_all_sensitive_content_option">表示</string>
     <string name="conversations">会話</string>
-    <string name="convert_gif_to_mp4_description">アニメーションGIFをMP4動画に変換してファイルサイズを縮小し、再生互換性を向上させます。</string>
     <string name="convert_gif_to_mp4_label">GIFをMP4に変換</string>
     <string name="copied_note_id_to_clipboard">投稿ID (@note1) をクリップボードにコピーしました</string>
     <string name="copied_note_text_to_clipboard">テキストがクリップボードにコピーされました</string>
@@ -2045,7 +2018,6 @@
     <string name="emoji_private_explainer">プライベート絵文字はrelayに暗号化されて保存され、あなただけに見えます。パブリック絵文字と同様に、リアクションメニューと「:」オートコンプリートに表示されます。</string>
     <string name="emoji_public_explainer">パブリック絵文字は全員に表示され、このパックが絵文字リストに含まれている場合、リアクションメニューと「:」オートコンプリートピッカーに表示されます。</string>
     <string name="emoji_sets">絵文字</string>
-    <string name="encrypt_files_description">プライバシーのためにアップロード前にファイルを暗号化します。一部のサーバーでは無料アカウントで暗号化ファイルを受け付けない場合があります。</string>
     <string name="encrypt_files_label">ファイルを暗号化</string>
     <string name="ephemeral_relay_chat">消えるチャット</string>
     <string name="error">エラー</string>
@@ -2091,8 +2063,6 @@
     <string name="failed_to_upload_media_no_details">メディアのアップロードに失敗しました</string>
     <string name="failed_to_upload_to_server_with_message">%1$sへのアップロードに失敗しました：%2$s</string>
     <string name="favorite_app_add">お気に入りに追加</string>
-    <string name="favorite_app_network_open">オープンウェブ経由で読み込みます。</string>
-    <string name="favorite_app_network_tor">Tor 経由で読み込みます。</string>
     <string name="favorite_app_recent">最近</string>
     <string name="favorite_app_remove">お気に入りから削除</string>
     <string name="favorite_app_still_loading">そのアプリはまだ読み込まれていません。しばらくしてから再試行してください。</string>
@@ -2368,9 +2338,6 @@
         <item quantity="other">%1$d 人のメンバー</item>
     </plurals>
     <string name="marmot_member_removed">メンバーが削除されました</string>
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d 件のメッセージ</item>
-    </plurals>
     <string name="marmot_not_a_member">このグループのメンバーではありません</string>
     <string name="marmot_unknown_error">不明なエラー</string>
     <string name="media_added">メディアを追加しました</string>
@@ -2454,13 +2421,7 @@
     <string name="nest_lower_hand">手を下ろす</string>
     <string name="nest_mic_mute">マイクをミュート</string>
     <string name="nest_mic_unmute">マイクのミュートを解除</string>
-    <string name="nest_mute">ミュート</string>
     <string name="nest_no_server_save_failed">Nest サーバーリストを保存できませんでした。再試行してください。</string>
-    <string name="nest_notification_broadcasting">Nest — ライブ中</string>
-    <string name="nest_notification_channel_description">ルームが開いている間オーディオを再生し続けます。</string>
-    <string name="nest_notification_listening">Nest に接続しました</string>
-    <string name="nest_notification_stop">停止</string>
-    <string name="nest_notification_text">タップして戻る。</string>
     <string name="nest_participant_follow">フォロー</string>
     <string name="nest_participant_mute">ミュート</string>
     <string name="nest_participant_unfollow">フォロー解除</string>
@@ -2471,7 +2432,6 @@
     <string name="nest_presence_raised_hand">手を挙げました</string>
     <string name="nest_presence_speaking">話しています</string>
     <string name="nest_raise_hand">手を挙げる</string>
-    <string name="nest_unmute">ミュート解除</string>
     <string name="nests_servers_my_explainer">kind-10112 の置き換え可能なイベントとして保存され、他のクライアントがあなたの設定を読み取ることができます。</string>
     <string name="nests_servers_my_section">あなたのサーバー</string>
     <string name="nests_servers_recommended_explainer">ワンタップでリストに追加できる組み込みの候補です。</string>
@@ -2504,9 +2464,6 @@
     <string name="new_requests">新しいリクエスト</string>
     <string name="new_threads">新規スレッド</string>
     <string name="new_workout">新しいワークアウト</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">%1$d 件のアセットがバンドルされています</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom アプリが見つかりませんでした。このファイルを表示するにはローカルの Blossom アプリをインストールしてください</string>
     <string name="no_blossom_apps_found_title">Blossom リンクを開けません</string>
     <string name="no_camera_app_found">この端末にカメラアプリが見つかりません</string>
@@ -2516,7 +2473,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">リアクションタイプが選択されていません。長押しして変更</string>
     <string name="no_reactions_setup">リアクションが設定されていません</string>
     <string name="no_wallet_found">Lightning 請求書を支払うウォレットが見つかりません。zap を使用するには Lightning ウォレットをインストールしてください</string>
-    <string name="no_wallet_found_with_error">Lightning 請求書を支払うウォレットが見つかりません（エラー: %1$s）。zap を使用するには Lightning ウォレットをインストールしてください</string>
     <string name="no_zap_amount_setup_long_press_to_change">ザップ額が未設定です。長押しで変更</string>
     <string name="notification_settings">通知</string>
     <string name="notification_settings_section_categories">カテゴリ</string>
@@ -2595,7 +2551,6 @@
         <item quantity="other">%1$d エピソード</item>
     </plurals>
     <string name="poll_author_no_vote">投票の作成者が投票することはできません。</string>
-    <string name="poll_consensus_threshold_percent">（0〜100）%</string>
     <string name="poll_is_closed_explainer">この投票は新規票を受け付けていません</string>
     <string name="poll_multiple_choice">複数選択</string>
     <string name="poll_single_choice">単一選択</string>
@@ -2853,8 +2808,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">ユーザー %1$s は sats を受け取るための Lightning アドレスを設定していません</string>
     <string name="vanish_history">消去履歴</string>
     <string name="vanish_request_sent">消去リクエストを送信しました</string>
-    <string name="video_codec_h265_description">小さいファイルサイズでより高い品質ですが、すべての端末がH.265の再生をサポートしているわけではありません。</string>
-    <string name="video_codec_h265_label">H.265/HEVCコーデックを使用</string>
     <string name="video_download_has_started_toast">動画のダウンロードを開始しました…</string>
     <string name="video_player_settings">ビデオプレーヤーボタン</string>
     <string name="video_saved_to_the_gallery">動画を端末のギャラリーに保存しました</string>

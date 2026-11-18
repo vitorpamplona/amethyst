@@ -89,7 +89,6 @@
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
     <string name="replying_to">Antworten auf </string>
-    <string name="and"> und </string>
     <string name="following"> Folgen</string>
     <string name="followers"> Anhänger</string>
     <string name="number_following">%1$s Folgen</string>
@@ -240,7 +239,6 @@
     <string name="refresh">Aktualisieren</string>
     <string name="channel_created">Kanal erstellt</string>
     <string name="channel_information_changed_to">Kanalinformationen geändert in</string>
-    <string name="marmot_group_no_messages_yet">Noch keine Nachrichten</string>
     <string name="paid_relay">Bezahltes Relay</string>
     <string name="tor_relay">Tor-Verbindung erzwingen</string>
     <string name="posts_received">empfangene Beiträge</string>
@@ -412,7 +410,6 @@
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Aus Health Connect</string>
     <string name="nsite_none_found">Noch keine nSites gefunden.</string>
-    <string name="browser_reload">Neu laden</string>
     <string name="browser_unsupported">Der In-App-Browser benötigt Android 11 oder neuer.</string>
     <string name="embedded_tab_load_failed">Diese App konnte nicht geladen werden.</string>
     <string name="browser_go">Öffnen</string>
@@ -420,10 +417,6 @@
     <string name="browser_recent_options">Optionen</string>
     <string name="browser_recent_remove">Aus Verlauf entfernen</string>
     <string name="favorite_apps_empty">Noch keine Lieblings-Apps. Öffnen Sie einen Web-Client oder eine nSite und tippen Sie auf den Stern, um sie hier anzuheften.</string>
-    <string name="favorite_app_open_window">In eigenem Fenster öffnen</string>
-    <string name="favorite_app_access_title">Worauf diese App zugreifen kann</string>
-    <string name="favorite_app_access_static">Läuft in einer Sandbox ohne besonderen Zugriff auf Ihr Konto.</string>
-    <string name="favorite_app_access_show">Worauf sie zugreifen kann</string>
     <string name="favorite_app_unavailable">Diese App ist noch nicht geladen. Öffnen Sie sie über ihre Karte oder versuchen Sie es in einem Moment erneut.</string>
     <string name="napplet_manage_permissions">Berechtigungen verwalten</string>
     <string name="napplet_none_found">Noch keine nApplets gefunden.</string>
@@ -647,7 +640,6 @@
     <string name="pledge_amount_in_sats">Spendenbetrag in Sats</string>
     <string name="poll_zap_value_min">Mindest-Zap-Betrag</string>
     <string name="poll_zap_value_max">Maximaler Zap-Betrag</string>
-    <string name="poll_consensus_threshold">Konsens</string>
     <string name="looking_for_event">Veranstaltung suchen %1$s</string>
     <string name="send_zap">Zap senden</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
@@ -655,11 +647,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Füge eine Rechnungsnachricht hinzu</string>
     <string name="custom_zaps_add_a_message_example">Vielen Dank für deine Arbeit!</string>
     <string name="lightning_create_and_add_invoice">Erstellen und Hinzufügen</string>
-    <string name="add_content">Zur Nachricht hinzufügen</string>
-    <string name="add_caption">Untertitel hinzufügen</string>
-    <string name="add_caption_example">Mein netter Freund</string>
-    <string name="content_description">Beschreibung des Inhalts</string>
-    <string name="content_description_example">Ein blaues Boot an einem weißen Sandstrand bei Sonnenuntergang</string>
     <string name="ai_suggested_alt_text_hint">KI-vorgeschlagen, bearbeite mich</string>
     <string name="ai_suggested_alt_text_dismiss">KI-Vorschlag verwerfen</string>
     <string name="zap_type">Zap-Typ</string>
@@ -995,7 +982,6 @@
     <string name="wallet_filter_all">Alle</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Keine Zaps</string>
-    <string name="wallet_add">Wallet hinzufügen</string>
     <string name="wallet_default">Standard</string>
     <string name="wallet_set_default">Als Standard festlegen</string>
     <string name="wallet_remove">Entfernen</string>
@@ -1090,8 +1076,6 @@
     <string name="cashu_redeemed_amount">%1$s Sats in deine Wallet eingelöst.</string>
     <string name="wallet_paste_uri">nostr+walletconnect://-URI einfügen</string>
     <string name="wallet_save">Speichern</string>
-    <string name="wallet_rename">Umbenennen</string>
-    <string name="wallet_rename_title">Wallet umbenennen</string>
     <string name="wallet_onchain_transactions">On-Chain-Transaktionen</string>
     <string name="wallet_onchain_no_address">Keine On-Chain-Adresse für dieses Konto verfügbar.</string>
     <string name="wallet_onchain_no_backend">Kein On-Chain-Backend konfiguriert.</string>
@@ -1341,7 +1325,6 @@
     <string name="accessibility_play_username">Benutzernamen als Audio abspielen</string>
     <string name="accessibility_pushpin">Reißzwecke</string>
     <string name="accessibility_scan_qr_code">QR-Code scannen</string>
-    <string name="accessibility_select_date">Datum auswählen</string>
     <string name="load_from_text">Aus Nachricht laden</string>
     <string name="dvm_looking_for_app">Suche nach Anwendung</string>
     <string name="dvm_waiting_status">Job angefordert, wartet auf Antwort</string>
@@ -1445,9 +1428,7 @@
     <string name="closing_time">Schließzeit</string>
     <string name="confirm">Bestätigen</string>
     <string name="next">Weiter</string>
-    <string name="go_back">Zurückgehen</string>
     <string name="approve">Genehmigen</string>
-    <string name="connected">Verbunden</string>
     <string name="social_proof">Sozialer Nachweis</string>
     <string name="poll_submit">Absenden</string>
     <string name="poll_view_results">Ergebnisse anzeigen</string>
@@ -1788,12 +1769,10 @@
     <string name="dvm_pay_invoice_from_dvm">Rechnung vom DVM bezahlen</string>
     <string name="dvm_pay_amount_to_dvm">%1$s sats an das DVM zahlen</string>
     <string name="use_direct_url">Direkte URL verwenden</string>
-    <string name="nsite_title">Statische Website: %1$s</string>
     <string name="nsite_root_site">Stammseite</string>
     <string name="nsite_source">Quelle:</string>
     <string name="nsite_servers">Server:</string>
     <string name="napplet_card_permissions">Berechtigungen:</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="nsite_open">Öffnen</string>
     <string name="about_legal">Über &amp; Rechtliches</string>
     <string name="account_settings">Kontoeinstellungen</string>
@@ -1802,7 +1781,6 @@
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
     <string name="add_client_tag_explainer">Wenn aktiviert, fügt Amethyst Ereignissen, die du veröffentlichst, einen NIP-89-Client-Tag hinzu.</string>
     <string name="add_client_tag_title">Client-Tag zu meinen Ereignissen hinzufügen</string>
-    <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
     <string name="add_sensitive_content_label">Sensibler Inhalt</string>
     <string name="add_to_public_bookmarks">Zu den öffentlichen Lesezeichen hinzufügen</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
@@ -1885,8 +1863,6 @@
     <string name="broadcast_section_explainer">Relays, die deine Beiträge an andere Relays weiterleiten, z.B. sendit.nosflare.com. Amethyst fügt diesen Relay zu allen neuen Ereignissen hinzu</string>
     <string name="browser">Browser</string>
     <string name="browser_favorites">Favoriten</string>
-    <string name="browser_tor_off">Laden über das offene Web. Tippen Sie, um Tor zu verwenden.</string>
-    <string name="browser_tor_on">Laden über Tor. Tippen Sie, um das offene Web zu verwenden.</string>
     <plurals name="calendar_day_a11y_events">
     <item quantity="one">%1$s, %2$d Termin</item>
     <item quantity="other">%1$s, %2$d Termine</item>
@@ -2017,15 +1993,10 @@
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_never">Nie</string>
     <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
-    <string name="content_description_add_document">Dokument hinzufügen</string>
-    <string name="content_description_add_image">Bild hinzufügen</string>
-    <string name="content_description_add_media">Medien hinzufügen</string>
-    <string name="content_description_add_video">Video hinzufügen</string>
     <string name="content_warning_hide_all_sensitive_content_option">Ausblenden</string>
     <string name="content_warning_see_warnings_option">Warnen</string>
     <string name="content_warning_show_all_sensitive_content_option">Anzeigen</string>
     <string name="conversations">Unterhaltungen</string>
-    <string name="convert_gif_to_mp4_description">Konvertiert animierte GIFs in MP4-Videos für kleinere Dateigrößen und bessere Wiedergabekompatibilität.</string>
     <string name="convert_gif_to_mp4_label">GIF in MP4 umwandeln</string>
     <string name="copied_note_id_to_clipboard">Notiz-ID in die Zwischenablage kopiert</string>
     <string name="copied_note_text_to_clipboard">Notiztext in die Zwischenablage kopiert</string>
@@ -2099,7 +2070,6 @@
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der ":"-Autovervollständigung wie öffentliche.</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der ":"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_sets">Emojis</string>
-    <string name="encrypt_files_description">Dateien vor dem Hochladen verschlüsseln, um die Privatsphäre zu schützen. Einige Server akzeptieren möglicherweise keine verschlüsselten Dateien bei kostenlosen Konten.</string>
     <string name="encrypt_files_label">Dateien verschlüsseln</string>
     <string name="ephemeral_relay_chat">Verschwindender Chat</string>
     <string name="error">Fehler</string>
@@ -2148,8 +2118,6 @@
     <string name="failed_to_upload_media_no_details">Fehler beim Laden der Medien</string>
     <string name="failed_to_upload_to_server_with_message">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="favorite_app_add">Zu Favoriten hinzufügen</string>
-    <string name="favorite_app_network_open">Lädt über das offene Web.</string>
-    <string name="favorite_app_network_tor">Lädt über Tor.</string>
     <string name="favorite_app_recent">Zuletzt verwendet</string>
     <string name="favorite_app_remove">Aus Favoriten entfernen</string>
     <string name="favorite_app_still_loading">Diese App ist noch nicht geladen. Versuchen Sie es in einem Moment erneut.</string>
@@ -2445,10 +2413,6 @@
     <item quantity="other">%1$d Mitglieder</item>
 </plurals>
     <string name="marmot_member_removed">Mitglied entfernt</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d Nachricht</item>
-    <item quantity="other">%1$d Nachrichten</item>
-</plurals>
     <string name="marmot_not_a_member">Kein Mitglied dieser Gruppe</string>
     <string name="marmot_unknown_error">unbekannter Fehler</string>
     <string name="mastodon">Mastodon-Beitrags-ID mit Nachweis</string>
@@ -2543,14 +2507,7 @@
     <string name="nest_lower_hand">Hand senken</string>
     <string name="nest_mic_mute">Mikrofon stumm</string>
     <string name="nest_mic_unmute">Mikrofon aktivieren</string>
-    <string name="nest_mute">Stummschalten</string>
     <string name="nest_no_server_save_failed">Nest-Serverliste konnte nicht gespeichert werden. Versuche es erneut.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Audioräume</string>
-    <string name="nest_notification_channel_description">Hält Audio aktiv, solange ein Raum geöffnet ist.</string>
-    <string name="nest_notification_listening">Nest verbunden</string>
-    <string name="nest_notification_stop">Stoppen</string>
-    <string name="nest_notification_text">Tippen zum Zurückkehren.</string>
     <string name="nest_participant_follow">Folgen</string>
     <string name="nest_participant_mute">Stummschalten</string>
     <string name="nest_participant_unfollow">Entfolgen</string>
@@ -2561,7 +2518,6 @@
     <string name="nest_presence_raised_hand">hat die Hand gehoben</string>
     <string name="nest_presence_speaking">spricht</string>
     <string name="nest_raise_hand">Hand heben</string>
-    <string name="nest_unmute">Stummschaltung aufheben</string>
     <string name="nests">Audioräume</string>
     <string name="nests_servers_my_explainer">Wird als ersetzbares kind-10112-Ereignis gespeichert, damit andere Clients deine Einstellung lesen können.</string>
     <string name="nests_servers_my_section">Deine Server</string>
@@ -2596,10 +2552,6 @@
     <string name="new_requests">Neue Anfragen</string>
     <string name="new_threads">Neue Threads</string>
     <string name="new_workout">Neues Workout</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d Asset gebündelt</item>
-    <item quantity="other">%1$d Assets bündelt</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Keine Blossom-Apps gefunden. Bitte installiere eine lokale Blossom-App, um diese Datei anzuzeigen</string>
     <string name="no_blossom_apps_found_title">Blossom-Links können nicht geöffnet werden</string>
     <string name="no_camera_app_found">Keine Kamera-App auf diesem Gerät gefunden</string>
@@ -2609,7 +2561,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Keine Reaktionstypen ausgewählt. Lange drücken, um zu ändern</string>
     <string name="no_reactions_setup">Keine Reaktionen eingerichtet</string>
     <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
-    <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="no_zap_amount_setup_long_press_to_change">Keinen Zap-Betrag festgelegt. Drücken Sie lange, um dies anzupassen</string>
     <string name="notification_settings">Benachrichtigungen</string>
     <string name="notification_settings_search_keywords">Push, Benachrichtigungen, Töne, Vibration</string>
@@ -2699,7 +2650,6 @@
     <item quantity="other">%1$d Folgen</item>
 </plurals>
     <string name="poll_author_no_vote">Umfragenautoren können nicht in ihren eigenen Umfragen abstimmen.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_multiple_choice">Mehrfachauswahl</string>
     <string name="poll_single_choice">Einzelauswahl</string>
@@ -2981,8 +2931,6 @@
     <string name="vanish_history">Löschverlauf</string>
     <string name="vanish_history_search_keywords">Löschung, Ereignisse löschen</string>
     <string name="vanish_request_sent">Löschanfrage gesendet</string>
-    <string name="video_codec_h265_description">Bessere Qualität bei kleinerer Dateigröße, aber nicht alle Geräte unterstützen die H.265-Wiedergabe.</string>
-    <string name="video_codec_h265_label">H.265/HEVC-Codec verwenden</string>
     <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
     <string name="video_player_search_keywords">Video, Player, Wiedergabe, automatische Wiedergabe, stummschalten</string>
     <string name="video_player_settings">Videoplayer-Schaltflächen</string>

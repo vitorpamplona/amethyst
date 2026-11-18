@@ -107,7 +107,6 @@
     <string name="quote">Lainaa</string>
     <string name="fork">Haara</string>
     <string name="new_amount_in_sats">Uusi määrä satseissa</string>
-    <string name="and"> ja </string>
     <string name="following"> Seuratut</string>
     <string name="followers"> Seuraajat</string>
     <string name="number_following">%1$s seurattavaa</string>
@@ -249,7 +248,6 @@
     <string name="refresh">Päivitä</string>
     <string name="channel_created">Kanava luotu</string>
     <string name="channel_information_changed_to">Kanavan tiedot muutettu kohteeksi</string>
-    <string name="marmot_group_no_messages_yet">Ei viestejä vielä</string>
     <string name="paid_relay">Maksullinen relay</string>
     <string name="tor_relay">Pakottaa Tor-yhteyden muodostettaessa</string>
     <string name="posts_received">vastaanotetut viestit</string>
@@ -419,7 +417,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSitejä ei löydy vielä.</string>
-    <string name="browser_reload">Lataa uudelleen</string>
     <string name="browser_unsupported">Sovelluksen sisäinen selain vaatii Android 11 tai uudemman.</string>
     <string name="embedded_tab_load_failed">Tätä sovellusta ei voitu ladata.</string>
     <string name="browser_go">Avaa</string>
@@ -427,10 +424,6 @@
     <string name="browser_recent_options">Vaihtoehdot</string>
     <string name="browser_recent_remove">Poista historiasta</string>
     <string name="favorite_apps_empty">Ei suosikkisovelluksia vielä. Avaa verkkoasiakas tai nsite ja napauta tähteä kiinnittääksesi sen tähän.</string>
-    <string name="favorite_app_open_window">Avaa omassa ikkunassa</string>
-    <string name="favorite_app_access_title">Mitä tämä sovellus voi käyttää</string>
-    <string name="favorite_app_access_static">Toimii hiekkalaatikossa ilman erityistä pääsyä tilillesi.</string>
-    <string name="favorite_app_access_show">Mitä se voi käyttää</string>
     <string name="favorite_app_unavailable">Tätä sovellusta ei ole vielä ladattu. Avaa se kortiltaan tai yritä hetken kuluttua uudelleen.</string>
     <string name="napplet_manage_permissions">Hallinnoi oikeuksia</string>
     <string name="napplet_none_found">nApplet-sovelluksia ei löydy vielä.</string>
@@ -647,7 +640,6 @@
     <string name="pledge_amount_in_sats">Luvattu määrä satseissa</string>
     <string name="poll_zap_value_min">Vähimmäiszap</string>
     <string name="poll_zap_value_max">Enimmäiszap</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
     <string name="looking_for_event">Etsitään tapahtumaa %1$s</string>
     <string name="send_zap">Lähetä zap</string>
     <string name="custom_zaps_add_a_message">Lisää julkinen viesti</string>
@@ -655,11 +647,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Lisää laskuviesti</string>
     <string name="custom_zaps_add_a_message_example">Kiitos tehdystä työstä!</string>
     <string name="lightning_create_and_add_invoice">Luo ja lisää</string>
-    <string name="add_content">Lisää viestiin</string>
-    <string name="add_caption">Lisää kuvateksti</string>
-    <string name="add_caption_example">Rakas ystäväni</string>
-    <string name="content_description">Sisällön kuvaus</string>
-    <string name="content_description_example">Sininen vene valkoisella hiekkarannalla auringonlaskussa</string>
     <string name="ai_suggested_alt_text_hint">Tekoälyn ehdottama, muokkaa minua</string>
     <string name="ai_suggested_alt_text_dismiss">Hylkää tekoälyn ehdotus</string>
     <string name="zap_type">Zap-tyyppi</string>
@@ -992,7 +979,6 @@
     <string name="wallet_filter_all">Kaikki</string>
     <string name="wallet_filter_zaps">Zapit</string>
     <string name="wallet_filter_non_zaps">Ei-zapit</string>
-    <string name="wallet_add">Lisää lompakko</string>
     <string name="wallet_default">Oletus</string>
     <string name="wallet_set_default">Aseta oletukseksi</string>
     <string name="wallet_remove">Poista</string>
@@ -1085,8 +1071,6 @@
     <string name="cashu_redeemed_amount">Lunastettu %1$s sats lompakkoosi.</string>
     <string name="wallet_paste_uri">Liitä nostr+walletconnect://-URI</string>
     <string name="wallet_save">Tallenna</string>
-    <string name="wallet_rename">Nimeä uudelleen</string>
-    <string name="wallet_rename_title">Nimeä lompakko uudelleen</string>
     <string name="wallet_onchain_transactions">Ketjutransaktiot</string>
     <string name="wallet_onchain_no_address">Tälle tilille ei ole saatavilla ketjuosoitetta.</string>
     <string name="wallet_onchain_no_backend">Ketjutaustapalvelua ei ole määritetty.</string>
@@ -1330,7 +1314,6 @@
     <string name="accessibility_play_username">Toista käyttäjänimi ääneen</string>
     <string name="accessibility_pushpin">Nastanuppi</string>
     <string name="accessibility_scan_qr_code">Skannaa QR-koodi</string>
-    <string name="accessibility_select_date">Valitse päivämäärä</string>
     <string name="load_from_text">Viestistä</string>
     <string name="dvm_looking_for_app">Etsitään sovellusta</string>
     <string name="dvm_waiting_status">Tehtävä pyydetty, odotetaan vastausta</string>
@@ -1431,9 +1414,7 @@
     <string name="closing_time">Sulkemisaika</string>
     <string name="confirm">Vahvista</string>
     <string name="next">Seuraava</string>
-    <string name="go_back">Palaa takaisin</string>
     <string name="approve">Hyväksy</string>
-    <string name="connected">Yhdistetty</string>
     <string name="social_proof">Sosiaalinen todiste</string>
     <string name="poll_submit">Lähetä</string>
     <string name="poll_view_results">Näytä tulokset</string>
@@ -1769,7 +1750,6 @@
     <string name="add_a_nip96_server">Lisää NIP-96-palvelin</string>
     <string name="add_client_tag_explainer">Kun käytössä, Amethyst lisää NIP-89-asiakastunnisteen julkaisemiisi tapahtumiin.</string>
     <string name="add_client_tag_title">Lisää asiakastunniste tapahtumiin</string>
-    <string name="add_sensitive_content_description">Lisää herkän sisällön varoitus ennen tämän sisällön näyttämistä</string>
     <string name="add_sensitive_content_label">Herkkä sisältö</string>
     <string name="add_to_public_bookmarks">Lisää julkisiin kirjanmerkkeihin</string>
     <string name="ai_writing_setting_description">Käyttää laitteen tekoälymallia ehdottamaan tekstikorjauksia ja sävymuutoksia.</string>
@@ -1847,8 +1827,6 @@
     <string name="broadcast_section_explainer">Relait, jotka erikoistuvat muistiinpanojesi välittämiseen kaikille muille relaiden, kuten sendit.nosflare.com. Amethyst lisää tämän relayn kaikkiin tekemiisi uusiin tapahtumiin</string>
     <string name="browser">Selain</string>
     <string name="browser_favorites">Suosikit</string>
-    <string name="browser_tor_off">Ladataan avoimen verkon kautta. Napauta käyttääksesi Toria.</string>
-    <string name="browser_tor_on">Ladataan Torin kautta. Napauta käyttääksesi avointa verkkoa.</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d tapahtuma</item>
         <item quantity="other">%1$s, %2$d tapahtumaa</item>
@@ -1965,15 +1943,10 @@
     <string name="connectivity_type_always">Aina</string>
     <string name="connectivity_type_never">Ei koskaan</string>
     <string name="connectivity_type_unmetered_wifi_only">Ei-mitattu WiFi</string>
-    <string name="content_description_add_document">Lisää dokumentti</string>
-    <string name="content_description_add_image">Lisää kuva</string>
-    <string name="content_description_add_media">Lisää mediaa</string>
-    <string name="content_description_add_video">Lisää video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Piilota</string>
     <string name="content_warning_see_warnings_option">Varoita</string>
     <string name="content_warning_show_all_sensitive_content_option">Näytä</string>
     <string name="conversations">Keskustelut</string>
-    <string name="convert_gif_to_mp4_description">Muuntaa animoidun GIF:n MP4-videoksi pienemmän tiedostokoon ja paremman toistettavuuden saavuttamiseksi.</string>
     <string name="convert_gif_to_mp4_label">Muunna GIF MP4:ksi</string>
     <string name="copied_note_id_to_clipboard">Viestin tunniste (@note1) kopioitu leikepöydälle</string>
     <string name="copied_note_text_to_clipboard">Viestin teksti kopioitu leikepöydälle</string>
@@ -2047,7 +2020,6 @@
     <string name="emoji_private_explainer">Yksityiset emojit tallennetaan salattuina relayihin ja ovat vain sinun nähtävissäsi. Ne näkyvät reaktiovalikossasi ja ":"-automaattitäydennyksessä aivan kuten julkisetkin.</string>
     <string name="emoji_public_explainer">Julkiset emojit näkyvät kaikille ja näkyvät reaktiovalikossasi sekä ":"-automaattitäydennyksessä, kun tämä paketti on emoji-listassasi.</string>
     <string name="emoji_sets">Emojit</string>
-    <string name="encrypt_files_description">Salaa tiedostot ennen lataamista yksityisyyden suojaamiseksi. Jotkin palvelimet eivät välttämättä hyväksy salattuja tiedostoja ilmaisilla tileillä.</string>
     <string name="encrypt_files_label">Salaa tiedostot</string>
     <string name="ephemeral_relay_chat">Katoava chat</string>
     <string name="error">Virhe</string>
@@ -2093,8 +2065,6 @@
     <string name="failed_to_upload_media_no_details">Median lataus epäonnistui</string>
     <string name="failed_to_upload_to_server_with_message">Lataaminen palvelimelle %1$s epäonnistui: %2$s</string>
     <string name="favorite_app_add">Lisää suosikkeihin</string>
-    <string name="favorite_app_network_open">Latautuu avoimen verkon kautta.</string>
-    <string name="favorite_app_network_tor">Latautuu Torin kautta.</string>
     <string name="favorite_app_recent">Viimeisimmät</string>
     <string name="favorite_app_remove">Poista suosikeista</string>
     <string name="favorite_app_still_loading">Sovellusta ei ole vielä ladattu. Yritä hetken kuluttua uudelleen.</string>
@@ -2370,10 +2340,6 @@
         <item quantity="other">%1$d jäsentä</item>
     </plurals>
     <string name="marmot_member_removed">Jäsen poistettu</string>
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d viesti</item>
-        <item quantity="other">%1$d viestiä</item>
-    </plurals>
     <string name="marmot_not_a_member">Et ole tämän ryhmän jäsen</string>
     <string name="marmot_unknown_error">tuntematon virhe</string>
     <string name="media_added">Media lisätty</string>
@@ -2462,12 +2428,7 @@
     <string name="nest_lower_hand">Laske käsi</string>
     <string name="nest_mic_mute">Mykistä mikrofoni</string>
     <string name="nest_mic_unmute">Poista mykistys</string>
-    <string name="nest_mute">Mykistä</string>
     <string name="nest_no_server_save_failed">Nest-palvelinluettelon tallennus epäonnistui. Yritä uudelleen.</string>
-    <string name="nest_notification_channel_description">Pitää äänen toistossa huoneen ollessa auki.</string>
-    <string name="nest_notification_listening">Nest yhdistetty</string>
-    <string name="nest_notification_stop">Lopeta</string>
-    <string name="nest_notification_text">Palaa napauttamalla.</string>
     <string name="nest_participant_follow">Seuraa</string>
     <string name="nest_participant_mute">Mykistä</string>
     <string name="nest_participant_unfollow">Lopeta seuraaminen</string>
@@ -2478,7 +2439,6 @@
     <string name="nest_presence_raised_hand">nosti kätensä</string>
     <string name="nest_presence_speaking">puhuu</string>
     <string name="nest_raise_hand">Nosta käsi</string>
-    <string name="nest_unmute">Poista mykistys</string>
     <string name="nests_servers_my_explainer">Tallennetaan kind-10112-korvattavana tapahtumana, jotta muut asiakkaat voivat lukea asetuksesi.</string>
     <string name="nests_servers_my_section">Omat palvelimesi</string>
     <string name="nests_servers_recommended_explainer">Sisäänrakennettuja ehdotuksia, jotka voit lisätä listaasi yhdellä napautuksella.</string>
@@ -2511,10 +2471,6 @@
     <string name="new_requests">Uudet pyynnöt</string>
     <string name="new_threads">Uudet keskustelut</string>
     <string name="new_workout">Uusi harjoitus</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d resurssi paketoitu</item>
-        <item quantity="other">%1$d resurssia paketoitu</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">Blossom-sovelluksia ei löydetty. Asenna paikallinen Blossom-sovellus nähdäksesi tämän tiedoston</string>
     <string name="no_blossom_apps_found_title">Blossom-linkkejä ei voi avata</string>
     <string name="no_camera_app_found">Tässä laitteessa ei ole kamerasovellusta</string>
@@ -2524,7 +2480,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Ei valittu reaktiotyyppejä. Pidä pitkään painettuna vaihtaaksesi.</string>
     <string name="no_reactions_setup">Ei reaktioita asetettu</string>
     <string name="no_wallet_found">Ei löytynyt lompakkoja Lightning-laskun maksamiseksi. Asenna Lightning-lompakko zapatäksesi</string>
-    <string name="no_wallet_found_with_error">Ei löytynyt lompakkoja Lightning-laskun maksamiseksi (käyttäjä: %1$s). Asenna Lightning-lompakko zapatäksesi</string>
     <string name="no_zap_amount_setup_long_press_to_change">Zap-määrää ei ole asetettu. Pidä painiketta pohjassa vaihtaaksesi sitä</string>
     <string name="notification_settings">Ilmoitukset</string>
     <string name="notification_settings_section_categories">Kategoriat</string>
@@ -2869,8 +2824,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Käyttäjällä %1$s ei ole Lightning-osoitetta määritettynä vastaanottamaan satseja</string>
     <string name="vanish_history">Katoamishistoria</string>
     <string name="vanish_request_sent">Katoamispyyntö lähetetty</string>
-    <string name="video_codec_h265_description">Parempi laatu pienemmillä tiedostokooilla, mutta kaikki laitteet eivät tue H.265-toistoa.</string>
-    <string name="video_codec_h265_label">Käytä H.265/HEVC-koodekkia</string>
     <string name="video_download_has_started_toast">Videon lataus on aloitettu…</string>
     <string name="video_player_settings">Videosoittimen painikkeet</string>
     <string name="video_saved_to_the_gallery">Video tallennettu puhelimen videogalleriaan</string>
