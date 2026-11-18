@@ -66,7 +66,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -81,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.refineMediaType
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -160,10 +158,7 @@ fun ImageCropDialog(
     onCancel: () -> Unit,
 ) {
     var saving by remember { mutableStateOf(false) }
-    Dialog(
-        onDismissRequest = { if (!saving) onCancel() },
-        properties = edgeToEdgeDialogProperties(dismissOnBackPress = !saving, dismissOnClickOutside = false),
-    ) {
+    StudioDialog(onDismissRequest = onCancel, canDismiss = !saving) {
         ImageCropStudio(media, shape, uploader, onDone, onCancel, saving = saving, onSaving = { saving = it })
     }
 }

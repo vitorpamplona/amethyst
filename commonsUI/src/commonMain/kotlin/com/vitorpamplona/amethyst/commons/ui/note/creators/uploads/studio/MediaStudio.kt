@@ -82,7 +82,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -131,7 +130,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSuppor
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.FilePreviewPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ComparisonImages
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.longEdge
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
@@ -189,10 +187,7 @@ fun MediaStudioDialog(
     val suggester = remember(appServices) { appServices.createAltTextSuggester() }
     DisposableEffect(suggester) { onDispose { suggester?.close() } }
 
-    Dialog(
-        onDismissRequest = { if (!isUploading) onCancel() },
-        properties = edgeToEdgeDialogProperties(dismissOnBackPress = !isUploading, dismissOnClickOutside = false),
-    ) {
+    StudioDialog(onDismissRequest = onCancel, canDismiss = !isUploading) {
         MediaStudio(
             media = media,
             servers = servers,
