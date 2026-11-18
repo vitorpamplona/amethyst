@@ -435,8 +435,10 @@ private fun RelayGroupMemberRow(
                                         onClick = {
                                             menuOpen = false
                                             // Additive: NIP-29 allows multiple roles per member and the menu only
-                                            // offers roles they lack, so keep the ones they already hold.
-                                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, entry.roles + role.name)
+                                            // offers roles they lack, so keep the ones they already hold. Buzz has
+                                            // one role per member and read the old one first, so send the new alone.
+                                            val roles = if (isBuzzRelay) listOf(role.name) else entry.roles + role.name
+                                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, roles)
                                         },
                                     )
                                 }

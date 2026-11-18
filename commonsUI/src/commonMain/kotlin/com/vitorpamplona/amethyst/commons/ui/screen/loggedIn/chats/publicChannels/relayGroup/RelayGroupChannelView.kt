@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.relayGroupChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_guests_cannot_post
 import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_only_to_post
 import com.vitorpamplona.amethyst.commons.resources.relay_group_join_to_post
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -297,7 +299,7 @@ private fun ChannelView(
                 nav,
             )
         } else {
-            JoinToPostNotice(liveChannel)
+            JoinToPostNotice(liveChannel, accountViewModel.userProfile().pubkeyHex)
         }
     }
 }
@@ -355,9 +357,15 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
  * the top-bar Join action (open groups) or explains the invite requirement (closed groups).
  */
 @Composable
-private fun JoinToPostNotice(channel: RelayGroupChannel) {
+private fun JoinToPostNotice(
+    channel: RelayGroupChannel,
+    myPubkey: HexKey,
+) {
     val message =
-        if (channel.isClosed()) {
+        if (channel.isBuzzAnnounceChannel() || channel.isBuzzGuest(myPubkey)) {
+            // Joining doesn't help here: the relay makes joiners read-only guests.
+            stringRes(Res.string.buzz_channel_guests_cannot_post)
+        } else if (channel.isClosed()) {
             stringRes(Res.string.relay_group_invite_only_to_post)
         } else {
             stringRes(Res.string.relay_group_join_to_post)

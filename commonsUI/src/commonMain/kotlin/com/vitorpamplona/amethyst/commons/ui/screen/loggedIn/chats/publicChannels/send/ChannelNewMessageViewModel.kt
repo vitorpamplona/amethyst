@@ -616,6 +616,8 @@ open class ChannelNewMessageViewModel :
     private suspend fun joinBuzzChannelBeforePosting(channel: Channel) {
         if (channel !is RelayGroupChannel || !BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) return
         if (channel.event?.isBuzzDm() == true) return
+        // Joining an announce channel makes me a read-only guest: the post would then be refused.
+        if (channel.isBuzzAnnounceChannel()) return
         if (channel.membershipOf(accountViewModel.account.userProfile().pubkeyHex).isMember()) return
         // Once per channel: the relay's roster (39002) lags the join, and every post before it
         // lands would otherwise re-send the kind-9021 and re-publish the kind-10009 list.

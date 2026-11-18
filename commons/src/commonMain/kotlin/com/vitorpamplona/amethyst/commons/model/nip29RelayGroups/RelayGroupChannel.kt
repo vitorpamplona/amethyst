@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_GUEST
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -93,6 +95,15 @@ class RelayGroupChannel(
     var members: Set<HexKey> = emptySet()
         private set
     private var membersUpdatedAt: Long = 0
+
+    /**
+     * Buzz only: the members whose 39002 entry (`["p", pubkey, "", role]`) carries the `guest` role.
+     * Guests can read and leave, but the relay refuses their posts, reactions, edits and typing
+     * (buzz `d97f6b4c6`, `MemberRole::can_post`).
+     */
+    @Volatile
+    var guests: Set<HexKey> = emptySet()
+        private set
 
     /** Relay-signed admins with their roles (kind 39001). */
     @Volatile
@@ -209,7 +220,33 @@ class RelayGroupChannel(
 
     fun isRestricted(): Boolean = event?.isRestricted() ?: false
 
+    /**
+     * NIP-29 `closed`: joining needs an invite. Buzz stamps it on **private** channels only (it used
+     * to stamp every channel; buzz `d97f6b4c6` changed that), and who may post there is decided by
+     * [canPost], not by this flag.
+     */
     fun isClosed(): Boolean = event?.isClosed() ?: false
+
+    /**
+     * Buzz only: the role a person gets on joining, from the 39000's `["join_role", …]` (`member`
+     * when absent, as on relays from before announce channels). Any value other than `member` reads
+     * as `guest`, as the relay's own `ChannelJoinRole::parse_fail_closed` does, so it never widens
+     * who may write.
+     */
+    fun buzzJoinRole(): String {
+        val value = event?.tags?.firstOrNull { it.size > 1 && it[0] == BUZZ_JOIN_ROLE_TAG }?.get(1) ?: return BUZZ_ROLE_MEMBER
+        return if (value == BUZZ_ROLE_MEMBER) BUZZ_ROLE_MEMBER else BUZZ_ROLE_GUEST
+    }
+
+    /**
+     * Buzz only: an **announce channel**, an open channel whose joiners become read-only guests
+     * (`join_role` = `guest`). Anyone can find, read and join it; only members it was given to can
+     * post.
+     */
+    fun isBuzzAnnounceChannel(): Boolean = BuzzRelayDialect.isBuzz(groupId.relayUrl) && !isPrivate() && buzzJoinRole() == BUZZ_ROLE_GUEST
+
+    /** Buzz only: whether [pubkey] is in this channel as a guest (read-only). */
+    fun isBuzzGuest(pubkey: HexKey): Boolean = pubkey in guests && admins.none { it.pubKey == pubkey }
 
     fun isHidden(): Boolean = event?.isHidden() ?: false
 
@@ -241,6 +278,7 @@ class RelayGroupChannel(
     fun updateMembers(event: GroupMembersEvent) {
         if (event.createdAt <= membersUpdatedAt) return
         members = event.members().toSet()
+        guests = buzzGuestsOf(event)
         membersUpdatedAt = event.createdAt
         recomputeAllMembers()
         updateChannelInfo()
@@ -372,19 +410,30 @@ class RelayGroupChannel(
      *
      * Standard NIP-29 relays require membership to post to every group (an `open` group only means a
      * kind-9021 join is auto-approved — you must still be a member to write). Buzz relaxes this: on a
-     * Buzz relay an **open** (non-`private`) channel accepts kind-9 from any authenticated relay member
-     * with NO per-channel join, and Buzz stamps EVERY channel with the `closed` join-flag — so there
-     * [isClosed] says nothing about who may post; only [isPrivate] reflects the write ACL.
+     * Buzz relay an **open** (non-`private`) channel whose `join_role` is `member` accepts kind-9 from
+     * any authenticated relay member with NO per-channel join. A private channel, or an announce
+     * channel ([isBuzzAnnounceChannel]), takes posts only from its roster. [isClosed] says nothing
+     * about who may post.
      */
-    fun requiresMembershipToPost(): Boolean = !BuzzRelayDialect.isBuzz(groupId.relayUrl) || isPrivate()
+    fun requiresMembershipToPost(): Boolean = !BuzzRelayDialect.isBuzz(groupId.relayUrl) || isPrivate() || buzzJoinRole() != BUZZ_ROLE_MEMBER
 
     /**
-     * Whether [pubkey] may post here: a roster member/mod/admin always may; on an open Buzz channel any
-     * authenticated relay member may, even without a per-channel join. Mirrors the relay's write gate
-     * (`check_channel_membership`: member OR open-visibility), so the composer isn't hidden where the
-     * relay would actually accept the message.
+     * Whether [pubkey] may post here, mirroring the relay's write gate so the composer shows exactly
+     * where a message would be accepted:
+     * - a roster member/mod/admin may, except a Buzz **guest**, whom the relay refuses
+     *   (`restricted: only members can post in this channel`);
+     * - on an open Buzz channel with `join_role` = `member` any authenticated relay member may, even
+     *   without a per-channel join;
+     * - on a Buzz announce channel a non-member may not, community member or not: joining would only
+     *   make them a guest.
      */
-    fun canPost(pubkey: HexKey): Boolean = !requiresMembershipToPost() || membershipOf(pubkey).isMember()
+    fun canPost(pubkey: HexKey): Boolean {
+        if (BuzzRelayDialect.isBuzz(groupId.relayUrl)) {
+            if (isBuzzGuest(pubkey)) return false
+            if (isBuzzAnnounceChannel()) return pubkey in members || admins.any { it.pubKey == pubkey }
+        }
+        return !requiresMembershipToPost() || membershipOf(pubkey).isMember()
+    }
 
     fun anyNameStartsWith(prefix: String): Boolean =
         groupId.id.contains(prefix, true) ||
@@ -410,4 +459,18 @@ class RelayGroupChannel(
     companion object {
         fun placeholderIdHex(groupId: GroupId): HexKey = "relaygroup-empty-${groupId.toKey()}"
     }
+}
+
+/** Buzz's 39000 tag naming the role a joiner gets (`member` or `guest`). */
+private const val BUZZ_JOIN_ROLE_TAG = "join_role"
+
+/** The guests on a Buzz 39002: `p` tags whose fourth value (the role) is `guest`. */
+private fun buzzGuestsOf(event: GroupMembersEvent): Set<HexKey> {
+    var guests: MutableSet<HexKey>? = null
+    event.tags.forEach { tag ->
+        if (tag.size > 3 && tag[0] == "p" && tag[3] == BUZZ_ROLE_GUEST) {
+            (guests ?: HashSet<HexKey>().also { guests = it }).add(tag[1])
+        }
+    }
+    return guests ?: emptySet()
 }

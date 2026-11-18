@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelLabels
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
@@ -30,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDelet
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
-import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
@@ -44,6 +45,8 @@ import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_BOT
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_GUEST
@@ -51,8 +54,10 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_OWNER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
+import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
@@ -61,6 +66,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithH
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -184,37 +190,40 @@ class AccountRelayGroupActions(
         relay: NormalizedRelayUrl,
         participants: List<HexKey>,
     ): String? {
-        val signed = account.signer.sign(DmOpenEvent.build(participants))
+        // Not DmOpenEvent.build: it stops at 8 others, but agents don't count toward Buzz's cap.
+        val signed = account.signer.sign(BuzzDmRules.openTemplate(participants))
         // The relay confirms the DM synchronously in the OK as `response:{"channel_id":"…"}` —
         // the authoritative, relay-assigned channel UUID (the deployed relay does not emit a
         // queryable kind-41001). Read it straight from the ack so the caller can open the chat.
-        var results = account.client.publishAndCollectResults(signed, setOf(relay))
-        var channelId = buzzDmChannelIdFromAck(results)
-
-        // NIP-42 write race: on a cold connection the relay rejects the first publish with
-        // `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm
-        // the connection with a pendingOnAuthRequired read so the auth coordinator completes the
-        // handshake, then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
-        if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
-            account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
-                filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
-                idleTimeoutMs = 8_000,
-                pendingOnAuthRequired = true,
-            ) { _, _ -> false }
-            results = account.client.publishAndCollectResults(signed, setOf(relay))
-            channelId = buzzDmChannelIdFromAck(results)
-        }
-        return channelId
+        return buzzDmChannelIdFromAck(publishAwaitingOk(signed, relay))
     }
 
-    /** The relay-assigned DM channel id from a DM-open OK message (`response:{"channel_id":"…"}`). */
-    private fun buzzDmChannelIdFromAck(results: Map<NormalizedRelayUrl, PublishResult>): String? =
-        results.values
-            .firstOrNull { it.accepted }
-            ?.message
-            ?.substringAfter("\"channel_id\":\"", "")
-            ?.substringBefore('"')
-            ?.takeIf { it.isNotBlank() }
+    /**
+     * Publishes [signed] to [relay] alone and waits for its OK.
+     *
+     * NIP-42 write race: on a cold connection the relay rejects the first publish with
+     * `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm the
+     * connection with a pendingOnAuthRequired read so the auth coordinator completes the handshake,
+     * then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
+     */
+    private suspend fun publishAwaitingOk(
+        signed: Event,
+        relay: NormalizedRelayUrl,
+    ): Map<NormalizedRelayUrl, PublishResult> {
+        val results = account.client.publishAndCollectResults(signed, setOf(relay))
+        if (results.values.any { it.accepted } || results.values.none { it.message.contains("auth-required", ignoreCase = true) }) {
+            return results
+        }
+        account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
+            filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
+            idleTimeoutMs = 8_000,
+            pendingOnAuthRequired = true,
+        ) { _, _ -> false }
+        return account.client.publishAndCollectResults(signed, setOf(relay))
+    }
+
+    /** The relay-assigned DM channel id from a DM command's OK message (`response:{"channel_id":"…"}`). */
+    private fun buzzDmChannelIdFromAck(results: Map<NormalizedRelayUrl, PublishResult>): String? = BuzzDmRules.channelIdFromOk(results.values.firstOrNull { it.accepted }?.message)
 
     /**
      * Asks [channel]'s Buzz relay which huddle sessions in it are live right now and records them
@@ -237,13 +246,25 @@ class AccountRelayGroupActions(
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
-    /** Add [member] to an existing group DM with a kind-41011 command (creates a new DM set). */
+    /**
+     * Add [member] to the Buzz DM [channel] with a kind-41011 command and return the DM the
+     * conversation now lives in, or null when the relay refused or never confirmed.
+     *
+     * With [includeHistory] (the default) the add carries `["history", "include"]`: the DM grows in
+     * place and [member] sees its history, unless those people already share a DM, which the relay
+     * answers with instead. Without it the relay adds no one in place and finds or creates the DM of
+     * the old people plus [member]. Either way the OK names the resulting DM, so the caller can
+     * follow it rather than stay in a conversation the newcomer is not in. See [BuzzDmRules].
+     */
     suspend fun addBuzzDmMember(
         channel: RelayGroupChannel,
         member: HexKey,
-    ) {
-        val template = DmAddMemberEvent.build(channel.groupId.id, member)
-        account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        includeHistory: Boolean = true,
+    ): GroupId? {
+        val relay = channel.groupId.relayUrl
+        val signed = account.signer.sign(BuzzDmRules.addMemberTemplate(channel.groupId.id, member, includeHistory))
+        account.cache.justConsumeMyOwnEvent(signed)
+        return buzzDmChannelIdFromAck(publishAwaitingOk(signed, relay))?.let { GroupId(it, relay) }
     }
 
     /**
@@ -399,8 +420,16 @@ class AccountRelayGroupActions(
 
     /**
      * Create a new group on [relay]: kind 9007 (create-group) then kind 9002
-     * (edit-metadata) with the chosen name/visibility, then remember it. Returns
-     * the new group's id.
+     * (edit-metadata) with the chosen name/visibility, then remember it.
+     *
+     * Waits for the relay's OK on the 9007 first. A relay that refuses it (Buzz refuses a listed
+     * channel whose name another listed channel has, ignoring case — buzz `5f8d0aab9`; any relay may
+     * refuse for policy) has created nothing, so nothing else is sent or followed and the refusal
+     * comes back as [RelayGroupCreateResult.Refused]. A relay that never answers is treated as before:
+     * the channel is assumed created, since the publish may still land when the socket comes back.
+     *
+     * [hashtags] are NIP-29 topics. On a Buzz relay `t` tags are channel labels instead, so they are
+     * not sent; [buzzLabels] (valid per [BuzzChannelLabels]) ride the 9007 there.
      */
     suspend fun createRelayGroup(
         relay: NormalizedRelayUrl,
@@ -417,20 +446,31 @@ class AccountRelayGroupActions(
         parent: String? = null,
         channelType: String? = null,
         banner: String? = null,
-    ): GroupId {
+        buzzLabels: List<String>? = null,
+    ): RelayGroupCreateResult {
+        val isBuzz = BuzzRelayDialect.isBuzz(relay)
+        if (isBuzz && buzzLabels != null && !BuzzChannelLabels.isValidSet(buzzLabels)) {
+            return RelayGroupCreateResult.Refused("invalid channel labels: ${buzzLabels.joinToString()}")
+        }
+
         // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
         // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
         // a `name` (see CreateGroupEvent.build), which used to make "create group" on a Buzz relay
         // publish two events and produce nothing at all.
-        account.broadcaster.signAndSendPrivatelyOrBroadcast(
+        val create =
             CreateGroupEvent.build(
                 groupId = groupId,
                 name = name,
                 about = about,
                 visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
                 channelType = channelType,
-            ),
-        ) { listOf(relay) }
+            ) {
+                if (isBuzz && !buzzLabels.isNullOrEmpty()) buzzLabels.distinct().forEach { add(arrayOf("t", it)) }
+            }
+        val signedCreate = account.signer.sign(create)
+        account.cache.justConsumeMyOwnEvent(signedCreate)
+        val results = publishAwaitingOk(signedCreate, relay)
+        relayGroupCreateRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
 
         val edit =
             GroupEditMetadataEvent.build(
@@ -440,7 +480,9 @@ class AccountRelayGroupActions(
                 picture = picture,
                 banner = banner,
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                hashtags = hashtags,
+                // Never on Buzz: there `t` tags replace the channel's labels, and the labels the user
+                // chose already rode the 9007.
+                hashtags = if (isBuzz) emptyList() else hashtags,
                 geohashes = geohashes,
                 parent = parent,
             )
@@ -448,26 +490,41 @@ class AccountRelayGroupActions(
 
         val id = GroupId(groupId, relay)
         account.follow(LocalCache.getOrCreateRelayGroupChannel(id))
-        return id
+        return RelayGroupCreateResult.Created(id)
     }
 
     /**
-     * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
-     * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
-     * restrictive counterpart — so only the enabled restrictive flags are added.
+     * On Buzz, the name of a listed channel (open, not unlisted, stream or forum) that a loaded
+     * listed channel on [relay] already holds, ignoring case, or null. The relay refuses such a
+     * create or rename (`invalid: an open channel named "…" already exists`, buzz `5f8d0aab9`); this
+     * lets the form say so before sending. Archived channels keep their names. Channels we haven't
+     * loaded can still collide, so the relay's answer stays authoritative.
      */
-    private fun relayGroupStatus(
+    fun buzzListedNameTaken(
+        relay: NormalizedRelayUrl,
+        name: String,
         isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-    ): Set<GroupMetadataEvent.GroupStatus> =
-        buildSet {
-            if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
-            if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
-            if (isHidden) add(GroupMetadataEvent.GroupStatus.HIDDEN)
-            if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
-        }
+        channelType: String?,
+        except: GroupId? = null,
+    ): String? {
+        if (!BuzzRelayDialect.isBuzz(relay) || isPrivate) return null
+        if (channelType != null && channelType != BUZZ_CHANNEL_TYPE_STREAM && channelType != BUZZ_CHANNEL_TYPE_FORUM) return null
+        val wanted = canonicalBuzzChannelName(name)
+        if (wanted.isEmpty()) return null
+        return LocalCache
+            .getRelayGroupChannelsOnRelay(relay)
+            .firstOrNull { channel ->
+                val event = channel.event ?: return@firstOrNull false
+                val type = event.buzzChannelType()
+                channel.groupId != except &&
+                    !channel.isPrivate() &&
+                    (type == null || type == BUZZ_CHANNEL_TYPE_STREAM || type == BUZZ_CHANNEL_TYPE_FORUM) &&
+                    event.tags.none { it.isNotEmpty() && it[0] == "unlisted" } &&
+                    !RelayGroupDeletions.isDeleted(channel.groupId) &&
+                    event.name()?.let { canonicalBuzzChannelName(it).equals(wanted, ignoreCase = true) } == true
+            }?.event
+            ?.name()
+    }
 
     /** Post a kind 11 thread (forum-style) to the group, scoped by its `h` tag. */
     suspend fun postRelayGroupThread(
@@ -596,16 +653,17 @@ class AccountRelayGroupActions(
         pubkey: HexKey,
         roles: List<String>,
     ) {
-        // Buzz ignores the roles inside the `p` tag and reads a top-level `role` tag instead, in its
-        // own vocabulary — so map ours onto its set before sending. Anything it cannot parse fails
-        // the whole put-user, which is why an unmapped role must become `member` rather than travel.
+        // Buzz has one role per member, in its own vocabulary, and reads it from `p[2]` before the
+        // `role` tag: our NIP-29 roles there (`moderator`, or the old role first in an edit) were
+        // refused or won over the new one. Map ours onto its set and send the role tag alone (see
+        // relayGroupPutUserTemplate). An unmapped role becomes `member` rather than travel.
         val buzzRole =
             if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
                 buzzRoleFor(roles)
             } else {
                 null
             }
-        val template = GroupPutUserEvent.build(channel.groupId.id, listOf(pubkey to roles), buzzRole = buzzRole)
+        val template = relayGroupPutUserTemplate(channel.groupId.id, pubkey, roles, buzzRole)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -645,6 +703,11 @@ class AccountRelayGroupActions(
      * (unless replaced) and every tag this form doesn't manage (`livekit`, `supported_kinds`, a
      * newer spec field…) ride along verbatim — otherwise a rename would erase them on a relay that
      * rebuilds the metadata from the edit.
+     *
+     * On a Buzz relay [hashtags] are ignored: there the 39000's `t` tags are the channel type and its
+     * labels, and a 9002 `t` tag replaces the label set — echoing them back (the type included) made
+     * the relay refuse every rename (buzz `2f79374f4`). Labels change only through [buzzLabels]:
+     * null leaves them as they are, an empty list clears them. See [BuzzChannelLabels].
      */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
@@ -660,14 +723,13 @@ class AccountRelayGroupActions(
         parent: String? = channel.parentGroupId(),
         children: List<String> = channel.childGroupIds(),
         banner: String? = channel.bannerPicture(),
+        buzzLabels: List<String>? = null,
     ) {
-        // On a Buzz relay, visibility rides a `visibility` ("open"/"private") tag — the relay does NOT
-        // read NIP-29's `private` status flag — so a Buzz channel's visibility only actually changes on
-        // edit when we send that tag. A plain NIP-29 relay ignores it and honours the status flag.
-        val isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
         val template =
-            GroupEditMetadataEvent.build(
+            relayGroupEditTemplate(
                 channel.groupId.id,
+                currentMetadata = channel.event,
+                isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl),
                 name = name,
                 about = about,
                 picture = picture,
@@ -677,10 +739,7 @@ class AccountRelayGroupActions(
                 geohashes = geohashes,
                 parent = parent,
                 children = children,
-                visibility = if (isBuzz) (if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
-                // Buzz honours only its own subset of tags on a 9002 and stamps relay-internal ones on
-                // its 39000, so don't echo those back; a NIP-29 relay gets the unmanaged tags verbatim.
-                extraTags = if (isBuzz) emptyList() else channel.event?.unmanagedTags() ?: emptyList(),
+                buzzLabels = buzzLabels,
             )
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
@@ -713,6 +772,117 @@ internal fun buzzRoleFor(roles: List<String>): String {
         else -> BUZZ_ROLE_MEMBER
     }
 }
+
+/**
+ * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
+ * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
+ * restrictive counterpart — so only the enabled restrictive flags are added.
+ */
+fun relayGroupStatus(
+    isPrivate: Boolean,
+    isClosed: Boolean,
+    isHidden: Boolean,
+    isRestricted: Boolean,
+): Set<GroupMetadataEvent.GroupStatus> =
+    buildSet {
+        if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+        if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
+        if (isHidden) add(GroupMetadataEvent.GroupStatus.HIDDEN)
+        if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
+    }
+
+/**
+ * The kind:9002 behind [AccountRelayGroupActions.editRelayGroupMetadata].
+ *
+ * On a Buzz relay ([isBuzz]) visibility rides a `visibility` ("open"/"private") tag, since the relay
+ * does not read NIP-29's `private` flag; [hashtags] are dropped, because there `t` tags are channel
+ * labels and the 39000's include the channel type, which the relay refuses as a label; the labels
+ * change only through [buzzLabels] (null: unchanged; empty: cleared), validated by
+ * [BuzzChannelLabels.editTags], which throws on a set the relay would refuse; and the tags this form
+ * doesn't manage are not echoed, since Buzz stamps relay-internal ones (`join_role`, `auto_join`,
+ * `P`, …) that a channel admin may not set. A NIP-29 relay gets [currentMetadata]'s unmanaged tags
+ * verbatim, so an edit doesn't erase them.
+ */
+fun relayGroupEditTemplate(
+    groupId: String,
+    currentMetadata: GroupMetadataEvent?,
+    isBuzz: Boolean,
+    name: String?,
+    about: String?,
+    picture: String?,
+    banner: String?,
+    status: Set<GroupMetadataEvent.GroupStatus>,
+    hashtags: List<String>,
+    geohashes: List<String>,
+    parent: String?,
+    children: List<String>,
+    buzzLabels: List<String>?,
+): EventTemplate<GroupEditMetadataEvent> {
+    val labelTags = if (isBuzz) BuzzChannelLabels.editTags(buzzLabels) else emptyList()
+    return GroupEditMetadataEvent.build(
+        groupId,
+        name = name,
+        about = about,
+        picture = picture,
+        banner = banner,
+        status = status,
+        hashtags = if (isBuzz) emptyList() else hashtags,
+        geohashes = geohashes,
+        parent = parent,
+        children = children,
+        visibility = if (isBuzz) (if (GroupMetadataEvent.GroupStatus.PRIVATE in status) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
+        extraTags = if (isBuzz) emptyList() else currentMetadata?.unmanagedTags() ?: emptyList(),
+    ) {
+        labelTags.forEach { add(it) }
+    }
+}
+
+/** What became of a [AccountRelayGroupActions.createRelayGroup]. */
+sealed interface RelayGroupCreateResult {
+    /** The relay accepted the create (or never answered, and it may still land). */
+    data class Created(
+        val groupId: GroupId,
+    ) : RelayGroupCreateResult
+
+    /** The relay refused the create, so no group exists; [message] is its reason. */
+    data class Refused(
+        val message: String,
+    ) : RelayGroupCreateResult
+}
+
+/**
+ * The relay's reason when it explicitly refused a group create, or null when it accepted it or
+ * never answered (a transport failure says nothing about the group). Relay prefixes (`invalid:`,
+ * `restricted:`, …) are dropped so the reason reads as a sentence.
+ */
+internal fun relayGroupCreateRefusal(results: Map<NormalizedRelayUrl, PublishResult>): String? {
+    if (results.values.any { it.accepted }) return null
+    val refusal = results.values.firstOrNull { !it.isTransportFailure } ?: return null
+    val message = refusal.message
+    val prefix = message.substringBefore(':', "")
+    return if (prefix.isNotEmpty() && prefix.none { it.isWhitespace() }) message.substringAfter(':').trim() else message
+}
+
+/**
+ * The kind:9000 that sets [pubkey]'s roles in [groupId].
+ *
+ * NIP-29 relays read the roles inside the `p` tag (`["p", pubkey, role, …]`). Buzz reads `p[2]`
+ * first and the top-level `role` tag only as a fallback (buzz `d0dee1cb5`, `put_user_targets` in
+ * `side_effects.rs`), refusing the whole event for a role outside owner/admin/member/guest/bot. So
+ * with a [buzzRole] the `p` tag stays bare and the role travels in the `role` tag alone, the shape
+ * Buzz's own SDK sends (`build_add_member`), which both old and new Buzz relays read the same way.
+ */
+fun relayGroupPutUserTemplate(
+    groupId: String,
+    pubkey: HexKey,
+    roles: List<String>,
+    buzzRole: String?,
+): EventTemplate<GroupPutUserEvent> =
+    if (buzzRole != null) {
+        GroupPutUserEvent.build(groupId, listOf(pubkey to emptyList()), buzzRole = buzzRole)
+    } else {
+        GroupPutUserEvent.build(groupId, listOf(pubkey to roles))
+    }
 
 /** A profile signed this recently is within Buzz's timestamp window and can be relayed as-is. */
 private const val BUZZ_FRESH_PROFILE_SECS = 60L

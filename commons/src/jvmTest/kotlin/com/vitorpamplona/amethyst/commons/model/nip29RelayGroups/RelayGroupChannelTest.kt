@@ -57,12 +57,14 @@ class RelayGroupChannelTest {
         createdAt: Long,
         flags: List<String> = emptyList(),
         name: String? = null,
+        extra: List<Array<String>> = emptyList(),
     ): GroupMetadataEvent {
         val tags =
             buildList {
                 add(arrayOf("d", gid))
                 name?.let { add(arrayOf("name", it)) }
                 flags.forEach { add(arrayOf(it)) }
+                addAll(extra)
             }.toTypedArray()
         return EventFactory.create("00".repeat(32), relaySelf, createdAt, GroupMetadataEvent.KIND, tags, "", "22".repeat(64)) as GroupMetadataEvent
     }
@@ -291,6 +293,74 @@ class RelayGroupChannelTest {
             assertFalse(c.requiresMembershipToPost())
             assertTrue(c.canPost(alice)) // roster member
             assertTrue(c.canPost(bob)) // NOT in the roster, but the open Buzz channel still accepts writes
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+        }
+    }
+
+    /** A Buzz 39002: `["p", pubkey, "", role]` per member (buzz `group_members_tags`). */
+    private fun buzzMembers(
+        createdAt: Long,
+        vararg entries: Pair<String, String>,
+    ): GroupMembersEvent {
+        val tags = (listOf(arrayOf("d", gid)) + entries.map { arrayOf("p", it.first, "", it.second) }).toTypedArray()
+        return EventFactory.create("00".repeat(32), relaySelf, createdAt, GroupMembersEvent.KIND, tags, "", "22".repeat(64)) as GroupMembersEvent
+    }
+
+    @Test
+    fun buzzGuestCannotPostEvenInAnOpenChannel() {
+        // buzz d97f6b4c6: guests read and leave; the relay refuses their posts.
+        BuzzRelayDialect.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, flags = listOf("public"), extra = listOf(arrayOf("join_role", "member"))))
+            c.updateMembers(buzzMembers(100, alice to "member", bob to "guest"))
+
+            assertEquals(RelayGroupMembership.MEMBER, c.membershipOf(bob)) // still in the channel
+            assertTrue(c.isBuzzGuest(bob))
+            assertFalse(c.canPost(bob))
+            assertTrue(c.canPost(alice))
+            assertTrue(c.canPost(carol)) // open, join_role=member: anyone in the community may post
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+        }
+    }
+
+    @Test
+    fun buzzAnnounceChannelTakesPostsOnlyFromItsMembers() {
+        // An open channel with join_role=guest: joiners become guests, so a non-member can't post
+        // even as a community member (`restricted: only members can post in this channel`).
+        BuzzRelayDialect.clearForTesting()
+        BuzzCommunityMembership.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, flags = listOf("public", "restricted"), extra = listOf(arrayOf("join_role", "guest"))))
+            c.updateMembers(buzzMembers(100, alice to "member", bob to "guest"))
+            BuzzCommunityMembership.updateSnapshot(relay, setOf(alice, bob, carol), createdAt = 100)
+
+            assertTrue(c.isBuzzAnnounceChannel())
+            assertTrue(c.requiresMembershipToPost())
+            assertFalse(c.isClosed()) // Buzz stamps `closed` on private channels only
+            assertTrue(c.canPost(alice))
+            assertFalse(c.canPost(bob))
+            assertFalse(c.canPost(carol))
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+            BuzzCommunityMembership.clearForTesting()
+        }
+    }
+
+    @Test
+    fun buzzUnknownJoinRoleFailsClosed() {
+        BuzzRelayDialect.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, extra = listOf(arrayOf("join_role", "observer"))))
+            assertTrue(c.isBuzzAnnounceChannel())
+            assertFalse(c.canPost(carol))
         } finally {
             BuzzRelayDialect.clearForTesting()
         }
