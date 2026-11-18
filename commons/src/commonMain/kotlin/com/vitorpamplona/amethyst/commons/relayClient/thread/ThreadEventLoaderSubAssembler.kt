@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * Loads all missing events in each thread.
@@ -41,7 +43,22 @@ class ThreadEventLoaderSubAssembler(
     val cache: ICacheProvider,
     client: INostrClient,
     allKeys: () -> Set<ThreadQueryState>,
+    /**
+     * Runs with this loader's own re-plan: after each EOSE and each live event, since what it loaded
+     * may change other plans. Callers should only queue work (an `invalidateFilters`), not do it here.
+     */
+    private val onEose: () -> Unit,
 ) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
+    override fun newEose(
+        key: ThreadQueryState,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+        filters: List<Filter>?,
+    ) {
+        super.newEose(key, relayUrl, time, filters)
+        onEose()
+    }
+
     override fun updateFilter(
         key: ThreadQueryState,
         since: SincePerRelayMap?,

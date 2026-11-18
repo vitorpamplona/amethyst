@@ -46,7 +46,7 @@ class ThreadFilterSubAssembler(
     ): List<RelayBasedFilter>? {
         val root = ThreadAssembler(cache).findRoot(key.eventId) ?: return null
 
-        return filterEventsInThreadForRoot(root, since)
+        return filterEventsInThreadForRoot(root, since, key.defaultRelays.value)
     }
 
     override fun id(key: ThreadQueryState) = key.eventId

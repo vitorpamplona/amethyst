@@ -49,10 +49,16 @@ class ThreadFilterAssembler(
     cache: ICacheProvider,
     client: INostrClient,
 ) : ComposeSubscriptionManager<ThreadQueryState>() {
+    private val rootFilter = ThreadFilterSubAssembler(cache, client, ::allKeys)
+
     val group =
         listOf(
-            ThreadFilterSubAssembler(cache, client, ::allKeys),
-            ThreadEventLoaderSubAssembler(cache, client, ::allKeys),
+            rootFilter,
+            // The root query is planned on the relays where replies to the root land, which are
+            // only known once the loader has the root. A thread opened from a link starts with an
+            // empty root, so without this re-plan the root query never goes out, and a reply that
+            // only it would find (a voice reply, which no engagement filter asks for) never shows.
+            ThreadEventLoaderSubAssembler(cache, client, ::allKeys, onEose = rootFilter::invalidateFilters),
         )
 
     override fun invalidateKeys() = invalidateFilters()
