@@ -253,8 +253,9 @@ private fun DescriptionBox(
             // Pictures and videos of the problem: uploaded, linked in the body, and described by
             // an imeta tag on the issue, as in a comment.
             SelectFromGallery(
-                isUploading = viewModel.mediaUploadTracker.isUploadingImage,
-                enabled = !viewModel.mediaUploadTracker.isUploadingFile,
+                // The files show their upload on their cards: this spins only for a drawing.
+                isUploading = viewModel.mediaUploadTracker.isUploadingDrawing,
+                enabled = !viewModel.mediaUploadTracker.isUploading,
                 tint = MaterialTheme.colorScheme.grayText,
                 modifier = Modifier,
             ) {

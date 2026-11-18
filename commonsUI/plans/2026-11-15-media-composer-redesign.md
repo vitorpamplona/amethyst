@@ -196,6 +196,35 @@ Not yet:
 - the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 
+### Feedback round, 2026-11-18
+
+Fixed after the first testers' report, and checked by posting from a new account on the desktop
+app (phone-sized window):
+- **Trim plays the kept part.** Play on the Trim stage (or a tap on it) loops start to end with
+  sound: `NotePlatform.TrimPreviewPlayer`, a clipped ExoPlayer on Android and the shared engine on
+  desktop (left out of the now-playing bar). A GIF plays its trimmed copy (`rememberTrimmedGif`),
+  which the Studio's other tools and the composer's card now show too.
+- **GIFs trim.** The 1 s minimum left a one-second GIF nothing to cut (GIFs now go down to 100 ms),
+  each drag step was snapped back to "all of it" on short clips (steps are now worked out from
+  where the drag began), and a handle pulled inward read as "move both" past the touch slop.
+  `StudioTrimUiTest` drives both.
+- **One wheel per upload, with its stage.** The composer's cards say Compressing, Uploading,
+  Processing… again; the gallery and file buttons no longer spin for files that show on cards
+  (only for a drawing), and the Studio's Add button no longer spins over its own overlay.
+- **Text above the media.** Files added at the start of the text leave an empty first line with
+  the cursor on it; Post drops that line if nothing was written there.
+- Transitions: the stage keeps a still across tools and while a player opens, the panel eases
+  between tool heights, and the probe and length are read once per file.
+
+Still open:
+- On Post the markers become URLs in the field before signing, so the URLs show for as long as
+  signing takes (a frame with a local key, seconds with a NIP-46 bunker), then the cleared composer
+  shows briefly before it closes. Fix: build the event from the resolved text and leave the field
+  alone (every composer that uses `AttachedMediaState` reads `message.text` after `uploadAll`).
+- "Original video kept" opens a modal in the middle of posting that outlives the composer; a
+  quiet line on the card or a toast would do.
+- Desktop dialogs (composer, Studio) open and close with a hard cut; Android's dialog windows fade.
+
 ## 1. What we have today
 
 Every screen that attaches a photo or video to text goes through one card,

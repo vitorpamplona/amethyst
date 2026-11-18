@@ -334,9 +334,11 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
                 .height(50.dp),
         verticalAlignment = CenterVertically,
     ) {
+        // The picked files show their upload on their cards: the buttons spin only for a drawing.
+        val busy = postViewModel.isUploadingImage || postViewModel.isUploadingFile
         SelectFromGallery(
-            isUploading = postViewModel.isUploadingImage,
-            enabled = !postViewModel.isUploadingFile,
+            isUploading = postViewModel.mediaUploadTracker.isUploadingDrawing,
+            enabled = !busy,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -344,15 +346,15 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingFile,
-            enabled = !postViewModel.isUploadingImage,
+            isUploading = false,
+            enabled = !busy,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
             postViewModel.selectImage(it)
         }
 
-        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+        DrawingButton(postViewModel.accountViewModel, enabled = !busy) { drawing, alt ->
             postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
         }
 

@@ -167,6 +167,7 @@ class LongFormPostViewModel :
     val mediaUploadTracker = MediaUploadTracker()
     override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
     override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingDrawing: Boolean get() = mediaUploadTracker.isUploadingDrawing
 
     /** The media attached to [message]: picked, in the text as markers, uploaded on Post. */
     val media = AttachedMediaState(message)

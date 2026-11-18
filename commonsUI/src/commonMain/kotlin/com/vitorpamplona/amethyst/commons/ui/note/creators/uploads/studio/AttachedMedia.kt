@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,6 +56,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -77,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessin
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.uploadingStateLabel
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
@@ -207,7 +210,8 @@ fun AttachedMediaCard(
         when {
             media.isImage() == true ->
                 CroppedImage(
-                    model = media.uri.toString(),
+                    // A trimmed GIF loops only the part that will be sent.
+                    model = rememberTrimmedGif(item, uploader),
                     crop = item.options.crop,
                     imageAspect = item.displayAspectRatio,
                     contentScale = ContentScale.Crop,
@@ -286,7 +290,24 @@ fun AttachedMediaCard(
                 Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(if (isPicture) Alignment.BottomEnd else Alignment.CenterEnd).padding(8.dp).size(24.dp))
             else ->
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(44.dp))
+                    // The wheel says how far, the word what for: compressing, uploading, the server's checks.
+                    val wheel = @Composable { size: Dp ->
+                        CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(size))
+                    }
+                    if (isPicture) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            wheel(44.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Pill(uploadingStateLabel(state))
+                        }
+                    } else {
+                        // A file's row is one line tall: the word goes beside the wheel.
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            wheel(24.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Pill(uploadingStateLabel(state))
+                        }
+                    }
                 }
         }
     }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -315,6 +316,18 @@ fun MediaStudio(
         )
 
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
+            // A video's first frame to be sent stays under every tool's stage, so switching tools
+            // never shows a black frame while the next stage loads its own.
+            if (current.media.isVideo() == true && uploader.videoTrim) {
+                val still = rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
+                if (still != null) AsyncImage(model = still, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            }
+            // Trim opens on a still and needs the length: read them now, so the first visit to Trim
+            // doesn't open on black with no times. A video's still is the one just above.
+            if (StudioTool.TRIM in tools) {
+                if (current.media.isGif()) rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
+                rememberVideoDuration(current, uploader)
+            }
             if (tool == StudioTool.TRIM) {
                 StudioTrimStage(current, uploader, trimSession)
             } else if (tool == StudioTool.CROP) {
@@ -357,7 +370,16 @@ fun MediaStudio(
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                     )
                 }
-                Box(Modifier.fillMaxWidth().heightIn(min = 112.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                // Each tool's panel has its own height: easing between them lets the stage above
+                // grow or shrink instead of jumping on every tab.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                        .heightIn(min = 112.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     when (tool) {
                         StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
                         StudioTool.TRIM -> TrimTool(current, uploader, trimSession, enabled = !isUploading)
@@ -411,11 +433,8 @@ private fun StudioTopBar(
         IconButton(onClick = onRemove, enabled = !isUploading) {
             Icon(MaterialSymbols.Delete, contentDescription = stringRes(Res.string.remove))
         }
+        // No spinner here while it uploads: the stage shows each file's progress and what it is doing.
         Button(onClick = onAdd, enabled = !isUploading, modifier = Modifier.padding(end = 8.dp).height(36.dp)) {
-            if (isUploading) {
-                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
-            }
             Text(stringRes(confirmLabel))
         }
     }
@@ -500,9 +519,9 @@ private fun StudioPreview(
 
         media.isImage() == true -> {
             val zoomState = rememberZoomState()
-            // A GIF or an animated WebP plays here as it will in the note, cropped as it will be sent.
+            // A GIF or an animated WebP plays here as it will in the note, cropped and trimmed as it will be sent.
             CroppedImage(
-                media.uri.toString(),
+                rememberTrimmedGif(item, uploader),
                 item.options.crop,
                 item.displayAspectRatio,
                 ContentScale.Fit,
@@ -624,7 +643,7 @@ private fun VideoPreview(
 ) {
     // Where the platform can decode frames, the stage opens on the first frame that will be sent;
     // elsewhere its thumbnail. Not both: each is a decode.
-    val frame = if (uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, 1280) else null
+    val frame = if (uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE) else null
     val thumbnail = if (!uploader.videoTrim) rememberVideoThumbnail(item.media) else null
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (frame != null) {
@@ -635,12 +654,12 @@ private fun VideoPreview(
             Icon(MaterialSymbols.Movie, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
         }
         if (uploader.videoCompression == VideoCompressionSupport.Supported) {
-            val info by produceState<VideoInfo?>(null, item.media) { value = uploader.probeVideo(item.media.uri) }
+            val probe = rememberVideoProbe(item, uploader)
             val quality = item.options.quality
             val label =
                 listOfNotNull(
                     levelName(quality.videoLevel),
-                    if (quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality.videoLevel, info) else null,
+                    if (quality != CompressorQuality.UNCOMPRESSED && probe.done) videoPhrase(quality.videoLevel, probe.info) else null,
                     item.options.trim?.let { formatLength(it.durationMs) },
                 )
             MediaPill(label.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
@@ -882,7 +901,7 @@ private fun VideoQuality(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ) {
-    val info by produceState<VideoInfo?>(null, item.media) { value = uploader.probeVideo(item.media.uri) }
+    val probe = rememberVideoProbe(item, uploader)
     val steps = VideoAwareSliderSteps.stepsFor(CompressorQuality.sliderSteps, hasVideo = true)
     val chosen = item.options.quality.videoLevel
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -890,7 +909,7 @@ private fun VideoQuality(
         steps.forEach { level ->
             LevelRow(
                 name = levelName(level),
-                detail = if (level == CompressorQuality.UNCOMPRESSED) null else videoPhrase(level, info),
+                detail = if (level == CompressorQuality.UNCOMPRESSED || !probe.done) null else videoPhrase(level, probe.info),
                 selected = chosen == level,
                 onClick = { item.options = item.options.copy(quality = level) },
             )
@@ -901,6 +920,30 @@ private fun VideoQuality(
             }
         }
     }
+}
+
+/** What [MediaUploader.probeVideo] found; [done] false while it runs. */
+private class VideoProbe(
+    val done: Boolean,
+    val info: VideoInfo?,
+)
+
+/**
+ * The picked video's probe. Until it answers, a level says nothing rather than the 1080p example
+ * meant for a file that can't be probed, which read "1080p video → 1080p" and then jumped to the
+ * file's real size.
+ */
+@Composable
+private fun rememberVideoProbe(
+    item: SelectedMediaProcessing,
+    uploader: MediaUploader,
+): VideoProbe {
+    val key = item.media
+    val known = key in StudioFileFacts.probes
+    val probe by produceState(VideoProbe(known, StudioFileFacts.probes[key]), item.media) {
+        if (!value.done) value = VideoProbe(true, uploader.probeVideo(item.media.uri).also { StudioFileFacts.probes[key] = it })
+    }
+    return probe
 }
 
 /** In the studio the top level is "Original": the file as picked, the same word the preview uses. */

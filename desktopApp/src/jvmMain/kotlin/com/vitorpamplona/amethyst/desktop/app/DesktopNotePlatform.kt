@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
+import com.vitorpamplona.amethyst.desktop.ui.media.DesktopTrimPreviewPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
@@ -489,6 +490,19 @@ object DesktopNotePlatform : NotePlatform {
             sizeBytes = rememberMediaSize(videoUri, mediaKindOf(mimeType, videoUri), accountViewModel, mimeType, held = !accountViewModel.settings.startVideoPlayback()),
         )
     }
+
+    // The shared video engine plays the picked file (see DesktopTrimPreviewPlayer).
+    override val canPlayTrimPreview: Boolean get() = true
+
+    @Composable
+    override fun TrimPreviewPlayer(
+        videoUri: String,
+        startMs: Long,
+        endMs: Long,
+        durationMs: Long,
+        onPositionMs: (Long) -> Unit,
+        modifier: Modifier,
+    ) = DesktopTrimPreviewPlayer(videoUri, startMs, endMs, durationMs, onPositionMs, modifier)
 
     @Composable
     override fun FullscreenVideoView(

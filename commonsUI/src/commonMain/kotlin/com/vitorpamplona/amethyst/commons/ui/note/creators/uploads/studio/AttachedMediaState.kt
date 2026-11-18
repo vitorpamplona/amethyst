@@ -105,18 +105,28 @@ class AttachedMediaState(
 
     fun hasMedia() = markerIds.isNotEmpty()
 
-    /** The studio's Add: each picked file gets a marker at the cursor, on a line of its own. */
+    /**
+     * The studio's Add: each picked file gets a marker at the cursor, on a line of its own. Files
+     * added at the very start of the text (an empty composer, most of the time) go under an empty
+     * first line that keeps the cursor: a card fills its line and opens the studio when tapped, so
+     * without that line there was no place to write the text above it.
+     */
     fun attachPicked(chosenServer: ServerName) {
         val batch = picking ?: return
         server = chosenServer
         message.edit {
-            var cursor = selection.max
+            val start = selection.max
+            var cursor = start
             batch.items().forEach { item ->
                 val id = nextId++
                 items[id] = item
                 val insertion = MediaMarkers.insertion(asCharSequence(), cursor, id)
                 replace(cursor, cursor, insertion)
                 cursor += insertion.length
+            }
+            if (start == 0 && cursor > 0) {
+                replace(0, 0, "\n")
+                cursor = 0
             }
             selection = TextRange(cursor)
         }
@@ -186,7 +196,8 @@ class AttachedMediaState(
         }
 
         onUiThread {
-            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }) }
+            // The empty line left above files added at the start (see attachPicked) goes if nothing was written there.
+            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }.trimStart('\n')) }
         }
         items.clear()
         return true

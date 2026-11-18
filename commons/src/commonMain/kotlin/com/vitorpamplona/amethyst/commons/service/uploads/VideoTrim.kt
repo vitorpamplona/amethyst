@@ -34,8 +34,15 @@ data class VideoTrim(
     fun orNullIfWhole(totalMs: Long): VideoTrim? = if (startMs <= SLACK_MS && endMs >= totalMs - SLACK_MS) null else this
 
     companion object {
-        /** The shortest a trim may be. */
+        /** The shortest a video's trim may be. */
         const val MIN_MS = 1_000L
+
+        /**
+         * The shortest a GIF's trim may be. A reaction GIF often runs a second or two, which
+         * [MIN_MS] left nothing to cut from; a GIF keeps every frame it touches, shortened to the
+         * part kept, so even a tenth of a second is a frame.
+         */
+        const val MIN_GIF_MS = 100L
 
         private const val SLACK_MS = 50L
     }
