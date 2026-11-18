@@ -8,9 +8,9 @@
 # verbatim out of an Android res tree renders literally -- the login screen once
 # read `Don\'t have a Nostr account?`.
 #
-# Why a dedicated hook: this is reintroduced by every Crowdin sync, because
-# Crowdin holds the Android-escaped source. It came back twice in two days, 2,068
-# escaped apostrophes across 40 locales each time. Nothing in the Gradle build
+# Why a dedicated hook: every Crowdin sync used to reintroduce it (2,068 escaped
+# apostrophes across 40 locales, twice in two days), and a value copied from an
+# Android res tree still does. Nothing in the Gradle build
 # fails on it -- the strings simply ship wrong -- so there is no slow gate this
 # stands in for; it is the only gate.
 #

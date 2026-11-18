@@ -68,25 +68,17 @@ mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
    then add their npub or an alias so future releases pick them up. Pass
    `--from`/`--to` to rebuild an older release's list.
 
-   For the `## Translations` section, generate the credits instead of writing
-   them by hand — no token needed:
+   For the `## Translations` section, credit the people whose translation PRs
+   landed since the last `v*` tag (translations no longer go through Crowdin):
    ```bash
-   scripts/translators.sh
+   git log --format='%an' "$(git describe --tags --abbrev=0 --match 'v*')"..HEAD -- \
+     'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
+     'amethyst/src/main/res/values-*/strings.xml' | sort | uniq -c | sort -rn
    ```
-   This runs offline. It reads `docs/changelog/translators.json` (kept next to
-   the changelogs), which CI keeps fresh: the Crowdin sync workflow's
-   `seed-translators` job records everyone who has translated since the last `v*`
-   tag, with their languages, in the file's `sinceLastTag` list, and accumulates
-   their npubs in the forever-growing `mappings` registry. The script resolves
-   that list to npubs and prints the `## Translations` block, one line per
-   translator with all their languages. Usernames under `ignore` (the account
-   that uploads machine translations) are left out, so credit translations that
-   arrived through git rather than Crowdin by hand.
-   Contributors with no npub yet are listed under `UNMAPPED` — credit them by
-   hand, then add their npub under `mappings` so future releases pick them up
-   automatically. (To re-query Crowdin live as a sanity check, run
-   `scripts/translators.sh --seed` with `CROWDIN_PROJECT_ID` /
-   `CROWDIN_PERSONAL_TOKEN` set, which refreshes the file.)
+   `docs/changelog/translators.json` keeps the npubs of past Crowdin translators
+   under `mappings`. `scripts/translators.sh` still prints a block from that file,
+   but its `sinceLastTag` list was last filled by the Crowdin sync and no longer
+   refreshes (its `--seed` mode needs the retired Crowdin project).
 
 3. **Publish the release-notes note on Nostr** — *minor releases only.* In
    practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,
@@ -470,7 +462,7 @@ ownership:
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | Nothing here any more: they published `quartz` to Maven Central, which now releases from vitorpamplona/quartz. No workflow in this repo reads them | Delete from this repo's secrets |
 | *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
-| `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
+| ~~`CROWDIN_PERSONAL_TOKEN`~~, ~~`CROWDIN_PROJECT_ID`~~ | Nothing: translations no longer go through Crowdin | Delete from this repo's secrets |
 
 The Maven Central secrets (`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`,
 `SIGNING_PASSWORD`) belong to the library repos' release workflows; no workflow in this repo

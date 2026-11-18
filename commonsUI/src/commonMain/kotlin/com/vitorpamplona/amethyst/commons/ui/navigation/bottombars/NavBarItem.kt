@@ -451,8 +451,8 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 // commonsUI's composeResources, which the screen's own title uses.
                 // Unavoidable here: `labelRes` is an Android @StringRes and every
                 // other catalog entry is one, so a Compose resource cannot be
-                // referenced without changing the type for all ~60 of them. Crowdin
-                // manages both resource sets, so this one gets translated too.
+                // referenced without changing the type for all ~60 of them. Both
+                // resource sets are translated, so this one is too.
                 label = { Res.string.marmot_groups_title },
                 // Lock, not Group: the rooms list already labels a Marmot room
                 // with this symbol, so it is the signifier users have learned
