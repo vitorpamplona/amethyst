@@ -2791,19 +2791,21 @@ open class BaseAccountViewModel(
         }
     }
 
-    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+    /** One row per member ACCOUNT (its first leaf), however many devices it has in the group. */
+    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId)?.distinctBy { it.pubkey } ?: emptyList()
 
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,
         memberPubKey: String,
     ): String = account.marmot.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
 
+    /** Remove an account, every one of its devices, from a Marmot group. */
     suspend fun removeMarmotGroupMember(
         nostrGroupId: String,
-        targetLeafIndex: Int,
+        targetPubKey: String,
     ) {
         val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+        account.marmot.removeMarmotGroupMember(nostrGroupId, targetPubKey, relays)
     }
 
     suspend fun grantMarmotGroupAdmin(

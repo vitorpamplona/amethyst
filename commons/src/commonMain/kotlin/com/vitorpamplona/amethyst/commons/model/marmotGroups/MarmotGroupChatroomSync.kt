@@ -62,11 +62,16 @@ fun MarmotManager.syncMetadataTo(
     // this is not read off the tree.
     if (isCreatedLocally(nostrGroupId)) chatroom.ownerSentMessage = true
     val previousCount = chatroom.members.value.size
-    val members = memberPubkeys(nostrGroupId)
+    // Members are accounts, not leaves (`foundation/identity.md`, "Devices"):
+    // someone on two phones is one member, listed once (under the first leaf
+    // it holds) and counted once, which is also what direct-chat detection
+    // (`memberCount in 1..2`) reads.
+    val leaves = memberPubkeys(nostrGroupId)
+    val members = leaves.distinctBy { it.pubkey }
     chatroom.members.value = members
     chatroom.memberCount.value = members.size
     Log.d("MarmotDbg") {
         "syncMetadataTo: group=${nostrGroupId.take(8)}… members $previousCount→${members.size} " +
-            "(leafs=${members.map { it.leafIndex }})"
+            "(leafs=${leaves.map { it.leafIndex }})"
     }
 }

@@ -80,18 +80,18 @@ preflight() {
   # compatible with tip"; testing against this answers "are we compatible with
   # what users are running", which is the question the harness exists to answer.
   #
-  # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
-  # As of 2026-10-24 android is on the MDK nightly `d274dd22` (2026-10-22,
-  # marmotkit-v0.14.0-nightly.20261023) and ios on the 0.13.0 release
-  # (`891ab349`), an ancestor of it. Both are ancestors of the v0.14.0 release
-  # (`3fb4b475`, 13 commits after android's nightly), which is pinned here: it
-  # is the release White Noise is about to ship, so it is where new validation
-  # lands first, and a client that satisfies it satisfies both apps.
+  # As of 2026-11-18 THE TWO APPS AGREE: whitenoise-android (`0c60d22f`,
+  # release android-v2026.11.17) and whitenoise-ios (`bca654d`, release
+  # v2026.11.16) both name `mdk-sha=4df811aea99269b437a6023be9446a5141e93cbe`,
+  # the MDK v0.17.0 release (marmotkit-v0.17.0), which is pinned here. v0.15.0
+  # in between is the one that changed the wire (account-devices `0x800d` in
+  # KeyPackages, leaves and new groups; every device of an account invited);
+  # 0.16 and 0.17 change only where events are sent.
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
-  # If they agree again, that is the value; if they disagree, take the newer
-  # and say so here.
-  MDK_PIN="${MDK_PIN:-3fb4b4759ac676b0c21c4c3527074866c9fa4c89}"
+  # If they agree, that is the value; if they disagree, take the newer and say
+  # so here.
+  MDK_PIN="${MDK_PIN:-4df811aea99269b437a6023be9446a5141e93cbe}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"

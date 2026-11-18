@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDevicePairing
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -600,6 +601,13 @@ class SealEventHandler(
         // cache and every chat feed.
         if (innerRumor.kind == ConcordDirectInvite.KIND) {
             account.concord.directInviteInbox.offerRumor(publicNote.event ?: event, event, rumor)
+            eventNote.event = event.copyNoContent()
+            return
+        }
+        // Marmot device pairing (kinds 452-456, gift-wrapped by an account to itself): another
+        // client of this account linking its devices. Not a message for the user, and this client
+        // does not link devices, so the rumor is neither cached nor shown.
+        if (MarmotDevicePairing.isPairingRumor(innerRumor)) {
             eventNote.event = event.copyNoContent()
             return
         }

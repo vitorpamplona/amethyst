@@ -504,9 +504,11 @@ class AccountMarmotActions(
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        // Both kinds: White Noise's MDK still publishes legacy kind:443, some
-        // of its users nothing else. The newest valid 30443 wins; a valid 443
-        // is the fallback (MIP-00 migration rules). A package that comes back
+        // Every device of the account: one KeyPackage per publication slot,
+        // fresh (30 days), at most 20, none a kind-5 slot deletion withdrew and
+        // none the group could not take (foundation/key-packages.md). White
+        // Noise's MDK may still publish legacy kind:443 only; a valid 443 is
+        // the fallback (MIP-00 migration rules). Every package that comes back
         // is valid, so it has content.
         val lookup =
             KeyPackageFetcher.fetchForInvite(
@@ -515,10 +517,11 @@ class AccountMarmotActions(
                 targetOutbox = memberOutbox,
                 myOutbox = myOutbox,
                 targetKeyPackageRelays = memberKeyPackageRelays,
+                compatible = manager.inviteCompatibility(nostrGroupId),
             )
-        val event = lookup.keyPackage
+        val keyPackages = lookup.keyPackages
 
-        if (event == null) {
+        if (keyPackages.isEmpty()) {
             Log.w("MarmotDbg") {
                 "fetchKeyPackageAndAddMember: NO valid KeyPackage found for ${memberPubKey.take(8)}… on any of ${lookup.relays.size} relay(s) " +
                     "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${lookup.relays.map { it.url }}"
@@ -527,7 +530,8 @@ class AccountMarmotActions(
         }
 
         Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
+            "fetchKeyPackageAndAddMember: got ${keyPackages.size} KeyPackage(s) " +
+                "${keyPackages.map { "id=${it.id.take(8)}… kind=${it.kind}" }} authored=${memberPubKey.take(8)}…"
         }
 
         // The commit goes to the GROUP's relays (its routing component), where
@@ -540,9 +544,9 @@ class AccountMarmotActions(
             "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
         }
 
-        addMarmotGroupMember(
+        addMarmotGroupMembers(
             nostrGroupId = nostrGroupId,
-            keyPackageEvent = event,
+            keyPackageEvents = keyPackages,
             groupRelays = groupRelays,
         )
 
@@ -557,19 +561,30 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         keyPackageEvent: PublishedKeyPackage,
         groupRelays: List<NormalizedRelayUrl>,
+    ) = addMarmotGroupMembers(nostrGroupId, listOf(keyPackageEvent), groupRelays)
+
+    /**
+     * Add one account's devices — one leaf per KeyPackage in [keyPackageEvents]
+     * — to a Marmot MLS group in ONE commit, then send each device its Welcome.
+     */
+    suspend fun addMarmotGroupMembers(
+        nostrGroupId: HexKey,
+        keyPackageEvents: List<PublishedKeyPackage>,
+        groupRelays: List<NormalizedRelayUrl>,
     ) {
-        val memberPubKey = keyPackageEvent.pubKey
+        if (keyPackageEvents.isEmpty()) return
+        val memberPubKey = keyPackageEvents.first().pubKey
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
-                "groupRelays=${groupRelays.size}"
+                "devices=${keyPackageEvents.size} groupRelays=${groupRelays.size}"
         }
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val (commitEvent, welcomeDelivery) =
-            manager.addMember(
+        val (commitEvent, welcomeDeliveries) =
+            manager.addMembers(
                 nostrGroupId = nostrGroupId,
-                keyPackageEvent = keyPackageEvent,
+                keyPackageEvents = keyPackageEvents,
                 relays = groupRelays,
             )
 
@@ -584,8 +599,7 @@ class AccountMarmotActions(
             val commit =
                 commitEvent?.let { "kind=${it.signedEvent.kind} id=${it.signedEvent.id.take(8)}…" }
                     ?: "none (founding add, merged locally)"
-            "addMarmotGroupMember: built commit $commit " +
-                "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
+            "addMarmotGroupMember: built commit $commit welcomeDeliveries=${welcomeDeliveries.size}"
         }
 
         // Nothing to publish here either way. A normal commit was already
@@ -609,7 +623,13 @@ class AccountMarmotActions(
         // with our own outbox + the recipient's dmInboxRelays() as a
         // belt-and-braces measure in case the cache hasn't been hydrated
         // yet for this contact.
-        if (welcomeDelivery != null) {
+        if (welcomeDeliveries.isEmpty()) {
+            Log.w("MarmotDbg") {
+                "addMarmotGroupMember: no Welcome — invitee ${memberPubKey.take(8)}… will receive nothing!"
+            }
+        }
+        // One Welcome per added KeyPackage, each naming the KeyPackage event it consumed.
+        for (welcomeDelivery in welcomeDeliveries) {
             val computed = account.broadcaster.computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
             val recipientInbox =
                 account.cache
@@ -633,10 +653,6 @@ class AccountMarmotActions(
                 }
             }
             account.client.publish(welcomeDelivery.giftWrapEvent, relayList)
-        } else {
-            Log.w("MarmotDbg") {
-                "addMarmotGroupMember: welcomeDelivery is NULL — invitee ${memberPubKey.take(8)}… will receive nothing!"
-            }
         }
     }
 
@@ -1040,16 +1056,19 @@ class AccountMarmotActions(
     }
 
     /**
-     * Remove a member from a Marmot MLS group.
+     * Remove a member — an ACCOUNT — from a Marmot MLS group: every leaf it
+     * holds, one per device, in one commit, and its admin seat with them
+     * (`protocol-core/member-departure.md`). Removing one leaf would leave the
+     * account a member through its other devices.
      * Publishes the commit GroupEvent to group relays.
      */
     suspend fun removeMarmotGroupMember(
         nostrGroupId: HexKey,
-        targetLeafIndex: Int,
+        targetPubKey: HexKey,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
         Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
+            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… target=${targetPubKey.take(8)}… " +
                 "groupRelays=${groupRelays.size}"
         }
         val manager =
@@ -1062,7 +1081,7 @@ class AccountMarmotActions(
             return
         }
 
-        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex, groupRelays.toList())
+        val outbound = manager.removeAccount(nostrGroupId, targetPubKey, groupRelays.toList())
         Log.d("MarmotDbg") {
             "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
@@ -1247,7 +1266,7 @@ class AccountMarmotActions(
 
         val view = manager.groupView(nostrGroupId) ?: return
         if (!view.adminPubkeys.contains(targetPubKey)) return
-        val members = manager.memberPubkeys(nostrGroupId).map { it.pubkey }
+        val members = manager.memberAccounts(nostrGroupId).map { it.pubkey }
         check(MarmotGroupPermissions.canDemote(view.adminPubkeys, members, account.signer.pubKey, targetPubKey)) {
             "Cannot revoke the last admin among the members of a Marmot group (MIP-03)"
         }
