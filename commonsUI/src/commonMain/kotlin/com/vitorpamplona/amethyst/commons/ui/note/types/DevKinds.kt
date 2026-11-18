@@ -99,11 +99,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_subtit
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv4
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv6
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_maven_malformed
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_maven_manifest
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_maven_modules
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_maven_release
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_maven_snapshot
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_napplet_snapshot
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_nns_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_permissions
@@ -124,7 +119,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
@@ -159,14 +153,12 @@ import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
-import com.vitorpamplona.quartz.nipFCMavenRepositories.MavenPublication
-import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import org.jetbrains.compose.resources.StringResource
 
 /*
  * Cards for the developer-tooling kinds: NIP-34 CI (runs, jobs, coordinators, service requests),
  * repository state and grasp server lists, app-store proofs and asset bundles, nSite and nApplet
- * snapshots, NIP-FC library releases, feed definitions, NIP-78 app data and NNS records. Most of them carry their meaning
+ * snapshots, feed definitions, NIP-78 app data and NNS records. Most of them carry their meaning
  * in tags and have empty or machine content, so the text fallback showed nothing useful.
  */
 
@@ -175,7 +167,6 @@ private const val MAX_TAG_CHIPS = 6
 private const val MAX_SERVER_CHIPS = 4
 private const val MAX_ARTIFACTS = 3
 private const val MAX_FILE_ROWS = 4
-private const val MAX_MODULE_CHIPS = 8
 private const val LOG_TAIL_LINES = 6
 
 // ---------------------------------------------------------------------------------------------
@@ -864,67 +855,6 @@ private fun SnapshotFacts(
     KindCardMeta(listOf(if (info.fileCount > 0) pluralStringRes(Res.plurals.kc_dev_files_count, info.fileCount, info.fileCount) else null))
     KindCardField(stringRes(Res.string.kc_dev_source), info.source, maxLines = 1)
     KindCardSectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)
-}
-
-// ---------------------------------------------------------------------------------------------
-// NIP-FC Maven repositories
-// ---------------------------------------------------------------------------------------------
-
-/**
- * Kinds 3071 and 33071: a release (or `-SNAPSHOT` build) of a library published to a Maven
- * repository on Nostr + Blossom. Shows the coordinate a build would declare, the modules it covers
- * (a Kotlin Multiplatform library lists its root and per-target modules), the manifest it pins and
- * the Blossom servers holding the files. The card does not judge trust: that takes the group's
- * release key, which a resolver checks, not the feed.
- */
-@Composable
-fun RenderMavenPublication(baseNote: Note) {
-    val event = baseNote.event as? MavenPublication ?: return
-    val info = remember(event) { MavenPublicationInfo(event) }
-
-    KindCard(
-        icon = MaterialSymbols.Code,
-        title = stringRes(if (info.isSnapshot) Res.string.kc_dev_maven_snapshot else Res.string.kc_dev_maven_release),
-        subtitle = info.module,
-        tone = if (info.wellFormed) KindTone.Primary else KindTone.Negative,
-        status = if (info.wellFormed) info.version else stringRes(Res.string.kc_dev_maven_malformed),
-        statusTone = if (info.wellFormed && info.isSnapshot) KindTone.Neutral else null,
-    ) {
-        info.dependency?.let { KindCardCode(it, maxLines = 1) }
-        KindCardSectionChips(stringRes(Res.string.kc_dev_maven_modules), info.otherModules, MAX_MODULE_CHIPS)
-        KindCardField(stringRes(Res.string.kc_dev_maven_manifest), info.manifest, monospace = true, maxLines = 1)
-        KindCardSectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)
-    }
-}
-
-/** What a NIP-FC card shows, parsed once per event. */
-private class MavenPublicationInfo(
-    event: MavenPublication,
-) {
-    val isSnapshot = event is MavenSnapshotEvent
-    val wellFormed = event.isWellFormed()
-    val version = event.version()
-
-    /** The root `groupId:artifactId`, or the first `j` as written when none parses. */
-    val module = event.rootModule()?.key ?: event.moduleKeys().firstOrNull()
-
-    /** The line a Gradle build adds to depend on it. */
-    val dependency = event.coordinate()?.let { "implementation(\"$it\")" }
-
-    /** The modules after the root (a KMP library's per-target ones), by artifactId: they share its group. */
-    val otherModules =
-        event.modules().let { modules ->
-            val root = modules.firstOrNull()
-            modules.drop(1).map { if (it.groupId == root?.groupId) it.artifactId else it.key }
-        }
-
-    val manifest =
-        event.manifest()?.let { manifest ->
-            val hash = manifest.sha256.toShortDisplay()
-            if (manifest.size >= 0) "$hash  ·  ${formatFileSize(manifest.size)}" else hash
-        }
-
-    val servers = event.servers().map { HttpUrlFormatter.displayUrl(it) }
 }
 
 // ---------------------------------------------------------------------------------------------

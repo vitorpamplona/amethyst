@@ -3033,7 +3033,7 @@ internal fun RenderNoteRow(
             is AssetBundleEvent -> RenderAssetBundle(baseNote, backgroundColor, accountViewModel, nav)
             is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote, backgroundColor, accountViewModel, nav)
-            is MavenReleaseEvent, is MavenSnapshotEvent -> RenderMavenPublication(baseNote)
+            is MavenReleaseEvent, is MavenSnapshotEvent -> RenderMavenPublication(baseNote, accountViewModel, nav)
             is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
             is AppDataEvent -> RenderAppData(baseNote)
             is NNSEvent -> RenderNNS(baseNote)
