@@ -32,7 +32,7 @@ import java.awt.GraphicsEnvironment
  * — names not installed on the system are skipped, so the order acts as a chain.
  *
  * Targets per OS:
- * - macOS: SF Pro Text (the system UI font; "Helvetica Neue" / "Helvetica" as fallbacks).
+ * - macOS: none; Compose's default family is already the system UI font (see [uiCandidates]).
  * - GNOME: Adwaita Sans (47+), Cantarell (older), Inter, Noto Sans.
  * - KDE Plasma: Noto Sans (Plasma's default), then Inter / DejaVu Sans.
  * - Windows: Segoe UI Variable Text (Win 11), Segoe UI (Win 10).
@@ -47,8 +47,11 @@ object PlatformFonts {
 
     private fun uiCandidates(): List<String> =
         when (PlatformInfo.current) {
+            // Compose's default family resolves to `.AppleSystemUIFont` (then Helvetica Neue,
+            // Helvetica) through the OS with all its weights. A family built here from one
+            // matched typeface holds only the regular face, so bold and semibold were synthesized.
             Platform.MACOS -> {
-                listOf("SF Pro Text", ".AppleSystemUIFont", "Helvetica Neue", "Helvetica")
+                emptyList()
             }
 
             Platform.WINDOWS -> {

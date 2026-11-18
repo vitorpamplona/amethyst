@@ -36,8 +36,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberImageSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.shareNoteLink
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * The note's Share options, in the [NoteActionGroup.SHARE] group: browser link, image file,
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 @Composable
 fun shareNoteActions(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
 ): List<NoteAction> {
@@ -73,7 +75,7 @@ fun shareNoteActions(
     return buildList {
         add(
             NoteAction(MaterialSymbols.Share, shareLinkStr, group = NoteActionGroup.SHARE) {
-                sharer.share(externalLinkForNote(note), shareLinkStr, shareStr)
+                sharer.shareNoteLink(note, accountViewModel, shareLinkStr, shareStr)
                 onDismiss()
             },
         )
@@ -109,10 +111,11 @@ fun shareNoteActions(
 @Composable
 fun ShareDropdownMenu(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
 ) {
-    val actions = shareNoteActions(note, nav, onDismiss).map { it.copy(group = null) }
+    val actions = shareNoteActions(note, accountViewModel, nav, onDismiss).map { it.copy(group = null) }
     NoteActionDropdownMenu(sections = listOf(actions), onDismiss = onDismiss)
 }
 
@@ -120,10 +123,11 @@ fun ShareDropdownMenu(
 @Composable
 fun ShareActionRows(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
 ) {
-    shareNoteActions(note, nav, onDismiss).forEach { action ->
+    shareNoteActions(note, accountViewModel, nav, onDismiss).forEach { action ->
         M3ActionRow(icon = action.symbol, text = action.label, onClick = action.onClick)
     }
 }

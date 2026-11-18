@@ -652,6 +652,7 @@ private fun Messages(
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
+    val codeChips = rememberChatCodeChips()
     // One selection for the whole chat: any part of any message, or a run across several, copies.
     SelectionContainer(modifier.fillMaxWidth()) {
         LazyColumn(
@@ -679,7 +680,7 @@ private fun Messages(
                                 Box(Modifier.padding(top = GroupGap - PartGap)) {
                                     UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
                                 }
-                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
+                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = codeChips)
                             is ChatItem.ToolCall ->
                                 if (ToolKind.of(item.name) == ToolKind.EDIT) {
                                     FileChangeRow(item, state.cwd, turnRunning)
@@ -1019,7 +1020,7 @@ private fun UserBubble(
             // prompts carry fences, which read better as code blocks.
             if (text.contains("```")) {
                 val style = rememberChatMarkdownStyle(codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest)
-                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle)
+                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle, blockComposer = rememberChatCodeChips())
             } else {
                 // Selectable through the chat's SelectionContainer.
                 Text(text, padding, style = textStyle)
@@ -1062,7 +1063,6 @@ private fun ToolGroupRow(
             running = turnRunning && group.running != null,
             error = false,
             expanded = expanded,
-            monospace = false,
             onClick = { expanded = !expanded },
         )
         group.running?.takeIf { turnRunning && !expanded }?.let { running ->
