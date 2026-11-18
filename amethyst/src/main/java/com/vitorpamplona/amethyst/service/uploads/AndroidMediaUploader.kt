@@ -23,8 +23,11 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Matrix
+import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.exifinterface.media.ExifInterface
@@ -932,20 +935,25 @@ class AndroidMediaUploader(
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             runCatching { resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } }
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
-            // An avatar or banner needs no more than this; sampling keeps a 50 MP photo out of memory.
-            var sample = 1
-            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= CROP_MAX_EDGE) sample *= 2
-            val decoded =
-                runCatching {
-                    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
-                }.getOrNull() ?: return@withContext null
             val orientation =
                 runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } }
                     .getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
-            val upright = applyExifOrientation(decoded, orientation)
-            val (x, y, w, h) = crop.pixels(upright.width, upright.height).toList()
-            val cropped = Bitmap.createBitmap(upright, x, y, w, h)
-            val png = cropped.hasAlpha()
+
+            // Only the part kept is decoded, from the picture as stored, at full resolution unless
+            // that part alone is over CROP_MAX_PIXELS: a crop of a 50 MP photo keeps its detail.
+            val (x, y, w, h) = crop.inStored(orientation).pixels(bounds.outWidth, bounds.outHeight).toList()
+            var sample = 1
+            while (w.toLong() * h / (sample.toLong() * sample) > CROP_MAX_PIXELS) sample *= 2
+            val part = decodeRegion(uri, Rect(x, y, x + w, y + h), sample)
+            val cropped =
+                if (part != null) {
+                    applyExifOrientation(part, orientation).also { if (it !== part) part.recycle() }
+                } else {
+                    // A format the region decoder can't read: the whole picture, sampled to fit.
+                    cropWhole(uri, bounds, orientation, crop) ?: return@withContext null
+                }
+            // A PNG stays lossless (a screenshot's text stays sharp); a picture with transparency keeps it.
+            val png = cropped.hasAlpha() || mimeType.equals("image/png", ignoreCase = true)
             val file = File.createTempFile("crop_", if (png) ".png" else ".jpg", appContext.cacheDir)
             try {
                 file.outputStream().use { out ->
@@ -955,12 +963,57 @@ class AndroidMediaUploader(
                 if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
                 throw e
             } finally {
-                if (cropped !== upright) cropped.recycle()
-                if (upright !== decoded) upright.recycle()
-                decoded.recycle()
+                cropped.recycle()
             }
             MediaCompressorResult(Uri.fromFile(file), if (png) "image/png" else "image/jpeg", file.length())
         }
+
+    /** [rect] of the stored picture at [uri], sampled by [sample]; null when the region decoder can't read it. */
+    private fun decodeRegion(
+        uri: Uri,
+        rect: Rect,
+        sample: Int,
+    ): Bitmap? =
+        try {
+            appContext.contentResolver.openInputStream(uri)?.use { input ->
+                val decoder =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        BitmapRegionDecoder.newInstance(input)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        BitmapRegionDecoder.newInstance(input, false)
+                    } ?: return@use null
+                try {
+                    decoder.decodeRegion(rect, BitmapFactory.Options().apply { inSampleSize = sample })
+                } finally {
+                    decoder.recycle()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("AndroidMediaUploader", "Region decode of $uri failed; decoding all of it", e)
+            null
+        }
+
+    /** [crop] of the whole picture at [uri], decoded sampled to at most CROP_MAX_PIXELS and turned upright. */
+    private fun cropWhole(
+        uri: Uri,
+        bounds: BitmapFactory.Options,
+        orientation: Int,
+        crop: ImageCrop,
+    ): Bitmap? {
+        var sample = 1
+        while (bounds.outWidth.toLong() * bounds.outHeight / (sample.toLong() * sample) > CROP_MAX_PIXELS) sample *= 2
+        val decoded =
+            runCatching {
+                appContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
+            }.getOrNull() ?: return null
+        val upright = applyExifOrientation(decoded, orientation)
+        if (upright !== decoded) decoded.recycle()
+        val (x, y, w, h) = crop.pixels(upright.width, upright.height).toList()
+        val cropped = Bitmap.createBitmap(upright, x, y, w, h)
+        if (cropped !== upright) upright.recycle()
+        return cropped
+    }
 
     /** [bitmap] as it displays under the EXIF [orientation]. */
     private fun applyExifOrientation(
@@ -1059,7 +1112,7 @@ class AndroidMediaUploader(
 /** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */
 private const val BUZZ_UPLOAD_TOKEN_SECS = 55L
 
-// A cropped avatar, icon or banner is decoded at no more than about twice this long edge.
-private const val CROP_MAX_EDGE = 2048
+/** The most pixels a crop is decoded at (4096 x 4096, 64 MB as ARGB): more is sampled down. */
+private const val CROP_MAX_PIXELS = 4096L * 4096L
 
 private const val CROP_JPEG_QUALITY = 92

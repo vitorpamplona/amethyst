@@ -133,6 +133,28 @@ object FfmpegCommandBuilder {
         )
 
     /**
+     * One frame near each of [times], like [frame], each into its own JPEG in [outputs], from one
+     * ffmpeg: [input] is opened once per time with its own fast seek, so the Trim strip starts one
+     * process instead of one per frame.
+     */
+    fun frames(
+        ffmpeg: String,
+        input: File,
+        times: List<Long>,
+        maxEdge: Int,
+        outputs: List<File>,
+    ): List<String> =
+        buildList {
+            addAll(listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y"))
+            times.forEach { atMs -> addAll(listOf("-ss", seconds(atMs.coerceAtLeast(0)), "-i", input.absolutePath)) }
+            outputs.forEachIndexed { i, output ->
+                addAll(listOf("-map", "$i:v:0", "-frames:v", "1"))
+                addAll(listOf("-vf", "scale=w='min($maxEdge,iw)':h='min($maxEdge,ih)':force_original_aspect_ratio=decrease"))
+                addAll(listOf("-q:v", "4", "-f", "image2", "-c:v", "mjpeg", output.path))
+            }
+        }
+
+    /**
      * Copies the sound of [input] into [output] (same container, by its extension) with no tags:
      * no artist, title or location, no chapters, no cover art (`-map 0:a`), and, for MP3, no ID3
      * block at all. `+bitexact` keeps ffmpeg from writing its own name and version into the tags.

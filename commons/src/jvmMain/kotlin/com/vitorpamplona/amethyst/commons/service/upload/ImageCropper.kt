@@ -35,7 +35,8 @@ import javax.imageio.stream.FileImageOutputStream
 /**
  * Crops a picture for an avatar, banner or icon on the JVM: decodes it, applies the camera's
  * orientation, cuts the [ImageCrop] out of the picture as it displays, and writes the result
- * without metadata: PNG when the picture has transparency, JPEG otherwise.
+ * without metadata: PNG when the picture has transparency or was a PNG (a screenshot's text stays
+ * sharp), JPEG otherwise.
  */
 object ImageCropper {
     private const val TAG = "ImageCropper"
@@ -58,12 +59,15 @@ object ImageCropper {
         source: File,
         crop: ImageCrop,
         fallbackDecode: ((ByteArray) -> BufferedImage?)? = null,
+        /** The source is a PNG: the crop stays lossless. */
+        keepPng: Boolean = false,
         tempFile: (suffix: String) -> File = { AmethystTempDir.createTempFile("amethyst_crop_", it) },
     ): Cropped? =
         withContext(Dispatchers.IO) {
             val upright = decodeUpright(source, fallbackDecode) ?: return@withContext null
             val (x, y, w, h) = crop.pixels(upright.width, upright.height).toList()
             val alpha = upright.colorModel.hasAlpha()
+            val png = alpha || keepPng
             val out = BufferedImage(w, h, if (alpha) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB)
             val g = out.createGraphics()
             try {
@@ -75,10 +79,10 @@ object ImageCropper {
             } finally {
                 g.dispose()
             }
-            val file = tempFile(if (alpha) ".png" else ".jpg")
+            val file = tempFile(if (png) ".png" else ".jpg")
             try {
-                if (alpha) ImageIO.write(out, "png", file) else writeJpeg(out, file)
-                Cropped(file, if (alpha) "image/png" else "image/jpeg", w, h)
+                if (png) ImageIO.write(out, "png", file) else writeJpeg(out, file)
+                Cropped(file, if (png) "image/png" else "image/jpeg", w, h)
             } catch (e: Throwable) {
                 file.deleteOrWarn(TAG, "failed crop")
                 throw e

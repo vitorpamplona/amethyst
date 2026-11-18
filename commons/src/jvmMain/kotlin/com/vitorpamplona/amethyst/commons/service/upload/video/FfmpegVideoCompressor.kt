@@ -184,6 +184,35 @@ class FfmpegVideoCompressor(
         }
     }
 
+    // One ffmpeg for the whole strip, not one per frame; not under the gate, like [frame]. Falls
+    // back to [frame] per time if that one run fails.
+    override suspend fun frames(
+        source: File,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> {
+        if (times.size <= 1) return times.map { frame(source, it, maxEdge) }
+        val ffmpeg = locator.ffmpeg ?: return times.map { null }
+        val outs = ArrayList<File>(times.size)
+        return try {
+            repeat(times.size) { outs.add(AmethystTempDir.createTempFile("amethyst_frame_", ".jpg")) }
+            val outcome = runner.run(FfmpegCommandBuilder.frames(ffmpeg, source, times, maxEdge, outs), {}, stallTimeoutMs)
+            if (outcome.exitCode == 0) {
+                outs.map { out -> out.takeIf { it.length() > 0 }?.readBytes() }
+            } else {
+                Log.w(TAG) { "Frames of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                times.map { frame(source, it, maxEdge) }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Frames of ${source.name} failed", e)
+            times.map { null }
+        } finally {
+            withContext(NonCancellable) { outs.forEach { it.deleteOrWarn(TAG, "frame") } }
+        }
+    }
+
     override suspend fun durationMs(source: File): Long? = probed(source)?.durationSeconds?.let { (it * 1000).toLong() }
 
     /** What the probe says about [source], read once per file even when the slider asked first. */

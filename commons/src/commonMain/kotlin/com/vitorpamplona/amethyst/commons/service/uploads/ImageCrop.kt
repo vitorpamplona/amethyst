@@ -56,6 +56,29 @@ data class ImageCrop(
         return intArrayOf(x, y, w, h)
     }
 
+    /**
+     * This crop, made on the picture as it displays, on the picture as it is stored under the EXIF
+     * [orientation] (1 to 8; anything else is 1): what a decoder that reads only part of the stored
+     * picture is asked for. Rotating or flipping that part by [orientation] gives this crop.
+     */
+    fun inStored(orientation: Int): ImageCrop =
+        when (orientation) {
+            // Mirrored left to right.
+            2 -> ImageCrop(1 - right, top, 1 - left, bottom)
+            3 -> ImageCrop(1 - right, 1 - bottom, 1 - left, 1 - top)
+            // Mirrored top to bottom.
+            4 -> ImageCrop(left, 1 - bottom, right, 1 - top)
+            // Transposed: the stored x is the displayed y.
+            5 -> ImageCrop(top, left, bottom, right)
+            // Turned a quarter clockwise to display.
+            6 -> ImageCrop(top, 1 - right, bottom, 1 - left)
+            // Transposed the other way.
+            7 -> ImageCrop(1 - bottom, 1 - right, 1 - top, 1 - left)
+            // Turned a quarter counter-clockwise to display.
+            8 -> ImageCrop(1 - bottom, left, 1 - top, right)
+            else -> this
+        }
+
     companion object {
         const val MIN = 0.02f
         val FULL = ImageCrop(0f, 0f, 1f, 1f)

@@ -91,6 +91,13 @@ interface VideoCompressor {
         maxEdge: Int,
     ): ByteArray? = null
 
+    /** [frame] at each of [times], in order; an implementation may get them all in one go. */
+    suspend fun frames(
+        source: File,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> = times.map { frame(source, it, maxEdge) }
+
     /** How long [source] runs, in milliseconds; null when unknown. */
     suspend fun durationMs(source: File): Long? = null
 }

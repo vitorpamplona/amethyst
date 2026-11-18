@@ -22,19 +22,26 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 
 /**
  * A marker holds a picked file's place in a composer's text until the post is sent, when the
- * file's URL replaces it. It is plain text (`[[media:3]]`), so undo, cut and paste, and moving it
- * around all work; the editor draws it as a chip, never as these characters. It is never
+ * file's URL replaces it. It is plain text, so undo, cut and paste, and moving it around all
+ * work; the editor draws it as a card or a chip, never as these characters. It is never
  * published: the composer swaps every marker for a URL before signing, or removes it.
+ *
+ * Its brackets are two private-use characters a keyboard cannot type ([OPEN], [CLOSE]), so text a
+ * person writes, `[[media:1]]` included, is never taken for a marker and removed on Post. The id
+ * has at most 9 digits, so it always fits an `Int`.
  */
 object MediaMarkers {
-    val REGEX = Regex("""\[\[media:(\d+)]]""")
+    const val OPEN = '\uE000'
+    const val CLOSE = '\uE001'
+
+    val REGEX = Regex("\uE000media:(\\d{1,9})\uE001")
 
     /** Cheap check before running [REGEX] on every keystroke. */
-    const val PREFIX = "[[media:"
+    const val PREFIX = "\uE000media:"
 
-    fun of(id: Int) = "[[media:$id]]"
+    fun of(id: Int) = "${OPEN}media:$id$CLOSE"
 
-    /** The ids of every marker in [text], in reading order. */
+    /** The ids of every marker in [text], in reading order; a pasted copy of a marker repeats its id. */
     fun idsIn(text: CharSequence): List<Int> = if (!text.contains(PREFIX)) emptyList() else REGEX.findAll(text).map { it.groupValues[1].toInt() }.toList()
 
     /**

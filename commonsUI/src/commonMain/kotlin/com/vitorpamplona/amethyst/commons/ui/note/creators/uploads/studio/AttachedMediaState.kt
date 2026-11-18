@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -47,7 +48,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
  * 1. [pick] holds the picked files ([picking]) while the media studio is open.
  * 2. [attachPicked] (the studio's Add) leaves a [MediaMarkers] marker per file at the cursor, on a
  *    line of its own, and keeps the file under the marker's id ([items]). Nothing is uploaded.
- *    A file shows while its marker is in the text: deleting the marker drops it, undo brings it back.
+ *    A file shows while its marker is in the text: deleting the marker (typing or Remove) drops
+ *    it, undo brings it back. A pasted copy of a marker shows the file again but sends it once.
  * 3. [uploadAll] (on Post) uploads every file with its own options, swaps each marker for its URL
  *    (the composer records the `imeta` in `attach`), and only then may the composer sign. When an
  *    upload fails it returns false and changes nothing: the composer stays, and Post retries only
@@ -92,10 +94,16 @@ class AttachedMediaState(
         if (batch.size() == 0) picking = null
     }
 
-    /** The files in the order their markers appear in the text: the numbers the user sees. */
-    fun inOrder(): List<SelectedMediaProcessing> = MediaMarkers.idsIn(message.text).mapNotNull { items[it] }
+    /**
+     * The marker ids in the text, in reading order, each once: a pasted copy of a marker is the same
+     * file, sent once. Scanned again only when the text changes, not on every recomposition.
+     */
+    private val markerIds by derivedStateOf { MediaMarkers.idsIn(message.text).distinct() }
 
-    fun hasMedia() = MediaMarkers.idsIn(message.text).isNotEmpty()
+    /** The files in the order their markers appear in the text: the numbers the user sees. */
+    fun inOrder(): List<SelectedMediaProcessing> = markerIds.mapNotNull { items[it] }
+
+    fun hasMedia() = markerIds.isNotEmpty()
 
     /** The studio's Add: each picked file gets a marker at the cursor, on a line of its own. */
     fun attachPicked(chosenServer: ServerName) {
@@ -123,9 +131,11 @@ class AttachedMediaState(
         removeMarker(idOf(item) ?: return)
     }
 
-    /** Takes the marker [id] and its file out, with the line the marker sat on. */
+    /**
+     * Takes the marker [id] out, with the line it sat on. Its file stays known, like a marker deleted
+     * by typing, so undo brings the file back with it; only markers in the text are ever sent.
+     */
     fun removeMarker(id: Int) {
-        items.remove(id)
         message.edit {
             val text = asCharSequence().toString()
             val marker = MediaMarkers.of(id)
@@ -152,7 +162,7 @@ class AttachedMediaState(
         forcedSigner: NostrSigner?,
         attach: (uploaded: UploadOrchestrator.OrchestratorResult.ServerResult, options: MediaUploadOptions) -> String,
     ): Boolean {
-        val ids = MediaMarkers.idsIn(message.text)
+        val ids = markerIds
         if (ids.isEmpty()) return true
         val files = ids.mapNotNull { items[it] }
 

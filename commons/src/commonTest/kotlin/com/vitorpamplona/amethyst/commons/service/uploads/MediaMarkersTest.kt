@@ -24,49 +24,66 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MediaMarkersTest {
+    private fun m(id: Int) = MediaMarkers.of(id)
+
+    @Test
+    fun textAPersonTypesIsNeverAMarker() {
+        val typed = "Write [[media:1]] where the picture goes"
+        assertEquals(emptyList(), MediaMarkers.idsIn(typed))
+        assertEquals(typed, MediaMarkers.replace(typed) { "https://a.jpg" })
+    }
+
+    @Test
+    fun anIdTooLongForAnIntIsNotAMarker() {
+        val text = "${MediaMarkers.OPEN}media:99999999999${MediaMarkers.CLOSE}"
+        assertEquals(emptyList(), MediaMarkers.idsIn(text))
+        assertEquals(null, MediaMarkers.markerAt(text, 0))
+        assertEquals(text, MediaMarkers.strip(text))
+    }
+
     @Test
     fun idsComeInReadingOrder() {
-        assertEquals(listOf(7, 2), MediaMarkers.idsIn("a\n[[media:7]]\nb [[media:2]]"))
-        assertEquals(emptyList(), MediaMarkers.idsIn("no markers [[media:x]]"))
+        assertEquals(listOf(7, 2), MediaMarkers.idsIn("a\n${m(7)}\nb ${m(2)}"))
+        assertEquals(emptyList(), MediaMarkers.idsIn("no markers ${MediaMarkers.OPEN}media:x${MediaMarkers.CLOSE}"))
     }
 
     @Test
     fun replaceSwapsMarkersForUrls() {
-        val text = "Look\n[[media:1]]\nand\n[[media:2]]\n"
+        val text = "Look\n${m(1)}\nand\n${m(2)}\n"
         assertEquals("Look\nhttps://a.jpg\nand\nhttps://b.jpg\n", MediaMarkers.replace(text) { "https://${if (it == 1) "a" else "b"}.jpg" })
     }
 
     @Test
     fun stripLeavesNoEmptyLines() {
-        assertEquals("Look\nand\n", MediaMarkers.strip("Look\n[[media:1]]\nand\n[[media:2]]\n"))
+        assertEquals("Look\nand\n", MediaMarkers.strip("Look\n${m(1)}\nand\n${m(2)}\n"))
         assertEquals("only text", MediaMarkers.strip("only text"))
     }
 
     @Test
     fun aMissingFileDropsItsMarkerAndKeepsTheOthers() {
-        assertEquals("x\nhttps://b\n", MediaMarkers.replace("x\n[[media:1]]\n[[media:2]]\n") { if (it == 2) "https://b" else null })
+        assertEquals("x\nhttps://b\n", MediaMarkers.replace("x\n${m(1)}\n${m(2)}\n") { if (it == 2) "https://b" else null })
     }
 
     @Test
     fun insertionPutsTheMarkerOnItsOwnLine() {
-        assertEquals("[[media:1]]\n", MediaMarkers.insertion("", 0, 1))
-        assertEquals("\n[[media:1]]\n", MediaMarkers.insertion("Hello", 5, 1))
-        assertEquals("[[media:1]]", MediaMarkers.insertion("Hello\n\nmore", 6, 1))
+        assertEquals("${m(1)}\n", MediaMarkers.insertion("", 0, 1))
+        assertEquals("\n${m(1)}\n", MediaMarkers.insertion("Hello", 5, 1))
+        assertEquals("${m(1)}", MediaMarkers.insertion("Hello\n\nmore", 6, 1))
     }
 
     @Test
     fun markerAtFindsTheMarkerTheCursorTouches() {
-        val text = "a\n[[media:3]]\nb"
+        val text = "a\n${m(3)}\nb"
         assertEquals(3, MediaMarkers.markerAt(text, 2))
-        assertEquals(3, MediaMarkers.markerAt(text, 13))
-        assertEquals(null, MediaMarkers.markerAt(text, 14))
+        assertEquals(3, MediaMarkers.markerAt(text, 2 + m(3).length))
+        assertEquals(null, MediaMarkers.markerAt(text, 3 + m(3).length))
         assertEquals(3, MediaMarkers.idAt(text, 2))
         assertEquals(null, MediaMarkers.idAt(text, 3))
     }
 
     @Test
     fun aUrlNeverTouchesTheTextAroundIt() {
-        assertEquals("Look\nhttps://a.jpg\nWorth it", MediaMarkers.replace("Look[[media:1]]Worth it") { "https://a.jpg" })
-        assertEquals("https://a.jpg\nhttps://b.jpg", MediaMarkers.replace("[[media:1]][[media:2]]") { if (it == 1) "https://a.jpg" else "https://b.jpg" })
+        assertEquals("Look\nhttps://a.jpg\nWorth it", MediaMarkers.replace("Look${m(1)}Worth it") { "https://a.jpg" })
+        assertEquals("https://a.jpg\nhttps://b.jpg", MediaMarkers.replace("${m(1)}${m(2)}") { if (it == 1) "https://a.jpg" else "https://b.jpg" })
     }
 }

@@ -109,6 +109,30 @@ class DesktopVideoTrimTest {
         assertTrue(image.height > image.width, "upright: ${image.width}x${image.height}")
     }
 
+    @Test
+    fun oneRunGivesTheSameFramesAsOneRunEach() {
+        assumeFfmpeg()
+        val plain = clip()
+        val rotated = File(dir, "rotated-strip.mp4")
+        ffmpeg("-display_rotation", "90", "-i", plain.absolutePath, "-c", "copy", rotated.absolutePath)
+
+        val times = listOf(500L, 2_000L, 4_500L)
+        val strip = runBlocking { compressor.frames(rotated, times, 160) }
+        assertEquals(times.size, strip.size)
+        times.zip(strip).forEach { (atMs, bytes) ->
+            val together = assertNotNull(ImageIO.read(ByteArrayInputStream(assertNotNull(bytes, "frame at $atMs"))))
+            val alone = assertNotNull(ImageIO.read(ByteArrayInputStream(assertNotNull(runBlocking { compressor.frame(rotated, atMs, 160) }))))
+            assertEquals(alone.width to alone.height, together.width to together.height, "frame at $atMs")
+            assertTrue(together.height > together.width, "upright at $atMs")
+            // The same moment: the test clip changes over time, so its pixels tell the moments apart.
+            val diff = (0 until alone.width * alone.height).count { i -> alone.getRGB(i % alone.width, i / alone.width) != together.getRGB(i % alone.width, i / alone.width) }
+            assertTrue(diff < alone.width * alone.height / 20, "frame at $atMs matches: $diff pixels differ")
+        }
+        // Past the end there is no frame, and the others still come back.
+        val withEnd = runBlocking { compressor.frames(rotated, listOf(1_000L, 60_000L), 160) }
+        assertNotNull(withEnd[0])
+    }
+
     private fun streams(file: File): List<String> {
         val process =
             ProcessBuilder("ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", file.absolutePath)

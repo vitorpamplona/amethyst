@@ -582,13 +582,13 @@ class DesktopMediaUploader(
     ): ByteArray? = videoFrames(uri, listOf(atMs), maxEdge).firstOrNull()
 
     // A GIF is decoded off the UI thread, all asked moments in one pass, and stops when the caller
-    // is cancelled (a drag moved on); a video asks ffmpeg for each.
+    // is cancelled (a drag moved on); a video asks one ffmpeg run for all of them.
     override suspend fun videoFrames(
         uri: MediaUri,
         times: List<Long>,
         maxEdge: Int,
     ): List<ByteArray?> {
-        val gif = gifBytes(uri) ?: return times.map { videoCompressor.frame(fileOf(uri), it, maxEdge) }
+        val gif = gifBytes(uri) ?: return videoCompressor.frames(fileOf(uri), times, maxEdge)
         return withContext(Dispatchers.Default) {
             val active = currentCoroutineContext()
             GifEditor.framesAt(gif, times, maxEdge) { active.isActive }
@@ -603,7 +603,7 @@ class DesktopMediaUploader(
         mimeType: String?,
         crop: ImageCrop,
     ): MediaCompressorResult? {
-        val cropped = ImageCropper.crop(fileOf(uri), crop, fallbackDecode = ::decodeImageWithSkia) ?: return null
+        val cropped = ImageCropper.crop(fileOf(uri), crop, fallbackDecode = ::decodeImageWithSkia, keepPng = mimeType.equals("image/png", ignoreCase = true)) ?: return null
         return MediaCompressorResult(StringMediaUri(cropped.file.absolutePath), cropped.mimeType, cropped.file.length())
     }
 

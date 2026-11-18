@@ -107,13 +107,15 @@ open class NewMediaModel : ViewModel() {
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
+        // Taken on the click, not in the coroutine: a second click before it starts finds the
+        // upload under way instead of sending and posting everything twice.
+        if (isUploadingImage) return
+        val myAccount = account ?: return
+        val serverToUse = selectedServer ?: return
+        val myMultiOrchestrator = multiOrchestrator ?: return
+        isUploadingImage = true
+
         viewModelScope.launch(Dispatchers.IO) {
-            val myAccount = account ?: return@launch
-            val serverToUse = selectedServer ?: return@launch
-
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            isUploadingImage = true
             try {
                 // Each file with its own options; one that already went up is not sent again.
                 val results =

@@ -80,6 +80,23 @@ class ImageCropperTest {
         }
 
     @Test
+    fun anOpaquePngStaysALosslessPng() =
+        runTest {
+            // A screenshot: opaque, sharp edges. A JPEG would blur them.
+            val img = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
+            for (y in 0 until 100) for (x in 0 until 100) img.setRGB(x, y, if ((x / 2 + y / 2) % 2 == 0) 0x000000 else 0xFFFFFF)
+            val src = File.createTempFile("crop_src_", ".png").also { createdFiles += it }
+            ImageIO.write(img, "png", src)
+
+            val out = assertNotNull(ImageCropper.crop(src, ImageCrop(0.25f, 0.25f, 0.75f, 0.75f), keepPng = true))
+            createdFiles += out.file
+
+            assertEquals("image/png", out.mimeType)
+            val decoded = ImageIO.read(out.file)
+            for (y in 0 until 50) for (x in 0 until 50) assertEquals(img.getRGB(x + 25, y + 25), decoded.getRGB(x, y), "pixel $x,$y")
+        }
+
+    @Test
     fun refusesWhatItCannotDecode() =
         runTest {
             val src = File.createTempFile("crop_src_", ".webp").also { createdFiles += it }

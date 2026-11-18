@@ -89,6 +89,10 @@ object VideoTrimmer {
             extractor.seekTo(startMs * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             val buffer = ByteBuffer.allocate(bufferSize)
             val info = MediaCodec.BufferInfo()
+            // Video frames past the end, in decode order, that a frame still before the end may
+            // reference (a B-frame decodes after the frame it points forward to): written only if
+            // such a frame follows, so the last frames kept still decode.
+            val held = ArrayList<HeldSample>()
             // The clock starts at the first video key frame kept; audio before it is dropped.
             var baseUs = -1L
             var written = 0
@@ -96,11 +100,7 @@ object VideoTrimmer {
                 val track = extractor.sampleTrackIndex
                 if (track < 0) break
                 val time = extractor.sampleTime
-                if (time > endUs) {
-                    // Samples come roughly in time order: past the end on this track means done with it.
-                    extractor.unselectTrack(track)
-                    continue
-                }
+                val sync = extractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0
                 if (baseUs < 0) {
                     if (videoTrack >= 0 && track != videoTrack) {
                         extractor.advance()
@@ -112,13 +112,39 @@ object VideoTrimmer {
                     extractor.advance()
                     continue
                 }
+                if (time > endUs) {
+                    if (track == videoTrack && !sync && held.size < MAX_HELD_FRAMES) {
+                        val size = extractor.readSampleData(buffer, 0)
+                        if (size < 0) break
+                        held.add(HeldSample(ByteArray(size).also { buffer.duplicate().apply { position(0).limit(size) }.get(it) }, time))
+                        extractor.advance()
+                    } else {
+                        // Past the end on this track; for video, a key frame or a run no frame
+                        // before the end came back for. Samples come roughly in time order.
+                        if (track == videoTrack) held.clear()
+                        extractor.unselectTrack(track)
+                    }
+                    continue
+                }
+                if (track == videoTrack && held.isNotEmpty()) {
+                    held.forEach { sample ->
+                        info.set(0, sample.bytes.size, sample.timeUs - baseUs, 0)
+                        mux.writeSampleData(tracks.getValue(track), ByteBuffer.wrap(sample.bytes), info)
+                        written++
+                    }
+                    held.clear()
+                }
                 val size = extractor.readSampleData(buffer, 0)
                 if (size < 0) break
-                info.set(0, size, time - baseUs, if (extractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
+                info.set(0, size, time - baseUs, if (sync) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
                 mux.writeSampleData(tracks.getValue(track), buffer, info)
                 written++
                 extractor.advance()
             }
+            // Finished here, not in finally: a file the muxer could not close has no index and
+            // would go up as a video nothing plays.
+            started = false
+            mux.stop()
             written > 0
         } catch (e: Exception) {
             Log.w(TAG, "Trim of $uri failed", e)
@@ -133,6 +159,15 @@ object VideoTrimmer {
             muxer?.release()
         }
     }
+
+    /** A video sample read past the trim's end and held in case a frame before the end needs it. */
+    private class HeldSample(
+        val bytes: ByteArray,
+        val timeUs: Long,
+    )
+
+    /** The most frames held past the end: deeper than any B-frame reordering a camera writes. */
+    private const val MAX_HELD_FRAMES = 8
 
     /** How long [uri] runs, in milliseconds: a video's own length, or a GIF's frame delays added up. */
     fun durationMs(
