@@ -10410,4 +10410,8 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
+    <string name="llama_garden_approve_title">Approve this listing?</string>
+    <string name="llama_garden_approve_body">You publish a llama.garden approval of "%1$s". Viewers that trust you as a curator then list it in the catalog, whoever published it. The label is public.</string>
+    <string name="llama_garden_reject_title">Reject this listing?</string>
+    <string name="llama_garden_reject_body">You publish a llama.garden rejection of "%1$s". The label is public and stays on relays.</string>
 </resources>

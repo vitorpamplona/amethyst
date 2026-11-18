@@ -63,6 +63,8 @@ import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.LocalEventKindPage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_all_models
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve
+import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve_body
+import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_base_model
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_bits_per_weight_value
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_checking
@@ -86,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_mirrors
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_request
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_no_link
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject
+import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject_body
+import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release_subtitle
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_request_seeders
@@ -101,9 +105,12 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_wants
 import com.vitorpamplona.amethyst.commons.resources.torrent_failure
 import com.vitorpamplona.amethyst.commons.resources.torrent_no_apps
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.llamagarden.curation.LlamaGardenCuration.Verdict
 import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
 import com.vitorpamplona.quartz.llamagarden.modelRequest.tags.RequestTypeTag
 import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
@@ -200,6 +207,8 @@ private fun ModelTorrentActions(
 ) {
     val uriHandler = LocalUriHandler.current
     var checking by remember { mutableStateOf(false) }
+    // A curator's verdict is a public label every viewer acts on: asked for, not published on a tap.
+    var confirming by remember { mutableStateOf<Verdict?>(null) }
     val isCurator = LlamaGardenDefaults.isCurator(accountViewModel.account.signer.pubKey)
     val canWrite = accountViewModel.account.signer.isWriteable()
 
@@ -247,11 +256,19 @@ private fun ModelTorrentActions(
         }
 
         if (canWrite && isCurator) {
-            CardAction(MaterialSymbols.Check, Res.string.llama_garden_approve) {
-                accountViewModel.launchSigner { LlamaGardenActions.approve(accountViewModel.account, baseNote) }
-            }
-            CardAction(MaterialSymbols.Block, Res.string.llama_garden_reject, tint = MaterialTheme.colorScheme.error) {
-                accountViewModel.launchSigner { LlamaGardenActions.reject(accountViewModel.account, baseNote) }
+            CardAction(MaterialSymbols.Check, Res.string.llama_garden_approve) { confirming = Verdict.APPROVE }
+            CardAction(MaterialSymbols.Block, Res.string.llama_garden_reject, tint = MaterialTheme.colorScheme.error) { confirming = Verdict.REJECT }
+        }
+    }
+
+    confirming?.let { verdict ->
+        ConfirmVerdictDialog(verdict, view.title ?: "", onDismiss = { confirming = null }) {
+            confirming = null
+            accountViewModel.launchSigner {
+                when (verdict) {
+                    Verdict.APPROVE -> LlamaGardenActions.approve(accountViewModel.account, baseNote)
+                    Verdict.REJECT -> LlamaGardenActions.reject(accountViewModel.account, baseNote)
+                }
             }
         }
     }
@@ -261,6 +278,31 @@ private fun ModelTorrentActions(
     if (LocalEventKindPage.current != ModelTorrentEvent.KIND) {
         CardLink(Res.string.llama_garden_all_models) { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }
     }
+}
+
+/** Asks before a curator publishes [verdict] on the listing titled [title]. */
+@Composable
+private fun ConfirmVerdictDialog(
+    verdict: Verdict,
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val approve = verdict == Verdict.APPROVE
+    QuickActionAlertDialogOneButton(
+        title = stringRes(if (approve) Res.string.llama_garden_approve_title else Res.string.llama_garden_reject_title),
+        textContent = stringRes(if (approve) Res.string.llama_garden_approve_body else Res.string.llama_garden_reject_body, title),
+        buttonIcon = if (approve) MaterialSymbols.Check else MaterialSymbols.Block,
+        buttonText = stringRes(if (approve) Res.string.llama_garden_approve else Res.string.llama_garden_reject),
+        buttonColors =
+            if (approve) {
+                ButtonDefaults.buttonColors()
+            } else {
+                ButtonDefaults.buttonColors(containerColor = LightRedColor, contentColor = Color.White)
+            },
+        onClickDoOnce = onConfirm,
+        onDismiss = onDismiss,
+    )
 }
 
 /**
