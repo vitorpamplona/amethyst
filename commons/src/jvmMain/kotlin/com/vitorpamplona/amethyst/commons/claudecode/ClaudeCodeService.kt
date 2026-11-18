@@ -260,10 +260,12 @@ class ClaudeCodeService(
                     workspace.repos.forEach { repo ->
                         // Only GitHub has pull requests to ask `gh` about.
                         val upstream = GitHubPullRequests.gitHubRepo(repo.url) ?: return@forEach
-                        val dir = File(workspace.dir, repo.name)
+                        val clone = File(workspace.dir, repo.name)
+                        // A freed workstream has no clone: `gh` runs in its folder, and asks by URL or by repository.
+                        val dir = if (clone.isDirectory) clone else File(workspace.dir)
                         val saved = workspace.pullRequests[repo.name]
                         // A branch never pushed has no pull request to look for.
-                        val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
+                        val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(clone, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
                         if (pushed && saved?.isOpen != false) {
                             val pr = GitHubPullRequests.state(dir, repo.branch, gh, upstream, knownUrl = saved?.url)
                             // No answer is not "no pull request": gh may be offline. Keep what was seen.

@@ -10423,4 +10423,5 @@
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
     <string name="claude_code_workspace_freed">space freed</string>
+    <string name="claude_code_pr_restoring">Bringing the workstream’s clones back…</string>
 </resources>

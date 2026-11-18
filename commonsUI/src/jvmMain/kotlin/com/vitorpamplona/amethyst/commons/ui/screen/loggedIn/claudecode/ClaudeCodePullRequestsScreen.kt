@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_pushed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_restoring
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_rules
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_send_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
@@ -126,6 +127,7 @@ fun ClaudeCodePullRequestsScreen(
     val workspace = viewModel.workspace
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val restoring by viewModel.restoring.collectAsStateWithLifecycle()
     val opening by viewModel.opening.collectAsStateWithLifecycle()
     val errors by viewModel.errors.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf(false) }
@@ -168,6 +170,8 @@ fun ClaudeCodePullRequestsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                         Text(stringRes(Res.string.claude_code_pr_rules), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh), modifier = Modifier)
+                        // A freed workstream: its clones come back before its pull requests can show.
+                        if (restoring) Text(stringRes(Res.string.claude_code_pr_restoring), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }

@@ -447,9 +447,9 @@ class AgentWorkspaces(
 
     /**
      * Removes [workspace]'s clones to give their disk back, keeping what brings them back: each
-     * repository's local branches beyond its base, as a git bundle (a few KB: the base is in the
-     * mirror), its branch settings (the NIP-34 link, the comments already reviewed) and the branch
-     * it was on. The folder stays: it keeps the workstream's name, and its sessions' folder.
+     * repository's local branches beyond its base, and where they were pushed, as a git bundle (a
+     * few KB: the base is in the mirror); its branch and remote settings (the NIP-34 link, the
+     * comments already reviewed, the user's fork); and the branch it was on. The folder stays: it keeps the workstream's name, and its sessions' folder.
      *
      * Refuses with [UnsavedWorkException], and changes nothing, while a repository holds what a
      * bundle can't carry: files not committed (ignored ones included, see [hasUnsavedWork]), a
@@ -469,12 +469,15 @@ class AgentWorkspaces(
                     val head = GitWorkspace.git(dir, "symbolic-ref", "--quiet", "--short", "HEAD")?.trim()?.ifEmpty { null } ?: throw UnsavedWorkException(repo.name)
                     File(staging, "${repo.name}$HEAD_FILE").writeText(head)
                     // Relative to the base the clone came from: whatever the mirror holds later, it holds that.
-                    val base = "refs/remotes/origin/${repo.baseBranch}"
+                    // The branches, and where they were pushed other than origin (the user's fork), so
+                    // a restored branch knows it was published; origin's come fresh from the mirror.
+                    val refs = arrayOf("--branches", "--exclude=refs/remotes/origin/*", "--remotes", "--not", "refs/remotes/origin/${repo.baseBranch}")
                     val ahead =
-                        GitWorkspace.git(dir, "rev-list", "--count", "--branches", "--not", base)?.trim()?.toIntOrNull()
+                        GitWorkspace.git(dir, "rev-list", "--count", *refs)?.trim()?.toIntOrNull()
                             ?: throw IOException("Could not count the commits of ${repo.name}")
-                    if (ahead > 0) git(dir, "bundle", "create", "--quiet", File(staging, "${repo.name}$BUNDLE").absolutePath, "--branches", "--not", base)
-                    GitWorkspace.git(dir, "config", "--local", "--null", "--get-regexp", "^branch\\.")?.takeIf { it.isNotEmpty() }?.let {
+                    if (ahead > 0) git(dir, "bundle", "create", "--quiet", File(staging, "${repo.name}$BUNDLE").absolutePath, *refs)
+                    // The branches' settings (the NIP-34 link, comments reviewed) and the remotes (the fork a pull request opened from).
+                    GitWorkspace.git(dir, "config", "--local", "--null", "--get-regexp", "^(branch|remote)\\.")?.takeIf { it.isNotEmpty() }?.let {
                         File(staging, "${repo.name}$CONFIG").writeText(it)
                     }
                 }
@@ -519,7 +522,7 @@ class AgentWorkspaces(
                     withMirror(repo.url) { mirror -> git(dir, "clone", "--quiet", "--no-checkout", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
                     git(target, "remote", "set-url", "origin", repo.url)
                     val bundle = File(saved, "${repo.name}$BUNDLE")
-                    if (bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", bundle.absolutePath, "refs/heads/*:refs/heads/*")
+                    if (bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", bundle.absolutePath, "refs/heads/*:refs/heads/*", "refs/remotes/*:refs/remotes/*")
                     val head =
                         File(saved, "${repo.name}$HEAD_FILE")
                             .takeIf { it.isFile }
@@ -530,7 +533,9 @@ class AgentWorkspaces(
                     if (GitWorkspace.git(target, "rev-parse", "--verify", "--quiet", "refs/heads/$head") == null) git(target, "branch", head, "refs/remotes/origin/${repo.baseBranch}")
                     // Forced: the clone has no files yet, and nothing of its own to keep.
                     git(target, "checkout", "--quiet", "--force", head)
-                    File(saved, "${repo.name}$CONFIG").takeIf { it.isFile }?.let { restoreBranchConfig(target, it.readText()) }
+                    File(saved, "${repo.name}$CONFIG").takeIf { it.isFile }?.let { restoreConfig(target, it.readText()) }
+                    // The saved settings name origin as it was; the repository's URL is what it is now.
+                    git(target, "remote", "set-url", "origin", repo.url)
                 }
             } catch (e: Throwable) {
                 made.forEach { if (it.exists() && !deleteTree(it)) Log.w(TAG) { "Could not remove the half-made $it" } }
@@ -543,8 +548,8 @@ class AgentWorkspaces(
         }
     }
 
-    /** Sets the `branch.*` settings [saved] holds (`git config --null --get-regexp`), replacing the clone's own. */
-    private fun restoreBranchConfig(
+    /** Sets the `branch.*` and `remote.*` settings [saved] holds (`git config --null --get-regexp`), replacing the clone's own. */
+    private fun restoreConfig(
         dir: File,
         saved: String,
     ) {

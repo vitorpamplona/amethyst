@@ -456,6 +456,31 @@ class AgentWorkspacesTest {
         }
 
     @Test
+    fun aBranchPushedToTheUsersForkStaysPublishedThroughAFreeAndRestore() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/f")
+            val app = File(ws.dir, "app")
+            File(app, "f.txt").writeText("f\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "f")
+            // As the pull request flow leaves it: a remote for the user's fork, the branch there and tracking it.
+            val fork = File(tmp, "remotes/fork.git").apply { mkdirs() }
+            git(fork, "init", "--quiet", "--bare", "-b", "main")
+            git(app, "remote", "add", "fork", fileUrl(fork))
+            git(app, "update-ref", "refs/remotes/fork/agent/f", "HEAD")
+            git(app, "config", "branch.agent/f.remote", "fork")
+            git(app, "config", "branch.agent/f.merge", "refs/heads/agent/f")
+            assertFalse(workspaces.hasUnsavedWork(ws))
+
+            workspaces.restore(workspaces.free(ws))
+            assertEquals(fileUrl(fork), git(app, "remote", "get-url", "fork").trim())
+            assertEquals(appUrl, git(app, "remote", "get-url", "origin").trim())
+            assertEquals("fork", git(app, "config", "--get", "branch.agent/f.remote").trim())
+            // Still on a remote: nothing reads as unpublished, and a cleanup may free it again.
+            assertFalse(workspaces.hasUnsavedWork(ws))
+        }
+
+    @Test
     fun aBranchWithNothingOfItsOwnComesBackFromTheLatestBase() =
         runBlocking {
             val ws = workspaces.create(listOf(appUrl), null, branch = "agent/z")

@@ -24,11 +24,13 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
@@ -82,6 +84,11 @@ class ClaudeCodeWorkspaceViewModel(
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
+    private val _restoring = MutableStateFlow(false)
+
+    /** Set while a freed workstream's clones are made again, before its pull requests can show. */
+    val restoring: StateFlow<Boolean> = _restoring.asStateFlow()
+
     /** The repository whose pull request is being opened, and why the last one failed. */
     private val _opening = MutableStateFlow<String?>(null)
     val opening: StateFlow<String?> = _opening.asStateFlow()
@@ -99,10 +106,13 @@ class ClaudeCodeWorkspaceViewModel(
     }
 
     fun refresh() {
-        val ws = workspace ?: return
+        val known = workspace ?: return
         viewModelScope.launch {
             _loading.value = true
             try {
+                // As saved now: it may have been freed, or brought back, since the screen opened.
+                val latest = withContext(Dispatchers.IO) { service.agentWorkspaces.of(File(known.dir)) } ?: known
+                val ws = if (latest.isFreed) restore(latest) ?: return@launch else latest
                 _rows.value =
                     service.agentWorkspaces.status(ws).map { status ->
                         val dir = File(ws.dir, status.repo.name)
@@ -129,6 +139,24 @@ class ClaudeCodeWorkspaceViewModel(
             } finally {
                 _loading.value = false
             }
+        }
+    }
+
+    /**
+     * Makes a freed workstream's clones again: its pull requests are opened and checked from them.
+     * Null, with the reason shown, when they can't be.
+     */
+    private suspend fun restore(freed: AgentWorkspace): AgentWorkspace? {
+        _restoring.value = true
+        _errors.update { it - "" }
+        return try {
+            service.restoreWorkspace(freed)
+        } catch (e: IOException) {
+            Log.w("ClaudeCodeWorkspace", "Could not bring the clones back", e)
+            _errors.update { it + ("" to PullRequestError(e.message ?: freed.dir, pushed = false)) }
+            null
+        } finally {
+            _restoring.value = false
         }
     }
 
