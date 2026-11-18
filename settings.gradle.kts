@@ -18,6 +18,19 @@ pluginManagement {
     }
 }
 
+// Quartz, crypto-kmp and libschnorr256k1 are released on Nostr + Blossom: the Magpie settings plugin
+// serves their groups, trusting only the release key vitorpamplona.com names as `releases`, and
+// gradle/magpie.lock pins that key and every resolved version's files. It needs Gradle on Java 21.
+plugins {
+    id("com.vitorpamplona.magpie") version "0.2.0"
+}
+
+magpie {
+    group("com.vitorpamplona.quartz")
+    group("com.vitorpamplona.crypto")
+    group("com.vitorpamplona.schnorr256k1")
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     // The groups only JitPack builds (straight from GitHub). Google and Maven Central never have
@@ -34,8 +47,6 @@ dependencyResolutionManagement {
             "com.github.lincollincol",
             "com.github.rikkahub.jlatexmath-android",
             "com.github.vitorpamplona.compose-richtext",
-            "com.github.vitorpamplona.quartz", // a quartz commit, while quartzJitpack is set
-            "com.github.vitorpamplona.libschnorr256k1-kotlin", // quartz's pure-Kotlin secp256k1, from JitPack for now
         )
     repositories {
         mavenLocal()
@@ -61,8 +72,8 @@ include(":agentCore")
 include(":claudeCodeClient")
 include(":codexClient")
 
-// quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto
-// and quic below. To change it alongside the app, point Gradle at a local checkout and it builds
+// quartz lives in its own repo (vitorpamplona/quartz) and comes from Nostr + Blossom through Magpie
+// (above), like crypto; quic comes from Maven Central. To change it alongside the app, point Gradle at a local checkout and it builds
 // that checkout instead of the published artifact, for every module and for the libraries' own
 // dependency on it:
 //   ./gradlew -PquartzDir=../quartz :commons:jvmTest
