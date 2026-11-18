@@ -191,7 +191,7 @@ fun RequestModelScreen(
                     value = name,
                     onValueChange = { name = it },
                     placeholder = stringRes(Res.string.llama_garden_model_name_placeholder),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, imeAction = ImeAction.Next),
                 )
             }
             LabeledField(Res.string.llama_garden_links_label, helper = stringRes(Res.string.llama_garden_links_help)) {
@@ -202,7 +202,9 @@ fun RequestModelScreen(
                     leadingIcon = MaterialSymbols.Link,
                     singleLine = false,
                     minLines = 2,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri),
+                    // Not KeyboardType.Uri: some URL keyboards show Go instead of a newline key, and
+                    // this field takes one link per line.
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
                 )
             }
         }
@@ -220,7 +222,7 @@ fun RequestModelScreen(
                 ) { type = it }
             }
             LabeledField(Res.string.llama_garden_vram, helper = stringRes(Res.string.llama_garden_vram_help)) {
-                NumberField(vram, { vram = it.filter(Char::isDigit) }, Res.string.llama_garden_vram_placeholder)
+                NumberField(vram, { vram = it.filter(Char::isDigit) }, Res.string.llama_garden_vram_placeholder, imeAction = ImeAction.Done)
             }
         }
 
@@ -289,7 +291,7 @@ fun AddTorrentScreen(
                     onValueChange = { url = it },
                     placeholder = stringRes(Res.string.llama_garden_torrent_url_placeholder),
                     leadingIcon = MaterialSymbols.Link,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                 )
             }
             LabeledField(Res.string.llama_garden_model_name, helper = stringRes(Res.string.llama_garden_required)) {
@@ -297,7 +299,7 @@ fun AddTorrentScreen(
                     value = name,
                     onValueChange = { name = it },
                     placeholder = stringRes(Res.string.llama_garden_model_name_placeholder),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, imeAction = ImeAction.Next),
                 )
             }
             LabeledField(Res.string.llama_garden_size_label) {
@@ -308,7 +310,7 @@ fun AddTorrentScreen(
                     value = tool,
                     onValueChange = { tool = it },
                     placeholder = stringRes(Res.string.llama_garden_tool_placeholder),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next),
                 )
             }
         }
@@ -320,7 +322,7 @@ fun AddTorrentScreen(
                     onValueChange = { hf = it },
                     placeholder = stringRes(Res.string.llama_garden_hf_placeholder),
                     leadingIcon = MaterialSymbols.Link,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                 )
             }
             if (hf.isNotBlank()) {
@@ -341,7 +343,13 @@ fun AddTorrentScreen(
                     value = lab,
                     onValueChange = { lab = it },
                     placeholder = stringRes(Res.string.llama_garden_lab_placeholder),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Next),
+                    // The last text field unless the quant format follows it.
+                    keyboardOptions =
+                        KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None,
+                            autoCorrectEnabled = false,
+                            imeAction = if (fileClass == FileClassTag.QUANT) ImeAction.Next else ImeAction.Done,
+                        ),
                 )
             }
             LabeledField(Res.string.llama_garden_file_class, helper = stringRes(Res.string.llama_garden_file_class_help)) {
@@ -363,7 +371,7 @@ fun AddTorrentScreen(
                         value = quantType,
                         onValueChange = { quantType = it },
                         placeholder = stringRes(Res.string.llama_garden_quant_format_placeholder),
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Done),
                     )
                 }
                 LabeledField(Res.string.llama_garden_model_kind, helper = stringRes(Res.string.llama_garden_model_kind_help)) {
@@ -473,13 +481,14 @@ private fun NumberField(
     onValueChange: (String) -> Unit,
     placeholder: StringResource,
     decimal: Boolean = false,
+    imeAction: ImeAction = ImeAction.Next,
 ) {
     FormTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = stringRes(placeholder),
         trailingIcon = { Text(stringRes(Res.string.llama_garden_gb), color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(end = 12.dp)) },
-        keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number, imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number, imeAction = imeAction),
     )
 }
 
