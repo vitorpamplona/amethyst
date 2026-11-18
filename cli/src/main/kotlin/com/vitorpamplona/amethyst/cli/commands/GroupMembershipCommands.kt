@@ -38,11 +38,12 @@ object GroupMembershipCommands {
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
-            val leafIndex =
-                ctx.marmot.leafIndexOf(gid, target)
-                    ?: return Output.error("target_not_member", "$target is not a member of group $gid")
+            // An account leaves by losing every leaf (device) it holds, in one
+            // commit; removing one leaf would keep it a member through the rest.
+            val leafIndices = ctx.marmot.leafIndicesOf(gid, target)
+            if (leafIndices.isEmpty()) return Output.error("target_not_member", "$target is not a member of group $gid")
 
-            val outbound = ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = leafIndex)
+            val outbound = ctx.marmot.removeAccount(nostrGroupId = gid, account = target)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(outbound.signedEvent, targets)
             RawEventSupport.publishGuard(ack, outbound.signedEvent.id)?.let { return it }
@@ -50,7 +51,8 @@ object GroupMembershipCommands {
                 mapOf(
                     "group_id" to gid,
                     "removed" to target,
-                    "leaf_index" to leafIndex,
+                    "leaf_index" to leafIndices.first(),
+                    "leaf_indices" to leafIndices,
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to outbound.signedEvent.id,
                 ) + RawEventSupport.ackFields(ack),

@@ -569,7 +569,7 @@ fun MarmotGroupInfoScreen(
                 memberToRemove = null
                 scope.launch(Dispatchers.IO) {
                     try {
-                        accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
+                        accountViewModel.removeMarmotGroupMember(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             shortNotice.show(loadStringRes(Res.string.marmot_member_removed))
                         }
