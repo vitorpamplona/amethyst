@@ -30,6 +30,8 @@ import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -273,27 +275,7 @@ class ClaudeCodeServiceTest {
     fun aWorkspaceWithoutASessionIsListedAndOpensAChatInIt() =
         runBlocking {
             // A workspace the app made, whose first message was never sent.
-            val remote = File(work, "remote.git")
-            val seed = File(work, "seed").apply { mkdirs() }
-
-            fun git(
-                dir: File,
-                vararg args: String,
-            ) = check(
-                ProcessBuilder(listOf("git") + args)
-                    .directory(dir)
-                    .apply { environment().forgetInheritedRepository() }
-                    .redirectErrorStream(true)
-                    .start()
-                    .waitFor() == 0,
-            ) { args.joinToString(" ") }
-            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
-            git(seed, "init", "--quiet", "--initial-branch=main")
-            File(seed, "README.md").writeText("app\n")
-            git(seed, "add", ".")
-            git(seed, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "--quiet", "-m", "init")
-            git(remote, "fetch", "--quiet", seed.absolutePath, "main:main")
-            val ws = service.agentWorkspaces.create(listOf(fileUrl(remote)), "Idle one", agentId = "claude")
+            val ws = service.agentWorkspaces.create(listOf(remote("remote")), "Idle one", agentId = "claude")
 
             service.refresh()
             val row = assertNotNull(service.rows.value.firstOrNull { it.workspace?.id == ws.id })
@@ -424,16 +406,24 @@ class ClaudeCodeServiceTest {
             val dirtyRepo = File(dirty.dir, dirty.repos.single().name)
             File(dirtyRepo, "work.txt").writeText("not committed\n")
 
+            val cleanSession = "77777777-2222-3333-4444-555555555555"
+            val dirtySession = "88888888-2222-3333-4444-555555555555"
+            sessionIn(cleanSession, clean.dir)
+            sessionIn(dirtySession, dirty.dir)
+            service.refresh()
+
             val freed = service.cleanUp(listOf(clean, committed, dirty))
             // A commit on no remote is kept in the bundle: freeing it loses nothing.
             assertEquals(setOf(clean.id, committed.id), freed.map { it.id }.toSet())
             assertFalse(File(clean.dir, clean.repos.single().name).exists())
             assertFalse(committedRepo.exists())
             assertTrue(File(dirtyRepo, "work.txt").isFile)
+            // A freed workstream's sessions go under Archived; the kept one's stay.
+            assertEquals(setOf(cleanSession), service.agentWorkspaces.preferences().archivedSessions)
         }
 
     @Test
-    fun archivingAWorkstreamsSessionFreesItsClonesAndUnarchivingBringsThemBack() =
+    fun archivingAWorkstreamsSessionFreesItsClonesAndUnarchivingListsItAgain() =
         runBlocking {
             val ws = service.agentWorkspaces.create(listOf(remote("archived")), "Archived", branch = "agent/a", agentId = "claude")
             val repo = File(ws.dir, ws.repos.single().name)
@@ -452,11 +442,35 @@ class ClaudeCodeServiceTest {
             assertEquals(true, archived.workspace?.isFreed)
             assertNull(archived.workspaceSize)
 
+            // Listed again, still freed: its next message brings the clones back, and shows how it goes.
             service.archive(archived, false)
-            assertEquals("done\n", File(repo, "work.txt").readText())
             val back = service.rows.value.single { it.sessionId == session }
             assertFalse(back.archived)
-            assertEquals(false, back.workspace?.isFreed)
+            assertEquals(true, back.workspace?.isFreed)
+            assertFalse(repo.exists())
+            service.restoreWorkspace(assertNotNull(back.workspace))
+            assertEquals("done\n", File(repo, "work.txt").readText())
+        }
+
+    @Test
+    fun twoRestoresAtOnceMakeTheClonesOnce() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("twice")), "Twice", branch = "agent/t", agentId = "claude")
+            val repo = File(ws.dir, ws.repos.single().name)
+            File(repo, "work.txt").writeText("done\n")
+            git(repo, "add", ".")
+            git(repo, "commit", "--quiet", "-m", "work")
+            service.refresh()
+            val freed = service.cleanUp(listOf(ws)).single()
+            val both = listOf(async(Dispatchers.Default) { service.restoreWorkspace(freed) }, async(Dispatchers.Default) { service.restoreWorkspace(freed) }).awaitAll()
+            assertTrue(both.none { it.isFreed })
+            assertEquals("done\n", File(repo, "work.txt").readText())
+            assertFalse(
+                service.agentWorkspaces
+                    .list()
+                    .single()
+                    .isFreed,
+            )
         }
 
     @Test
@@ -505,28 +519,7 @@ class ClaudeCodeServiceTest {
     @Test
     fun aWorkstreamOpensAtOnceAndClonesBehindIt() =
         runBlocking {
-            val remote = File(work, "workstream.git")
-            val seed = File(work, "workstream-seed").apply { mkdirs() }
-
-            fun git(
-                dir: File,
-                vararg args: String,
-            ) = check(
-                ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
-                    .directory(dir)
-                    .apply { environment().forgetInheritedRepository() }
-                    .redirectErrorStream(true)
-                    .start()
-                    .waitFor() == 0,
-            ) { args.joinToString(" ") }
-            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
-            git(seed, "init", "--quiet", "--initial-branch=main")
-            File(seed, "README.md").writeText("app\n")
-            git(seed, "add", ".")
-            git(seed, "commit", "--quiet", "-m", "init")
-            git(remote, "fetch", "--quiet", seed.absolutePath, "main:main")
-
-            val chat = service.newWorkstream(listOf(fileUrl(remote)), "Greeting")
+            val chat = service.newWorkstream(listOf(remote("workstream")), "Greeting")
             // The chat is there before the clone: in the workstream's folder, hands-off.
             assertEquals(File(service.agentWorkspaces.workstreamsDir, "greeting").absolutePath, chat.state.value.cwd)
             assertEquals(PermissionMode.AUTO, chat.state.value.permissionMode)

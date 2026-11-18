@@ -75,9 +75,18 @@ data class AgentWorkspace(
      * are there. [AgentWorkspaces.restore] makes them again.
      */
     val freedAt: Long? = null,
+    /** When its clones were last made again ([AgentWorkspaces.restore]): the user came back to it. */
+    val restoredAt: Long? = null,
 ) {
     /** Its clones are gone for now, kept as what brings them back. */
     val isFreed: Boolean get() = freedAt != null
+
+    /**
+     * Since when nobody needed its clones, for the automatic cleanup: its work done ([finishedAt]),
+     * or, when the user brought it back after that, since then. Null while its work isn't done.
+     */
+    val idleSince: Long?
+        get() = finishedAt?.let { maxOf(it, restoredAt ?: 0L) }
 
     /**
      * What the agent is told about the workstream: its folder holds one clone per repository and is not
@@ -153,6 +162,22 @@ data class RepoGroup(
     val urls: List<String>,
 )
 
+/**
+ * What [AgentWorkspaces.free] kept of one repository besides its commits and settings: enough to
+ * show it, and to put it back on its branch, without its clone.
+ */
+@Immutable
+@Serializable
+data class FreedRepo(
+    /** The branch it was on. */
+    val head: String,
+    /** Commits on [head] beyond its base, and their subjects, newest first. */
+    val ahead: Int = 0,
+    val subjects: List<String> = emptyList(),
+    /** The NIP-34 repository [head] is linked to, as its git setting holds it ([NostrRepoRef.fromConfig]). */
+    val nostrRepo: String? = null,
+)
+
 /** Why [AgentWorkspaces.free] kept a workspace's clones: [repo] holds work only its folder has. */
 class UnsavedWorkException(
     val repo: String,
@@ -174,7 +199,7 @@ data class WorkspaceRepoStatus(
  * workstreams/<workstream>/<name>/                  a workstream's clones, made from the mirrors
  * meta/<workstream>.json                     what each workstream holds (outside the agent's folder)
  * meta/<workstream>.gone                     a workstream that was removed: its name is not given out again
- * meta/<workstream>.freed/                   a freed workstream's commits (a bundle), branch settings and HEAD, by repository
+ * meta/<workstream>.freed/                   a freed workstream's commits (a bundle), settings and summary, by repository
  * groups.json                         the repository groups the user saved
  * ```
  *
@@ -446,41 +471,25 @@ class AgentWorkspaces(
         }
 
     /**
-     * Removes [workspace]'s clones to give their disk back, keeping what brings them back: each
-     * repository's local branches beyond its base, and where they were pushed, as a git bundle (a
-     * few KB: the base is in the mirror); its branch and remote settings (the NIP-34 link, the
-     * comments already reviewed, the user's fork); and the branch it was on. The folder stays: it keeps the workstream's name, and its sessions' folder.
+     * Removes [workspace]'s clones to give their disk back, keeping what brings them back ([FreedFiles]):
+     * each repository's local branches beyond its base, and where they were pushed, as a git bundle
+     * (a few KB: the base is in the mirror); its branch and remote settings (the NIP-34 link, the
+     * comments already reviewed, the user's fork); and a [FreedRepo] summary, the branch it was on
+     * among it. The folder stays: it keeps the workstream's name, and its sessions' folder.
      *
      * Refuses with [UnsavedWorkException], and changes nothing, while a repository holds what a
-     * bundle can't carry: files not committed (ignored ones included, see [hasUnsavedWork]), a
-     * stash, or a detached HEAD. The caller ends the agents working there first.
+     * bundle can't carry ([canBundle]). The caller ends the agents working there first.
      */
     suspend fun free(workspace: AgentWorkspace): AgentWorkspace =
         withContext(Dispatchers.IO) {
             if (workspace.isFreed) return@withContext workspace
+            val clones = workspace.repos.map { it to File(workspace.dir, it.name) }.filter { it.second.isDirectory }
+            clones.firstOrNull { !canBundle(it.second) }?.let { throw UnsavedWorkException(it.first.name) }
             val staging = File(metaDir, "${workspace.id}$FREED.tmp")
             if (staging.exists() && !deleteTree(staging)) throw IOException("Could not remove $staging")
             if (!staging.mkdirs()) throw IOException("Could not create $staging")
             try {
-                workspace.repos.forEach { repo ->
-                    val dir = File(workspace.dir, repo.name)
-                    if (!dir.isDirectory) return@forEach
-                    if (!canBundle(dir)) throw UnsavedWorkException(repo.name)
-                    val head = GitWorkspace.git(dir, "symbolic-ref", "--quiet", "--short", "HEAD")?.trim()?.ifEmpty { null } ?: throw UnsavedWorkException(repo.name)
-                    File(staging, "${repo.name}$HEAD_FILE").writeText(head)
-                    // Relative to the base the clone came from: whatever the mirror holds later, it holds that.
-                    // The branches, and where they were pushed other than origin (the user's fork), so
-                    // a restored branch knows it was published; origin's come fresh from the mirror.
-                    val refs = arrayOf("--branches", "--exclude=refs/remotes/origin/*", "--remotes", "--not", "refs/remotes/origin/${repo.baseBranch}")
-                    val ahead =
-                        GitWorkspace.git(dir, "rev-list", "--count", *refs)?.trim()?.toIntOrNull()
-                            ?: throw IOException("Could not count the commits of ${repo.name}")
-                    if (ahead > 0) git(dir, "bundle", "create", "--quiet", File(staging, "${repo.name}$BUNDLE").absolutePath, *refs)
-                    // The branches' settings (the NIP-34 link, comments reviewed) and the remotes (the fork a pull request opened from).
-                    GitWorkspace.git(dir, "config", "--local", "--null", "--get-regexp", "^(branch|remote)\\.")?.takeIf { it.isNotEmpty() }?.let {
-                        File(staging, "${repo.name}$CONFIG").writeText(it)
-                    }
-                }
+                clones.forEach { (repo, dir) -> keep(repo, dir, FreedFiles(staging, repo.name)) }
                 val saved = freedDir(workspace.id)
                 if (saved.exists() && !deleteTree(saved)) throw IOException("Could not remove $saved")
                 if (!staging.renameTo(saved)) throw IOException("Could not move $staging to $saved")
@@ -492,18 +501,43 @@ class AgentWorkspaces(
             save(freed)
             // Only now: what brings the clones back is on disk. A clone left half removed is made
             // again by [restore]. Anything else in the folder (notes, the agent's settings) stays.
-            workspace.repos
-                .map { File(workspace.dir, it.name) }
-                .filter { it.exists() }
-                .forEach { if (!deleteTree(it)) throw IOException("Could not remove $it") }
+            clones.forEach { (_, dir) -> if (!deleteTree(dir)) throw IOException("Could not remove $dir") }
             freed
         }
 
+    /** Writes what [free] keeps of the clone [dir] of [repo] into [files]. */
+    private fun keep(
+        repo: WorkspaceRepo,
+        dir: File,
+        files: FreedFiles,
+    ) {
+        val head = GitWorkspace.git(dir, "symbolic-ref", "--quiet", "--short", "HEAD")?.trim()?.ifEmpty { null } ?: throw UnsavedWorkException(repo.name)
+        // Relative to the base the clone came from: whatever the mirror holds later, it holds that.
+        // The branches, and where they were pushed other than origin (the user's fork), so a
+        // restored branch knows it was published; origin's come fresh from the mirror. (After
+        // --remotes, git matches --exclude without the refs/remotes/ prefix.)
+        val base = "refs/remotes/origin/${repo.baseBranch}"
+        val refs = arrayOf("--branches", "--exclude=origin/*", "--remotes", "--not", base)
+        val toKeep =
+            GitWorkspace.git(dir, "rev-list", "--count", *refs)?.trim()?.toIntOrNull()
+                ?: throw IOException("Could not count the commits of ${repo.name}")
+        if (toKeep > 0) git(dir, "bundle", "create", "--quiet", files.bundle.absolutePath, *refs)
+        // The branches' settings (the NIP-34 link, comments reviewed) and the remotes (the fork a pull request opened from).
+        GitWorkspace.git(dir, "config", "--local", "--null", "--get-regexp", "^(branch|remote)\\.")?.takeIf { it.isNotEmpty() }?.let { files.config.writeText(it) }
+        val subjects =
+            GitWorkspace
+                .git(dir, "log", "--format=%s", "$base..HEAD")
+                ?.lines()
+                ?.filter { it.isNotBlank() }
+                .orEmpty()
+        val nostr = GitWorkspace.git(dir, "config", "--get", "branch.$head.${GitWorkspace.KEY_REPO}")?.trim()?.ifEmpty { null }
+        files.summary.writeText(json.encodeToString(FreedRepo(head, subjects.size, subjects, nostr)))
+    }
+
     /**
      * Makes a freed [workspace]'s clones again ([free]): from the mirrors, fetched first, then its
-     * saved branches on top, the branch it was on checked out and its branch settings back. A
-     * repository whose clone is still there is left as it is. A failure leaves it freed, with
-     * nothing half made.
+     * saved branches on top, the branch it was on checked out and its settings back. A repository
+     * whose clone is still there is left as it is. A failure leaves it freed, with nothing half made.
      */
     suspend fun restore(workspace: AgentWorkspace): AgentWorkspace {
         if (!workspace.isFreed) return workspace
@@ -518,34 +552,40 @@ class AgentWorkspaces(
                     if (target.isDirectory && GitWorkspace.git(target, "rev-parse", "--git-dir") != null) return@forEach
                     if (target.exists() && !deleteTree(target)) throw IOException("Could not remove $target")
                     made.add(target)
-                    // No checkout yet: the saved branches may replace the one the clone starts on.
-                    withMirror(repo.url) { mirror -> git(dir, "clone", "--quiet", "--no-checkout", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
-                    git(target, "remote", "set-url", "origin", repo.url)
-                    val bundle = File(saved, "${repo.name}$BUNDLE")
-                    if (bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", bundle.absolutePath, "refs/heads/*:refs/heads/*", "refs/remotes/*:refs/remotes/*")
-                    val head =
-                        File(saved, "${repo.name}$HEAD_FILE")
-                            .takeIf { it.isFile }
-                            ?.readText()
-                            ?.trim()
-                            ?.ifEmpty { null } ?: repo.branch
-                    // A branch with nothing of its own was not bundled: it starts again from the base, as now.
-                    if (GitWorkspace.git(target, "rev-parse", "--verify", "--quiet", "refs/heads/$head") == null) git(target, "branch", head, "refs/remotes/origin/${repo.baseBranch}")
-                    // Forced: the clone has no files yet, and nothing of its own to keep.
-                    git(target, "checkout", "--quiet", "--force", head)
-                    File(saved, "${repo.name}$CONFIG").takeIf { it.isFile }?.let { restoreConfig(target, it.readText()) }
-                    // The saved settings name origin as it was; the repository's URL is what it is now.
-                    git(target, "remote", "set-url", "origin", repo.url)
+                    restoreClone(repo, target, FreedFiles(saved, repo.name))
                 }
             } catch (e: Throwable) {
                 made.forEach { if (it.exists() && !deleteTree(it)) Log.w(TAG) { "Could not remove the half-made $it" } }
                 throw e
             }
-            val restored = workspace.copy(freedAt = null)
+            val restored = workspace.copy(freedAt = null, restoredAt = System.currentTimeMillis())
             save(restored)
             if (saved.exists() && !deleteTree(saved)) Log.w(TAG) { "Could not remove $saved" }
             restored
         }
+    }
+
+    /** Clones [repo] into [target] from its mirror, and puts back what [files] kept of it. */
+    private suspend fun restoreClone(
+        repo: WorkspaceRepo,
+        target: File,
+        files: FreedFiles,
+    ) {
+        // No checkout yet: the saved branches may replace the one the clone starts on.
+        withMirror(repo.url) { mirror -> git(target.parentFile, "clone", "--quiet", "--no-checkout", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
+        git(target, "remote", "set-url", "origin", repo.url)
+        if (files.bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", files.bundle.absolutePath, "refs/heads/*:refs/heads/*", "refs/remotes/*:refs/remotes/*")
+        val head = readFreed(files.summary)?.head ?: repo.branch
+        // A branch with nothing of its own was not bundled: it starts again from the base, as now,
+        // and like the one [create] made, tracks nothing until the user pushes it.
+        if (GitWorkspace.git(target, "rev-parse", "--verify", "--quiet", "refs/heads/$head") == null) {
+            git(target, "branch", "--no-track", head, "refs/remotes/origin/${repo.baseBranch}")
+        }
+        // Forced: the clone has no files yet, and nothing of its own to keep.
+        git(target, "checkout", "--quiet", "--force", head)
+        if (files.config.isFile) restoreConfig(target, files.config.readText())
+        // The saved settings name origin as it was; the repository's URL is what it is now.
+        git(target, "remote", "set-url", "origin", repo.url)
     }
 
     /** Sets the `branch.*` and `remote.*` settings [saved] holds (`git config --null --get-regexp`), replacing the clone's own. */
@@ -562,19 +602,58 @@ class AgentWorkspaces(
         entries.forEach { (key, value) -> git(dir, "config", "--local", "--add", key, value) }
     }
 
+    /** What a freed [workspace] kept of each repository, by its folder name: to show it without its clones. */
+    fun freedRepos(workspace: AgentWorkspace): Map<String, FreedRepo> {
+        if (!workspace.isFreed) return emptyMap()
+        val saved = freedDir(workspace.id)
+        return workspace.repos.mapNotNull { repo -> readFreed(FreedFiles(saved, repo.name).summary)?.let { repo.name to it } }.toMap()
+    }
+
+    private fun readFreed(file: File): FreedRepo? =
+        try {
+            if (file.isFile) json.decodeFromString<FreedRepo>(file.readText()) else null
+        } catch (e: SerializationException) {
+            Log.w(TAG, "Unreadable $file", e)
+            null
+        } catch (e: IOException) {
+            Log.w(TAG, "Unreadable $file", e)
+            null
+        }
+
     private fun freedDir(id: String) = File(metaDir, "$id$FREED")
 
-    /** Whether [free] would keep [workspace]'s clones: a repository holds work a bundle can't carry. */
+    /** Where a freed workspace keeps one repository, under `meta/<id>.freed/`. */
+    private class FreedFiles(
+        dir: File,
+        repo: String,
+    ) {
+        val summary = File(dir, "$repo.json")
+        val bundle = File(dir, "$repo.bundle")
+        val config = File(dir, "$repo.config")
+    }
+
+    /**
+     * Whether [free] would keep [workspace]'s clones, and a cleanup would leave it: a repository
+     * holds work a bundle can't carry ([canBundle]).
+     */
     suspend fun cannotFree(workspace: AgentWorkspace): Boolean =
         withContext(Dispatchers.IO) {
             !workspace.isFreed && workspace.repos.any { repo -> File(workspace.dir, repo.name).let { it.isDirectory && !canBundle(it) } }
         }
 
-    /** Whether all of the clone [dir]'s work is in its commits: nothing uncommitted, no stash, on a branch. */
+    /**
+     * Whether all of the clone [dir]'s work is in its commits: no files left uncommitted (ignored
+     * ones included, but not what a build makes again: [isRebuildable]), no stash, on a branch,
+     * and no other worktree of it, whose files and `.git` link would go with the clone.
+     */
     private fun canBundle(dir: File): Boolean =
         !hasUncommittedWork(dir) &&
             GitWorkspace.git(dir, "stash", "list")?.isBlank() == true &&
-            GitWorkspace.git(dir, "symbolic-ref", "--quiet", "HEAD") != null
+            GitWorkspace.git(dir, "symbolic-ref", "--quiet", "HEAD") != null &&
+            GitWorkspace
+                .git(dir, "worktree", "list", "--porcelain")
+                ?.lines()
+                ?.count { it.startsWith("worktree ") } == 1
 
     fun groups(): List<RepoGroup> =
         try {
@@ -665,31 +744,6 @@ class AgentWorkspaces(
         val dropped = GitWorkspace.run(mirror, listOf("git", "update-ref", "--stdin"), input = others.joinToString("") { "delete $it\n" })
         if (dropped.code != 0) Log.w(TAG) { "Could not drop the extra refs of $mirror: ${dropped.output.trim()}" }
     }
-
-    /**
-     * Whether removing [workspace] would lose work: a repository with files not committed, or
-     * commits that are on no remote (the user's push, to the repository or a fork, puts them there).
-     *
-     * Ignored files count too (a `.env`, `local.properties`, notes): git leaves them out of a
-     * plain status, and nothing but this folder holds them. A directory ignored as a whole
-     * (`build/`, `node_modules/`) is taken for output a build makes again, and the clutter
-     * operating systems leave ([OS_CLUTTER]) never counts.
-     */
-    suspend fun hasUnsavedWork(workspace: AgentWorkspace): Boolean =
-        withContext(Dispatchers.IO) {
-            workspace.repos.any { repo ->
-                val dir = File(workspace.dir, repo.name)
-                if (!dir.isDirectory) return@any false
-                val uncommitted = hasUncommittedWork(dir)
-                val unpushed =
-                    GitWorkspace
-                        .git(dir, "rev-list", "--count", "HEAD", "--not", "--remotes")
-                        ?.trim()
-                        ?.toIntOrNull()
-                        ?.let { it > 0 } ?: true
-                uncommitted || unpushed
-            }
-        }
 
     /** Files not committed in the clone [dir], ignored ones included; never what a build makes again. */
     private fun hasUncommittedWork(dir: File): Boolean =
@@ -818,11 +872,8 @@ class AgentWorkspaces(
         /** The mark a removed workstream leaves in `meta/`, so its name is not given to a new one. */
         private const val GONE = ".gone"
 
-        /** A freed workstream's folder in `meta/`, and what it keeps of each repository. */
+        /** A freed workstream's folder in `meta/`. */
         private const val FREED = ".freed"
-        private const val BUNDLE = ".bundle"
-        private const val CONFIG = ".config"
-        private const val HEAD_FILE = ".head"
 
         /** Files operating systems drop in folders: never anyone's work. */
         private val OS_CLUTTER = setOf(".DS_Store", "Thumbs.db", "desktop.ini")

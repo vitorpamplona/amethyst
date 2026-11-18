@@ -170,7 +170,7 @@ fun ClaudeCodePullRequestsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                         Text(stringRes(Res.string.claude_code_pr_rules), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh), modifier = Modifier)
-                        // A freed workstream: its clones come back before its pull requests can show.
+                        // A freed workstream: its clones come back for what needs them.
                         if (restoring) Text(stringRes(Res.string.claude_code_pr_restoring), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
@@ -182,8 +182,9 @@ fun ClaudeCodePullRequestsScreen(
                         opening = opening == row.name,
                         error = errors[row.name],
                         onOpen = { title, body, draft -> viewModel.openPullRequest(row.name, title, body, draft) },
-                        onChanges = { nav.nav(Route.ClaudeCodeChanges(key, row.name)) },
-                        onPropose = { nav.nav(Route.ClaudeCodePropose(key, row.name)) },
+                        // Both read the clone: a freed workstream's come back first.
+                        onChanges = { viewModel.withClones { nav.nav(Route.ClaudeCodeChanges(key, row.name)) } },
+                        onPropose = { viewModel.withClones { nav.nav(Route.ClaudeCodePropose(key, row.name)) } },
                         onOpenNostr = { repo -> nav.nav(Route.GitRepository(repo.kind, repo.pubKeyHex, repo.identifier)) },
                         onAskToCommit = {
                             viewModel.askToCommit(row.name)

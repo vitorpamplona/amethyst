@@ -40,6 +40,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Workspaces against real git, with local bare repositories standing in for GitHub. */
@@ -403,19 +404,17 @@ class AgentWorkspacesTest {
         }
 
     @Test
-    fun uncommittedOrUnpushedWorkIsUnsaved() =
+    fun uncommittedWorkKeepsTheClonesButCommitsDoNot() =
         runBlocking {
             val ws = workspaces.create(listOf(appUrl), null, branch = "agent/x")
             val dir = File(ws.dir, "app")
-            assertFalse(workspaces.hasUnsavedWork(ws))
+            assertFalse(workspaces.cannotFree(ws))
             File(dir, "new.txt").writeText("x\n")
-            assertTrue(workspaces.hasUnsavedWork(ws))
+            assertTrue(workspaces.cannotFree(ws))
             git(dir, "add", ".")
             git(dir, "commit", "--quiet", "-m", "work")
-            // Committed but on no remote.
-            assertTrue(workspaces.hasUnsavedWork(ws))
-            git(dir, "push", "--quiet", "origin", "agent/x")
-            assertFalse(workspaces.hasUnsavedWork(ws))
+            // Committed, on no remote: the bundle carries it.
+            assertFalse(workspaces.cannotFree(ws))
         }
 
     @Test
@@ -438,20 +437,26 @@ class AgentWorkspacesTest {
             val freed = workspaces.free(ws)
             assertTrue(freed.isFreed)
             assertTrue(workspaces.list().single().isFreed)
+            // Enough to show it without its clones.
+            assertEquals(FreedRepo("agent/x", ahead = 1, subjects = listOf("fix")), workspaces.freedRepos(freed)["app"])
+            assertEquals(FreedRepo("agent/x"), workspaces.freedRepos(freed)["lib"])
             assertFalse(app.exists())
             assertFalse(File(ws.dir, "lib").exists())
             assertTrue(File(ws.dir, "notes.md").isFile)
 
             val restored = workspaces.restore(freed)
             assertFalse(restored.isFreed)
+            assertNotNull(restored.restoredAt)
             assertFalse(workspaces.list().single().isFreed)
             assertEquals("agent/x", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
             assertEquals("fixed\n", File(app, "fix.txt").readText())
             assertEquals("", git(app, "status", "--porcelain"))
             assertEquals(listOf("e1", "e2"), git(app, "config", "--get-all", "branch.agent/x.amethyst-reviewed").lines().filter { it.isNotBlank() })
             assertEquals(appUrl, git(app, "remote", "get-url", "origin").trim())
-            // The repository with nothing of its own is back on its branch too.
-            assertEquals("agent/x", git(File(ws.dir, "lib"), "rev-parse", "--abbrev-ref", "HEAD").trim())
+            // The repository with nothing of its own is back on its branch too, tracking nothing, as made.
+            val lib = File(ws.dir, "lib")
+            assertEquals("agent/x", git(lib, "rev-parse", "--abbrev-ref", "HEAD").trim())
+            assertTrue(GitWorkspace.run(lib, listOf("git", "config", "--get", "branch.agent/x.merge")).code != 0, "a recreated branch must not track the base")
             assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
         }
 
@@ -470,15 +475,65 @@ class AgentWorkspacesTest {
             git(app, "update-ref", "refs/remotes/fork/agent/f", "HEAD")
             git(app, "config", "branch.agent/f.remote", "fork")
             git(app, "config", "branch.agent/f.merge", "refs/heads/agent/f")
-            assertFalse(workspaces.hasUnsavedWork(ws))
 
             workspaces.restore(workspaces.free(ws))
             assertEquals(fileUrl(fork), git(app, "remote", "get-url", "fork").trim())
             assertEquals(appUrl, git(app, "remote", "get-url", "origin").trim())
             assertEquals("fork", git(app, "config", "--get", "branch.agent/f.remote").trim())
-            // Still on a remote: nothing reads as unpublished, and a cleanup may free it again.
-            assertFalse(workspaces.hasUnsavedWork(ws))
+            // Still on a remote: nothing reads as unpublished.
+            assertEquals("0", git(app, "rev-list", "--count", "HEAD", "--not", "--remotes").trim())
         }
+
+    @Test
+    fun anotherBranchThatMovesUpstreamWhileFreedDoesNotStopTheRestore() =
+        runBlocking {
+            // The remote has a second branch, ahead of main.
+            val seed = File(tmp, "seed-app")
+            val bare = File(tmp, "remotes/app.git")
+            git(seed, "checkout", "--quiet", "-b", "other")
+            File(seed, "other.txt").writeText("1\n")
+            git(seed, "add", ".")
+            git(seed, "commit", "--quiet", "-m", "other 1")
+            git(bare, "fetch", "--quiet", seed.absolutePath, "other:other")
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/o")
+            val app = File(ws.dir, "app")
+            File(app, "mine.txt").writeText("mine\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "mine")
+            val freed = workspaces.free(ws)
+            // Origin's branches come from the mirror, not the bundle.
+            val heads = git(File(tmp, "agents"), "bundle", "list-heads", File(tmp, "agents/meta/${ws.id}.freed/app.bundle").absolutePath)
+            assertEquals(listOf("refs/heads/agent/o"), heads.lines().filter { it.isNotBlank() }.map { it.substringAfter(' ') })
+
+            File(seed, "other.txt").writeText("2\n")
+            git(seed, "commit", "--quiet", "-am", "other 2")
+            git(bare, "fetch", "--quiet", seed.absolutePath, "other:other")
+            workspaces.restore(freed)
+            assertEquals("mine\n", File(app, "mine.txt").readText())
+            assertEquals(git(bare, "rev-parse", "other").trim(), git(app, "rev-parse", "origin/other").trim())
+        }
+
+    @Test
+    fun aCloneWithAnotherWorktreeIsKept() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/t")
+            val app = File(ws.dir, "app")
+            // Its files, and the link into the clone's .git, would go with the clone.
+            git(app, "worktree", "add", "--quiet", "-b", "side", File(ws.dir, "app-worktrees/side").absolutePath)
+            assertTrue(workspaces.cannotFree(ws))
+            assertIs<UnsavedWorkException>(runCatching { workspaces.free(ws) }.exceptionOrNull())
+            git(app, "worktree", "remove", File(ws.dir, "app-worktrees/side").absolutePath)
+            assertFalse(workspaces.cannotFree(ws))
+        }
+
+    @Test
+    fun aRestoredWorkspaceIsIdleFromWhenItCameBackNotWhenItsWorkWasDone() {
+        val prs = mapOf("app" to SavedPullRequest("u", "MERGED", checkedAt = 1, closedAt = 100))
+        val done = AgentWorkspace("w", "W", "/w", listOf(WorkspaceRepo("u", "app", "main", "agent/w")), 0, pullRequests = prs)
+        assertEquals(100L, done.idleSince)
+        assertEquals(500L, done.copy(restoredAt = 500).idleSince)
+        assertNull(done.copy(pullRequests = emptyMap()).idleSince)
+    }
 
     @Test
     fun aBranchWithNothingOfItsOwnComesBackFromTheLatestBase() =
@@ -541,16 +596,15 @@ class AgentWorkspacesTest {
             File(dir, ".gitignore").writeText("build/\n.env\n")
             git(dir, "add", ".")
             git(dir, "commit", "--quiet", "-m", "ignore")
-            git(dir, "push", "--quiet", "origin", "agent/y")
-            assertFalse(workspaces.hasUnsavedWork(ws))
+            assertFalse(workspaces.cannotFree(ws))
             // What a build makes again, and what the OS leaves: nothing lost.
             File(dir, "build/classes").mkdirs()
             File(dir, "build/classes/A.class").writeText("x")
             File(dir, ".DS_Store").writeText("x")
-            assertFalse(workspaces.hasUnsavedWork(ws))
+            assertFalse(workspaces.cannotFree(ws))
             // A secret only this folder holds.
             File(dir, ".env").writeText("TOKEN=x\n")
-            assertTrue(workspaces.hasUnsavedWork(ws))
+            assertTrue(workspaces.cannotFree(ws))
         }
 
     @Test

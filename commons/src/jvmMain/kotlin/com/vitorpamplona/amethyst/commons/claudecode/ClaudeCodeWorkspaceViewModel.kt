@@ -86,7 +86,7 @@ class ClaudeCodeWorkspaceViewModel(
 
     private val _restoring = MutableStateFlow(false)
 
-    /** Set while a freed workstream's clones are made again, before its pull requests can show. */
+    /** Set while a freed workstream's clones are made again, for what needs them ([withClones]). */
     val restoring: StateFlow<Boolean> = _restoring.asStateFlow()
 
     /** The repository whose pull request is being opened, and why the last one failed. */
@@ -110,54 +110,93 @@ class ClaudeCodeWorkspaceViewModel(
         viewModelScope.launch {
             _loading.value = true
             try {
-                // As saved now: it may have been freed, or brought back, since the screen opened.
-                val latest = withContext(Dispatchers.IO) { service.agentWorkspaces.of(File(known.dir)) } ?: known
-                val ws = if (latest.isFreed) restore(latest) ?: return@launch else latest
-                _rows.value =
-                    service.agentWorkspaces.status(ws).map { status ->
-                        val dir = File(ws.dir, status.repo.name)
-                        val subjects =
-                            GitWorkspace
-                                .git(dir, "log", "--format=%s", "origin/${status.repo.baseBranch}..HEAD")
-                                ?.lines()
-                                ?.filter { it.isNotBlank() }
-                                .orEmpty()
-                        val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
-                        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
-                        // The session list shows it from the saved record, without asking GitHub.
-                        if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
-                        WorkspaceRepoRow(
-                            status = status,
-                            pullRequest = pr,
-                            draftTitle = subjects.lastOrNull() ?: ws.title,
-                            draftBody = subjects.reversed().joinToString("\n") { "- $it" },
-                            nostr = NostrRepoRef.fromConfig(GitWorkspace.git(dir, "config", "--get", "branch.${status.repo.branch}.${GitWorkspace.KEY_REPO}")?.trim()),
-                            gitHub = gitHub,
-                            viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
-                        )
-                    }
+                // As the service knows it now: it may have been freed, or brought back, since the screen opened.
+                val ws = service.workspaceAt(known.dir) ?: known
+                _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
             } finally {
                 _loading.value = false
             }
         }
     }
 
+    /** The repositories as their clones are now. */
+    private suspend fun cloneRows(ws: AgentWorkspace): List<WorkspaceRepoRow> =
+        service.agentWorkspaces.status(ws).map { status ->
+            val dir = File(ws.dir, status.repo.name)
+            val subjects =
+                GitWorkspace
+                    .git(dir, "log", "--format=%s", "origin/${status.repo.baseBranch}..HEAD")
+                    ?.lines()
+                    ?.filter { it.isNotBlank() }
+                    .orEmpty()
+            val nostr = GitWorkspace.git(dir, "config", "--get", "branch.${status.repo.branch}.${GitWorkspace.KEY_REPO}")?.trim()
+            row(ws, status, dir, subjects, nostr)
+        }
+
     /**
-     * Makes a freed workstream's clones again: its pull requests are opened and checked from them.
-     * Null, with the reason shown, when they can't be.
+     * A freed workstream's repositories, from what it kept ([AgentWorkspaces.freedRepos]): seeing
+     * them, and its pull requests, doesn't bring the clones back; opening one does.
      */
-    private suspend fun restore(freed: AgentWorkspace): AgentWorkspace? {
+    private suspend fun freedRows(ws: AgentWorkspace): List<WorkspaceRepoRow> {
+        val kept = withContext(Dispatchers.IO) { service.agentWorkspaces.freedRepos(ws) }
+        // No clone: `gh` runs in the workstream's folder, and asks by URL or by repository.
+        val folder = File(ws.dir)
+        return ws.repos.map { repo ->
+            val summary = kept[repo.name]
+            row(ws, WorkspaceRepoStatus(repo, ahead = summary?.ahead ?: 0, uncommitted = 0), folder, summary?.subjects.orEmpty(), summary?.nostrRepo)
+        }
+    }
+
+    private suspend fun row(
+        ws: AgentWorkspace,
+        status: WorkspaceRepoStatus,
+        /** Where `git` and `gh` run for it: its clone, or the workstream's folder when freed. */
+        dir: File,
+        /** Its commits' subjects, newest first. */
+        subjects: List<String>,
+        nostr: String?,
+    ): WorkspaceRepoRow {
+        val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
+        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
+        // The session list shows it from the saved record, without asking GitHub.
+        if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
+        return WorkspaceRepoRow(
+            status = status,
+            pullRequest = pr,
+            draftTitle = subjects.lastOrNull() ?: ws.title,
+            draftBody = subjects.reversed().joinToString("\n") { "- $it" },
+            nostr = NostrRepoRef.fromConfig(nostr),
+            gitHub = gitHub,
+            viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
+        )
+    }
+
+    /**
+     * Brings a freed workstream's clones back, for what needs them: opening a pull request,
+     * seeing the changes, sending a proposal. False, with the reason shown, when they can't come.
+     */
+    private suspend fun ensureClones(): Boolean {
+        val known = workspace ?: return false
+        val ws = service.workspaceAt(known.dir) ?: known
+        if (!ws.isFreed) return true
         _restoring.value = true
         _errors.update { it - "" }
         return try {
-            service.restoreWorkspace(freed)
+            service.restoreWorkspace(ws)
+            refresh()
+            true
         } catch (e: IOException) {
             Log.w("ClaudeCodeWorkspace", "Could not bring the clones back", e)
-            _errors.update { it + ("" to PullRequestError(e.message ?: freed.dir, pushed = false)) }
-            null
+            _errors.update { it + ("" to PullRequestError(e.message ?: ws.dir, pushed = false)) }
+            false
         } finally {
             _restoring.value = false
         }
+    }
+
+    /** Runs [action] (a screen that reads the clones) once they are there. */
+    fun withClones(action: () -> Unit) {
+        viewModelScope.launch { if (ensureClones()) action() }
     }
 
     /** Pushes the repository's branch and opens its pull request, on the user's click. */
@@ -174,6 +213,8 @@ class ClaudeCodeWorkspaceViewModel(
         _errors.update { it - repo }
         viewModelScope.launch {
             try {
+                // A freed workstream pushes from its clones: they come back first.
+                if (!ensureClones()) return@launch
                 when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft, upstream = row.gitHub)) {
                     is GitHubPullRequests.Result.Failed -> {
                         _errors.update { it + (repo to PullRequestError(result.reason, result.pushed)) }
