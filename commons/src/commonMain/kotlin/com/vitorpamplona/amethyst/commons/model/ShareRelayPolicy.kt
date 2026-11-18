@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -29,10 +30,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
- * Which events Amethyst may copy to the share relay ([com.vitorpamplona.amethyst.commons.defaults.Constants.brainstorm])
- * when the user makes a web link for them. A web link page can only render what its relay can
- * serve, so a shared note is pushed there first; but a share link must never be the path by
- * which private content reaches a public relay.
+ * Which events Amethyst copies to the share relay ([RELAYS]) when the user makes a web link for
+ * them. A web link page can only render what its relay can serve, so a shared note is pushed there
+ * first; but a share link must never be the path by which private content reaches a public relay.
  *
  * Pushed: signed events that already live on public relays. Never pushed:
  * - unsigned rumors (NIP-17 DMs, Concord and Marmot messages, private replies): they have no
@@ -44,6 +44,30 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * - NIP-70 protected events (a `-` tag): only their author may publish them to a relay.
  */
 object ShareRelayPolicy {
+    /** The relay that backs Amethyst's share links: Brainstorm's, which its web pages read from. */
+    val RELAYS = setOf(Constants.brainstorm)
+
+    /**
+     * What sharing [note]'s link copies to [RELAYS]: the note, then its author's profile and relay
+     * list (so the page shows their name and picture and can follow their outbox). Empty for a note
+     * that must not leave its relays. [profileOf] finds a user's cached kind 0.
+     */
+    fun eventsToPush(
+        note: Note,
+        profileOf: (User) -> Event?,
+    ): List<Event> {
+        if (!canPush(note)) return emptyList()
+        val event = note.event ?: return emptyList()
+        val author = note.author ?: return listOf(event)
+        return listOf(event) + eventsToPush(author, profileOf)
+    }
+
+    /** What sharing [user]'s profile link copies to [RELAYS]: their profile and relay list. */
+    fun eventsToPush(
+        user: User,
+        profileOf: (User) -> Event?,
+    ): List<Event> = listOfNotNull(profileOf(user), user.nip65RelayListNote.event).filter { canPush(it) }
+
     fun canPush(note: Note): Boolean {
         if (note.rumorHost != null) return false
         val event = note.event ?: return false

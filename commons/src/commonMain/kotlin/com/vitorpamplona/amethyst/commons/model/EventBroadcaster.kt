@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.filter
@@ -58,9 +57,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * several addressables by the same author (a calendar listing its own appointments).
  */
 fun addressedAuthors(event: AddressHintProvider): Set<HexKey> = event.linkedAddressIds().mapNotNullTo(mutableSetOf()) { Address.parse(it)?.pubKeyHex }
-
-/** The relay that backs Amethyst's share links: Brainstorm's, which its web pages read from. */
-private val SHARE_RELAYS = setOf(Constants.brainstorm)
 
 /**
  * The sign-and-publish choke point for an [Account]: computes the relay set an
@@ -205,24 +201,14 @@ class EventBroadcaster(
     /**
      * Copies [note] to the share relay when the user hands out its web link, so the page the link
      * opens ([com.vitorpamplona.amethyst.commons.util.shareLinkForEvent]) can find it wherever it
-     * was posted. The author's profile and relay list go along, so the page shows their name and
-     * picture and can follow their outbox. Private and relay-gated content is never copied: see
-     * [ShareRelayPolicy].
+     * was posted. Private and relay-gated content is never copied: see [ShareRelayPolicy].
      */
-    fun pushToShareRelay(note: Note) {
-        if (!ShareRelayPolicy.canPush(note)) return
-        val event = note.event ?: return
-        account.client.publish(event, SHARE_RELAYS)
-        note.author?.let { pushToShareRelay(it) }
-    }
+    fun pushToShareRelay(note: Note) = ShareRelayPolicy.eventsToPush(note, ::cachedProfile).forEach { account.client.publish(it, ShareRelayPolicy.RELAYS) }
 
     /** Copies [user]'s profile and relay list to the share relay when their web link is shared. */
-    fun pushToShareRelay(user: User) {
-        val profile = account.cache.getAddressableNoteIfExists(Address(MetadataEvent.KIND, user.pubkeyHex, ""))?.event
-        listOfNotNull(profile, user.nip65RelayListNote.event).forEach {
-            if (ShareRelayPolicy.canPush(it)) account.client.publish(it, SHARE_RELAYS)
-        }
-    }
+    fun pushToShareRelay(user: User) = ShareRelayPolicy.eventsToPush(user, ::cachedProfile).forEach { account.client.publish(it, ShareRelayPolicy.RELAYS) }
+
+    private fun cachedProfile(user: User) = account.cache.getAddressableNoteIfExists(Address(MetadataEvent.KIND, user.pubkeyHex, ""))?.event
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,
