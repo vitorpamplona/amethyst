@@ -405,11 +405,6 @@ class ClaudeCodeProposeViewModel(
     /** The chat's agent is writing the title and description ([draftWithAgent]). */
     val drafting: StateFlow<Boolean> = _drafting.asStateFlow()
 
-    private val _draftedBy = MutableStateFlow<String?>(null)
-
-    /** The agent the title and description came from, until the user changes them. */
-    val draftedBy: StateFlow<String?> = _draftedBy.asStateFlow()
-
     private val _draftFailed = MutableStateFlow(false)
 
     /** The last draft the agent was asked for never came back. */
@@ -564,7 +559,6 @@ class ClaudeCodeProposeViewModel(
     /** The user's own text. An agent draft still being written stops: what was typed stays. */
     fun setDraft(draft: ProposalDraft) {
         _draft.value = draft
-        _draftedBy.value = null
         stopDrafting()
     }
 
@@ -592,12 +586,7 @@ class ClaudeCodeProposeViewModel(
                 try {
                     val prompt = draftPrompt(dir, info)
                     val draft = service.askAside(key, prompt)?.let(::parseDraftAnswer)
-                    if (draft != null) {
-                        _draft.value = draft
-                        _draftedBy.value = agentName
-                    } else {
-                        _draftFailed.value = true
-                    }
+                    if (draft != null) _draft.value = draft else _draftFailed.value = true
                 } finally {
                     // A newer draft took over: it says when it is done.
                     if (draftJob === coroutineContext[Job]) {

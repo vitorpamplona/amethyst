@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,6 +45,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -89,8 +91,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_close
 import com.vitorpamplona.amethyst.commons.resources.claude_code_commit_prompt
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_failed
-import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_with
-import com.vitorpamplona.amethyst.commons.resources.claude_code_drafted_by
 import com.vitorpamplona.amethyst.commons.resources.claude_code_drafting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_cancelled
@@ -125,9 +125,11 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_step_describe
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_write_it_myself
-import com.vitorpamplona.amethyst.commons.resources.try_again
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -200,7 +202,6 @@ private fun ProposeForm(
     val publishState by proposals.state.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val drafting by viewModel.drafting.collectAsStateWithLifecycle()
-    val draftedBy by viewModel.draftedBy.collectAsStateWithLifecycle()
     val draftFailed by viewModel.draftFailed.collectAsStateWithLifecycle()
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -292,16 +293,23 @@ private fun ProposeForm(
 
             var step = 0
             if (!isUpdate) {
-                ProposeStep(++step, stringRes(Res.string.claude_code_step_describe), done = title.isNotBlank()) {
+                ProposeStep(
+                    ++step,
+                    stringRes(Res.string.claude_code_step_describe),
+                    done = title.isNotBlank(),
+                    trailing = {
+                        DraftMenu(
+                            agent = viewModel.agentName,
+                            drafting = drafting,
+                            onRedraft = viewModel::draftWithAgent,
+                            onStop = viewModel::stopDrafting,
+                        )
+                    },
+                ) {
                     val value = draft ?: ProposalDraft("", "")
-                    DraftStatus(
-                        agent = viewModel.agentName,
-                        drafting = drafting,
-                        draftedBy = draftedBy,
-                        failed = draftFailed,
-                        onDraft = viewModel::draftWithAgent,
-                        onStop = viewModel::stopDrafting,
-                    )
+                    if (draftFailed) {
+                        Text(stringRes(Res.string.claude_code_draft_failed, viewModel.agentName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                     LabeledField(Res.string.claude_code_propose_title) {
                         FormTextField(value = value.title, onValueChange = { viewModel.setDraft(value.copy(title = it)) })
                     }
@@ -457,6 +465,8 @@ private fun ProposeStep(
     number: Int,
     title: String,
     done: Boolean,
+    /** At the end of the step's title row: its status and menu. */
+    trailing: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // A step starts a section: more room above it than between its parts.
@@ -476,7 +486,8 @@ private fun ProposeStep(
                 }
             }
             Spacer(Modifier.width(InlineGap))
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            trailing()
         }
         // Under the title, past the 24 dp mark and its gap.
         Column(Modifier.padding(start = 24.dp + InlineGap), verticalArrangement = Arrangement.spacedBy(PartGap)) { content() }
@@ -610,43 +621,36 @@ private fun ngitAccountName(
 }
 
 /**
- * Where the title and description come from: the agent writing them (the user can take over),
- * the agent's draft (to edit, or ask again), or the user's own text (an agent can still draft).
+ * The describe step's corner: a note while the agent writes the title and description, and the
+ * menu to ask it again or to stop it and write them by hand.
  */
 @Composable
-private fun DraftStatus(
+private fun RowScope.DraftMenu(
     agent: String,
     drafting: Boolean,
-    draftedBy: String?,
-    failed: Boolean,
-    onDraft: () -> Unit,
+    onRedraft: () -> Unit,
     onStop: () -> Unit,
 ) {
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-        when {
-            drafting -> {
-                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(stringRes(Res.string.claude_code_drafting, agent), style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.weight(1f))
-                TextButton(onClick = onStop) { Text(stringRes(Res.string.claude_code_write_it_myself)) }
-            }
-            draftedBy != null -> {
-                Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringRes(Res.string.claude_code_drafted_by, draftedBy), style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.weight(1f))
-                TextButton(onClick = onDraft) { Text(stringRes(Res.string.claude_code_redraft)) }
-            }
-            failed -> {
-                Text(stringRes(Res.string.claude_code_draft_failed, agent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-                TextButton(onClick = onDraft) { Text(stringRes(Res.string.try_again)) }
-            }
-            else -> {
-                Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = onDraft) {
-                    Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringRes(Res.string.claude_code_draft_with, agent))
+    if (drafting) {
+        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+        Spacer(Modifier.width(InlineGap))
+        Text(stringRes(Res.string.claude_code_drafting, agent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options)) }
+        RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            RoundedMenuSection {
+                if (drafting) {
+                    MenuRow(stringRes(Res.string.claude_code_write_it_myself)) {
+                        open = false
+                        onStop()
+                    }
+                } else {
+                    MenuRow(stringRes(Res.string.claude_code_redraft, agent)) {
+                        open = false
+                        onRedraft()
+                    }
                 }
             }
         }
