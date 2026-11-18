@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.llamagarden.ui.LlamaGardenKindActions
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
@@ -98,6 +99,9 @@ fun EventKindScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             item(key = "header") { KindHeader(kind, remember(definitions) { NipsOnNostr.labelOf(kind, definitions) }, nav) }
+            // A kind whose protocol has actions of its own beyond one event (llama.garden: request a
+            // model, list a torrent) offers them under the header.
+            item(key = "actions") { LlamaGardenKindActions(kind, accountViewModel) }
 
             item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), loadingDefinitions) }
             if (definitions.isEmpty() && !loadingDefinitions) {

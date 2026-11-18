@@ -271,6 +271,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowProgress
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowResult
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClassifieds
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClientRelease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityRules
@@ -367,6 +368,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderModelRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderModelTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDevFee
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDispute
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroUserRating
@@ -425,6 +428,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoutstrNode
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSeederRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
@@ -699,6 +703,12 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVe
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.UnrecognizedKind30103Event
+import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
+import com.vitorpamplona.quartz.llamagarden.seederRequest.SeederRequestEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.UnrecognizedKind30099Event
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -2216,9 +2226,18 @@ internal fun RenderNoteRow(
             is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
             is DrssReadWriteListsEvent -> RenderDrssReadWriteLists(baseNote, accountViewModel, nav)
 
+            // llama.garden's model torrents, seeder requests, model requests and viewer releases
+            // (types/LlamaGarden.kt); the other apps' events on 30099 and 30103 below.
+            is ModelTorrentEvent -> RenderModelTorrent(baseNote, accountViewModel, nav)
+            is SeederRequestEvent -> RenderSeederRequest(baseNote, nav)
+            is ModelRequestEvent -> RenderModelRequest(baseNote)
+            is ClientReleaseEvent -> RenderClientRelease(baseNote)
+
             // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
             // were typed.
             is UnrecognizedKind30054Event,
+            is UnrecognizedKind30099Event,
+            is UnrecognizedKind30103Event,
             is UnrecognizedKind30100Event,
             is UnrecognizedKind30101Event,
             is UnrecognizedKind30102Event,
