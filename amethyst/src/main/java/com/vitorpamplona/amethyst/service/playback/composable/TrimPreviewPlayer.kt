@@ -30,6 +30,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -53,8 +58,40 @@ fun TrimPreviewPlayer(
     modifier: Modifier,
 ) {
     val context = LocalContext.current
-    val player = remember(context) { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ONE } }
+    val player =
+        remember(context) {
+            ExoPlayer
+                .Builder(context)
+                // Takes the audio focus like any player the user started (a podcast playing pauses),
+                // and stops when headphones come out.
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true,
+                ).setHandleAudioBecomingNoisy(true)
+                .build()
+                .apply { repeatMode = Player.REPEAT_MODE_ONE }
+        }
     DisposableEffect(player) { onDispose { player.release() } }
+
+    // The Studio stays composed when the app goes to the background: the loop must not keep playing
+    // there. It picks up again when the app comes back.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(player, lifecycle) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> player.pause()
+                    Lifecycle.Event.ON_START -> player.play()
+                    else -> Unit
+                }
+            }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(player, videoUri, startMs, endMs) {
         // A clip, so the loop wraps at the trim's end and the position starts at its start.
@@ -72,7 +109,8 @@ fun TrimPreviewPlayer(
                 .build(),
         )
         player.prepare()
-        player.playWhenReady = true
+        // Not when it opens in the background (a rotation or a return re-composes it).
+        player.playWhenReady = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
     }
 
     val latestOnPosition by rememberUpdatedState(onPositionMs)

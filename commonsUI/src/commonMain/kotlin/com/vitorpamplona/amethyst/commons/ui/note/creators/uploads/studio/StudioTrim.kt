@@ -76,11 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.media_trim_hint
 import com.vitorpamplona.amethyst.commons.resources.pause
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
-import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
-import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
@@ -113,11 +110,11 @@ internal fun canPlayTrim(
 ): Boolean = if (item.media.isGif()) uploader.gifTrim else LocalNotePlatform.current.canPlayTrimPreview
 
 /**
- * What a GIF plays as once trimmed: a temp copy holding only the frames [item]'s
- * [com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions.trim] keeps, so every
- * preview loops what will be sent (a crop is drawn over it, as on the picked file). The picked
- * file while there is no trim, and until the first copy is written; the last copy while the next
- * one is. Each copy is deleted once replaced or left.
+ * What a GIF plays as once trimmed: the item's shared copy holding only the frames its
+ * [com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions.trim] keeps
+ * ([SelectedMediaProcessing.trimmedGif]), so every preview loops what will be sent and the upload
+ * sends that same copy (a crop is drawn over it, as on the picked file). The picked file while there
+ * is no trim and until the first copy is written; the last copy while the next one is.
  */
 @Composable
 internal fun rememberTrimmedGif(
@@ -126,57 +123,45 @@ internal fun rememberTrimmedGif(
 ): String {
     val media = item.media
     val trim = item.options.trim
-    // The trim a copy was made for, and the copy.
-    var edited by remember(media, uploader) { mutableStateOf<Pair<VideoTrim, MediaUri>?>(null) }
-    LaunchedEffect(media, trim, uploader) {
-        if (uploader == null || !media.isGif() || trim == null || edited?.first == trim) return@LaunchedEffect
+    if (uploader == null || !media.isGif()) return media.uri.toString()
+    // Held while shown, so the copy outlives neither this preview nor the last one using it.
+    DisposableEffect(item, uploader) {
+        item.holdTrimmedGif()
+        onDispose { item.releaseTrimmedGif() }
+    }
+    var shown by remember(item) { mutableStateOf(item.trimmedGifNow(trim)) }
+    LaunchedEffect(item, trim, uploader) {
+        if (trim == null) return@LaunchedEffect
+        item.trimmedGifNow(trim)?.let {
+            shown = it
+            return@LaunchedEffect
+        }
         // Lets a drag settle before writing a copy.
         delay(300)
-        val copy = uploader.editGif(media.uri, null, trim) ?: return@LaunchedEffect
-        val replaced = edited
-        edited = trim to copy.uri
-        replaced?.let { uploader.discardTempFile(it.second) }
+        item.trimmedGif(uploader, trim)?.let { shown = it }
     }
-    DisposableEffect(media, uploader) {
-        onDispose { edited?.let { uploader?.discardTempFile(it.second) } }
-    }
-    return if (trim != null && media.isGif()) edited?.second?.toString() ?: media.uri.toString() else media.uri.toString()
+    return if (trim == null) media.uri.toString() else (shown ?: media.uri).toString()
 }
 
-/** How long [item]'s video runs, once [uploader] has read it; at once when it was read before (Trim reopened). */
+/** How long [item]'s video runs, once [uploader] has read it; at once when the open Studio read it before. */
 @Composable
 internal fun rememberVideoDuration(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ): Long? {
-    val key = item.media
-    val duration by produceState(StudioFileFacts.durations[key], item.media) {
-        if (value == null) value = uploader.videoDurationMs(item.media.uri)?.also { StudioFileFacts.durations[key] = it }
+    val reads = LocalStudioReads.current
+    val media = item.media
+    val duration by produceState(reads?.durationNow(media), media, reads) {
+        if (value != null) return@produceState
+        value = reads?.duration(media) { uploader.videoDurationMs(media.uri) } ?: uploader.videoDurationMs(media.uri)
     }
     return duration
 }
 
 /**
- * What the Studio read about the last few files it opened (a video's length, its probe), so a tool
- * opened again doesn't show its "unknown" state for a frame while the file is read again. Keyed by
- * the pick itself, not its path: a camera or a temp file can reuse a path for a different file.
- * UI thread only.
- */
-internal object StudioFileFacts {
-    private const val KEEP = 16
-
-    private fun <V> recent() =
-        object : LinkedHashMap<SelectedMedia, V>(KEEP, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<SelectedMedia, V>?) = size > KEEP
-        }
-
-    val durations: MutableMap<SelectedMedia, Long> = recent()
-    val probes: MutableMap<SelectedMedia, VideoInfo?> = recent()
-}
-
-/**
  * One frame of [item]'s video near [atMs] as JPEG bytes, keeping the last one while the next loads.
- * A frame decoded before (the Quality stage's, when Trim opens on the same moment) shows at once.
+ * In the Studio, a frame another part of it read (the still under every tool, Trim opening on the
+ * same moment) shows at once, and one being read is waited for rather than decoded again.
  */
 @Composable
 internal fun rememberVideoFrame(
@@ -185,52 +170,22 @@ internal fun rememberVideoFrame(
     atMs: Long,
     maxEdge: Int,
 ): ByteArray? {
+    val reads = LocalStudioReads.current
+    val media = item.media
     val bucket = atMs / FRAME_STEP_MS
-    val key = DecodedFrames.Key(item.media, bucket, maxEdge)
-    var shown by remember(item.media) { mutableStateOf(DecodedFrames[key]) }
-    LaunchedEffect(item.media, bucket) {
-        DecodedFrames[key]?.let {
+    val key = StudioReads.FrameKey(media, bucket, maxEdge)
+    var shown by remember(media) { mutableStateOf(reads?.frameNow(key)) }
+    LaunchedEffect(media, bucket, reads) {
+        reads?.frameNow(key)?.let {
             shown = it
             return@LaunchedEffect
         }
-        // Lets a drag settle before decoding.
-        delay(80)
-        uploader.videoFrame(item.media.uri, bucket * FRAME_STEP_MS, maxEdge)?.let {
-            DecodedFrames[key] = it
-            shown = it
-        }
+        // Lets a drag settle before decoding, unless that frame is already on its way.
+        if (reads == null || !reads.hasFrame(key)) delay(80)
+        val read: suspend () -> ByteArray? = { uploader.videoFrame(media.uri, bucket * FRAME_STEP_MS, maxEdge) }
+        (reads?.frame(key, read) ?: read())?.let { shown = it }
     }
     return shown
-}
-
-/**
- * The last few stage frames decoded, so a stage that opens on a moment another one just showed
- * (switching tools, reopening a file) doesn't go black while ffmpeg or the retriever decode it
- * again. Read and written from composition and its effects, on the UI thread.
- */
-private object DecodedFrames {
-    data class Key(
-        /** The pick itself, not its path, which a camera or a temp file can reuse for another file. */
-        val media: SelectedMedia,
-        val bucket: Long,
-        val maxEdge: Int,
-    )
-
-    private const val KEEP = 12
-
-    private val frames =
-        object : LinkedHashMap<Key, ByteArray>(KEEP, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, ByteArray>?) = size > KEEP
-        }
-
-    operator fun get(key: Key): ByteArray? = frames[key]
-
-    operator fun set(
-        key: Key,
-        frame: ByteArray,
-    ) {
-        frames[key] = frame
-    }
 }
 
 /** Frames are decoded at this step, so a drag doesn't ask for one per pixel. */
@@ -256,7 +211,8 @@ internal fun StudioTrimStage(
     // A stage left playing (another tool, another file) starts stopped next time.
     DisposableEffect(session) { onDispose { session.stop() } }
 
-    val at = session.focusMs ?: start
+    // While it plays, the still under the player is the moment it starts from, not the edge dragged last.
+    val at = if (playing) start else session.focusMs ?: start
     Box(
         Modifier.fillMaxSize().then(
             if (canPlay && duration != null) {
@@ -344,7 +300,8 @@ internal fun TrimTool(
     val canPlay = canPlayTrim(item, uploader) && duration != null
 
     Column(Modifier.fillMaxWidth()) {
-        Filmstrip(item, uploader, duration, start, end, enabled, playheadMs = session.playheadMs.takeIf { session.playing }) { newStart, newEnd, focus ->
+        // Read in the filmstrip's drawing only: the playhead moves many times a second and only redraws there.
+        Filmstrip(item, uploader, duration, start, end, enabled, playheadMs = { session.playheadMs.takeIf { session.playing } }) { newStart, newEnd, focus ->
             val total = duration ?: return@Filmstrip
             // The stage shows the edge being moved; it plays the new part when asked again.
             session.stop()
@@ -389,8 +346,8 @@ private fun Filmstrip(
     start: Long,
     end: Long,
     enabled: Boolean,
-    /** Where the kept part is playing, drawn as a line; null draws none. */
-    playheadMs: Long?,
+    /** Where the kept part is playing, drawn as a line; null draws none. Read while drawing, so it moves without a recomposition. */
+    playheadMs: () -> Long?,
     onChange: (start: Long, end: Long, focus: Long) -> Unit,
 ) {
     val frames = remember(item.media) { mutableStateListOf<ByteArray?>() }
@@ -509,8 +466,9 @@ private fun Filmstrip(
             val notchH = size.height / 3
             drawLine(notch, Offset(sx + grip / 2, (size.height - notchH) / 2), Offset(sx + grip / 2, (size.height + notchH) / 2), 2.dp.toPx())
             drawLine(notch, Offset(ex - grip / 2, (size.height - notchH) / 2), Offset(ex - grip / 2, (size.height + notchH) / 2), 2.dp.toPx())
-            if (playheadMs != null) {
-                val px = (playheadMs.coerceIn(start, end).toFloat() / total * size.width).coerceIn(sx + grip, ex - grip)
+            val playhead = playheadMs()
+            if (playhead != null) {
+                val px = (playhead.coerceIn(start, end).toFloat() / total * size.width).coerceIn(sx + grip, ex - grip)
                 drawLine(notch, Offset(px, 0f), Offset(px, size.height), 2.dp.toPx())
             }
         }

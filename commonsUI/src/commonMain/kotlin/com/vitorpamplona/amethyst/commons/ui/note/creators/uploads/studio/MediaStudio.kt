@@ -59,7 +59,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +70,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -297,109 +300,127 @@ fun MediaStudio(
     SuggestAltText(items, altSuggester)
     PreparePreviews(current, previews, cropped, isUploading || tool == StudioTool.CROP)
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding(),
-    ) {
-        StudioTopBar(
-            position = items.indexOf(current) + 1,
-            count = items.size,
-            isUploading = isUploading,
-            confirmLabel = confirmLabel,
-            onCancel = onCancel.takeIf { canCancel },
-            onRemove = { onRemove(current) },
-            onAdd = { onAdd(server) },
-        )
-
-        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
-            // A video's first frame to be sent stays under every tool's stage, so switching tools
-            // never shows a black frame while the next stage loads its own.
-            if (current.media.isVideo() == true && uploader.videoTrim) {
-                val still = rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
-                if (still != null) AsyncImage(model = still, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-            }
-            // Trim opens on a still and needs the length: read them now, so the first visit to Trim
-            // doesn't open on black with no times. A video's still is the one just above.
-            if (StudioTool.TRIM in tools) {
-                if (current.media.isGif()) rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
-                rememberVideoDuration(current, uploader)
-            }
-            if (tool == StudioTool.TRIM) {
-                StudioTrimStage(current, uploader, trimSession)
-            } else if (tool == StudioTool.CROP) {
-                StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
-            } else {
-                StudioPreview(current, previews, cropped, uploader, holdingOriginal)
-            }
-            UploadOverlay(current)
-        }
-
-        UploadErrorBanner(current, confirmLabel)
-
-        if (items.size > 1) {
-            // On the stage's black, in either theme: the strip belongs to the pictures, not the panel.
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            ) {
-                items.forEachIndexed { index, item ->
-                    key(item) {
-                        Thumbnail(item, item === current, stringRes(Res.string.media_studio_position, index + 1, items.size)) { selected = item }
-                    }
-                }
+    // A trimmed GIF's copy is written once for the whole Studio: held while it is open, so moving
+    // between tools (each stage a holder of its own) doesn't let it go and write it again.
+    // Per file, so removing one doesn't let go of the others.
+    items.forEach { item ->
+        key(item) {
+            DisposableEffect(item) {
+                item.holdTrimmedGif()
+                onDispose { item.releaseTrimmedGif() }
             }
         }
+    }
 
-        Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(top = 12.dp)) {
-                // The post's own text heads the panel, in the same filled style as the tools below it.
-                if (caption != null) {
-                    StudioTextField(
-                        value = caption,
-                        onValueChange = onCaptionChange,
-                        placeholder = stringRes(Res.string.media_studio_caption_placeholder),
-                        enabled = !isUploading,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    )
+    // Frames, lengths and probes read once for every part of the Studio, and let go with it.
+    val readScope = rememberCoroutineScope()
+    val reads = remember(readScope) { StudioReads(readScope) }
+
+    CompositionLocalProvider(LocalStudioReads provides reads) {
+        Column(
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding(),
+        ) {
+            StudioTopBar(
+                position = items.indexOf(current) + 1,
+                count = items.size,
+                isUploading = isUploading,
+                confirmLabel = confirmLabel,
+                onCancel = onCancel.takeIf { canCancel },
+                onRemove = { onRemove(current) },
+                onAdd = { onAdd(server) },
+            )
+
+            Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
+                // A video's first frame to be sent stays under every tool's stage, so switching tools
+                // never shows a black frame while the next stage loads its own.
+                if (current.media.isVideo() == true && uploader.videoTrim) {
+                    val still = rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
+                    if (still != null) AsyncImage(model = still, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                 }
-                // Each tool's panel has its own height: easing between them lets the stage above
-                // grow or shrink instead of jumping on every tab.
-                Box(
+                // Trim opens on a still and needs the length: read them now, so the first visit to Trim
+                // doesn't open on black with no times. A video's still is the one just above.
+                if (StudioTool.TRIM in tools) {
+                    if (current.media.isGif()) rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
+                    rememberVideoDuration(current, uploader)
+                }
+                if (tool == StudioTool.TRIM) {
+                    StudioTrimStage(current, uploader, trimSession)
+                } else if (tool == StudioTool.CROP) {
+                    StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
+                } else {
+                    StudioPreview(current, previews, cropped, uploader, holdingOriginal)
+                }
+                UploadOverlay(current)
+            }
+
+            UploadErrorBanner(current, confirmLabel)
+
+            if (items.size > 1) {
+                // On the stage's black, in either theme: the strip belongs to the pictures, not the panel.
+                Row(
                     Modifier
                         .fillMaxWidth()
-                        .animateContentSize()
-                        .heightIn(min = 112.dp)
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center,
+                        .background(Color.Black)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 ) {
-                    when (tool) {
-                        StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
-                        StudioTool.TRIM -> TrimTool(current, uploader, trimSession, enabled = !isUploading)
-                        StudioTool.CROP ->
-                            CropTool(
-                                current,
-                                aspect = cropAspects[current] ?: CropAspect.FREE,
-                                enabled = !isUploading,
-                                onAspect = { cropAspects[current] = it },
-                            )
-                        StudioTool.ALT -> AltTool(current)
-                        StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression, showSensitive, privacyExtras)
+                    items.forEachIndexed { index, item ->
+                        key(item) {
+                            Thumbnail(item, item === current, stringRes(Res.string.media_studio_position, index + 1, items.size)) { selected = item }
+                        }
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // The tabs keep their width; the server's name shortens into what is left.
-                    Box(Modifier.weight(1f)) {
-                        ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
+            }
+
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(top = 12.dp)) {
+                    // The post's own text heads the panel, in the same filled style as the tools below it.
+                    if (caption != null) {
+                        StudioTextField(
+                            value = caption,
+                            onValueChange = onCaptionChange,
+                            placeholder = stringRes(Res.string.media_studio_caption_placeholder),
+                            enabled = !isUploading,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                        )
                     }
-                    tools.forEach { t -> ToolTab(t, t == tool) { picked = t } }
+                    // Each tool's panel has its own height: easing between them lets the stage above
+                    // grow or shrink instead of jumping on every tab.
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .animateContentSize()
+                            .heightIn(min = 112.dp)
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when (tool) {
+                            StudioTool.QUALITY -> QualityTool(current, previews, cropped, uploader)
+                            StudioTool.TRIM -> TrimTool(current, uploader, trimSession, enabled = !isUploading)
+                            StudioTool.CROP ->
+                                CropTool(
+                                    current,
+                                    aspect = cropAspects[current] ?: CropAspect.FREE,
+                                    enabled = !isUploading,
+                                    onAspect = { cropAspects[current] = it },
+                                )
+                            StudioTool.ALT -> AltTool(current)
+                            StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression, showSensitive, privacyExtras)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // The tabs keep their width; the server's name shortens into what is left.
+                        Box(Modifier.weight(1f)) {
+                            ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
+                        }
+                        tools.forEach { t -> ToolTab(t, t == tool) { picked = t } }
+                    }
                 }
             }
         }
@@ -641,17 +662,14 @@ private fun VideoPreview(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ) {
-    // Where the platform can decode frames, the stage opens on the first frame that will be sent;
-    // elsewhere its thumbnail. Not both: each is a decode.
+    // Where the platform can decode frames, the Studio draws the first frame to be sent under every
+    // tool (see MediaStudio); this only says when it isn't there yet. Elsewhere, the thumbnail.
     val frame = if (uploader.videoTrim) rememberVideoFrame(item, uploader, item.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE) else null
     val thumbnail = if (!uploader.videoTrim) rememberVideoThumbnail(item.media) else null
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (frame != null) {
-            AsyncImage(model = frame, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-        } else if (thumbnail != null) {
-            Image(thumbnail, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-        } else {
-            Icon(MaterialSymbols.Movie, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
+        when {
+            thumbnail != null -> Image(thumbnail, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            frame == null -> Icon(MaterialSymbols.Movie, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
         }
         if (uploader.videoCompression == VideoCompressionSupport.Supported) {
             val probe = rememberVideoProbe(item, uploader)
@@ -923,25 +941,29 @@ private fun VideoQuality(
 }
 
 /** What [MediaUploader.probeVideo] found; [done] false while it runs. */
+@Immutable
 private class VideoProbe(
     val done: Boolean,
     val info: VideoInfo?,
 )
 
 /**
- * The picked video's probe. Until it answers, a level says nothing rather than the 1080p example
- * meant for a file that can't be probed, which read "1080p video → 1080p" and then jumped to the
- * file's real size.
+ * The picked video's probe, read once for the whole Studio. Until it answers, a level says nothing
+ * rather than the 1080p example meant for a file that can't be probed, which read
+ * "1080p video → 1080p" and then jumped to the file's real size.
  */
 @Composable
 private fun rememberVideoProbe(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ): VideoProbe {
-    val key = item.media
-    val known = key in StudioFileFacts.probes
-    val probe by produceState(VideoProbe(known, StudioFileFacts.probes[key]), item.media) {
-        if (!value.done) value = VideoProbe(true, uploader.probeVideo(item.media.uri).also { StudioFileFacts.probes[key] = it })
+    val reads = LocalStudioReads.current
+    val media = item.media
+    val known = reads?.probeNow(media)
+    val probe by produceState(VideoProbe(known != null, known), media, reads) {
+        if (value.done) return@produceState
+        val info = reads?.probe(media) { uploader.probeVideo(media.uri) } ?: uploader.probeVideo(media.uri)
+        value = VideoProbe(true, info)
     }
     return probe
 }

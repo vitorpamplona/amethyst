@@ -120,6 +120,9 @@ class AttachedMediaState(
             batch.items().forEach { item ->
                 val id = nextId++
                 items[id] = item
+                // Held while the composer keeps the file (undo can bring back a deleted marker),
+                // and taken before the Studio lets go, so a trimmed GIF's copy isn't written again.
+                item.holdTrimmedGif()
                 val insertion = MediaMarkers.insertion(asCharSequence(), cursor, id)
                 replace(cursor, cursor, insertion)
                 cursor += insertion.length
@@ -199,13 +202,19 @@ class AttachedMediaState(
             // The empty line left above files added at the start (see attachPicked) goes if nothing was written there.
             message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }.trimStart('\n')) }
         }
-        items.clear()
+        releaseAll()
         return true
+    }
+
+    /** Lets go of every file this composer kept. */
+    private fun releaseAll() {
+        items.values.forEach { it.releaseTrimmedGif() }
+        items.clear()
     }
 
     fun clear() {
         picking = null
-        items.clear()
+        releaseAll()
         reopened = null
         server = null
     }

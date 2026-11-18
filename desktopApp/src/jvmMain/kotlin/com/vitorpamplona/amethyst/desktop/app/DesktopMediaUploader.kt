@@ -529,11 +529,16 @@ class DesktopMediaUploader(
         uri: MediaUri,
         crop: ImageCrop?,
         trim: VideoTrim?,
-    ): MediaCompressorResult? =
-        withContext(Dispatchers.Default) {
-            val bytes = gifBytes(uri) ?: return@withContext null
-            val active = currentCoroutineContext()
-            val edited = GifEditor.edit(bytes, crop, trim) { active.isActive } ?: return@withContext null
+    ): MediaCompressorResult? {
+        val bytes = gifBytes(uri) ?: return null
+        val edited =
+            withContext(Dispatchers.Default) {
+                val active = currentCoroutineContext()
+                GifEditor.edit(bytes, crop, trim) { active.isActive }
+            } ?: return null
+        // Written past a cancellation, so the caller always gets the file back to keep or delete:
+        // cancelled after writing it, a cancellable block would drop the result and leave the file.
+        return withContext(Dispatchers.IO + NonCancellable) {
             val file = AmethystTempDir.createTempFile("amethyst_gif_", ".gif")
             try {
                 file.writeBytes(edited)
@@ -543,6 +548,7 @@ class DesktopMediaUploader(
             }
             MediaCompressorResult(StringMediaUri(file.absolutePath), GIF_CONTENT_TYPE, file.length())
         }
+    }
 
     override suspend fun videoDurationMs(uri: MediaUri): Long? = gifBytes(uri)?.let { withContext(Dispatchers.Default) { PictureHeaders.gifDurationMs(it) } } ?: videoCompressor.durationMs(fileOf(uri))
 

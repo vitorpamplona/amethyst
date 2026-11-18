@@ -20,8 +20,13 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +34,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import java.io.File
 import java.net.URI
@@ -89,8 +101,24 @@ fun DesktopTrimPreviewPlayer(
     val state by GlobalMediaPlayer.videoState.collectAsState()
     Box(modifier) {
         val engine = GlobalMediaPlayer.activeVideoPlayerState
-        if (engine != null && state.url == url && (surfaceOwner == null || surfaceOwner === owner)) {
+        val failed = state.url == url && state.errorReason != null
+        if (!failed && engine != null && state.url == url && (surfaceOwner == null || surfaceOwner === owner)) {
             VideoSurface(playerState = engine, url = url, modifier = Modifier.fillMaxSize())
+        }
+        // No engine here (Linux without GStreamer reports "Video playback unavailable") or one that
+        // can't read the file: say so over the Studio's still, rather than a Play that seems to do nothing.
+        if (failed) {
+            Text(
+                stringRes(Res.string.error_video_playback_failed),
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
         }
     }
 }

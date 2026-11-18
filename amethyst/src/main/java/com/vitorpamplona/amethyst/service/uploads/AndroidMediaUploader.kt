@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -878,10 +879,15 @@ class AndroidMediaUploader(
         uri: MediaUri,
         crop: ImageCrop?,
         trim: VideoTrim?,
-    ): MediaCompressorResult? =
-        withContext(Dispatchers.IO) {
-            val active = currentCoroutineContext()
-            val edited = VideoTrimmer.editGif(appContext, uri, crop, trim) { active.isActive } ?: return@withContext null
+    ): MediaCompressorResult? {
+        val edited =
+            withContext(Dispatchers.IO) {
+                val active = currentCoroutineContext()
+                VideoTrimmer.editGif(appContext, uri, crop, trim) { active.isActive }
+            } ?: return null
+        // Written past a cancellation, so the caller always gets the file back to keep or delete:
+        // cancelled after writing it, a cancellable block would drop the result and leave the file.
+        return withContext(Dispatchers.IO + NonCancellable) {
             val file = File.createTempFile("gif_", ".gif", appContext.cacheDir)
             try {
                 file.writeBytes(edited)
@@ -891,6 +897,7 @@ class AndroidMediaUploader(
             }
             MediaCompressorResult(Uri.fromFile(file), "image/gif", file.length())
         }
+    }
 
     override suspend fun videoDurationMs(uri: MediaUri): Long? = withContext(Dispatchers.IO) { VideoTrimmer.durationMs(appContext, uri) }
 
