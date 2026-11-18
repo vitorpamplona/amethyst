@@ -56,6 +56,8 @@ Translations live only in this repo; Crowdin is retired, so nothing overwrites a
 - **Exceptions:** `values-zh-rTW` and `values-zh-rHK` are full Traditional-Chinese files (`values-zh` is
   Simplified, so they must not fall back to it); diff and fill them like a base folder. `values-en-rGB`
   overrides the default English.
+- **Indonesian is `values-in`**, never `values-id`: commonsUI's build serves the folder under both codes,
+  since Locale reports `in` on Android 14 and older but `id` on desktop and Android 15+.
 - `tools/agent-hooks/locale_layout_check.py` (pre-push and CI) rejects a regional value identical to the
   base one; `--fix` deletes them.
 - **Copy the English verbatim** for keys a locale keeps in English (brand names like `Nowhere …`,

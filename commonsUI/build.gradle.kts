@@ -270,12 +270,38 @@ kotlin {
     }
 }
 
+// Compose resources match a locale on `Locale.getLanguage()`, and Indonesian has two answers: `in`
+// on Android 14 and older, `id` on desktop Java 17+ and on Android 15+ for apps targeting it. A
+// `values-in` folder alone left desktop and Android 15+ users in English. The catalog keeps one
+// folder people edit (`values-in`), and the build serves it under both codes. Android's own `res/`
+// needs nothing: the framework hands the resource system `in` whatever Locale reports.
+val legacyLanguageAliases = mapOf("in" to "id")
+val composeResourcesSource = layout.projectDirectory.dir("src/commonMain/composeResources")
+val aliasLegacyLanguageFolders by tasks.registering(Sync::class) {
+    from(composeResourcesSource)
+    legacyLanguageAliases.forEach { (legacy, current) ->
+        from(composeResourcesSource.dir("values-$legacy")) { into("values-$current") }
+    }
+    into(layout.buildDirectory.dir("generated/composeResourcesWithAliases/commonMain"))
+    doFirst {
+        legacyLanguageAliases.values.forEach { current ->
+            check(!composeResourcesSource.dir("values-$current").asFile.exists()) {
+                "composeResources/values-$current is generated from values-${legacyLanguageAliases.entries.first { it.value == current }.key}; edit that folder instead"
+            }
+        }
+    }
+}
+
 compose.resources {
     publicResClass = true
     // Kept on the pre-split package so `Res` imports in every consumer
     // (amethyst, desktopApp, nappletHost) keep resolving unchanged.
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
+    customDirectory(
+        sourceSetName = "commonMain",
+        directoryProvider = layout.dir(aliasLegacyLanguageFolders.map { it.destinationDir }),
+    )
 }
 
 // iOS purity gate — shared task, see gradle/kmp-purity.gradle.kts.
