@@ -204,4 +204,10 @@ class ShareRelayPolicyTest {
         assertEquals(setOf(Constants.brainstorm), ShareSite.RELAYS)
         assertEquals("wss://search.brainstorm.world/", Constants.brainstorm.url)
     }
+
+    @Test
+    fun shareLinksAreBareBech32OnBrainstorm() {
+        assertEquals("https://brainstorm.world/nevent1abc", ShareSite.link("nevent1abc"))
+        assertEquals("https://brainstorm.world/nprofile1abc", ShareSite.link("nprofile1abc"))
+    }
 }

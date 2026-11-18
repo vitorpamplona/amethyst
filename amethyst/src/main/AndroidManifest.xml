@@ -284,8 +284,9 @@
                 <data android:host="njump.to" />
             </intent-filter>
 
-            <!-- Brainstorm, where Amethyst's Share links point: its event and profile pages
-                 (/e/<nevent|naddr|note1>, /p/<npub|nprofile>) and bare /<bech32> links. Only paths
+            <!-- Brainstorm, where Amethyst's Share links point: bare /<bech32> links (what Amethyst
+                 hands out) and the event and profile pages they redirect to
+                 (/e/<nevent|naddr|note1>, /p/<npub|nprofile>). Only paths
                  that carry a NIP-19 entity: its other pages, and the /e/<hex> links it sometimes
                  makes, have nothing the app can open, so they stay in the browser. -->
             <intent-filter android:label="brainstorm.world">

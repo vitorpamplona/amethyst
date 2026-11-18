@@ -158,7 +158,7 @@ private fun lightenColor(
 }
 
 val externalLinkForUser = { user: User ->
-    ShareSite.profileLink(user.toNProfile())
+    ShareSite.link(user.toNProfile())
 }
 
 val nipLink = { nipNumber: String ->
@@ -185,7 +185,7 @@ internal fun dedicatedLinkForNote(note: Note): String? {
 
 // An AddressableNote's toNEvent() is its naddr, so this covers both kinds of note.
 val externalLinkForNote = { note: Note ->
-    dedicatedLinkForNote(note) ?: ShareSite.eventLink(note.toNEvent())
+    dedicatedLinkForNote(note) ?: ShareSite.link(note.toNEvent())
 }
 
 /**
@@ -205,7 +205,7 @@ fun TextSharer.shareNoteLink(
     if (dedicated != null) {
         share(dedicated, title, chooserTitle)
     } else {
-        share(ShareSite.eventLink(note.toNEvent()), title, chooserTitle) { accountViewModel.pushToShareRelay(note) }
+        share(ShareSite.link(note.toNEvent()), title, chooserTitle) { accountViewModel.pushToShareRelay(note) }
     }
 }
 
@@ -223,7 +223,7 @@ fun TextSharer.shareChannelLink(
     accountViewModel: AccountViewModel,
     title: String?,
     chooserTitle: String,
-) = share(ShareSite.eventLink(channel.toNEvent()), title, chooserTitle) { channel.creationEventNote?.let { accountViewModel.pushToShareRelay(it) } }
+) = share(ShareSite.link(channel.toNEvent()), title, chooserTitle) { channel.creationEventNote?.let { accountViewModel.pushToShareRelay(it) } }
 
 /**
  * Shares a NIP-29 group's link ([groupNAddr]). Nothing is copied: the group's relay, which the link
@@ -233,7 +233,7 @@ fun TextSharer.shareRelayGroupLink(
     groupNAddr: String,
     title: String?,
     chooserTitle: String,
-) = share(ShareSite.eventLink(groupNAddr), title, chooserTitle)
+) = share(ShareSite.link(groupNAddr), title, chooserTitle)
 
 @Composable
 fun LongPressToQuickAction(

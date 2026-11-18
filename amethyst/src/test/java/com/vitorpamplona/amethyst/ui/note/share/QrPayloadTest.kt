@@ -52,7 +52,7 @@ class QrPayloadTest {
 
             assertTrue(
                 "web mode must produce an https URL so a stock phone camera can action it, got: $payload",
-                payload.startsWith("https://brainstorm.world/e/nevent1"),
+                payload.startsWith("https://brainstorm.world/nevent1"),
             )
         }
 
@@ -110,7 +110,7 @@ class QrPayloadTest {
 
             assertTrue(
                 "an addressable note must link to its naddr page, got: $payload",
-                payload.startsWith("https://brainstorm.world/e/naddr1"),
+                payload.startsWith("https://brainstorm.world/naddr1"),
             )
         }
 }

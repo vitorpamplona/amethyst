@@ -204,7 +204,7 @@ class EventBroadcaster(
 
     /**
      * Copies [note] to the share relay once the user has shared its web link, so the page the link
-     * opens ([ShareSite.eventLink]) can find it wherever it was posted. Private, relay-gated and
+     * opens ([ShareSite.link]) can find it wherever it was posted. Private, relay-gated and
      * already-copied content is left out: see [ShareRelayPolicy].
      *
      * The share relay is usually outside the user's lists, so their Tor settings may route it
