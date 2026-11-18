@@ -68,7 +68,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -960,12 +959,16 @@ private fun rememberVideoProbe(
 ): VideoProbe {
     val reads = LocalStudioReads.current?.probes
     val media = item.media
-    val known = reads?.now(media)
-    val probe by produceState(VideoProbe(known != null, known), media, reads) {
-        if (value.done) return@produceState
-        value = VideoProbe(true, reads.getOrRead(media) { uploader.probeVideo(media.uri) })
+    // Per file: the Studio switches files in place, and produceState would keep the last file's probe.
+    val probe =
+        remember(media, reads) {
+            val known = reads?.now(media)
+            mutableStateOf(VideoProbe(known != null, known))
+        }
+    LaunchedEffect(probe) {
+        if (!probe.value.done) probe.value = VideoProbe(true, reads.getOrRead(media) { uploader.probeVideo(media.uri) })
     }
-    return probe
+    return probe.value
 }
 
 /** In the studio the top level is "Original": the file as picked, the same word the preview uses. */

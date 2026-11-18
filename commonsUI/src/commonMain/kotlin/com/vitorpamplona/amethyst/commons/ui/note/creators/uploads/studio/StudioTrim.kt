@@ -48,7 +48,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -156,11 +155,12 @@ internal fun rememberVideoDuration(
 ): Long? {
     val reads = LocalStudioReads.current?.durations
     val media = item.media
-    val duration by produceState(reads?.now(media), media, reads) {
-        if (value != null) return@produceState
-        value = reads.getOrRead(media) { uploader.videoDurationMs(media.uri) }
+    // Per file: the Studio switches files in place, and produceState would keep the last file's length.
+    val duration = remember(media, reads) { mutableStateOf(reads?.now(media)) }
+    LaunchedEffect(duration) {
+        if (duration.value == null) duration.value = reads.getOrRead(media) { uploader.videoDurationMs(media.uri) }
     }
-    return duration
+    return duration.value
 }
 
 /**
