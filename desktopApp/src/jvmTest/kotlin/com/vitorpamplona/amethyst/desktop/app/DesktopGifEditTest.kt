@@ -126,7 +126,12 @@ class DesktopGifEditTest {
         name: String,
     ): List<BufferedImage> {
         val out = File(dir, name).apply { mkdirs() }
-        ffmpeg("-i", gif.absolutePath, "-fps_mode", "passthrough", File(out, "%03d.png").absolutePath)
+        // Every frame as it is, none dropped or doubled: -fps_mode since ffmpeg 5.1, -vsync before it
+        // (ffmpeg 9 removed -vsync).
+        val target = File(out, "%03d.png").absolutePath
+        runCatching { ffmpeg("-i", gif.absolutePath, "-fps_mode", "passthrough", target) }
+            .recover { if ("fps_mode" in it.message.orEmpty()) ffmpeg("-i", gif.absolutePath, "-vsync", "0", target) else throw it }
+            .getOrThrow()
         return out.listFiles()!!.sortedBy { it.name }.map { ImageIO.read(it) }
     }
 
