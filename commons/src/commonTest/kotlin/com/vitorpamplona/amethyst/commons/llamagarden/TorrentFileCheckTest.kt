@@ -82,7 +82,7 @@ class TorrentFileCheckTest {
         runTest {
             val event =
                 ModelTorrentEvent
-                    .buildSubmission(ModelTorrentEvent.userSubmissionDTag("22".repeat(32), hash), "https://nostr.download/x.torrent", "model")
+                    .buildSubmission("22".repeat(32), "https://nostr.download/x.torrent", "model")
                     .let { EventFactory.create<ModelTorrentEvent>("11".repeat(32), "22".repeat(32), it.createdAt, it.kind, it.tags, it.content, "00".repeat(64)) }
             val check = TorrentFileCheck.check(event) { torrent }
             assertEquals(TorrentFileCheck.Unchecked("https://nostr.download/x.torrent"), check)

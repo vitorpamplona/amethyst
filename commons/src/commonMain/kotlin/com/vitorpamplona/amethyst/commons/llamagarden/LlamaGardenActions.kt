@@ -23,13 +23,11 @@ package com.vitorpamplona.amethyst.commons.llamagarden
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
-import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.llamagarden.curation.LlamaGardenCuration
 import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
 import com.vitorpamplona.quartz.llamagarden.seederRequest.SeederRequestEvent
 import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 
 /**
@@ -82,21 +80,18 @@ object LlamaGardenActions {
         hfMatch: String,
     ) {
         if (!account.signer.isWriteable() || torrentUrl.isBlank() || name.isBlank()) return
-        val url = torrentUrl.trim()
-        val title = name.trim()
-        val dTag = ModelTorrentEvent.userSubmissionDTag(account.signer.pubKey, sha256("$url:$title".encodeToByteArray()).toHexKey())
         val template =
             ModelTorrentEvent.buildSubmission(
-                dTag = dTag,
-                torrentUrl = url,
-                name = title,
+                submitter = account.signer.pubKey,
+                torrentUrl = torrentUrl,
+                name = name,
                 approximateSize = approximateSizeGb?.let { (it * BYTES_PER_GIB).toLong() },
-                huggingFaceUrl = huggingFaceUrl?.trim()?.ifEmpty { null },
+                huggingFaceUrl = huggingFaceUrl,
                 fileClass = fileClass,
                 modelKind = modelKind,
-                lab = lab?.trim()?.ifEmpty { null },
-                quantType = quantType?.trim()?.ifEmpty { null },
-                torrentTool = torrentTool?.trim()?.ifEmpty { null },
+                lab = lab,
+                quantType = quantType,
+                torrentTool = torrentTool,
                 hfMatch = hfMatch,
             )
         account.sendMinedLikeTheViewer(template)
