@@ -92,6 +92,7 @@ internal class TrimSession {
 
     /** The kept part plays on the stage, over and over; dragging an edge stops it. */
     var playing by mutableStateOf(false)
+        private set
 
     /** Where the playing video is, for the filmstrip's playhead; null when the platform doesn't say. */
     var playheadMs by mutableStateOf<Long?>(null)
@@ -99,6 +100,10 @@ internal class TrimSession {
     fun stop() {
         playing = false
         playheadMs = null
+    }
+
+    fun toggle() {
+        if (playing) stop() else playing = true
     }
 }
 
@@ -149,11 +154,11 @@ internal fun rememberVideoDuration(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ): Long? {
-    val reads = LocalStudioReads.current
+    val reads = LocalStudioReads.current?.durations
     val media = item.media
-    val duration by produceState(reads?.durationNow(media), media, reads) {
+    val duration by produceState(reads?.now(media), media, reads) {
         if (value != null) return@produceState
-        value = reads?.duration(media) { uploader.videoDurationMs(media.uri) } ?: uploader.videoDurationMs(media.uri)
+        value = reads.getOrRead(media) { uploader.videoDurationMs(media.uri) }
     }
     return duration
 }
@@ -170,20 +175,19 @@ internal fun rememberVideoFrame(
     atMs: Long,
     maxEdge: Int,
 ): ByteArray? {
-    val reads = LocalStudioReads.current
+    val reads = LocalStudioReads.current?.frames
     val media = item.media
     val bucket = atMs / FRAME_STEP_MS
     val key = StudioReads.FrameKey(media, bucket, maxEdge)
-    var shown by remember(media) { mutableStateOf(reads?.frameNow(key)) }
+    var shown by remember(media) { mutableStateOf(reads?.now(key)) }
     LaunchedEffect(media, bucket, reads) {
-        reads?.frameNow(key)?.let {
+        reads?.now(key)?.let {
             shown = it
             return@LaunchedEffect
         }
         // Lets a drag settle before decoding, unless that frame is already on its way.
-        if (reads == null || !reads.hasFrame(key)) delay(80)
-        val read: suspend () -> ByteArray? = { uploader.videoFrame(media.uri, bucket * FRAME_STEP_MS, maxEdge) }
-        (reads?.frame(key, read) ?: read())?.let { shown = it }
+        if (reads == null || !reads.has(key)) delay(80)
+        reads.getOrRead(key) { uploader.videoFrame(media.uri, bucket * FRAME_STEP_MS, maxEdge) }?.let { shown = it }
     }
     return shown
 }
@@ -201,11 +205,11 @@ internal fun StudioTrimStage(
     uploader: MediaUploader,
     session: TrimSession,
 ) {
-    val canPlay = canPlayTrim(item, uploader)
     val duration = rememberVideoDuration(item, uploader)
+    val canPlay = canPlayTrim(item, uploader) && duration != null
     val start = item.options.trim?.startMs ?: 0L
     val end = item.options.trim?.endMs ?: duration ?: 0L
-    val playing = session.playing && canPlay && duration != null
+    val playing = session.playing && canPlay
     // Written as the edges move, not when Play is pressed, so it plays the part kept at once.
     val trimmedGif = if (item.media.isGif()) rememberTrimmedGif(item, uploader) else null
     // A stage left playing (another tool, another file) starts stopped next time.
@@ -215,8 +219,8 @@ internal fun StudioTrimStage(
     val at = if (playing) start else session.focusMs ?: start
     Box(
         Modifier.fillMaxSize().then(
-            if (canPlay && duration != null) {
-                Modifier.clickable(interactionSource = null, indication = null) { if (session.playing) session.stop() else session.playing = true }
+            if (canPlay) {
+                Modifier.clickable(interactionSource = null, indication = null) { session.toggle() }
             } else {
                 Modifier
             },
@@ -242,7 +246,7 @@ internal fun StudioTrimStage(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-        } else if (canPlay && duration != null) {
+        } else if (canPlay) {
             Icon(
                 MaterialSymbols.PlayArrow,
                 contentDescription = stringRes(Res.string.play),
@@ -310,7 +314,7 @@ internal fun TrimTool(
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (canPlay) {
-                IconButton(onClick = { if (session.playing) session.stop() else session.playing = true }) {
+                IconButton(onClick = session::toggle) {
                     if (session.playing) {
                         Icon(MaterialSymbols.Pause, contentDescription = stringRes(Res.string.pause), filled = true)
                     } else {

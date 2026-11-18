@@ -335,7 +335,7 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
         verticalAlignment = CenterVertically,
     ) {
         // The picked files show their upload on their cards: the buttons spin only for a drawing.
-        val busy = postViewModel.isUploadingImage || postViewModel.isUploadingFile
+        val busy = postViewModel.mediaUploadTracker.isUploading
         SelectFromGallery(
             isUploading = postViewModel.mediaUploadTracker.isUploadingDrawing,
             enabled = !busy,
