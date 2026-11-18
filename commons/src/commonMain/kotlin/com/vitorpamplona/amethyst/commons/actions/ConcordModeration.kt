@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.RankedRoster
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
@@ -119,8 +120,18 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val (version, prevHash) = versioning(head)
+        // Roles v2 (CORD-04 §1, §2): every edition of a switched Community is marked. The legacy role
+        // and grant editors, and plain private-channel metadata, write shapes a v2 reader drops, so
+        // they are refused there until the Roles v2 editors land rather than published wrong.
+        val binding = RankedRoster.bindingForWrite(current, communityId, owner, kind)
+        if (binding != null) {
+            check(kind != ControlEntityKind.ROLE && kind != ControlEntityKind.GRANT) { "This community uses ranked roles (Roles v2); editing its roles is not supported yet" }
+            check(kind != ControlEntityKind.CHANNEL || ConcordJson.decodeOrNull<ChannelEntity>(content)?.private != true) {
+                "This community seals private channel details (Roles v2); creating or editing a private channel is not supported yet"
+            }
+        }
         val vac = citation ?: AuthorityCitations.forActor(current, communityId, owner, actor.pubKey)
-        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac)
+        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac, binding)
         return ConcordStreamEnvelope.wrap(rumor, controlPlane, actor, encrypted = false, createdAt = createdAt)
     }
 
