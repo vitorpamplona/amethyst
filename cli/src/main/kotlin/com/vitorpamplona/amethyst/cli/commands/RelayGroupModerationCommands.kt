@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelLabels
+import com.vitorpamplona.amethyst.commons.model.relayGroupEditTemplate
+import com.vitorpamplona.amethyst.commons.model.relayGroupPutUserTemplate
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLES
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
@@ -32,8 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
@@ -102,9 +103,13 @@ object RelayGroupModerationCommands {
 
             // A kind-9002 re-asserts the whole metadata, so omitted fields must be carried over
             // from the current 39000 — otherwise editing only a flag would wipe name/about/tags.
+            // Except on Buzz, whose `t` tags are the channel type and labels (echoing them gets the
+            // edit refused) and whose relay-internal tags a channel admin may not set.
             val template =
-                GroupEditMetadataEvent.build(
+                relayGroupEditTemplate(
                     groupId,
+                    currentMetadata = meta,
+                    isBuzz = BuzzChannelLabels.looksLikeBuzzGroupState(meta),
                     name = args.flag("name") ?: meta?.name(),
                     about = args.flag("about") ?: meta?.about(),
                     picture = args.flag("picture") ?: meta?.picture(),
@@ -116,7 +121,7 @@ object RelayGroupModerationCommands {
                     // rejected, so keep both unless the caller re-parents (--parent) or detaches (--root).
                     parent = if (args.bool("root")) null else args.flag("parent") ?: meta?.parent(),
                     children = meta?.children() ?: emptyList(),
-                    extraTags = meta?.unmanagedTags() ?: emptyList(),
+                    buzzLabels = null,
                 )
             args.rejectUnknown()
             val signed = ctx.signer.sign(template)
@@ -289,7 +294,9 @@ object RelayGroupModerationCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
-            val signed = ctx.signer.sign(GroupPutUserEvent.build(groupId, listOf(pubkey to roles), buzzRole = buzzRole))
+            // With --buzz-role the `p` tag stays bare: Buzz reads `p[2]` before the `role` tag and
+            // refuses a NIP-29 role (`moderator`) there.
+            val signed = ctx.signer.sign(relayGroupPutUserTemplate(groupId, pubkey, roles, buzzRole))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(

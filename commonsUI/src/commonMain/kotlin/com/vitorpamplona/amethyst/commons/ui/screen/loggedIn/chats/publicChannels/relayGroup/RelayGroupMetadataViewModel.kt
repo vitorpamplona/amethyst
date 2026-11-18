@@ -29,11 +29,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.RelayGroupCreateResult
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_name_taken
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_refused
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -232,7 +235,12 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 }
 
                 try {
-                    publish()
+                    val refusal = publish()
+                    if (refusal != null) {
+                        // Nothing was created: keep the form open with the relay's reason.
+                        onError(loadStringRes(Res.string.relay_group_create_refused), refusal)
+                        return@launch
+                    }
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     onError(
                         loadStringRes(Res.string.read_only_user),
@@ -251,7 +259,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
         }
     }
 
-    private suspend fun publish() {
+    /** Publishes the create or edit. Returns why the relay refused a create, or null when it went out. */
+    private suspend fun publish(): String? {
         // Send Buzz the name it would store anyway (no leading `#`s), so our optimistic copy and
         // the relay's 39000 agree.
         val name = if (isBuzzRelay) canonicalBuzzChannelName(name.value.text) else name.value.text.trim()
@@ -271,22 +280,30 @@ class RelayGroupMetadataViewModel : ViewModel() {
         val geohashes = parseGeohashes()
         val existing = channel
         if (existing == null) {
-            account.relayGroups.createRelayGroup(
-                relay = relay!!,
-                groupId = groupId,
-                name = name,
-                about = about,
-                picture = picture,
-                banner = banner,
-                isPrivate = isPrivate,
-                isClosed = isClosed,
-                isHidden = isHidden,
-                isRestricted = isRestricted,
-                hashtags = hashtags,
-                geohashes = geohashes,
-                parent = parentGroupId,
-                channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null,
-            )
+            val channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null
+            // Buzz refuses a listed channel whose name another listed one holds; say so before sending
+            // when the directory we already loaded shows the clash.
+            account.relayGroups.buzzListedNameTaken(relay!!, name, isPrivate, channelType)?.let {
+                return loadStringRes(Res.string.buzz_channel_name_taken, it)
+            }
+            val result =
+                account.relayGroups.createRelayGroup(
+                    relay = relay!!,
+                    groupId = groupId,
+                    name = name,
+                    about = about,
+                    picture = picture,
+                    banner = banner,
+                    isPrivate = isPrivate,
+                    isClosed = isClosed,
+                    isHidden = isHidden,
+                    isRestricted = isRestricted,
+                    hashtags = hashtags,
+                    geohashes = geohashes,
+                    parent = parentGroupId,
+                    channelType = channelType,
+                )
+            return (result as? RelayGroupCreateResult.Refused)?.message
         } else {
             account.relayGroups.editRelayGroupMetadata(
                 channel = existing,
@@ -307,6 +324,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 // subgroup isn't dropped by this metadata edit.
                 parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
             )
+            return null
         }
     }
 

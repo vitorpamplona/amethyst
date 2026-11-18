@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_history
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_invalid
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_body
@@ -98,6 +99,8 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Bottom room the inbox leaves for its extended FAB — same clearance the community view uses, and
@@ -228,7 +231,12 @@ private fun DmRowCard(
                 addMemberOpen = false
                 accountViewModel.launchSigner {
                     val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-                    accountViewModel.account.relayGroups.addBuzzDmMember(channel, hex)
+                    // The relay may answer with another DM (those people already share one): open
+                    // it, since the newcomer is there and not here.
+                    val landedIn = accountViewModel.account.relayGroups.addBuzzDmMember(channel, hex)
+                    if (landedIn != null && landedIn != groupId) {
+                        withContext(Dispatchers.Main) { nav.nav(Route.RelayGroup(landedIn.id, landedIn.relayUrl.url)) }
+                    }
                 }
             },
         )
@@ -418,18 +426,27 @@ private fun AddDmMemberDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.buzz_dm_add_member_title)) },
         text = {
-            OutlinedTextField(
-                value = input,
-                onValueChange = {
-                    input = it
-                    error = null
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringRes(Res.string.buzz_dm_add_hint)) },
-                singleLine = true,
-                isError = error != null,
-                supportingText = error?.let { { Text(it) } },
-            )
+            Column {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = {
+                        input = it
+                        error = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringRes(Res.string.buzz_dm_add_hint)) },
+                    singleLine = true,
+                    isError = error != null,
+                    supportingText = error?.let { { Text(it) } },
+                )
+                // The add carries ["history", "include"]: say so before it happens.
+                Text(
+                    text = stringRes(Res.string.buzz_dm_add_member_history),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = { submit() }, enabled = input.isNotBlank()) {

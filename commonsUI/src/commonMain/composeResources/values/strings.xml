@@ -2701,6 +2701,7 @@
     <string name="buzz_dm_add_member">Add member</string>
     <string name="buzz_dm_add_member_title">Add someone to this DM</string>
     <string name="buzz_dm_add_member_invalid">Not a valid npub or hex key</string>
+    <string name="buzz_dm_add_member_history">They will see the messages already in this conversation.</string>
     <string name="buzz_dm_just_you">Just you</string>
     <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">To</string>
@@ -5926,6 +5927,8 @@
     <string name="relay_explain_relay_lists">Finds which relays each person publishes to, so their posts can be fetched from the right place.</string>
     <string name="relay_explain_wallet">Your own wallet events, read back from the relays you published them to.</string>
     <string name="relay_group_create_title">Create a group</string>
+    <string name="relay_group_create_refused">The relay did not create it</string>
+    <string name="buzz_channel_name_taken">An open channel named %1$s already exists. Pick another name.</string>
     <string name="relay_group_delete">Delete group</string>
     <string name="relay_group_delete_confirm">Delete "%1$s"? This removes the group and its history for everyone, and cannot be undone.</string>
     <string name="relay_group_edit_title">Edit group</string>

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.buzz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -45,12 +45,16 @@ import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Backing ViewModel for [BuzzNewDmScreen]. It gathers 1-8 other participants and a Buzz
+ * Backing ViewModel for [BuzzNewDmScreen]. It gathers the other participants (up to 8 more people;
+ * agents don't count, see [BuzzDmRules]) and a Buzz
  * workspace relay, publishes a kind-41010 open command, and reads the relay's synchronous OK
  * (`response:{"channel_id":"…"}`) for the assigned [GroupId] — we never mint the DM's UUID
  * ourselves, and the deployed relay does not emit a queryable kind-41001 to poll for.
  */
-class BuzzNewDmViewModel : ViewModel() {
+class BuzzNewDmViewModel(
+    /** Whether the relay would count a key as an agent; agents don't count toward a DM's people. */
+    private val isAgent: (HexKey) -> Boolean = BuzzDmRules::isLikelyAgent,
+) : ViewModel() {
     @Volatile private var account: Account? = null
 
     private val _relay = MutableStateFlow<NormalizedRelayUrl?>(null)
@@ -146,7 +150,8 @@ class BuzzNewDmViewModel : ViewModel() {
 
     /**
      * Adds an already-resolved [hex] pubkey (a tapped search result). Returns an error string to
-     * surface, or null on success. Rejects me, duplicates, invalid keys and the 8-participant ceiling.
+     * surface, or null on success. Rejects me, duplicates, invalid keys and a ninth person (counting
+     * me; agents don't count, as on the relay).
      * Also clears the query so the suggestion list collapses after a pick.
      */
     fun addParticipant(hex: HexKey): String? {
@@ -155,7 +160,7 @@ class BuzzNewDmViewModel : ViewModel() {
         if (hex == account.userProfile().pubkeyHex) return "That's you"
         val current = _participants.value
         if (hex in current) return "Already added"
-        if (current.size >= DmOpenEvent.MAX_PARTICIPANTS) return "At most ${DmOpenEvent.MAX_PARTICIPANTS} others"
+        if (!BuzzDmRules.canAdd(current, hex, isAgent)) return "At most ${BuzzDmRules.MAX_PEOPLE - 1} others"
         _participants.value = current + hex
         _query.value = ""
         _suggestions.value = emptyList()

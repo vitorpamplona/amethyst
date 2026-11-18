@@ -25,11 +25,10 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
-import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
-import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteClaim
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -83,9 +82,9 @@ object BuzzCommands {
         |    [--timeout SECS]
         |amy buzz dm list [--relays R,R]             list my DMs (44100 member-added + 40099 dm_created)
         |    [--limit N] [--timeout SECS]
-        |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM with 1-8 people (kind-41010)
+        |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM (up to 8 more people; agents extra) (kind-41010)
         |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
-        |amy buzz dm add-member RELAY CHANNEL PUBKEY add a member to a group DM (kind-41011)
+        |amy buzz dm add-member RELAY CHANNEL PUBKEY [--include-history] add a member to a group DM (kind-41011)
         |amy buzz job …                             file/list/show/cancel agent jobs (43001-43006)
         |amy buzz workflow …                        trigger/run/approve Buzz workflows (30620/46020/46030)
         |amy buzz agent serve RELAY --exec CMD       run a parallel backlog scheduler (worktree-isolated)
@@ -123,7 +122,7 @@ object BuzzCommands {
             |amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]
             |amy buzz dm open RELAY PUBKEY [PUBKEY…]
             |amy buzz dm hide RELAY CHANNEL
-            |amy buzz dm add-member RELAY CHANNEL PUBKEY
+            |amy buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]
             """.trimMargin()
         return route(
             "buzz dm",
@@ -194,7 +193,7 @@ object BuzzCommands {
         }
     }
 
-    /** `buzz dm open RELAY PUBKEY [PUBKEY…]` → publishes a kind-41010 with 1-8 `p` participants. */
+    /** `buzz dm open RELAY PUBKEY [PUBKEY…]` → publishes a kind-41010, one `p` per other participant. */
     private suspend fun dmOpen(
         dataDir: DataDir,
         rest: Array<String>,
@@ -214,13 +213,15 @@ object BuzzCommands {
             if (hex !in participants) participants.add(hex)
             i++
         }
-        if (participants.size !in DmOpenEvent.MIN_PARTICIPANTS..DmOpenEvent.MAX_PARTICIPANTS) {
-            return Output.error("bad_args", "a DM needs ${DmOpenEvent.MIN_PARTICIPANTS}-${DmOpenEvent.MAX_PARTICIPANTS} participants")
+        // At most 9 people, me included, but agents don't count: only the relay knows who is an
+        // agent, so the cap is its to enforce (`invalid: a DM may hold at most 9 people…`).
+        if (participants.isEmpty()) {
+            return Output.error("bad_args", "a DM needs at least one other participant")
         }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val signed = ctx.signer.sign(DmOpenEvent.build(participants))
+            val signed = ctx.signer.sign(BuzzDmRules.openTemplate(participants))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             // The relay confirms a DM open synchronously in the OK message as
@@ -264,18 +265,50 @@ object BuzzCommands {
             DmHideEvent.build(channelId)
         }
 
-    /** `buzz dm add-member RELAY CHANNEL PUBKEY` → publishes a kind-41011 (`h` + new `p`). */
+    /**
+     * `buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]` → publishes a kind-41011 (`h` +
+     * new `p`). Without `--include-history` the relay adds no one in place: it finds or creates the
+     * DM of this DM's people plus PUBKEY. With it (`["history", "include"]`) the DM grows in place and
+     * the newcomer sees its history. Either way `channel_id` is the DM the conversation is now in, read
+     * from the relay's OK, and `created` says whether the relay made it just now.
+     */
     private suspend fun dmAddMember(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY"
-        val memberInput = Args(rest).positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]"
+        val args = Args(rest)
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val channelId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+        val memberInput = args.positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val member =
             decodePublicKeyAsHexOrNull(memberInput.trim())?.takeIf { it.isValid() }
                 ?: return Output.error("bad_args", "invalid public key (npub or 64-char hex): $memberInput")
-        return publishScoped(dataDir, rest, usage) { _, channelId, _ ->
-            DmAddMemberEvent.build(channelId, member)
+        val includeHistory = args.bool("include-history")
+        args.rejectUnknown()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val signed = ctx.signer.sign(BuzzDmRules.addMemberTemplate(channelId, member, includeHistory))
+            val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
+            val okMessage = ack.values.firstOrNull { it.accepted }?.message
+            Output.emit(
+                mapOf(
+                    "event_id" to signed.id,
+                    "kind" to signed.kind,
+                    "relay" to relay.url,
+                    "group_id" to channelId,
+                    "member" to member,
+                    "include_history" to includeHistory,
+                    "published" to ack.values.any { it.accepted },
+                    "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
+                    "created" to okMessage?.contains("\"created\":true"),
+                    "relay_message" to okMessage,
+                ),
+            )
+            return 0
         }
     }
 
