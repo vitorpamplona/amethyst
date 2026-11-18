@@ -64,7 +64,9 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteExc
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeException
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -86,6 +88,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordRootAuthentication
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord06Rekey.ChannelRekeyOutcome
@@ -512,7 +515,10 @@ class AccountConcordActions(
      * coordinate whose newest event is a revocation tombstone is left alone: re-posting a live
      * bundle over it would silently un-revoke the link.
      */
-    private suspend fun refreshConcordInviteLinks(entry: ConcordCommunityListEntry): Int {
+    private suspend fun refreshConcordInviteLinks(
+        entry: ConcordCommunityListEntry,
+        severed: Boolean = false,
+    ): Int {
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
         if (relays.isEmpty()) return 0
         val list = readConcordInviteList() ?: return 0
@@ -521,7 +527,20 @@ class AccountConcordActions(
 
         // An elapsed or retired link can no longer be joined; re-posting it would only resurrect a
         // dead URL at a live epoch.
-        val links = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        val live = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        // A Severing Refounding (CORD-06 §3): every link minted under an older epoch is retired, never
+        // refreshed into the new one, so whoever came in through that door can't walk back in.
+        val links =
+            if (severed) {
+                val (cut, kept) = live.partition { it.isSeveredBy(entry.rootEpoch) }
+                for (link in cut) {
+                    val revoked = revokeConcordInvite(entry.id, link.token, refoundIfPrivatized = false)
+                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired an invite link minted at epoch ${link.epoch()}: $revoked" }
+                }
+                kept
+            } else {
+                live
+            }
         if (links.isEmpty()) return 0
 
         // One REQ for every link's bundle rather than a round trip each. This runs inside the
@@ -623,7 +642,7 @@ class AccountConcordActions(
                                 communityId = entry.id,
                                 url = minted.url,
                                 createdAt = TimeUtils.now(),
-                            ),
+                            ).withEpoch(entry.rootEpoch),
                         ),
                 ),
             )
@@ -683,6 +702,9 @@ class AccountConcordActions(
     suspend fun revokeConcordInvite(
         communityId: String,
         token: String,
+        // False when the Refounding that makes the community Private has already happened (a
+        // Severing Refounding retiring its links, CORD-06 §3): nothing further rotates.
+        refoundIfPrivatized: Boolean = true,
     ): ConcordRevokeResult {
         if (!account.isWriteable()) return ConcordRevokeResult.FAILED
         val entry =
@@ -723,7 +745,7 @@ class AccountConcordActions(
         }
         publishConcordInviteRegistry(entry, recorded, retired = listOf(signer))
 
-        if (!privatizes) return ConcordRevokeResult.REVOKED
+        if (!privatizes || !refoundIfPrivatized) return ConcordRevokeResult.REVOKED
         // The last live link is gone: the community is Private now, and whoever already fetched a
         // link holds the current root. CORD-05 §2/§5: this is a Refounding (CORD-06 §3, "converting a
         // Public Community to Private"), which re-keys the members and leaves the lurkers behind.
@@ -910,6 +932,14 @@ class AccountConcordActions(
         ) { event, _ -> planeWraps.add(event) }
         val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
         if (joinEditions.isEmpty()) return ConcordInviteResult.NotReachable
+        // CORD-05 §1 (genesis anchor): the delivered root must open the owner's genesis metadata (or,
+        // past a Refounding, the Community-bound metadata head plus an owner-signed edition). A bundle
+        // pairing a real Community's identity with a forged root fails here and is refused as invalid.
+        when (ConcordRootAuthentication.verify(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner, bundle.rootEpoch)) {
+            ConcordRootAuthentication.Verdict.AUTHENTIC -> Unit
+            ConcordRootAuthentication.Verdict.DEFER -> return ConcordInviteResult.NotReachable
+            ConcordRootAuthentication.Verdict.REFUSED -> return ConcordInviteResult.InvalidLink
+        }
         if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(account.signer.pubKey)) {
             return ConcordInviteResult.Banned
         }
@@ -2553,7 +2583,7 @@ class AccountConcordActions(
                     // who is merely re-keyed would otherwise leave every link they handed out pointing
                     // at the dead root.
                     adopted?.let { next ->
-                        val moved = refreshConcordInviteLinks(next)
+                        val moved = refreshConcordInviteLinks(next, severed = received.severed)
                         if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
                     }
                     continue
@@ -3089,6 +3119,37 @@ class AccountConcordActions(
                         ChannelRekeyOutcome.None -> Unit
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Collects the Private Channel keys delivered on each Channel's access plane (CORD-03 §5, Roles
+     * v2): a delivery whose deliverer the fold trusts, to a recipient it entitles (this account),
+     * at an epoch past the one held and at most 1024 ahead of it, hands us the Channel's key. A
+     * delivery is never a rotation: whatever it omits, it removes nobody (CORD-06 §1).
+     */
+    internal suspend fun drainConcordAccessDeliveries() {
+        if (!account.isWriteable()) return
+        val me = account.signer.pubKey.lowercase()
+        for (session in account.concordSessions.sessions()) {
+            val state = session.state.value ?: continue
+            if (state.dissolved || !state.isRolesV2) continue
+            val pending = session.pendingAccessWraps()
+            if (pending.isEmpty()) continue
+            for ((channelIdHex, wrap) in pending) {
+                val plane = session.accessPlaneKey(wrap.pubKey) ?: continue
+                val opened = ConcordStreamEnvelope.openOrNull(wrap, plane) ?: continue
+                val delivery = ConcordChannelAccess.parse(opened) ?: continue
+                if (!ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer)) continue
+                val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
+                if (held != null && (delivery.newEpoch <= held.epoch || delivery.newEpoch > held.epoch + ConcordChannelAccess.MAX_EPOCH_JUMP)) continue
+                val key = ConcordChannelAccess.openAccess(delivery, account.signer, channelIdHex.hexToByteArray()) ?: continue
+                val adopted =
+                    updateConcordEntry(session.entry.id) { cur ->
+                        ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))
+                    }
+                if (adopted) Log.i("Concord") { "Access delivery ${session.entry.id}/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
             }
         }
     }

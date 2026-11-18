@@ -51,7 +51,9 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_community_rules
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_control
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_edit
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_banlist
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_category
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_channel
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_channel_permissions
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_dissolved
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_grant
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invite
@@ -59,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invi
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invite_revoked
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_metadata
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_role
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_tenure
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_writers
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_invite_revoked
 import com.vitorpamplona.amethyst.commons.resources.kc_group_create
 import com.vitorpamplona.amethyst.commons.resources.kc_group_create_invite
@@ -1067,6 +1071,11 @@ private fun concordEntityLabel(kind: ControlEntityKind): String =
             ControlEntityKind.INVITE_REVOKED -> Res.string.kc_group_concord_entity_invite_revoked
             ControlEntityKind.DISSOLVED -> Res.string.kc_group_concord_entity_dissolved
             ControlEntityKind.PIN_LIST -> Res.string.relay_group_pinned_content_description
+            ControlEntityKind.RANKED_ROLE -> Res.string.kc_group_concord_entity_role
+            ControlEntityKind.ACL, ControlEntityKind.SYNC -> Res.string.kc_group_concord_entity_channel_permissions
+            ControlEntityKind.CATEGORY -> Res.string.kc_group_concord_entity_category
+            ControlEntityKind.TENURE -> Res.string.kc_group_concord_entity_tenure
+            ControlEntityKind.WRITERS -> Res.string.kc_group_concord_entity_writers
         },
     )
 

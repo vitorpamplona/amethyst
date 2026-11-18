@@ -8373,6 +8373,10 @@
     <string name="kc_group_concord_entity_invite_registry">Invite links</string>
     <string name="kc_group_concord_entity_invite_revoked">Revoked invite link</string>
     <string name="kc_group_concord_entity_dissolved">Community dissolved</string>
+    <string name="kc_group_concord_entity_channel_permissions">Channel permissions</string>
+    <string name="kc_group_concord_entity_category">Category</string>
+    <string name="kc_group_concord_entity_tenure">Kept decisions</string>
+    <string name="kc_group_concord_entity_writers">Channel writers</string>
     <string name="kc_group_field_version">Version</string>
     <string name="kc_group_concord_invite_revoked">Invite link revoked</string>
     <string name="kc_group_relay_invite_request">Asked the relay for an invite code</string>
