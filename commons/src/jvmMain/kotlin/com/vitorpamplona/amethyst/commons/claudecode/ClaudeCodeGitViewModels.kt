@@ -28,12 +28,18 @@ import com.vitorpamplona.claudecode.process.ClaudeExecutable
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
@@ -211,39 +217,102 @@ class ClaudeCodeChangesViewModel(
 
     private var scope: ChangesScope? = null
 
+    /** The folder whose changes show: the chat's, or [repo] inside it. */
+    private val dir: File? =
+        chat
+            ?.state
+            ?.value
+            ?.cwd
+            ?.let(::File)
+            ?.let { cwd -> repo?.let { File(cwd, it) } ?: cwd }
+
+    /** What the branch is, read once per [reload]: switching scopes doesn't change it. */
+    private class Snapshot(
+        val info: GitWorkInfo?,
+        val untracked: List<String>,
+    )
+
+    private var snapshot: Snapshot? = null
+    private var reloading: Job? = null
+    private var showing: Job? = null
+
+    /** Each scope's parsed diff since the last [reload], so switching back and forth is instant. */
+    private val patches = HashMap<ChangesScope, Deferred<ParsedPatch>>()
+
     init {
         reload()
+        // A turn that ends may have changed files: what was read before is stale.
+        chat?.let { chat ->
+            viewModelScope.launch {
+                chat.state
+                    .map { it.status == ChatStatus.WORKING }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .filter { working -> !working }
+                    .collect { reload() }
+            }
+        }
     }
 
     /** Shows [next]'s changes. */
     fun show(next: ChangesScope) {
         scope = next
-        reload()
+        // A reload in flight shows the scope picked meanwhile.
+        val snapshot = snapshot ?: return
+        val dir = dir ?: return
+        showing?.cancel()
+        showing = viewModelScope.launch { publish(dir, snapshot, next) }
     }
 
+    /** Reads the branch and its changes again. */
     fun reload() {
-        val cwd =
-            chat
-                ?.state
-                ?.value
-                ?.cwd
-                ?.let(::File) ?: return
-        val dir = repo?.let { File(cwd, it) } ?: cwd
-        viewModelScope.launch {
-            val info = GitWorkspace.inspect(dir)
-            // First open: what isn't committed when there is some (what Claude just did), else the branch.
-            val shown = scope ?: (if ((info?.uncommitted ?: 0) > 0) ChangesScope.Uncommitted else ChangesScope.Branch).also { scope = it }
-            val untracked = GitWorkspace.untracked(dir)
-            val diff =
-                when (shown) {
-                    ChangesScope.Uncommitted -> GitWorkspace.uncommittedDiff(dir) + GitWorkspace.untrackedDiff(dir, untracked)
-                    ChangesScope.Branch -> GitWorkspace.diff(dir) + GitWorkspace.untrackedDiff(dir, untracked)
-                    is ChangesScope.Commit -> GitWorkspace.commitDiff(dir, shown.sha)
-                }
-            val patch = withContext(Dispatchers.Default) { UnifiedDiffParser.parse(diff) }
-            _state.value = ChangesState.Loaded(info, shown, patch, if (shown is ChangesScope.Commit) emptyList() else untracked)
+        val dir = dir ?: return
+        reloading?.cancel()
+        showing?.cancel()
+        patches.values.forEach { it.cancel() }
+        patches.clear()
+        snapshot = null
+        reloading =
+            viewModelScope.launch {
+                val info = GitWorkspace.inspect(dir)
+                val read = Snapshot(info, GitWorkspace.untracked(dir))
+                snapshot = read
+                // First open: what isn't committed when there is some (what Claude just did), else the branch.
+                val shown = scope ?: (if ((info?.uncommitted ?: 0) > 0) ChangesScope.Uncommitted else ChangesScope.Branch).also { scope = it }
+                // The picker's other choice reads meanwhile, so it is ready when picked.
+                listOf(ChangesScope.Uncommitted, ChangesScope.Branch).forEach { patchOf(dir, read, it) }
+                publish(dir, read, shown)
+            }
+    }
+
+    private suspend fun publish(
+        dir: File,
+        snapshot: Snapshot,
+        shown: ChangesScope,
+    ) {
+        val patch = patchOf(dir, snapshot, shown).await()
+        // The user may have picked another scope while this one read.
+        if (scope == shown && this.snapshot === snapshot) {
+            _state.value = ChangesState.Loaded(snapshot.info, shown, patch, if (shown is ChangesScope.Commit) emptyList() else snapshot.untracked)
         }
     }
+
+    private fun patchOf(
+        dir: File,
+        snapshot: Snapshot,
+        scope: ChangesScope,
+    ): Deferred<ParsedPatch> =
+        patches.getOrPut(scope) {
+            viewModelScope.async {
+                val diff =
+                    when (scope) {
+                        ChangesScope.Uncommitted -> GitWorkspace.uncommittedDiff(dir) + GitWorkspace.untrackedDiff(dir, snapshot.untracked)
+                        ChangesScope.Branch -> GitWorkspace.diff(dir) + GitWorkspace.untrackedDiff(dir, snapshot.untracked)
+                        is ChangesScope.Commit -> GitWorkspace.commitDiff(dir, scope.sha)
+                    }
+                withContext(Dispatchers.Default) { UnifiedDiffParser.parse(diff) }
+            }
+        }
 
     /** Puts a question about [line] of [path] to the chat, quoting the line, and sends it. */
     fun askAbout(

@@ -9497,7 +9497,7 @@
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
     <!-- Claude Code: drive the user's installed Claude Code CLI from the desktop app -->
-    <string name="claude_code_title">Claude Code</string>
+    <string name="ai_code_title">AI Code</string>
     <string name="claude_code_new_session">New session</string>
     <string name="claude_code_search_hint">Search sessions</string>
     <string name="claude_code_no_sessions">No Claude Code sessions on this computer yet. Start one here, or run claude in a terminal and it shows up in this list.</string>
@@ -9598,8 +9598,8 @@
         <item quantity="one">%1$d file has changes that aren't committed. They won't be part of the proposal.</item>
         <item quantity="other">%1$d files have changes that aren't committed. They won't be part of the proposal.</item>
     </plurals>
-    <string name="claude_code_propose">Propose</string>
-    <string name="claude_code_update_proposal">Update proposal</string>
+    <string name="claude_code_create_pr">Create a PR</string>
+    <string name="claude_code_update_pr">Update PR</string>
     <string name="claude_code_propose_desc">Signed by you and sent to the repository’s servers, as ngit does.</string>
     <string name="claude_code_propose_desc_no_grasp">Signed by you; its commits go to a remote you pick below.</string>
     <string name="claude_code_propose_update_desc">Already a proposal: publishing again makes these commits its new version.</string>

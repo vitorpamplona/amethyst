@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_check_read_diff
 import com.vitorpamplona.amethyst.commons.resources.claude_code_check_tested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_close
 import com.vitorpamplona.amethyst.commons.resources.claude_code_commit_prompt
+import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_with_claude
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_cancelled
@@ -97,7 +98,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_none
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_passed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_run
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_running
-import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc_no_grasp
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_description
@@ -119,7 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_step_check
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_confirm
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_describe
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_warning
-import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -156,7 +156,7 @@ fun ClaudeCodeProposeScreen(
     Scaffold(
         topBar = {
             ChatTopBar(
-                title = stringRes(if (isUpdate) Res.string.claude_code_update_proposal else Res.string.claude_code_propose),
+                title = stringRes(if (isUpdate) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr),
                 subtitle = info?.let { listOfNotNull(it.repo?.identifier, it.branch).joinToString(" · ") },
                 nav = nav,
             ) {
