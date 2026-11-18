@@ -77,6 +77,8 @@ data class AgentWorkspace(
     val freedAt: Long? = null,
     /** When its clones were last made again ([AgentWorkspaces.restore]): the user came back to it. */
     val restoredAt: Long? = null,
+    /** What the agent asked the user to publish, by repository folder: a pull request waiting on their click. */
+    val publishRequests: Map<String, PublishRequest> = emptyMap(),
 ) {
     /** Its clones are gone for now, kept as what brings them back. */
     val isFreed: Boolean get() = freedAt != null
@@ -115,6 +117,19 @@ data class AgentWorkspace(
             return prs.maxOf { it.closedAt ?: it.checkedAt }
         }
 }
+
+/**
+ * A pull request the agent asked for ([PublishToolServer]): its title and description, ready for the
+ * user to review, change and open, or dismiss. The agent never publishes it itself.
+ */
+@Immutable
+@Serializable
+data class PublishRequest(
+    val title: String,
+    val body: String = "",
+    val draft: Boolean = false,
+    val requestedAt: Long = 0,
+)
 
 /** A pull request as last seen, kept so the session list can show it without asking GitHub. */
 @Immutable
@@ -390,6 +405,13 @@ class AgentWorkspaces(
             .mapNotNull { read(it) }
             .sortedByDescending { it.createdAt }
 
+    /** Whether [dir] is inside a workstream's folder, made or still being made: no record is read. */
+    fun isInWorkstreams(dir: File): Boolean {
+        val root = workstreamsDir.absoluteFile.normalize().toPath()
+        val path = dir.absoluteFile.normalize().toPath()
+        return path.startsWith(root) && path != root
+    }
+
     /** The workspace [dir] is in (its folder or one inside it), or null. */
     fun of(dir: File): AgentWorkspace? {
         val root = workstreamsDir.absoluteFile.normalize().toPath()
@@ -425,6 +447,26 @@ class AgentWorkspaces(
         // A new check time alone is no change: the record is rewritten only when something moved.
         if (next.mapValues { it.value.copy(checkedAt = 0) } == workspace.pullRequests.mapValues { it.value.copy(checkedAt = 0) }) return workspace
         val updated = workspace.copy(pullRequests = next)
+        save(updated)
+        return updated
+    }
+
+    /**
+     * Records what the agent asked to publish from [repo] in the workspace [id] (null: nothing,
+     * once the user opened or dismissed it), and returns the workspace as saved. Nothing happens
+     * to a workspace that is gone.
+     */
+    @Synchronized
+    fun recordPublishRequest(
+        id: String,
+        repo: String,
+        request: PublishRequest?,
+    ): AgentWorkspace? {
+        val file = File(metaDir, "$id.json")
+        val workspace = read(file) ?: return null
+        val next = if (request == null) workspace.publishRequests - repo else workspace.publishRequests + (repo to request)
+        if (next == workspace.publishRequests) return workspace
+        val updated = workspace.copy(publishRequests = next)
         save(updated)
         return updated
     }

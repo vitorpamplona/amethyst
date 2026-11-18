@@ -106,6 +106,9 @@ data class ChatAttention(
     enum class Kind {
         NEEDS_APPROVAL,
         FINISHED,
+
+        /** The agent asked the user to open a pull request ([PublishToolServer]). */
+        REQUESTS_PUBLISH,
     }
 }
 
@@ -278,6 +281,20 @@ class ClaudeCodeService(
                 }
                 if (changed) rebuildRows()
             }
+    }
+
+    /**
+     * Saves what the agent asked to publish from [repo] in workspace [id], or clears it (null) once
+     * the user opened or dismissed it: the list and the Pull requests screen show it.
+     */
+    fun recordPublishRequest(
+        id: String,
+        repo: String,
+        request: PublishRequest?,
+    ) {
+        val updated = agentWorkspaces.recordPublishRequest(id, repo, request) ?: return
+        knownWorkspaces = knownWorkspaces.map { if (it.id == id) updated else it }
+        rebuildRows()
     }
 
     /** Saves what GitHub said about [repo]'s pull request in workspace [id], for the list's badge. */
@@ -766,6 +783,8 @@ class ClaudeCodeService(
         agent: AgentBackend = backend,
         folderKnown: Boolean = true,
     ): ClaudeChat {
+        // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
+        val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
         val chat =
             ClaudeChat(
                 key,
@@ -779,13 +798,19 @@ class ClaudeCodeService(
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
                 heldElsewhere = ::isHeldElsewhere,
-                mcpServers = mcpServers,
-                launchOptions = launchOptions,
+                mcpServers = mcpServers + listOfNotNull(publish),
+                launchOptions =
+                    if (publish == null) {
+                        launchOptions
+                    } else {
+                        // It only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
+                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + publish.qualifiedName(PublishToolServer.REQUEST)) } }
+                    },
                 kind = kind,
                 forkBefore = forkBefore,
                 publishingIsTheUsers = { agentWorkspaces.of(it) != null },
                 restoreFolder = ::restoreBeforeStart,
-                folderBrief = { agentWorkspaces.of(it)?.brief },
+                folderBrief = { dir -> agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it } },
                 folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }
@@ -825,6 +850,21 @@ class ClaudeCodeService(
             }
         return chat
     }
+
+    /** The publish tool of the chat [key] working in [cwd]: its requests are saved with the workstream, and the user is told. */
+    private fun publishTool(
+        key: String,
+        cwd: File,
+    ) = PublishToolServer(
+        folder = cwd,
+        workspaceOf = { dir -> workspaceOf(dir.path) ?: agentWorkspaces.of(dir) },
+        status = { agentWorkspaces.status(it) },
+        request = { workspace, repo, request ->
+            recordPublishRequest(workspace.id, repo.name, request)
+            val chat = chats.value[key]
+            _attention.tryEmit(ChatAttention(key, chat?.state?.value?.let(::titleOf) ?: workspace.title, ChatAttention.Kind.REQUESTS_PUBLISH, chat?.backend?.shortName ?: "Claude"))
+        },
+    )
 
     private fun recountNeedsYou() {
         _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }

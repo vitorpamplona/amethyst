@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_w
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pick_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_requested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
@@ -581,7 +582,10 @@ private fun SessionRow(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                row.workspace?.let { PullRequestBadge(it) }
+                row.workspace?.let {
+                    PublishRequestBadge(it)
+                    PullRequestBadge(it)
+                }
                 // What the workspace's clones take on disk, once measured.
                 row.workspaceSize?.let { size ->
                     Text(" • " + formatFileSize(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
@@ -635,6 +639,20 @@ private fun SessionRow(
             }
         }
     }
+}
+
+/** The agent asked the user to open a pull request, and it waits on the Pull requests screen. */
+@Composable
+private fun PublishRequestBadge(workspace: AgentWorkspace) {
+    if (workspace.publishRequests.isEmpty()) return
+    val color = MaterialTheme.colorScheme.primary
+    Text(
+        stringRes(Res.string.claude_code_pr_badge_requested),
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.padding(start = 6.dp).border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /**

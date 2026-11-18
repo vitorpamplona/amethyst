@@ -453,6 +453,41 @@ class ClaudeCodeServiceTest {
         }
 
     @Test
+    fun aWorkstreamsAgentCanAskToPublishButOtherChatsCannot() =
+        runBlocking {
+            // A CLI that records how it was asked to start.
+            val started = mutableListOf<ClaudeCodeOptions>()
+            val recording =
+                ClaudeCodeService(
+                    backend =
+                        ClaudeBackend(
+                            ClaudeSessionStore(config),
+                            ClaudeCodeStarter { options, _ ->
+                                synchronized(started) { started.add(options) }
+                                throw IOException("not in tests")
+                            },
+                            findExecutable = { null },
+                        ),
+                    scope = scope,
+                    agentWorkspaces = AgentWorkspaces(File(config, "agents")),
+                )
+            val ws = recording.agentWorkspaces.create(listOf(remote("asks")), "Asks", agentId = "claude")
+            recording.refresh()
+            recording.newChat(File(ws.dir), PermissionMode.AUTO).send("go")
+            waitFor { synchronized(started) { started.size == 1 } }
+            val tool = "mcp__${PublishToolServer.NAME}__${PublishToolServer.REQUEST}"
+            // It only asks the user, so it runs without a prompt; the agent is told it exists.
+            assertTrue(started[0].sdkMcpServers.any { it.name == PublishToolServer.NAME })
+            assertTrue(tool in started[0].allowedTools)
+            assertTrue(started[0].appendSystemPrompt.orEmpty().contains(PublishToolServer.REQUEST))
+
+            recording.newChat(work).send("elsewhere")
+            waitFor { synchronized(started) { started.size == 2 } }
+            assertTrue(started[1].sdkMcpServers.none { it.name == PublishToolServer.NAME })
+            assertFalse(tool in started[1].allowedTools)
+        }
+
+    @Test
     fun twoRestoresAtOnceMakeTheClonesOnce() =
         runBlocking {
             val ws = service.agentWorkspaces.create(listOf(remote("twice")), "Twice", branch = "agent/t", agentId = "claude")

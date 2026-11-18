@@ -49,6 +49,8 @@ data class WorkspaceRepoRow(
     val gitHub: String? = null,
     /** The user can't push to it: the branch goes to their fork. */
     val viaFork: Boolean = false,
+    /** The pull request the agent asked the user to open ([PublishToolServer]), while none is open. */
+    val request: PublishRequest? = null,
 ) {
     val name get() = status.repo.name
 }
@@ -160,15 +162,27 @@ class ClaudeCodeWorkspaceViewModel(
         val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
         // The session list shows it from the saved record, without asking GitHub.
         if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
+        // The agent's request, until a pull request is open: then it was answered, here or elsewhere.
+        val request = ws.publishRequests[status.repo.name]
+        if (request != null && pr != null) service.recordPublishRequest(ws.id, status.repo.name, null)
+        val asked = request.takeIf { pr == null }
         return WorkspaceRepoRow(
             status = status,
             pullRequest = pr,
-            draftTitle = subjects.lastOrNull() ?: ws.title,
-            draftBody = subjects.reversed().joinToString("\n") { "- $it" },
+            draftTitle = asked?.title ?: subjects.lastOrNull() ?: ws.title,
+            draftBody = asked?.body ?: subjects.reversed().joinToString("\n") { "- $it" },
             nostr = NostrRepoRef.fromConfig(nostr),
             gitHub = gitHub,
             viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
+            request = asked,
         )
+    }
+
+    /** Declines the agent's request to publish [repo]: the form stays, with the commits' own title and description. */
+    fun dismissRequest(repo: String) {
+        val ws = workspace ?: return
+        service.recordPublishRequest(ws.id, repo, null)
+        refresh()
     }
 
     /**
@@ -221,7 +235,11 @@ class ClaudeCodeWorkspaceViewModel(
                         // gh may have failed because the pull request already exists: it shows.
                         if (result.pushed) refresh()
                     }
-                    is GitHubPullRequests.Result.Opened -> refresh()
+                    is GitHubPullRequests.Result.Opened -> {
+                        // Answered: the agent's request, if any, is done.
+                        service.recordPublishRequest(ws.id, repo, null)
+                        refresh()
+                    }
                 }
             } finally {
                 _opening.value = null
