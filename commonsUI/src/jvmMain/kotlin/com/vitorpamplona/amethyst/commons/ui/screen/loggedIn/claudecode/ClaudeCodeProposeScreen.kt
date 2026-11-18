@@ -88,7 +88,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_check_tested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_close
 import com.vitorpamplona.amethyst.commons.resources.claude_code_commit_prompt
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
-import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_with_claude
+import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_with
+import com.vitorpamplona.amethyst.commons.resources.claude_code_drafted_by
+import com.vitorpamplona.amethyst.commons.resources.claude_code_drafting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_cancelled
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_desc
@@ -114,12 +117,15 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_push_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_no_remotes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_redraft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_show_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_check
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_confirm
 import com.vitorpamplona.amethyst.commons.resources.claude_code_step_describe
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
+import com.vitorpamplona.amethyst.commons.resources.claude_code_write_it_myself
+import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -194,6 +200,8 @@ private fun ProposeForm(
     val publishState by proposals.state.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val drafting by viewModel.drafting.collectAsStateWithLifecycle()
+    val draftedBy by viewModel.draftedBy.collectAsStateWithLifecycle()
+    val draftFailed by viewModel.draftFailed.collectAsStateWithLifecycle()
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val isUpdate = info.proposalId != null
@@ -286,6 +294,14 @@ private fun ProposeForm(
             if (!isUpdate) {
                 ProposeStep(++step, stringRes(Res.string.claude_code_step_describe), done = title.isNotBlank()) {
                     val value = draft ?: ProposalDraft("", "")
+                    DraftStatus(
+                        agent = viewModel.agentName,
+                        drafting = drafting,
+                        draftedBy = draftedBy,
+                        failed = draftFailed,
+                        onDraft = viewModel::draftWithAgent,
+                        onStop = viewModel::stopDrafting,
+                    )
                     LabeledField(Res.string.claude_code_propose_title) {
                         FormTextField(value = value.title, onValueChange = { viewModel.setDraft(value.copy(title = it)) })
                     }
@@ -299,15 +315,6 @@ private fun ProposeForm(
                             textStyle = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.heightIn(max = 360.dp),
                         )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(enabled = !drafting, onClick = { viewModel.draftWithClaude() }) {
-                            if (drafting) {
-                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Text(stringRes(Res.string.claude_code_draft_with_claude))
-                        }
                     }
                 }
             }
@@ -600,4 +607,48 @@ private fun ngitAccountName(
     if (user == null) return fallback
     val info by observeUserInfo(user, accountViewModel)
     return info?.info?.bestName()?.takeIf { it.isNotBlank() } ?: fallback
+}
+
+/**
+ * Where the title and description come from: the agent writing them (the user can take over),
+ * the agent's draft (to edit, or ask again), or the user's own text (an agent can still draft).
+ */
+@Composable
+private fun DraftStatus(
+    agent: String,
+    drafting: Boolean,
+    draftedBy: String?,
+    failed: Boolean,
+    onDraft: () -> Unit,
+    onStop: () -> Unit,
+) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+        when {
+            drafting -> {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(stringRes(Res.string.claude_code_drafting, agent), style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.weight(1f))
+                TextButton(onClick = onStop) { Text(stringRes(Res.string.claude_code_write_it_myself)) }
+            }
+            draftedBy != null -> {
+                Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(Res.string.claude_code_drafted_by, draftedBy), style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.weight(1f))
+                TextButton(onClick = onDraft) { Text(stringRes(Res.string.claude_code_redraft)) }
+            }
+            failed -> {
+                Text(stringRes(Res.string.claude_code_draft_failed, agent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                TextButton(onClick = onDraft) { Text(stringRes(Res.string.try_again)) }
+            }
+            else -> {
+                Spacer(Modifier.weight(1f))
+                OutlinedButton(onClick = onDraft) {
+                    Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(Res.string.claude_code_draft_with, agent))
+                }
+            }
+        }
+    }
 }
