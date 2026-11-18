@@ -41,6 +41,7 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.TableStyle
 import com.halilibo.richtext.ui.string.RichTextStringStyle
 import com.vitorpamplona.amethyst.commons.ui.markdown.InlineCodeChips
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 /**
  * The chat's reading text, a Claude reply read like a document: lines close enough (1.4) that a
@@ -54,8 +55,10 @@ internal val ChatTextStyle: TextStyle
 /** Paragraphs that draw their inline code as rounded chips; pairs with [rememberChatMarkdownStyle]. */
 @Composable
 internal fun rememberChatCodeChips(): InlineCodeChips {
-    // Translucent, so the chip reads on the page and on the gray of the user's bubble alike.
-    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+    // Translucent, so the chip reads on the page and on the gray of the user's bubble alike; a
+    // stronger tint on a dark page, where 6% of a light ink barely shows against black.
+    val colors = MaterialTheme.colorScheme
+    val color = colors.onSurface.copy(alpha = if (colors.isLight) 0.06f else 0.12f)
     return remember(color) { InlineCodeChips(color) }
 }
 

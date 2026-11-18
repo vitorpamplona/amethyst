@@ -28,10 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -92,44 +90,65 @@ class InlineCodeChips(
         val density = LocalDensity.current
         val padding = with(density) { sidePadding.toSp() }
         val paragraph = remember(astNode, renderer, padding) { buildParagraph(astNode, renderer, padding) }
-        var layout by remember(paragraph) { mutableStateOf<TextLayoutResult?>(null) }
-        val chips =
-            if (paragraph.codeRuns.isEmpty()) {
-                Modifier
-            } else {
-                Modifier.drawBehind { layout?.let { drawChips(it, paragraph.codeRuns) } }
+        if (paragraph.codeRuns.isEmpty()) {
+            Text(text = paragraph.text)
+            return
+        }
+        // Worked out once per layout, so drawing (on every frame that redraws) only paints.
+        var chips by remember(paragraph) { mutableStateOf(emptyList<Rect>()) }
+        val onLayout =
+            remember(paragraph, density) {
+                { layout: TextLayoutResult ->
+                    chips = with(density) { chipRects(layout, paragraph.codeRuns, sidePadding.toPx(), verticalInset.toPx()) }
+                }
             }
-        Text(text = paragraph.text, modifier = chips, onTextLayout = { layout = it })
+        val drawChips =
+            remember(paragraph, density) {
+                val radius = with(density) { CornerRadius(cornerRadius.toPx()) }
+                Modifier.drawBehind { chips.forEach { drawRoundRect(color, it.topLeft, it.size, radius) } }
+            }
+        Text(text = paragraph.text, modifier = drawChips, onTextLayout = onLayout)
     }
+}
 
-    private fun DrawScope.drawChips(
-        layout: TextLayoutResult,
-        runs: List<IntRange>,
-    ) {
-        val pad = sidePadding.toPx()
-        val inset = verticalInset.toPx()
-        val radius = CornerRadius(cornerRadius.toPx())
-        val length = layout.layoutInput.text.length
-        runs.forEach { run ->
-            if (run.last >= length) return@forEach
-            for (line in layout.getLineForOffset(run.first)..layout.getLineForOffset(run.last)) {
-                val from = maxOf(run.first, layout.getLineStart(line))
-                val to = minOf(run.last, layout.getLineEnd(line, visibleEnd = true) - 1)
-                if (to < from) continue
-                // The run's last box already holds the letter spacing that makes the right side's room.
-                val left = layout.getBoundingBox(from).left - pad
-                val right = layout.getBoundingBox(to).right + if (to == run.last) 0f else pad
-                val top = layout.getLineTop(line) + inset
-                val bottom = layout.getLineBottom(line) - inset
-                drawRoundRect(color, Offset(left, top), Size(right - left, bottom - top), radius)
-            }
+/** One rect per line each code run covers, [pad] wider on the sides the letter spacing made room on. */
+private fun chipRects(
+    layout: TextLayoutResult,
+    runs: List<CodeRun>,
+    pad: Float,
+    inset: Float,
+): List<Rect> {
+    val length = layout.layoutInput.text.length
+    val rects = ArrayList<Rect>(runs.size)
+    runs.forEach { code ->
+        val run = code.range
+        if (run.last >= length) return@forEach
+        for (line in layout.getLineForOffset(run.first)..layout.getLineForOffset(run.last)) {
+            val from = maxOf(run.first, layout.getLineStart(line))
+            val to = minOf(run.last, layout.getLineEnd(line, visibleEnd = true) - 1)
+            if (to < from) continue
+            val first = layout.getBoundingBox(from)
+            val last = layout.getBoundingBox(to)
+            // min/max: in right-to-left text the run's first box is the rightmost. A side with no
+            // room stays flush with the letters instead of sliding under the glyph next to it; the
+            // run's last box already holds the closing side's room, when it has some.
+            val left = minOf(first.left, last.left) - if (from == run.first && !code.roomBefore) 0f else pad
+            val right = maxOf(first.right, last.right) + if (to == run.last) 0f else pad
+            rects.add(Rect(left, layout.getLineTop(line) + inset, right, layout.getLineBottom(line) - inset))
         }
     }
+    return rects
 }
 
 private class ChipParagraph(
     val text: RichTextString,
-    val codeRuns: List<IntRange>,
+    val codeRuns: List<CodeRun>,
+)
+
+/** A code run's characters, and whether letter spacing made room for the chip before it. */
+private class CodeRun(
+    val range: IntRange,
+    val roomBefore: Boolean,
 )
 
 /** The paragraph's string, as `MarkdownRichText` builds it, plus where each code run sits. */
@@ -139,34 +158,53 @@ private fun buildParagraph(
     padding: TextUnit,
 ): ChipParagraph {
     val builder = RichTextString.Builder()
-    val runs = mutableListOf<IntRange>()
+    val runs = mutableListOf<CodeRun>()
     val room = SpanStyle(letterSpacing = padding)
+
+    // The last character appended, while it is known: the media renderer appends its own.
+    var last: Char? = null
+
+    fun appendText(text: String) {
+        if (text.isEmpty()) return
+        builder.append(text)
+        last = text.last()
+    }
 
     fun visit(node: AstNode) {
         var format: Int? = null
         when (val type = node.type) {
             is AstCode -> {
-                if (type.literal.isEmpty()) return
-                builder.withAnnotatedString {
-                    if (length > 0) addStyle(room, length - 1, length)
-                }
+                val literal = type.literal
+                if (literal.isEmpty()) return
                 val start = builder.withAnnotatedString { length }
-                builder.withFormat(RichTextString.Format.Code) { append(type.literal) }
-                val end = builder.withAnnotatedString { length }
-                builder.withAnnotatedString { addStyle(room, end - 1, end) }
-                runs.add(start until end)
+                val roomBefore = last?.takesRoom() == true
+                if (roomBefore) builder.withAnnotatedString { addStyle(room, start - 1, start) }
+                builder.withFormat(RichTextString.Format.Code) { append(literal) }
+                val end = start + literal.length
+                if (literal.last().takesRoom()) builder.withAnnotatedString { addStyle(room, end - 1, end) }
+                last = literal.last()
+                runs.add(CodeRun(start until end, roomBefore))
                 return
             }
             is AstText -> {
                 val label = if (renderer.shouldSanitizeUriLabel() && node.links.parent?.type is AstLink) renderer.sanitizeUriLabel(type.literal) else type.literal
-                builder.append(label)
+                appendText(label)
                 return
             }
-            is AstImage -> return renderer.renderImage(type.title, type.destination, builder)
-            is AstNostrUri -> return renderer.renderNostrUri(type.destination, builder)
-            is AstHashtag -> return renderer.renderHashtag(type.tag, builder)
-            AstSoftLineBreak -> return builder.append(" ")
-            AstHardLineBreak -> return builder.append("\n")
+            is AstImage -> {
+                last = null
+                return renderer.renderImage(type.title, type.destination, builder)
+            }
+            is AstNostrUri -> {
+                last = null
+                return renderer.renderNostrUri(type.destination, builder)
+            }
+            is AstHashtag -> {
+                last = null
+                return renderer.renderHashtag(type.tag, builder)
+            }
+            AstSoftLineBreak -> return appendText(" ")
+            AstHardLineBreak -> return appendText("\n")
             is AstEmphasis -> format = builder.pushFormat(RichTextString.Format.Italic)
             is AstStrikethrough -> format = builder.pushFormat(RichTextString.Format.Strikethrough)
             is AstStrongEmphasis -> format = builder.pushFormat(RichTextString.Format.Bold)
@@ -174,6 +212,7 @@ private fun buildParagraph(
             is AstLink -> {
                 val title = type.title ?: node.children().joinToString { (it.type as? AstText)?.literal ?: "" }
                 if (renderer.shouldRenderLinkPreview(title, type.destination)) {
+                    last = null
                     return renderer.renderLinkPreview(title, type.destination, builder)
                 }
                 format = builder.pushFormat(RichTextString.Format.Link(destination = type.destination))
@@ -189,3 +228,12 @@ private fun buildParagraph(
 }
 
 private fun AstNode.children(): Sequence<AstNode> = generateSequence(links.firstChild) { it.links.next }
+
+/**
+ * Whether letter spacing can go on this character alone. A span on half of a surrogate pair, or
+ * on a combining mark, ZWJ or variation selector, would cut a cluster (an emoji, an accented
+ * letter) in two, so those get no room; a letter, digit, ideograph, space or punctuation does.
+ */
+private fun Char.takesRoom(): Boolean = !isSurrogate() && category !in CLUSTER_PARTS
+
+private val CLUSTER_PARTS = setOf(CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK, CharCategory.FORMAT)
