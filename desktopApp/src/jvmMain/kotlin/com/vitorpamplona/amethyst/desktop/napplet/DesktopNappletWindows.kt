@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +79,7 @@ import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.OnionIcon
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.oldestAccountGroup
@@ -135,6 +137,7 @@ import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
+import kotlinx.coroutines.delay
 import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -212,7 +215,7 @@ private fun NappletWindow(
 
         // Its own window, above Chromium's: one question at a time, the oldest first.
         val app = session.launch.identity.coordinate
-        ConsentWindows(apps = { it == app }, titleOf = { session.launch.title }, queues = host.consent)
+        ConsentWindows(apps = { it == app }, titleOf = { _, _ -> session.launch.title }, queues = host.consent)
 
         if (showAccess) AccessWindow(session, host, parent = window, onDone = { showAccess = false })
     }
@@ -492,9 +495,16 @@ internal fun AccessWindow(
 internal fun ConsentWindows(
     /** Which asking apps this window shows the questions of. */
     apps: (app: String?) -> Boolean,
-    /** The name the question's window gives the app that asks. */
-    titleOf: (app: String?) -> String,
+    /** The name the question's window gives the app that asks, given the question. */
+    titleOf: (app: String?, info: Any?) -> String,
     queues: NappletPromptQueues,
+    /**
+     * How long a question may stay on screen unanswered before it is declined, counted from when it
+     * is shown; null leaves that to whoever asked.
+     */
+    answerWithinMs: Long? = null,
+    /** Brings each question's window to the front, for questions that arrive while the user is elsewhere. */
+    raise: Boolean = false,
 ) {
     val capabilities by queues.capabilities.pending
         .collectAsState()
@@ -502,13 +512,28 @@ internal fun ConsentWindows(
         .collectAsState()
     val signerOps by queues.signerOps.pending
         .collectAsState()
-    val question = (capabilities + connects + signerOps).filter { apps(it.app) }.minByOrNull { it.order } ?: return
-    val mySignerOps = signerOps.filter { it.app == question.app }
-    // Best-effort note preview of what would be signed; without it the card shows the JSON.
-    val accountViewModel = CallSessionBridge.accountViewModel
+    val question = oldestQuestion(apps, capabilities, connects, signerOps) ?: return
+    val batch = if (question.info is SignerConsentInfo) signerOps.filter { it.app == question.app }.oldestAccountGroup() else emptyList()
+    // Best-effort note preview of what would be signed, through the active account; without it the
+    // card shows the JSON. A question for another account's bunker must not be previewed as this one.
+    val accountViewModel =
+        CallSessionBridge.accountViewModel?.takeIf { viewModel ->
+            val asked = (question.info as? SignerConsentInfo)?.accountPubKey
+            asked == null || asked == viewModel.account.pubKey
+        }
 
     key(question) {
-        ConsentWindow(titleOf(question.app), onClose = { question.dismiss() }) {
+        if (answerWithinMs != null) {
+            // Counted from here, when it shows: a question waiting behind another was not seen. The
+            // signatures that joined it in the same window go with it.
+            val shownWith by rememberUpdatedState(batch)
+            LaunchedEffect(Unit) {
+                delay(answerWithinMs)
+                question.dismiss()
+                shownWith.forEach { it.dismiss() }
+            }
+        }
+        ConsentWindow(titleOf(question.app, question.info), raise = raise, onClose = { question.dismiss() }) {
             when (val info = question.info) {
                 is NappletConsentInfo -> NappletConsentCard(info, onDecision = { queues.capabilities.answer(question.token, it) })
                 is SignerConnectInfo ->
@@ -519,8 +544,7 @@ internal fun ConsentWindows(
                         onCancel = { queues.connects.answer(question.token, AppConnectResult.Cancelled) },
                     )
                 is SignerConsentInfo -> {
-                    val batch = mySignerOps.oldestAccountGroup()
-                    if (batch.size == 1) {
+                    if (batch.size <= 1) {
                         SignerConsentCard(info, accountViewModel, onGrant = { queues.signerOps.answer(question.token, it) })
                     } else {
                         BatchedConsentCard(
@@ -535,6 +559,25 @@ internal fun ConsentWindows(
     }
 }
 
+/** The oldest question, of any kind, from the [apps] asked about. */
+internal fun oldestQuestion(
+    apps: (app: String?) -> Boolean,
+    vararg queues: List<ConsentQueue.Request<*, *>>,
+): ConsentQueue.Request<*, *>? =
+    queues
+        .asSequence()
+        .flatten()
+        .filter { apps(it.app) }
+        .minByOrNull { it.order }
+
+/** The name a NIP-46 or site question gives the app that asks, when it carries one. */
+internal fun consentTitle(info: Any?): String? =
+    when (info) {
+        is SignerConnectInfo -> info.appletTitle
+        is SignerConsentInfo -> info.appletTitle
+        else -> null
+    }?.ifBlank { null }
+
 /**
  * A permission question in a window of its own, as tall as the question: at a fixed 680 the connect
  * card's Cancel, Connect and Block buttons sat below the bottom edge, reachable only by scrolling a
@@ -544,6 +587,7 @@ internal fun ConsentWindows(
 @Composable
 private fun ConsentWindow(
     appTitle: String,
+    raise: Boolean = false,
     onClose: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -568,6 +612,10 @@ private fun ConsentWindow(
             if (!centered) {
                 state.position = WindowPosition.Aligned(Alignment.Center)
                 centered = true
+                if (raise) {
+                    window.toFront()
+                    window.requestFocus()
+                }
             }
         }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {

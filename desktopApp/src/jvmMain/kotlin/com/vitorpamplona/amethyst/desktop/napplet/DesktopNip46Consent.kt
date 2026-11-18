@@ -21,165 +21,81 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentInfoBuilder
-import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentStrings
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
-import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerFace
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
-import com.vitorpamplona.amethyst.commons.resources.nip46_signer_decrypt_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
-import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.label
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.Nip46ConsentPrompts
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The desktop's answer to a NIP-46 app asking the bunker: each question waits in [queues] and
- * [Nip46ConsentWindows] shows the oldest in a window of its own, with the same cards the napplet
- * windows use. The desktop's counterpart of Android's `Nip46ConsentBridge`.
+ * The desktop's NIP-46 bunker questions, worded by [Nip46ConsentPrompts] like Android's: each waits
+ * in [queues] under its app's ledger coordinate (`nip46:<account>:<app>`), and
+ * [Nip46ConsentWindows] shows the oldest in a window of its own.
  *
- * Every question fails closed: one left unanswered for [CONSENT_TIMEOUT_MS], or whose window is
- * closed, declines the connect or denies the operation.
+ * Every question fails closed. Once on screen it has [ANSWER_WITHIN_MS] to be answered (the window
+ * dismisses it), and closing its window declines it. One that is never shown, behind other
+ * questions, gives up after [UNSHOWN_LIMIT_MS], so it can't hold the signer forever.
  */
 class DesktopNip46Consent(
-    private val clientStore: () -> Nip46ClientStore,
-) : Nip46ConsentPrompter {
-    /** Keyed by the app's ledger coordinate (`nip46:<account>:<app>`). */
-    val queues = NappletPromptQueues()
-
-    /** The name each asking app goes by, for its question's window title. */
-    private val titles = ConcurrentHashMap<String, String>()
-
-    fun titleOf(coordinate: String?): String? = coordinate?.let { titles[it] }
-
-    override suspend fun requestConnect(
-        coordinate: String,
-        clientPubKey: HexKey,
-        request: BunkerRequestConnect,
-    ): AppConnectResult {
-        val meta = request.clientMetadata
-        val title = meta?.name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
-        val face = accountFace(coordinate)
-        val info =
-            SignerConnectInfo(
-                appletTitle = title,
-                coordinate = coordinate,
-                domain = meta?.url?.ifBlank { null } ?: (clientPubKey.take(12) + "…"),
-                iconUrl = meta?.image,
-                accountName = face.name,
-                accountPicture = face.picture,
-                accountPubKey = face.pubKey,
-            )
-        titles[coordinate] = title
-        return withTimeoutOrNull(CONSENT_TIMEOUT_MS) { queues.connects.ask(info, coordinate) } ?: AppConnectResult.Cancelled
-    }
-
-    override suspend fun requestNostrConnectConsent(
-        coordinate: String,
-        name: String?,
-        url: String?,
-        image: String?,
-        requestedOps: List<NostrSignerOp>,
-    ): AppConnectResult {
-        val title = name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
-        val face = accountFace(coordinate)
-        val info =
-            SignerConnectInfo(
-                appletTitle = title,
-                coordinate = coordinate,
-                domain = url?.ifBlank { null } ?: (Nip46PermissionAuthorizer.clientPubKeyOf(coordinate)?.take(12)?.plus("…") ?: ""),
-                iconUrl = image,
-                accountName = face.name,
-                accountPicture = face.picture,
-                accountPubKey = face.pubKey,
-                requestedPermissions = requestedOps.map { it.label() },
-            )
-        titles[coordinate] = title
-        return withTimeoutOrNull(CONSENT_TIMEOUT_MS) { queues.connects.ask(info, coordinate) } ?: AppConnectResult.Cancelled
-    }
-
-    /**
-     * One operation. A decrypt is decrypted first, locally with the account's own [signer], so the
-     * window shows what the app would read; nothing leaves the device unless the user allows it.
-     */
-    override suspend fun requestOp(
-        coordinate: String,
-        clientPubKey: HexKey,
-        op: NostrSignerOp,
-        request: BunkerRequest,
-        signer: NostrSigner,
-    ): SignerOpGrant {
-        val stored = runCatching { clientStore().load(coordinate) }.getOrNull()
-        val title = stored?.name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
-        val info =
-            Nip46ConsentInfoBuilder.build(
-                coordinate = coordinate,
-                title = title,
-                iconUrl = stored?.image,
-                op = op,
-                request = request,
-                account = accountFace(coordinate),
-                faceOf = ::userFace,
-                strings =
-                    Nip46ConsentStrings(
-                        opLabel = { it.label() },
-                        allowAlwaysFor = { loadStringRes(Res.string.nip46_signer_allow_always_for, it) },
-                        decryptFailed = loadStringRes(Res.string.nip46_signer_decrypt_failed),
-                    ),
-                decrypt = { decryptWithAccountSigner(signer, it) },
-            )
-        titles[coordinate] = title
-        return withTimeoutOrNull(CONSENT_TIMEOUT_MS) { queues.signerOps.ask(info, coordinate) } ?: SignerOpGrant.DenyOnce
-    }
-
-    private suspend fun decryptWithAccountSigner(
-        signer: NostrSigner,
-        request: BunkerRequest,
-    ): String? =
-        when (request) {
-            is BunkerRequestNip04Decrypt -> signer.nip04Decrypt(request.ciphertext, request.pubKey)
-            is BunkerRequestNip44Decrypt -> signer.nip44Decrypt(request.ciphertext, request.pubKey)
-            else -> null
-        }
-
-    /** The account being signed for, from the coordinate's signer pubkey. */
-    private fun accountFace(coordinate: String): SignerFace = userFace(Nip46PermissionAuthorizer.signerPubKeyOf(coordinate))
-
-    private fun userFace(pubKey: HexKey?): SignerFace {
-        val user = pubKey?.let { LocalCache.getUserIfExists(it) }
-        return SignerFace(name = user?.toBestDisplayName(), picture = user?.profilePicture(), pubKey = pubKey)
-    }
-
+    clientStore: () -> Nip46ClientStore,
+    val queues: NappletPromptQueues = NappletPromptQueues(),
+) : Nip46ConsentPrompter by Nip46ConsentPrompts(
+        clientStore = clientStore,
+        showConnect = { info: SignerConnectInfo ->
+            withTimeoutOrNull(UNSHOWN_LIMIT_MS) { queues.connects.ask(info, info.coordinate) } ?: AppConnectResult.Cancelled
+        },
+        showOp = { info: SignerConsentInfo ->
+            withTimeoutOrNull(UNSHOWN_LIMIT_MS) { queues.signerOps.ask(info, info.coordinate) } ?: SignerOpGrant.DenyOnce
+        },
+    ) {
     companion object {
         /**
-         * How long a question may wait. An app gives up on a signer after a minute or two, and an
-         * unanswered question must not hold the signer for every other app; same bound as Android.
+         * How long a question on screen may wait. An app gives up on a signer after a minute or two,
+         * and a question left open must not hold the signer for every other app; as on Android.
          */
-        const val CONSENT_TIMEOUT_MS = 120_000L
+        const val ANSWER_WITHIN_MS = 120_000L
+
+        /**
+         * The ceiling for a question still waiting its turn. Each one gets [ANSWER_WITHIN_MS] from
+         * when it is shown, so this only ends one that never could be.
+         */
+        const val UNSHOWN_LIMIT_MS = 10 * 60_000L
     }
 }
 
-/** Every NIP-46 question waiting on the user, each in a window of its own over the app. */
+/**
+ * Every NIP-46 question waiting on the user, oldest first, each in a window of its own. A question
+ * brings the main window back ([onQuestion]) and comes to the front itself: the bunker answers apps
+ * while the user is elsewhere, and a question nobody sees is a silent "no".
+ */
 @Composable
-fun Nip46ConsentWindows(consent: DesktopNip46Consent) {
+fun Nip46ConsentWindows(
+    consent: DesktopNip46Consent,
+    onQuestion: () -> Unit,
+) {
+    val connects by consent.queues.connects.pending
+        .collectAsState()
+    val signerOps by consent.queues.signerOps.pending
+        .collectAsState()
+    val waiting = connects.isNotEmpty() || signerOps.isNotEmpty()
+    LaunchedEffect(waiting) { if (waiting) onQuestion() }
+
+    val remoteApp = stringRes(Res.string.nip46_signer_remote_app)
     ConsentWindows(
         apps = { true },
-        titleOf = { app -> consent.titleOf(app) ?: "" },
+        titleOf = { _, info -> consentTitle(info) ?: remoteApp },
         queues = consent.queues,
+        answerWithinMs = DesktopNip46Consent.ANSWER_WITHIN_MS,
+        raise = true,
     )
 }

@@ -526,7 +526,7 @@ fun main(args: Array<String>) {
                                     DesktopNappletWindows(nappletHost)
 
                                     // A NIP-46 app asking this desktop's bunker, in a window of its own.
-                                    Nip46ConsentWindows(modules.nip46Consent)
+                                    Nip46ConsentWindows(modules.nip46Consent, onQuestion = { windows.showMainWindow() })
                                 }
                             }
                         }

@@ -480,7 +480,7 @@ class DesktopAppModules(
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
 
     /** Asks the user before an app connects to an account's bunker, or before an operation it set to ask. */
-    val nip46Consent = DesktopNip46Consent { nip46ClientStore }
+    val nip46Consent = DesktopNip46Consent(clientStore = { nip46ClientStore })
 
     // Hydrated as it is made, as Android's Application does: until init() the registry neither reads
     // the stored favorites nor writes any, so every pin was lost when the app closed.

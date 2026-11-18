@@ -226,7 +226,7 @@ private fun WebPage(
     val page by session.page.collectAsState()
     ConsentWindows(
         apps = { it in apps },
-        titleOf = { app -> app?.removePrefix(BROWSER_APP_PREFIX)?.let(BrowserChrome::displayHost) ?: BrowserChrome.displayHost(page.url) },
+        titleOf = { app, _ -> app?.removePrefix(BROWSER_APP_PREFIX)?.let(BrowserChrome::displayHost) ?: BrowserChrome.displayHost(page.url) },
         queues = host.consent,
     )
 }
