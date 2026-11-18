@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.KeepScreenBr
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.delay
 
 // A cap, not a fixed size: QrCodeDrawer's own quiet zone (QR_QUIET_ZONE_MODULES in QrCodeDrawer.kt) is a
 // fixed pixel count subtracted from raw size.width, so its share of the tile grows as density
@@ -117,6 +119,9 @@ fun ShareNoteAsQrScreen(
     }
 }
 
+/** How long the web QR stays on screen before it counts as shared. */
+private const val QR_SCANNABLE_AFTER_MS = 3_000L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ShareNoteAsQrScreenContent(
@@ -135,12 +140,18 @@ private fun ShareNoteAsQrScreenContent(
     val noteState by observeNote(note, accountViewModel)
     val payload = remember(noteState, mode) { qrPayloadFor(note, mode) }
 
-    // The web link opens Brainstorm's page, which reads the note from Brainstorm's relay: copy it
-    // there while the code is on screen (private notes never are, see ShareRelayPolicy). Keyed on the
-    // event so a note still loading is pushed once it arrives.
+    // The web link opens the share site's page, which reads the note from the share relay: copy it
+    // there once the web code has been up long enough to be scanned, so opening the screen and
+    // backing out shares nothing. Once per screen, toggles and rotations included; a note still
+    // loading counts from when it arrives. Private notes never are copied (ShareRelayPolicy).
+    var copiedToShareRelay by rememberSaveable { mutableStateOf(false) }
     val loadedEventId = note.event?.id
     LaunchedEffect(mode, loadedEventId) {
-        if (mode == QrPayloadMode.Web && loadedEventId != null) accountViewModel.pushToShareRelay(note)
+        if (!copiedToShareRelay && mode == QrPayloadMode.Web && loadedEventId != null) {
+            delay(QR_SCANNABLE_AFTER_MS)
+            accountViewModel.pushToShareRelay(note)
+            copiedToShareRelay = true
+        }
     }
 
     KeepScreenBrightAndAwake()

@@ -20,53 +20,89 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.util.ShareSite
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
- * Which events Amethyst copies to the share relay ([RELAYS]) when the user makes a web link for
- * them. A web link page can only render what its relay can serve, so a shared note is pushed there
- * first; but a share link must never be the path by which private content reaches a public relay.
+ * Which events Amethyst copies to the share relay ([ShareSite.RELAYS]) when the user shares a web
+ * link for them. A web link page can only render what its relay can serve, so a shared note is
+ * copied there; but a share link must never be the path by which private content reaches a public
+ * relay.
  *
- * Pushed: signed events that already live on public relays. Never pushed:
+ * Copied: signed events already seen on a public relay, that the share relay does not have yet.
+ * Never copied:
  * - unsigned rumors (NIP-17 DMs, Concord and Marmot messages, private replies): they have no
  *   signature to publish and their content is private;
  * - envelopes of private content (gift wraps, seals, NIP-04 DMs, Marmot group events, drafts):
  *   signed, but republishing them spreads ciphertext and metadata the user did not choose to spread;
- * - NIP-29 group posts (an `h` tag): a group's relay decides who reads them, and a copy elsewhere
- *   would bypass that;
- * - NIP-70 protected events (a `-` tag): only their author may publish them to a relay.
+ * - NIP-29 group posts (an `h` tag) and the metadata of private or hidden groups: a group's relay
+ *   decides who reads them, and a copy elsewhere would bypass that;
+ * - private NIP-34 repositories, which name the only relays they may live on;
+ * - NIP-70 protected events (a `-` tag): only their author may publish them to a relay;
+ * - events seen only on relays that are not public (`isPublicRelay`: the user's local and private
+ *   storage relays, relays that require AUTH): the user may be sharing with someone who has access,
+ *   and copying would publish them to everyone.
  */
 object ShareRelayPolicy {
-    /** The relay that backs Amethyst's share links: Brainstorm's, which its web pages read from. */
-    val RELAYS = setOf(Constants.brainstorm)
-
     /**
-     * What sharing [note]'s link copies to [RELAYS]: the note, then its author's profile and relay
-     * list (so the page shows their name and picture and can follow their outbox). Empty for a note
-     * that must not leave its relays. [profileOf] finds a user's cached kind 0.
+     * What sharing [note]'s link copies: the note, the note it reposts or replies to (Brainstorm's
+     * page shows that one too), and its author's profile and relay list (so the page shows their
+     * name and picture and can follow their outbox). Nothing at all when [note] itself may not be
+     * copied. [profileOf] finds a user's cached kind 0.
      */
     fun eventsToPush(
         note: Note,
-        profileOf: (User) -> Event?,
+        profileOf: (User) -> Note?,
+        isPublicRelay: (NormalizedRelayUrl) -> Boolean,
     ): List<Event> {
-        if (!canPush(note)) return emptyList()
-        val event = note.event ?: return emptyList()
-        val author = note.author ?: return listOf(event)
-        return listOf(event) + eventsToPush(author, profileOf)
+        if (!mayCopy(note, isPublicRelay)) return emptyList()
+        val candidates =
+            buildList {
+                add(note)
+                note.replyTo?.lastOrNull()?.let { add(it) }
+                note.author?.let { addAll(authorNotes(it, profileOf)) }
+            }
+        return toPush(candidates, isPublicRelay)
     }
 
-    /** What sharing [user]'s profile link copies to [RELAYS]: their profile and relay list. */
+    /** What sharing [user]'s profile link copies: their profile and relay list. */
     fun eventsToPush(
         user: User,
-        profileOf: (User) -> Event?,
-    ): List<Event> = listOfNotNull(profileOf(user), user.nip65RelayListNote.event).filter { canPush(it) }
+        profileOf: (User) -> Note?,
+        isPublicRelay: (NormalizedRelayUrl) -> Boolean,
+    ): List<Event> = toPush(authorNotes(user, profileOf), isPublicRelay)
+
+    private fun authorNotes(
+        user: User,
+        profileOf: (User) -> Note?,
+    ) = listOfNotNull(profileOf(user), user.nip65RelayListNote)
+
+    private fun toPush(
+        candidates: List<Note>,
+        isPublicRelay: (NormalizedRelayUrl) -> Boolean,
+    ): List<Event> =
+        candidates
+            .filter { mayCopy(it, isPublicRelay) && !isOnShareRelay(it) }
+            .mapNotNull { it.event }
+            .distinctBy { it.id }
+
+    /** True when [note] may be copied: a public kind of event, seen on at least one public relay. */
+    fun mayCopy(
+        note: Note,
+        isPublicRelay: (NormalizedRelayUrl) -> Boolean,
+    ): Boolean = canPush(note) && note.relays.any(isPublicRelay)
+
+    /** True when the share relay already serves [note]: it sent it to us, or accepted it from us. */
+    fun isOnShareRelay(note: Note): Boolean = note.relays.any { it in ShareSite.RELAYS }
 
     fun canPush(note: Note): Boolean {
         if (note.rumorHost != null) return false
@@ -85,6 +121,8 @@ object ShareRelayPolicy {
         ) {
             return false
         }
+        if (event is GitRepositoryEvent && event.isPrivate()) return false
+        if (event is GroupMetadataEvent && (event.isPrivate() || event.isHidden())) return false
         for (tag in event.tags) {
             if (tag.isEmpty()) continue
             if (tag[0] == "-" || tag[0] == "h") return false

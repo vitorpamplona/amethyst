@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberImageSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.shareableLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.shareNoteLink
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -75,7 +75,7 @@ fun shareNoteActions(
     return buildList {
         add(
             NoteAction(MaterialSymbols.Share, shareLinkStr, group = NoteActionGroup.SHARE) {
-                sharer.share(shareableLinkForNote(note, accountViewModel), shareLinkStr, shareStr)
+                sharer.shareNoteLink(note, accountViewModel, shareLinkStr, shareStr)
                 onDismiss()
             },
         )

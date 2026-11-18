@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.util
 
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
 /**
  * An `https://njump.to/…` link for a NIP-19 bech32 entity, for handing a nostr event to
  * something that does not speak nostr — a share sheet, a browser, or a log line meant to be
@@ -28,12 +31,22 @@ package com.vitorpamplona.amethyst.commons.util
 fun njumpLink(nip19BechAddress: String) = "https://njump.to/$nip19BechAddress"
 
 /**
- * The web page Amethyst's Share buttons hand out for an event: Brainstorm's `/e/` page, which takes
- * an nevent, naddr or note1 and renders a link preview for chat apps and social sites. Amethyst
- * copies the shared event to Brainstorm's relay first, so the page can always find it (see
- * `EventBroadcaster.pushToShareRelay`).
+ * Where Amethyst's Share links point, and the relay that site's pages read from. Every share link
+ * and every copy made for one goes through here, so moving to another provider is one edit.
+ *
+ * Brainstorm's `/e/` page takes an nevent, naddr or note1 and `/p/` an npub or nprofile; links keep
+ * the nevent/nprofile forms because those carry relay hints. Its crawler previews (the card a chat
+ * app or social site shows for a pasted link) are filled in for text notes and long-form posts;
+ * other kinds render on the page but preview as Brainstorm's generic card. Brainstorm's bare
+ * `/<bech32>` form redirects to these on staging only, so links use the typed paths.
  */
-fun shareLinkForEvent(nip19BechAddress: String) = "https://brainstorm.world/e/$nip19BechAddress"
+object ShareSite {
+    const val WEB = "https://brainstorm.world"
 
-/** The web page for a profile: Brainstorm's `/p/` page, for an npub or nprofile. */
-fun shareLinkForProfile(nip19BechAddress: String) = "https://brainstorm.world/p/$nip19BechAddress"
+    /** The relay Brainstorm's pages read, where Amethyst copies what it shares (see `ShareRelayPolicy`). */
+    val RELAYS: Set<NormalizedRelayUrl> = setOf(Constants.brainstorm)
+
+    fun eventLink(nip19BechAddress: String) = "$WEB/e/$nip19BechAddress"
+
+    fun profileLink(nip19BechAddress: String) = "$WEB/p/$nip19BechAddress"
+}

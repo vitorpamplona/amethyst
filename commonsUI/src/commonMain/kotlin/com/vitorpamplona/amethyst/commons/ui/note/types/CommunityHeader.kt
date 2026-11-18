@@ -92,7 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.commons.ui.note.shareableLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.shareNoteLink
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -545,7 +545,7 @@ fun ShareCommunityButton(
 
     FilledTonalIconButton(
         onClick = {
-            sharer.share(shareableLinkForNote(note, accountViewModel), quickActionShareBrowserLinkStr, quickActionShareStr)
+            sharer.shareNoteLink(note, accountViewModel, quickActionShareBrowserLinkStr, quickActionShareStr)
         },
     ) {
         Icon(

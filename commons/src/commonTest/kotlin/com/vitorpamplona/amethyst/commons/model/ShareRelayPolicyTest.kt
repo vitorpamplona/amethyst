@@ -21,12 +21,18 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.util.ShareSite
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -96,41 +102,106 @@ class ShareRelayPolicyTest {
         assertFalse(ShareRelayPolicy.canPush(DraftWrapEvent(id, author, 1L, arrayOf(arrayOf("d", "draft")), "x", sig)))
     }
 
-    private val profile = MetadataEvent("e".repeat(64), author, 1L, emptyArray(), "{\"name\":\"bob\"}", sig)
+    @Test
+    fun privateRepositoriesAndGroupsAreNeverPushed() {
+        assertFalse(ShareRelayPolicy.canPush(GitRepositoryEvent(id, author, 1L, arrayOf(arrayOf("d", "repo"), arrayOf("private", "true")), "", sig)))
+        assertTrue(ShareRelayPolicy.canPush(GitRepositoryEvent(id, author, 1L, arrayOf(arrayOf("d", "repo")), "", sig)))
+        assertFalse(ShareRelayPolicy.canPush(GroupMetadataEvent(id, author, 1L, arrayOf(arrayOf("d", "g"), arrayOf("private")), "", sig)))
+        assertFalse(ShareRelayPolicy.canPush(GroupMetadataEvent(id, author, 1L, arrayOf(arrayOf("d", "g"), arrayOf("hidden")), "", sig)))
+        assertTrue(ShareRelayPolicy.canPush(GroupMetadataEvent(id, author, 1L, arrayOf(arrayOf("d", "g"), arrayOf("public")), "", sig)))
+    }
+
+    private val publicRelay = RelayUrlNormalizer.normalize("wss://nos.lol")
+    private val privateRelay = RelayUrlNormalizer.normalize("wss://my.private.relay")
+    private val isPublic = { relay: NormalizedRelayUrl -> relay != privateRelay }
+
+    private val profileNote: AddressableNote =
+        run {
+            val profile = MetadataEvent("e".repeat(64), author, 1L, emptyArray(), "{\"name\":\"bob\"}", sig)
+            AddressableNote(MetadataEvent.createAddress(author)).also {
+                it.event = profile
+                it.addRelay(publicRelay)
+            }
+        }
     private val relayList = AdvertisedRelayListEvent("f".repeat(64), author, 1L, arrayOf(arrayOf("r", "wss://nos.lol")), "", sig)
 
-    private fun authoredNote(event: TextNoteEvent): Note {
+    private fun author(): User {
         val user = User(author) { address -> AddressableNote(address) }
         user.nip65RelayListNote.event = relayList
-        return Note(event.id).also { it.loadEvent(event, user, emptyList()) }
+        user.nip65RelayListNote.addRelay(publicRelay)
+        return user
     }
+
+    private fun seenOn(
+        event: Event,
+        vararg relays: NormalizedRelayUrl,
+        replyTo: List<Note> = emptyList(),
+    ): Note = Note(event.id).also { note -> note.loadEvent(event, author(), replyTo) }.also { note -> relays.forEach { note.addRelay(it) } }
 
     @Test
     fun sharingANoteCopiesItThenItsAuthorsProfileAndRelayList() {
         val event = textNote()
-        val pushed = ShareRelayPolicy.eventsToPush(authoredNote(event)) { profile }
+        val pushed = ShareRelayPolicy.eventsToPush(seenOn(event, publicRelay), { profileNote }, isPublic)
 
-        assertEquals(listOf<Event>(event, profile, relayList), pushed)
+        assertEquals(listOf(event, profileNote.event, relayList), pushed)
     }
 
     @Test
     fun aPrivateNoteCopiesNothingNotEvenItsAuthorsProfile() {
-        val pushed = ShareRelayPolicy.eventsToPush(authoredNote(textNote(signature = ""))) { profile }
+        val pushed = ShareRelayPolicy.eventsToPush(seenOn(textNote(signature = ""), publicRelay), { profileNote }, isPublic)
 
         assertTrue(pushed.isEmpty())
     }
 
     @Test
-    fun sharingAProfileCopiesWhatIsCachedOfIt() {
-        val user = User(author) { address -> AddressableNote(address) }
+    fun aNoteSeenOnlyOnPrivateRelaysIsNotCopied() {
+        // Shared with someone who has access to that relay: copying it would publish it to everyone.
+        assertTrue(ShareRelayPolicy.eventsToPush(seenOn(textNote(), privateRelay), { profileNote }, isPublic).isEmpty())
+        // Never seen on any relay (a local cache, a store): no proof it is public.
+        assertTrue(ShareRelayPolicy.eventsToPush(seenOn(textNote()), { profileNote }, isPublic).isEmpty())
+        // Seen on a public relay as well: it is public.
+        assertEquals(id, ShareRelayPolicy.eventsToPush(seenOn(textNote(), privateRelay, publicRelay), { null }, isPublic).first().id)
+    }
 
-        assertTrue(ShareRelayPolicy.eventsToPush(user) { null }.isEmpty())
-        assertEquals(listOf<Event>(profile), ShareRelayPolicy.eventsToPush(user) { profile })
+    @Test
+    fun whatTheShareRelayAlreadyHasIsNotSentAgain() {
+        val event = textNote()
+        profileNote.addRelay(Constants.brainstorm)
+        val pushed = ShareRelayPolicy.eventsToPush(seenOn(event, publicRelay, Constants.brainstorm), { profileNote }, isPublic)
+
+        // The note and the profile came from (or were accepted by) Brainstorm's relay; the relay list was not.
+        assertEquals(listOf<Event>(relayList), pushed)
+    }
+
+    @Test
+    fun aRepostAlsoCopiesTheNoteItReposts() {
+        val original = seenOn(TextNoteEvent("1".repeat(64), author, 1L, emptyArray(), "original", sig), publicRelay)
+        val repost = RepostEvent("2".repeat(64), author, 2L, arrayOf(arrayOf("e", original.idHex)), "", sig)
+
+        val pushed = ShareRelayPolicy.eventsToPush(seenOn(repost, publicRelay, replyTo = listOf(original)), { null }, isPublic)
+
+        assertEquals(listOf(repost, original.event, relayList), pushed)
+    }
+
+    @Test
+    fun aReplyDoesNotCopyAParentThatMustStayPrivate() {
+        val parent = seenOn(TextNoteEvent("1".repeat(64), author, 1L, emptyArray(), "members only", sig), privateRelay)
+        val reply = TextNoteEvent("2".repeat(64), author, 2L, arrayOf(arrayOf("e", parent.idHex)), "reply", sig)
+
+        val pushed = ShareRelayPolicy.eventsToPush(seenOn(reply, publicRelay, replyTo = listOf(parent)), { null }, isPublic)
+
+        assertEquals(listOf(reply, relayList), pushed)
+    }
+
+    @Test
+    fun sharingAProfileCopiesWhatIsCachedOfIt() {
+        assertEquals(listOf(relayList), ShareRelayPolicy.eventsToPush(author(), { null }, isPublic))
+        assertEquals(listOf(profileNote.event, relayList), ShareRelayPolicy.eventsToPush(author(), { profileNote }, isPublic))
     }
 
     @Test
     fun theShareRelayIsBrainstorms() {
-        assertEquals(setOf(Constants.brainstorm), ShareRelayPolicy.RELAYS)
+        assertEquals(setOf(Constants.brainstorm), ShareSite.RELAYS)
         assertEquals("wss://search.brainstorm.world/", Constants.brainstorm.url)
     }
 }
