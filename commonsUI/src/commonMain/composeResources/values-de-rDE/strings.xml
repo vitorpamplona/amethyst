@@ -9888,7 +9888,6 @@
     <string name="claude_code_propose_update_desc">Bereits ein Vorschlag: Erneutes Veröffentlichen macht diese Commits zu seiner neuen Version.</string>
     <string name="claude_code_propose_title">Titel</string>
     <string name="claude_code_propose_description">Beschreibung</string>
-    <string name="claude_code_draft_with_claude">Mit Claude entwerfen</string>
     <string name="claude_code_gate">Build-Prüfungen</string>
     <string name="claude_code_gate_desc">Führt die Pre-Push-Prüfungen des Repositorys im Ordner dieses Branches aus.</string>
     <string name="claude_code_gate_none">Dieses Repository hat keine Pre-Push-Prüfungen.</string>

@@ -24,14 +24,13 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.agents.PermissionMode
-import com.vitorpamplona.claudecode.process.ClaudeExecutable
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +42,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -382,8 +380,8 @@ data class LocalTip(
  * gate. Signing and pushing go through the app's GitProposals, as any proposal made in the app.
  */
 class ClaudeCodeProposeViewModel(
-    service: ClaudeCodeService,
-    key: String,
+    private val service: ClaudeCodeService,
+    private val key: String,
     /** A repository's folder in the chat's workspace, or null for the chat's folder itself. */
     repo: String? = null,
 ) : ViewModel() {
@@ -403,7 +401,19 @@ class ClaudeCodeProposeViewModel(
     val draft: StateFlow<ProposalDraft?> = _draft.asStateFlow()
 
     private val _drafting = MutableStateFlow(false)
+
+    /** The chat's agent is writing the title and description ([draftWithAgent]). */
     val drafting: StateFlow<Boolean> = _drafting.asStateFlow()
+
+    private val _draftFailed = MutableStateFlow(false)
+
+    /** The last draft the agent was asked for never came back. */
+    val draftFailed: StateFlow<Boolean> = _draftFailed.asStateFlow()
+
+    /** How the screen names the agent that drafts: "Claude", "Codex". */
+    val agentName: String = chat?.backend?.shortName ?: "Claude"
+
+    private var draftJob: Job? = null
 
     private val _gate = MutableStateFlow<GateState>(GateState.NotRun)
     val gate: StateFlow<GateState> = _gate.asStateFlow()
@@ -426,8 +436,10 @@ class ClaudeCodeProposeViewModel(
             val info = GitWorkspace.inspect(dir)
             _info.value = info
             if (!gateScript(dir).isFile) _gate.value = GateState.None
-            // A first draft from the commits themselves; Claude can write a better one.
+            // A first draft from the commits themselves, shown while the agent writes a better one.
             if (_draft.value == null && info != null) _draft.value = draftFromCommits(info)
+            // A new proposal is described as the screen opens; an update keeps its description.
+            if (info != null && info.proposalId == null && info.commits.isNotEmpty()) draftWithAgent()
         }
     }
 
@@ -544,62 +556,47 @@ class ClaudeCodeProposeViewModel(
         super.onCleared()
     }
 
+    /** The user's own text. An agent draft still being written stops: what was typed stays. */
     fun setDraft(draft: ProposalDraft) {
         _draft.value = draft
+        stopDrafting()
+    }
+
+    /** Stops the draft being written; the text so far stays. */
+    fun stopDrafting() {
+        draftJob?.cancel()
+        draftJob = null
+        _drafting.value = false
     }
 
     /**
-     * Asks Claude, in a one-off run without tools, for a title and description from the commits
-     * and the diff, in the repository's PR style.
+     * Asks the chat's own agent for the title and description, on a copy of its session
+     * ([ClaudeCodeService.askAside]): it knows why the work was done, not only the diff. It
+     * follows the repository's pull-request template when there is one. Leaving the screen
+     * clears this ViewModel, which stops the agent and throws the copy away.
      */
-    fun draftWithClaude() {
+    fun draftWithAgent() {
         val dir = dir ?: return
         val info = _info.value ?: return
-        if (_drafting.value) return
+        draftJob?.cancel()
         _drafting.value = true
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val exe = ClaudeExecutable.find() ?: return@launch
-                val diff = GitWorkspace.diff(dir).take(DRAFT_DIFF_CHARS)
-                val log = info.commits.joinToString("\n\n") { "${it.subject}\n${it.body}".trim() }
-                val prompt =
-                    """
-                    Write the title and description of a pull request for these changes.
-                    The title is one line under 72 characters, in the conventional-commit style of the commits.
-                    The description says what changed and why, then a short test plan, in plain markdown.
-                    Answer with only a JSON object: {"title": "...", "description": "..."}
-
-                    Commits:
-                    $log
-
-                    Diff (may be cut short):
-                    $diff
-                    """.trimIndent()
-                // The prompt goes in on stdin: as an argument, a large diff passes Windows' 32k
-                // command-line limit and the start fails.
-                val process =
-                    ProcessBuilder(exe.absolutePath, "-p", "--output-format", "json", "--tools", "", "--no-session-persistence")
-                        .directory(dir)
-                        .redirectError(ProcessBuilder.Redirect.DISCARD)
-                        .start()
-                val out =
-                    try {
-                        withTimeout(DRAFT_TIMEOUT_MS) {
-                            process.outputStream.bufferedWriter().use { it.write(prompt) }
-                            runInterruptible { process.inputStream.bufferedReader().readText() }
-                        }
-                    } finally {
-                        process.destroy()
+        _draftFailed.value = false
+        val job =
+            viewModelScope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    val prompt = draftPrompt(dir, info)
+                    val draft = service.askAside(key, prompt)?.let(::parseDraftAnswer)
+                    if (draft != null) _draft.value = draft else _draftFailed.value = true
+                } finally {
+                    // A newer draft took over: it says when it is done.
+                    if (draftJob === coroutineContext[Job]) {
+                        draftJob = null
+                        _drafting.value = false
                     }
-                parseDraft(out)?.let { _draft.value = it }
-            } catch (e: IOException) {
-                Log.w(TAG, "Could not draft the description", e)
-            } catch (e: TimeoutCancellationException) {
-                Log.w(TAG, "Drafting the description took too long", e)
-            } finally {
-                _drafting.value = false
+                }
             }
-        }
+        draftJob = job
+        job.start()
     }
 
     /** The branch tip and its merge base with [head], the target branch's tip in the maintainers' signed state. */
@@ -695,7 +692,7 @@ class ClaudeCodeProposeViewModel(
         private const val GATE_LOG_MAX = 2_000_000
         private const val GATE_SHOW_MS = 100L
         private const val DRAFT_DIFF_CHARS = 60_000
-        private const val DRAFT_TIMEOUT_MS = 180_000L
+        private const val TEMPLATE_CHARS = 20_000
 
         fun draftFromCommits(info: GitWorkInfo): ProposalDraft {
             val first = info.commits.lastOrNull()
@@ -717,26 +714,75 @@ class ClaudeCodeProposeViewModel(
             return ProposalDraft(title, description)
         }
 
-        /** The JSON object Claude answered with, from `--output-format json`'s `result`. */
-        fun parseDraft(output: String): ProposalDraft? {
-            val json = Json { ignoreUnknownKeys = true }
-            val result =
-                try {
-                    ((json.parseToJsonElement(output) as? JsonObject)?.get("result") as? JsonPrimitive)?.content
-                } catch (e: IllegalArgumentException) {
-                    null
-                } ?: return null
-            val start = result.indexOf('{')
-            val end = result.lastIndexOf('}')
+        /** The `{"title", "description"}` object in the agent's answer, which may have words around it. */
+        fun parseDraftAnswer(answer: String): ProposalDraft? {
+            val start = answer.indexOf('{')
+            val end = answer.lastIndexOf('}')
             if (start < 0 || end <= start) return null
             return try {
-                val obj = json.parseToJsonElement(result.substring(start, end + 1)) as? JsonObject ?: return null
-                val title = (obj["title"] as? JsonPrimitive)?.content ?: return null
-                ProposalDraft(title.trim(), (obj["description"] as? JsonPrimitive)?.content?.trim().orEmpty())
+                val obj = Json.parseToJsonElement(answer.substring(start, end + 1)) as? JsonObject ?: return null
+                val title = (obj["title"] as? JsonPrimitive)?.content?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+                ProposalDraft(title, (obj["description"] as? JsonPrimitive)?.content?.trim().orEmpty())
             } catch (e: IllegalArgumentException) {
                 null
             }
         }
+
+        /** Where forges look for a repository's pull-request template, in their order. */
+        private val TEMPLATE_PATHS =
+            listOf(
+                ".github/pull_request_template.md",
+                ".github/PULL_REQUEST_TEMPLATE.md",
+                "pull_request_template.md",
+                "PULL_REQUEST_TEMPLATE.md",
+                "docs/pull_request_template.md",
+                "docs/PULL_REQUEST_TEMPLATE.md",
+            )
+
+        /** The repository's pull-request template, if it has one. */
+        fun pullRequestTemplate(root: File): String? =
+            TEMPLATE_PATHS
+                .map { File(root, it) }
+                .firstOrNull { it.isFile }
+                ?.readText()
+                ?.take(TEMPLATE_CHARS)
+                ?.takeIf { it.isNotBlank() }
+
+        /** What the agent is asked: the commits and diff, and the repository's template if any. */
+        suspend fun draftPrompt(
+            dir: File,
+            info: GitWorkInfo,
+        ): String =
+            withContext(Dispatchers.IO) {
+                val diff = GitWorkspace.diff(dir).take(DRAFT_DIFF_CHARS)
+                val log = info.commits.joinToString("\n\n") { "${it.subject}\n${it.body}".trim() }
+                val root = GitWorkspace.git(dir, "rev-parse", "--show-toplevel")?.trim()?.let(::File) ?: dir
+                val template = pullRequestTemplate(root)
+                val shape =
+                    if (template != null) {
+                        "Fill in the repository's pull-request template below: keep its headings, follow its comments (<!-- -->) and then leave them out, drop the sections that don't apply, and leave unticked any box only a person can vouch for."
+                    } else {
+                        "The description says what changed and why, then how it was tested, in plain markdown."
+                    }
+                buildString {
+                    appendLine("Write the title and description of a pull request for the work on this branch, for a reviewer who hasn't seen this conversation.")
+                    appendLine("Take the why from this conversation: what was asked, what was decided and what was ruled out. Take what changed from the commits and the diff below, and the testing from what was actually run.")
+                    appendLine("The title is one line under 72 characters, in the style of the commits.")
+                    appendLine(shape)
+                    appendLine("Don't use tools and don't change anything. Answer with only a JSON object: {\"title\": \"...\", \"description\": \"...\"}")
+                    appendLine()
+                    appendLine("Commits:")
+                    appendLine(log)
+                    appendLine()
+                    appendLine("Diff (may be cut short):")
+                    appendLine(diff)
+                    if (template != null) {
+                        appendLine()
+                        appendLine("Template:")
+                        appendLine(template)
+                    }
+                }
+            }
     }
 }
 

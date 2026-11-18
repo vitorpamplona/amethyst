@@ -9605,7 +9605,10 @@
     <string name="claude_code_propose_update_desc">Already a proposal: publishing again makes these commits its new version.</string>
     <string name="claude_code_propose_title">Title</string>
     <string name="claude_code_propose_description">Description</string>
-    <string name="claude_code_draft_with_claude">Draft with Claude</string>
+    <string name="claude_code_drafting">%1$s is writing the title and description…</string>
+    <string name="claude_code_write_it_myself">Write it myself</string>
+    <string name="claude_code_redraft">Redraft with %1$s</string>
+    <string name="claude_code_draft_failed">%1$s didn't send a draft. Write it here, or try again.</string>
     <string name="claude_code_gate">Build checks</string>
     <string name="claude_code_gate_desc">Runs the repository's pre-push checks in this branch's folder.</string>
     <string name="claude_code_gate_none">This repository has no pre-push checks to run.</string>

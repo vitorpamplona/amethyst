@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.agents.AgentBackend
+import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentLiveSession
 import com.vitorpamplona.agents.AgentSessionInfo
 import com.vitorpamplona.agents.AgentStartOptions
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.amethyst.commons.util.appDataDir
@@ -36,9 +38,12 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -47,9 +52,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -791,6 +798,77 @@ class ClaudeCodeService(
         refresh()
     }
 
+    /**
+     * Asks [key]'s agent [prompt] on a copy of its session, so the answer knows the conversation,
+     * and gives the reply's text, or null when the agent can't start or says nothing. The copy
+     * has no tools, runs read-only, is refused every approval, and is deleted afterwards, so it
+     * never shows in the list. Cancelling stops the agent; the copy is deleted all the same.
+     */
+    suspend fun askAside(
+        key: String,
+        prompt: String,
+        timeoutMs: Long = ASIDE_TIMEOUT_MS,
+    ): String? {
+        val chat = chats.value[key] ?: chat(key) ?: return null
+        val state = chat.state.value
+        val agent = chat.backend
+        val options =
+            AgentStartOptions(
+                cwd = File(state.cwd),
+                resumeSessionId = state.sessionId,
+                // A copy: the session itself stays as it is, even while a turn runs in it.
+                forkSession = state.sessionId != null,
+                model = state.modelChoice,
+                permissionMode = if (PermissionMode.PLAN in agent.capabilities.modes) PermissionMode.PLAN else PermissionMode.DEFAULT,
+                onlyHostTools = true,
+            )
+        val connection =
+            try {
+                agent.start(options, scope)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not start ${agent.displayName} to ask aside", e)
+                return null
+            }
+        var copyId: String? = null
+        var answer: String? = null
+        try {
+            withTimeout(timeoutMs) {
+                coroutineScope {
+                    val reading =
+                        launch {
+                            connection.events
+                                .takeWhile { it !is AgentEvent.TurnEnded }
+                                .collect { event ->
+                                    when (event) {
+                                        is AgentEvent.SessionStarted -> if (event.sessionId != state.sessionId) copyId = event.sessionId
+                                        is AgentEvent.Reply ->
+                                            event.content
+                                                .filterIsInstance<ContentBlock.Text>()
+                                                .joinToString("") { it.text }
+                                                .takeIf { it.isNotBlank() }
+                                                ?.let { answer = it }
+                                        is AgentEvent.ApprovalRequested -> connection.respond(event.request, PermissionDecision.Deny(ASIDE_NO_TOOLS))
+                                        else -> {}
+                                    }
+                                }
+                        }
+                    connection.send(prompt)
+                    reading.join()
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w(TAG, "${agent.displayName} took too long to answer aside", e)
+        } catch (e: IOException) {
+            Log.w(TAG, "${agent.displayName} stopped while answering aside", e)
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) {
+                connection.kill()
+                copyId?.let { id -> if (!agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
+            }
+        }
+        return answer
+    }
+
     /** Ends the session's chat here and deletes its file. */
     suspend fun delete(row: ClaudeSessionRow) {
         chats.value[row.key]?.let { chat ->
@@ -990,6 +1068,10 @@ class ClaudeCodeService(
 
     companion object {
         private const val TAG = "ClaudeCodeService"
+
+        /** How long [askAside] waits for an answer. */
+        private const val ASIDE_TIMEOUT_MS = 180_000L
+        private const val ASIDE_NO_TOOLS = "No tools here: answer from the conversation and the message alone."
 
         /** The repositories of the last workspace, offered first next time. */
         const val LAST_GROUP = "Last used"

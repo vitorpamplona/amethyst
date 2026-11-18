@@ -9886,7 +9886,6 @@
     <string name="claude_code_propose_update_desc">Redan ett förslag: när du publicerar igen blir dessa commits dess nya version.</string>
     <string name="claude_code_propose_title">Titel</string>
     <string name="claude_code_propose_description">Beskrivning</string>
-    <string name="claude_code_draft_with_claude">Skriv utkast med Claude</string>
     <string name="claude_code_gate">Byggkontroller</string>
     <string name="claude_code_gate_desc">Kör repositoryts pre-push-kontroller i den här grenens mapp.</string>
     <string name="claude_code_gate_none">Det här repositoryt har inga pre-push-kontroller att köra.</string>

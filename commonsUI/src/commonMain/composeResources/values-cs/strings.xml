@@ -10528,7 +10528,6 @@
     <string name="claude_code_propose_update_desc">Už jde o návrh: opětovným zveřejněním se tyto commity stanou jeho novou verzí.</string>
     <string name="claude_code_propose_title">Název</string>
     <string name="claude_code_propose_description">Popis</string>
-    <string name="claude_code_draft_with_claude">Sepsat s Claudem</string>
     <string name="claude_code_gate">Kontroly sestavení</string>
     <string name="claude_code_gate_desc">Spustí kontroly repozitáře před pushem ve složce této větve.</string>
     <string name="claude_code_gate_none">Tento repozitář nemá žádné kontroly před pushem.</string>
