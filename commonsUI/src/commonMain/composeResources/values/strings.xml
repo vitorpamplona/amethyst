@@ -2073,6 +2073,7 @@
     <string name="channel_invite_leave">Leave</string>
     <string name="relay_group_join_to_post">Join this group to send messages.</string>
     <string name="relay_group_invite_only_to_post">This group is invite-only — you need an invite to post.</string>
+    <string name="buzz_channel_guests_cannot_post">Only members can post in this channel. You can read and follow along.</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject_caption">Topic of the conversation</string>
     <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
