@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">ответ на </string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Разрешения:</string>
+    <string name="nsite_root_site">Корневой сайт</string>
+    <string name="nsite_source">Источник:</string>
+    <string name="nsite_servers">Серверы:</string>
+    <string name="nsite_open">Открыть</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Использовать прямой URL-адрес</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Открыт</string>
     <string name="git_status_merged">Объединён</string>
     <string name="git_status_closed">Закрыт</string>
@@ -28,6 +48,7 @@
     <string name="road_event_speed_camera">Камера контроля скорости</string>
     <string name="road_event_traffic_jam">Пробка</string>
     <string name="road_event_unknown">Дорожное событие</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Открытие</string>
     <string name="relay_monitor_rtt_read">Чтение</string>
     <string name="relay_monitor_rtt_write">Запись</string>
@@ -54,10 +75,9 @@
     <string name="your_profile_image">Фото профиля</string>
     <string name="scan_qr">Сканировать QR</string>
     <string name="show_anyway">Показать</string>
-    <string name="post_was_hidden">Этот пост был скрыт, так как он упоминает скрытых пользователей или слова</string>
+    <string name="post_was_hidden">Данный пост был скрыт, потому что упоминает скрытых ваши пользователей</string>
     <string name="post_was_flagged_as_inappropriate_by">Запись была помечена как неуместная</string>
     <string name="post_not_found">запись не найдена</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Фото канала</string>
     <string name="referenced_event_not_found">Связанное событие не найдено</string>
     <string name="could_not_decrypt_the_message">Не удалось расшифровать сообщение</string>
@@ -65,14 +85,14 @@
     <string name="explicit_content">Запрещённый контент</string>
     <string name="relay_notice">Уведомление relay</string>
     <string name="duplicated_post">Дублированный пост</string>
-    <string name="other">Другое</string>
-    <string name="harassment">Преследование</string>
+    <string name="other">Другие</string>
+    <string name="harassment">Домогательство</string>
     <string name="violence">Насилие</string>
     <string name="unknown_author">Неизвестный автор</string>
     <string name="copy_text">Копировать текст</string>
     <string name="copy_user_pubkey">Копировать ID автора</string>
     <string name="copy_note_id">Копировать ID записи</string>
-    <string name="copy_raw_json">Скопировать сырой JSON</string>
+    <string name="copy_raw_json">Скопировать исходный JSON</string>
     <string name="broadcast">Разослать</string>
     <string name="timestamp_it">Поставить метку времени</string>
     <string name="timestamp_pending">Метка времени: ожидание подтверждений</string>
@@ -81,39 +101,35 @@
     <string name="report_spam_scam">Сообщить о спаме / мошенничестве</string>
     <string name="report_impersonation">Сообщить о выдаче себя за другого</string>
     <string name="report_illegal_behaviour">Сообщить о незаконных действиях</string>
-    <string name="report_malware">Сообщить о вредоносном ПО</string>
-    <string name="malware">Вредоносное ПО</string>
+    <string name="report_malware">Сообщить об вредоносных ПО</string>
+    <string name="malware">Вирус</string>
     <string name="chat_zap_amount_suffix">заплачено %1$s sats</string>
-    <string name="chat_zap_anonymous">Анонимно</string>
-    <string name="chat_raid_is_raiding">совершает рейд</string>
+    <string name="chat_zap_anonymous">Анонимный</string>
+    <string name="chat_raid_is_raiding">проводит рейды</string>
     <string name="chat_clip_created_a_clip">создал клип</string>
     <string name="edited">изменено</string>
     <string name="original">оригинал</string>
     <string name="quote">Цитата</string>
-    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Новая сумма в sat</string>
-    <string name="replying_to">ответ на </string>
     <string name="following"> Подписок</string>
     <string name="followers"> Подписчиков</string>
-    <string name="number_following">%1$s подписок</string>
-    <string name="number_followers">%1$s подписчиков</string>
+    <string name="number_following">%1$s Подписок</string>
+    <string name="number_followers">%1$s Подписчиков</string>
     <string name="log_out">Выйти</string>
     <string name="show_more">Больше</string>
+    <string name="show_less">Скрыть</string>
     <string name="lightning_invoice">Lightning инвойс</string>
     <string name="invoice_expired">Истёк срок</string>
-    <string name="clink_lightning_offer">CLINK Offer</string>
     <string name="clink_offer_pay_to">Кому</string>
     <string name="clink_confirm_payment_title">Подтверждение платежа</string>
     <string name="clink_offer_amount_sats">Сумма (sats)</string>
     <string name="clink_offer_amount_range">Допустимый диапазон: %1$s–%2$s sats</string>
-    <string name="clink_offer_label">CLINK Offer (noffer)</string>
     <string name="clink_budget_set">Бюджет</string>
     <string name="clink_budget_title">Бюджет трат</string>
     <string name="clink_budget_amount_sats">Сумма (sats)</string>
     <string name="clink_budget_request">Запрос</string>
     <string name="clink_budget_approved">Бюджет утверждён</string>
     <string name="clink_debit_pay_only">Только оплата</string>
-    <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Оплачивайте и отправляйте zap из кошелька, который заранее авторизовал ваш аккаунт. Только расходы — без баланса и истории.</string>
     <string name="wallet_add_clink_invalid">Недействительный указатель CLINK debit. Ожидается строка ndebit1…</string>
     <string name="wallet_paste_ndebit">Вставить указатель ndebit</string>
@@ -123,10 +139,7 @@
     <string name="send_payment_source_external">Другое приложение-кошелёк</string>
     <string name="send_payment_source_onchain_wallet">Кошелёк на блокчейне</string>
     <string name="send_payment_source_cashu_wallet">Cashu-кошелёк</string>
-    <string name="send_payment_method_lightning">Lightning</string>
-    <string name="send_payment_method_clink">CLINK Offer</string>
     <string name="send_payment_method_onchain">На блокчейне</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Сумма</string>
     <string name="send_payment_fixed_price">Цена установлена предложением</string>
     <string name="send_payment_receipt_section">Квитанция zap</string>
@@ -156,54 +169,52 @@
     <string name="send_sats">Отправить</string>
     <string name="secret_emoji_maker">Создатель секретных эмодзи</string>
     <string name="secret_emoji_maker_explainer">Добавить эмодзи со скрытым сообщением в пост</string>
-    <string name="secret_note_to_receiver">Секретная заметка для получателя</string>
-    <string name="secret_note_to_receiver_placeholder">Моё скрытое сообщение</string>
+    <string name="secret_note_to_receiver">Секретное примечание для получателя</string>
+    <string name="secret_note_to_receiver_placeholder">Мое скрытое сообщение</string>
     <string name="secret_visible_text">Видимый префикс</string>
-    <string name="secret_visible_text_placeholder">😎</string>
-    <string name="secret_add_to_text">Добавить в пост</string>
+    <string name="secret_add_to_text">Добавить к посту</string>
     <string name="article">Статья</string>
     <string name="channel_name">Название канала</string>
     <string name="my_awesome_group">Моя новая группа</string>
     <string name="picture_url">URL фотографии</string>
-    <string name="optional_picture_url">URL изображения (необязательно)</string>
+    <string name="optional_picture_url">Url (необязательно)</string>
     <string name="about_us">О нас.. </string>
     <string name="search_and_add_a_user">Найти и добавить пользователя</string>
     <string name="add_a_relay">Добавить релей</string>
-    <string name="my_name">Моё имя @tag</string>
+    <string name="my_name">Мой @тег</string>
     <string name="display_name">Отображаемое имя</string>
     <string name="my_display_name">Моё отображаемое имя</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
-    <string name="welcome">Добро пожаловать, Ostrich!</string>
+    <string name="welcome">Добро пожаловать Ostrich!</string>
     <string name="username">Никнейм</string>
     <string name="about_me">Обо мне</string>
     <string name="avatar_url">URL фотографии</string>
     <string name="banner_url">URL баннера</string>
     <string name="website_url">URL сайта</string>
     <string name="pronouns">Местоимения</string>
-    <string name="stale_relay_hint_label">Исходные relay могут быть устаревшими</string>
+    <string name="stale_relay_hint_label">Ретрансляторы могут быть устаревшими</string>
     <string name="stale_relay_hint_icon_description">Предупреждение об устаревшем relay</string>
     <string name="pinned_to_top">Закреплено наверху</string>
     <string name="upload_image">Загрузить фото</string>
     <string name="upload_file">Загрузить файл</string>
-    <string name="take_a_picture">Сделать снимок</string>
-    <string name="record_a_video">Записать видео</string>
+    <string name="take_a_picture">Сделать фото</string>
+    <string name="record_a_video">Снять видео</string>
     <string name="record_a_message">Записать сообщение</string>
     <string name="re_record">Перезаписать</string>
     <string name="recording_indicator_description">Запись</string>
     <string name="recording_indicator_with_time">Запись %1$s</string>
-    <string name="voice_anonymize_title">Анонимизация</string>
-    <string name="voice_anonymize_description">Изменяет высоту вашего голоса. Примечание: базовые изменения высоты тона потенциально могут быть обращены целеустремлёнными слушателями.</string>
+    <string name="voice_anonymize_title">Анонимизировать</string>
+    <string name="voice_anonymize_description">Обрабатывает ваш голос. Внимание: основные изменения тона потенциально могут быть отменены определенными слушателями.</string>
     <string name="user_suggestion_in_this_chat">В этом чате</string>
     <string name="edits_the_channel_metadata">Редактирует метаданные канала</string>
     <string name="join">Войти</string>
     <string name="feed">Лента</string>
-    <string name="mod_queue">Очередь модерации</string>
+    <string name="mod_queue">Очередь модов</string>
     <string name="notes">Записи</string>
     <string name="replies">Ответы</string>
-    <string name="mutual">Ваши</string>
+    <string name="mutual">Ваш</string>
     <string name="gallery">Галерея</string>
     <string name="reports">Жалоб</string>
-    <string name="number_reports">%1$s жалоб</string>
+    <string name="number_reports">%1$s Отчётов</string>
     <string name="relays"> Релеев</string>
     <string name="website">Сайт</string>
     <string name="lightning_address">Lightning адрес</string>
@@ -225,9 +236,9 @@
     <string name="login">Войти</string>
     <string name="sign_up">Зарегистрироваться</string>
     <string name="create_account">Создать аккаунт</string>
-    <string name="how_should_we_call_you">Как вас называть?</string>
-    <string name="don_t_have_an_account">Нет аккаунта Nostr?</string>
-    <string name="already_have_an_account">Уже есть аккаунт Nostr?</string>
+    <string name="how_should_we_call_you">Как нам вас называть?</string>
+    <string name="don_t_have_an_account">Нет учетной записи Nostr?</string>
+    <string name="already_have_an_account">Уже есть учетная запись Nostr?</string>
     <string name="loading_feed">Загрузка ленты</string>
     <string name="loading_account">Загрузка аккаунта</string>
     <string name="chats_history_proto_nip17">зашифровано</string>
@@ -387,8 +398,6 @@
     <string name="app_definition_by">от</string>
     <string name="app_definition_available_on">Доступно на</string>
     <string name="platform_web">Веб</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Тренировка</string>
     <string name="workout_title">Название</string>
     <string name="workout_duration">Длительность</string>
@@ -413,6 +422,8 @@
     <string name="workout_suggestion_connect_button">Подключить</string>
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">Из Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites пока не найдены.</string>
     <string name="browser_unsupported">Встроенный браузер требует Android 11 или новее.</string>
     <string name="embedded_tab_load_failed">Не удалось загрузить это приложение.</string>
@@ -429,7 +440,6 @@
     <string name="napplet_consent_deny_always">Никогда не разрешать</string>
     <string name="napplet_consent_not_now">Не сейчас</string>
     <string name="nip82_repository_label">Источник: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Скачать</string>
     <string name="nip82_section_about">О приложении</string>
     <string name="nip82_section_platforms">Платформы</string>
@@ -527,7 +537,6 @@
     <string name="nest_create_field_summary">О чём речь?</string>
     <string name="nest_create_field_service">URL MoQ-сервиса</string>
     <string name="nest_create_field_service_hint">Auth sidecar — по умолчанию nostrnests.com</string>
-    <string name="nest_create_field_endpoint">MoQ relay endpoint</string>
     <string name="nest_create_field_endpoint_hint">WebTransport URL — обычно тот же хост</string>
     <string name="nest_create_field_image">URL обложки (необязательно)</string>
     <string name="nest_create_cancel">Отмена</string>
@@ -538,8 +547,6 @@
     <string name="nests_servers_add_relay_field">URL relay (WebTransport)</string>
     <string name="nests_servers_add_auth_field">URL Auth (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Добавить</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_use_defaults">Использовать настройки Amethyst по умолчанию</string>
     <string name="nests_servers_add_recommended">Добавить сервер</string>
     <string name="nests_servers_remove">Удалить сервер</string>
@@ -572,7 +579,7 @@
     <string name="add_hashtag_label_field">Хэштег</string>
     <string name="add_hashtag_label_confirm">Добавить</string>
     <string name="hashtag_label_added_by">добавил</string>
-    <string name="pinned_notes">Закреплённые заметки</string>
+    <string name="pinned_notes">Закрепленные заметки</string>
     <string name="pinned_notes_explainer">Ваши закреплённые заметки</string>
     <string name="deleted_items_banner_title">%1$d элемент(ов) в этом списке удалён автором.</string>
     <string name="deleted_items_banner_remove">Удалить из списка</string>
@@ -611,14 +618,13 @@
     <string name="bookmark_absence_indicator">здесь нет в закладках</string>
     <string name="bookmark_remove_action_desc">Удалить закладку из списка</string>
     <string name="bookmark_add_action_desc">Добавить закладку в список</string>
-    <string name="public_bookmark_add_action_label">Добавить как публичную закладку</string>
-    <string name="private_bookmark_add_action_label">Добавить как приватную закладку</string>
+    <string name="public_bookmark_add_action_label">Добавить в Публичные закладки</string>
+    <string name="private_bookmark_add_action_label">Добавить в Личные закладки</string>
     <string name="bookmark_remove_action_label">Удалить из списка закладок</string>
     <string name="quick_zap_amounts">Быстрые суммы zap</string>
     <string name="quick_zap_amounts_explainer">Отображаются при нажатии кнопки zap. Каждую сумму можно оплатить любым поддерживаемым получателем способом — Lightning, Cashu или on-chain (on-chain только для крупных сумм). Нажмите на сумму, чтобы удалить её. Если оставить поле пустым, диалог для ввода суммы будет открываться каждый раз.</string>
     <string name="send_onchain_instead">Отправить on-chain</string>
     <string name="reload_mint_title">Пополнить mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Сумма пополнения</string>
     <string name="reload_mint_section_to">mint для пополнения</string>
     <string name="reload_mint_section_from">Источник средств</string>
@@ -638,8 +644,8 @@
     <string name="topup_mint_amount_label">Сумма для добавления</string>
     <string name="topup_mint_confirm">Пополнить</string>
     <string name="zap_privacy_section">Конфиденциальность запов</string>
-    <string name="zap_type_section_explainer">Управляет тем, как отображается ваша личность при отправке zap.</string>
-    <string name="wallet_connect_connect_app">Подключить кошелёк</string>
+    <string name="zap_type_section_explainer">Определяет, как отображается ваша личность, когда вы отправляете зап.</string>
+    <string name="wallet_connect_connect_app">Подключить кошелек</string>
     <string name="see_relay_feed">Смотреть ленту relay</string>
     <string name="pledge_amount_in_sats">Сумма взноса в sat</string>
     <string name="poll_zap_value_min">Минимальный зап</string>
@@ -722,6 +728,9 @@
     <string name="call_calling">Звонок…</string>
     <string name="call_connecting">Подключение…</string>
     <string name="call_ended">Звонок завершён</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Закрыть</string>
     <string name="call_switch_camera">Переключить камеру</string>
     <string name="call_voice">Голосовой звонок</string>
@@ -759,8 +768,6 @@
     <string name="show_sensitive_content_explainer">Показывает предупреждение, если автор пометил публикацию как чувствительную</string>
     <string name="max_hashtag_limit_title">Макс. хэштегов в публикации</string>
     <string name="max_hashtag_limit_explainer">Скрывает публикации с хэштегами сверх этого лимита. Установите 0 для отключения</string>
-    <string name="security_unlimited">∞</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Добавляет целевую сумму sat для сбора к этой публикации. Поддерживающие клиенты могут отображать это как шкалу прогресса для стимулирования пожертвований</string>
     <string name="zapraiser_target_amount_in_sats">Целевая сумма в sat</string>
     <string name="sats_to_complete">Zapraiser: %1$s. До цели: %2$s sat</string>
@@ -820,7 +827,6 @@
     <string name="max_filters_per_sub">Макс. фильтров на подписку</string>
     <string name="max_limit_events_returning">Макс. лимит (возвращаемых событий)</string>
     <string name="max_subid_length">Макс. длина SubID</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Получить</string>
     <string name="cashu_copy_token">Копировать токен</string>
     <string name="quick_actions_open_in_another_app">Открыть в другом приложении</string>
@@ -938,7 +944,6 @@
     <string name="send_the_seller_a_message">Написать продавцу</string>
     <string name="hi_there_is_this_still_available">Привет, это ещё в наличии?</string>
     <string name="classifieds_title">Заголовок</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Состояние</string>
     <string name="classifieds_category">Категория</string>
     <string name="classifieds_price">Цена (в sats)</string>
@@ -967,7 +972,6 @@
     <string name="wallet_send">Отправить</string>
     <string name="wallet_receive">Получить</string>
     <string name="wallet_transactions">Транзакции</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Вставьте BOLT-11 счёт</string>
     <string name="wallet_pay">Оплатить</string>
     <string name="wallet_payment_success">Платёж выполнен</string>
@@ -1006,7 +1010,6 @@
     <string name="cashu_discovering">Поиск вашего кошелька…</string>
     <string name="cashu_discovering_description">NIP-60 кошельки синхронизируются между клиентами. Если вы создали его в другом приложении под этим Nostr-ключом, он должен появиться через несколько секунд.</string>
     <string name="cashu_balance">Баланс</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL mint</string>
     <string name="cashu_remove_mint">Удалить mint</string>
     <string name="cashu_add_mint">Добавить mint</string>
@@ -1062,9 +1065,7 @@
     <string name="cashu_getting_quote">Запрос котировки у mint'а…</string>
     <string name="cashu_verify">Проверить</string>
     <string name="cashu_mint_reachable">✓ Mint доступен</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Не удалось подключиться к mint'у: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Создать токен</string>
     <string name="cashu_redeem_button">Обменять</string>
     <string name="cashu_done">Готово</string>
@@ -1097,11 +1098,9 @@
     <string name="onchain_send_recipient_placeholder">имя, NIP-05 или npub</string>
     <string name="onchain_send_change_recipient">Изменить получателя</string>
     <string name="onchain_send_amount">Сумма</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Минимальный onchain зап — %1$s sats — меньшие суммы поглощаются комиссией майнера. Используйте вместо этого Lightning зап.</string>
     <string name="onchain_send_comment_label">Комментарий (необязательно)</string>
     <string name="onchain_send_priority">Приоритет</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Загрузка оценок комиссий…</string>
     <string name="onchain_send_button_amount">Отправить %1$s sats</string>
     <string name="onchain_send_dont_split">Не делить — отправить одному получателю</string>
@@ -1110,7 +1109,6 @@
     <string name="onchain_send_result_transaction">Транзакция</string>
     <string name="onchain_send_result_fee">Комиссия</string>
     <string name="onchain_send_result_change">Сдача</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Готово</string>
     <string name="onchain_send_failed_at">Ошибка на этапе: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Платёж был транслирован (tx %1$s), но квитанция не была опубликована.</string>
@@ -1202,7 +1200,6 @@
     <string name="your_article_title">Заголовок вашей статьи…</string>
     <string name="article_description_placeholder">Краткое описание вашей статьи…</string>
     <string name="url_slug">URL-слаг</string>
-    <string name="url_slug_placeholder">article-url-slug</string>
     <string name="tags_label"># Теги</string>
     <string name="add_a_tag">Добавить тег…</string>
     <string name="start_writing_article">Начните писать вашу статью…</string>
@@ -1210,7 +1207,6 @@
     <string name="jump_to_parent_reply">Перейти к записи, на которую отвечает этот ответ</string>
     <string name="boost_or_quote_description">Репост или цитата</string>
     <string name="like_description">Нравится</string>
-    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
     <string name="onchain_zap_pending">Ожидание подтверждения</string>
     <string name="change_reaction">Изменить быстрые реакции</string>
     <string name="bottom_bar_settings_available">Доступно</string>
@@ -1226,7 +1222,6 @@
     <string name="reactions_settings_boost_description">Репостнуть или процитировать эту запись</string>
     <string name="reactions_settings_like">Нравится</string>
     <string name="reactions_settings_like_description">Отреагировать на эту запись с помощью эмодзи</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Отправить Lightning-платёж автору</string>
     <string name="reactions_settings_share">Поделиться</string>
     <string name="reactions_settings_share_description">Поделиться этой записью за пределами приложения</string>
@@ -1259,14 +1254,12 @@
     <string name="audio_visualizer_classic">Классическая форма волны</string>
     <string name="audio_visualizer_static">Статичное изображение</string>
     <string name="profile_image_of_user">Фото профиля %1$s</string>
-    <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Развернуть список relay</string>
     <string name="note_options">Параметры записи</string>
     <string name="poll">Опрос</string>
     <string name="disable_poll">Отключить опрос</string>
     <string name="add_bitcoin_invoice">Bitcoin-счёт</string>
     <string name="cancel_bitcoin_invoice">Отменить Bitcoin-счёт</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Отменить Zapraiser</string>
     <string name="add_location">Местоположение</string>
     <string name="remove_location">Удалить местоположение</string>
@@ -1300,7 +1293,6 @@
     <string name="relay_reorder">Изменить порядок relay</string>
     <string name="trusted_relays_title">Доверенные Relays</string>
     <string name="favorite_relays_title">Избранные ленты Relay</string>
-    <string name="proxy_relays_title">Proxy Relays</string>
     <string name="broadcast_relays_title">Relay-серверы для трансляции</string>
     <string name="indexer_relays_title">Relay-серверы-индексаторы</string>
     <string name="blocked_relays_title">Заблокированные relay-серверы</string>
@@ -1357,7 +1349,7 @@
     <string name="group_relay">Relay чата</string>
     <string name="share_image">Поделиться изображением…</string>
     <string name="share_video">Поделиться видео…</string>
-    <string name="search_by_hashtag">Искать хэштег: #%1$s</string>
+    <string name="search_by_hashtag">Поиск по хештегу: #%1$s</string>
     <string name="search_scope_all">Все</string>
     <string name="search_scope_people">Люди</string>
     <string name="search_scope_notes">Заметки</string>
@@ -1373,15 +1365,14 @@
     <string name="search_filters_section_source">Источник</string>
     <string name="search_filters_section_sort">Сортировать по</string>
     <string name="search_filters_open">Фильтры</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Поиск языков</string>
     <string name="add_language">Добавить язык</string>
     <string name="add_language_pair">Добавить языковую пару</string>
     <string name="source_language">Исходный язык</string>
     <string name="target_language">Целевой язык</string>
-    <string name="show_first">Показывать %1$s первым</string>
-    <string name="no_language_preferences">Нет настроек отображения языка. Они создаются автоматически при выполнении переводов, или вы можете добавить их вручную.</string>
-    <string name="delete_preference">Удалить настройку</string>
+    <string name="show_first">Показать сперва %1$s</string>
+    <string name="no_language_preferences">Настройки языка пока отсутствуют. Они создаются автоматически во время переводов, вы можете добавить их в ручную.</string>
+    <string name="delete_preference">Удалить предпочтение</string>
     <string name="open_dropdown_menu">Открыть выпадающее меню</string>
     <string name="option_of">Вариант %1$s из %2$s</string>
     <string name="feed_filter_selected">Фильтр ленты, выбрано: %1$s</string>
@@ -1420,7 +1411,6 @@
     <string name="timeout">Тайм-аут</string>
     <string name="retrying">Повтор…</string>
     <string name="dismiss">Закрыть</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Трансляция</string>
     <string name="broadcasting_name">Трансляция %1$s</string>
     <string name="broadcasting_number_events">Трансляция %1$d событий…</string>
@@ -1509,7 +1499,6 @@
     <string name="cashu_move_coins_withdraw_ln">Вывести через Lightning…</string>
     <string name="cashu_move_coins_export_token">Экспортировать как токен Cashu…</string>
     <string name="cashu_move_coins_working">Перемещение монет…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Подключение</string>
     <string name="event_sync_status_downloading">Загрузка</string>
     <string name="event_sync_status_error">Ошибка</string>
@@ -1532,7 +1521,6 @@
     <string name="hls_content_warning_reason_placeholder">Причина (необязательно)</string>
     <string name="hls_codec_label">Кодек</string>
     <string name="hls_codec_h265">H.265 (лучшее сжатие)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 недоступен на этом устройстве — используется H.264.</string>
     <string name="hls_renditions_label">Варианты качества</string>
     <string name="hls_renditions_source_format">Исходное разрешение: %1$d×%2$d</string>
@@ -1570,14 +1558,11 @@
     <string name="event_sync_date_filter_until">По</string>
     <string name="event_sync_date_filter_now">Сейчас</string>
     <string name="event_sync_date_filter_all_time">За всё время</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Название</string>
     <string name="web_bookmark_title_placeholder">Название закладки</string>
     <string name="web_bookmark_description_label">Описание</string>
     <string name="web_bookmark_description_placeholder">Краткое описание</string>
     <string name="web_bookmark_tags_label">Теги (через запятую)</string>
-    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
     <string name="web_bookmark_save">Сохранить</string>
     <string name="web_bookmark_delete">Удалить</string>
     <string name="web_bookmark_delete_confirm">Удалить эту веб-закладку?</string>
@@ -1586,15 +1571,12 @@
     <string name="fundraiser_ends">Завершается %1$s</string>
     <string name="fundraiser_onchain_donation">Пожертвование on-chain</string>
     <string name="goal_amount_label">Целевая сумма (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Опишите вашу цель</string>
     <string name="goal_description_placeholder">На что вы собираете средства?</string>
     <string name="goal_summary_label">Краткое описание</string>
     <string name="goal_summary_placeholder">Краткое описание, отображаемое в превью</string>
     <string name="goal_image_label">URL изображения (необязательно)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL сайта (необязательно)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Установить срок</string>
     <string name="request_to_vanish_description">Запросить relay на постоянное удаление всех ваших данных до выбранной даты. Это действие основано на NIP-62 и является юридически обязывающим в некоторых юрисдикциях.</string>
     <string name="vanish_target_relay">Целевые relay</string>
@@ -1711,7 +1693,6 @@
     <string name="emoji_pack_actions_dialog_title">Действия с набором эмодзи</string>
     <string name="emoji_private_toggle">Приватный</string>
     <string name="emoji_private_badge">Приватный эмодзи</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Нарушение правил сообщества</string>
     <string name="community_rules_violation_author_denied">Вы находитесь в списке запрещённых пользователей этого сообщества. Публикации не будут приняты.</string>
     <string name="community_rules_violation_kind_not_allowed">Это сообщество не принимает события kind %1$d.</string>
@@ -1723,7 +1704,6 @@
     <string name="marmot_create_group_footer">Будет создана новая MLS-группа. После создания можно добавить участников.</string>
     <string name="marmot_group_default_name">Группа Marmot</string>
     <string name="marmot_group_fallback_name">Группа %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Известные</string>
     <string name="marmot_tab_known_count">Известные (%1$d)</string>
     <string name="marmot_tab_new_requests">Новые запросы</string>
@@ -1737,6 +1717,9 @@
     <string name="marmot_group_name_placeholder">Введите название группы</string>
     <string name="marmot_group_description_placeholder">Введите описание группы (необязательно)</string>
     <string name="marmot_edit_info_footer">Изменения будут зафиксированы в группе через MLS и распространены всем участникам.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay не настроены</string>
     <string name="marmot_keypackage_relays_not_set_message">У вас ещё нет списка KeyPackage Relay (MIP-00). Этот список сообщает другим пользователям, где опубликован ваш KeyPackage, чтобы они могли пригласить вас в групповые чаты.\n\nИспользовать ваши текущие outbox relay для этого?</string>
     <string name="marmot_use_outbox_relays">Использовать outbox relay</string>
@@ -1771,12 +1754,6 @@
     <string name="ots_explorer_api_label">Базовый URL API обозревателя</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатить счёт от DVM</string>
     <string name="dvm_pay_amount_to_dvm">Оплатить %1$s sats DVM</string>
-    <string name="napplet_card_permissions">Разрешения:</string>
-    <string name="nsite_root_site">Корневой сайт</string>
-    <string name="nsite_source">Источник:</string>
-    <string name="nsite_servers">Серверы:</string>
-    <string name="nsite_open">Открыть</string>
-    <string name="use_direct_url">Использовать прямой URL</string>
     <string name="about_legal">О приложении &amp; правовые сведения</string>
     <string name="account_settings">Настройки аккаунта</string>
     <string name="add">Добавить</string>
@@ -1854,7 +1831,7 @@
     <string name="blocked_users">Заблокированные пользователи</string>
     <string name="bookmark_list_creation_screen_title">Новый список закладок</string>
     <string name="bookmark_list_edit_sub_title">Метаданные списка закладок</string>
-    <string name="bookmark_list_explainer">Метаданные списков закладок видны всем в Nostr. Только ваши приватные элементы зашифрованы.</string>
+    <string name="bookmark_list_explainer">Метаданные списков закладок могут быть видны любым пользователем Nostr. Только ваши частные участники зашифрованы.</string>
     <string name="bookmarks">Закладки</string>
     <string name="boost">Продвинуть</string>
     <string name="bottom_bar_settings">Нижняя панель навигации</string>
@@ -1863,11 +1840,11 @@
     <string name="browser">Браузер</string>
     <string name="browser_favorites">Избранное</string>
     <plurals name="calendar_day_a11y_events">
-    <item quantity="one">%1$s, %2$d событие</item>
-    <item quantity="few">%1$s, %2$d события</item>
-    <item quantity="many">%1$s, %2$d событий</item>
-    <item quantity="other">%1$s, %2$d событий</item>
-</plurals>
+        <item quantity="one">%1$s, %2$d событие</item>
+        <item quantity="few">%1$s, %2$d события</item>
+        <item quantity="many">%1$s, %2$d событий</item>
+        <item quantity="other">%1$s, %2$d событий</item>
+    </plurals>
     <string name="calendar_event_image_upload_failed">Ошибка загрузки изображения</string>
     <string name="calendar_event_image_upload_failed_body">Не удалось загрузить выбранное изображение. Попробуйте ещё раз или вставьте URL.</string>
     <string name="calendar_export_share_title">Поделиться событием календаря</string>
@@ -1876,30 +1853,28 @@
     <string name="calendar_relative_ongoing">Происходит сейчас</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · заканчивается %2$s</string>
     <plurals name="calendar_reminder_body">
-    <item quantity="one">Начнётся через %1$d минуту</item>
-    <item quantity="few">Начнётся через %1$d минуты</item>
-    <item quantity="many">Начнётся через %1$d минут</item>
-    <item quantity="other">Начнётся через %1$d минуты</item>
-</plurals>
+        <item quantity="one">Начнётся через %1$d минуту</item>
+        <item quantity="few">Начнётся через %1$d минуты</item>
+        <item quantity="many">Начнётся через %1$d минут</item>
+        <item quantity="other">Начнётся через %1$d минуты</item>
+    </plurals>
     <string name="calendar_reminder_channel_description">Уведомление перед началом события, на которое вы записались.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Напоминания календаря</string>
     <string name="calendar_reminder_default_title">Событие календаря</string>
     <string name="calendar_reminder_settings_enabled_subtitle">Уведомление приходит перед началом события, на которое вы записались.</string>
     <string name="calendar_reminder_settings_enabled_title">Отправлять напоминания</string>
     <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="one">%1$d мин</item>
-    <item quantity="few">%1$d мин</item>
-    <item quantity="many">%1$d мин</item>
-    <item quantity="other">%1$d мин</item>
-</plurals>
+        <item quantity="one">%1$d мин</item>
+        <item quantity="few">%1$d мин</item>
+        <item quantity="many">%1$d мин</item>
+        <item quantity="other">%1$d мин</item>
+    </plurals>
     <string name="calendar_reminder_settings_title">Напоминания календаря</string>
     <string name="calendar_view_day">День</string>
     <string name="calendar_view_feed">Лента</string>
     <string name="calendar_view_month">Месяц</string>
     <string name="calendar_view_week">Неделя</string>
     <string name="call_accept">Принять</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">Камера выключена</string>
     <string name="call_camera_on">Камера включена</string>
     <string name="call_earpiece">Динамик</string>
@@ -1924,44 +1899,38 @@
     <string name="cashu_history_outgoing">Отправлено</string>
     <string name="cashu_mint_matches_header">Подходящие mint'ы</string>
     <plurals name="cashu_mint_plus_others">
-    <item quantity="one">+%1$d ещё</item>
-    <item quantity="few">+%1$d ещё</item>
-    <item quantity="many">+%1$d ещё</item>
-    <item quantity="other">+%1$d ещё</item>
-</plurals>
+        <item quantity="one">+%1$d ещё</item>
+        <item quantity="few">+%1$d ещё</item>
+        <item quantity="many">+%1$d ещё</item>
+        <item quantity="other">+%1$d ещё</item>
+    </plurals>
     <string name="cashu_mint_popular_header">Популярные mint'ы</string>
     <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="one">Рекомендовано %1$d пользователем</item>
-    <item quantity="few">Рекомендовано %1$d пользователями</item>
-    <item quantity="many">Рекомендовано %1$d пользователями</item>
-    <item quantity="other">Рекомендовано %1$d пользователями</item>
-</plurals>
+        <item quantity="one">Рекомендовано %1$d пользователем</item>
+        <item quantity="few">Рекомендовано %1$d пользователями</item>
+        <item quantity="many">Рекомендовано %1$d пользователями</item>
+        <item quantity="other">Рекомендовано %1$d пользователями</item>
+    </plurals>
     <string name="cashu_move_coins_done">Перемещено %1$s sat в %2$s.</string>
     <string name="cashu_no_wallet_found">На устройстве не найден совместимый Cashu-кошелёк</string>
     <plurals name="cashu_pending_quotes_title">
-    <item quantity="one">%1$d ожидающий счёт</item>
-    <item quantity="few">%1$d ожидающих счёта</item>
-    <item quantity="many">%1$d ожидающих счетов</item>
-    <item quantity="other">%1$d ожидающих счёта</item>
-</plurals>
+        <item quantity="one">%1$d ожидающий счёт</item>
+        <item quantity="few">%1$d ожидающих счёта</item>
+        <item quantity="many">%1$d ожидающих счетов</item>
+        <item quantity="other">%1$d ожидающих счёта</item>
+    </plurals>
     <string name="cashu_quote_confirm">Оплатить %1$s sat + до %2$s sat комиссии?</string>
     <string name="cashu_settings_delete_confirm_body">Опубликовать запрос на удаление вашей рекомендации kind:38000 для %1$s. Relay'и, соблюдающие NIP-09, удалят её.</string>
     <string name="cashu_settings_restore_result">Восстановлено %1$s sats в %2$s доказательствах.</string>
     <string name="cashu_successful_redemption">Cashu получен</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats отправлено в ваш кошелёк. (Комиссия: %2$s sats)</string>
     <plurals name="cashu_untrusted_mint_title">
-    <item quantity="one">Средства хранятся в %1$d mint, который вы не используете</item>
-    <item quantity="few">Средства хранятся в %1$d mint, которые вы не используете</item>
-    <item quantity="many">Средства хранятся в %1$d mint, которые вы не используете</item>
-    <item quantity="other">Средства хранятся в %1$d mint, которые вы не используете</item>
-</plurals>
+        <item quantity="one">Средства хранятся в %1$d mint, который вы не используете</item>
+        <item quantity="few">Средства хранятся в %1$d mint, которые вы не используете</item>
+        <item quantity="many">Средства хранятся в %1$d mint, которые вы не используете</item>
+        <item quantity="other">Средства хранятся в %1$d mint, которые вы не используете</item>
+    </plurals>
     <string name="cashu_waiting_for_payment">Ожидание оплаты инвойса…</string>
-    <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="one">%1$d mint</item>
-    <item quantity="few">%1$d mint</item>
-    <item quantity="many">%1$d mint</item>
-    <item quantity="other">%1$d mint</item>
-</plurals>
     <string name="cast_stop_casting">Остановить трансляцию</string>
     <string name="cast_to_device">Трансляция на устройство</string>
     <string name="child_safety_standards">Стандарты безопасности детей</string>
@@ -1997,10 +1966,14 @@
     <string name="community_rules_violation_max_size_exceeded">Черновик занимает %1$d байт; в этом сообществе установлено ограничение %2$d байт для событий.</string>
     <string name="community_rules_violation_quota_exceeded">Сегодня вы уже опубликовали %1$d событий этого kind (лимит: %2$d).</string>
     <string name="compose_settings">Настройки редактора</string>
+    <string name="concord_channels_empty">Каналов еще нет.</string>
+    <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>
+    <string name="concord_invite_links_title">Приглашения</string>
+    <string name="concord_invite_revoked_ok">Ссылка для приглашения отозвана.</string>
     <string name="connect_through_your_orbot_setup_short">Порт по умолчанию: 9050</string>
     <string name="connected_section">Подключённые Relays</string>
     <string name="connected_section_description">Текущий список используемых relay</string>
-    <string name="connection_success_rate_description">Процент успешных подключений к relay</string>
+    <string name="connection_success_rate_description">Процент успешных соединений к трансляции</string>
     <string name="connectivity_type_always">Всегда</string>
     <string name="connectivity_type_never">Никогда</string>
     <string name="connectivity_type_unmetered_wifi_only">Безлимитный Wi-Fi</string>
@@ -2034,12 +2007,10 @@
     <string name="discover_live_v2">Прямые трансляции</string>
     <string name="discover_marketplace">Рынок</string>
     <string name="discover_reads">Чтение</string>
-    <string name="dm_relays_title">DM Inbox Relays</string>
-    <string name="dms">DMs</string>
     <string name="dont_translate_from">Не переводить с</string>
-    <string name="dont_translate_from_description">Языки, указанные здесь, не будут переводиться. Выберите язык, чтобы убрать его из списка и снова получать переводы.</string>
-    <string name="download_to_phone">Сохранить на телефон</string>
-    <string name="downloading_video_for_sharing">Загрузка видео…</string>
+    <string name="dont_translate_from_description">Языки показанные здесь не будут переведены. Выберите язык, чтобы удалить его и снова перевести.</string>
+    <string name="download_to_phone">Сохранить в телефон</string>
+    <string name="downloading_video_for_sharing">Скачивание видео…</string>
     <string name="draft_note">Черновая заметка</string>
     <string name="drafts">Черновики</string>
     <string name="drawer_accounts">Аккаунты</string>
@@ -2049,41 +2020,41 @@
     <string name="drawer_section_system">Система</string>
     <string name="drawer_section_you">Вы</string>
     <plurals name="duration_days">
-    <item quantity="one">%1$d день</item>
-    <item quantity="few">%1$d дня</item>
-    <item quantity="many">%1$d дней</item>
-    <item quantity="other">%1$d дня</item>
-</plurals>
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
     <plurals name="duration_hours">
-    <item quantity="one">%1$d час</item>
-    <item quantity="few">%1$d часа</item>
-    <item quantity="many">%1$d часов</item>
-    <item quantity="other">%1$d часа</item>
-</plurals>
+        <item quantity="one">%1$d час</item>
+        <item quantity="few">%1$d часа</item>
+        <item quantity="many">%1$d часов</item>
+        <item quantity="other">%1$d часа</item>
+    </plurals>
     <plurals name="duration_minutes">
-    <item quantity="one">%1$d минута</item>
-    <item quantity="few">%1$d минуты</item>
-    <item quantity="many">%1$d минут</item>
-    <item quantity="other">%1$d минуты</item>
-</plurals>
+        <item quantity="one">%1$d минута</item>
+        <item quantity="few">%1$d минуты</item>
+        <item quantity="many">%1$d минут</item>
+        <item quantity="other">%1$d минуты</item>
+    </plurals>
     <plurals name="duration_months">
-    <item quantity="one">%1$d месяц</item>
-    <item quantity="few">%1$d месяца</item>
-    <item quantity="many">%1$d месяцев</item>
-    <item quantity="other">%1$d месяца</item>
-</plurals>
+        <item quantity="one">%1$d месяц</item>
+        <item quantity="few">%1$d месяца</item>
+        <item quantity="many">%1$d месяцев</item>
+        <item quantity="other">%1$d месяца</item>
+    </plurals>
     <plurals name="duration_weeks">
-    <item quantity="one">%1$d неделя</item>
-    <item quantity="few">%1$d недели</item>
-    <item quantity="many">%1$d недель</item>
-    <item quantity="other">%1$d недели</item>
-</plurals>
+        <item quantity="one">%1$d неделя</item>
+        <item quantity="few">%1$d недели</item>
+        <item quantity="many">%1$d недель</item>
+        <item quantity="other">%1$d недели</item>
+    </plurals>
     <plurals name="duration_years">
-    <item quantity="one">%1$d год</item>
-    <item quantity="few">%1$d года</item>
-    <item quantity="many">%1$d лет</item>
-    <item quantity="other">%1$d года</item>
-</plurals>
+        <item quantity="one">%1$d год</item>
+        <item quantity="few">%1$d года</item>
+        <item quantity="many">%1$d лет</item>
+        <item quantity="other">%1$d года</item>
+    </plurals>
     <string name="edit_calendar_collection">Редактировать календарь</string>
     <string name="edit_calendar_event">Редактировать событие календаря</string>
     <string name="edit_community">Редактировать сообщество</string>
@@ -2112,11 +2083,9 @@
     <string name="event_sync_title">Синхронизация relay</string>
     <string name="events_from_you">события от вас</string>
     <string name="events_to_you">события для вас</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">Круговая тренировка</string>
     <string name="exercise_cycling">Велоспорт</string>
     <string name="exercise_diet">Питание</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">Голодание</string>
     <string name="exercise_hiking">Пешие прогулки</string>
     <string name="exercise_meditation">Медитация</string>
@@ -2132,7 +2101,7 @@
     <string name="failed_to_delete_with_message">Не удалось удалить: %1$s</string>
     <string name="failed_to_encrypt_key">Не удалось зашифровать ваш приватный ключ</string>
     <string name="failed_to_save_the_image">Не удалось сохранить фото</string>
-    <string name="failed_to_save_the_pdf">Не удалось сохранить PDF</string>
+    <string name="failed_to_save_the_pdf">Не удалось сохранить PDF-файл</string>
     <string name="failed_to_save_the_video">Не удалось сохранить видео</string>
     <string name="failed_to_upload_encrypted_media_message">Многие серверы не принимают зашифрованные файлы на бесплатных аккаунтах. Вы можете повторить попытку без шифрования.</string>
     <string name="failed_to_upload_encrypted_media_title">Зашифрованная загрузка не удалась</string>
@@ -2159,7 +2128,7 @@
     <string name="feed_group_locations">Местоположения</string>
     <string name="feed_group_relays">Relay-серверы</string>
     <string name="file_server">Сервер для загрузки</string>
-    <string name="file_server_description">Выберите сервер для загрузки файла</string>
+    <string name="file_server_description">Выберите сервер для загрузки этого файла</string>
     <string name="filter_spam_from_strangers_explainer">Скрывает публикации от незнакомцев, которые встречались 5 или более раз с одинаковым содержимым</string>
     <string name="filter_spam_from_strangers_title">Фильтр спама</string>
     <string name="follow">Подписаться</string>
@@ -2230,7 +2199,6 @@
     <string name="illegal_behavior">Незаконные действия</string>
     <string name="image_saved_to_the_gallery">Фото сохранено в галерею</string>
     <string name="impersonation">Выдача себя за другое лицо</string>
-    <string name="inbox_relays_title">Inbox Relays</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Неверная сумма счёта (%1$s sats) от %2$s. Должно быть %3$s</string>
     <string name="indexer_section">Relay-серверы-индексаторы</string>
     <string name="indexer_section_explainer">Relay-серверы, специализирующиеся на хранении метаданных и списков relay-серверов всех пользователей, например purplepag.es. Amethyst будет использовать эти relay для поиска пользователей, которых нет в ваших списках.</string>
@@ -2238,7 +2206,7 @@
     <string name="interest_set_rename">Переименовать</string>
     <string name="interest_sets_title">Наборы хэштегов</string>
     <string name="invalid_key">Некорректный ключ</string>
-    <string name="invalid_key_with_message">Неверный ключ: %1$s</string>
+    <string name="invalid_key_with_message">Недопустимый ключ: %1$s</string>
     <string name="invalid_nip19_uri">Неверный адрес</string>
     <string name="invalid_nip19_uri_description">Amethyst получил URI для открытия, но этот URI недействителен: %1$s</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">Нельзя процитировать черновую заметку</string>
@@ -2246,9 +2214,7 @@
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Нельзя ответить на черновую заметку</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Нельзя отправить zap на черновую заметку</string>
     <string name="key_is_required">Нужно ввести ключ</string>
-    <string name="keypackage_section">KeyPackage Relays</string>
     <string name="keypackage_section_explainer">Relay, на которых публикуются ваши MLS KeyPackage (MIP-00). Другие пользователи загружают эти KeyPackage, чтобы пригласить вас в групповые чаты Marmot. Укажите от 1 до 3 relay, принимающих события KeyPackage от вас и допускающих публичное чтение.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">Принятый набор значков</string>
     <string name="kind_adventure_prologue">Пролог приключения</string>
     <string name="kind_adventure_reading">Чтение приключения</string>
@@ -2266,7 +2232,6 @@
     <string name="kind_blob_headers">Заголовки Blob</string>
     <string name="kind_blocked_relays">Заблокированные relay</string>
     <string name="kind_blogs">Блоги</string>
-    <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_blossom_servers">Серверы Blossom</string>
     <string name="kind_bookmark_list">Список закладок</string>
     <string name="kind_broadcast_relays">Вещательные relay</string>
@@ -2277,7 +2242,6 @@
     <string name="kind_channel_message">Сообщение канала</string>
     <string name="kind_channel_metadata">Метаданные канала</string>
     <string name="kind_channel_mute_user">Отключение пользователя в канале</string>
-    <string name="kind_chess_auth">Chess Auth</string>
     <string name="kind_chess_challenges">Шахматные вызовы</string>
     <string name="kind_chess_draw_offer">Предложение ничьей</string>
     <string name="kind_chess_game_accept">Принятие шахматной партии</string>
@@ -2296,11 +2260,6 @@
     <string name="kind_dm_message">Сообщение в ЛС</string>
     <string name="kind_dm_relays">Relay для ЛС</string>
     <string name="kind_drafts">Черновики</string>
-    <string name="kind_dvm_content_req">DVM Content Req</string>
-    <string name="kind_dvm_content_resp">DVM Content Resp</string>
-    <string name="kind_dvm_status">DVM Status</string>
-    <string name="kind_dvm_user_req">DVM User Req</string>
-    <string name="kind_dvm_user_resp">DVM User Resp</string>
     <string name="kind_edits">Правки</string>
     <string name="kind_emoji_pack_list">Список наборов эмодзи</string>
     <string name="kind_emoji_packs">Наборы эмодзи</string>
@@ -2313,14 +2272,8 @@
     <string name="kind_follow_list">Список подписок</string>
     <string name="kind_follow_packs">Наборы подписок</string>
     <string name="kind_geohash_follows">Подписки по геохешу</string>
-    <string name="kind_gift_wraps">GiftWraps</string>
-    <string name="kind_git_issue">Git Issue</string>
-    <string name="kind_git_patch">Git Patch</string>
-    <string name="kind_git_reply">Git Reply</string>
-    <string name="kind_git_repo">Git Repo</string>
     <string name="kind_hashtag_follows">Подписки по хештегу</string>
     <string name="kind_highlights">Выделения</string>
-    <string name="kind_http_auth">Http Auth</string>
     <string name="kind_index_relay_list">Список индексных relay</string>
     <string name="kind_live_chats">Живые чаты</string>
     <string name="kind_live_streams">Прямые трансляции</string>
@@ -2332,17 +2285,9 @@
     <string name="kind_mute_list">Список отключённых</string>
     <string name="kind_named_bookmarks">Именованные закладки</string>
     <string name="kind_nests_servers">Серверы Nests</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_nns">NNS</string>
-    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_notes">Заметки</string>
-    <string name="kind_nwc_request">NWC Request</string>
-    <string name="kind_nwc_response">NWC Response</string>
     <string name="kind_old_bookmark_list">Старый список закладок</string>
-    <string name="kind_ots">OTS</string>
     <string name="kind_outbox_relays">Исходящие relay</string>
-    <string name="kind_pay_to">PayTo</string>
     <string name="kind_people_lists">Списки пользователей</string>
     <string name="kind_pictures">Картинки</string>
     <string name="kind_pins">Закреплённые</string>
@@ -2358,7 +2303,6 @@
     <string name="kind_proxy_relays">Прокси-relay</string>
     <string name="kind_public_message">Публичное сообщение</string>
     <string name="kind_reactions">Реакции</string>
-    <string name="kind_relay_auth">Relay Auth</string>
     <string name="kind_relay_discovery">Обнаружение relay</string>
     <string name="kind_relay_monitor">Объявление монитора relay</string>
     <string name="kind_relay_set">Набор relay</string>
@@ -2368,8 +2312,6 @@
     <string name="kind_room_presence">Присутствие в комнате</string>
     <string name="kind_seals">Печати</string>
     <string name="kind_search_relays">Поисковые relay</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     <string name="kind_torrent_comments">Комментарии к торрентам</string>
     <string name="kind_torrents">Торренты</string>
     <string name="kind_trusted_providers">Доверенные провайдеры</string>
@@ -2381,17 +2323,12 @@
     <string name="kind_video_repl">Видео (Repl)</string>
     <string name="kind_voice_msg">Голосовое сообщение</string>
     <string name="kind_voice_reply">Голосовой ответ</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Веб-закладка</string>
-    <string name="kind_wiki">Wiki</string>
     <string name="kind_workouts">Тренировки</string>
     <string name="kind_zap_goals">Цели Zap</string>
-    <string name="kind_zap_poll">Zap Poll</string>
-    <string name="kind_zap_req">Zap Req</string>
-    <string name="kind_zaps">Zaps</string>
     <string name="known">Известные</string>
     <string name="language_preferences">Настройки отображения языка</string>
-    <string name="language_preferences_description">Для каждой переведённой языковой пары выберите, какой язык показывать первым.</string>
+    <string name="language_preferences_description">Для каждой языковой пары, выберите язык, который показывать в первую очередь.</string>
     <string name="last_seen">Последний раз %1$s назад</string>
     <string name="last_seen_just_now">Только что был(а) в сети</string>
     <string name="last_seen_never">Никогда не посещал(а)</string>
@@ -2407,9 +2344,9 @@
     <string name="login_with_a_private_key_to_be_able_to_reply">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы ответить</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Войдите с приватным ключом чтобы запать</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность показать слово или предложение</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">Вы используете публичный ключ, который доступен только для чтения. Войдите с приватным ключом, чтобы подписывать события</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Вы используете публичный ключ. Войдите приватным ключом, чтобы редактировать</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность отписаться</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">Вы используете публичный ключ, который доступен только для чтения. Войдите с приватным ключом, чтобы загружать файлы</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность загружать</string>
     <string name="login_with_a_private_key_to_like_posts">Вы используете публичный ключ, они - только для чтения. Войдите с приватным ключом, чтобы лайкать посты</string>
     <string name="longs">Видео</string>
     <string name="m">м</string>
@@ -2424,20 +2361,19 @@
     <string name="marmot_failed_to_remove_member">Не удалось удалить участника: %1$s</string>
     <string name="marmot_failed_to_revoke_admin">Не удалось отозвать права администратора: %1$s</string>
     <string name="marmot_failed_to_update">Не удалось обновить: %1$s</string>
-    <string name="marmot_group">Marmot Group</string>
     <string name="marmot_group_info_updated">Информация о группе обновлена</string>
     <plurals name="marmot_member_count">
-    <item quantity="one">%1$d участник</item>
-    <item quantity="few">%1$d участника</item>
-    <item quantity="many">%1$d участников</item>
-    <item quantity="other">%1$d участника</item>
-</plurals>
+        <item quantity="one">%1$d участник</item>
+        <item quantity="few">%1$d участника</item>
+        <item quantity="many">%1$d участников</item>
+        <item quantity="other">%1$d участника</item>
+    </plurals>
     <string name="marmot_member_removed">Участник удалён</string>
     <string name="marmot_not_a_member">Не является участником этой группы</string>
     <string name="marmot_unknown_error">неизвестная ошибка</string>
     <string name="media_added">Медиа добавлено</string>
     <string name="media_added_to_profile_gallery">Медиа добавлено в галерею вашего профиля</string>
-    <string name="media_download_has_started_toast">Загрузка медиафайла начата…</string>
+    <string name="media_download_has_started_toast">Загрузка вложений было запущено…</string>
     <string name="media_servers">Медиасерверы</string>
     <string name="messages_cant_upload_explainer">Сначала укажите получателя сообщения</string>
     <string name="messages_cant_upload_title">Невозможно загрузить</string>
@@ -2447,28 +2383,28 @@
     <string name="migrate_bookmarks_success">Закладки успешно перенесены</string>
     <string name="missing_lud16">Отсутствует настройка Lightning</string>
     <string name="more_options">Больше опций</string>
-    <string name="move_bookmark_to_private_label">Переместить в приватные</string>
-    <string name="move_bookmark_to_public_label">Переместить в публичные</string>
+    <string name="move_bookmark_to_private_label">Переместить в личные</string>
+    <string name="move_bookmark_to_public_label">Переместить в публчный</string>
     <string name="music_playlist_cover_upload_cta">Загрузить обложку</string>
     <string name="music_playlist_cover_upload_hint">Выберите квадратное изображение в качестве обложки для этого плейлиста.</string>
     <plurals name="music_playlist_more_tracks">
-    <item quantity="one">+%1$d трек ещё</item>
-    <item quantity="few">+%1$d трека ещё</item>
-    <item quantity="many">+%1$d треков ещё</item>
-    <item quantity="other">+%1$d трека ещё</item>
-</plurals>
+        <item quantity="one">+%1$d трек ещё</item>
+        <item quantity="few">+%1$d трека ещё</item>
+        <item quantity="many">+%1$d треков ещё</item>
+        <item quantity="other">+%1$d трека ещё</item>
+    </plurals>
     <plurals name="music_playlist_track_count">
-    <item quantity="one">%1$d трек</item>
-    <item quantity="few">%1$d трека</item>
-    <item quantity="many">%1$d треков</item>
-    <item quantity="other">%1$d трека</item>
-</plurals>
+        <item quantity="one">%1$d трек</item>
+        <item quantity="few">%1$d трека</item>
+        <item quantity="many">%1$d треков</item>
+        <item quantity="other">%1$d трека</item>
+    </plurals>
     <plurals name="music_playlist_track_count_short">
-    <item quantity="one">%1$d трек</item>
-    <item quantity="few">%1$d трека</item>
-    <item quantity="many">%1$d треков</item>
-    <item quantity="other">%1$d трека</item>
-</plurals>
+        <item quantity="one">%1$d трек</item>
+        <item quantity="few">%1$d трека</item>
+        <item quantity="many">%1$d треков</item>
+        <item quantity="other">%1$d трека</item>
+    </plurals>
     <string name="music_playlist_uploading_banner">Загрузка обложки и публикация. Процесс продолжится, даже если вы покинете экран.</string>
     <string name="music_track_audio_upload_cta">Загрузить аудиофайл</string>
     <string name="music_track_audio_upload_hint">Выберите файл MP3, WAV или FLAC. Он будет загружен на ваш медиасервер при сохранении.</string>
@@ -2478,7 +2414,7 @@
     <string name="mute_button">Звук включён. Нажмите для отключения</string>
     <string name="muted_button">Без звука. Нажмите для включения</string>
     <string name="my_lists">Мои списки</string>
-    <string name="name_is_required">Необходимо указать имя</string>
+    <string name="name_is_required">Требуется имя</string>
     <string name="namecoin_response_time">%1$dмс</string>
     <string name="namecoin_settings">Настройки Namecoin</string>
     <string name="napplet_cap_identity">Личность</string>
@@ -2505,11 +2441,11 @@
     <string name="napplet_consent_identity_read">Этот nApplet хочет прочитать ваш профиль и данные аккаунта.</string>
     <string name="napplet_consent_notify">Этот nApplet хочет показывать вам уведомления.</string>
     <plurals name="napplet_consent_pay_amount">
-    <item quantity="one">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sat.</item>
-    <item quantity="few">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
-    <item quantity="many">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
-    <item quantity="other">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
-</plurals>
+        <item quantity="one">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sat.</item>
+        <item quantity="few">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
+        <item quantity="many">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
+        <item quantity="other">Этот nApplet хочет оплатить Lightning-инвойс на %1$d sats.</item>
+    </plurals>
     <string name="napplet_consent_publish">Этот nApplet хочет подписать и опубликовать событие kind:%1$d от вашего имени.</string>
     <string name="napplet_consent_publish_encrypted">Этот nApplet хочет отправить зашифрованное событие от вашего имени.</string>
     <string name="napplet_consent_publish_preview">Этот nApplet хочет подписать и опубликовать событие kind:%1$d от вашего имени:</string>
@@ -2518,19 +2454,17 @@
     <string name="napplet_consent_sign">Этот сайт хочет подписать событие kind:%1$d вашим ключом Nostr.</string>
     <string name="napplet_consent_storage">Этот nApplet хочет использовать своё приватное хранилище.</string>
     <string name="napplet_consent_upload">Этот nApplet хочет загрузить файл на ваш медиасервер.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
-    <string name="napplets">nApplets</string>
     <string name="nest_chat_send_failed_title">Не удалось отправить сообщение</string>
     <string name="nest_hush_local">Заглушить этого участника</string>
     <string name="nest_hush_local_restore">Восстановить этого участника</string>
     <string name="nest_leave">Выйти</string>
     <string name="nest_leave_host_close_failed">Не удалось отметить комнату как закрытую. Выходим в любом случае — комната закроется автоматически.</string>
     <plurals name="nest_listener_count">
-    <item quantity="one">%1$d слушатель</item>
-    <item quantity="few">%1$d слушателя</item>
-    <item quantity="many">%1$d слушателей</item>
-    <item quantity="other">%1$d слушателя</item>
-</plurals>
+        <item quantity="one">%1$d слушатель</item>
+        <item quantity="few">%1$d слушателя</item>
+        <item quantity="many">%1$d слушателей</item>
+        <item quantity="other">%1$d слушателя</item>
+    </plurals>
     <string name="nest_lower_hand">Опустить руку</string>
     <string name="nest_mic_mute">Выключить микрофон</string>
     <string name="nest_mic_unmute">Включить микрофон</string>
@@ -2545,7 +2479,6 @@
     <string name="nest_presence_raised_hand">поднял руку</string>
     <string name="nest_presence_speaking">говорит</string>
     <string name="nest_raise_hand">Поднять руку</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Сохраняется как заменяемое событие kind:10112, чтобы другие клиенты могли прочитать ваши настройки.</string>
     <string name="nests_servers_my_section">Ваши серверы</string>
     <string name="nests_servers_recommended_explainer">Встроенные предложения, которые можно добавить в список одним касанием.</string>
@@ -2602,29 +2535,28 @@
     <string name="nowhere_link_card_message">Сообщение Nowhere</string>
     <string name="nowhere_link_card_petition">Петиция Nowhere</string>
     <string name="nowhere_link_card_store">Магазин Nowhere</string>
-    <string name="nsites">nSites</string>
     <string name="nudity">Нагота</string>
     <string name="nutzap_failed_no_event">Не удаётся создать ссылку на событие</string>
     <string name="nutzap_failed_no_recipient">В заметке нет публичного ключа получателя</string>
     <string name="nutzap_failed_private_note">Nutzap'ы публичны и раскроют эту приватную заметку. Используйте вместо этого Lightning зап.</string>
     <string name="nutzap_failed_title">Nutzap не удался</string>
     <plurals name="onchain_send_button_amount_split">
-    <item quantity="one">Отправить %1$s sats, %2$d получателю</item>
-    <item quantity="few">Отправить %1$s sats, %2$d получателям</item>
-    <item quantity="many">Отправить %1$s sats, %2$d получателям</item>
-    <item quantity="other">Отправить %1$s sats, %2$d получателям</item>
-</plurals>
+        <item quantity="one">Отправить %1$s sats, %2$d получателю</item>
+        <item quantity="few">Отправить %1$s sats, %2$d получателям</item>
+        <item quantity="many">Отправить %1$s sats, %2$d получателям</item>
+        <item quantity="other">Отправить %1$s sats, %2$d получателям</item>
+    </plurals>
     <string name="onchain_send_error_backend_not_configured">Блокчейн-бэкенд Bitcoin не настроен</string>
     <string name="onchain_send_error_broadcast">Не удалось транслировать транзакцию</string>
     <string name="onchain_send_error_build">Не удалось построить транзакцию</string>
     <string name="onchain_send_error_load_utxos">Не удалось загрузить баланс Bitcoin</string>
     <string name="onchain_send_error_publish_receipt">Платёж отправлен, но квитанция о запе не может быть опубликована</string>
     <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="one">Платёж отправлен (%1$d из %2$d квитанции опубликовано), но следующая квитанция не может быть опубликована</item>
-    <item quantity="few">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
-    <item quantity="many">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
-    <item quantity="other">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
-</plurals>
+        <item quantity="one">Платёж отправлен (%1$d из %2$d квитанции опубликовано), но следующая квитанция не может быть опубликована</item>
+        <item quantity="few">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
+        <item quantity="many">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
+        <item quantity="other">Платёж отправлен (%1$d из %2$d квитанций опубликовано), но следующая квитанция не может быть опубликована</item>
+    </plurals>
     <string name="onchain_send_error_recipient_dust">Доля получателя ниже минимального порога (dust)</string>
     <string name="onchain_send_error_sign">Не удалось подписать транзакцию</string>
     <string name="onchain_send_fee_eta_fast">~10 мин</string>
@@ -2633,25 +2565,24 @@
     <string name="onchain_send_fee_fast">Быстро</string>
     <string name="onchain_send_fee_normal">Нормально</string>
     <string name="onchain_send_fee_slow">Медленно</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
-    <item quantity="one">Разделение между %1$d получателем</item>
-    <item quantity="few">Разделение между %1$d получателями</item>
-    <item quantity="many">Разделение между %1$d получателями</item>
-    <item quantity="other">Разделение между %1$d получателями</item>
-</plurals>
+        <item quantity="one">Разделение между %1$d получателем</item>
+        <item quantity="few">Разделение между %1$d получателями</item>
+        <item quantity="many">Разделение между %1$d получателями</item>
+        <item quantity="other">Разделение между %1$d получателями</item>
+    </plurals>
     <plurals name="onchain_send_splits_skipped">
-    <item quantity="one">Пропуск %1$d получателя с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
-    <item quantity="few">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
-    <item quantity="many">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
-    <item quantity="other">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
-</plurals>
+        <item quantity="one">Пропуск %1$d получателя с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
+        <item quantity="few">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
+        <item quantity="many">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
+        <item quantity="other">Пропуск %1$d получателей с только Lightning-адресом — onchain требует публичный ключ Nostr для получения адреса.</item>
+    </plurals>
     <plurals name="onchain_send_use_note_split">
-    <item quantity="one">Использовать разделение этой заметки на %1$d часть</item>
-    <item quantity="few">Использовать разделение этой заметки на %1$d части</item>
-    <item quantity="many">Использовать разделение этой заметки на %1$d частей</item>
-    <item quantity="other">Использовать разделение этой заметки на %1$d частей</item>
-</plurals>
+        <item quantity="one">Использовать разделение этой заметки на %1$d часть</item>
+        <item quantity="few">Использовать разделение этой заметки на %1$d части</item>
+        <item quantity="many">Использовать разделение этой заметки на %1$d частей</item>
+        <item quantity="other">Использовать разделение этой заметки на %1$d частей</item>
+    </plurals>
     <string name="onchain_stage_broadcasting">трансляция</string>
     <string name="onchain_stage_building">построение транзакции</string>
     <string name="onchain_stage_loading_utxos">загрузка баланса</string>
@@ -2661,11 +2592,9 @@
     <string name="open_all_reactions_to_this_post">Открыть все реакции на эту запись</string>
     <string name="open_polls">Открытые</string>
     <string name="orbot_socks_port">Порт Orbot Socks</string>
-    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="ots_info_description">Есть доказательство того, что эта публикация была подписана до %1$s. Доказательство зафиксировано в блокчейне Bitcoin в указанную дату и время.</string>
     <string name="ots_info_title">Доказательство временно́й метки</string>
-    <string name="outbox_relays_title">Outbox Relays</string>
-    <string name="password_is_required">Необходимо указать пароль</string>
+    <string name="password_is_required">Требуется пароль</string>
     <string name="pause">Пауза</string>
     <string name="pay">Оплатить</string>
     <string name="payment_required_title">Сообщение от %1$s</string>
@@ -2674,34 +2603,33 @@
     <string name="pdf_saved_to_the_gallery">PDF сохранён в Downloads/Amethyst</string>
     <string name="people_list_explainer">Метаданные списков подписок могут видеть все пользователи Nostr. Только приватные участники зашифрованы.</string>
     <string name="people_list_title">Метаданные списка подписок</string>
-    <string name="pictures">Фото</string>
+    <string name="pictures">Изображения</string>
     <string name="pin_conversation">Закрепить наверху</string>
     <string name="pin_to_profile">Закрепить в профиле</string>
-    <string name="play">Воспроизвести</string>
+    <string name="play">Воспроизведение</string>
     <plurals name="podcast_episode_count">
-    <item quantity="one">%1$d эпизод</item>
-    <item quantity="few">%1$d эпизода</item>
-    <item quantity="many">%1$d эпизодов</item>
-    <item quantity="other">%1$d эпизода</item>
-</plurals>
+        <item quantity="one">%1$d эпизод</item>
+        <item quantity="few">%1$d эпизода</item>
+        <item quantity="many">%1$d эпизодов</item>
+        <item quantity="other">%1$d эпизода</item>
+    </plurals>
     <string name="poll_author_no_vote">Автор опроса не может голосовать</string>
     <string name="poll_is_closed_explainer">Опрос закрыт</string>
-    <string name="poll_multiple_choice">Множественный выбор</string>
-    <string name="poll_single_choice">Одиночный выбор</string>
+    <string name="poll_multiple_choice">Несколько вариантов ответа</string>
+    <string name="poll_single_choice">Один вариант ответа</string>
     <string name="poll_unable_to_vote">Невозможно проголосовать</string>
     <string name="polls">Опросы</string>
     <string name="post">Отправить</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">Этот пост содержит более %1$d хэштега</item>
-        <item quantity="few">Этот пост содержит более %1$d хэштегов</item>
-        <item quantity="many">Этот пост содержит более %1$d хэштегов</item>
-        <item quantity="other">Этот пост содержит более %1$d хэштегов</item>
+        <item quantity="one">Этот пост имеет более чем %1$d хэштег</item>
+        <item quantity="few">Этот пост имеет более чем %1$d хэштегов</item>
+        <item quantity="many">Этот пост имеет более чем %1$d хэштегов</item>
+        <item quantity="other">Этот пост имеет более чем %1$d хэштегов</item>
     </plurals>
     <string name="preview_card_image_for">Предпросмотр для %1$s</string>
     <string name="privacy_options">Настройки конфиденциальности</string>
     <string name="privacy_policy">Политика конфиденциальности</string>
     <string name="private_conversation_notification">&lt;Не удалось расшифровать сообщение!&gt;\n\nВас упомянули в приватном/зашифрованном чате между %1$s и %2$s.</string>
-    <string name="private_inbox_section">DM Inbox Relays</string>
     <string name="private_inbox_section_explainer">Укажите от 1 до 3 relay для использования в качестве личного почтового ящика. Другие будут использовать эти relay для отправки вам DM. DM Inbox relay должны принимать любые сообщения от кого угодно, но разрешать скачивание только вам. Хорошие варианты:\n - inbox.nostr.wine (платно)\n - auth.nostr1.com (бесплатно)\n - you.nostr1.com (личные relay — платно)</string>
     <string name="private_inbox_section_explainer_profile">Пользователь получает DM на этих relay</string>
     <string name="private_message">Личное сообщение</string>
@@ -2719,8 +2647,7 @@
     <string name="profile_ui_setting_zap_received_feed">Лента полученных Zap</string>
     <string name="profile_ui_settings">Интерфейс профиля</string>
     <string name="profiles">профили</string>
-    <string name="propose_an_edit">Предложить правку</string>
-    <string name="proxy_section">Proxy Relays</string>
+    <string name="propose_an_edit">Предложить изменение</string>
     <string name="proxy_section_explainer">Агрегирующие relay-серверы, которые приложение использует для загрузки ваших лент, например filter.nostr.wine. Это заменяет модель outbox и позволит приложению подключаться только к relay-серверам из ваших списков.</string>
     <string name="public_chat">Публичный чат</string>
     <string name="public_chat_explainer">Публичные чаты видны всем в Nostr и открыты для участия любого желающего. Они отлично подходят для открытых сообществ по определённым темам. Модерация осуществляется путём удаления постов на relay</string>
@@ -2747,7 +2674,7 @@
     <string name="read_from_relay">Чтение из relay</string>
     <string name="read_from_relay_description">Объём данных в байтах, полученных от этого relay, включая фильтры и события</string>
     <string name="read_only_user">Пользователь только для чтения</string>
-    <string name="record_a_message_description">Нажмите и удерживайте для записи сообщения</string>
+    <string name="record_a_message_description">Нажмите и удерживайте, чтобы записать сообщение</string>
     <string name="relay_chat">Чат relay</string>
     <string name="relay_chat_explainer">Чаты relay — это групповые чаты, управляемые их домашним relay. Они видны всем в Nostr, и любой может в них участвовать. Они отлично подходят для открытых сообществ по определённым темам. Некоторые группы эфемерны, поэтому сообщения исчезают со временем</string>
     <string name="relay_chat_title">Чаты relay</string>
@@ -2797,43 +2724,43 @@
     <string name="scheduled_posts_error_prefix">Ошибка: %1$s</string>
     <string name="scheduled_posts_event_id_copied">ID заметки скопирован</string>
     <plurals name="scheduled_posts_logout_toast">
-    <item quantity="one">Выход выполнен · %1$d запланированный пост удалён</item>
-    <item quantity="few">Выход выполнен · %1$d запланированных поста удалено</item>
-    <item quantity="many">Выход выполнен · %1$d запланированных постов удалено</item>
-    <item quantity="other">Выход выполнен · %1$d запланированных поста удалено</item>
-</plurals>
+        <item quantity="one">Выход выполнен · %1$d запланированный пост удалён</item>
+        <item quantity="few">Выход выполнен · %1$d запланированных поста удалено</item>
+        <item quantity="many">Выход выполнен · %1$d запланированных постов удалено</item>
+        <item quantity="other">Выход выполнен · %1$d запланированных поста удалено</item>
+    </plurals>
     <string name="scheduled_posts_logout_toast_zero">Выход выполнен</string>
     <plurals name="scheduled_posts_logout_warning">
-    <item quantity="one">У вас %1$d запланированный пост, который ещё не опубликован. При выходе он будет удалён навсегда.</item>
-    <item quantity="few">У вас %1$d запланированных поста, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
-    <item quantity="many">У вас %1$d запланированных постов, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
-    <item quantity="other">У вас %1$d запланированных поста, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
-</plurals>
+        <item quantity="one">У вас %1$d запланированный пост, который ещё не опубликован. При выходе он будет удалён навсегда.</item>
+        <item quantity="few">У вас %1$d запланированных поста, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
+        <item quantity="many">У вас %1$d запланированных постов, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
+        <item quantity="other">У вас %1$d запланированных поста, которые ещё не опубликованы. При выходе они будут удалены навсегда.</item>
+    </plurals>
     <string name="scheduled_posts_notification_failed_title">Ошибка запланированного поста</string>
     <string name="scheduled_posts_notification_sent_title">Запланированный пост опубликован</string>
     <plurals name="scheduled_posts_relay_count">
-    <item quantity="one">на %1$d relay</item>
-    <item quantity="few">на %1$d relay</item>
-    <item quantity="many">на %1$d relay</item>
-    <item quantity="other">на %1$d relay</item>
-</plurals>
+        <item quantity="one">на %1$d relay</item>
+        <item quantity="few">на %1$d relay</item>
+        <item quantity="many">на %1$d relay</item>
+        <item quantity="other">на %1$d relay</item>
+    </plurals>
     <string name="scheduled_posts_status_cancelled">Отменено</string>
     <string name="scheduled_posts_status_failed">Ошибка</string>
     <string name="scheduled_posts_status_pending">Запланировано</string>
     <string name="scheduled_posts_status_publishing">Отправка…</string>
     <string name="scheduled_posts_status_sent">Отправлено</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="one"> · %1$d через 1ч</item>
-    <item quantity="few"> · %1$d через 1ч</item>
-    <item quantity="many"> · %1$d через 1ч</item>
-    <item quantity="other"> · %1$d через 1ч</item>
-</plurals>
+        <item quantity="one"> · %1$d через 1ч</item>
+        <item quantity="few"> · %1$d через 1ч</item>
+        <item quantity="many"> · %1$d через 1ч</item>
+        <item quantity="other"> · %1$d через 1ч</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="one">%1$d в очереди</item>
-    <item quantity="few">%1$d в очереди</item>
-    <item quantity="many">%1$d в очереди</item>
-    <item quantity="other">%1$d в очереди</item>
-</plurals>
+        <item quantity="one">%1$d в очереди</item>
+        <item quantity="few">%1$d в очереди</item>
+        <item quantity="many">%1$d в очереди</item>
+        <item quantity="other">%1$d в очереди</item>
+    </plurals>
     <string name="search_relays_not_found_examples">Хорошие варианты:\n%1$s</string>
     <string name="search_relays_title">Поисковые Relays</string>
     <string name="search_section">Поисковые Relays</string>
@@ -2861,13 +2788,12 @@
     <string name="share_as_image_url">Поделиться URL изображения</string>
     <string name="share_hls_video">Загрузка HLS</string>
     <string name="share_or_save">Поделиться или сохранить</string>
-    <string name="shorts">Shorts</string>
     <string name="show_messages_in_notifications_setting_description">Включить личные и групповые сообщения во вкладку «Уведомления». Отключите, чтобы сообщения отображались только во вкладке «Сообщения».</string>
     <string name="show_messages_in_notifications_setting_title">Показывать сообщения</string>
     <string name="sign_request_rejected2">Запрос на подпись отклонён</string>
     <string name="sign_request_rejected_description">Убедитесь, что приложение подписи авторизовало эту транзакцию</string>
     <string name="signer_illegal_state_exception_description">Внешний подписант вернул неожиданный ответ на запрос. Возможно, ошибка в Amethyst или в приложении подписи.</string>
-    <string name="signer_not_found_exception">Подписант не найден</string>
+    <string name="signer_not_found_exception">Подпись не найдена</string>
     <string name="signer_not_found_exception_description">Приложение подписи удалено? Убедитесь, что оно установлено и содержит этот аккаунт. Выйдите и войдите снова, если приложение подписи изменилось.</string>
     <string name="skip_back">Перемотать назад на %1$d сек.</string>
     <string name="skip_forward">Перемотать вперёд на %1$d сек.</string>
@@ -2886,17 +2812,16 @@
     <string name="theme_description">Тёмная, светлая или системная тема</string>
     <string name="this_message_will_disappear_in">Это сообщение исчезнет через %1$s</string>
     <plurals name="thread_collapsed_reply_count">
-    <item quantity="one">+%1$d\\nответ</item>
-    <item quantity="few">+%1$d\\nответа</item>
-    <item quantity="many">+%1$d\\nответов</item>
-    <item quantity="other">+%1$d\\nответа</item>
-</plurals>
+        <item quantity="one">+%1$d\\nответ</item>
+        <item quantity="few">+%1$d\\nответа</item>
+        <item quantity="many">+%1$d\\nответов</item>
+        <item quantity="other">+%1$d\\nответа</item>
+    </plurals>
     <string name="today">Сегодня</string>
     <string name="tor_custom">Настраиваемый</string>
     <string name="tor_custom_explainer">Настройте по своему усмотрению</string>
     <string name="tor_default">По умолчанию</string>
     <string name="tor_default_explainer">Скрыть ваш IP от случайных relay</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_full_privacy">Полная конфиденциальность</string>
     <string name="tor_full_privacy_explainer">Скрыть ваш IP во всех соединениях</string>
     <string name="tor_internal">Встроенный</string>
@@ -2935,7 +2860,7 @@
     <string name="tracked_broadcasts_setting_description">Использует отслеживаемый режим при отправке событий. Показывает прогресс в реальном времени и статус по каждому relay.</string>
     <string name="tracked_broadcasts_setting_title">Отслеживаемые трансляции</string>
     <string name="translate_to">Перевести на</string>
-    <string name="translate_to_description">Выберите язык, на который переводить контент.</string>
+    <string name="translate_to_description">Выберите язык для перевода содержимого.</string>
     <string name="translations">Переводы</string>
     <string name="trusted_section">Доверенные Relays</string>
     <string name="trusted_section_explainer">Relay, которым вы доверяете настолько, что Tor-соединение не требуется</string>
@@ -2946,17 +2871,17 @@
     <string name="ui_style">Режим интерфейса</string>
     <string name="ui_style_description">Выберите стиль публикаций</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Не удалось создать Lightning-счёт перед отправкой зап. Lightning-кошелёк получателя вернул следующую ошибку: %1$s</string>
-    <string name="unable_to_share_image">Не удалось поделиться изображением, повторите попытку позже…</string>
-    <string name="unable_to_share_video">Не удалось поделиться видео, повторите попытку позже…</string>
+    <string name="unable_to_share_image">Не удается поделиться изображением, повторите попытку позже…</string>
+    <string name="unable_to_share_video">Не удается поделиться видео, повторите попытку позже…</string>
     <string name="unauthorized_exception">Несанкционированная расшифровка</string>
-    <string name="unauthorized_exception_description">Подписант не разрешил расшифровку, необходимую для выполнения этой операции. Активируйте расшифровки NIP-44 в вашем приложении-подписанте и повторите попытку</string>
+    <string name="unauthorized_exception_description">Подписчик не авторизовал расшифровку, необходимую для выполнения этой операции. Активируйте расшифровки NIP-44 в приложении для подписчика и попробуйте еще раз</string>
     <string name="unfollow">Отписаться</string>
     <string name="unpin_conversation">Открепить</string>
     <string name="unpin_from_profile">Открепить от профиля</string>
     <string name="upload_cancelled">Загрузка отменена</string>
     <string name="upload_error_title">Ошибка загрузки</string>
     <string name="upload_error_voice_message_exception">Ошибка загрузки голосового сообщения: %1$s</string>
-    <string name="upload_error_voice_message_failed">Не удалось загрузить голосовое сообщение</string>
+    <string name="upload_error_voice_message_failed">Неудалось загрузить голосовое сообщение</string>
     <string name="uptime">%1$d% времени работы</string>
     <string name="use_internal_tor">Встроенный движок Tor</string>
     <string name="use_internal_tor_explainer">Использовать встроенную версию или Orbot</string>
@@ -2964,18 +2889,17 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">У пользователя %1$s не настроен Lightning-адрес для получения sats</string>
     <string name="vanish_history">История запросов на удаление</string>
     <string name="vanish_request_sent">Запрос на удаление отправлен</string>
-    <string name="video_download_has_started_toast">Загрузка видео начата…</string>
+    <string name="video_download_has_started_toast">Скачивание видео было запущено…</string>
     <string name="video_player_settings">Кнопки видеоплеера</string>
-    <string name="video_saved_to_the_gallery">Видео сохранено в видеогалерею телефона</string>
+    <string name="video_saved_to_the_gallery">Видео сохранено в галерею</string>
     <string name="voice_post">Голосовая публикация</string>
-    <string name="voice_preset_deep">Низкий</string>
+    <string name="voice_preset_deep">Глубокий</string>
     <string name="voice_preset_high">Высокий</string>
     <string name="voice_preset_neutral">Нейтральный</string>
-    <string name="voice_preset_none">Нет</string>
+    <string name="voice_preset_none">Отсутствует</string>
     <string name="voice_reply">Голосовой ответ</string>
     <string name="wallet">Кошелёк</string>
     <string name="wallet_add_cashu_title">Cashu-кошелёк (NIP-60)</string>
-    <string name="wallet_connect">Wallet Connect</string>
     <string name="wallet_connect_pay_invoice_error_error">Ваш провайдер wallet connect вернул следующую ошибку: %1$s</string>
     <string name="wallet_edit_cashu_title">Изменить mint'ы</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Показывает предупреждение, если на публикацию или профиль пожаловались люди из ваших подписок</string>
@@ -2988,7 +2912,6 @@
     <string name="write_a_message">Написать сообщение…</string>
     <string name="write_to_relay">Запись в relay</string>
     <string name="write_to_relay_description">Объём данных в байтах, отправленных на этот relay, включая фильтры и события</string>
-    <string name="zap_description">Zap</string>
     <string name="zaps">Запы</string>
     <string name="block_hide_user"><![CDATA[Блокировать и скрыть пользователя]]></string>
     <string name="rename">Переименовать</string>
@@ -2998,6 +2921,127 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервис получателя по адресу %1$s недоступен. Он был вычислен из Lightning-адреса "%2$s". Ошибка: %3$s. Проверьте, работает ли сервер и правильно ли указан Lightning-адрес</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Не удалось создать Lightning-счёт от %1$s: элемент pr не найден в полученном JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Не удалось создать Lightning-счёт. Сообщение от %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="post_not_found_short">👀</string>
+    <string name="fork">Fork</string>
+    <string name="clink_lightning_offer">CLINK Offer</string>
+    <string name="clink_offer_label">CLINK Offer (noffer)</string>
+    <string name="wallet_add_clink_title">CLINK Debit</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_clink">CLINK Offer</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nest_create_field_endpoint">MoQ relay endpoint</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="security_unlimited">∞</string>
+    <string name="zapraiser">Zapraiser</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="wallet_sats">sats</string>
+    <string name="cashu_mints">Mints</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="url_slug_placeholder">article-url-slug</string>
+    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="proxy_relays_title">Proxy Relays</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <plurals name="cashu_wallet_subtitle_mints">
+    <item quantity="one">%1$d mint</item>
+    <item quantity="few">%1$d mint</item>
+    <item quantity="many">%1$d mint</item>
+    <item quantity="other">%1$d mint</item>
+</plurals>
+    <string name="dm_relays_title">DM Inbox Relays</string>
+    <string name="dms">DMs</string>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="inbox_relays_title">Inbox Relays</string>
+    <string name="keypackage_section">KeyPackage Relays</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_blossom_auth">Blossom Auth</string>
+    <string name="kind_chess_auth">Chess Auth</string>
+    <string name="kind_dvm_content_req">DVM Content Req</string>
+    <string name="kind_dvm_content_resp">DVM Content Resp</string>
+    <string name="kind_dvm_status">DVM Status</string>
+    <string name="kind_dvm_user_req">DVM User Req</string>
+    <string name="kind_dvm_user_resp">DVM User Resp</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_git_issue">Git Issue</string>
+    <string name="kind_git_patch">Git Patch</string>
+    <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_repo">Git Repo</string>
+    <string name="kind_http_auth">Http Auth</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
+    <string name="kind_nwc_request">NWC Request</string>
+    <string name="kind_nwc_response">NWC Response</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_relay_auth">Relay Auth</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_wiki">Wiki</string>
+    <string name="kind_zap_poll">Zap Poll</string>
+    <string name="kind_zap_req">Zap Req</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="marmot_group">Marmot Group</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="napplets">nApplets</string>
+    <string name="nests">Nests</string>
+    <string name="nsites">nSites</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="outbox_relays_title">Outbox Relays</string>
+    <string name="private_inbox_section">DM Inbox Relays</string>
+    <string name="proxy_section">Proxy Relays</string>
+    <string name="shorts">Shorts</string>
+    <string name="tor_external">Orbot</string>
+    <string name="wallet_connect">Wallet Connect</string>
+    <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Поиск или введите адрес</string>
     <string name="napplet_untitled">nApplet без названия</string>
 </resources>

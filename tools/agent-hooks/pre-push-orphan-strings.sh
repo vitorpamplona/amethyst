@@ -13,7 +13,11 @@
 # minutes, so it is a pre-push gate (`:amethyst:lintPlayDebug` in `.git-hooks/pre-push`),
 # not a per-commit one. This check is a directory scan and finishes in well under a second.
 #
-# Run the scan by hand any time with:  tools/agent-hooks/orphan_strings_check.py
+# The same gate runs locale_layout_check.py: a regional file (values-es-rES) may
+# only hold what that region says differently from its base (values-es).
+#
+# Run the scans by hand any time with:  tools/agent-hooks/orphan_strings_check.py
+#                                       tools/agent-hooks/locale_layout_check.py
 set -uo pipefail
 
 hook_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -36,4 +40,7 @@ esac
 
 printf '%s' "$payload" | python3 "$hook_dir/lib/git_push_gate.py" || exit 0
 
-exec python3 "$hook_dir/orphan_strings_check.py"
+status=0
+python3 "$hook_dir/orphan_strings_check.py" || status=$?
+python3 "$hook_dir/locale_layout_check.py" || status=$?
+exit "$status"

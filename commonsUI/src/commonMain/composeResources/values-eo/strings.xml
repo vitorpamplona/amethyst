@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">respondante al </string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Permesoj:</string>
+    <string name="nsite_root_site">Radika Retejo</string>
+    <string name="nsite_source">Fonto:</string>
+    <string name="nsite_servers">Serviloj:</string>
+    <string name="nsite_open">Malfermi</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Uzi rektan URL</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Malferma</string>
     <string name="git_status_merged">Kunfandita</string>
     <string name="git_status_closed">Fermita</string>
@@ -26,6 +46,7 @@
     <string name="road_event_speed_camera">Rapideca fotilo</string>
     <string name="road_event_traffic_jam">Trafika ŝtopado</string>
     <string name="road_event_unknown">Voja evento</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Malfermi</string>
     <string name="relay_monitor_rtt_read">Legi</string>
     <string name="relay_monitor_rtt_write">Skribi</string>
@@ -33,7 +54,6 @@
     <string name="relay_monitor_relay_type">Tipo</string>
     <string name="relay_monitor_requirements">Postuloj</string>
     <string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
     <string name="relay_discovery_geohash">Loko</string>
     <string name="calendar_rsvp_going">Iras</string>
@@ -53,7 +73,6 @@
     <string name="post_was_hidden">Tiu ĉi afiŝo estis kaŝita ĉar ĝi mencias viajn kaŝitajn uzantojn aŭ vortojn</string>
     <string name="post_was_flagged_as_inappropriate_by">La afiŝo estis denuncita kiel netaŭga de</string>
     <string name="post_not_found">Afiŝo ŝarĝanta aŭ netrovita en via listo de plusendiloj</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanala Bildo</string>
     <string name="referenced_event_not_found">Referencita evento netrovita</string>
     <string name="could_not_decrypt_the_message">Mesaĝo nemalĉifrebla</string>
@@ -78,7 +97,6 @@
     <string name="report_impersonation">Raporti Personigon</string>
     <string name="report_illegal_behaviour">Raporti Kontraŭleĝan Konduton</string>
     <string name="report_malware">Raporti Malware</string>
-    <string name="malware">Malware</string>
     <string name="chat_zap_amount_suffix">Zap-is %1$s sats</string>
     <string name="chat_zap_anonymous">Anonima</string>
     <string name="chat_raid_is_raiding">rajdas</string>
@@ -88,7 +106,6 @@
     <string name="quote">Citi</string>
     <string name="fork">Forko</string>
     <string name="new_amount_in_sats">Nova Kvanto da Satoj</string>
-    <string name="replying_to">respondante al </string>
     <string name="following"> Sekvanti</string>
     <string name="followers"> Sekvantoj</string>
     <string name="number_following">%1$s Sekvata(j)</string>
@@ -119,10 +136,8 @@
     <string name="send_payment_source_external">Alia monujo-app</string>
     <string name="send_payment_source_onchain_wallet">Ĉen-surmonujo</string>
     <string name="send_payment_source_cashu_wallet">Cashu-monujo</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK-Oferto</string>
     <string name="send_payment_method_onchain">Ĉen-sure</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Sumo</string>
     <string name="send_payment_fixed_price">Prezo fiksita de la oferto</string>
     <string name="send_payment_receipt_section">Zap-kvitanco</string>
@@ -155,7 +170,6 @@
     <string name="secret_note_to_receiver">Sekreta Noto al Ricevanto</string>
     <string name="secret_note_to_receiver_placeholder">Mia kaŝita mesaĝo</string>
     <string name="secret_visible_text">Videbla Antaŭaĵo</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Aldoni al Afiŝo</string>
     <string name="article">Artikolo</string>
     <string name="channel_name">Kanala Nomo</string>
@@ -383,8 +397,6 @@
     <string name="app_definition_by">de</string>
     <string name="app_definition_available_on">Disponebla sur</string>
     <string name="platform_web">Retejo</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Ekzercado</string>
     <string name="workout_title">Titolo</string>
     <string name="workout_duration">Daŭro</string>
@@ -407,8 +419,9 @@
     <string name="workout_minutes">Minutoj</string>
     <string name="workout_seconds">Sekundoj</string>
     <string name="workout_suggestion_connect_button">Konekti</string>
-    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">El Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Ankoraŭ neniuj nSite-oj trovitaj.</string>
     <string name="browser_unsupported">La en-aplikaĵa retumilo bezonas Android 11 aŭ pli novan.</string>
     <string name="embedded_tab_load_failed">Ne eblis ŝargi ĉi tiun aplikaĵon.</string>
@@ -425,7 +438,6 @@
     <string name="napplet_consent_deny_always">Neniam permesi</string>
     <string name="napplet_consent_not_now">Ne nun</string>
     <string name="nip82_repository_label">Fonto: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Elŝuti</string>
     <string name="nip82_section_about">Pri</string>
     <string name="nip82_section_platforms">Platformoj</string>
@@ -531,10 +543,8 @@
     <string name="nest_create_schedule_toggle">Plani por poste</string>
     <string name="nest_create_when">Elekti komenchoraron</string>
     <string name="nests_servers_explainer">Elektu kiujn MoQ-gastigajn servilojn Amethyst publikigas viajn nestojn al. La unua ero estas uzata defaŭlte kiam vi komencas novan spacon.</string>
-    <string name="nests_servers_add_relay_field">Relay (WebTransport) URL</string>
     <string name="nests_servers_add_auth_field">Aŭtentikiga (JWT-minta) URL</string>
     <string name="nests_servers_add_pair_button">Aldoni</string>
-    <string name="nests_servers_relay_label">Relay</string>
     <string name="nests_servers_auth_label">Aŭtentikigo</string>
     <string name="nests_servers_use_defaults">Uzi Amethyst-defaŭltojn</string>
     <string name="nests_servers_add_recommended">Aldoni servilon</string>
@@ -614,7 +624,6 @@
     <string name="quick_zap_amounts_explainer">Montrataj kiam oni premas la Zap-butonon. Ĉiu kvanto povas esti pagita per ajna relo kiun la ricevanto subtenas — Lightning, Cashu, aŭ enkatenita (enkatenita nur por pli grandaj kvantoj). Tuŝetu kvanton por forigi ĝin. Se vi lasas ĝin malplena, ĝi malfermos la dialogon por enigi kvanton ĉiufoje.</string>
     <string name="send_onchain_instead">Sendi enkatenite anstataŭe</string>
     <string name="reload_mint_title">Ĉargi montan</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Ŝargkvanto</string>
     <string name="reload_mint_section_to">Monto por ŝargi</string>
     <string name="reload_mint_section_from">Fondusoj de</string>
@@ -718,6 +727,9 @@
     <string name="call_calling">Alvokante…</string>
     <string name="call_connecting">Konektante…</string>
     <string name="call_ended">Alvoko finiĝis</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Malakcepti</string>
     <string name="call_switch_camera">Ŝanĝi fotilon</string>
     <string name="call_voice">Voĉa alvoko</string>
@@ -755,7 +767,6 @@
     <string name="show_sensitive_content_explainer">Montras avermesaĝon kiam la aŭtoro de la afiŝo markis ĝin kiel sentivan</string>
     <string name="max_hashtag_limit_title">Maksimuma hashtag-nombro per afiŝo</string>
     <string name="max_hashtag_limit_explainer">Kaŝas afiŝojn kun pli da hashtag-oj ol tiu ĉi limo. Agordu al 0 por malŝalti</string>
-    <string name="security_unlimited">∞</string>
     <string name="zapraiser">Zapkolekto</string>
     <string name="zapraiser_explainer">Difinas kvanton de zapoj por kolekti por ĉi tiu afiŝo. Subtenantaj klientoj montrus ĉi tion kiel plenumskalo por kuraĝigi donacojn</string>
     <string name="zapraiser_target_amount_in_sats">Celita Kvanto da Satoj</string>
@@ -934,7 +945,6 @@
     <string name="send_the_seller_a_message">Sendi mesaĝon al la vendisto</string>
     <string name="hi_there_is_this_still_available">Saluton, ĉu ĉi tio ankoraŭ disponeblas?</string>
     <string name="classifieds_title">Titolo</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Kondiĉo</string>
     <string name="classifieds_category">Kategorio</string>
     <string name="classifieds_price">Prezo (en Sats)</string>
@@ -963,7 +973,6 @@
     <string name="wallet_send">Sendi</string>
     <string name="wallet_receive">Ricevi</string>
     <string name="wallet_transactions">Transakcioj</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Alglui BOLT-11-fakturon</string>
     <string name="wallet_pay">Pagi</string>
     <string name="wallet_payment_success">Pago sukcesa</string>
@@ -980,7 +989,6 @@
     <string name="wallet_outgoing">Sendita</string>
     <string name="wallet_refresh">Refreŝigi</string>
     <string name="wallet_filter_all">Ĉiuj</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Ne-Zaps</string>
     <string name="wallet_default">Defaŭlta</string>
     <string name="wallet_set_default">Agordi kiel defaŭltan</string>
@@ -1058,9 +1066,7 @@
     <string name="cashu_getting_quote">Petado de monfarejo pri citaĵo…</string>
     <string name="cashu_verify">Kontroli</string>
     <string name="cashu_mint_reachable">✓ Monfarejo atingebla</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Ne eblis atingi monfarejOn: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Krei ĵetonon</string>
     <string name="cashu_redeem_button">Elaĉeti</string>
     <string name="cashu_done">Farite</string>
@@ -1093,11 +1099,9 @@
     <string name="onchain_send_recipient_placeholder">nomo, NIP-05 aŭ npub</string>
     <string name="onchain_send_change_recipient">Ŝanĝi ricevanton</string>
     <string name="onchain_send_amount">Kvanto</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Minimuma onchain-Zap estas %1$s sats — pli malgrandaj kvantoj estas manĝataj de ministo-kotizoj. Uzu anstataŭe Lightning Zap.</string>
     <string name="onchain_send_comment_label">Komento (nedeviga)</string>
     <string name="onchain_send_priority">Prioritato</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Ŝargado de kotiz-taksoj…</string>
     <string name="onchain_send_button_amount">Sendi %1$s sats</string>
     <string name="onchain_send_dont_split">Ne dividi — pagi unu ricevanton anstataŭe</string>
@@ -1106,7 +1110,6 @@
     <string name="onchain_send_result_transaction">Transakcio</string>
     <string name="onchain_send_result_fee">Kotizo</string>
     <string name="onchain_send_result_change">Restaĵo</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Farite</string>
     <string name="onchain_send_failed_at">Malsukcesis ĉe: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Pago estis elsendita (tx %1$s) sed la kvitanco ne estis publikigita.</string>
@@ -1222,7 +1225,6 @@
     <string name="reactions_settings_boost_description">Republiki aŭ citi ĉi tiun noton</string>
     <string name="reactions_settings_like">Ŝati</string>
     <string name="reactions_settings_like_description">Reagi al ĉi tiu noto per emodžio</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Sendi fulmpagon al la aŭtoro</string>
     <string name="reactions_settings_share">Dividi</string>
     <string name="reactions_settings_share_description">Dividi ĉi tiun noton ekstere</string>
@@ -1255,14 +1257,12 @@
     <string name="audio_visualizer_classic">Klasika Ondoformo</string>
     <string name="audio_visualizer_static">Statika Bildo</string>
     <string name="profile_image_of_user">Profila bildo de %1$s</string>
-    <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Vastigi relay-liston</string>
     <string name="note_options">Notaj opcioj</string>
     <string name="poll">Sondumado</string>
     <string name="disable_poll">Malŝalti Sondumado</string>
     <string name="add_bitcoin_invoice">Bitcoin-fakturo</string>
     <string name="cancel_bitcoin_invoice">Nuligi Bitcoin-fakturon</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Nuligi Zapraiser</string>
     <string name="add_location">Loko</string>
     <string name="remove_location">Forigi Lokon</string>
@@ -1369,7 +1369,6 @@
     <string name="search_filters_section_source">Fonto</string>
     <string name="search_filters_section_sort">Ordigi laŭ</string>
     <string name="search_filters_open">Filtriloj</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Serĉi lingvojn</string>
     <string name="add_language">Aldoni lingvon</string>
     <string name="add_language_pair">Aldoni lingvoparon</string>
@@ -1416,7 +1415,6 @@
     <string name="timeout">Tempolimo</string>
     <string name="retrying">Reprovante…</string>
     <string name="dismiss">Ignori</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Elsendante</string>
     <string name="broadcasting_name">Elsendante %1$s</string>
     <string name="broadcasting_number_events">Elsendante %1$d eventojn…</string>
@@ -1485,7 +1483,6 @@
     <string name="event_sync_sending_to">Sendante Al</string>
     <string name="event_sync_outbox_relays">Elirejo</string>
     <string name="event_sync_inbox_relays">Enirejo</string>
-    <string name="event_sync_dm_relays">DMs</string>
     <string name="event_sync_activity_log">Nuntempe Kontrolanta (%1$d relay-oj)</string>
     <string name="event_sync_activity_log_finished">Finita (%1$d relay-oj)</string>
     <string name="event_sync_log_sent">sendita %1$s</string>
@@ -1505,7 +1502,6 @@
     <string name="cashu_move_coins_withdraw_ln">Retiri per Lightning…</string>
     <string name="cashu_move_coins_export_token">Eksporti kiel Cashu-ĵetonon…</string>
     <string name="cashu_move_coins_working">Movante monerojn…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Konektante</string>
     <string name="event_sync_status_downloading">Elŝutante</string>
     <string name="event_sync_status_error">Eraro</string>
@@ -1528,7 +1524,6 @@
     <string name="hls_content_warning_reason_placeholder">Kialo (nedeviga)</string>
     <string name="hls_codec_label">Kodeko</string>
     <string name="hls_codec_h265">H.265 (pli bona kunpremado)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 ne disponeblas sur ĉi tiu aparato — refalas al H.264.</string>
     <string name="hls_renditions_label">Rendiciadoj</string>
     <string name="hls_renditions_source_format">Fonta rezolucio: %1$d×%2$d</string>
@@ -1566,8 +1561,6 @@
     <string name="event_sync_date_filter_until">Ĝis</string>
     <string name="event_sync_date_filter_now">Nun</string>
     <string name="event_sync_date_filter_all_time">Ĉiam</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Titolo</string>
     <string name="web_bookmark_title_placeholder">Titolo de legosigno</string>
     <string name="web_bookmark_description_label">Priskribo</string>
@@ -1582,15 +1575,12 @@
     <string name="fundraiser_ends">Finiĝas %1$s</string>
     <string name="fundraiser_onchain_donation">Donaco en ĉeno</string>
     <string name="goal_amount_label">Celosummo (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Priskribu vian celon</string>
     <string name="goal_description_placeholder">Por kio vi kolektas monon?</string>
     <string name="goal_summary_label">Mallonga resumo</string>
     <string name="goal_summary_placeholder">Mallonga priskribo montrata en antaŭrigardoj</string>
     <string name="goal_image_label">Bildo-URL (nedeviga)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">Retejo-URL (nedeviga)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Agordi limdaton</string>
     <string name="request_to_vanish_description">Petu relay-ojn por konstante forigi ĉiujn viajn datumojn ĝis la elektita dato. Ĉi tiu ago baziĝas sur NIP-62 kaj estas jure deviga en kelkaj jurisdikcioj.</string>
     <string name="vanish_target_relay">Celaj relay-oj</string>
@@ -1707,7 +1697,6 @@
     <string name="emoji_pack_actions_dialog_title">Agoj de emodžio-pako</string>
     <string name="emoji_private_toggle">Privata</string>
     <string name="emoji_private_badge">Privata emodžio</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Malobservo de komunumaj reguloj</string>
     <string name="community_rules_violation_author_denied">Vi estas sur la malpermesa listo de ĉi tiu komunumo. Afiŝoj ne estos akceptitaj.</string>
     <string name="community_rules_violation_kind_not_allowed">Ĉi tiu komunumo ne akceptas eventojn de tipo %1$d.</string>
@@ -1719,7 +1708,6 @@
     <string name="marmot_create_group_footer">Nova MLS-grupo estos kreita. Vi povas aldoni membrojn poste.</string>
     <string name="marmot_group_default_name">Marmot Grupo</string>
     <string name="marmot_group_fallback_name">Grupo %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Konataj</string>
     <string name="marmot_tab_known_count">Konataj (%1$d)</string>
     <string name="marmot_tab_new_requests">Novaj Petoj</string>
@@ -1733,6 +1721,9 @@
     <string name="marmot_group_name_placeholder">Enigu nomon de grupo</string>
     <string name="marmot_group_description_placeholder">Enigu priskribon de grupo (nedeviga)</string>
     <string name="marmot_edit_info_footer">Ŝanĝoj estos transdonitaj al la grupo per MLS kaj disvastigitaj al ĉiuj membroj.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage-relays ne agordita</string>
     <string name="marmot_keypackage_relays_not_set_message">Vi ankoraŭ ne havas KeyPackage-relay-liston (MIP-00). Ĉi tiu listo informas aliajn, kie via KeyPackage estas publikigita, por ke ili povu inviti vin al grupaj babilejoj.\n\nUzi viajn nunajn elirkest-relays por tio?</string>
     <string name="marmot_use_outbox_relays">Uzi elirkest-relays</string>
@@ -1759,7 +1750,6 @@
     <string name="marmot_revoke_admin_privileges">Revoki administrantajn privilegiojn</string>
     <string name="marmot_revoke_admin_title">Revoki Administrantajn Privilegiojn</string>
     <string name="marmot_revoke_admin_confirm">Revoki administrantajn privilegiojn de „%1$s"? Ili restos membro de la grupo.</string>
-    <string name="marmot_relays_header">Relays</string>
     <string name="marmot_relay_no_events">ankoraŭ neniuj eventoj</string>
     <string name="marmot_relay_last_event">lasta evento%1$s</string>
     <string name="copy">Kopii</string>
@@ -1767,12 +1757,6 @@
     <string name="ots_explorer_api_label">Baza URL de Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Pagi Fakturon de la DVM</string>
     <string name="dvm_pay_amount_to_dvm">Pagi %1$s sats al la DVM</string>
-    <string name="use_direct_url">Uzi rektan URL</string>
-    <string name="napplet_card_permissions">Permesoj:</string>
-    <string name="nsite_root_site">Radika Retejo</string>
-    <string name="nsite_source">Fonto:</string>
-    <string name="nsite_servers">Serviloj:</string>
-    <string name="nsite_open">Malfermi</string>
     <string name="about_legal">Pri &amp; Jura</string>
     <string name="account_settings">Kontaj Agordoj</string>
     <string name="add">Aldoni</string>
@@ -1874,22 +1858,16 @@
         <item quantity="other">Komenciĝas post %1$d minutoj</item>
     </plurals>
     <string name="calendar_reminder_channel_description">Averto kiam evento, kiun vi partoprenas, baldaŭ komenciĝos.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Kalendaraj memorigoj</string>
     <string name="calendar_reminder_default_title">Kalendra evento</string>
     <string name="calendar_reminder_settings_enabled_subtitle">Sciigo aperas kiam evento, kiun vi partoprenas, baldaŭ komenciĝos.</string>
     <string name="calendar_reminder_settings_enabled_title">Sendi memorigojn</string>
-    <plurals name="calendar_reminder_settings_lead_choice">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <string name="calendar_reminder_settings_title">Kalendaraj memorigoj</string>
     <string name="calendar_view_day">Tago</string>
     <string name="calendar_view_feed">Fluo</string>
     <string name="calendar_view_month">Monato</string>
     <string name="calendar_view_week">Semajno</string>
     <string name="call_accept">Akcepti</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">Fotilo malŝaltita</string>
     <string name="call_camera_on">Fotilo ŝaltita</string>
     <string name="call_earpiece">Aŭskultiloo</string>
@@ -2015,7 +1993,6 @@
     <string name="discover_marketplace">Merkato</string>
     <string name="discover_reads">Legaĵoj</string>
     <string name="dm_relays_title">DM Enskatolaj Relay-oj</string>
-    <string name="dms">DMs</string>
     <string name="dont_translate_from">Ne Traduki El</string>
     <string name="dont_translate_from_description">Lingvoj montritaj ĉi tie ne estos tradukitaj. Elektu lingvon por forigi ĝin kaj havi ĝin tradukita denove.</string>
     <string name="download_to_phone">Konservi al Telefono</string>
@@ -2080,11 +2057,9 @@
     <string name="event_sync_title">relay-a Sinkronigo</string>
     <string name="events_from_you">eventoj de vi</string>
     <string name="events_to_you">eventoj al vi</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">Cirkvito</string>
     <string name="exercise_cycling">Biciklado</string>
     <string name="exercise_diet">Dieto</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">Fastado</string>
     <string name="exercise_hiking">Tura marŝado</string>
     <string name="exercise_meditation">Meditado</string>
@@ -2155,7 +2130,6 @@
     <string name="geohash_exclusive">Loko-ekskluziva Afiŝo</string>
     <string name="geohash_exclusive_explainer">Nur sekvantoj de la loko vidos ĝin. Viaj ĝeneralaj sekvantoj ne vidos ĝin.</string>
     <string name="goal_progress">%1$s financita el %2$s sats celo</string>
-    <string name="h">h</string>
     <string name="hash_verification_failed">Ĉi tiu enhavo ŝanĝiĝis. La aŭtoro eble ne vidis aŭ jesis la ŝanĝo</string>
     <string name="hash_verification_info_title">Kion tio signifas?</string>
     <string name="hash_verification_passed">Ĉi tiu enhavo estas la sama ĝis la afiŝo</string>
@@ -2216,7 +2190,6 @@
     <string name="key_is_required">Ŝlosilo estas nepra</string>
     <string name="keypackage_section">KeyPackage Relay-oj</string>
     <string name="keypackage_section_explainer">Relay-oj kie viaj MLS KeyPackages estas publikigitaj (MIP-00). Aliaj uzantoj alprenas ĉi tiujn KeyPackages por inviti vin en Marmot-grupajn babiladojn. Enigu inter 1–3 relay-ojn kiuj akceptas KeyPackage-eventojn de vi kaj permesas publikajn legojn.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">Akceptita Insigna Aro</string>
     <string name="kind_adventure_prologue">Aventura Prologo</string>
     <string name="kind_adventure_reading">Aventura Legado</string>
@@ -2281,7 +2254,6 @@
     <string name="kind_follow_list">Sekva Listo</string>
     <string name="kind_follow_packs">Sekvataj Pakaĵoj</string>
     <string name="kind_geohash_follows">Geohash Sekvoj</string>
-    <string name="kind_gift_wraps">GiftWraps</string>
     <string name="kind_git_issue">Git Temo</string>
     <string name="kind_git_patch">Git Flikaĵo</string>
     <string name="kind_git_reply">Git Respondo</string>
@@ -2300,17 +2272,12 @@
     <string name="kind_mute_list">Silentiga Listo</string>
     <string name="kind_named_bookmarks">Nomataj Legosignoj</string>
     <string name="kind_nests_servers">Nests Serviloj</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_nns">NNS</string>
     <string name="kind_nostr_connect">Nostr Konekto</string>
     <string name="kind_notes">Notoj</string>
     <string name="kind_nwc_request">NWC Peto</string>
     <string name="kind_nwc_response">NWC Respondo</string>
     <string name="kind_old_bookmark_list">Malnova Legosigna Listo</string>
-    <string name="kind_ots">OTS</string>
     <string name="kind_outbox_relays">Eliraj relay-oj</string>
-    <string name="kind_pay_to">PayTo</string>
     <string name="kind_people_lists">Personaj Listoj</string>
     <string name="kind_pictures">Bildoj</string>
     <string name="kind_pins">Pingloj</string>
@@ -2345,18 +2312,14 @@
     <string name="kind_user_delete">Uzanto Forigi</string>
     <string name="kind_user_settings">Uzantaj Agordoj</string>
     <string name="kind_user_status">Uzanta Stato</string>
-    <string name="kind_video">Video</string>
-    <string name="kind_video_repl">Video (Repl)</string>
     <string name="kind_voice_msg">Voĉa Mesaĝo</string>
     <string name="kind_voice_reply">Voĉa Respondo</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Reta Legosigno</string>
     <string name="kind_wiki">Vikio</string>
     <string name="kind_workouts">Trejnadoj</string>
     <string name="kind_zap_goals">Zap Celoj</string>
     <string name="kind_zap_poll">Zap Voĉdono</string>
     <string name="kind_zap_req">Zap Peto</string>
-    <string name="kind_zaps">Zaps</string>
     <string name="known">Konataj</string>
     <string name="language_preferences">Lingva Montraj Preferoj</string>
     <string name="language_preferences_description">Por ĉiu tradukita lingvoparo, elektu, kiun lingvon montri unue.</string>
@@ -2380,7 +2343,6 @@
     <string name="login_with_a_private_key_to_be_able_to_upload">Vi uzas publikan ŝlosilon kaj publikaj ŝlosiloj estas nur-legitaj. Ensalutu per Privata ŝlosilo por povi alŝuti</string>
     <string name="login_with_a_private_key_to_like_posts">Ensaluti per sekreta ŝlosilo por ŝati afiŝojn</string>
     <string name="longs">Videoj</string>
-    <string name="m">m</string>
     <string name="manage_emoji_packs">Miaj Emodžio-Pakoj</string>
     <string name="marmot_adding_user">Aldonante %1$s…</string>
     <string name="marmot_admin_granted">Administrantaj privilegioj donitaj</string>
@@ -2439,7 +2401,6 @@
     <string name="muted_button">Silentigita. Alklaki por malsilentigi</string>
     <string name="my_lists">Miaj Listoj</string>
     <string name="name_is_required">Nomo estas necesa</string>
-    <string name="namecoin_response_time">%1$dms</string>
     <string name="namecoin_settings">Namecoin Agordoj</string>
     <string name="napplet_cap_identity">Identeco</string>
     <string name="napplet_cap_identity_desc">Legi vian publikan ŝlosilon</string>
@@ -2476,7 +2437,6 @@
     <string name="napplet_consent_sign">Ĉi tiu retejo volas subskribi specon %1$d eventon per via Nostr-ŝlosilo.</string>
     <string name="napplet_consent_storage">Ĉi tiu nApplet volas uzi sian privatan stokadan lokon.</string>
     <string name="napplet_consent_upload">Ĉi tiu nApplet volas alŝuti dosieron al via amaskomunikilara servilo.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
     <string name="napplets">nApplet-oj</string>
     <string name="nest_chat_send_failed_title">Ne povis sendi mesaĝon</string>
     <string name="nest_hush_local">Silentigi ĉi tiun parolanton</string>
@@ -2501,7 +2461,6 @@
     <string name="nest_presence_raised_hand">levis sian manon</string>
     <string name="nest_presence_speaking">parolas</string>
     <string name="nest_raise_hand">Levi manon</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Konservita kiel kind-10112 anstataŭebla evento por ke aliaj klientoj povu legi vian preferon.</string>
     <string name="nests_servers_my_section">Viaj serviloj</string>
     <string name="nests_servers_recommended_explainer">Enkonstruitaj sugestoj kiujn vi povas aldoni al via listo per unu tuŝeto.</string>
@@ -2579,13 +2538,10 @@
     </plurals>
     <string name="onchain_send_error_recipient_dust">Ricevant-parto estas sub polvo</string>
     <string name="onchain_send_error_sign">Ne eblis subskribi la transakcion</string>
-    <string name="onchain_send_fee_eta_fast">~10 min</string>
-    <string name="onchain_send_fee_eta_normal">~30 min</string>
     <string name="onchain_send_fee_eta_slow">~1 h</string>
     <string name="onchain_send_fee_fast">Rapida</string>
     <string name="onchain_send_fee_normal">Normala</string>
     <string name="onchain_send_fee_slow">Malrapida</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
         <item quantity="one">Disigo inter %1$d ricevanto</item>
         <item quantity="other">Disigo inter %1$d ricevantoj</item>
@@ -2826,7 +2782,6 @@
     <string name="tor_custom_explainer">Faru la vian</string>
     <string name="tor_default">Defaŭlta</string>
     <string name="tor_default_explainer">Kaŝu vian IP de hazardaj relay-oj</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_full_privacy">Plena Privateco</string>
     <string name="tor_full_privacy_explainer">Kaŝu vian IP en ĉiuj konektoj</string>
     <string name="tor_internal">Interna</string>
@@ -2905,7 +2860,6 @@
     <string name="voice_reply">Voĉa Respondo</string>
     <string name="wallet">Monujo</string>
     <string name="wallet_add_cashu_title">Cashu-monujo (NIP-60)</string>
-    <string name="wallet_connect">Wallet Connect</string>
     <string name="wallet_connect_pay_invoice_error_error">Via Wallet Connect-provizanto resendis la sekvan eraron: %1$s</string>
     <string name="wallet_edit_cashu_title">Redakti monfarejojn</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Montras avermesaĝon kiam afiŝoj aŭ profiloj havas raportojn de viaj sekvatoj</string>
@@ -2918,7 +2872,6 @@
     <string name="write_a_message">Skribi mesaĝon…</string>
     <string name="write_to_relay">Skribi al Plusendilo</string>
     <string name="write_to_relay_description">La kvanto en bajtoj kiuj estis senditaj al tiu ĉi relay, inkluzive de filtriloj kaj eventoj</string>
-    <string name="zap_description">Zap</string>
     <string name="zaps">Zapoj</string>
     <string name="block_hide_user"><![CDATA[Bloki kaj Kaŝi Uzanton]]></string>
     <string name="rename">Renomi</string>
@@ -2928,6 +2881,92 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">La Lightning-servo de la ricevanto ĉe %1$s ne disponeblas. Ĝi estis kalkulita el la Lightning-adreso „%2$s". Eraro: %3$s. Kontrolu ĉu la servilo funkcias kaj ĉu la Lightning-adreso estas ĝusta</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Ne eblas krei Lightning-fakturon de %1$s: Elemento pr ne trovita en la rezulta JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Ne eblas krei Lightning-fakturon. Mesaĝo de %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="malware">Malware</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nests_servers_add_relay_field">Relay (WebTransport) URL</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="security_unlimited">∞</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
+    <string name="marmot_relays_header">Relays</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="dms">DMs</string>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="h">h</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_video_repl">Video (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="m">m</string>
+    <string name="namecoin_response_time">%1$dms</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="nests">Nests</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="tor_external">Orbot</string>
+    <string name="wallet_connect">Wallet Connect</string>
+    <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Serĉi aŭ enigi adreson</string>
     <string name="napplet_untitled">Sennoma nApplet</string>
 </resources>
