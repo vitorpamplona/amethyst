@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,8 +113,8 @@ import com.vitorpamplona.amethyst.commons.claudecode.workstreamModeOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_advanced
 import com.vitorpamplona.amethyst.commons.resources.claude_code_agent
@@ -191,6 +190,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.HorizontalTwoPane
 import com.vitorpamplona.amethyst.commons.ui.layouts.WidthClass
 import com.vitorpamplona.amethyst.commons.ui.layouts.widthClassOf
@@ -425,7 +425,8 @@ private fun SessionList(
                 .toList()
         }
     var showArchived by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    // Kept while the app runs: opening a chat and coming back finds the list where it was.
+    val listState = rememberForeverLazyListState("ClaudeCodeSessions")
     // Where the open chat's row sits in the list, headers counted, as laid out below.
     val selectedIndex =
         remember(needsYou, inWorkspaces, sections, archived, showArchived, selectedKey) {
