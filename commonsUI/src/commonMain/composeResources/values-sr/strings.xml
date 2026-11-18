@@ -2676,6 +2676,7 @@
     <string name="poll_unable_to_vote">Nije moguće glasati</string>
     <string name="polls">Ankete</string>
     <string name="post">Objavi</string>
+    <string name="post_noun">Objava</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Ova objava ima više od %1$d heštega</item>
         <item quantity="few">Ova objava ima više od %1$d heštega</item>

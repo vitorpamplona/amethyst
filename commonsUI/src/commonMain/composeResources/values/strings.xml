@@ -5636,6 +5636,7 @@
     <string name="poll_deadline_passed">That time has already passed. Pick a later one.</string>
     <string name="polls">Polls</string>
     <string name="post">Post</string>
+    <string name="post_noun">Post</string>
     <string name="publish">Publish</string>
     <string name="composer_pop_out">Open in a separate window</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">

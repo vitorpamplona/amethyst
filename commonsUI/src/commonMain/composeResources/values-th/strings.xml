@@ -2455,6 +2455,7 @@
     <string name="poll_unable_to_vote">ไม่สามารถโหวต</string>
     <string name="polls">โพล</string>
     <string name="post">โพสต์</string>
+    <string name="post_noun">โพสต์</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">โพสต์นี้มีแฮชแท็กมากกว่า %1$d รายการ</item>
     </plurals>

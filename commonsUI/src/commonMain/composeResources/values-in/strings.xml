@@ -2550,6 +2550,7 @@
     <string name="poll_unable_to_vote">Tidak dapat memilih</string>
     <string name="polls">Polling</string>
     <string name="post">Posting</string>
+    <string name="post_noun">Postingan</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">Postingan ini memiliki lebih dari %1$d hashtag</item>
     </plurals>

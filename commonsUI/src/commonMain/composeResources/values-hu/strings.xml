@@ -5230,6 +5230,7 @@
     <string name="poll_unable_to_vote">Nem lehet szavazni</string>
     <string name="polls">Szavazások</string>
     <string name="post">Közzététel</string>
+    <string name="post_noun">Bejegyzés</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</item>
         <item quantity="other">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</item>
@@ -9319,7 +9320,6 @@
     <string name="media_kind_audio">Hang</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Új munkamenet</string>
     <string name="claude_code_search_hint">Munkamenetek keresése</string>
     <string name="claude_code_no_sessions">Ezen a számítógépen még nincsenek Claude Code-munkamenetek. Indítson egyet itt, vagy futtassa a claude parancsot egy terminálban, és megjelenik ebben a listában.</string>
@@ -9420,14 +9420,11 @@
         <item quantity="one">%1$d fájlban nem véglegesített változtatások vannak. Ezek nem lesznek a javaslat részei.</item>
         <item quantity="other">%1$d fájlban nem véglegesített változtatások vannak. Ezek nem lesznek a javaslat részei.</item>
     </plurals>
-    <string name="claude_code_propose">Javaslat</string>
-    <string name="claude_code_update_proposal">Javaslat frissítése</string>
     <string name="claude_code_propose_desc">Ön írja alá, és a tároló szervereire kerül, ahogy az ngit is teszi.</string>
     <string name="claude_code_propose_desc_no_grasp">Ön írja alá; a véglegesítései egy lent kiválasztott távoli tárolóba kerülnek.</string>
     <string name="claude_code_propose_update_desc">Már javaslat: az újbóli közzététel ezeket a véglegesítéseket teszi az új verziójává.</string>
     <string name="claude_code_propose_title">Cím</string>
     <string name="claude_code_propose_description">Leírás</string>
-    <string name="claude_code_draft_with_claude">Megírás Claude-dal</string>
     <string name="claude_code_gate">Build-ellenőrzések</string>
     <string name="claude_code_gate_desc">Lefuttatja a tároló feltolás előtti ellenőrzéseit ennek az ágnak a mappájában.</string>
     <string name="claude_code_gate_none">Ennek a tárolónak nincsenek futtatható feltolás előtti ellenőrzései.</string>
@@ -10150,4 +10147,11 @@
     <string name="claude_code_storage_measuring">Mérés…</string>
     <string name="claude_code_archive">Archiválás</string>
     <string name="claude_code_unarchive">Archiválás visszavonása</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Beolvasztási kérés létrehozása</string>
+    <string name="claude_code_update_pr">Beolvasztási kérés frissítése</string>
+    <string name="claude_code_drafting">%1$s írja a címet és a leírást…</string>
+    <string name="claude_code_write_it_myself">Megírom magam</string>
+    <string name="claude_code_redraft">Újrafogalmazás ezzel: %1$s</string>
+    <string name="claude_code_draft_failed">%1$s nem küldött vázlatot. Írja meg itt, vagy próbálja újra.</string>
 </resources>

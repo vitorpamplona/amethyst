@@ -2835,6 +2835,7 @@
     <string name="poll_unable_to_vote">تعذر التصويت</string>
     <string name="polls">استطلاعات</string>
     <string name="post">نشر</string>
+    <string name="post_noun">منشور</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="zero">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسم</item>
         <item quantity="one">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسم</item>

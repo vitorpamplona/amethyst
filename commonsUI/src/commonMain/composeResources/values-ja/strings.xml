@@ -2601,6 +2601,7 @@
     <string name="poll_unable_to_vote">投票できません</string>
     <string name="polls">投票</string>
     <string name="post">送信</string>
+    <string name="post_noun">投稿</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">このポストには %1$d 件以上のハッシュタグが含まれています</item>
     </plurals>

@@ -2653,6 +2653,7 @@
     <string name="poll_unable_to_vote">No se puede votar</string>
     <string name="polls">Encuestas</string>
     <string name="post">Publicar</string>
+    <string name="post_noun">Publicación</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Esta publicación tiene más de %1$d hashtag</item>
         <item quantity="other">Esta publicación tiene más de %1$d hashtags</item>

@@ -5506,6 +5506,7 @@
     <string name="poll_unable_to_vote">Nezmožen za glasovanje</string>
     <string name="polls">Glasovanja</string>
     <string name="post">Pošlji</string>
+    <string name="post_noun">Objava</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Ta objava ima več kot %1$d ključnik</item>
         <item quantity="two">Ta objava ima več kot %1$d ključnika</item>
@@ -9983,7 +9984,6 @@
     <string name="media_kind_audio">Zvok</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Nova seja</string>
     <string name="claude_code_search_hint">Išči seje</string>
     <string name="claude_code_no_sessions">Na tem računalniku še ni sej Claude Code. Začni eno tukaj ali zaženi claude v terminalu in prikazala se bo na tem seznamu.</string>
@@ -10106,14 +10106,11 @@
         <item quantity="few">%1$d datoteke imajo spremembe, ki niso v commitu. Ne bodo del predloga.</item>
         <item quantity="other">%1$d datotek ima spremembe, ki niso v commitu. Ne bodo del predloga.</item>
     </plurals>
-    <string name="claude_code_propose">Predlagaj</string>
-    <string name="claude_code_update_proposal">Posodobi predlog</string>
     <string name="claude_code_propose_desc">Podpišeš ga ti, pošlje pa se na strežnike repozitorija, tako kot pri ngit.</string>
     <string name="claude_code_propose_desc_no_grasp">Podpišeš ga ti; njegovi commiti gredo na oddaljeni repozitorij, ki ga izbereš spodaj.</string>
     <string name="claude_code_propose_update_desc">To je že predlog: ponovna objava naredi te commite za njegovo novo različico.</string>
     <string name="claude_code_propose_title">Naslov</string>
     <string name="claude_code_propose_description">Opis</string>
-    <string name="claude_code_draft_with_claude">Pripravi osnutek s Claudom</string>
     <string name="claude_code_gate">Preverjanja gradnje</string>
     <string name="claude_code_gate_desc">Zažene preverjanja pred potiskom (pre-push) repozitorija v mapi te veje.</string>
     <string name="claude_code_gate_none">Ta repozitorij nima preverjanj pred potiskom.</string>
@@ -10906,4 +10903,11 @@
     <string name="claude_code_storage_measuring">Merim…</string>
     <string name="claude_code_archive">Arhiviraj</string>
     <string name="claude_code_unarchive">Odarhiviraj</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Ustvari zahtevek za združitev</string>
+    <string name="claude_code_update_pr">Posodobi zahtevek za združitev</string>
+    <string name="claude_code_drafting">%1$s piše naslov in opis…</string>
+    <string name="claude_code_write_it_myself">Napiši sam</string>
+    <string name="claude_code_redraft">Nov osnutek z: %1$s</string>
+    <string name="claude_code_draft_failed">Osnutka od %1$s ni bilo. Napiši ga tukaj ali poskusi znova.</string>
 </resources>

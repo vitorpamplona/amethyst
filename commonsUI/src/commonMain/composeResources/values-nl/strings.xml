@@ -5230,6 +5230,7 @@
     <string name="poll_unable_to_vote">Kan niet stemmen</string>
     <string name="polls">Polls</string>
     <string name="post">Plaatsen</string>
+    <string name="post_noun">Bericht</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Dit bericht bevat meer dan %1$d hashtag</item>
         <item quantity="other">Dit bericht bevat meer dan %1$d hashtags</item>
@@ -9319,7 +9320,6 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Nieuwe sessie</string>
     <string name="claude_code_search_hint">Sessies zoeken</string>
     <string name="claude_code_no_sessions">Nog geen Claude Code-sessies op deze computer. Start er hier een, of voer claude uit in een terminal en hij verschijnt in deze lijst.</string>
@@ -9420,14 +9420,11 @@
         <item quantity="one">%1$d bestand heeft wijzigingen die niet gecommit zijn. Die horen niet bij het voorstel.</item>
         <item quantity="other">%1$d bestanden hebben wijzigingen die niet gecommit zijn. Die horen niet bij het voorstel.</item>
     </plurals>
-    <string name="claude_code_propose">Voorstellen</string>
-    <string name="claude_code_update_proposal">Voorstel bijwerken</string>
     <string name="claude_code_propose_desc">Door jou ondertekend en naar de servers van de repository gestuurd, zoals ngit dat doet.</string>
     <string name="claude_code_propose_desc_no_grasp">Door jou ondertekend; de commits gaan naar een remote die je hieronder kiest.</string>
     <string name="claude_code_propose_update_desc">Al een voorstel: opnieuw publiceren maakt van deze commits de nieuwe versie.</string>
     <string name="claude_code_propose_title">Titel</string>
     <string name="claude_code_propose_description">Beschrijving</string>
-    <string name="claude_code_draft_with_claude">Opstellen met Claude</string>
     <string name="claude_code_gate">Buildcontroles</string>
     <string name="claude_code_gate_desc">Voert de pre-push-controles van de repository uit in de map van deze branch.</string>
     <string name="claude_code_gate_none">Deze repository heeft geen pre-push-controles om uit te voeren.</string>
@@ -10150,4 +10147,11 @@
     <string name="claude_code_storage_measuring">Meten…</string>
     <string name="claude_code_archive">Archiveren</string>
     <string name="claude_code_unarchive">Uit archief halen</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Pull request maken</string>
+    <string name="claude_code_update_pr">PR bijwerken</string>
+    <string name="claude_code_drafting">%1$s schrijft de titel en beschrijving…</string>
+    <string name="claude_code_write_it_myself">Zelf schrijven</string>
+    <string name="claude_code_redraft">Opnieuw opstellen met %1$s</string>
+    <string name="claude_code_draft_failed">%1$s heeft geen concept gestuurd. Schrijf het hier of probeer het opnieuw.</string>
 </resources>

@@ -5473,6 +5473,7 @@
     <string name="poll_unable_to_vote">Nebylo možné hlasovat</string>
     <string name="polls">Ankety</string>
     <string name="post">Publikovat</string>
+    <string name="post_noun">Příspěvek</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Tento příspěvek má více než %1$d hashtag</item>
         <item quantity="few">Tento příspěvek má více než %1$d hashtagy</item>
@@ -10902,4 +10903,11 @@
     <string name="media_trim_hint">Přetažením konců vyberte část, kterou chcete ponechat</string>
     <string name="media_trim_upload_failed">Video se nepodařilo zkrátit</string>
     <string name="media_crop_failed">Tento obrázek zde nelze oříznout. Tlačítko Uložit ho použije beze změn.</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Vytvořit PR</string>
+    <string name="claude_code_update_pr">Aktualizovat PR</string>
+    <string name="claude_code_drafting">%1$s píše název a popis…</string>
+    <string name="claude_code_write_it_myself">Napsat vlastní</string>
+    <string name="claude_code_redraft">Navrhnout znovu s %1$s</string>
+    <string name="claude_code_draft_failed">Od %1$s nepřišel žádný návrh. Napište ho sem, nebo to zkuste znovu.</string>
 </resources>

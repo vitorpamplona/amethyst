@@ -2907,4 +2907,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="post_noun">Post</string>
 </resources>

@@ -5461,6 +5461,7 @@
     <string name="poll_unable_to_vote">Nie można głosować</string>
     <string name="polls">Ankiety</string>
     <string name="post">Wyślij</string>
+    <string name="post_noun">Wpis</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Ten post ma więcej niż %1$d hashtag</item>
         <item quantity="few">Ten post ma więcej niż %1$d hashtagów</item>
@@ -6154,7 +6155,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows_title">Ostrzeżenie o zgłoszeniach</string>
     <string name="web_bookmark_add_title">Dodaj zakładkę</string>
     <string name="web_bookmark_edit_title">Edytuj zakładkę</string>
-    <string name="web_bookmarks">Zakładki</string>
+    <string name="web_bookmarks">Zakładki stron</string>
     <string name="what_s_on_your_mind">Co masz na myśli?</string>
     <plurals name="workout_suggestion_combined_sessions">
         <item quantity="one">%1$d aktywność</item>
@@ -9983,7 +9984,6 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Nowa sesja</string>
     <string name="claude_code_search_hint">Szukaj sesji</string>
     <string name="claude_code_no_sessions">Na tym komputerze nie ma jeszcze sesji Claude Code. Rozpocznij jedną tutaj albo uruchom claude w terminalu, a pojawi się na tej liście.</string>
@@ -10106,14 +10106,11 @@
         <item quantity="many">%1$d plików ma niezatwierdzone zmiany. Nie będą one częścią propozycji.</item>
         <item quantity="other">%1$d pliku ma niezatwierdzone zmiany. Nie będą one częścią propozycji.</item>
     </plurals>
-    <string name="claude_code_propose">Zaproponuj</string>
-    <string name="claude_code_update_proposal">Zaktualizuj propozycję</string>
     <string name="claude_code_propose_desc">Podpisana przez Ciebie i wysłana na serwery repozytorium, tak jak robi to ngit.</string>
     <string name="claude_code_propose_desc_no_grasp">Podpisana przez Ciebie; jej commity trafią do zdalnego repozytorium wybranego poniżej.</string>
     <string name="claude_code_propose_update_desc">To już jest propozycja: ponowna publikacja sprawi, że te commity staną się jej nową wersją.</string>
     <string name="claude_code_propose_title">Tytuł</string>
     <string name="claude_code_propose_description">Opis</string>
-    <string name="claude_code_draft_with_claude">Napisz szkic z Claude</string>
     <string name="claude_code_gate">Kontrole kompilacji</string>
     <string name="claude_code_gate_desc">Uruchamia kontrole pre-push repozytorium w folderze tej gałęzi.</string>
     <string name="claude_code_gate_none">To repozytorium nie ma kontroli pre-push do uruchomienia.</string>
@@ -10827,7 +10824,7 @@
     <string name="media_post_upload_failed">Nie przesłano: %1$s</string>
     <string name="media_studio_caption_placeholder">Napisz podpis…</string>
     <string name="media_studio_retry">Nic nie zostało wysłane. %1$s spróbuje ponownie.</string>
-    <string name="media_post_nothing_posted">Nic nie zostało opublikowane. Opublikuj spróbuje ponownie.</string>
+    <string name="media_post_nothing_posted">Nic nie zostało opublikowane. Dotknij „Wyślij”, aby spróbować ponownie.</string>
     <string name="media_studio_alt_suggested">Zaproponowane na tym urządzeniu. Sprawdź przed publikacją.</string>
     <string name="media_studio_h265">Mniejszy plik (H.265)</string>
     <string name="media_studio_h265_description">Niektóre starsze aplikacje nie odtworzą go</string>
@@ -10906,4 +10903,11 @@
     <string name="claude_code_storage_measuring">Mierzenie…</string>
     <string name="claude_code_archive">Archiwizuj</string>
     <string name="claude_code_unarchive">Przywróć z archiwum</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Utwórz pull request</string>
+    <string name="claude_code_update_pr">Zaktualizuj PR</string>
+    <string name="claude_code_drafting">%1$s pisze tytuł i opis…</string>
+    <string name="claude_code_write_it_myself">Napisz samodzielnie</string>
+    <string name="claude_code_redraft">Nowy szkic: %1$s</string>
+    <string name="claude_code_draft_failed">Brak szkicu od %1$s. Napisz go tutaj lub spróbuj ponownie.</string>
 </resources>

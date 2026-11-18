@@ -2577,6 +2577,7 @@
     <string name="poll_unable_to_vote">Không thể bình chọn</string>
     <string name="polls">Cuộc thăm dò</string>
     <string name="post">Đăng</string>
+    <string name="post_noun">Bài đăng</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">Bài đăng này có hơn %1$d hashtag</item>
     </plurals>

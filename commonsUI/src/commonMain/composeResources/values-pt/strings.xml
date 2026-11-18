@@ -5200,7 +5200,8 @@
     <string name="poll_single_choice">Escolha única</string>
     <string name="poll_unable_to_vote">Impossibilitado de votar</string>
     <string name="polls">Enquetes</string>
-    <string name="post">Salvar</string>
+    <string name="post">Publicar</string>
+    <string name="post_noun">Publicação</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Esta publicação tem mais de %1$d hashtag</item>
         <item quantity="other">Esta publicação tem mais de %1$d hashtags</item>
@@ -10131,7 +10132,7 @@
     <string name="media_post_upload_failed">Falha ao enviar %1$s</string>
     <string name="media_studio_caption_placeholder">Escreva uma legenda…</string>
     <string name="media_studio_retry">Nada foi enviado. Toque em %1$s para tentar de novo.</string>
-    <string name="media_post_nothing_posted">Nada foi publicado. Toque em Salvar para tentar de novo.</string>
+    <string name="media_post_nothing_posted">Nada foi publicado. Toque em Publicar para tentar de novo.</string>
     <string name="media_studio_alt_suggested">Sugerido neste dispositivo. Confira antes de publicar.</string>
     <string name="media_studio_h265">Arquivo menor (H.265)</string>
     <string name="media_studio_h265_description">Alguns aplicativos antigos não conseguem reproduzi-lo</string>
@@ -10146,4 +10147,11 @@
     <string name="media_trim_hint">Arraste as pontas para manter um trecho</string>
     <string name="media_trim_upload_failed">Não foi possível aparar este vídeo</string>
     <string name="media_crop_failed">Esta imagem não pode ser cortada aqui. Ao salvar, ela será usada como está.</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Criar um PR</string>
+    <string name="claude_code_update_pr">Atualizar PR</string>
+    <string name="claude_code_drafting">%1$s está escrevendo o título e a descrição…</string>
+    <string name="claude_code_write_it_myself">Escrever eu mesmo</string>
+    <string name="claude_code_redraft">Refazer o rascunho com %1$s</string>
+    <string name="claude_code_draft_failed">%1$s não enviou um rascunho. Escreva aqui ou tente de novo.</string>
 </resources>

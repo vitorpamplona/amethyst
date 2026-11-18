@@ -2588,6 +2588,7 @@
     <string name="poll_unable_to_vote">투표할 수 없습니다</string>
     <string name="polls">투표</string>
     <string name="post">게시</string>
+    <string name="post_noun">게시물</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">이 게시물에 해시태그가 %1$d개를 초과합니다</item>
     </plurals>

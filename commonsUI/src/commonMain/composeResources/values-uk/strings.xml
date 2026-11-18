@@ -2719,6 +2719,7 @@
     <string name="poll_unable_to_vote">Неможливо проголосувати</string>
     <string name="polls">Опитування</string>
     <string name="post">Надіслати</string>
+    <string name="post_noun">Допис</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Цей пост містить більше ніж %1$d хештег</item>
         <item quantity="few">Цей пост містить більше ніж %1$d хештеги</item>

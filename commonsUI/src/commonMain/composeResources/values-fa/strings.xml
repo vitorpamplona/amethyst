@@ -2661,6 +2661,7 @@
     <string name="poll_unable_to_vote">نمی توان رای داد</string>
     <string name="polls">نظرسنجی‌ها</string>
     <string name="post">ارسال</string>
+    <string name="post_noun">پست</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">این پست بیش از %1$d هشتگ دارد</item>
         <item quantity="other">این پست بیش از %1$d هشتگ دارد</item>

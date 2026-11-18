@@ -5200,7 +5200,8 @@
     <string name="poll_single_choice">Einzelauswahl</string>
     <string name="poll_unable_to_vote">Konnte nicht abstimmen</string>
     <string name="polls">Umfragen</string>
-    <string name="post">Beitrag</string>
+    <string name="post">Posten</string>
+    <string name="post_noun">Beitrag</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Dieser Beitrag hat mehr als %1$d Hashtag</item>
         <item quantity="other">Dieser Beitrag hat mehr als %1$d Hashtags</item>
@@ -9744,7 +9745,6 @@
     <string name="geohash_area_neighborhood">~1,2 km</string>
     <string name="geohash_area_block">~150 m</string>
     <string name="geohash_area_building">~38 m</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Neue Sitzung</string>
     <string name="claude_code_search_hint">Sitzungen durchsuchen</string>
     <string name="claude_code_no_sessions">Noch keine Claude-Code-Sitzungen auf diesem Computer. Starte hier eine oder führe claude in einem Terminal aus, dann erscheint sie in dieser Liste.</string>
@@ -9801,14 +9801,11 @@
     <string name="claude_code_changes">Änderungen</string>
     <string name="claude_code_no_changes">Auf diesem Branch hat sich noch nichts geändert.</string>
     <string name="claude_code_untracked">Neue Dateien, die nicht zu git hinzugefügt sind</string>
-    <string name="claude_code_propose">Vorschlagen</string>
-    <string name="claude_code_update_proposal">Vorschlag aktualisieren</string>
     <string name="claude_code_propose_desc">Von dir signiert und an die Server des Repositorys gesendet, so wie ngit es macht.</string>
     <string name="claude_code_propose_desc_no_grasp">Von dir signiert; seine Commits gehen an ein Remote, das du unten auswählst.</string>
     <string name="claude_code_propose_update_desc">Bereits ein Vorschlag: Erneutes Veröffentlichen macht diese Commits zu seiner neuen Version.</string>
     <string name="claude_code_propose_title">Titel</string>
     <string name="claude_code_propose_description">Beschreibung</string>
-    <string name="claude_code_draft_with_claude">Mit Claude entwerfen</string>
     <string name="claude_code_gate">Build-Prüfungen</string>
     <string name="claude_code_gate_desc">Führt die Pre-Push-Prüfungen des Repositorys im Ordner dieses Branches aus.</string>
     <string name="claude_code_gate_none">Dieses Repository hat keine Pre-Push-Prüfungen.</string>
@@ -10174,7 +10171,7 @@
     <string name="media_post_upload_failed">%1$s wurde nicht hochgeladen</string>
     <string name="media_studio_caption_placeholder">Bildunterschrift schreiben…</string>
     <string name="media_studio_retry">Nichts wurde gesendet. Tippe auf %1$s, um es erneut zu versuchen.</string>
-    <string name="media_post_nothing_posted">Nichts wurde veröffentlicht. Tippe auf „Beitrag“, um es erneut zu versuchen.</string>
+    <string name="media_post_nothing_posted">Nichts wurde veröffentlicht. Tippe auf „Posten“, um es erneut zu versuchen.</string>
     <string name="media_studio_alt_suggested">Auf diesem Gerät vorgeschlagen. Prüfe ihn vor dem Posten.</string>
     <string name="media_studio_h265">Kleinere Datei (H.265)</string>
     <string name="media_studio_h265_description">Manche älteren Apps können sie nicht abspielen</string>
@@ -10189,4 +10186,11 @@
     <string name="media_trim_hint">Ziehe die Enden, um einen Teil zu behalten</string>
     <string name="media_trim_upload_failed">Video konnte nicht gekürzt werden</string>
     <string name="media_crop_failed">Dieses Bild kann hier nicht zugeschnitten werden. Speichern verwendet es unverändert.</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">PR erstellen</string>
+    <string name="claude_code_update_pr">PR aktualisieren</string>
+    <string name="claude_code_drafting">%1$s schreibt Titel und Beschreibung…</string>
+    <string name="claude_code_write_it_myself">Selbst schreiben</string>
+    <string name="claude_code_redraft">Mit %1$s neu entwerfen</string>
+    <string name="claude_code_draft_failed">%1$s hat keinen Entwurf geschickt. Schreib ihn hier oder versuch es noch einmal.</string>
 </resources>

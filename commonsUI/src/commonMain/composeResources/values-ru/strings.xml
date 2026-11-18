@@ -2730,6 +2730,7 @@
     <string name="poll_unable_to_vote">Невозможно проголосовать</string>
     <string name="polls">Опросы</string>
     <string name="post">Отправить</string>
+    <string name="post_noun">Публикация</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Этот пост имеет более чем %1$d хэштег</item>
         <item quantity="few">Этот пост имеет более чем %1$d хэштегов</item>

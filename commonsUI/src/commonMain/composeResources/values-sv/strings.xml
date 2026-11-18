@@ -5201,6 +5201,7 @@
     <string name="poll_unable_to_vote">Kunde inte rösta</string>
     <string name="polls">Omröstningar</string>
     <string name="post">Dela</string>
+    <string name="post_noun">Inlägg</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Det här inlägget har fler än %1$d hashtagg</item>
         <item quantity="other">Det här inlägget har fler än %1$d hashtaggar</item>
@@ -10146,4 +10147,11 @@
     <string name="media_trim_hint">Dra i ändarna för att behålla en del</string>
     <string name="media_trim_upload_failed">Det gick inte att klippa videon</string>
     <string name="media_crop_failed">Bilden kan inte beskäras här. Spara använder den som den är.</string>
+    <string name="ai_code_title">AI Code</string>
+    <string name="claude_code_create_pr">Skapa en PR</string>
+    <string name="claude_code_update_pr">Uppdatera PR</string>
+    <string name="claude_code_drafting">%1$s skriver titeln och beskrivningen…</string>
+    <string name="claude_code_write_it_myself">Skriv själv</string>
+    <string name="claude_code_redraft">Skriv om med %1$s</string>
+    <string name="claude_code_draft_failed">%1$s skickade inget utkast. Skriv det här eller försök igen.</string>
 </resources>

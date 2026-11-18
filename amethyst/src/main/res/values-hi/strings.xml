@@ -128,10 +128,10 @@
     <string name="always_on_notif_show_details">विवरण दिखाएँ</string>
     <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>
     <string name="always_on_notif_tile_subtitle_on">सक्रिय</string>
-    <string name="always_on_notif_title">अमेथिस्ट सूचनाएँ सक्रिय</string>
+    <string name="always_on_notif_title">Amethyst सूचनाएँ सक्रिय</string>
     <string name="blossom_sync_cancel">निरस्त</string>
-    <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके ब्लोस्सम सेवासंगणकों में।</string>
-    <string name="blossom_sync_channel_name">ब्लोस्सम समचरणीकरण</string>
+    <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके Blossom सेवासंगणकों में।</string>
+    <string name="blossom_sync_channel_name">Blossom समचरणीकरण</string>
     <string name="call_ongoing">आह्वान</string>
     <string name="call_ongoing_description">चालू आह्वान सूचना</string>
     <string name="call_with">%1$s के साथ आह्वान</string>
@@ -177,7 +177,7 @@
     <string name="voice_reply">ध्वनि उत्तर</string>
     <string name="pow_kind_report">वृत्तान्त</string>
     <!-- Emoji packs -->
-    <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
+    <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="private_message">निजी सन्देश</string>

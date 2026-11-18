@@ -2657,6 +2657,7 @@
     <string name="poll_unable_to_vote">Ne eblas voĉdoni</string>
     <string name="polls">Balotadoj</string>
     <string name="post">Afiŝi</string>
+    <string name="post_noun">Afiŝo</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="one">Ĉi tiu afiŝo havas pli ol %1$d kromnomon</item>
         <item quantity="other">Ĉi tiu afiŝo havas pli ol %1$d kromnomojn</item>
