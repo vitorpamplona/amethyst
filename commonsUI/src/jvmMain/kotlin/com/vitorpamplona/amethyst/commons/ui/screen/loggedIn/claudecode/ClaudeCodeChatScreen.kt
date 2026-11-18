@@ -149,6 +149,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_pick
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
+import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used_little
 import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_edit_message
@@ -184,7 +185,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setti
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
-import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
@@ -221,7 +221,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_settings
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
-import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
@@ -407,7 +407,7 @@ fun ClaudeCodeChatScreen(
                         val ended = git.proposalId?.let { proposalEnded(it) } ?: false
                         if (git.repo != null && git.ahead > 0 && !ended) {
                             FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
-                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_proposal else Res.string.claude_code_propose))
+                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
                             }
                         }
                     }

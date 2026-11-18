@@ -9827,7 +9827,6 @@
     <string name="geohash_area_neighborhood">~1,2 km</string>
     <string name="geohash_area_block">~150 m</string>
     <string name="geohash_area_building">~38 m</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Neue Sitzung</string>
     <string name="claude_code_search_hint">Sitzungen durchsuchen</string>
     <string name="claude_code_no_sessions">Noch keine Claude-Code-Sitzungen auf diesem Computer. Starte hier eine oder führe claude in einem Terminal aus, dann erscheint sie in dieser Liste.</string>
@@ -9884,8 +9883,6 @@
     <string name="claude_code_changes">Änderungen</string>
     <string name="claude_code_no_changes">Auf diesem Branch hat sich noch nichts geändert.</string>
     <string name="claude_code_untracked">Neue Dateien, die nicht zu git hinzugefügt sind</string>
-    <string name="claude_code_propose">Vorschlagen</string>
-    <string name="claude_code_update_proposal">Vorschlag aktualisieren</string>
     <string name="claude_code_propose_desc">Von dir signiert und an die Server des Repositorys gesendet, so wie ngit es macht.</string>
     <string name="claude_code_propose_desc_no_grasp">Von dir signiert; seine Commits gehen an ein Remote, das du unten auswählst.</string>
     <string name="claude_code_propose_update_desc">Bereits ein Vorschlag: Erneutes Veröffentlichen macht diese Commits zu seiner neuen Version.</string>

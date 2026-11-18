@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.workstreamModeOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_advanced
@@ -157,7 +158,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_status_starting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_working
 import com.vitorpamplona.amethyst.commons.resources.claude_code_storage
 import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
-import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_unarchive
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
@@ -284,7 +284,7 @@ private fun SessionsPane(
 
     Scaffold(
         topBar = {
-            ChatTopBar(stringRes(Res.string.claude_code_title), null, nav) {
+            ChatTopBar(stringRes(Res.string.ai_code_title), null, nav) {
                 HoverTooltip(stringRes(Res.string.claude_code_search_hint)) {
                     IconButton(onClick = {
                         searching = !searching
