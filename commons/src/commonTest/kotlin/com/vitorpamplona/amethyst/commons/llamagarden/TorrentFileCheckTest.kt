@@ -88,4 +88,14 @@ class TorrentFileCheckTest {
             assertEquals(TorrentFileCheck.Unchecked("https://nostr.download/x.torrent"), check)
             assertEquals("https://nostr.download/x.torrent", TorrentFileCheck.linkToOpen(event, check))
         }
+
+    @Test
+    fun mirrorsThatDoNotAnswerAreNotAMismatch() =
+        runTest {
+            val event = listing(hash, "https://down.example/a.torrent", "https://gone.example/a.torrent")
+            val check = TorrentFileCheck.check(event) { if (it.contains("down")) throw IllegalStateException("offline") else null }
+
+            assertEquals(TorrentFileCheck.Unreachable, check)
+            assertEquals("magnet:?xt=urn:btih:$infoHash", TorrentFileCheck.linkToOpen(event, check))
+        }
 }

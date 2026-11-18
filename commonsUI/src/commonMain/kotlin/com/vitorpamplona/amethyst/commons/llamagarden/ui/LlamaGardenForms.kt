@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.llamagarden.LlamaGardenActions
+import com.vitorpamplona.amethyst.commons.llamagarden.TorrentSubmissionForm
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_add_torrent
@@ -83,8 +84,6 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_no
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_unknown
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_yes
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_matches_hf_label
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_kind
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_kind_help
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_name
@@ -179,7 +178,6 @@ fun RequestModelScreen(
             val linkList = links.lines().map { it.trim() }.filter { it.isNotEmpty() }
             val wants = type
             val vramGb = vram.toIntOrNull()
-            accountViewModel.toastManager.toast(Res.string.llama_garden_mining_title, Res.string.llama_garden_mining)
             accountViewModel.launchSigner { LlamaGardenActions.requestModel(accountViewModel.account, requested, linkList, wants, vramGb) }
         },
     ) {
@@ -247,47 +245,37 @@ fun AddTorrentScreen(
     var quantType by rememberSaveable { mutableStateOfString() }
     var hfMatch by rememberSaveable { mutableStateOfString(HfMatchTag.YES) }
 
+    // Built from the fields on each read: the rules for what is published live in the form class.
+    val form =
+        TorrentSubmissionForm(
+            torrentUrl = url,
+            name = name,
+            sizeGb = sizeGb,
+            torrentTool = tool,
+            huggingFaceUrl = hf,
+            lab = lab,
+            fileClass = fileClass,
+            modelKind = modelKind,
+            quantType = quantType,
+            hfMatch = hfMatch,
+        )
+
     FormScaffold(
         title = Res.string.llama_garden_add_torrent,
         postLabel = Res.string.publish,
-        canPost = { url.isNotBlank() && name.isNotBlank() },
+        canPost = { form.isPublishable },
         nav = nav,
-        onPost = {
-            // Read once: the screen and its state are gone by the time the signer runs.
-            val torrentUrl = url
-            val title = name
-            val size = sizeGb.toDoubleOrNull()
-            val huggingFaceUrl = hf
-            val chosenClass = fileClass
-            val chosenKind = modelKind
-            val chosenLab = lab
-            val chosenQuant = quantType.takeIf { chosenClass == FileClassTag.QUANT }
-            val chosenTool = tool
-            val chosenMatch = hfMatch
-            accountViewModel.toastManager.toast(Res.string.llama_garden_mining_title, Res.string.llama_garden_mining)
-            accountViewModel.launchSigner {
-                LlamaGardenActions.submitTorrent(
-                    account = accountViewModel.account,
-                    torrentUrl = torrentUrl,
-                    name = title,
-                    approximateSizeGb = size,
-                    huggingFaceUrl = huggingFaceUrl,
-                    fileClass = chosenClass,
-                    modelKind = chosenKind,
-                    lab = chosenLab,
-                    quantType = chosenQuant,
-                    torrentTool = chosenTool,
-                    hfMatch = chosenMatch,
-                )
-            }
-        },
+        onPost = { accountViewModel.launchSigner { LlamaGardenActions.submitTorrent(accountViewModel.account, form) } },
     ) {
         Intro(MaterialSymbols.CloudUpload, Res.string.llama_garden_add_torrent_intro)
 
         Section(Res.string.llama_garden_section_torrent) {
-            LabeledField(Res.string.llama_garden_torrent_url, helper = stringRes(Res.string.llama_garden_torrent_url_help)) {
+            // Red once something is typed that no client could fetch the .torrent from.
+            val badUrl = url.isNotBlank() && !TorrentSubmissionForm.isHttpUrl(url)
+            LabeledField(Res.string.llama_garden_torrent_url, helper = stringRes(Res.string.llama_garden_torrent_url_help), isError = badUrl) {
                 FormTextField(
                     value = url,
+                    isError = badUrl,
                     onValueChange = { url = it },
                     placeholder = stringRes(Res.string.llama_garden_torrent_url_placeholder),
                     leadingIcon = MaterialSymbols.Link,
@@ -303,7 +291,7 @@ fun AddTorrentScreen(
                 )
             }
             LabeledField(Res.string.llama_garden_size_label) {
-                NumberField(sizeGb, { sizeGb = it.filter { c -> c.isDigit() || c == '.' } }, Res.string.llama_garden_size_placeholder, decimal = true)
+                NumberField(sizeGb, { sizeGb = TorrentSubmissionForm.cleanSize(it) }, Res.string.llama_garden_size_placeholder, decimal = true)
             }
             LabeledField(Res.string.llama_garden_tool_label) {
                 FormTextField(
@@ -325,7 +313,7 @@ fun AddTorrentScreen(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                 )
             }
-            if (hf.isNotBlank()) {
+            if (form.hasHuggingFace) {
                 LabeledField(Res.string.llama_garden_matches_hf_label) {
                     Choices(
                         selected = hfMatch,
@@ -348,7 +336,7 @@ fun AddTorrentScreen(
                         KeyboardOptions(
                             capitalization = KeyboardCapitalization.None,
                             autoCorrectEnabled = false,
-                            imeAction = if (fileClass == FileClassTag.QUANT) ImeAction.Next else ImeAction.Done,
+                            imeAction = if (form.isQuant) ImeAction.Next else ImeAction.Done,
                         ),
                 )
             }
@@ -365,7 +353,7 @@ fun AddTorrentScreen(
                 ) { fileClass = it }
             }
             // A quant's format, and what it is a quant of, only matter for a quant.
-            if (fileClass == FileClassTag.QUANT) {
+            if (form.isQuant) {
                 LabeledField(Res.string.llama_garden_quant_format_label) {
                     FormTextField(
                         value = quantType,

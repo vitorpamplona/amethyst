@@ -36,10 +36,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.cartridges.fetchMedia
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -57,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.llamagarden.LlamaGardenDefaults
 import com.vitorpamplona.amethyst.commons.llamagarden.TorrentFileCheck
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.LocalEventKindPage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_all_models
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve
@@ -75,13 +78,10 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_kind_not_said
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_kind_quant
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_lab
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_listing
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_listing_link
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_no
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_unknown
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_yes
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_matches_hf
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_mirrors
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_request
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_no_link
@@ -112,10 +112,8 @@ import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
 import com.vitorpamplona.quartz.llamagarden.torrent.tags.FileClassTag
 import com.vitorpamplona.quartz.llamagarden.torrent.tags.HfMatchTag
 import com.vitorpamplona.quartz.llamagarden.torrent.tags.ModelKindTag
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -131,38 +129,64 @@ fun RenderModelTorrent(
     nav: INav,
 ) {
     val event = baseNote.event as? ModelTorrentEvent ?: return
-    val curated = remember(event) { LlamaGardenDefaults.isCurator(event.pubKey) }
-    val bpw = event.quantBpw()?.let { stringRes(Res.string.llama_garden_bits_per_weight_value, it.toString()) }
-    val chips =
-        remember(event, bpw) {
-            listOfNotNull(
-                event.totalSize()?.let { countToHumanReadableBytes(it) },
-                event.quantDetail() ?: event.quantType()?.uppercase(),
-                bpw,
-            ).distinct()
-        }
+    val view = remember(event) { ModelTorrentView(event) }
+    val bpw = view.bitsPerWeight?.let { stringRes(Res.string.llama_garden_bits_per_weight_value, it) }
+    val chips = remember(view, bpw) { listOfNotNull(view.size, view.quant, bpw).distinct() }
 
     KindCard(
         icon = MaterialSymbols.DownloadForOffline,
-        title = event.title() ?: stringRes(Res.string.llama_garden_listing),
-        subtitle = event.repoId(),
+        title = view.title ?: stringRes(Res.string.llama_garden_listing),
+        subtitle = view.repoId,
         // A curator's own listing, or a user's submission (a .torrent URL, no infohash yet). Another
         // builder's catalog listing gets no pill: whether a curator approved it is in their labels.
         status =
             when {
-                curated -> stringRes(Res.string.llama_garden_curated)
-                !event.isCatalogListing() -> stringRes(Res.string.llama_garden_submitted)
+                view.curated -> stringRes(Res.string.llama_garden_curated)
+                !view.isCatalogListing -> stringRes(Res.string.llama_garden_submitted)
                 else -> null
             },
-        statusTone = if (curated) KindTone.Positive else KindTone.Neutral,
+        statusTone = if (view.curated) KindTone.Positive else KindTone.Neutral,
     ) {
         KindCardChips(chips)
         KindCardField(stringRes(Res.string.llama_garden_format), fileClassLabel(event.fileClass(), event.effectiveModelKind()))
         KindCardField(stringRes(Res.string.llama_garden_lab), event.lab())
         KindCardField(stringRes(Res.string.llama_garden_base_model), event.baseModel())
         KindCardField(stringRes(Res.string.llama_garden_matches_hf), hfMatchLabel(event.hfMatch()))
-        KindCardField(stringRes(Res.string.llama_garden_infohash), event.infoHash(), monospace = true, maxLines = 1)
-        ModelTorrentActions(baseNote, event, accountViewModel, nav)
+        KindCardField(stringRes(Res.string.llama_garden_infohash), view.infoHash, monospace = true, maxLines = 1)
+        ModelTorrentActions(baseNote, event, view, accountViewModel, nav)
+    }
+}
+
+/** What the card reads from a listing, worked out once per event rather than on every recomposition. */
+@Immutable
+private class ModelTorrentView(
+    event: ModelTorrentEvent,
+) {
+    val title = event.title()
+    val repoId = event.repoId()
+    val infoHash = event.infoHash()
+    val isCatalogListing = event.isCatalogListing()
+    val curated = LlamaGardenDefaults.isCurator(event.pubKey)
+    val huggingFaceUrl = event.huggingFaceUrl()?.let(::openableUrl)
+    val size = event.totalSize()?.let { countToHumanReadableBytes(it) }
+    val quant = event.quantDetail() ?: event.quantType()?.uppercase()
+
+    /** `6.6`, or `5` rather than `5.0`. */
+    val bitsPerWeight = event.quantBpw()?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() }
+}
+
+/**
+ * [url] as a link to open: as is when it is http(s), with `https://` when it names no scheme, and
+ * null for any other scheme (`javascript:`, `intent:`, `file:`), which an event has no business
+ * handing to the platform.
+ */
+private fun openableUrl(url: String): String? {
+    val trimmed = url.trim()
+    return when {
+        trimmed.startsWith("https://", ignoreCase = true) || trimmed.startsWith("http://", ignoreCase = true) -> trimmed
+        trimmed.contains(':') -> null
+        trimmed.isNotEmpty() -> "https://$trimmed"
+        else -> null
     }
 }
 
@@ -170,14 +194,12 @@ fun RenderModelTorrent(
 private fun ModelTorrentActions(
     baseNote: Note,
     event: ModelTorrentEvent,
+    view: ModelTorrentView,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val uriHandler = LocalUriHandler.current
-    val scope = rememberCoroutineScope()
     var checking by remember { mutableStateOf(false) }
-    val mismatchTitle = stringRes(Res.string.llama_garden_torrent_mismatch_title)
-    val mismatch = stringRes(Res.string.llama_garden_torrent_mismatch)
     val isCurator = LlamaGardenDefaults.isCurator(accountViewModel.account.signer.pubKey)
     val canWrite = accountViewModel.account.signer.isWriteable()
 
@@ -190,24 +212,15 @@ private fun ModelTorrentActions(
             enabled = !checking,
             onClick = {
                 checking = true
-                scope.launch {
+                // On the account's scope, not the card's: scrolling the card away must not drop a
+                // download the user asked for.
+                accountViewModel.viewModelScope.launch {
                     val check =
-                        withContext(Dispatchers.IO) {
+                        withTimeoutOrNull(DOWNLOAD_CHECK_TIMEOUT_MS) {
                             TorrentFileCheck.check(event) { accountViewModel.httpClientBuilder.fetchMedia(it, LlamaGardenDefaults.MAX_TORRENT_FILE_BYTES) }
-                        }
+                        } ?: TorrentFileCheck.Unreachable
                     checking = false
-                    if (check == TorrentFileCheck.Mismatch) accountViewModel.toastManager.toast(mismatchTitle, mismatch)
-                    val link = TorrentFileCheck.linkToOpen(event, check)
-                    if (link == null) {
-                        accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.llama_garden_no_link)
-                    } else {
-                        try {
-                            uriHandler.openUri(link)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.torrent_no_apps)
-                        }
-                    }
+                    openDownload(event, check, uriHandler::openUri, accountViewModel)
                 }
             },
         ) {
@@ -222,13 +235,13 @@ private fun ModelTorrentActions(
             )
         }
 
-        event.huggingFaceUrl()?.let { url ->
+        view.huggingFaceUrl?.let { url ->
             CardAction(MaterialSymbols.AutoMirrored.OpenInNew, Res.string.llama_garden_hugging_face) { runCatching { uriHandler.openUri(url) } }
         }
 
-        if (canWrite && event.infoHash() != null) {
+        // The account's mining queue shows its own progress while the request is mined.
+        if (canWrite && view.infoHash != null) {
             CardAction(MaterialSymbols.CloudUpload, Res.string.llama_garden_request_seeders) {
-                accountViewModel.toastManager.toast(Res.string.llama_garden_mining_title, Res.string.llama_garden_mining)
                 accountViewModel.launchSigner { LlamaGardenActions.requestSeeders(accountViewModel.account, baseNote) }
             }
         }
@@ -243,9 +256,42 @@ private fun ModelTorrentActions(
         }
     }
 
-    // The kind's page lists more listings and holds "Request a model" and "Add a torrent".
-    CardLink(Res.string.llama_garden_all_models) { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }
+    // The kind's page lists more listings and holds "Request a model" and "Add a torrent"; on that
+    // page the link would only open it again.
+    if (LocalEventKindPage.current != ModelTorrentEvent.KIND) {
+        CardLink(Res.string.llama_garden_all_models) { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }
+    }
 }
+
+/**
+ * Hands the BitTorrent client what [check] allows: the magnet (with `xs=` only for a verified
+ * mirror), or a submission's `.torrent`. Warns only when a mirror served a different file and there is
+ * still something to open; an unreachable mirror is not news, the magnet works without it.
+ */
+private fun openDownload(
+    event: ModelTorrentEvent,
+    check: TorrentFileCheck,
+    openUri: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val link = TorrentFileCheck.linkToOpen(event, check)
+    if (link == null) {
+        accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.llama_garden_no_link)
+        return
+    }
+    if (check == TorrentFileCheck.Mismatch) {
+        accountViewModel.toastManager.toast(Res.string.llama_garden_torrent_mismatch_title, Res.string.llama_garden_torrent_mismatch)
+    }
+    try {
+        openUri(link)
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.torrent_no_apps)
+    }
+}
+
+/** Every mirror tried in turn can wait on its own timeout; past this the download goes ahead without one. */
+private const val DOWNLOAD_CHECK_TIMEOUT_MS = 30_000L
 
 /** A secondary card action: an icon and a label, lighter than the card's one tonal button. */
 @Composable
@@ -284,12 +330,13 @@ private fun CardLink(
 @Composable
 private fun CardUrl(url: String) {
     val uriHandler = LocalUriHandler.current
+    val target = remember(url) { openableUrl(url) }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .clickable { runCatching { uriHandler.openUri(url) } }
+                .clickable(enabled = target != null) { target?.let { runCatching { uriHandler.openUri(it) } } }
                 .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -305,10 +352,13 @@ private fun CardUrl(url: String) {
     }
 }
 
-/** A llama.garden seeder request (kind 30102): the torrent that needs seeders, and a link to its listing. */
+/** A llama.garden seeder request (kind 30102): the torrent that needs seeders, with its listing quoted. */
 @Composable
 fun RenderSeederRequest(
     baseNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val event = baseNote.event as? SeederRequestEvent ?: return
@@ -319,9 +369,7 @@ fun RenderSeederRequest(
         tone = KindTone.Warning,
     ) {
         KindCardField(stringRes(Res.string.llama_garden_infohash), event.infoHash(), monospace = true, maxLines = 1)
-        event.torrentListingId()?.let { id ->
-            CardLink(Res.string.llama_garden_listing_link) { nav.nav(Route.Note(id)) }
-        }
+        event.torrentListingId()?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
 
@@ -353,7 +401,7 @@ fun RenderClientRelease(baseNote: Note) {
         subtitle = stringRes(Res.string.llama_garden_release_subtitle),
         tone = KindTone.Neutral,
     ) {
-        KindCardField(stringRes(Res.string.llama_garden_size), event.size()?.let { countToHumanReadableBytes(it) })
+        KindCardField(stringRes(Res.string.llama_garden_size), event.fileSize()?.let { countToHumanReadableBytes(it) })
         KindCardField(stringRes(Res.string.llama_garden_sha256), event.sha256(), monospace = true, maxLines = 1)
         KindCardField(stringRes(Res.string.llama_garden_mirrors), event.downloadUrls().size.toString())
     }

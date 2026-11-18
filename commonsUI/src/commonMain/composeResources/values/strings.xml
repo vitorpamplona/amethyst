@@ -10363,9 +10363,7 @@
     <string name="llama_garden_torrent_mismatch_title">Unverified .torrent</string>
     <string name="llama_garden_torrent_mismatch">No mirror served a .torrent that matches the listing's signed hash. Opening the magnet link instead; your torrent app checks the files against the infohash.</string>
     <string name="llama_garden_no_link">This listing has neither a magnet link nor a reachable .torrent file.</string>
-    <string name="llama_garden_mining_title">Proof of work</string>
     <string name="llama_garden_seeders_wanted">Seeders wanted</string>
-    <string name="llama_garden_listing_link">Open the listing</string>
     <string name="llama_garden_model_request">Model request</string>
     <string name="llama_garden_wants">Wants</string>
     <string name="llama_garden_vram">VRAM</string>
@@ -10384,7 +10382,6 @@
     <string name="llama_garden_request_model_intro">Ask for a model to be added to llama.garden's catalog. It is a signal of interest: someone may or may not add it.</string>
     <string name="llama_garden_add_torrent_intro">Upload the .torrent file first, to a Blossom server such as nostr.download or any web server, then describe it here. It joins llama.garden's catalog once a curator approves it.</string>
     <string name="llama_garden_pow_notice">Before it goes out, Amethyst mines a small proof of work, as llama.garden asks, so the catalog stays free of spam. It publishes on its own when done.</string>
-    <string name="llama_garden_mining">Mining a proof of work before publishing. It goes out on its own when done.</string>
     <string name="llama_garden_required">Required</string>
     <string name="llama_garden_section_model">The model</string>
     <string name="llama_garden_section_wants">What you need</string>

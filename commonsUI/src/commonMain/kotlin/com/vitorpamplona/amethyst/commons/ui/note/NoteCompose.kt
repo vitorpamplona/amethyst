@@ -2229,7 +2229,7 @@ internal fun RenderNoteRow(
             // llama.garden's model torrents, seeder requests, model requests and viewer releases
             // (types/LlamaGarden.kt); the other apps' events on 30099 and 30103 below.
             is ModelTorrentEvent -> RenderModelTorrent(baseNote, accountViewModel, nav)
-            is SeederRequestEvent -> RenderSeederRequest(baseNote, nav)
+            is SeederRequestEvent -> RenderSeederRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ModelRequestEvent -> RenderModelRequest(baseNote)
             is ClientReleaseEvent -> RenderClientRelease(baseNote)
 

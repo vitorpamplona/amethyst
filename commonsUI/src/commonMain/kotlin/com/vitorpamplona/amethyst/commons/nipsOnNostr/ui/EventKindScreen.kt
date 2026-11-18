@@ -38,7 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +72,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.kinds.KindNames
 
+/** The kind whose page is drawing this, for cards that would otherwise link back to it. Null elsewhere. */
+val LocalEventKindPage = staticCompositionLocalOf<Int?> { null }
+
 /**
  * An event kind's own page: its name, the official NIP that defines it (when the registry knows
  * one), the NIPs published on Nostr whose `k` tags define it, and a sample of its recent events,
@@ -97,28 +102,31 @@ fun EventKindScreen(
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.event_kind_title, kind), nav) },
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            item(key = "header") { KindHeader(kind, remember(definitions) { NipsOnNostr.labelOf(kind, definitions) }, nav) }
-            // A kind whose protocol has actions of its own beyond one event (llama.garden: request a
-            // model, list a torrent) offers them under the header.
-            item(key = "actions") { LlamaGardenKindActions(kind, accountViewModel, nav) }
+// Cards on this page know which kind it lists, so a card's "see all of this kind" link can step aside.
+        CompositionLocalProvider(LocalEventKindPage provides kind) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+                item(key = "header") { KindHeader(kind, remember(definitions) { NipsOnNostr.labelOf(kind, definitions) }, nav) }
+                // A kind whose protocol has actions of its own beyond one event (llama.garden: request a
+                // model, list a torrent) offers them under the header.
+                item(key = "actions") { LlamaGardenKindActions(kind, accountViewModel, nav) }
 
-            item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), loadingDefinitions) }
-            if (definitions.isEmpty() && !loadingDefinitions) {
-                item(key = "defs-empty") { EmptyLine(stringRes(Res.string.event_kind_no_definitions)) }
-            }
-            items(definitions, key = { "def-" + it.idHex }) { note ->
-                NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
-                HorizontalDivider(thickness = 0.5.dp)
-            }
+                item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), loadingDefinitions) }
+                if (definitions.isEmpty() && !loadingDefinitions) {
+                    item(key = "defs-empty") { EmptyLine(stringRes(Res.string.event_kind_no_definitions)) }
+                }
+                items(definitions, key = { "def-" + it.idHex }) { note ->
+                    NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
+                    HorizontalDivider(thickness = 0.5.dp)
+                }
 
-            item(key = "recent-title") { SectionTitle(stringRes(Res.string.event_kind_recent), loadingRecent) }
-            if (recent.isEmpty() && !loadingRecent) {
-                item(key = "recent-empty") { EmptyLine(stringRes(Res.string.event_kind_no_recent)) }
-            }
-            items(recent, key = { "recent-" + it.idHex }) { note ->
-                NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
-                HorizontalDivider(thickness = 0.5.dp)
+                item(key = "recent-title") { SectionTitle(stringRes(Res.string.event_kind_recent), loadingRecent) }
+                if (recent.isEmpty() && !loadingRecent) {
+                    item(key = "recent-empty") { EmptyLine(stringRes(Res.string.event_kind_no_recent)) }
+                }
+                items(recent, key = { "recent-" + it.idHex }) { note ->
+                    NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
+                    HorizontalDivider(thickness = 0.5.dp)
+                }
             }
         }
     }

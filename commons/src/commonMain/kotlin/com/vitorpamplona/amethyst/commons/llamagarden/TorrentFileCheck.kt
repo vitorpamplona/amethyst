@@ -42,8 +42,11 @@ sealed interface TorrentFileCheck {
         val url: String,
     ) : TorrentFileCheck
 
-    /** Every mirror failed or served other bytes. */
+    /** A mirror served a file that does not hash to the listing's `x`, and none served the right one. */
     data object Mismatch : TorrentFileCheck
+
+    /** No mirror answered: offline, blocked or gone. Says nothing about the file. */
+    data object Unreachable : TorrentFileCheck
 
     /** The listing names no `.torrent` mirror. */
     data object NoMirror : TorrentFileCheck
@@ -62,6 +65,7 @@ sealed interface TorrentFileCheck {
             val urls = listing.torrentFileUrls()
             if (urls.isEmpty()) return NoMirror
             val expected = listing.torrentFileSha256()?.lowercase() ?: return Unchecked(urls.first())
+            var anyAnswered = false
             for (url in urls) {
                 val bytes =
                     try {
@@ -71,10 +75,11 @@ sealed interface TorrentFileCheck {
                         Log.w(TAG, "could not fetch $url", e)
                         null
                     } ?: continue
+                anyAnswered = true
                 if (sha256(bytes).toHexKey() == expected) return Verified(url)
                 Log.w(TAG) { "$url does not hash to $expected" }
             }
-            return Mismatch
+            return if (anyAnswered) Mismatch else Unreachable
         }
 
         /**
@@ -89,7 +94,7 @@ sealed interface TorrentFileCheck {
             when (check) {
                 is Verified -> listing.magnetWithExactSource(check.url) ?: check.url
                 is Unchecked -> listing.magnetLink() ?: check.url
-                Mismatch, NoMirror -> listing.magnetLink()
+                Mismatch, Unreachable, NoMirror -> listing.magnetLink()
             }
     }
 }

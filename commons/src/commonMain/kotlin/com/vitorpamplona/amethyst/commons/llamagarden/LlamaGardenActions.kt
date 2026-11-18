@@ -63,38 +63,15 @@ object LlamaGardenActions {
     }
 
     /**
-     * Lists an already uploaded `.torrent` at [torrentUrl], the way the viewer's "Add a torrent" form
+     * Lists the already uploaded `.torrent` [form] describes, the way the viewer's "Add a torrent" form
      * does. It shows in llama.garden's catalog once a curator approves it.
      */
     suspend fun submitTorrent(
         account: Account,
-        torrentUrl: String,
-        name: String,
-        approximateSizeGb: Double?,
-        huggingFaceUrl: String?,
-        fileClass: String,
-        modelKind: String,
-        lab: String?,
-        quantType: String?,
-        torrentTool: String?,
-        hfMatch: String,
+        form: TorrentSubmissionForm,
     ) {
-        if (!account.signer.isWriteable() || torrentUrl.isBlank() || name.isBlank()) return
-        val template =
-            ModelTorrentEvent.buildSubmission(
-                submitter = account.signer.pubKey,
-                torrentUrl = torrentUrl,
-                name = name,
-                approximateSize = approximateSizeGb?.let { (it * BYTES_PER_GIB).toLong() },
-                huggingFaceUrl = huggingFaceUrl,
-                fileClass = fileClass,
-                modelKind = modelKind,
-                lab = lab,
-                quantType = quantType,
-                torrentTool = torrentTool,
-                hfMatch = hfMatch,
-            )
-        account.sendMinedLikeTheViewer(template)
+        if (!account.signer.isWriteable() || !form.isPublishable) return
+        account.sendMinedLikeTheViewer(form.template(account.signer.pubKey))
     }
 
     /** A curator's approval of [listing]: llama.garden's viewers then show it whoever wrote it. */
@@ -116,7 +93,4 @@ object LlamaGardenActions {
         val hint = listing.toEventHint<ModelTorrentEvent>() ?: return
         account.signAndComputeBroadcast(LlamaGardenCuration.buildRejection(hint))
     }
-
-    /** The viewer's GB is 1024³ bytes. */
-    private const val BYTES_PER_GIB = 1_073_741_824.0
 }
