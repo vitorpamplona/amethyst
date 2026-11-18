@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -94,6 +95,12 @@ data class ChannelPlane(
     val channelIdHex: HexKey,
     val epoch: Long,
     val key: GroupKey,
+    /**
+     * Set on a restricted Channel's **writer address** (CORD-03 §1): the writer epoch its rumors must
+     * commit (`wepoch`). The [key] then carries the writer address as its public key and the Channel's
+     * read conversation key, and no secret: this account reads there, it never signs or AUTHs as it.
+     */
+    val writerEpoch: Long? = null,
 )
 
 /** A [ChannelPlane] at a prior epoch (pre-Refounding history). */
@@ -211,6 +218,49 @@ object ConcordActions {
         val def = state.channels[channelIdHex]?.definition ?: return null
         return currentChannelPlane(entry, channelIdHex, def.private)
     }
+
+    /**
+     * The writer addresses of every restricted Channel of [state] this account can read (CORD-03 §1,
+     * §3): one plane per live or retired window of each Writers ledger, decrypted with the Channel's
+     * current read key. A reader subscribes them all so a restricted Channel's posts reach it.
+     */
+    fun writerPlanes(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+    ): List<ChannelPlane> =
+        state.writers.flatMap { (channelIdHex, ledger) ->
+            val read = currentChannelPlane(entry, state, channelIdHex) ?: return@flatMap emptyList()
+            ledger.windows.map { w ->
+                ChannelPlane(channelIdHex, read.epoch, GroupKey(ByteArray(0), w.writerPubKey.hexToByteArray(), read.key.conversationKey), writerEpoch = w.epoch)
+            }
+        }
+
+    /**
+     * The access planes (CORD-03 §5) of every live Private Channel of a Roles v2 [state], where a
+     * member the fold entitles collects the keys it lacks. Keyed by address; the value names the channel.
+     */
+    fun accessPlanes(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+    ): Map<HexKey, Pair<HexKey, GroupKey>> {
+        if (!state.isRolesV2) return emptyMap()
+        val root = entry.root.hexToByteArray()
+        return state.privateChannelIds.associate { channelIdHex ->
+            val plane = ConcordChannelAccess.plane(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
+            plane.publicKeyHex to (channelIdHex to plane)
+        }
+    }
+
+    /**
+     * The conversation key of [entry]'s held key for a Private Channel at a given epoch, current or
+     * older, so a fold opens the Channel's sealed metadata (CORD-03 §2); null when none is held.
+     */
+    fun channelConversationKeys(entry: ConcordCommunityListEntry): (HexKey, Long) -> ByteArray? =
+        { channelIdHex, epoch ->
+            val held = heldPrivateChannelKey(entry, channelIdHex)?.takeIf { it.epoch == epoch }
+            val key = held?.key ?: ConcordChannelKeyring.historicalKeys(entry, channelIdHex).firstOrNull { it.epoch == epoch }?.key
+            key?.let { ConcordChannelKeys.privateChannel(it.hexToByteArray(), channelIdHex.hexToByteArray(), epoch).conversationKey }
+        }
 
     /**
      * The older Chat Planes of a channel this account can still read, beside [currentChannelPlane]:
@@ -649,7 +699,11 @@ object ConcordActions {
         channelId: HexKey,
         epoch: Long,
         kinds: Set<Int> = ChannelChat.CHAT_KINDS,
-    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch, kinds) }
+        writerEpoch: Long? = null,
+    ): Event? =
+        ConcordStreamEnvelope.openOrNull(wrap, channel.publicKeyHex, channel.conversationKey)?.let {
+            if (writerEpoch != null) ChannelChat.acceptWriterOpened(it, channelId, epoch, writerEpoch, kinds) else ChannelChat.acceptOpened(it, channelId, epoch, kinds)
+        }
 
     // ---- invites --------------------------------------------------------------
 

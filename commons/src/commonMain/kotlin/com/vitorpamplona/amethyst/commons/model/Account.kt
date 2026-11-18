@@ -227,11 +227,13 @@ import com.vitorpamplona.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -814,18 +816,36 @@ class Account(
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl>,
     ) {
-        val authority =
+        val state =
             concordSessions
                 .sessionFor(communityId)
                 ?.state
                 ?.value
-                ?.authority
-        if (authority?.isBanned(rumor.pubKey) == true) return
+        if (state?.authority?.isBanned(rumor.pubKey) == true) return
+        // A moderation hide (CORD-03 §3): a kind 5 by a MANAGE_MESSAGES holder in the Channel who
+        // strictly outranks the author, citing their Grant, is honored like the author's own delete.
+        if (rumor is DeletionRequestEvent && state != null) hideModeratedConcordMessages(state, channelIdHex, rumor)
         // CORD-08 §3: an already-expired rumor is never stored. The session refuses it first; this
         // backs it up for any other caller of the sink.
         if (ConcordDisappearing.isExpired(rumor)) return
         registerConcordEncryptedImages(rumor)
         cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
+    }
+
+    private fun hideModeratedConcordMessages(
+        state: ConcordCommunityState,
+        channelIdHex: String,
+        deletion: DeletionRequestEvent,
+    ) {
+        val citation = deletion.tags.firstOrNull { it.isNotEmpty() && it[0] == VacTag.TAG_NAME }?.let(VacTag::parse)
+        for (target in deletion.deleteEventIds()) {
+            val note = cache.getNoteIfExists(target) ?: continue
+            val author = note.event?.pubKey ?: continue
+            if (author.equals(deletion.pubKey, ignoreCase = true)) continue
+            if (!state.honorsModerationHide(deletion.pubKey, author, channelIdHex, citation)) continue
+            note.detachFromChildren()
+            cache.pruner.unlinkAndRemove(note)
+        }
     }
 
     /**
@@ -4655,6 +4675,8 @@ class Account(
                 // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
                 // key, or drop the channel when it cut us.
                 runCatchingCancellable { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                // On Roles v2 a Private Channel's key may come on its access plane instead (CORD-03 §5).
+                runCatchingCancellable { concord.drainConcordAccessDeliveries() }.onFailure { Log.w("Concord", "access delivery drain failed", it) }
                 // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
                 runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.
