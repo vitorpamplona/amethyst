@@ -21,13 +21,23 @@
 package com.vitorpamplona.amethyst.commons.relayClient.mavenReleases
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipFCMavenRepositories.MavenModule
 
-/** Keeps a NIP-FC card's library loading its other releases from relays while the card is on screen. */
+/**
+ * Keeps a NIP-FC card's library loading its other releases from relays while the card is on screen.
+ *
+ * The REQ goes to the signer's outbox, which is often not loaded when the card first draws: re-plan
+ * it when the signer's relay list (NIP-65) arrives or changes, or it would stay on the relays the
+ * card's event happened to come from.
+ */
 @Composable
 fun MavenVersionsFilterAssemblerSubscription(
     note: Note,
@@ -37,4 +47,16 @@ fun MavenVersionsFilterAssemblerSubscription(
 ) {
     val state = remember(note, signer, module) { MavenVersionsQueryState(note, signer, module) }
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
+
+    val relayList by remember(signer) {
+        LocalCache
+            .getOrCreateUser(signer)
+            .nip65RelayListNote
+            .flow()
+            .metadata.stateFlow
+    }.collectAsStateWithLifecycle()
+    val relayListId = relayList.note.event?.id
+    LaunchedEffect(relayListId) {
+        if (relayListId != null) filterAssembler.invalidateFilters()
+    }
 }

@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,15 +51,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.mavenReleases.KmpPlatform
+import com.vitorpamplona.amethyst.commons.mavenReleases.MavenLibraryVersions
 import com.vitorpamplona.amethyst.commons.mavenReleases.MavenReleaseKeys
 import com.vitorpamplona.amethyst.commons.mavenReleases.MavenReleaseSummary
 import com.vitorpamplona.amethyst.commons.mavenReleases.MavenVersion
-import com.vitorpamplona.amethyst.commons.mavenReleases.MavenVersions
 import com.vitorpamplona.amethyst.commons.mavenReleases.ReleaseKeyLookup
 import com.vitorpamplona.amethyst.commons.mavenReleases.ReleaseKeyVerdict
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.mavenReleases.MavenVersionsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.kc_maven_artifacts
@@ -94,16 +97,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nipFCMavenRepositories.MavenModule
 import com.vitorpamplona.quartz.nipFCMavenRepositories.MavenPublication
-import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -124,12 +123,19 @@ fun RenderMavenPublication(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event ?: return
+    // A release never changes, but a snapshot is replaced by each new build: watch it so the card
+    // shows the latest one without the feed reloading. Releases skip the relay watch altogether.
+    val noteEvent =
+        if (baseNote is AddressableNote) {
+            observeNoteEvent<Event>(baseNote, accountViewModel).value
+        } else {
+            baseNote.event
+        } ?: return
     val event = noteEvent as? MavenPublication ?: return
     val summary = remember(noteEvent) { MavenReleaseSummary(event) }
     val root = summary.root
 
-    val lookup = root?.let { rememberReleaseKeyLookup(it.groupId, accountViewModel) }
+    val lookup = root?.let { rememberReleaseKeyLookup(it.groupId, noteEvent.pubKey, accountViewModel) }
     val verdict = lookup?.value?.let { MavenReleaseKeys.verdict(it, noteEvent.pubKey) }
     val impostor = verdict == ReleaseKeyVerdict.OTHER_KEY
 
@@ -163,14 +169,21 @@ fun RenderMavenPublication(
     }
 }
 
-/** The group's release key, looked up once per group and remembered across cards. */
+/** The group's release key, looked up once per group and shared by its cards. */
 @Composable
 private fun rememberReleaseKeyLookup(
     groupId: String,
+    signer: HexKey,
     accountViewModel: AccountViewModel,
 ): State<ReleaseKeyLookup?> =
     produceState<ReleaseKeyLookup?>(null, groupId) {
-        value = MavenReleaseKeys.cachedLookup(groupId, accountViewModel.nip05ClientBuilder())
+        // A host that couldn't be read may answer later: ask again while the card is on screen.
+        while (true) {
+            val result = MavenReleaseKeys.cachedLookup(groupId, accountViewModel.nip05ClientBuilder())
+            value = result
+            if (!MavenReleaseKeys.isPartial(result) || MavenReleaseKeys.verdict(result, signer) == ReleaseKeyVerdict.VERIFIED) break
+            delay(MavenReleaseKeys.RETRY_SECONDS * 1000)
+        }
     }
 
 /** One line on the signer: verified, someone else's key, no key to check against, or not known yet. */
@@ -267,13 +280,7 @@ private fun NewerVersionBanner(
     if (version == null) return
     MavenVersionsFilterAssemblerSubscription(baseNote, signer, module, accountViewModel.dataSources().mavenVersions)
 
-    val newest by remember(signer, module) {
-        LocalCache
-            .observeNotes(MavenReleaseEvent.filter(listOf(signer), module))
-            .map { notes -> MavenVersions.newestRelease(notes.mapNotNull { it.event as? MavenReleaseEvent }, module) }
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.IO)
-    }.collectAsStateWithLifecycle(initialValue = null)
+    val newest by remember(signer, module) { MavenLibraryVersions.newest(LocalCache, signer, module) }.collectAsStateWithLifecycle()
 
     val release = newest ?: return
     val newer = release.version() ?: return
@@ -288,7 +295,7 @@ private fun NewerVersionBanner(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(accent.copy(alpha = 0.12f))
-                .clickable {
+                .clickable(role = Role.Button) {
                     val note = LocalCache.getOrCreateNote(release.id)
                     routeFor(note, accountViewModel.account)?.let { nav.nav(it) }
                 }.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -322,7 +329,7 @@ private fun GradleSetup(settings: String) {
         modifier =
             Modifier
                 .clip(RoundedCornerShape(6.dp))
-                .clickable { open = !open }
+                .clickable(role = Role.Button) { open = !open }
                 .padding(vertical = 2.dp, horizontal = 2.dp),
     ) {
         Text(

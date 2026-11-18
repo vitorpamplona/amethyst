@@ -76,11 +76,12 @@ object MavenVersion : Comparator<String> {
             "milestone", "m" -> 2
             "rc", "cr" -> 3
             "snapshot" -> 4
-            "", "ga", "final", "release" -> 5
+            "", "ga", "final", "release" -> RELEASE
             "sp" -> 6
             else -> UNKNOWN
         }
 
+    private const val RELEASE = 5
     private const val UNKNOWN = 7
 
     /** Numbers as [Long], qualifiers in lower case; zero-length parts dropped. */
@@ -116,8 +117,19 @@ object MavenVersion : Comparator<String> {
         }
         flush()
         // Trailing zeros and release markers add nothing: 1.0 == 1.0.0 == 1.0.0-final.
-        while (out.isNotEmpty() && (out.last() == 0L || (out.last() as? String)?.let { rank(it) == 5 } == true)) {
+        while (out.isNotEmpty() && (out.last() == 0L || (out.last() as? String)?.let { rank(it) == RELEASE } == true)) {
             out.removeAt(out.size - 1)
+        }
+        // Nor do zeros before a qualifier, as Maven trims each sub-list: 1.0.0-rc1 == 1.0-rc1.
+        var i = out.size - 1
+        while (i > 0) {
+            if (out[i] is String) {
+                while (i > 0 && out[i - 1] == 0L) {
+                    out.removeAt(i - 1)
+                    i--
+                }
+            }
+            i--
         }
         return out
     }

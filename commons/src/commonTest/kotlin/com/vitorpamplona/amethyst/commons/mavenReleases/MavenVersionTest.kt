@@ -44,6 +44,8 @@ class MavenVersionTest {
         assertEquals(0, MavenVersion.compare("1.0", "1.0.0"))
         assertEquals(0, MavenVersion.compare("1.0.0", "1.0.0-final"))
         assertEquals(0, MavenVersion.compare("1.0-RC1", "1.0-rc-1"))
+        assertEquals(0, MavenVersion.compare("1.0.0-rc1", "1.0-rc1"))
+        assertEquals(0, MavenVersion.compare("2.0.0-SNAPSHOT", "2-SNAPSHOT"))
     }
 
     @Test

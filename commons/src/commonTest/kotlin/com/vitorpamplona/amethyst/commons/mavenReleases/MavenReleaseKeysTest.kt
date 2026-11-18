@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.KeyInfoSet
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05FetchException
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05KeyInfo
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,6 +65,7 @@ class MavenReleaseKeysTest {
     fun walksFromTheGroupDownToItsDomain() {
         assertEquals(listOf("quartz.vitorpamplona.com", "vitorpamplona.com"), MavenReleaseKeys.hostsFor("com.vitorpamplona.quartz"))
         assertEquals(listOf("vitorpamplona.com"), MavenReleaseKeys.hostsFor("com.vitorpamplona"))
+        assertEquals(listOf("lib.example.com", "example.com"), MavenReleaseKeys.hostsFor("com.Example.Lib"))
         assertEquals(emptyList(), MavenReleaseKeys.hostsFor("com.my_company.lib"))
         assertEquals(emptyList(), MavenReleaseKeys.hostsFor("local"))
     }
@@ -112,6 +115,18 @@ class MavenReleaseKeysTest {
             val lookup = MavenReleaseKeys.lookup("com.vitorpamplona.crypto", client)
             assertEquals(ReleaseKeyLookup.Unreachable("crypto.vitorpamplona.com"), lookup)
             assertEquals(ReleaseKeyVerdict.UNKNOWN, MavenReleaseKeys.verdict(lookup, SIGNER))
+        }
+
+    @Test
+    fun cardsOfOneGroupShareOneWalk() =
+        runTest {
+            val client = FakeNip05(mapOf("dedupe.example.org" to SIGNER))
+            val results = (1..5).map { async { MavenReleaseKeys.cachedLookup("org.example.dedupe", client) } }.awaitAll()
+            results.forEach { assertEquals(ReleaseKeyLookup.Found("dedupe.example.org", SIGNER), it) }
+            assertEquals(listOf("dedupe.example.org"), client.asked)
+            // Remembered: asking again fetches nothing.
+            MavenReleaseKeys.cachedLookup("org.example.dedupe", client)
+            assertEquals(1, client.asked.size)
         }
 
     @Test

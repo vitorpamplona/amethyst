@@ -27,6 +27,11 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05FetchException
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -85,7 +90,7 @@ enum class ReleaseKeyVerdict {
 object MavenReleaseKeys {
     private const val NAME = "releases"
     private const val TTL_SECONDS = 60L * 60
-    private const val RETRY_SECONDS = 60L
+    const val RETRY_SECONDS = 60L
     private val LABEL = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
     /**
@@ -94,7 +99,7 @@ object MavenReleaseKeys {
      * (`uk.co.example`) also asks the suffix (`co.uk`), which names no release key.
      */
     fun hostsFor(groupId: String): List<String> {
-        val labels = groupId.split('.').asReversed()
+        val labels = groupId.lowercase().split('.').asReversed()
         if (labels.size < 2 || labels.any { !LABEL.matches(it) }) return emptyList()
         return (labels.size downTo 2).map { n -> labels.takeLast(n).joinToString(".") }
     }
@@ -138,21 +143,50 @@ object MavenReleaseKeys {
         return skipped?.let { ReleaseKeyLookup.Unreachable(it) } ?: ReleaseKeyLookup.None(hosts.last())
     }
 
+    private const val MAX_CACHED_GROUPS = 256
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val mutex = Mutex()
     private val cache = HashMap<String, Pair<Long, ReleaseKeyLookup>>()
+    private val inFlight = HashMap<String, Deferred<ReleaseKeyLookup>>()
 
-    /** [lookup], remembered per group for an hour (a minute when a host couldn't be read). */
+    /** Whether [lookup] could not read a host, so asking again later may answer differently. */
+    fun isPartial(lookup: ReleaseKeyLookup) = lookup is ReleaseKeyLookup.Unreachable || (lookup is ReleaseKeyLookup.Found && lookup.skipped != null)
+
+    /**
+     * [lookup], remembered per group for an hour (a minute when a host couldn't be read). Cards of
+     * the same group asking at once share one walk, which runs on its own so a card scrolling away
+     * does not cancel it for the others.
+     */
     suspend fun cachedLookup(
         groupId: String,
         client: INip05Client,
     ): ReleaseKeyLookup {
-        val now = TimeUtils.now()
-        mutex.withLock { cache[groupId] }?.let { (until, result) -> if (until > now) return result }
-        val result = lookup(groupId, client)
-        val partial = result is ReleaseKeyLookup.Unreachable || (result is ReleaseKeyLookup.Found && result.skipped != null)
-        val ttl = if (partial) RETRY_SECONDS else TTL_SECONDS
-        mutex.withLock { cache[groupId] = (now + ttl) to result }
-        return result
+        val running =
+            mutex.withLock {
+                cache[groupId]?.let { (until, result) -> if (until > TimeUtils.now()) return result }
+                inFlight.getOrPut(groupId) {
+                    scope.async {
+                        // lookup() already turns a failed fetch into a verdict; this keeps anything
+                        // else from leaving the group stuck in [inFlight].
+                        val result =
+                            try {
+                                lookup(groupId, client)
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                ReleaseKeyLookup.Unreachable(hostsFor(groupId).firstOrNull() ?: groupId)
+                            }
+                        val ttl = if (isPartial(result)) RETRY_SECONDS else TTL_SECONDS
+                        mutex.withLock {
+                            if (cache.size >= MAX_CACHED_GROUPS) cache.clear()
+                            cache[groupId] = (TimeUtils.now() + ttl) to result
+                            inFlight.remove(groupId)
+                        }
+                        result
+                    }
+                }
+            }
+        return running.await()
     }
 
     /**

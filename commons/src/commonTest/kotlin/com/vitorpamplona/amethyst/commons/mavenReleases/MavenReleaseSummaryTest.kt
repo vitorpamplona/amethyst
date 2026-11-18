@@ -86,6 +86,23 @@ class MavenReleaseSummaryTest {
     }
 
     @Test
+    fun readsComposeTargetNames() {
+        val summary = MavenReleaseSummary(release("1.0", listOf("org.jetbrains.compose.ui:ui", "org.jetbrains.compose.ui:ui-desktop", "org.jetbrains.compose.ui:ui-uikitarm64")))
+        assertEquals(listOf(KmpPlatform.JVM, KmpPlatform.IOS), summary.platforms)
+        assertEquals(emptyList(), summary.otherModules)
+    }
+
+    @Test
+    fun countsArtifactsWhereverTheManifestHashSits() {
+        // The manifest's x tag after an artifact's, and in upper case.
+        val event = release("1.0", extra = listOf(arrayOf("x", "cd".repeat(32))))
+        val reordered =
+            MavenReleaseEvent(event.id, event.pubKey, event.createdAt, event.tags.filter { it[0] != "x" }.toTypedArray() + arrayOf(arrayOf("x", "ab".repeat(32)), arrayOf("x", MANIFEST.uppercase())), "", event.sig)
+        assertEquals(2, MavenReleaseSummary(event).artifactCount)
+        assertEquals(1, MavenReleaseSummary(reordered).artifactCount)
+    }
+
+    @Test
     fun keepsModulesThatAreNoTarget() {
         val summary = MavenReleaseSummary(release("1.0", listOf("com.example:lib", "com.example:lib-bom", "com.example:lib-jvm", "org.other:thing")))
         assertEquals(listOf(KmpPlatform.JVM), summary.platforms)
@@ -131,8 +148,8 @@ class MavenReleaseSummaryTest {
         val rc = release("1.3.0-rc1", id = "04".repeat(32))
         val other = release("9.0.0", listOf("com.example:other"), id = "05".repeat(32))
 
-        assertSame(newEarly, MavenVersions.newestRelease(listOf(old, newLate, newEarly, other), module))
-        assertSame(rc, MavenVersions.newestRelease(listOf(old, newLate, rc), module))
-        assertNull(MavenVersions.newestRelease(listOf(other), module))
+        assertSame(newEarly, MavenLibraryVersions.newestRelease(listOf(old, newLate, newEarly, other), module))
+        assertSame(rc, MavenLibraryVersions.newestRelease(listOf(old, newLate, rc), module))
+        assertNull(MavenLibraryVersions.newestRelease(listOf(other), module))
     }
 }

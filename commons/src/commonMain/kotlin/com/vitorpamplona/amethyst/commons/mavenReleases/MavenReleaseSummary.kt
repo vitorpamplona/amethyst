@@ -48,9 +48,10 @@ enum class KmpPlatform {
          */
         fun ofSuffix(suffix: String): KmpPlatform? =
             when {
-                suffix == "jvm" -> JVM
+                // Compose Multiplatform names its JVM target `desktop` and its iOS ones `uikit…`.
+                suffix == "jvm" || suffix == "desktop" -> JVM
                 suffix == "android" || suffix.startsWith("android-") || suffix.startsWith("androidnative") -> ANDROID
-                suffix.startsWith("ios") -> IOS
+                suffix.startsWith("ios") || suffix.startsWith("uikit") -> IOS
                 suffix.startsWith("macos") -> MACOS
                 suffix.startsWith("tvos") -> TVOS
                 suffix.startsWith("watchos") -> WATCHOS
@@ -108,11 +109,13 @@ class MavenReleaseSummary(
         otherModules = others
     }
 
+    private val manifest = event.manifest()
+
     /** The manifest's size in bytes, or null when the event gives none. */
-    val manifestSize: Long? = event.manifest()?.size?.takeIf { it >= 0 }
+    val manifestSize: Long? = manifest?.size?.takeIf { it >= 0 }
 
     /** Primary artifacts the event hashes, besides the manifest. Publishers may trim them. */
-    val artifactCount: Int = (event.hashes().size - 1).coerceAtLeast(0)
+    val artifactCount: Int = event.hashes().count { !it.equals(manifest?.sha256, ignoreCase = true) }
 
     val servers: List<String> = event.servers()
 

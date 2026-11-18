@@ -20,10 +20,54 @@
  */
 package com.vitorpamplona.amethyst.commons.mavenReleases
 
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipFCMavenRepositories.MavenModule
 import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-object MavenVersions {
+/**
+ * The newest release of a library by one signer, kept live from the cache for the NIP-FC cards that
+ * show it.
+ *
+ * Releases are a regular kind, so starting a cache observer walks every note in memory. One flow per
+ * library (signer and module) is shared by every card of it on screen, so a profile listing twenty
+ * releases of one library walks the cache once, not twenty times, and the walk stops five seconds
+ * after the last card leaves.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+object MavenLibraryVersions {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val flows = AtomicReference(emptyMap<String, StateFlow<MavenReleaseEvent?>>())
+
+    fun newest(
+        cache: EventCache,
+        signer: HexKey,
+        module: MavenModule,
+    ): StateFlow<MavenReleaseEvent?> {
+        val key = signer + ":" + module.key
+        while (true) {
+            val current = flows.load()
+            current[key]?.let { return it }
+            val flow =
+                cache
+                    .observeNotes(MavenReleaseEvent.filter(listOf(signer), module))
+                    .map { notes -> newestRelease(notes.mapNotNull { it.event as? MavenReleaseEvent }, module) }
+                    .distinctUntilChanged()
+                    .stateIn(scope, SharingStarted.WhileSubscribed(5_000), null)
+            if (flows.compareAndSet(current, current + (key to flow))) return flow
+        }
+    }
+
     /**
      * The newest version among [releases] of [module], as its canonical release: NIP-FC's earliest
      * event for that version (`created_at`, then the lowest id). Malformed events and ones that
@@ -39,9 +83,8 @@ object MavenVersions {
         for (event in releases) {
             val version = event.version() ?: continue
             if (!event.covers(module, version) || !event.isWellFormed()) continue
-            val current = bestVersion
-            val c = if (current == null) 1 else MavenVersion.compare(version, current)
-            if (c > 0 || (c == 0 && isEarlier(event, best!!))) {
+            val c = bestVersion?.let { MavenVersion.compare(version, it) } ?: 1
+            if (c > 0 || (c == 0 && best != null && isEarlier(event, best))) {
                 best = event
                 bestVersion = version
             }
