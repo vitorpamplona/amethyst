@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForUser
+import com.vitorpamplona.amethyst.commons.ui.note.shareableLinkForUser
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -97,7 +97,7 @@ fun UserProfileDropDownMenu(
                 icon = MaterialSymbols.Share,
                 text = stringRes(Res.string.quick_action_share),
             ) {
-                textSharer.share(externalLinkForUser(user), quickActionShareBrowserLinkStr, quickActionShareStr)
+                textSharer.share(shareableLinkForUser(user, accountViewModel), quickActionShareBrowserLinkStr, quickActionShareStr)
                 onDismiss()
             }
         }

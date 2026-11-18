@@ -37,6 +37,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -133,6 +134,14 @@ private fun ShareNoteAsQrScreenContent(
     // SharedNoteCard uses for its own sensitivity gate (F1).
     val noteState by observeNote(note, accountViewModel)
     val payload = remember(noteState, mode) { qrPayloadFor(note, mode) }
+
+    // The web link opens Brainstorm's page, which reads the note from Brainstorm's relay: copy it
+    // there while the code is on screen (private notes never are, see ShareRelayPolicy). Keyed on the
+    // event so a note still loading is pushed once it arrives.
+    val loadedEventId = note.event?.id
+    LaunchedEffect(mode, loadedEventId) {
+        if (mode == QrPayloadMode.Web && loadedEventId != null) accountViewModel.pushToShareRelay(note)
+    }
 
     KeepScreenBrightAndAwake()
 

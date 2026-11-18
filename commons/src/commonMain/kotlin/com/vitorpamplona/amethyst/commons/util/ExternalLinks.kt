@@ -26,3 +26,14 @@ package com.vitorpamplona.amethyst.commons.util
  * opened by a human.
  */
 fun njumpLink(nip19BechAddress: String) = "https://njump.to/$nip19BechAddress"
+
+/**
+ * The web page Amethyst's Share buttons hand out for an event: Brainstorm's `/e/` page, which takes
+ * an nevent, naddr or note1 and renders a link preview for chat apps and social sites. Amethyst
+ * copies the shared event to Brainstorm's relay first, so the page can always find it (see
+ * `EventBroadcaster.pushToShareRelay`).
+ */
+fun shareLinkForEvent(nip19BechAddress: String) = "https://brainstorm.world/e/$nip19BechAddress"
+
+/** The web page for a profile: Brainstorm's `/p/` page, for an npub or nprofile. */
+fun shareLinkForProfile(nip19BechAddress: String) = "https://brainstorm.world/p/$nip19BechAddress"

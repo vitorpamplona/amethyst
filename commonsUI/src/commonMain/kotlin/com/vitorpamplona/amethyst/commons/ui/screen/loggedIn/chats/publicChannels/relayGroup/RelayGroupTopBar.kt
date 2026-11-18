@@ -97,7 +97,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarActi
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.BuzzPinDropdownItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.util.njumpLink
+import com.vitorpamplona.amethyst.commons.util.shareLinkForEvent
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
@@ -403,7 +403,7 @@ fun RelayGroupTopBar(
                             text = { Text(stringRes(Res.string.quick_action_share)) },
                             onClick = {
                                 menuOpen = false
-                                textSharer.share(njumpLink(naddr), shareLinkTitle, shareChooserTitle)
+                                textSharer.share(shareLinkForEvent(naddr), shareLinkTitle, shareChooserTitle)
                             },
                         )
                     }

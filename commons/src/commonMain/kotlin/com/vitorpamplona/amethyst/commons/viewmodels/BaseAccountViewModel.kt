@@ -1558,6 +1558,15 @@ open class BaseAccountViewModel(
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
     /**
+     * Call when the user hands out [note]'s web link (Share, QR): copies it to the relay the link's
+     * page reads, unless it is private. Needs no signature, so it works on read-only accounts too.
+     */
+    fun pushToShareRelay(note: Note) = viewModelScope.launch(Dispatchers.IO) { account.pushToShareRelay(note) }
+
+    /** Call when the user hands out [user]'s profile web link. */
+    fun pushToShareRelay(user: User) = viewModelScope.launch(Dispatchers.IO) { account.pushToShareRelay(user) }
+
+    /**
      * Broadcast republishes public events directly and rumors as their
      * delivering kind-1059 wrap. A rumor whose wrap is unknown can't be
      * broadcast at all — publishing the unsigned event would disclose the

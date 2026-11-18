@@ -284,6 +284,24 @@
                 <data android:host="njump.to" />
             </intent-filter>
 
+            <!-- Brainstorm, where Amethyst's Share links point: its event and profile pages
+                 (/e/<nevent|naddr|note1>, /p/<npub|nprofile>) and bare /<bech32> links. Not the
+                 whole host: its other pages (settings, search, onboarding) are not nostr entities. -->
+            <intent-filter android:label="brainstorm.world">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="brainstorm.world" />
+                <data android:pathPrefix="/e/" />
+                <data android:pathPrefix="/p/" />
+                <data android:pathPrefix="/npub1" />
+                <data android:pathPrefix="/nprofile1" />
+                <data android:pathPrefix="/nevent1" />
+                <data android:pathPrefix="/naddr1" />
+                <data android:pathPrefix="/note1" />
+            </intent-filter>
+
             <intent-filter android:label="iris.to">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

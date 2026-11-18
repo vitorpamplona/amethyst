@@ -46,15 +46,14 @@ class QrPayloadTest {
     }
 
     @Test
-    fun webMode_returnsAnHttpsNjumpLink() =
+    fun webMode_returnsAnHttpsBrainstormEventLink() =
         runTest {
             val payload = qrPayloadFor(textNote(), QrPayloadMode.Web)
 
             assertTrue(
                 "web mode must produce an https URL so a stock phone camera can action it, got: $payload",
-                payload.startsWith("https://"),
+                payload.startsWith("https://brainstorm.world/e/nevent1"),
             )
-            assertTrue(payload.contains("nevent1"))
         }
 
     @Test
@@ -94,6 +93,24 @@ class QrPayloadTest {
             assertTrue(
                 "AddressableNote must encode as naddr via the toNEvent() override, got: $payload",
                 payload.startsWith("nostr:naddr1"),
+            )
+        }
+
+    @Test
+    fun addressableNote_webMode_yieldsABrainstormNaddrLink() =
+        runTest {
+            val event =
+                LongFormContentEvent
+                    .build("body", "My Article", dTag = "my-article") {}
+                    .let { aliceSigner.sign(it) }
+            val note = AddressableNote(event.address())
+            note.event = event
+
+            val payload = qrPayloadFor(note, QrPayloadMode.Web)
+
+            assertTrue(
+                "an addressable note must link to its naddr page, got: $payload",
+                payload.startsWith("https://brainstorm.world/e/naddr1"),
             )
         }
 }

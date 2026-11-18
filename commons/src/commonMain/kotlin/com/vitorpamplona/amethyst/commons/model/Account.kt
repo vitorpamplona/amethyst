@@ -2297,6 +2297,10 @@ class Account(
 
     fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
 
+    fun pushToShareRelay(note: Note) = broadcaster.pushToShareRelay(note)
+
+    fun pushToShareRelay(user: User) = broadcaster.pushToShareRelay(user)
+
     /**
      * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
      * version (same kind, tags and content, so NIP-44 private items stay readable, minus the

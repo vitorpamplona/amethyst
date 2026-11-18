@@ -113,7 +113,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.QuickActionPopupShadow
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallestBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.secondaryButtonBackground
-import com.vitorpamplona.amethyst.commons.util.njumpLink
+import com.vitorpamplona.amethyst.commons.util.shareLinkForEvent
+import com.vitorpamplona.amethyst.commons.util.shareLinkForProfile
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -156,7 +157,7 @@ private fun lightenColor(
 }
 
 val externalLinkForUser = { user: User ->
-    njumpLink(user.toNProfile())
+    shareLinkForProfile(user.toNProfile())
 }
 
 val nipLink = { nipNumber: String ->
@@ -167,17 +168,46 @@ val graspLink = { graspNumber: String ->
     "https://gitworkshop.dev/danconwaydev.com/grasp/tree/master/$graspNumber.md"
 }
 
-val externalLinkForNote = { note: Note ->
-    if (note is AddressableNote) {
-        when {
-            note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
-            note.event is FollowSetEvent -> "https://listr.lol/a/${note.toNAddr()}"
-            note.event is StarterPackEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
-            else -> njumpLink(note.toNAddr())
-        }
-    } else {
-        njumpLink(note.toNEvent())
+/**
+ * The site made for this kind of note, when there is one that presents it better than a generic
+ * note page (bounties, people lists, follow packs); null for everything else.
+ */
+private fun dedicatedLinkForNote(note: Note): String? {
+    if (note !is AddressableNote) return null
+    return when {
+        note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
+        note.event is FollowSetEvent -> "https://listr.lol/a/${note.toNAddr()}"
+        note.event is StarterPackEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
+        else -> null
     }
+}
+
+// An AddressableNote's toNEvent() is its naddr, so this covers both kinds of note.
+val externalLinkForNote = { note: Note ->
+    dedicatedLinkForNote(note) ?: shareLinkForEvent(note.toNEvent())
+}
+
+/**
+ * [externalLinkForNote], for a link the user is handing out right now (Share, QR). A Brainstorm
+ * link also copies the note to the relay its page reads, so the page finds it wherever it was
+ * posted; private notes are never copied ([com.vitorpamplona.amethyst.commons.model.ShareRelayPolicy]).
+ */
+fun shareableLinkForNote(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): String =
+    dedicatedLinkForNote(note) ?: run {
+        accountViewModel.pushToShareRelay(note)
+        shareLinkForEvent(note.toNEvent())
+    }
+
+/** [externalLinkForUser], for a profile link the user is handing out: also copies their profile to the share relay. */
+fun shareableLinkForUser(
+    user: User,
+    accountViewModel: AccountViewModel,
+): String {
+    accountViewModel.pushToShareRelay(user)
+    return externalLinkForUser(user)
 }
 
 @Composable
@@ -508,7 +538,7 @@ fun CardBody(
                     icon = MaterialSymbols.Share,
                     label = stringRes(Res.string.quick_action_share),
                 ) {
-                    sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
+                    sharer.share(shareableLinkForNote(note, accountViewModel), quickActionShareBrowserLinkStr, quickActionShareStr)
                     onDismiss()
                 }
             }
