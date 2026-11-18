@@ -59,6 +59,9 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  */
 fun addressedAuthors(event: AddressHintProvider): Set<HexKey> = event.linkedAddressIds().mapNotNullTo(mutableSetOf()) { Address.parse(it)?.pubKeyHex }
 
+/** The relay that backs Amethyst's share links: Brainstorm's, which its web pages read from. */
+private val SHARE_RELAYS = setOf(Constants.brainstorm)
+
 /**
  * The sign-and-publish choke point for an [Account]: computes the relay set an
  * event should be broadcast to (NIP-65 outbox model, relay hints, channel home
@@ -69,9 +72,6 @@ fun addressedAuthors(event: AddressHintProvider): Set<HexKey> = event.linkedAddr
  * funnel every publish through this class instead of calling the relay client
  * directly.
  */
-/** The relay that backs Amethyst's share links: Brainstorm's, which its web pages read from. */
-private val SHARE_RELAYS = setOf(Constants.brainstorm)
-
 class EventBroadcaster(
     private val account: Account,
 ) {
