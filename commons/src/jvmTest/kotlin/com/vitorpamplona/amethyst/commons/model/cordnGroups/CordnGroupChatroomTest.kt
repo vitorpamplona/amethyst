@@ -343,4 +343,60 @@ class CordnGroupChatroomTest {
         initialExtensions = listOf(metadata.toExtension()),
         groupId = "gid-1".encodeToByteArray(),
     )
+
+    @Test
+    fun `a poll vote is never a row, nor the room's preview`() {
+        // cordn-web 0.6.0 sends NIP-88 votes as kind 1018 with content
+        // "Voted: …" for clients without polls. Rendering that content would
+        // put words in the voter's mouth and make it the room's last message.
+        val room = room()
+        room.add(message("1", at = 10, cursor = 1, content = "Lunch?", kind = CordnMessageKinds.POLL))
+        room.add(
+            message(
+                "2",
+                at = 11,
+                cursor = 2,
+                author = bob,
+                content = "Voted: Pizza",
+                kind = CordnMessageKinds.POLL_RESPONSE,
+                tags = arrayOf(arrayOf("e", "1".padEnd(64, '0')), arrayOf("response", "a")),
+            ),
+        )
+
+        assertEquals(listOf("Lunch?"), room.messages.value.map { it.envelope.content })
+        assertEquals(
+            "Lunch?",
+            room.newest.value
+                ?.envelope
+                ?.content,
+        )
+    }
+
+    @Test
+    fun `an RSVP is never a row`() {
+        val room = room()
+        room.add(message("1", at = 10, cursor = 1, content = "hi"))
+        room.add(message("2", at = 11, cursor = 2, author = bob, content = "Going", kind = CordnMessageKinds.CALENDAR_RSVP))
+
+        assertEquals(listOf("hi"), room.messages.value.map { it.envelope.content })
+        assertEquals(
+            "hi",
+            room.newest.value
+                ?.envelope
+                ?.content,
+        )
+    }
+
+    @Test
+    fun `only the latest revision of a calendar event is a row`() {
+        // calendar-events.md §5: a revision replaces the event in place.
+        val room = room()
+        val tags = arrayOf(arrayOf("d", "standup"), arrayOf("title", "Standup"))
+        room.add(message("1", at = 10, cursor = 1, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))
+        room.add(message("2", at = 20, cursor = 2, content = "hello"))
+        room.add(message("3", at = 30, cursor = 3, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))
+
+        assertEquals(listOf("2", "3").map { it.padEnd(64, '0') }, room.messages.value.map { it.envelope.id })
+        assertTrue(room.annotations.value.isRevised("3".padEnd(64, '0')))
+    }
 }

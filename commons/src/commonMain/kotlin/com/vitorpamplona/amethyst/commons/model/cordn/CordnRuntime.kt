@@ -61,7 +61,6 @@ import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.cordn.spec00Coordinator.CordnCoordinatorDiscovery
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -209,6 +208,10 @@ class CordnRuntime(
                     it.loop.stop()
                 }
 
+                // The same sink for what a Commit reads on its way to its own
+                // echo (CordnGroupManager.deliveryListener), or the messages it
+                // passes are stored but not shown until the room reloads.
+                session.manager.deliveryListener = { file(config.pubKey, it) }
                 val loop =
                     CordnSyncLoop(
                         source = session.manager,
@@ -903,12 +906,10 @@ class CordnRuntime(
         delivery: CordnGroupManager.Delivery,
     ) {
         when (delivery) {
+            // `delivered` carries the media key of the message's own epoch,
+            // which is what opens its attachments after the next Commit.
             is CordnGroupManager.Delivery.Message ->
-                groups.add(
-                    coordinatorPubKey,
-                    delivery.gid,
-                    CordnDeliveredMessage(delivery.received.envelope, delivery.cursor),
-                )
+                groups.add(coordinatorPubKey, delivery.gid, delivery.delivered)
 
             // The rest still get a room. A group whose history we cannot
             // read, or that only moved an epoch, is a group we are in —
@@ -918,6 +919,14 @@ class CordnRuntime(
             is CordnGroupManager.Delivery.EpochAdvanced,
             is CordnGroupManager.Delivery.Echo,
             -> groups.getOrCreate(coordinatorPubKey, delivery.gid)
+
+            // A change of ours settled after the call that made it returned
+            // (its post or confirmation failed, and the screen already said
+            // so). The room re-reads the winner's state below.
+            is CordnGroupManager.Delivery.CommitLost -> {
+                Log.w(TAG) { "a change to ${delivery.gid} lost to another commit at ${delivery.cursor}" }
+                groups.getOrCreate(coordinatorPubKey, delivery.gid)
+            }
         }
 
         // After every delivery, not only after an EpochAdvanced: a Commit that
