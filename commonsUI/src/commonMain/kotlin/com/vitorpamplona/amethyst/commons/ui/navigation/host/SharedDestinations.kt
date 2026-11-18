@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import com.vitorpamplona.amethyst.commons.cashu.ui.CashuWalletCreatedScreen
 import com.vitorpamplona.amethyst.commons.chats.ui.NewConversationScreen
+import com.vitorpamplona.amethyst.commons.llamagarden.ui.AddTorrentScreen
+import com.vitorpamplona.amethyst.commons.llamagarden.ui.RequestModelScreen
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.EventKindScreen
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.NipsScreen
@@ -343,6 +345,8 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     // The dashboard sizes its own columns; Explore caps its feed to the reading width itself.
     composableFromEnd<Route.GitRepositories>(capWidth = false) { GitRepositoriesScreen(accountViewModel, nav) }
     composer<Route.NewGitRepository>(ComposerSize.FORM, NavFamily.END) { NewGitRepositoryScreen(accountViewModel, nav) }
+    composer<Route.LlamaGardenRequestModel>(ComposerSize.FORM, NavFamily.END) { RequestModelScreen(accountViewModel, nav) }
+    composer<Route.LlamaGardenAddTorrent>(ComposerSize.FORM, NavFamily.END) { AddTorrentScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }

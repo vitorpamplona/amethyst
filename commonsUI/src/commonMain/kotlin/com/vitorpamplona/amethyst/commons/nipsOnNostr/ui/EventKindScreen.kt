@@ -101,7 +101,7 @@ fun EventKindScreen(
             item(key = "header") { KindHeader(kind, remember(definitions) { NipsOnNostr.labelOf(kind, definitions) }, nav) }
             // A kind whose protocol has actions of its own beyond one event (llama.garden: request a
             // model, list a torrent) offers them under the header.
-            item(key = "actions") { LlamaGardenKindActions(kind, accountViewModel) }
+            item(key = "actions") { LlamaGardenKindActions(kind, accountViewModel, nav) }
 
             item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), loadingDefinitions) }
             if (definitions.isEmpty() && !loadingDefinitions) {

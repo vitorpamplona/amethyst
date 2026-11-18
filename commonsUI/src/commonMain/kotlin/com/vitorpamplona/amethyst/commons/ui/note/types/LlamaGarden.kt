@@ -20,9 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,9 +41,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.cartridges.fetchMedia
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.llamagarden.LlamaGardenActions
 import com.vitorpamplona.amethyst.commons.llamagarden.LlamaGardenDefaults
@@ -41,9 +58,9 @@ import com.vitorpamplona.amethyst.commons.llamagarden.TorrentFileCheck
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.llama_garden_all_models
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_base_model
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_bits_per_weight
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_bits_per_weight_value
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_checking
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_curated
@@ -57,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_kind_fine_tune
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_kind_not_said
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_kind_quant
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_lab
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_links
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_listing
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_listing_link
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_match_no
@@ -68,9 +84,7 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_mining_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_mirrors
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_request
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_more_models
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_no_link
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_quant
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release_subtitle
@@ -84,7 +98,6 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_torrent_mismatc
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_vram
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_vram_value
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_wants
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_web_seeds
 import com.vitorpamplona.amethyst.commons.resources.torrent_failure
 import com.vitorpamplona.amethyst.commons.resources.torrent_no_apps
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -103,6 +116,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -118,11 +132,13 @@ fun RenderModelTorrent(
 ) {
     val event = baseNote.event as? ModelTorrentEvent ?: return
     val curated = remember(event) { LlamaGardenDefaults.isCurator(event.pubKey) }
+    val bpw = event.quantBpw()?.let { stringRes(Res.string.llama_garden_bits_per_weight_value, it.toString()) }
     val chips =
-        remember(event) {
+        remember(event, bpw) {
             listOfNotNull(
                 event.totalSize()?.let { countToHumanReadableBytes(it) },
                 event.quantDetail() ?: event.quantType()?.uppercase(),
+                bpw,
             ).distinct()
         }
 
@@ -142,18 +158,8 @@ fun RenderModelTorrent(
     ) {
         KindCardChips(chips)
         KindCardField(stringRes(Res.string.llama_garden_format), fileClassLabel(event.fileClass(), event.effectiveModelKind()))
-        KindCardField(stringRes(Res.string.llama_garden_quant), event.quantDetail() ?: event.quantType())
-        event.quantBpw()?.let { KindCardField(stringRes(Res.string.llama_garden_bits_per_weight), stringRes(Res.string.llama_garden_bits_per_weight_value, it.toString())) }
         KindCardField(stringRes(Res.string.llama_garden_lab), event.lab())
         KindCardField(stringRes(Res.string.llama_garden_base_model), event.baseModel())
-        KindCardField(
-            stringRes(Res.string.llama_garden_web_seeds),
-            event
-                .webSeeds()
-                .size
-                .takeIf { it > 0 }
-                ?.toString(),
-        )
         KindCardField(stringRes(Res.string.llama_garden_matches_hf), hfMatchLabel(event.hfMatch()))
         KindCardField(stringRes(Res.string.llama_garden_infohash), event.infoHash(), monospace = true, maxLines = 1)
         ModelTorrentActions(baseNote, event, accountViewModel, nav)
@@ -175,8 +181,12 @@ private fun ModelTorrentActions(
     val isCurator = LlamaGardenDefaults.isCurator(accountViewModel.account.signer.pubKey)
     val canWrite = accountViewModel.account.signer.isWriteable()
 
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        FilledTonalButton(
             enabled = !checking,
             onClick = {
                 checking = true
@@ -201,39 +211,97 @@ private fun ModelTorrentActions(
                 }
             },
         ) {
-            Text(stringRes(if (checking) Res.string.llama_garden_checking else Res.string.llama_garden_download))
+            if (checking) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(MaterialSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Text(
+                stringRes(if (checking) Res.string.llama_garden_checking else Res.string.llama_garden_download),
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
 
         event.huggingFaceUrl()?.let { url ->
-            TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
-                Text(stringRes(Res.string.llama_garden_hugging_face))
-            }
+            CardAction(MaterialSymbols.AutoMirrored.OpenInNew, Res.string.llama_garden_hugging_face) { runCatching { uriHandler.openUri(url) } }
         }
 
         if (canWrite && event.infoHash() != null) {
-            TextButton(
-                onClick = {
-                    accountViewModel.toastManager.toast(Res.string.llama_garden_mining_title, Res.string.llama_garden_mining)
-                    accountViewModel.launchSigner { LlamaGardenActions.requestSeeders(accountViewModel.account, baseNote) }
-                },
-            ) {
-                Text(stringRes(Res.string.llama_garden_request_seeders))
+            CardAction(MaterialSymbols.CloudUpload, Res.string.llama_garden_request_seeders) {
+                accountViewModel.toastManager.toast(Res.string.llama_garden_mining_title, Res.string.llama_garden_mining)
+                accountViewModel.launchSigner { LlamaGardenActions.requestSeeders(accountViewModel.account, baseNote) }
             }
-        }
-
-        // The kind's page lists more listings and holds "Request a model" and "Add a torrent".
-        TextButton(onClick = { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }) {
-            Text(stringRes(Res.string.llama_garden_more_models))
         }
 
         if (canWrite && isCurator) {
-            TextButton(onClick = { accountViewModel.launchSigner { LlamaGardenActions.approve(accountViewModel.account, baseNote) } }) {
-                Text(stringRes(Res.string.llama_garden_approve))
+            CardAction(MaterialSymbols.Check, Res.string.llama_garden_approve) {
+                accountViewModel.launchSigner { LlamaGardenActions.approve(accountViewModel.account, baseNote) }
             }
-            TextButton(onClick = { accountViewModel.launchSigner { LlamaGardenActions.reject(accountViewModel.account, baseNote) } }) {
-                Text(stringRes(Res.string.llama_garden_reject))
+            CardAction(MaterialSymbols.Block, Res.string.llama_garden_reject, tint = MaterialTheme.colorScheme.error) {
+                accountViewModel.launchSigner { LlamaGardenActions.reject(accountViewModel.account, baseNote) }
             }
         }
+    }
+
+    // The kind's page lists more listings and holds "Request a model" and "Add a torrent".
+    CardLink(Res.string.llama_garden_all_models) { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }
+}
+
+/** A secondary card action: an icon and a label, lighter than the card's one tonal button. */
+@Composable
+private fun CardAction(
+    icon: MaterialSymbol,
+    label: StringResource,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = tint),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(stringRes(label), modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+/** A quiet link to somewhere else, aligned with the card's facts rather than its buttons. */
+@Composable
+private fun CardLink(
+    label: StringResource,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringRes(label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** A URL someone gave, one line, in a row like the card's facts. */
+@Composable
+private fun CardUrl(url: String) {
+    val uriHandler = LocalUriHandler.current
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { runCatching { uriHandler.openUri(url) } }
+                .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Text(
+            text = url.removePrefix("https://").removePrefix("http://"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -252,9 +320,7 @@ fun RenderSeederRequest(
     ) {
         KindCardField(stringRes(Res.string.llama_garden_infohash), event.infoHash(), monospace = true, maxLines = 1)
         event.torrentListingId()?.let { id ->
-            TextButton(onClick = { nav.nav(Route.Note(id)) }) {
-                Text(stringRes(Res.string.llama_garden_listing_link))
-            }
+            CardLink(Res.string.llama_garden_listing_link) { nav.nav(Route.Note(id)) }
         }
     }
 }
@@ -263,7 +329,6 @@ fun RenderSeederRequest(
 @Composable
 fun RenderModelRequest(baseNote: Note) {
     val event = baseNote.event as? ModelRequestEvent ?: return
-    val uriHandler = LocalUriHandler.current
     KindCard(
         icon = MaterialSymbols.AddCircle,
         title = event.name() ?: stringRes(Res.string.llama_garden_model_request),
@@ -271,15 +336,7 @@ fun RenderModelRequest(baseNote: Note) {
     ) {
         KindCardField(stringRes(Res.string.llama_garden_wants), requestTypeLabel(event.requestType()))
         event.vramGb()?.let { KindCardField(stringRes(Res.string.llama_garden_vram), stringRes(Res.string.llama_garden_vram_value, it)) }
-        val links = event.links()
-        if (links.isNotEmpty()) {
-            KindCardSection(stringRes(Res.string.llama_garden_links))
-            links.take(5).forEach { url ->
-                TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
-                    Text(url, maxLines = 1)
-                }
-            }
-        }
+        event.links().take(5).forEach { CardUrl(it) }
     }
 }
 
