@@ -10358,8 +10358,6 @@
     <string name="llama_garden_checking">Checking…</string>
     <string name="llama_garden_hugging_face">HuggingFace</string>
     <string name="llama_garden_request_seeders">Request seeders</string>
-    <string name="llama_garden_approve">Approve</string>
-    <string name="llama_garden_reject">Reject</string>
     <string name="llama_garden_torrent_mismatch_title">Unverified .torrent</string>
     <string name="llama_garden_torrent_mismatch">No mirror served a .torrent that matches the listing's signed hash. Opening the magnet link instead; your torrent app checks the files against the infohash.</string>
     <string name="llama_garden_no_link">This listing has neither a magnet link nor a reachable .torrent file.</string>
@@ -10410,8 +10408,4 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
-    <string name="llama_garden_approve_title">Approve this listing?</string>
-    <string name="llama_garden_approve_body">You publish a llama.garden approval of "%1$s". Viewers that trust you as a curator then list it in the catalog, whoever published it. The label is public.</string>
-    <string name="llama_garden_reject_title">Reject this listing?</string>
-    <string name="llama_garden_reject_body">You publish a llama.garden rejection of "%1$s". The label is public and stays on relays.</string>
 </resources>

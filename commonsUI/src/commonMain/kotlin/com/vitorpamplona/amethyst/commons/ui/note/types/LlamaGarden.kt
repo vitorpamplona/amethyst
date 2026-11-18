@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -62,9 +61,6 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.LocalEventKindPage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_all_models
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve_body
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_approve_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_base_model
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_bits_per_weight_value
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_checking
@@ -87,9 +83,6 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_matches_hf
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_mirrors
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_model_request
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_no_link
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject_body
-import com.vitorpamplona.amethyst.commons.resources.llama_garden_reject_title
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_release_subtitle
 import com.vitorpamplona.amethyst.commons.resources.llama_garden_request_seeders
@@ -105,12 +98,9 @@ import com.vitorpamplona.amethyst.commons.resources.llama_garden_wants
 import com.vitorpamplona.amethyst.commons.resources.torrent_failure
 import com.vitorpamplona.amethyst.commons.resources.torrent_no_apps
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.llamagarden.curation.LlamaGardenCuration.Verdict
 import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
 import com.vitorpamplona.quartz.llamagarden.modelRequest.tags.RequestTypeTag
 import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
@@ -127,7 +117,7 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * A llama.garden model torrent (kind 30099): the model, its format and size, and what llama.garden's
  * viewer offers: download (the magnet, with the `.torrent` mirror as exact source only once its bytes
- * hash to the signed `x`), the HuggingFace page, a seeder request, and approve/reject for curators.
+ * hash to the signed `x`), the HuggingFace page and a seeder request.
  */
 @Composable
 fun RenderModelTorrent(
@@ -207,9 +197,6 @@ private fun ModelTorrentActions(
 ) {
     val uriHandler = LocalUriHandler.current
     var checking by remember { mutableStateOf(false) }
-    // A curator's verdict is a public label every viewer acts on: asked for, not published on a tap.
-    var confirming by remember { mutableStateOf<Verdict?>(null) }
-    val isCurator = LlamaGardenDefaults.isCurator(accountViewModel.account.signer.pubKey)
     val canWrite = accountViewModel.account.signer.isWriteable()
 
     FlowRow(
@@ -254,23 +241,6 @@ private fun ModelTorrentActions(
                 accountViewModel.launchSigner { LlamaGardenActions.requestSeeders(accountViewModel.account, baseNote) }
             }
         }
-
-        if (canWrite && isCurator) {
-            CardAction(MaterialSymbols.Check, Res.string.llama_garden_approve) { confirming = Verdict.APPROVE }
-            CardAction(MaterialSymbols.Block, Res.string.llama_garden_reject, tint = MaterialTheme.colorScheme.error) { confirming = Verdict.REJECT }
-        }
-    }
-
-    confirming?.let { verdict ->
-        ConfirmVerdictDialog(verdict, view.title ?: "", onDismiss = { confirming = null }) {
-            confirming = null
-            accountViewModel.launchSigner {
-                when (verdict) {
-                    Verdict.APPROVE -> LlamaGardenActions.approve(accountViewModel.account, baseNote)
-                    Verdict.REJECT -> LlamaGardenActions.reject(accountViewModel.account, baseNote)
-                }
-            }
-        }
     }
 
     // The kind's page lists more listings and holds "Request a model" and "Add a torrent"; on that
@@ -278,31 +248,6 @@ private fun ModelTorrentActions(
     if (LocalEventKindPage.current != ModelTorrentEvent.KIND) {
         CardLink(Res.string.llama_garden_all_models) { nav.nav(Route.EventKind(ModelTorrentEvent.KIND)) }
     }
-}
-
-/** Asks before a curator publishes [verdict] on the listing titled [title]. */
-@Composable
-private fun ConfirmVerdictDialog(
-    verdict: Verdict,
-    title: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val approve = verdict == Verdict.APPROVE
-    QuickActionAlertDialogOneButton(
-        title = stringRes(if (approve) Res.string.llama_garden_approve_title else Res.string.llama_garden_reject_title),
-        textContent = stringRes(if (approve) Res.string.llama_garden_approve_body else Res.string.llama_garden_reject_body, title),
-        buttonIcon = if (approve) MaterialSymbols.Check else MaterialSymbols.Block,
-        buttonText = stringRes(if (approve) Res.string.llama_garden_approve else Res.string.llama_garden_reject),
-        buttonColors =
-            if (approve) {
-                ButtonDefaults.buttonColors()
-            } else {
-                ButtonDefaults.buttonColors(containerColor = LightRedColor, contentColor = Color.White)
-            },
-        onClickDoOnce = onConfirm,
-        onDismiss = onDismiss,
-    )
 }
 
 /**
@@ -340,12 +285,10 @@ private const val DOWNLOAD_CHECK_TIMEOUT_MS = 30_000L
 private fun CardAction(
     icon: MaterialSymbol,
     label: StringResource,
-    tint: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit,
 ) {
     TextButton(
         onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(contentColor = tint),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
