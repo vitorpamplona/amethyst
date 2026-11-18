@@ -1062,7 +1062,12 @@
     <string name="napplet_decision_deny">Odmítnout</string>
     <string name="nip46_signer_explainer">Umožněte jiným aplikacím podepisovat vaším klíčem. Amethyst naslouchá na vašich inbox relayích a před podepsáním kontroluje oprávnění každé aplikace — pomocí stejných úrovní důvěry jako Připojené aplikace.</string>
     <string name="nip46_signer_status_no_relays">Nejsou nakonfigurovány žádné inbox relaye. Přidejte inbox relaye, aby aplikace mohly dosáhnout na vašeho podepisovatele.</string>
-    <string name="nip46_signer_relays_some_down">Připojeno %1$d z %2$d relayů</string>
+    <plurals name="nip46_signer_relays_some_down">
+        <item quantity="one">Připojeno %1$d z %2$d relaye</item>
+        <item quantity="few">Připojeno %1$d z %2$d relayů</item>
+        <item quantity="many">Připojeno %1$d z %2$d relaye</item>
+        <item quantity="other">Připojeno %1$d z %2$d relayů</item>
+    </plurals>
     <string name="nip46_signer_copy">Kopírovat</string>
     <string name="nip46_signer_regenerate">Nová adresa</string>
     <string name="nip46_signer_rotate_confirm_title">Vygenerovat novou adresu?</string>
@@ -1226,7 +1231,12 @@
     <string name="nest_lobby_host_label">Hostitel</string>
     <string name="nest_lobby_open_action">Otevřít</string>
     <string name="nest_lobby_no_listeners">V místnosti právě nikdo není.</string>
-    <string name="nest_lobby_listeners_count">%1$d poslouchá</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d poslouchá</item>
+        <item quantity="few">%1$d poslouchají</item>
+        <item quantity="many">%1$d poslouchá</item>
+        <item quantity="other">%1$d poslouchá</item>
+    </plurals>
     <string name="nest_role_host">Hostitel</string>
     <string name="nest_role_moderator">Moderátor</string>
     <string name="nest_state_muted">Mikrofon ztlumen</string>
@@ -1404,7 +1414,12 @@
     <string name="hashtag_label_added_by">přidal(a)</string>
     <string name="pinned_notes">Připnuté poznámky</string>
     <string name="pinned_notes_explainer">Vaše připnuté poznámky</string>
-    <string name="deleted_items_banner_title">%1$d položek v tomto seznamu bylo smazáno autorem.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d položka v tomto seznamu byla smazána autorem.</item>
+        <item quantity="few">%1$d položky v tomto seznamu byly smazány autorem.</item>
+        <item quantity="many">%1$d položky v tomto seznamu bylo smazáno autorem.</item>
+        <item quantity="other">%1$d položek v tomto seznamu bylo smazáno autorem.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Odebrat ze seznamu</string>
     <string name="deleted_items_banner_dismiss">Zavřít</string>
     <string name="bookmark_lists">Seznamy záložek</string>
@@ -1420,7 +1435,12 @@
     <string name="interest_set_name_placeholder">Moje zájmy</string>
     <string name="interest_set_hashtag_add_placeholder">Přidat hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Soukromé</string>
-    <string name="interest_set_hashtag_count">%1$d hashtagů</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="few">%1$d hashtagy</item>
+        <item quantity="many">%1$d hashtagu</item>
+        <item quantity="other">%1$d hashtagů</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Akce sady zájmů</string>
     <string name="interest_set_clone">Klonovat</string>
     <string name="interest_set_add_hashtag">Přidat hashtag</string>
@@ -1707,8 +1727,18 @@
     <string name="relay_req_subscriptions">REQ odběry (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT odběry (%1$d)</string>
     <string name="relay_outbox_events">Události k odeslání (%1$d)</string>
-    <string name="relay_filter_authors">%1$d autorů</string>
-    <string name="relay_filter_ids">%1$d ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d autor</item>
+        <item quantity="few">%1$d autoři</item>
+        <item quantity="many">%1$d autora</item>
+        <item quantity="other">%1$d autorů</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ID</item>
+        <item quantity="few">%1$d ID</item>
+        <item quantity="many">%1$d ID</item>
+        <item quantity="other">%1$d ID</item>
+    </plurals>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
     <string name="relay_filter_limit">limit %1$d</string>
@@ -1793,7 +1823,12 @@
     <string name="url_preview_open_in_browser">Otevřít v prohlížeči</string>
     <string name="long_form_reading_minutes">%1$d min čtení</string>
     <string name="long_form_published">Publikováno</string>
-    <string name="search_waiting_on_relays">Čekám na %1$d z %2$d relé</string>
+    <plurals name="search_waiting_on_relays">
+        <item quantity="one">Čekám na %1$d z %2$d relé</item>
+        <item quantity="few">Čekám na %1$d z %2$d relé</item>
+        <item quantity="many">Čekám na %1$d z %2$d relé</item>
+        <item quantity="other">Čekám na %1$d z %2$d relé</item>
+    </plurals>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d sekce</item>
         <item quantity="few">%1$d sekce</item>
@@ -2790,7 +2825,12 @@
     <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
     <string name="follow_list_item_label">Balíček Sledování</string>
     <string name="members">Členové</string>
-    <string name="contact_list_containing_label">Seznam sledování (%1$d):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Seznam sledování obsahující %1$d uživatele:</item>
+        <item quantity="few">Seznam sledování obsahující %1$d uživatele:</item>
+        <item quantity="many">Seznam sledování obsahující %1$d uživatele:</item>
+        <item quantity="other">Seznam sledování obsahující %1$d uživatelů:</item>
+    </plurals>
     <string name="contact_list_screen_title">Seznam sledování</string>
     <string name="contact_list_screen_title_with_count">Seznam sledování (%1$d)</string>
     <string name="relay_list_screen_title">Relaye</string>
@@ -2824,8 +2864,18 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Odesílání</string>
     <string name="broadcasting_name">Odesílání %1$s</string>
-    <string name="broadcasting_number_events">Odesílání %1$d událostí…</string>
-    <string name="sent_number_events">Odesláno %1$d událostí</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Odesílání %1$d události…</item>
+        <item quantity="few">Odesílání %1$d událostí…</item>
+        <item quantity="many">Odesílání %1$d události…</item>
+        <item quantity="other">Odesílání %1$d událostí…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">Odeslána %1$d událost</item>
+        <item quantity="few">Odeslány %1$d události</item>
+        <item quantity="many">Odesláno %1$d události</item>
+        <item quantity="other">Odesláno %1$d událostí</item>
+    </plurals>
     <string name="bradcasting_result_partial">Některé události selhaly</string>
     <string name="bradcasting_result_success">Všechny události byly úspěšné</string>
     <string name="bradcasting_result_failure">Všechny události selhaly</string>
@@ -2849,7 +2899,12 @@
     <string name="new_chess_game">Nová šachová hra</string>
     <string name="chess_loading_game">Načítání hry…</string>
     <string name="chess_game_not_found">Hra nenalezena</string>
-    <string name="badge_and_n_others"> a %1$d dalších</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> a %1$d další</item>
+        <item quantity="few"> a %1$d další</item>
+        <item quantity="many"> a %1$d další</item>
+        <item quantity="other"> a %1$d dalších</item>
+    </plurals>
     <string name="remove_language">Odebrat %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Začněte se skvělým feedem tím, že budete sledovat stejné lidi jako někdo, komu důvěřujete.</string>
     <string name="import_follow_list">Importovat seznam sledovaných</string>
@@ -2858,9 +2913,24 @@
     <string name="name_search_npub1_alice_example_com">hledání jména, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Podporuje npub, NIP-05, hex a Namecoin (.bit / d/ / id/)</string>
     <string name="tip">Tip</string>
-    <string name="accounts_found">Nalezeno účtů: %1$d</string>
-    <string name="num_selected">Vybráno: %1$d</string>
-    <string name="follow_accounts">Sledovat %1$d účtů</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Nalezen %1$d účet</item>
+        <item quantity="few">Nalezeny %1$d účty</item>
+        <item quantity="many">Nalezeno %1$d účtu</item>
+        <item quantity="other">Nalezeno %1$d účtů</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">Vybráno: %1$d</item>
+        <item quantity="few">Vybráno: %1$d</item>
+        <item quantity="many">Vybráno: %1$d</item>
+        <item quantity="other">Vybráno: %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Sledovat %1$d účet</item>
+        <item quantity="few">Sledovat %1$d účty</item>
+        <item quantity="many">Sledovat %1$d účtu</item>
+        <item quantity="other">Sledovat %1$d účtů</item>
+    </plurals>
     <string name="skip_for_now">Prozatím přeskočit</string>
     <string name="fetching_follow_list">Načítám seznam sledovaných…</string>
     <string name="no_follows_found">Žádní sledovaní nenalezeni</string>
@@ -2892,16 +2962,41 @@
     <string name="event_sync_relays_progress">Relé: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Přerozděleno událostí: %1$d nových z %2$d odeslaných a %3$d přijatých</string>
     <string name="event_sync_done_title">Synchronizace dokončena</string>
-    <string name="event_sync_done_sent">Předáno %1$d událostí na cílová relé z %2$d přijatých.</string>
-    <string name="event_sync_done_accepted">%1$d událostí přijato jako nové cílovými relé.</string>
-    <string name="event_sync_done_duration">Dokončeno za %1$d sekund.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Předána %1$d událost na cílová relé z %2$d přijatých.</item>
+        <item quantity="few">Předány %1$d události na cílová relé z %2$d přijatých.</item>
+        <item quantity="many">Předáno %1$d události na cílová relé z %2$d přijatých.</item>
+        <item quantity="other">Předáno %1$d událostí na cílová relé z %2$d přijatých.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d událost přijata jako nová cílovými relé.</item>
+        <item quantity="few">%1$d události přijaty jako nové cílovými relé.</item>
+        <item quantity="many">%1$d události přijato jako nové cílovými relé.</item>
+        <item quantity="other">%1$d událostí přijato jako nové cílovými relé.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Dokončeno za %1$d sekundu.</item>
+        <item quantity="few">Dokončeno za %1$d sekundy.</item>
+        <item quantity="many">Dokončeno za %1$d sekundy.</item>
+        <item quantity="other">Dokončeno za %1$d sekund.</item>
+    </plurals>
     <string name="event_sync_error_title">Chyba synchronizace</string>
     <string name="event_sync_sending_to">Odesílání na</string>
     <string name="event_sync_outbox_relays">Odchozí</string>
     <string name="event_sync_inbox_relays">Příchozí</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_activity_log">Právě se kontroluje (%1$d relé)</string>
-    <string name="event_sync_activity_log_finished">Dokončeno (%1$d relé)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Právě se kontroluje (%1$d relé)</item>
+        <item quantity="few">Právě se kontroluje (%1$d relé)</item>
+        <item quantity="many">Právě se kontroluje (%1$d relé)</item>
+        <item quantity="other">Právě se kontroluje (%1$d relé)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Dokončeno (%1$d relé)</item>
+        <item quantity="few">Dokončeno (%1$d relé)</item>
+        <item quantity="many">Dokončeno (%1$d relé)</item>
+        <item quantity="other">Dokončeno (%1$d relé)</item>
+    </plurals>
     <string name="event_sync_log_sent">odesláno %1$s</string>
     <string name="event_sync_log_recv">přijato %1$s</string>
     <string name="event_sync_log_new">nových %1$s</string>
@@ -3090,7 +3185,12 @@
     <string name="manage">Spravovat</string>
     <string name="relay_members">Členové</string>
     <string name="relay_members_title">Členové %1$s</string>
-    <string name="relay_members_count">%1$d členů</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d člen</item>
+        <item quantity="few">%1$d členové</item>
+        <item quantity="many">%1$d člena</item>
+        <item quantity="other">%1$d členů</item>
+    </plurals>
     <string name="relay_members_loading">Načítání členů…</string>
     <string name="relay_members_empty">Žádní členové nenalezeni</string>
     <string name="relay_members_request_join">Požádat o připojení</string>
@@ -3103,9 +3203,19 @@
     <string name="relay_members_unverifiable">Tento relay nezveřejňuje svůj identifikační klíč (NIP-11 self), takže jeho seznam členů nelze ověřit</string>
     <string name="relay_membership_list">Seznam členů relé</string>
     <string name="relay_member_added">Člen přidán do relé</string>
-    <string name="relay_members_added">%1$d členů přidáno do relé</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d člen přidán do relé</item>
+        <item quantity="few">%1$d členové přidáni do relé</item>
+        <item quantity="many">%1$d člena přidáno do relé</item>
+        <item quantity="other">%1$d členů přidáno do relé</item>
+    </plurals>
     <string name="relay_member_removed">Člen odebrán z relé</string>
-    <string name="relay_members_removed">%1$d členů odebráno z relé</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d člen odebrán z relé</item>
+        <item quantity="few">%1$d členové odebráni z relé</item>
+        <item quantity="many">%1$d člena odebráno z relé</item>
+        <item quantity="other">%1$d členů odebráno z relé</item>
+    </plurals>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
     <string name="compose_signature_setting_title">Podpis</string>
@@ -3148,7 +3258,12 @@
     <string name="emoji_pack_upload_image_cta">Nahrát obrázek obalu</string>
     <string name="emoji_pack_upload_image_hint">Vyberte čtvercový obrázek pro reprezentaci tohoto emoji balíčku.</string>
     <string name="no_emoji_packs">Zatím nemáte žádné emoji balíčky</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="few">%1$d emoji</item>
+        <item quantity="many">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Můj seznam emoji</string>
     <string name="my_emoji_list_explainer">Emoji balíčky, které jste přidali do svého výběru (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Do svého seznamu jste zatím nepřidali žádné emoji balíčky</string>
@@ -3197,7 +3312,12 @@
     <string name="emoji_import_unreadable">Nelze otevřít</string>
     <string name="emoji_import_truncated">Importováno jen částečně</string>
     <string name="emoji_import_truncated_hint">Z archivu se načte nejvýše %1$d obrázků nebo %2$d MB.</string>
-    <string name="emoji_import_more">+%1$d dalších</string>
+    <plurals name="emoji_import_more">
+        <item quantity="one">+%1$d další</item>
+        <item quantity="few">+%1$d další</item>
+        <item quantity="many">+%1$d další</item>
+        <item quantity="other">+%1$d dalších</item>
+    </plurals>
     <string name="emoji_import_cta">Importovat obrázky nebo .zip</string>
     <string name="emoji_pack_empty_title">Tento balíček je prázdný</string>
     <string name="emoji_pack_empty_body">Přidávejte emoji po jednom, nebo najednou přidejte celou sadu obrázků či .zip.</string>
@@ -3888,7 +4008,12 @@
     <string name="communities">Komunity</string>
     <string name="community_rules_violation_kind_size_exceeded">Návrh má %1$d bajtů; tato komunita pro tento typ omezuje velikost na %2$d bajtů.</string>
     <string name="community_rules_violation_max_size_exceeded">Návrh má %1$d bajtů; tato komunita omezuje velikost událostí na %2$d bajtů.</string>
-    <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Dnes jste již zveřejnil %1$d událost tohoto typu (limit %2$d).</item>
+        <item quantity="few">Dnes jste již zveřejnil %1$d události tohoto typu (limit %2$d).</item>
+        <item quantity="many">Dnes jste již zveřejnil %1$d události tohoto typu (limit %2$d).</item>
+        <item quantity="other">Dnes jste již zveřejnil %1$d událostí tohoto typu (limit %2$d).</item>
+    </plurals>
     <string name="compose_settings">Nastavení editoru</string>
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d kanál</item>
@@ -6821,7 +6946,12 @@
     <string name="cordn_coordinators_purge_body">Odebráním zůstanou skupiny na tomto zařízení, takže po opětovném přidání koordinátora se vrátí s ním. Vymazáním se smažou: klíče skupin, pozice čtení i vaše balíčky klíčů zmizí a do těchto skupin se lze vrátit jen s novou pozvánkou.\n\nKoordinátor se o tom nedozví a ponechá si vše, co už měl.</string>
     <string name="cordn_coordinators_purge_title">Vymazat tohoto koordinátora?</string>
     <string name="cordn_coordinators_relays_label">Odpovídá na</string>
-    <string name="cordn_coordinators_relays_more">%1$s +%2$d další</string>
+    <plurals name="cordn_coordinators_relays_more">
+        <item quantity="one">%1$s +%2$d další</item>
+        <item quantity="few">%1$s +%2$d další</item>
+        <item quantity="many">%1$s +%2$d další</item>
+        <item quantity="other">%1$s +%2$d dalších</item>
+    </plurals>
     <string name="cordn_coordinators_remove">Odebrat</string>
     <string name="cordn_coordinators_rename">Přejmenovat</string>
     <string name="cordn_coordinators_server">Tvrdí, že je: %1$s</string>
@@ -6961,7 +7091,12 @@
         <item quantity="many">%1$d osoby už je v této skupině</item>
         <item quantity="other">%1$d osob už je v této skupině</item>
     </plurals>
-    <string name="cordn_invitations_members_more">+%1$d další</string>
+    <plurals name="cordn_invitations_members_more">
+        <item quantity="one">+%1$d další</item>
+        <item quantity="few">+%1$d další</item>
+        <item quantity="many">+%1$d další</item>
+        <item quantity="other">+%1$d dalších</item>
+    </plurals>
     <string name="cordn_invitations_no_coordinators">Nemáte otevřeného žádného koordinátora. Pozvánky cordn přicházejí přes koordinátora, takže zatím není kde hledat.</string>
     <string name="cordn_invitations_none">Žádné čekající pozvánky.</string>
     <string name="cordn_invitations_refresh">Zkontrolovat znovu</string>
@@ -7514,7 +7649,12 @@
         <item quantity="many">%1$d člena</item>
         <item quantity="other">%1$d členů</item>
     </plurals>
-    <string name="trusted_list_truncated">Zobrazeno %1$d z %2$d členů</string>
+    <plurals name="trusted_list_truncated">
+        <item quantity="one">Zobrazeno %1$d z %2$d člena</item>
+        <item quantity="few">Zobrazeno %1$d z %2$d členů</item>
+        <item quantity="many">Zobrazeno %1$d z %2$d člena</item>
+        <item quantity="other">Zobrazeno %1$d z %2$d členů</item>
+    </plurals>
     <string name="trusted_list_retracted">Odvoláno</string>
     <string name="trusted_list_built_from_tag">Sestaveno z tagu</string>
     <string name="trusted_list_tag_by">od</string>
@@ -8546,7 +8686,12 @@
     <string name="devtools_kind_no_client">Bez tagu client</string>
     <string name="devtools_kind_shape_n">Tvar %1$d</string>
     <string name="devtools_kind_from_clients">Od: %1$s</string>
-    <string name="devtools_kind_more">+%1$d dalších</string>
+    <plurals name="devtools_kind_more">
+        <item quantity="one">+%1$d další</item>
+        <item quantity="few">+%1$d další</item>
+        <item quantity="many">+%1$d další</item>
+        <item quantity="other">+%1$d dalších</item>
+    </plurals>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d událost</item>
         <item quantity="few">%1$d události</item>
@@ -8586,7 +8731,12 @@
     <string name="devtools_status_timeout">Časový limit vypršel</string>
     <string name="devtools_status_tor">Čeká na Tor</string>
     <string name="devtools_console_your_relays">Vaše relaye</string>
-    <string name="devtools_console_open_subs">Otevřeno: %1$d</string>
+    <plurals name="devtools_console_open_subs">
+        <item quantity="one">Otevřeno: %1$d</item>
+        <item quantity="few">Otevřeno: %1$d</item>
+        <item quantity="many">Otevřeno: %1$d</item>
+        <item quantity="other">Otevřeno: %1$d</item>
+    </plurals>
     <string name="devtools_console_close_sub">Zavřít %1$s</string>
     <string name="devtools_console_build">Sestavit rámec</string>
     <string name="devtools_console_composer">Surový rámec, nebo + pro sestavení</string>
@@ -10715,4 +10865,45 @@
         <item quantity="many">Zrcadla uklizena a odstraněno %1$d nepoužitých, uvolněno %2$s</item>
         <item quantity="other">Zrcadla uklizena a odstraněno %1$d nepoužitých, uvolněno %2$s</item>
     </plurals>
+    <string name="composer_pop_out">Otevřít v samostatném okně</string>
+    <string name="media_studio_add">Přidat</string>
+    <string name="media_studio_position">%1$d z %2$d</string>
+    <string name="media_studio_hold_original">Podržením zobrazíte originál</string>
+    <string name="media_studio_tool_quality">Kvalita</string>
+    <string name="media_studio_tool_alt">Alternativní text</string>
+    <string name="media_studio_tool_privacy">Soukromí</string>
+    <string name="media_studio_alt_placeholder">Popište to pro lidi, kteří to nevidí</string>
+    <string name="media_studio_sensitive">Citlivé</string>
+    <string name="media_studio_sensitive_description">Rozmazáno do klepnutí</string>
+    <string name="media_studio_remove_location">Odstranit polohu</string>
+    <string name="media_studio_remove_location_description">A údaje o fotoaparátu</string>
+    <string name="media_studio_remove_location_audio_description">A název, interpreta a další štítky</string>
+    <string name="media_studio_long_edge">%1$d px</string>
+    <string name="media_studio_no_options">Nahraje se beze změn</string>
+    <string name="media_studio_done">Hotovo</string>
+    <string name="media_marker_photo">Fotka %1$d</string>
+    <string name="media_marker_video">Video %1$d</string>
+    <string name="media_marker_audio">Zvuk %1$d</string>
+    <string name="media_marker_file">Soubor %1$d</string>
+    <string name="media_marker_missing">Chybějící soubor</string>
+    <string name="media_alt_badge">ALT</string>
+    <string name="media_cw_badge">CW</string>
+    <string name="media_post_upload_failed">%1$s: nahrání se nezdařilo</string>
+    <string name="media_studio_caption_placeholder">Napište popisek…</string>
+    <string name="media_studio_retry">Nic nebylo odesláno. Klepnutím na %1$s to zkusíte znovu.</string>
+    <string name="media_post_nothing_posted">Nic nebylo zveřejněno. Klepnutím na Publikovat to zkusíte znovu.</string>
+    <string name="media_studio_alt_suggested">Navrženo v tomto zařízení. Před zveřejněním to zkontrolujte.</string>
+    <string name="media_studio_h265">Menší soubor (H.265)</string>
+    <string name="media_studio_h265_description">Některé starší aplikace ho nepřehrají</string>
+    <string name="media_studio_gif_description">Obvykle mnohem menší</string>
+    <string name="media_studio_encrypt_description">Otevřít je půjde jen v tomto chatu</string>
+    <string name="media_crop_hint">Přetáhněte rohy nebo posuňte rámeček</string>
+    <string name="media_crop_reset">Obnovit</string>
+    <string name="media_studio_tool_crop">Oříznout</string>
+    <string name="media_crop_free">Volně</string>
+    <string name="media_crop_upload_failed">Obrázek se nepodařilo oříznout</string>
+    <string name="media_studio_tool_trim">Zkrátit</string>
+    <string name="media_trim_hint">Přetažením konců vyberte část, kterou chcete ponechat</string>
+    <string name="media_trim_upload_failed">Video se nepodařilo zkrátit</string>
+    <string name="media_crop_failed">Tento obrázek zde nelze oříznout. Tlačítko Uložit ho použije beze změn.</string>
 </resources>

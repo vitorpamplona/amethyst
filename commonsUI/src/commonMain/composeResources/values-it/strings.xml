@@ -462,7 +462,10 @@
     <string name="nest_join">Entra nel nest</string>
     <string name="nest_lobby_open_action">Apri</string>
     <string name="nest_lobby_no_listeners">Non c'è nessuno nella stanza adesso.</string>
-    <string name="nest_lobby_listeners_count">%1$d in ascolto</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d in ascolto</item>
+        <item quantity="other">%1$d in ascolto</item>
+    </plurals>
     <string name="nest_role_moderator">Moderatore</string>
     <string name="nest_state_muted">Microfono silenziato</string>
     <string name="nest_state_speaking">Sta parlando</string>
@@ -566,7 +569,10 @@
     <string name="hashtag_label_added_by">aggiunto da</string>
     <string name="pinned_notes">Note fissate</string>
     <string name="pinned_notes_explainer">Le tue note fissate</string>
-    <string name="deleted_items_banner_title">%1$d elemento/i in questa lista sono stati eliminati dai loro autori.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d elemento in questa lista è stato eliminato dal suo autore.</item>
+        <item quantity="other">%1$d elementi in questa lista sono stati eliminati dai loro autori.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Rimuovi dalla lista</string>
     <string name="deleted_items_banner_dismiss">Ignora</string>
     <string name="bookmark_lists">Liste segnalibro</string>
@@ -582,7 +588,10 @@
     <string name="interest_set_name_placeholder">I miei interessi</string>
     <string name="interest_set_hashtag_add_placeholder">Aggiungi hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Privato</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Azioni del set di interessi</string>
     <string name="interest_set_clone">Clona</string>
     <string name="interest_set_add_hashtag">Aggiungi hashtag</string>
@@ -783,8 +792,14 @@
     <string name="relay_req_subscriptions">Sottoscrizioni REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Sottoscrizioni COUNT (%1$d)</string>
     <string name="relay_outbox_events">Eventi outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d autori</string>
-    <string name="relay_filter_ids">%1$d id</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d autore</item>
+        <item quantity="other">%1$d autori</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d id</item>
+        <item quantity="other">%1$d id</item>
+    </plurals>
     <string name="relay_filter_since">dal %1$s</string>
     <string name="relay_filter_until">fino a %1$s</string>
     <string name="relay_filter_limit">limite %1$d</string>
@@ -1363,7 +1378,10 @@
     <string name="add_user_to_the_list">Aggiungi utente alla lista</string>
     <string name="remove_user_from_the_list">Rimuovi utente dalla lista</string>
     <string name="members">Membri</string>
-    <string name="contact_list_containing_label">Lista dei seguiti contenente %1$d utente/i:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Lista dei seguiti contenente %1$d utente:</item>
+        <item quantity="other">Lista dei seguiti contenente %1$d utenti:</item>
+    </plurals>
     <string name="contact_list_screen_title">Lista dei seguiti</string>
     <string name="contact_list_screen_title_with_count">Lista dei seguiti (%1$d)</string>
     <string name="follow_pack_creation_name_label">Nome del pack</string>
@@ -1385,8 +1403,14 @@
     <string name="dismiss">Ignora</string>
     <string name="broadcasting">Trasmissione in corso</string>
     <string name="broadcasting_name">Trasmissione di %1$s in corso</string>
-    <string name="broadcasting_number_events">Trasmissione di %1$d eventi in corso…</string>
-    <string name="sent_number_events">%1$d eventi inviati</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Trasmissione di %1$d evento in corso…</item>
+        <item quantity="other">Trasmissione di %1$d eventi in corso…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d evento inviato</item>
+        <item quantity="other">%1$d eventi inviati</item>
+    </plurals>
     <string name="bradcasting_result_partial">Alcuni eventi non sono riusciti</string>
     <string name="bradcasting_result_success">Tutti gli eventi riusciti</string>
     <string name="bradcasting_result_failure">Tutti gli eventi non riusciti</string>
@@ -1401,7 +1425,10 @@
     <string name="new_chess_game">Nuova partita a scacchi</string>
     <string name="chess_loading_game">Caricamento partita…</string>
     <string name="chess_game_not_found">Partita non trovata</string>
-    <string name="badge_and_n_others"> e altri %1$d</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> e %1$d altro</item>
+        <item quantity="other"> e altri %1$d</item>
+    </plurals>
     <string name="remove_language">Rimuovi %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Inizia con un ottimo feed seguendo le stesse persone di qualcuno di cui ti fidi.</string>
     <string name="import_follow_list">Importa lista di follow</string>
@@ -1410,9 +1437,18 @@
     <string name="name_search_npub1_alice_example_com">cerca, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supporta npub, nprofile, NIP-05, hex e Namecoin (.bit)</string>
     <string name="tip">Suggerimento</string>
-    <string name="accounts_found">%1$d account trovati</string>
-    <string name="num_selected">%1$d selezionati</string>
-    <string name="follow_accounts">Segui %1$d account</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d account trovato</item>
+        <item quantity="other">%1$d account trovati</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d selezionato</item>
+        <item quantity="other">%1$d selezionati</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Segui %1$d account</item>
+        <item quantity="other">Segui %1$d account</item>
+    </plurals>
     <string name="skip_for_now">Salta per ora</string>
     <string name="fetching_follow_list">Recupero lista di follow…</string>
     <string name="no_follows_found">Nessun follow trovato</string>
@@ -1444,14 +1480,29 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Eventi ridistribuiti: %1$d nuovi su %2$d inviati e %3$d ricevuti</string>
     <string name="event_sync_done_title">Sincronizzazione completata</string>
-    <string name="event_sync_done_sent">Inoltrati %1$d eventi ai relay di destinazione su %2$d ricevuti.</string>
-    <string name="event_sync_done_accepted">%1$d eventi accettati come nuovi dai relay di destinazione.</string>
-    <string name="event_sync_done_duration">Completato in %1$d secondi.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Inoltrato %1$d evento ai relay di destinazione su %2$d ricevuti.</item>
+        <item quantity="other">Inoltrati %1$d eventi ai relay di destinazione su %2$d ricevuti.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d evento accettato come nuovo dai relay di destinazione.</item>
+        <item quantity="other">%1$d eventi accettati come nuovi dai relay di destinazione.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Completato in %1$d secondo.</item>
+        <item quantity="other">Completato in %1$d secondi.</item>
+    </plurals>
     <string name="event_sync_error_title">Errore di sync</string>
     <string name="event_sync_sending_to">Invio a</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_activity_log">Verifica in corso (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Terminato (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Verifica in corso (%1$d relay)</item>
+        <item quantity="other">Verifica in corso (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Terminato (%1$d relay)</item>
+        <item quantity="other">Terminato (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">inviato %1$s</string>
     <string name="event_sync_log_recv">ricevuto %1$s</string>
     <string name="event_sync_log_new">nuovo %1$s</string>
@@ -1609,7 +1660,10 @@
     <string name="manage">Gestisci</string>
     <string name="relay_members">Membri</string>
     <string name="relay_members_title">Membri di %1$s</string>
-    <string name="relay_members_count">%1$d membri</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d membro</item>
+        <item quantity="other">%1$d membri</item>
+    </plurals>
     <string name="relay_members_loading">Caricamento membri…</string>
     <string name="relay_members_empty">Nessun membro trovato</string>
     <string name="relay_members_request_join">Richiesta di Iscrizione</string>
@@ -1619,9 +1673,15 @@
     <string name="relay_members_you_are_member">Sei un membro</string>
     <string name="relay_membership_list">Lista di appartenenza al relay</string>
     <string name="relay_member_added">Membro aggiunto al relay</string>
-    <string name="relay_members_added">%1$d membri aggiunti al relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d membro aggiunto al relay</item>
+        <item quantity="other">%1$d membri aggiunti al relay</item>
+    </plurals>
     <string name="relay_member_removed">Membro rimosso dal relay</string>
-    <string name="relay_members_removed">%1$d membri rimossi dal relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d membro rimosso dal relay</item>
+        <item quantity="other">%1$d membri rimossi dal relay</item>
+    </plurals>
     <string name="relay_join_request">Richiesta di iscrizione al relay</string>
     <string name="relay_leave_request">Richiesta di uscita dal relay</string>
     <string name="ai_writing_use_this">Usa Questo</string>
@@ -1646,7 +1706,10 @@
     <string name="emoji_pack_upload_image_cta">Carica un'immagine di copertina</string>
     <string name="emoji_pack_upload_image_hint">Scegli un'immagine quadrata per rappresentare questo pacchetto emoji.</string>
     <string name="no_emoji_packs">Non hai ancora nessun pacchetto emoji</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">La mia lista emoji</string>
     <string name="my_emoji_list_explainer">Pacchetti emoji aggiunti alla tua selezione (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Non hai ancora aggiunto nessun pacchetto emoji alla tua lista</string>
@@ -1908,7 +1971,10 @@
     <string name="communities">Comunità</string>
     <string name="community_rules_violation_kind_size_exceeded">La bozza è di %1$d byte; questa community limita questo kind a %2$d byte.</string>
     <string name="community_rules_violation_max_size_exceeded">La bozza è di %1$d byte; questa community limita gli eventi a %2$d byte.</string>
-    <string name="community_rules_violation_quota_exceeded">Hai già pubblicato %1$d eventi di questo kind oggi (limite %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Hai già pubblicato %1$d evento di questo kind oggi (limite %2$d).</item>
+        <item quantity="other">Hai già pubblicato %1$d eventi di questo kind oggi (limite %2$d).</item>
+    </plurals>
     <string name="compose_settings">Impostazioni Composizione</string>
     <string name="connect_through_your_orbot_setup_short">La porta predefinita è 9050</string>
     <string name="connected_section">Relay connessi</string>

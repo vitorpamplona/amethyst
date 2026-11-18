@@ -137,7 +137,7 @@ private fun TrustedListSubtitle(
         Text(
             text =
                 if (truncatedTotal != null && truncatedTotal > memberCount) {
-                    stringRes(Res.string.trusted_list_truncated, memberCount, truncatedTotal)
+                    pluralStringRes(Res.plurals.trusted_list_truncated, truncatedTotal, memberCount, truncatedTotal)
                 } else {
                     pluralStringRes(Res.plurals.trusted_list_member_count, memberCount, memberCount)
                 },

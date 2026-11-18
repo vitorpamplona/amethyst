@@ -379,7 +379,7 @@ private fun AudienceReview(
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = stringRes(Res.string.num_selected, selected.size),
+            text = pluralStringRes(Res.plurals.num_selected, selected.size, selected.size),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
         )

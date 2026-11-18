@@ -467,7 +467,10 @@
     <string name="nest_lobby_host_label">Isäntä</string>
     <string name="nest_lobby_open_action">Avaa</string>
     <string name="nest_lobby_no_listeners">Huoneessa ei ole ketään juuri nyt.</string>
-    <string name="nest_lobby_listeners_count">%1$d kuuntelee</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d kuuntelee</item>
+        <item quantity="other">%1$d kuuntelee</item>
+    </plurals>
     <string name="nest_role_host">Isäntä</string>
     <string name="nest_role_moderator">Moderaattori</string>
     <string name="nest_state_muted">Mikrofoni mykistetty</string>
@@ -570,7 +573,10 @@
     <string name="hashtag_label_added_by">lisännyt</string>
     <string name="pinned_notes">Kiinnitetyt muistiinpanot</string>
     <string name="pinned_notes_explainer">Kiinnitetyt muistiinpanosi</string>
-    <string name="deleted_items_banner_title">%1$d kohde(tta) tässä listassa on poistettu tekijänsä toimesta.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d kohde tässä listassa on poistettu tekijänsä toimesta.</item>
+        <item quantity="other">%1$d kohdetta tässä listassa on poistettu tekijänsä toimesta.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Poista listalta</string>
     <string name="deleted_items_banner_dismiss">Hylkää</string>
     <string name="bookmark_lists">Kirjanmerkkilistat</string>
@@ -586,7 +592,10 @@
     <string name="interest_set_name_placeholder">Omat kiinnostukseni</string>
     <string name="interest_set_hashtag_add_placeholder">Lisää hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Yksityinen</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag(ia)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtagia</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Mielenkiintokokoelman toiminnot</string>
     <string name="interest_set_clone">Kloonaa</string>
     <string name="interest_set_add_hashtag">Lisää hashtag</string>
@@ -792,8 +801,14 @@
     <string name="relay_req_subscriptions">REQ-tilaukset (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-tilaukset (%1$d)</string>
     <string name="relay_outbox_events">Outbox-tapahtumat (%1$d)</string>
-    <string name="relay_filter_authors">%1$d tekijää</string>
-    <string name="relay_filter_ids">%1$d tunnistetta</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d tekijä</item>
+        <item quantity="other">%1$d tekijää</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d tunniste</item>
+        <item quantity="other">%1$d tunnistetta</item>
+    </plurals>
     <string name="relay_filter_since">alkaen %1$s</string>
     <string name="relay_filter_until">asti %1$s</string>
     <string name="relay_filter_limit">raja %1$d</string>
@@ -1383,7 +1398,10 @@
     <string name="remove_user_from_the_list">Poista käyttäjä listalta</string>
     <string name="follow_list_item_label">Seuraamispaketti</string>
     <string name="members">Jäsenet</string>
-    <string name="contact_list_containing_label">Seurauslista, joka sisältää %1$d käyttäjän:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Seurauslista, joka sisältää %1$d käyttäjän:</item>
+        <item quantity="other">Seurauslista, joka sisältää %1$d käyttäjää:</item>
+    </plurals>
     <string name="contact_list_screen_title">Seurauslista</string>
     <string name="contact_list_screen_title_with_count">Seurauslista (%1$d)</string>
     <string name="follow_pack_creation_name_label">Paketin nimi</string>
@@ -1406,8 +1424,14 @@
     <string name="dismiss">Sulje</string>
     <string name="broadcasting">Lähetetään</string>
     <string name="broadcasting_name">Lähetetään %1$s</string>
-    <string name="broadcasting_number_events">Lähetetään %1$d tapahtumaa…</string>
-    <string name="sent_number_events">%1$d tapahtumaa lähetetty</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Lähetetään %1$d tapahtuma…</item>
+        <item quantity="other">Lähetetään %1$d tapahtumaa…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d tapahtuma lähetetty</item>
+        <item quantity="other">%1$d tapahtumaa lähetetty</item>
+    </plurals>
     <string name="bradcasting_result_partial">Jotkin tapahtumat epäonnistuivat</string>
     <string name="bradcasting_result_success">Kaikki tapahtumat onnistuivat</string>
     <string name="bradcasting_result_failure">Kaikki tapahtumat epäonnistuivat</string>
@@ -1422,7 +1446,10 @@
     <string name="new_chess_game">Uusi shakkipeli</string>
     <string name="chess_loading_game">Ladataan peliä…</string>
     <string name="chess_game_not_found">Peliä ei löydy</string>
-    <string name="badge_and_n_others"> ja %1$d muuta</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> ja %1$d muu</item>
+        <item quantity="other"> ja %1$d muuta</item>
+    </plurals>
     <string name="remove_language">Poista %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Aloita loistavalla syötteellä seuraamalla samoja ihmisiä kuin joku, johon luotat.</string>
     <string name="import_follow_list">Tuo seurantalista</string>
@@ -1431,9 +1458,18 @@
     <string name="name_search_npub1_alice_example_com">haku, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Tukee npub-, nprofile-, NIP-05-, hex- ja Namecoin (.bit) -muotoja</string>
     <string name="tip">Vinkki</string>
-    <string name="accounts_found">%1$d tiliä löydetty</string>
-    <string name="num_selected">%1$d valittu</string>
-    <string name="follow_accounts">Seuraa %1$d tiliä</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d tili löydetty</item>
+        <item quantity="other">%1$d tiliä löydetty</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d valittu</item>
+        <item quantity="other">%1$d valittu</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Seuraa %1$d tiliä</item>
+        <item quantity="other">Seuraa %1$d tiliä</item>
+    </plurals>
     <string name="skip_for_now">Ohita toistaiseksi</string>
     <string name="fetching_follow_list">Haetaan seurauslistaa…</string>
     <string name="no_follows_found">Seurattavia ei löydy</string>
@@ -1465,14 +1501,29 @@
     <string name="event_sync_relays_progress">Relayt: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Uudelleen jaetut tapahtumat: %1$d uutta, %2$d lähetetystä ja %3$d vastaanotetusta</string>
     <string name="event_sync_done_title">Synkronointi valmis</string>
-    <string name="event_sync_done_sent">Välitetty %1$d tapahtumaa kohderelayhyn, %2$d vastaanotetusta.</string>
-    <string name="event_sync_done_accepted">%1$d tapahtumaa hyväksytty uusina kohderelayn toimesta.</string>
-    <string name="event_sync_done_duration">Valmistui %1$d sekunnissa.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Välitetty %1$d tapahtuma kohderelayhyn, %2$d vastaanotetusta.</item>
+        <item quantity="other">Välitetty %1$d tapahtumaa kohderelayhyn, %2$d vastaanotetusta.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d tapahtuma hyväksytty uutena kohderelayn toimesta.</item>
+        <item quantity="other">%1$d tapahtumaa hyväksytty uusina kohderelayn toimesta.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Valmistui %1$d sekunnissa.</item>
+        <item quantity="other">Valmistui %1$d sekunnissa.</item>
+    </plurals>
     <string name="event_sync_error_title">Synkronointivirhe</string>
     <string name="event_sync_sending_to">Lähetetään kohteeseen</string>
     <string name="event_sync_dm_relays">DM:t</string>
-    <string name="event_sync_activity_log">Tarkistetaan parhaillaan (%1$d relaytä)</string>
-    <string name="event_sync_activity_log_finished">Valmis (%1$d relaytä)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Tarkistetaan parhaillaan (%1$d relay)</item>
+        <item quantity="other">Tarkistetaan parhaillaan (%1$d relaytä)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Valmis (%1$d relay)</item>
+        <item quantity="other">Valmis (%1$d relaytä)</item>
+    </plurals>
     <string name="event_sync_log_sent">lähetetty %1$s</string>
     <string name="event_sync_log_recv">vastaanotettu %1$s</string>
     <string name="event_sync_log_new">uusi %1$s</string>
@@ -1631,7 +1682,10 @@
     <string name="manage">Hallinnoi</string>
     <string name="relay_members">Jäsenet</string>
     <string name="relay_members_title">Relayn %1$s jäsenet</string>
-    <string name="relay_members_count">%1$d jäsentä</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d jäsen</item>
+        <item quantity="other">%1$d jäsentä</item>
+    </plurals>
     <string name="relay_members_loading">Ladataan jäseniä…</string>
     <string name="relay_members_empty">Jäseniä ei löydy</string>
     <string name="relay_members_request_join">Pyydä liittymistä</string>
@@ -1641,9 +1695,15 @@
     <string name="relay_members_you_are_member">Olet jäsen</string>
     <string name="relay_membership_list">Relayn jäsenlista</string>
     <string name="relay_member_added">Jäsen lisätty relayhin</string>
-    <string name="relay_members_added">%1$d jäsentä lisätty relayhin</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d jäsen lisätty relayhin</item>
+        <item quantity="other">%1$d jäsentä lisätty relayhin</item>
+    </plurals>
     <string name="relay_member_removed">Jäsen poistettu relaylta</string>
-    <string name="relay_members_removed">%1$d jäsentä poistettu relaylta</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d jäsen poistettu relaylta</item>
+        <item quantity="other">%1$d jäsentä poistettu relaylta</item>
+    </plurals>
     <string name="relay_join_request">Relayn liittymispyyntö</string>
     <string name="relay_leave_request">Relayn poistumispyyntö</string>
     <string name="ai_writing_use_this">Käytä tätä</string>
@@ -1668,7 +1728,10 @@
     <string name="emoji_pack_upload_image_cta">Lataa kansikuva</string>
     <string name="emoji_pack_upload_image_hint">Valitse neliönmuotoinen kuva edustamaan tätä emoji-pakettia.</string>
     <string name="no_emoji_packs">Sinulla ei ole vielä yhtään emoji-pakettia</string>
-    <string name="emoji_pack_count">%1$d emojia</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojia</item>
+    </plurals>
     <string name="my_emoji_list_title">Oma emoji-lista</string>
     <string name="my_emoji_list_explainer">Emoji-paketit, jotka olet lisännyt valintaasi (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Et ole vielä lisännyt yhtään emoji-pakettia listaasi</string>
@@ -1934,7 +1997,10 @@
     <string name="communities">Yhteisöt</string>
     <string name="community_rules_violation_kind_size_exceeded">Luonnos on %1$d tavua; tämä yhteisö rajoittaa tämän tyypin %2$d tavuun.</string>
     <string name="community_rules_violation_max_size_exceeded">Luonnos on %1$d tavua; tämä yhteisö rajoittaa tapahtumat %2$d tavuun.</string>
-    <string name="community_rules_violation_quota_exceeded">Olet jo julkaissut %1$d tämän tyypin tapahtumaa tänään (raja %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Olet jo julkaissut %1$d tämän tyypin tapahtuman tänään (raja %2$d).</item>
+        <item quantity="other">Olet jo julkaissut %1$d tämän tyypin tapahtumaa tänään (raja %2$d).</item>
+    </plurals>
     <string name="compose_settings">Kirjoitusasetukset</string>
     <string name="connect_through_your_orbot_setup_short">Oletusportti on 9050</string>
     <string name="connected_section">Yhdistetyt relayit</string>

@@ -472,7 +472,10 @@
     <string name="nest_lobby_host_label">Mezbon</string>
     <string name="nest_lobby_open_action">Ochish</string>
     <string name="nest_lobby_no_listeners">Hozirda xonada hech kim yo'q.</string>
-    <string name="nest_lobby_listeners_count">%1$d kishi tinglayapti</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d kishi tinglayapti</item>
+        <item quantity="other">%1$d kishi tinglayapti</item>
+    </plurals>
     <string name="nest_role_host">Mezbon</string>
     <string name="nest_state_muted">Mikrofon o'chirilgan</string>
     <string name="nest_state_speaking">Hozir gapiryapti</string>
@@ -575,7 +578,10 @@
     <string name="hashtag_label_added_by">tomonidan qo'shildi</string>
     <string name="pinned_notes">Mahkamlangan Eslatmalar</string>
     <string name="pinned_notes_explainer">Sizning mahkamlangan eslatmalaringiz</string>
-    <string name="deleted_items_banner_title">Bu ro'yxatdagi %1$d ta element muallifi tomonidan o'chirilgan.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">Bu ro'yxatdagi %1$d ta element muallifi tomonidan o'chirilgan.</item>
+        <item quantity="other">Bu ro'yxatdagi %1$d ta element muallifi tomonidan o'chirilgan.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Ro'yxatdan olib tashlash</string>
     <string name="deleted_items_banner_dismiss">Yopish</string>
     <string name="bookmark_lists">Xatcho'p Ro'yxatlari</string>
@@ -591,7 +597,10 @@
     <string name="interest_set_name_placeholder">Mening qiziqishlarim</string>
     <string name="interest_set_hashtag_add_placeholder">Xeshteg qo'shish</string>
     <string name="interest_set_hashtag_private_toggle">Shaxsiy</string>
-    <string name="interest_set_hashtag_count">%1$d ta xeshteg</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d ta xeshteg</item>
+        <item quantity="other">%1$d ta xeshteg</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Qiziqish To'plami Amallari</string>
     <string name="interest_set_clone">Klonlash</string>
     <string name="interest_set_add_hashtag">Xeshteg qo'shish</string>
@@ -796,8 +805,14 @@
     <string name="relay_req_subscriptions">REQ Obunalar (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Obunalar (%1$d)</string>
     <string name="relay_outbox_events">Chiqish Voqealari (%1$d)</string>
-    <string name="relay_filter_authors">%1$d muallif</string>
-    <string name="relay_filter_ids">%1$d identifikator</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d muallif</item>
+        <item quantity="other">%1$d muallif</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d identifikator</item>
+        <item quantity="other">%1$d identifikator</item>
+    </plurals>
     <string name="relay_filter_since">%1$s dan beri</string>
     <string name="relay_filter_until">%1$s gacha</string>
     <string name="minimum_prefix">Min Prefiks</string>
@@ -1380,7 +1395,10 @@
     <string name="remove_user_from_the_list">Foydalanuvchini ro'yxatdan olib tashlash</string>
     <string name="follow_list_item_label">Kuzatish To'plami</string>
     <string name="members">A'zolar</string>
-    <string name="contact_list_containing_label">%1$d foydalanuvchi(lar)ni o'z ichiga olgan kuzatish ro'yxati:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">%1$d foydalanuvchini o'z ichiga olgan kuzatish ro'yxati:</item>
+        <item quantity="other">%1$d foydalanuvchini o'z ichiga olgan kuzatish ro'yxati:</item>
+    </plurals>
     <string name="contact_list_screen_title">Kuzatish ro'yxati</string>
     <string name="contact_list_screen_title_with_count">Kuzatish ro'yxati (%1$d)</string>
     <string name="follow_pack_creation_name_label">To'plam nomi</string>
@@ -1403,8 +1421,14 @@
     <string name="dismiss">Yopish</string>
     <string name="broadcasting">Translyatsiya qilinmoqda</string>
     <string name="broadcasting_name">%1$s uzatilmoqda</string>
-    <string name="broadcasting_number_events">%1$d ta voqea uzatilmoqda…</string>
-    <string name="sent_number_events">%1$d ta voqea yuborildi</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">%1$d ta voqea uzatilmoqda…</item>
+        <item quantity="other">%1$d ta voqea uzatilmoqda…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d ta voqea yuborildi</item>
+        <item quantity="other">%1$d ta voqea yuborildi</item>
+    </plurals>
     <string name="bradcasting_result_partial">Ba'zi voqealar muvaffaqiyatsiz bo'ldi</string>
     <string name="bradcasting_result_success">Barcha voqealar muvaffaqiyatli bo'ldi</string>
     <string name="bradcasting_result_failure">Barcha voqealar muvaffaqiyatsiz bo'ldi</string>
@@ -1419,7 +1443,10 @@
     <string name="new_chess_game">Yangi shaxmat o'yini</string>
     <string name="chess_loading_game">O'yin yuklanmoqda…</string>
     <string name="chess_game_not_found">O'yin topilmadi</string>
-    <string name="badge_and_n_others"> va yana %1$d kishi</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> va yana %1$d kishi</item>
+        <item quantity="other"> va yana %1$d kishi</item>
+    </plurals>
     <string name="remove_language">%1$s ni olib tashlash</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Ishonchli odamingiz kuzatayotgan kishilarni kuzatib, ajoyib lenta bilan boshlang.</string>
     <string name="import_follow_list">Kuzatuv ro'yxatini import qilish</string>
@@ -1428,9 +1455,18 @@
     <string name="name_search_npub1_alice_example_com">qidirish, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex va Namecoin (.bit) ni qo'llab-quvvatlaydi</string>
     <string name="tip">Maslahat</string>
-    <string name="accounts_found">%1$d ta hisob topildi</string>
-    <string name="num_selected">%1$d ta tanlandi</string>
-    <string name="follow_accounts">%1$d ta hisobni kuzatish</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d ta hisob topildi</item>
+        <item quantity="other">%1$d ta hisob topildi</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d ta tanlandi</item>
+        <item quantity="other">%1$d ta tanlandi</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d ta hisobni kuzatish</item>
+        <item quantity="other">%1$d ta hisobni kuzatish</item>
+    </plurals>
     <string name="skip_for_now">Hozircha o'tkazib yuborish</string>
     <string name="fetching_follow_list">Kuzatuv ro'yxati olinmoqda…</string>
     <string name="no_follows_found">Kuzatuvchilar topilmadi</string>
@@ -1462,16 +1498,31 @@
     <string name="event_sync_relays_progress">Relaylar: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Qayta taqsimlangan voqealar: %2$d yuborilganidan %1$d yangi va %3$d qabul qilingan</string>
     <string name="event_sync_done_title">Sinxronizatsiya yakunlandi</string>
-    <string name="event_sync_done_sent">%2$d ta qabul qilinganidan %1$d ta voqea maqsad relaylarga yo'naltirildi.</string>
-    <string name="event_sync_done_accepted">%1$d ta voqea maqsad relaylar tomonidan yangi sifatida qabul qilindi.</string>
-    <string name="event_sync_done_duration">%1$d soniyada yakunlandi.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%2$d ta qabul qilinganidan %1$d ta voqea maqsad relaylarga yo'naltirildi.</item>
+        <item quantity="other">%2$d ta qabul qilinganidan %1$d ta voqea maqsad relaylarga yo'naltirildi.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d ta voqea maqsad relaylar tomonidan yangi sifatida qabul qilindi.</item>
+        <item quantity="other">%1$d ta voqea maqsad relaylar tomonidan yangi sifatida qabul qilindi.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">%1$d soniyada yakunlandi.</item>
+        <item quantity="other">%1$d soniyada yakunlandi.</item>
+    </plurals>
     <string name="event_sync_error_title">Sinxronizatsiya xatosi</string>
     <string name="event_sync_sending_to">Yuborilmoqda</string>
     <string name="event_sync_outbox_relays">Chiqish</string>
     <string name="event_sync_inbox_relays">Kirish</string>
     <string name="event_sync_dm_relays">DMlar</string>
-    <string name="event_sync_activity_log">Hozir tekshirilmoqda (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Yakunlandi (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Hozir tekshirilmoqda (%1$d relay)</item>
+        <item quantity="other">Hozir tekshirilmoqda (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Yakunlandi (%1$d relay)</item>
+        <item quantity="other">Yakunlandi (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">yuborildi %1$s</string>
     <string name="event_sync_log_recv">qabul qilindi %1$s</string>
     <string name="event_sync_log_new">yangi %1$s</string>
@@ -1631,7 +1682,10 @@
     <string name="manage">Boshqarish</string>
     <string name="relay_members">A'zolar</string>
     <string name="relay_members_title">%1$s a'zolari</string>
-    <string name="relay_members_count">%1$d a'zo</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d a'zo</item>
+        <item quantity="other">%1$d a'zo</item>
+    </plurals>
     <string name="relay_members_loading">A'zolar yuklanmoqda…</string>
     <string name="relay_members_empty">A'zolar topilmadi</string>
     <string name="relay_members_request_join">Qo'shilish so'rovi</string>
@@ -1641,9 +1695,15 @@
     <string name="relay_members_you_are_member">Siz a'zosiz</string>
     <string name="relay_membership_list">Relay a'zolik ro'yxati</string>
     <string name="relay_member_added">A'zo relay ga qo'shildi</string>
-    <string name="relay_members_added">%1$d a'zo relay ga qo'shildi</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d a'zo relay ga qo'shildi</item>
+        <item quantity="other">%1$d a'zo relay ga qo'shildi</item>
+    </plurals>
     <string name="relay_member_removed">A'zo relay dan chiqarildi</string>
-    <string name="relay_members_removed">%1$d a'zo relay dan chiqarildi</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d a'zo relay dan chiqarildi</item>
+        <item quantity="other">%1$d a'zo relay dan chiqarildi</item>
+    </plurals>
     <string name="relay_join_request">Relay ga qo'shilish so'rovi</string>
     <string name="relay_leave_request">Relay dan chiqish so'rovi</string>
     <string name="ai_writing_use_this">Buni ishlatish</string>
@@ -1667,7 +1727,10 @@
     <string name="emoji_pack_upload_image_cta">Muqova rasm yuklash</string>
     <string name="emoji_pack_upload_image_hint">Bu emoji to'plamini ifodalovchi kvadrat rasm tanlang.</string>
     <string name="no_emoji_packs">Sizda hali emoji to'plamlari yo'q</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Mening emoji ro'yxatim</string>
     <string name="my_emoji_list_explainer">Tanlovingizga qo'shgan emoji to'lamlaringiz (NIP-51 tur 10030)</string>
     <string name="my_emoji_list_empty">Siz hali ro'yxatingizga hech qanday emoji to'plami qo'shmagansiz</string>
@@ -1934,7 +1997,10 @@
     <string name="communities">Jamoalar</string>
     <string name="community_rules_violation_kind_size_exceeded">Qoralama %1$d bayt; ushbu hamjamiyat bu turni %2$d bayt bilan cheklaydi.</string>
     <string name="community_rules_violation_max_size_exceeded">Qoralama %1$d bayt; ushbu hamjamiyat voqealarni %2$d bayt bilan cheklaydi.</string>
-    <string name="community_rules_violation_quota_exceeded">Bugun bu turdan allaqachon %1$d ta voqea joylashtirgansiz (chegara %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Bugun bu turdan allaqachon %1$d ta voqea joylashtirgansiz (chegara %2$d).</item>
+        <item quantity="other">Bugun bu turdan allaqachon %1$d ta voqea joylashtirgansiz (chegara %2$d).</item>
+    </plurals>
     <string name="compose_settings">Yozish sozlamalari</string>
     <string name="connect_through_your_orbot_setup_short">Standart port: 9050</string>
     <string name="connected_section">Ulangan Relay lar</string>

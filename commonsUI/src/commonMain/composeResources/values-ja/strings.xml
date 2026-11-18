@@ -470,7 +470,9 @@
     <string name="nest_lobby_host_label">ホスト</string>
     <string name="nest_lobby_open_action">開く</string>
     <string name="nest_lobby_no_listeners">現在ルームに誰もいません。</string>
-    <string name="nest_lobby_listeners_count">%1$d 人が聴いています</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d 人が聴いています</item>
+    </plurals>
     <string name="nest_role_host">ホスト</string>
     <string name="nest_role_moderator">モデレーター</string>
     <string name="nest_state_muted">マイクがミュートされています</string>
@@ -578,7 +580,9 @@
     <string name="hashtag_label_added_by">追加者</string>
     <string name="pinned_notes">ピン留めノート</string>
     <string name="pinned_notes_explainer">あなたのピン留めノート</string>
-    <string name="deleted_items_banner_title">このリストの%1$d件のアイテムが作成者によって削除されました。</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">このリストの%1$d件のアイテムが作成者によって削除されました。</item>
+    </plurals>
     <string name="deleted_items_banner_remove">リストから削除</string>
     <string name="deleted_items_banner_dismiss">閉じる</string>
     <string name="bookmark_lists">ブックマークリスト</string>
@@ -594,7 +598,9 @@
     <string name="interest_set_name_placeholder">自分の興味</string>
     <string name="interest_set_hashtag_add_placeholder">ハッシュタグを追加</string>
     <string name="interest_set_hashtag_private_toggle">プライベート</string>
-    <string name="interest_set_hashtag_count">%1$d 個のハッシュタグ</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d 個のハッシュタグ</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">インタレストセットの操作</string>
     <string name="interest_set_clone">クローン</string>
     <string name="interest_set_add_hashtag">ハッシュタグを追加</string>
@@ -798,8 +804,12 @@
     <string name="relay_req_subscriptions">REQ サブスクリプション（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT サブスクリプション（%1$d）</string>
     <string name="relay_outbox_events">アウトボックスイベント（%1$d）</string>
-    <string name="relay_filter_authors">%1$d 件の作成者</string>
-    <string name="relay_filter_ids">%1$d 件の ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d 件の作成者</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d 件の ID</item>
+    </plurals>
     <string name="relay_filter_since">%1$s 以降</string>
     <string name="relay_filter_until">%1$s まで</string>
     <string name="relay_filter_limit">上限 %1$d 件</string>
@@ -1384,7 +1394,9 @@
     <string name="remove_user_from_the_list">リストからユーザーを削除</string>
     <string name="follow_list_item_label">フォローパック</string>
     <string name="members">メンバー</string>
-    <string name="contact_list_containing_label">%1$d 人のユーザーを含むフォローリスト:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">%1$d 人のユーザーを含むフォローリスト:</item>
+    </plurals>
     <string name="contact_list_screen_title">フォローリスト</string>
     <string name="contact_list_screen_title_with_count">フォローリスト (%1$d)</string>
     <string name="follow_pack_creation_name_label">パック名</string>
@@ -1406,8 +1418,12 @@
     <string name="dismiss">閉じる</string>
     <string name="broadcasting">ブロードキャスト中</string>
     <string name="broadcasting_name">%1$s をブロードキャスト中</string>
-    <string name="broadcasting_number_events">%1$d 件のイベントをブロードキャスト中…</string>
-    <string name="sent_number_events">%1$d 件のイベントを送信しました</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">%1$d 件のイベントをブロードキャスト中…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">%1$d 件のイベントを送信しました</item>
+    </plurals>
     <string name="bradcasting_result_partial">一部のイベントが失敗しました</string>
     <string name="bradcasting_result_success">すべてのイベントが成功しました</string>
     <string name="bradcasting_result_failure">すべてのイベントが失敗しました</string>
@@ -1422,7 +1438,9 @@
     <string name="new_chess_game">新しいチェスゲーム</string>
     <string name="chess_loading_game">ゲームを読み込み中…</string>
     <string name="chess_game_not_found">ゲームが見つかりません</string>
-    <string name="badge_and_n_others"> および他 %1$d 名</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> および他 %1$d 名</item>
+    </plurals>
     <string name="remove_language">%1$s を削除</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">信頼できる人と同じ人をフォローして、素晴らしいフィードから始めましょう。</string>
     <string name="import_follow_list">フォローリストをインポート</string>
@@ -1431,9 +1449,15 @@
     <string name="name_search_npub1_alice_example_com">検索、npub1…、alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub、nprofile、NIP-05、hex、Namecoin（.bit）に対応</string>
     <string name="tip">ヒント</string>
-    <string name="accounts_found">%1$dアカウントが見つかりました</string>
-    <string name="num_selected">%1$d個選択中</string>
-    <string name="follow_accounts">%1$dアカウントをフォロー</string>
+    <plurals name="accounts_found">
+        <item quantity="other">%1$dアカウントが見つかりました</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">%1$d個選択中</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">%1$dアカウントをフォロー</item>
+    </plurals>
     <string name="skip_for_now">今はスキップ</string>
     <string name="fetching_follow_list">フォローリストを取得中…</string>
     <string name="no_follows_found">フォローが見つかりません</string>
@@ -1465,16 +1489,26 @@
     <string name="event_sync_relays_progress">relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">再配布済みイベント：%2$d件送信・%3$d件受信のうち%1$d件が新規</string>
     <string name="event_sync_done_title">同期完了</string>
-    <string name="event_sync_done_sent">受信した%2$d件のうち%1$d件のイベントを宛先relayに転送しました。</string>
-    <string name="event_sync_done_accepted">%1$d件のイベントが宛先relayに新規として受け入れられました。</string>
-    <string name="event_sync_done_duration">%1$d秒で完了しました。</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">受信した%2$d件のうち%1$d件のイベントを宛先relayに転送しました。</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d件のイベントが宛先relayに新規として受け入れられました。</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">%1$d秒で完了しました。</item>
+    </plurals>
     <string name="event_sync_error_title">同期エラー</string>
     <string name="event_sync_sending_to">送信先</string>
     <string name="event_sync_outbox_relays">アウトボックス</string>
     <string name="event_sync_inbox_relays">インボックス</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_activity_log">現在確認中（%1$d relay）</string>
-    <string name="event_sync_activity_log_finished">完了（%1$d relay）</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">現在確認中（%1$d relay）</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">完了（%1$d relay）</item>
+    </plurals>
     <string name="event_sync_log_sent">送信 %1$s</string>
     <string name="event_sync_log_recv">受信 %1$s</string>
     <string name="event_sync_log_new">新規 %1$s</string>
@@ -1634,7 +1668,9 @@
     <string name="manage">管理</string>
     <string name="relay_members">メンバー</string>
     <string name="relay_members_title">%1$s のメンバー</string>
-    <string name="relay_members_count">%1$d 人のメンバー</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d 人のメンバー</item>
+    </plurals>
     <string name="relay_members_loading">メンバーを読み込み中…</string>
     <string name="relay_members_empty">メンバーが見つかりません</string>
     <string name="relay_members_request_join">参加をリクエスト</string>
@@ -1644,9 +1680,13 @@
     <string name="relay_members_you_are_member">あなたはメンバーです</string>
     <string name="relay_membership_list">Relay メンバーシップリスト</string>
     <string name="relay_member_added">メンバーが relay に追加されました</string>
-    <string name="relay_members_added">%1$d 人のメンバーが relay に追加されました</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">%1$d 人のメンバーが relay に追加されました</item>
+    </plurals>
     <string name="relay_member_removed">メンバーが relay から削除されました</string>
-    <string name="relay_members_removed">%1$d 人のメンバーが relay から削除されました</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">%1$d 人のメンバーが relay から削除されました</item>
+    </plurals>
     <string name="relay_join_request">Relay 参加リクエスト</string>
     <string name="relay_leave_request">Relay 退出リクエスト</string>
     <string name="ai_writing_use_this">これを使用する</string>
@@ -1672,7 +1712,9 @@
     <string name="emoji_pack_upload_image_cta">カバー画像をアップロードする</string>
     <string name="emoji_pack_upload_image_hint">この絵文字パックを表す正方形の画像を選択してください。</string>
     <string name="no_emoji_packs">絵文字パックはまだありません</string>
-    <string name="emoji_pack_count">%1$d 個の絵文字</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d 個の絵文字</item>
+    </plurals>
     <string name="my_emoji_list_title">マイ絵文字リスト</string>
     <string name="my_emoji_list_explainer">選択に追加した絵文字パック（NIP-51 kind 10030）</string>
     <string name="my_emoji_list_empty">まだ絵文字パックをリストに追加していません</string>
@@ -1938,7 +1980,9 @@
     <string name="communities">コミュニティ</string>
     <string name="community_rules_violation_kind_size_exceeded">下書きは %1$d バイトです。このコミュニティはこの kind を %2$d バイトまでに制限しています。</string>
     <string name="community_rules_violation_max_size_exceeded">下書きは %1$d バイトです。このコミュニティはイベントを %2$d バイトまでに制限しています。</string>
-    <string name="community_rules_violation_quota_exceeded">本日、この kind のイベントをすでに %1$d 件投稿しています（上限 %2$d 件）。</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">本日、この kind のイベントをすでに %1$d 件投稿しています（上限 %2$d 件）。</item>
+    </plurals>
     <string name="compose_settings">作成の設定</string>
     <string name="connect_through_your_orbot_setup_short">デフォルトポートは 9050</string>
     <string name="connected_section">接続済み Relay</string>

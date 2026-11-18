@@ -222,4 +222,18 @@
     <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
     <string name="play">Predvajaj</string>
     <string name="pause">Premor</string>
+    <string name="front_page_print_channel_name">The Observer – tiskanje</string>
+    <string name="front_page_print_channel_description">Prikazuje Observer med tiskanjem, da se lahko dokonča tudi, ko zapustiš aplikacijo.</string>
+    <string name="front_page_print_cancel">Prekliči</string>
+    <string name="front_page_print_title">Tiskanje Observerja</string>
+    <string name="front_page_print_step_probe">Preverjam tvojo razvrstitev</string>
+    <string name="front_page_print_step_pull">Berem rubrike · %1$d od %2$d</string>
+    <string name="front_page_print_step_write">Pisanje</string>
+    <string name="front_page_print_step_fix">Popravljam stran</string>
+    <string name="front_page_print_step_check">Preverjam citate, slike in povezave</string>
+    <string name="front_page_print_step_publish">Objavljam tvoj Observer</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Datoteke</string>
+    <string name="napplet_cap_common">Družabna dejanja</string>
+    <string name="napplet_cap_intent">Odpiranje drugih aplikacij</string>
 </resources>

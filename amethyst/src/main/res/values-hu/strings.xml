@@ -208,4 +208,18 @@
     <string name="mute_button">Hang bekapcsolva. Koppintson a némításhoz</string>
     <string name="play">Lejátszás</string>
     <string name="pause">Szüneteltetés</string>
+    <string name="front_page_print_channel_name">The Observer – nyomtatás</string>
+    <string name="front_page_print_channel_description">Nyomtatás közben megjeleníti az Observert, hogy akkor is elkészüljön, ha Ön kilép az alkalmazásból.</string>
+    <string name="front_page_print_cancel">Mégse</string>
+    <string name="front_page_print_title">The Observer nyomtatása</string>
+    <string name="front_page_print_step_probe">Rangsor ellenőrzése</string>
+    <string name="front_page_print_step_pull">Rovatok olvasása · %1$d / %2$d</string>
+    <string name="front_page_print_step_write">Írás</string>
+    <string name="front_page_print_step_fix">A lap javítása</string>
+    <string name="front_page_print_step_check">Idézetek, képek és hivatkozások ellenőrzése</string>
+    <string name="front_page_print_step_publish">Az Ön Observerének közzététele</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Fájlok</string>
+    <string name="napplet_cap_common">Közösségi műveletek</string>
+    <string name="napplet_cap_intent">Más alkalmazások megnyitása</string>
 </resources>

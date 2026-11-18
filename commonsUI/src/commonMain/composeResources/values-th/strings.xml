@@ -467,7 +467,9 @@
     <string name="nest_join">เข้าร่วม nest</string>
     <string name="nest_lobby_open_action">เปิด</string>
     <string name="nest_lobby_no_listeners">ยังไม่มีใครอยู่ในห้องตอนนี้</string>
-    <string name="nest_lobby_listeners_count">%1$d คนกำลังฟัง</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d คนกำลังฟัง</item>
+    </plurals>
     <string name="nest_state_muted">ปิดไมโครโฟนแล้ว</string>
     <string name="nest_state_speaking">กำลังพูดอยู่</string>
     <string name="nest_state_mic_open">ไมโครโฟนเปิดอยู่</string>
@@ -568,7 +570,9 @@
     <string name="hashtag_label_added_by">เพิ่มโดย</string>
     <string name="pinned_notes">โน้ตที่ปักหมุด</string>
     <string name="pinned_notes_explainer">โน้ตที่ปักหมุดของคุณ</string>
-    <string name="deleted_items_banner_title">รายการ %1$d รายการในรายชื่อนี้ถูกลบโดยผู้เขียน</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">รายการ %1$d รายการในรายชื่อนี้ถูกลบโดยผู้เขียน</item>
+    </plurals>
     <string name="deleted_items_banner_remove">ลบออกจากรายการ</string>
     <string name="deleted_items_banner_dismiss">ปิด</string>
     <string name="bookmark_lists">รายการบุ๊กมาร์ก</string>
@@ -584,7 +588,9 @@
     <string name="interest_set_name_placeholder">ความสนใจของฉัน</string>
     <string name="interest_set_hashtag_add_placeholder">เพิ่มแฮชแท็ก</string>
     <string name="interest_set_hashtag_private_toggle">ส่วนตัว</string>
-    <string name="interest_set_hashtag_count">%1$d แฮชแท็ก</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d แฮชแท็ก</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">การดำเนินการชุดความสนใจ</string>
     <string name="interest_set_clone">โคลน</string>
     <string name="interest_set_add_hashtag">เพิ่มแฮชแท็ก</string>
@@ -789,8 +795,12 @@
     <string name="relay_req_subscriptions">การสมัครสมาชิก REQ (%1$d)</string>
     <string name="relay_count_subscriptions">การสมัครสมาชิก COUNT (%1$d)</string>
     <string name="relay_outbox_events">กิจกรรม Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d ผู้เขียน</string>
-    <string name="relay_filter_ids">%1$d รหัส</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d ผู้เขียน</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d รหัส</item>
+    </plurals>
     <string name="relay_filter_since">ตั้งแต่ %1$s</string>
     <string name="relay_filter_until">จนถึง %1$s</string>
     <string name="relay_filter_limit">จำกัด %1$d</string>
@@ -1364,7 +1374,9 @@
     <string name="add_user_to_the_list">เพิ่มผู้ใช้ลงในรายการ</string>
     <string name="remove_user_from_the_list">ลบผู้ใช้ออกจากรายการ</string>
     <string name="members">สมาชิก</string>
-    <string name="contact_list_containing_label">รายการติดตามที่มีผู้ใช้ %1$d คน:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">รายการติดตามที่มีผู้ใช้ %1$d คน:</item>
+    </plurals>
     <string name="contact_list_screen_title">รายการติดตาม</string>
     <string name="contact_list_screen_title_with_count">รายการติดตาม (%1$d)</string>
     <string name="follow_pack_creation_name_label">ชื่อ Pack</string>
@@ -1387,8 +1399,12 @@
     <string name="dismiss">ปิด</string>
     <string name="broadcasting">กำลังกระจาย</string>
     <string name="broadcasting_name">กำลังกระจาย %1$s</string>
-    <string name="broadcasting_number_events">กำลังกระจาย %1$d เหตุการณ์…</string>
-    <string name="sent_number_events">ส่ง %1$d เหตุการณ์แล้ว</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">กำลังกระจาย %1$d เหตุการณ์…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">ส่ง %1$d เหตุการณ์แล้ว</item>
+    </plurals>
     <string name="bradcasting_result_partial">บางเหตุการณ์ล้มเหลว</string>
     <string name="bradcasting_result_success">เหตุการณ์ทั้งหมดสำเร็จ</string>
     <string name="bradcasting_result_failure">เหตุการณ์ทั้งหมดล้มเหลว</string>
@@ -1403,7 +1419,9 @@
     <string name="new_chess_game">เกมหมากรุกใหม่</string>
     <string name="chess_loading_game">กำลังโหลดเกม…</string>
     <string name="chess_game_not_found">ไม่พบเกม</string>
-    <string name="badge_and_n_others"> และอีก %1$d คน</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> และอีก %1$d คน</item>
+    </plurals>
     <string name="remove_language">ลบ %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">เริ่มต้นด้วยฟีดที่ยอดเยี่ยมโดยการติดตามผู้คนกลุ่มเดียวกับคนที่คุณไว้วางใจ</string>
     <string name="import_follow_list">นำเข้ารายการติดตาม</string>
@@ -1412,9 +1430,15 @@
     <string name="name_search_npub1_alice_example_com">ค้นหา, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">รองรับ npub, nprofile, NIP-05, hex และ Namecoin (.bit)</string>
     <string name="tip">ทิป</string>
-    <string name="accounts_found">พบ %1$d บัญชี</string>
-    <string name="num_selected">เลือก %1$d รายการ</string>
-    <string name="follow_accounts">ติดตาม %1$d บัญชี</string>
+    <plurals name="accounts_found">
+        <item quantity="other">พบ %1$d บัญชี</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">เลือก %1$d รายการ</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">ติดตาม %1$d บัญชี</item>
+    </plurals>
     <string name="skip_for_now">ข้ามไปก่อน</string>
     <string name="fetching_follow_list">กำลังดึงรายการติดตาม…</string>
     <string name="no_follows_found">ไม่พบรายการติดตาม</string>
@@ -1446,13 +1470,23 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Event ที่กระจายซ้ำ: %1$d รายการใหม่จาก %2$d ที่ส่งและ %3$d ที่ได้รับ</string>
     <string name="event_sync_done_title">ซิงค์เสร็จสมบูรณ์</string>
-    <string name="event_sync_done_sent">ส่งต่อ %1$d event ไปยัง relay ปลายทางจาก %2$d ที่ได้รับ</string>
-    <string name="event_sync_done_accepted">%1$d event ได้รับการยอมรับว่าเป็นรายการใหม่โดย relay ปลายทาง</string>
-    <string name="event_sync_done_duration">เสร็จสมบูรณ์ใน %1$d วินาที</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">ส่งต่อ %1$d event ไปยัง relay ปลายทางจาก %2$d ที่ได้รับ</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d event ได้รับการยอมรับว่าเป็นรายการใหม่โดย relay ปลายทาง</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">เสร็จสมบูรณ์ใน %1$d วินาที</item>
+    </plurals>
     <string name="event_sync_error_title">เกิดข้อผิดพลาดในการซิงค์</string>
     <string name="event_sync_sending_to">กำลังส่งไปยัง</string>
-    <string name="event_sync_activity_log">กำลังตรวจสอบอยู่ (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">เสร็จสิ้น (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">กำลังตรวจสอบอยู่ (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">เสร็จสิ้น (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">ส่ง %1$s</string>
     <string name="event_sync_log_recv">รับ %1$s</string>
     <string name="event_sync_log_new">ใหม่ %1$s</string>
@@ -1610,7 +1644,9 @@
     <string name="manage">จัดการ</string>
     <string name="relay_members">สมาชิก</string>
     <string name="relay_members_title">สมาชิกของ %1$s</string>
-    <string name="relay_members_count">%1$d สมาชิก</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d สมาชิก</item>
+    </plurals>
     <string name="relay_members_loading">กำลังโหลดสมาชิก…</string>
     <string name="relay_members_empty">ไม่พบสมาชิก</string>
     <string name="relay_members_request_join">ขอเข้าร่วม</string>
@@ -1620,9 +1656,13 @@
     <string name="relay_members_you_are_member">คุณเป็นสมาชิก</string>
     <string name="relay_membership_list">รายการสมาชิก Relay</string>
     <string name="relay_member_added">เพิ่มสมาชิกใน relay แล้ว</string>
-    <string name="relay_members_added">เพิ่ม %1$d สมาชิกใน relay แล้ว</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">เพิ่ม %1$d สมาชิกใน relay แล้ว</item>
+    </plurals>
     <string name="relay_member_removed">ลบสมาชิกออกจาก relay แล้ว</string>
-    <string name="relay_members_removed">ลบ %1$d สมาชิกออกจาก relay แล้ว</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">ลบ %1$d สมาชิกออกจาก relay แล้ว</item>
+    </plurals>
     <string name="relay_join_request">คำขอเข้าร่วม Relay</string>
     <string name="relay_leave_request">คำขอออกจาก Relay</string>
     <string name="ai_writing_use_this">ใช้สิ่งนี้</string>
@@ -1647,7 +1687,9 @@
     <string name="emoji_pack_upload_image_cta">อัปโหลดรูปภาพปก</string>
     <string name="emoji_pack_upload_image_hint">เลือกรูปภาพสี่เหลี่ยมเพื่อแทนแพ็ค emoji นี้</string>
     <string name="no_emoji_packs">คุณยังไม่มีแพ็ค emoji ใด ๆ</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">รายการ Emoji ของฉัน</string>
     <string name="my_emoji_list_explainer">แพ็ค emoji ที่คุณเพิ่มในการเลือกของคุณ (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">คุณยังไม่ได้เพิ่มแพ็ค emoji ใด ๆ ในรายการของคุณ</string>
@@ -1911,7 +1953,9 @@
     <string name="communities">ชุมชน</string>
     <string name="community_rules_violation_kind_size_exceeded">ร่างมีขนาด %1$d ไบต์ ชุมชนนี้จำกัดประเภทนี้ไว้ที่ %2$d ไบต์</string>
     <string name="community_rules_violation_max_size_exceeded">ร่างมีขนาด %1$d ไบต์ ชุมชนนี้จำกัดกิจกรรมไว้ที่ %2$d ไบต์</string>
-    <string name="community_rules_violation_quota_exceeded">คุณโพสต์กิจกรรมประเภทนี้ไปแล้ว %1$d รายการในวันนี้ (จำกัด %2$d)</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">คุณโพสต์กิจกรรมประเภทนี้ไปแล้ว %1$d รายการในวันนี้ (จำกัด %2$d)</item>
+    </plurals>
     <string name="compose_settings">การตั้งค่าการแต่ง</string>
     <string name="connect_through_your_orbot_setup_short">Port เริ่มต้นคือ 9050</string>
     <string name="connected_section">Relays ที่เชื่อมต่อ</string>

@@ -453,7 +453,9 @@
     <string name="nest_lobby_host_label">主持人</string>
     <string name="nest_lobby_open_action">開啟</string>
     <string name="nest_lobby_no_listeners">目前房間內沒有任何人。</string>
-    <string name="nest_lobby_listeners_count">%1$d 位正在收聽</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d 位正在收聽</item>
+    </plurals>
     <string name="nest_role_host">主持人</string>
     <string name="nest_role_moderator">主持人</string>
     <string name="nest_state_muted">麥克風已靜音</string>
@@ -561,7 +563,9 @@
     <string name="hashtag_label_added_by">新增者</string>
     <string name="pinned_notes">置頂筆記</string>
     <string name="pinned_notes_explainer">您的置頂筆記</string>
-    <string name="deleted_items_banner_title">此清單中有 %1$d 個項目已被作者刪除。</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">此清單中有 %1$d 個項目已被作者刪除。</item>
+    </plurals>
     <string name="deleted_items_banner_remove">從清單中移除</string>
     <string name="deleted_items_banner_dismiss">關閉</string>
     <string name="bookmark_lists">書籤清單</string>
@@ -577,7 +581,9 @@
     <string name="interest_set_name_placeholder">我的興趣</string>
     <string name="interest_set_hashtag_add_placeholder">新增主題標籤</string>
     <string name="interest_set_hashtag_private_toggle">私密</string>
-    <string name="interest_set_hashtag_count">%1$d 個主題標籤</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d 個主題標籤</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">興趣集操作</string>
     <string name="interest_set_clone">複製</string>
     <string name="interest_set_add_hashtag">新增主題標籤</string>
@@ -779,8 +785,12 @@
     <string name="relay_req_subscriptions">REQ 訂閱（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT 訂閱（%1$d）</string>
     <string name="relay_outbox_events">發件箱事件（%1$d）</string>
-    <string name="relay_filter_authors">%1$d 位作者</string>
-    <string name="relay_filter_ids">%1$d 個 ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d 位作者</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d 個 ID</item>
+    </plurals>
     <string name="relay_filter_since">自 %1$s 起</string>
     <string name="relay_filter_until">至 %1$s 止</string>
     <string name="relay_filter_limit">限制 %1$d</string>
@@ -1367,7 +1377,9 @@
     <string name="remove_user_from_the_list">從清單中移除用戶</string>
     <string name="follow_list_item_label">追蹤包</string>
     <string name="members">成員</string>
-    <string name="contact_list_containing_label">包含 %1$d 位用戶的追蹤清單：</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">包含 %1$d 位用戶的追蹤清單：</item>
+    </plurals>
     <string name="contact_list_screen_title">追蹤清單</string>
     <string name="contact_list_screen_title_with_count">追蹤清單（%1$d）</string>
     <string name="follow_pack_creation_name_label">包名稱</string>
@@ -1390,8 +1402,12 @@
     <string name="dismiss">關閉</string>
     <string name="broadcasting">廣播中</string>
     <string name="broadcasting_name">正在廣播 %1$s</string>
-    <string name="broadcasting_number_events">正在廣播 %1$d 個事件…</string>
-    <string name="sent_number_events">已傳送 %1$d 個事件</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">正在廣播 %1$d 個事件…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">已傳送 %1$d 個事件</item>
+    </plurals>
     <string name="bradcasting_result_partial">部分事件失敗</string>
     <string name="bradcasting_result_success">所有事件成功</string>
     <string name="bradcasting_result_failure">所有事件失敗</string>
@@ -1406,7 +1422,9 @@
     <string name="new_chess_game">新棋局</string>
     <string name="chess_loading_game">載入遊戲中…</string>
     <string name="chess_game_not_found">找不到棋局</string>
-    <string name="badge_and_n_others"> 以及其他 %1$d 人</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> 以及其他 %1$d 人</item>
+    </plurals>
     <string name="remove_language">移除 %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">追蹤您信任的人所追蹤的帳號，開始享受精彩的訊息流。</string>
     <string name="import_follow_list">匯入追蹤清單</string>
@@ -1415,9 +1433,15 @@
     <string name="name_search_npub1_alice_example_com">搜尋、npub1…、alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">支援 npub、nprofile、NIP-05、hex 及 Namecoin（.bit）</string>
     <string name="tip">小費</string>
-    <string name="accounts_found">找到 %1$d 個帳號</string>
-    <string name="num_selected">已選擇 %1$d 個</string>
-    <string name="follow_accounts">追蹤 %1$d 個帳號</string>
+    <plurals name="accounts_found">
+        <item quantity="other">找到 %1$d 個帳號</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">已選擇 %1$d 個</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">追蹤 %1$d 個帳號</item>
+    </plurals>
     <string name="skip_for_now">暫時跳過</string>
     <string name="fetching_follow_list">正在取得追蹤清單…</string>
     <string name="no_follows_found">未找到任何追蹤對象</string>
@@ -1449,16 +1473,26 @@
     <string name="event_sync_relays_progress">Relay：%1$d / %2$d</string>
     <string name="event_sync_events_sent">已重新分配的事件：%2$d 筆已傳送、%3$d 筆已接收中有 %1$d 筆為新事件</string>
     <string name="event_sync_done_title">同步完成</string>
-    <string name="event_sync_done_sent">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</string>
-    <string name="event_sync_done_accepted">%1$d 筆事件已被目的地 relay 接受為新事件。</string>
-    <string name="event_sync_done_duration">已在 %1$d 秒內完成。</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d 筆事件已被目的地 relay 接受為新事件。</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">已在 %1$d 秒內完成。</item>
+    </plurals>
     <string name="event_sync_error_title">同步錯誤</string>
     <string name="event_sync_sending_to">傳送至</string>
     <string name="event_sync_outbox_relays">發件箱</string>
     <string name="event_sync_inbox_relays">收件箱</string>
     <string name="event_sync_dm_relays">私訊</string>
-    <string name="event_sync_activity_log">目前正在檢查（%1$d 個 relay）</string>
-    <string name="event_sync_activity_log_finished">已完成（%1$d 個 relay）</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">目前正在檢查（%1$d 個 relay）</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">已完成（%1$d 個 relay）</item>
+    </plurals>
     <string name="event_sync_log_sent">已傳送 %1$s</string>
     <string name="event_sync_log_recv">已接收 %1$s</string>
     <string name="event_sync_log_new">新增 %1$s</string>
@@ -1618,7 +1652,9 @@
     <string name="manage">管理</string>
     <string name="relay_members">成員</string>
     <string name="relay_members_title">%1$s 的成員</string>
-    <string name="relay_members_count">%1$d 位成員</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d 位成員</item>
+    </plurals>
     <string name="relay_members_loading">正在載入成員…</string>
     <string name="relay_members_empty">未找到成員</string>
     <string name="relay_members_request_join">申請加入</string>
@@ -1628,9 +1664,13 @@
     <string name="relay_members_you_are_member">您是成員</string>
     <string name="relay_membership_list">Relay 成員清單</string>
     <string name="relay_member_added">成員已新增至 relay</string>
-    <string name="relay_members_added">%1$d 位成員已新增至 relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">%1$d 位成員已新增至 relay</item>
+    </plurals>
     <string name="relay_member_removed">成員已從 relay 移除</string>
-    <string name="relay_members_removed">%1$d 位成員已從 relay 移除</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">%1$d 位成員已從 relay 移除</item>
+    </plurals>
     <string name="relay_join_request">Relay 加入申請</string>
     <string name="relay_leave_request">Relay 退出申請</string>
     <string name="ai_writing_use_this">使用此版本</string>
@@ -1655,7 +1695,9 @@
     <string name="emoji_pack_upload_image_cta">上傳封面圖片</string>
     <string name="emoji_pack_upload_image_hint">選擇一張正方形圖片來代表此 emoji 包。</string>
     <string name="no_emoji_packs">您還沒有任何 emoji 包</string>
-    <string name="emoji_pack_count">%1$d 個 emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d 個 emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">我的 Emoji 清單</string>
     <string name="my_emoji_list_explainer">您已新增至選取項目的 emoji 包（NIP-51 kind 10030）</string>
     <string name="my_emoji_list_empty">您尚未將任何 emoji 包新增至清單</string>
@@ -1920,7 +1962,9 @@
     <string name="communities">社群</string>
     <string name="community_rules_violation_kind_size_exceeded">草稿為 %1$d 位元組；此社群將此類型上限設為 %2$d 位元組。</string>
     <string name="community_rules_violation_max_size_exceeded">草稿為 %1$d 位元組；此社群將事件上限設為 %2$d 位元組。</string>
-    <string name="community_rules_violation_quota_exceeded">您今天已發布 %1$d 個此類型的事件（上限 %2$d 個）。</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">您今天已發布 %1$d 個此類型的事件（上限 %2$d 個）。</item>
+    </plurals>
     <string name="compose_settings">撰寫設定</string>
     <string name="connect_through_your_orbot_setup_short">預設連接埠為 9050</string>
     <string name="connected_section">已連線的 Relay</string>

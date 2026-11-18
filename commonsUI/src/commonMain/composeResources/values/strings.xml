@@ -1068,7 +1068,10 @@
     <string name="napplet_decision_deny">Deny</string>
     <string name="nip46_signer_explainer">Let other apps sign with your key. Amethyst listens on your inbox relays and checks each app's permissions before signing — using the same trust levels as Connected Apps.</string>
     <string name="nip46_signer_status_no_relays">No inbox relays configured. Add inbox relays so apps can reach your signer.</string>
-    <string name="nip46_signer_relays_some_down">%1$d of %2$d relays connected</string>
+    <plurals name="nip46_signer_relays_some_down">
+        <item quantity="one">%1$d of %2$d relay connected</item>
+        <item quantity="other">%1$d of %2$d relays connected</item>
+    </plurals>
     <string name="nip46_signer_copy">Copy</string>
     <string name="nip46_signer_regenerate">New address</string>
     <string name="nip46_signer_rotate_confirm_title">Generate a new address?</string>
@@ -1232,7 +1235,10 @@
     <string name="nest_lobby_host_label">Host</string>
     <string name="nest_lobby_open_action">Open</string>
     <string name="nest_lobby_no_listeners">No one is in the room right now.</string>
-    <string name="nest_lobby_listeners_count">%1$d listening</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d listening</item>
+        <item quantity="other">%1$d listening</item>
+    </plurals>
     <string name="nest_role_host">Host</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Microphone muted</string>
@@ -1410,7 +1416,10 @@
     <string name="hashtag_label_added_by">added by</string>
     <string name="pinned_notes">Pinned Notes</string>
     <string name="pinned_notes_explainer">Your pinned notes</string>
-    <string name="deleted_items_banner_title">%1$d item(s) in this list have been deleted by their author.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d item in this list has been deleted by its author.</item>
+        <item quantity="other">%1$d items in this list have been deleted by their author.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Remove from list</string>
     <string name="deleted_items_banner_dismiss">Dismiss</string>
     <string name="bookmark_lists">Bookmark Lists</string>
@@ -1426,7 +1435,10 @@
     <string name="interest_set_name_placeholder">My interests</string>
     <string name="interest_set_hashtag_add_placeholder">Add hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Private</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag(s)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtags</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Interest Set Actions</string>
     <string name="interest_set_clone">Clone</string>
     <string name="interest_set_add_hashtag">Add hashtag</string>
@@ -1714,8 +1726,14 @@
     <string name="relay_req_subscriptions">REQ Subscriptions (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Subscriptions (%1$d)</string>
     <string name="relay_outbox_events">Outbox Events (%1$d)</string>
-    <string name="relay_filter_authors">%1$d authors</string>
-    <string name="relay_filter_ids">%1$d ids</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d author</item>
+        <item quantity="other">%1$d authors</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d id</item>
+        <item quantity="other">%1$d ids</item>
+    </plurals>
     <string name="relay_filter_since">since %1$s</string>
     <string name="relay_filter_until">until %1$s</string>
     <string name="relay_filter_limit">limit %1$d</string>
@@ -1801,7 +1819,10 @@
     <string name="url_preview_open_in_browser">Open in browser</string>
     <string name="long_form_reading_minutes">%1$d min read</string>
     <string name="long_form_published">Published</string>
-    <string name="search_waiting_on_relays">Waiting on %1$d of %2$d relays</string>
+    <plurals name="search_waiting_on_relays">
+        <item quantity="one">Waiting on %1$d of %2$d relay</item>
+        <item quantity="other">Waiting on %1$d of %2$d relays</item>
+    </plurals>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d section</item>
         <item quantity="other">%1$d sections</item>
@@ -3067,7 +3088,10 @@
     <string name="remove_user_from_the_list">Remove user from the list</string>
     <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Members</string>
-    <string name="contact_list_containing_label">Follow list containing %1$d user(s):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Follow list containing %1$d user:</item>
+        <item quantity="other">Follow list containing %1$d users:</item>
+    </plurals>
     <string name="contact_list_screen_title">Follow list</string>
     <string name="contact_list_screen_title_with_count">Follow list (%1$d)</string>
     <string name="relay_list_screen_title">Relays</string>
@@ -3099,8 +3123,14 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Broadcasting</string>
     <string name="broadcasting_name">Broadcasting %1$s</string>
-    <string name="broadcasting_number_events">Broadcasting %1$d events…</string>
-    <string name="sent_number_events">%1$d events sent</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Broadcasting %1$d event…</item>
+        <item quantity="other">Broadcasting %1$d events…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d event sent</item>
+        <item quantity="other">%1$d events sent</item>
+    </plurals>
     <string name="bradcasting_result_partial">Some events failed</string>
     <string name="bradcasting_result_success">All events succeeded</string>
     <string name="bradcasting_result_failure">All events failed</string>
@@ -3124,7 +3154,10 @@
     <string name="new_chess_game">New Chess Game</string>
     <string name="chess_loading_game">Loading game\u2026</string>
     <string name="chess_game_not_found">Game Not Found</string>
-    <string name="badge_and_n_others"> and %1$d others</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> and %1$d other</item>
+        <item quantity="other"> and %1$d others</item>
+    </plurals>
     <string name="remove_language">Remove %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>
     <string name="import_follow_list">Import Follow List</string>
@@ -3133,9 +3166,18 @@
     <string name="name_search_npub1_alice_example_com">search, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, nprofile, NIP-05, hex, and Namecoin (.bit)</string>
     <string name="tip">Tip</string>
-    <string name="accounts_found">%1$d accounts found</string>
-    <string name="num_selected">%1$d selected</string>
-    <string name="follow_accounts">Follow %1$d accounts</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d account found</item>
+        <item quantity="other">%1$d accounts found</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Follow %1$d account</item>
+        <item quantity="other">Follow %1$d accounts</item>
+    </plurals>
     <string name="skip_for_now">Skip for now</string>
     <string name="fetching_follow_list">Fetching follow list…</string>
     <string name="no_follows_found">No follows found</string>
@@ -3167,16 +3209,31 @@
     <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Events redistributed: %1$d new out of %2$d sent and %3$d received</string>
     <string name="event_sync_done_title">Sync complete</string>
-    <string name="event_sync_done_sent">Forwarded %1$d events to destination relays out of %2$d received.</string>
-    <string name="event_sync_done_accepted">%1$d events accepted as new by destination relays.</string>
-    <string name="event_sync_done_duration">Completed in %1$d seconds.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Forwarded %1$d event to destination relays out of %2$d received.</item>
+        <item quantity="other">Forwarded %1$d events to destination relays out of %2$d received.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d event accepted as new by destination relays.</item>
+        <item quantity="other">%1$d events accepted as new by destination relays.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Completed in %1$d second.</item>
+        <item quantity="other">Completed in %1$d seconds.</item>
+    </plurals>
     <string name="event_sync_error_title">Sync error</string>
     <string name="event_sync_sending_to">Sending To</string>
     <string name="event_sync_outbox_relays">Outbox</string>
     <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Currently Checking (%1$d relays)</string>
-    <string name="event_sync_activity_log_finished">Finished (%1$d relays)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Currently Checking (%1$d relay)</item>
+        <item quantity="other">Currently Checking (%1$d relays)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Finished (%1$d relay)</item>
+        <item quantity="other">Finished (%1$d relays)</item>
+    </plurals>
     <string name="event_sync_log_sent">sent %1$s</string>
     <string name="event_sync_log_recv">recv %1$s</string>
     <string name="event_sync_log_new">new %1$s</string>
@@ -3378,7 +3435,10 @@
     <string name="manage">Manage</string>
     <string name="relay_members">Members</string>
     <string name="relay_members_title">Members of %1$s</string>
-    <string name="relay_members_count">%1$d members</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
     <string name="relay_members_loading">Loading members…</string>
     <string name="relay_members_empty">No members found</string>
     <string name="relay_members_request_join">Request to Join</string>
@@ -3391,9 +3451,15 @@
     <string name="relay_members_unverifiable">This relay does not publish its identity key (NIP-11 self), so its member list cannot be verified</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
-    <string name="relay_members_added">%1$d members added to relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d member added to relay</item>
+        <item quantity="other">%1$d members added to relay</item>
+    </plurals>
     <string name="relay_member_removed">Member removed from relay</string>
-    <string name="relay_members_removed">%1$d members removed from relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d member removed from relay</item>
+        <item quantity="other">%1$d members removed from relay</item>
+    </plurals>
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
     <string name="compose_signature_setting_title">Signature</string>
@@ -3436,7 +3502,10 @@
     <string name="emoji_pack_upload_image_cta">Upload a cover image</string>
     <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
     <string name="no_emoji_packs">You don't have any emoji packs yet</string>
-    <string name="emoji_pack_count">%1$d emojis</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojis</item>
+    </plurals>
     <string name="emoji_copy_shortcode">Copy</string>
     <string name="emoji_list_not_loaded_title">Emoji list not loaded yet</string>
     <string name="emoji_list_not_loaded_description">Your emoji list has not arrived from your relays, and adding a pack now could replace it. Try again once your relays connect.</string>
@@ -3496,7 +3565,10 @@
     <string name="emoji_import_unreadable">Could not open</string>
     <string name="emoji_import_truncated">Only partly imported</string>
     <string name="emoji_import_truncated_hint">An archive is read up to %1$d images or %2$d MB of them.</string>
-    <string name="emoji_import_more">+%1$d more</string>
+    <plurals name="emoji_import_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
     <string name="emoji_import_cta">Import images or .zip</string>
     <string name="emoji_pack_empty_title">This pack is empty</string>
     <string name="emoji_pack_empty_body">Add emojis one at a time, or bring in a whole set of images or a .zip at once.</string>
@@ -4169,7 +4241,10 @@
     <string name="communities">Communities</string>
     <string name="community_rules_violation_kind_size_exceeded">Draft is %1$d bytes; this community caps this kind at %2$d bytes.</string>
     <string name="community_rules_violation_max_size_exceeded">Draft is %1$d bytes; this community caps events at %2$d bytes.</string>
-    <string name="community_rules_violation_quota_exceeded">You have already posted %1$d events of this kind today (limit %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">You have already posted %1$d event of this kind today (limit %2$d).</item>
+        <item quantity="other">You have already posted %1$d events of this kind today (limit %2$d).</item>
+    </plurals>
     <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13, spell check, spelling, dictionary</string>
     <string name="compose_settings">Compose Settings</string>
     <plurals name="concord_channel_count">
@@ -6956,7 +7031,10 @@
     <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
     <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
     <string name="cordn_coordinators_relays_label">Answers on</string>
-    <string name="cordn_coordinators_relays_more">%1$s +%2$d more</string>
+    <plurals name="cordn_coordinators_relays_more">
+        <item quantity="one">%1$s +%2$d more</item>
+        <item quantity="other">%1$s +%2$d more</item>
+    </plurals>
     <string name="cordn_coordinators_remove">Remove</string>
     <string name="cordn_coordinators_rename">Rename</string>
     <string name="cordn_coordinators_server">Says it is: %1$s</string>
@@ -7078,7 +7156,10 @@
         <item quantity="one">%1$d person is already in this group</item>
         <item quantity="other">%1$d people are already in this group</item>
     </plurals>
-    <string name="cordn_invitations_members_more">+%1$d more</string>
+    <plurals name="cordn_invitations_members_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
     <string name="cordn_invitations_no_coordinators">You have no coordinator open. cordn invitations arrive through a coordinator, so there is nowhere to look yet.</string>
     <string name="cordn_invitations_none">No invitations waiting.</string>
     <string name="cordn_invitations_refresh">Check again</string>
@@ -7626,7 +7707,10 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
-    <string name="trusted_list_truncated">Showing %1$d of %2$d members</string>
+    <plurals name="trusted_list_truncated">
+        <item quantity="one">Showing %1$d of %2$d member</item>
+        <item quantity="other">Showing %1$d of %2$d members</item>
+    </plurals>
     <string name="trusted_list_retracted">Retracted</string>
     <string name="trusted_list_built_from_tag">Built from the tag</string>
     <string name="trusted_list_tag_by">by</string>
@@ -8550,7 +8634,10 @@
     <string name="devtools_kind_no_client">No client tag</string>
     <string name="devtools_kind_shape_n">Shape %1$d</string>
     <string name="devtools_kind_from_clients">From: %1$s</string>
-    <string name="devtools_kind_more">+%1$d more</string>
+    <plurals name="devtools_kind_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d event</item>
         <item quantity="other">%1$d events</item>
@@ -8584,7 +8671,10 @@
     <string name="devtools_status_timeout">Timed out</string>
     <string name="devtools_status_tor">Waiting for Tor</string>
     <string name="devtools_console_your_relays">Your relays</string>
-    <string name="devtools_console_open_subs">%1$d open</string>
+    <plurals name="devtools_console_open_subs">
+        <item quantity="one">%1$d open</item>
+        <item quantity="other">%1$d open</item>
+    </plurals>
     <string name="devtools_console_close_sub">Close %1$s</string>
     <string name="devtools_console_build">Build a frame</string>
     <string name="devtools_console_composer">Raw frame, or + to build one</string>

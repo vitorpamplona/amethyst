@@ -465,7 +465,9 @@
     <string name="nest_lobby_host_label">호스트</string>
     <string name="nest_lobby_open_action">열기</string>
     <string name="nest_lobby_no_listeners">지금 방에 아무도 없습니다.</string>
-    <string name="nest_lobby_listeners_count">%1$d명 청취 중</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d명 청취 중</item>
+    </plurals>
     <string name="nest_role_host">호스트</string>
     <string name="nest_role_moderator">중재자</string>
     <string name="nest_state_muted">마이크 음소거됨</string>
@@ -572,7 +574,9 @@
     <string name="hashtag_label_added_by">추가한 사람</string>
     <string name="pinned_notes">고정된 노트</string>
     <string name="pinned_notes_explainer">내 고정된 노트</string>
-    <string name="deleted_items_banner_title">이 목록의 항목 %1$d개가 작성자에 의해 삭제되었습니다.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">이 목록의 항목 %1$d개가 작성자에 의해 삭제되었습니다.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">목록에서 제거</string>
     <string name="deleted_items_banner_dismiss">닫기</string>
     <string name="bookmark_lists">북마크 목록</string>
@@ -588,7 +592,9 @@
     <string name="interest_set_name_placeholder">내 관심사</string>
     <string name="interest_set_hashtag_add_placeholder">해시태그 추가</string>
     <string name="interest_set_hashtag_private_toggle">비공개</string>
-    <string name="interest_set_hashtag_count">해시태그 %1$d개</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">해시태그 %1$d개</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">관심 세트 작업</string>
     <string name="interest_set_clone">복제</string>
     <string name="interest_set_add_hashtag">해시태그 추가</string>
@@ -792,8 +798,12 @@
     <string name="relay_req_subscriptions">REQ 구독 (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT 구독 (%1$d)</string>
     <string name="relay_outbox_events">보낼 편지함 이벤트 (%1$d)</string>
-    <string name="relay_filter_authors">%1$d 명의 작성자</string>
-    <string name="relay_filter_ids">%1$d 개의 ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d 명의 작성자</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d 개의 ID</item>
+    </plurals>
     <string name="relay_filter_since">%1$s 이후</string>
     <string name="relay_filter_until">%1$s 까지</string>
     <string name="relay_filter_limit">한도 %1$d</string>
@@ -1374,7 +1384,9 @@
     <string name="add_user_to_the_list">목록에 사용자 추가</string>
     <string name="remove_user_from_the_list">목록에서 사용자 제거</string>
     <string name="members">멤버</string>
-    <string name="contact_list_containing_label">%1$d명의 사용자를 포함한 팔로우 목록:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">%1$d명의 사용자를 포함한 팔로우 목록:</item>
+    </plurals>
     <string name="contact_list_screen_title">팔로우 목록</string>
     <string name="contact_list_screen_title_with_count">팔로우 목록 (%1$d)</string>
     <string name="follow_pack_creation_name_label">Pack 이름</string>
@@ -1396,8 +1408,12 @@
     <string name="dismiss">닫기</string>
     <string name="broadcasting">브로드캐스팅</string>
     <string name="broadcasting_name">%1$s 브로드캐스팅</string>
-    <string name="broadcasting_number_events">%1$d개의 이벤트 브로드캐스팅 중…</string>
-    <string name="sent_number_events">%1$d개의 이벤트 전송됨</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">%1$d개의 이벤트 브로드캐스팅 중…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">%1$d개의 이벤트 전송됨</item>
+    </plurals>
     <string name="bradcasting_result_partial">일부 이벤트가 실패했습니다</string>
     <string name="bradcasting_result_success">모든 이벤트가 성공했습니다</string>
     <string name="bradcasting_result_failure">모든 이벤트가 실패했습니다</string>
@@ -1412,7 +1428,9 @@
     <string name="new_chess_game">새 체스 게임</string>
     <string name="chess_loading_game">게임 로딩 중…</string>
     <string name="chess_game_not_found">게임을 찾을 수 없습니다</string>
-    <string name="badge_and_n_others"> 외 %1$d명</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> 외 %1$d명</item>
+    </plurals>
     <string name="remove_language">%1$s 제거</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">신뢰하는 사람과 같은 사람들을 팔로우하여 훌륭한 피드로 시작하세요.</string>
     <string name="import_follow_list">팔로우 목록 가져오기</string>
@@ -1421,9 +1439,15 @@
     <string name="name_search_npub1_alice_example_com">검색, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex, Namecoin (.bit) 지원</string>
     <string name="tip">팁</string>
-    <string name="accounts_found">%1$d개의 계정을 찾았습니다</string>
-    <string name="num_selected">%1$d개 선택됨</string>
-    <string name="follow_accounts">%1$d개 계정 팔로우</string>
+    <plurals name="accounts_found">
+        <item quantity="other">%1$d개의 계정을 찾았습니다</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">%1$d개 선택됨</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">%1$d개 계정 팔로우</item>
+    </plurals>
     <string name="skip_for_now">지금은 건너뛰기</string>
     <string name="fetching_follow_list">팔로우 목록 가져오는 중…</string>
     <string name="no_follows_found">팔로우를 찾을 수 없습니다</string>
@@ -1455,16 +1479,26 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">이벤트 재배분됨: %2$d개 전송 및 %3$d개 수신 중 %1$d개 신규</string>
     <string name="event_sync_done_title">동기화 완료</string>
-    <string name="event_sync_done_sent">수신된 %2$d개 중 %1$d개의 이벤트를 목적지 relay로 전달했습니다.</string>
-    <string name="event_sync_done_accepted">목적지 relay에서 %1$d개의 이벤트가 신규로 수락되었습니다.</string>
-    <string name="event_sync_done_duration">%1$d초 만에 완료되었습니다.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">수신된 %2$d개 중 %1$d개의 이벤트를 목적지 relay로 전달했습니다.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">목적지 relay에서 %1$d개의 이벤트가 신규로 수락되었습니다.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">%1$d초 만에 완료되었습니다.</item>
+    </plurals>
     <string name="event_sync_error_title">동기화 오류</string>
     <string name="event_sync_sending_to">전송 대상</string>
     <string name="event_sync_outbox_relays">아웃박스</string>
     <string name="event_sync_inbox_relays">인박스</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_activity_log">현재 확인 중 (%1$d개 relay)</string>
-    <string name="event_sync_activity_log_finished">완료 (%1$d개 relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">현재 확인 중 (%1$d개 relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">완료 (%1$d개 relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">%1$s 전송됨</string>
     <string name="event_sync_log_recv">%1$s 수신됨</string>
     <string name="event_sync_log_new">%1$s 신규</string>
@@ -1624,7 +1658,9 @@
     <string name="manage">관리</string>
     <string name="relay_members">멤버</string>
     <string name="relay_members_title">%1$s의 멤버</string>
-    <string name="relay_members_count">%1$d명의 멤버</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d명의 멤버</item>
+    </plurals>
     <string name="relay_members_loading">멤버 불러오는 중…</string>
     <string name="relay_members_empty">멤버를 찾을 수 없습니다</string>
     <string name="relay_members_request_join">가입 요청</string>
@@ -1634,9 +1670,13 @@
     <string name="relay_members_you_are_member">귀하는 멤버입니다</string>
     <string name="relay_membership_list">Relay 멤버십 목록</string>
     <string name="relay_member_added">Relay에 멤버가 추가되었습니다</string>
-    <string name="relay_members_added">Relay에 %1$d명의 멤버가 추가되었습니다</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">Relay에 %1$d명의 멤버가 추가되었습니다</item>
+    </plurals>
     <string name="relay_member_removed">Relay에서 멤버가 제거되었습니다</string>
-    <string name="relay_members_removed">Relay에서 %1$d명의 멤버가 제거되었습니다</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">Relay에서 %1$d명의 멤버가 제거되었습니다</item>
+    </plurals>
     <string name="relay_join_request">Relay 가입 요청</string>
     <string name="relay_leave_request">Relay 탈퇴 요청</string>
     <string name="ai_writing_use_this">이것 사용</string>
@@ -1661,7 +1701,9 @@
     <string name="emoji_pack_upload_image_cta">커버 이미지 업로드</string>
     <string name="emoji_pack_upload_image_hint">이 emoji 팩을 나타낼 정사각형 이미지를 선택하세요.</string>
     <string name="no_emoji_packs">아직 emoji 팩이 없습니다</string>
-    <string name="emoji_pack_count">%1$d개의 emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d개의 emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">내 Emoji 목록</string>
     <string name="my_emoji_list_explainer">선택 항목에 추가한 emoji 팩 (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">아직 emoji 팩을 목록에 추가하지 않았습니다</string>
@@ -1927,7 +1969,9 @@
     <string name="communities">커뮤니티</string>
     <string name="community_rules_violation_kind_size_exceeded">임시 저장이 %1$d바이트입니다. 이 커뮤니티는 이 종류를 %2$d바이트로 제한합니다.</string>
     <string name="community_rules_violation_max_size_exceeded">임시 저장이 %1$d바이트입니다. 이 커뮤니티는 이벤트를 %2$d바이트로 제한합니다.</string>
-    <string name="community_rules_violation_quota_exceeded">오늘 이 종류의 이벤트를 이미 %1$d개 게시했습니다 (한도 %2$d개).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">오늘 이 종류의 이벤트를 이미 %1$d개 게시했습니다 (한도 %2$d개).</item>
+    </plurals>
     <string name="compose_settings">작성 설정</string>
     <string name="connect_through_your_orbot_setup_short">기본 포트는 9050입니다</string>
     <string name="connected_section">연결된 Relay</string>

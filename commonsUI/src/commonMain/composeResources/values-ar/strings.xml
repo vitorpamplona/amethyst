@@ -482,7 +482,14 @@
     <string name="nest_lobby_host_label">المضيف</string>
     <string name="nest_lobby_open_action">فتح</string>
     <string name="nest_lobby_no_listeners">لا يوجد أحد في الغرفة الآن.</string>
-    <string name="nest_lobby_listeners_count">%1$d يستمع</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="zero">%1$d يستمع</item>
+        <item quantity="one">%1$d يستمع</item>
+        <item quantity="two">%1$d يستمعان</item>
+        <item quantity="few">%1$d يستمعون</item>
+        <item quantity="many">%1$d يستمعون</item>
+        <item quantity="other">%1$d يستمعون</item>
+    </plurals>
     <string name="nest_role_host">المضيف</string>
     <string name="nest_role_moderator">المشرف</string>
     <string name="nest_state_muted">الميكروفون مكتوم</string>
@@ -591,7 +598,14 @@
     <string name="hashtag_label_added_by">أضافه</string>
     <string name="pinned_notes">الملاحظات المثبَّتة</string>
     <string name="pinned_notes_explainer">ملاحظاتك المثبَّتة</string>
-    <string name="deleted_items_banner_title">تم حذف %1$d عنصر/عناصر في هذه القائمة من قِبل مؤلفيها.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="zero">تم حذف %1$d عنصر في هذه القائمة من قِبل مؤلفيها.</item>
+        <item quantity="one">تم حذف %1$d عنصر في هذه القائمة من قِبل مؤلفه.</item>
+        <item quantity="two">تم حذف %1$d عنصرين في هذه القائمة من قِبل مؤلفيهما.</item>
+        <item quantity="few">تم حذف %1$d عناصر في هذه القائمة من قِبل مؤلفيها.</item>
+        <item quantity="many">تم حذف %1$d عنصرًا في هذه القائمة من قِبل مؤلفيها.</item>
+        <item quantity="other">تم حذف %1$d عنصر في هذه القائمة من قِبل مؤلفيها.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">إزالة من القائمة</string>
     <string name="deleted_items_banner_dismiss">تجاهل</string>
     <string name="bookmark_lists">قوائم الإشارات المرجعية</string>
@@ -607,7 +621,14 @@
     <string name="interest_set_name_placeholder">اهتماماتي</string>
     <string name="interest_set_hashtag_add_placeholder">إضافة وسم</string>
     <string name="interest_set_hashtag_private_toggle">خاص</string>
-    <string name="interest_set_hashtag_count">%1$d وسم(وسوم)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="zero">%1$d وسم</item>
+        <item quantity="one">%1$d وسم</item>
+        <item quantity="two">%1$d وسمان</item>
+        <item quantity="few">%1$d وسوم</item>
+        <item quantity="many">%1$d وسمًا</item>
+        <item quantity="other">%1$d وسم</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">إجراءات مجموعة الاهتمامات</string>
     <string name="interest_set_clone">استنساخ</string>
     <string name="interest_set_add_hashtag">إضافة وسم</string>
@@ -812,8 +833,22 @@
     <string name="relay_req_subscriptions">اشتراكات REQ (%1$d)</string>
     <string name="relay_count_subscriptions">اشتراكات COUNT (%1$d)</string>
     <string name="relay_outbox_events">أحداث Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d مؤلف</string>
-    <string name="relay_filter_ids">%1$d معرّف</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="zero">%1$d مؤلف</item>
+        <item quantity="one">%1$d مؤلف</item>
+        <item quantity="two">%1$d مؤلفان</item>
+        <item quantity="few">%1$d مؤلفين</item>
+        <item quantity="many">%1$d مؤلفًا</item>
+        <item quantity="other">%1$d مؤلف</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="zero">%1$d معرّف</item>
+        <item quantity="one">%1$d معرّف</item>
+        <item quantity="two">%1$d معرّفان</item>
+        <item quantity="few">%1$d معرّفات</item>
+        <item quantity="many">%1$d معرّفًا</item>
+        <item quantity="other">%1$d معرّف</item>
+    </plurals>
     <string name="relay_filter_since">منذ %1$s</string>
     <string name="relay_filter_until">حتى %1$s</string>
     <string name="relay_filter_limit">الحد %1$d</string>
@@ -1395,7 +1430,14 @@
     <string name="remove_user_from_the_list">إزالة مستخدم من القائمة</string>
     <string name="follow_list_item_label">حزمة متابعة</string>
     <string name="members">الأعضاء</string>
-    <string name="contact_list_containing_label">قائمة متابعة تحتوي على %1$d مستخدم/مستخدمين:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="zero">قائمة متابعة تحتوي على %1$d مستخدم:</item>
+        <item quantity="one">قائمة متابعة تحتوي على %1$d مستخدم:</item>
+        <item quantity="two">قائمة متابعة تحتوي على %1$d مستخدمَين:</item>
+        <item quantity="few">قائمة متابعة تحتوي على %1$d مستخدمين:</item>
+        <item quantity="many">قائمة متابعة تحتوي على %1$d مستخدمًا:</item>
+        <item quantity="other">قائمة متابعة تحتوي على %1$d مستخدم:</item>
+    </plurals>
     <string name="contact_list_screen_title">قائمة المتابعة</string>
     <string name="contact_list_screen_title_with_count">قائمة المتابعة (%1$d)</string>
     <string name="follow_pack_creation_name_label">اسم الحزمة</string>
@@ -1418,8 +1460,22 @@
     <string name="dismiss">رفض</string>
     <string name="broadcasting">جارٍ البثّ</string>
     <string name="broadcasting_name">جارٍ بثّ %1$s</string>
-    <string name="broadcasting_number_events">جارٍ بثّ %1$d حدث/أحداث…</string>
-    <string name="sent_number_events">تم إرسال %1$d حدث/أحداث</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="zero">جارٍ بثّ %1$d حدث…</item>
+        <item quantity="one">جارٍ بثّ %1$d حدث…</item>
+        <item quantity="two">جارٍ بثّ %1$d حدثين…</item>
+        <item quantity="few">جارٍ بثّ %1$d أحداث…</item>
+        <item quantity="many">جارٍ بثّ %1$d حدثًا…</item>
+        <item quantity="other">جارٍ بثّ %1$d حدث…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="zero">تم إرسال %1$d حدث</item>
+        <item quantity="one">تم إرسال %1$d حدث</item>
+        <item quantity="two">تم إرسال %1$d حدثين</item>
+        <item quantity="few">تم إرسال %1$d أحداث</item>
+        <item quantity="many">تم إرسال %1$d حدثًا</item>
+        <item quantity="other">تم إرسال %1$d حدث</item>
+    </plurals>
     <string name="bradcasting_result_partial">فشل بعض الأحداث</string>
     <string name="bradcasting_result_success">نجحت جميع الأحداث</string>
     <string name="bradcasting_result_failure">فشلت جميع الأحداث</string>
@@ -1434,7 +1490,14 @@
     <string name="new_chess_game">لعبة شطرنج جديدة</string>
     <string name="chess_loading_game">جارٍ تحميل اللعبة…</string>
     <string name="chess_game_not_found">اللعبة غير موجودة</string>
-    <string name="badge_and_n_others"> و%1$d آخرين</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="zero"> و%1$d آخرين</item>
+        <item quantity="one"> و%1$d آخر</item>
+        <item quantity="two"> و%1$d آخرَين</item>
+        <item quantity="few"> و%1$d آخرين</item>
+        <item quantity="many"> و%1$d آخرين</item>
+        <item quantity="other"> و%1$d آخرين</item>
+    </plurals>
     <string name="remove_language">إزالة %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">ابدأ بتغذية رائعة بمتابعة نفس الأشخاص الذين يتابعهم شخص تثق به.</string>
     <string name="import_follow_list">استيراد قائمة المتابَعين</string>
@@ -1443,9 +1506,30 @@
     <string name="name_search_npub1_alice_example_com">بحث، npub1…، alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">يدعم npub وnprofile وNIP-05 والنظام الست عشري وNamecoin ‏(.bit)</string>
     <string name="tip">نصيحة</string>
-    <string name="accounts_found">تم العثور على %1$d حساب</string>
-    <string name="num_selected">%1$d محدد</string>
-    <string name="follow_accounts">متابعة %1$d حساب</string>
+    <plurals name="accounts_found">
+        <item quantity="zero">تم العثور على %1$d حساب</item>
+        <item quantity="one">تم العثور على %1$d حساب</item>
+        <item quantity="two">تم العثور على %1$d حسابين</item>
+        <item quantity="few">تم العثور على %1$d حسابات</item>
+        <item quantity="many">تم العثور على %1$d حسابًا</item>
+        <item quantity="other">تم العثور على %1$d حساب</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="zero">%1$d محدد</item>
+        <item quantity="one">%1$d محدد</item>
+        <item quantity="two">%1$d محددان</item>
+        <item quantity="few">%1$d محددة</item>
+        <item quantity="many">%1$d محددًا</item>
+        <item quantity="other">%1$d محدد</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="zero">متابعة %1$d حساب</item>
+        <item quantity="one">متابعة %1$d حساب</item>
+        <item quantity="two">متابعة %1$d حسابين</item>
+        <item quantity="few">متابعة %1$d حسابات</item>
+        <item quantity="many">متابعة %1$d حسابًا</item>
+        <item quantity="other">متابعة %1$d حساب</item>
+    </plurals>
     <string name="skip_for_now">تخطي في الوقت الحالي</string>
     <string name="fetching_follow_list">جارٍ جلب قائمة المتابَعين…</string>
     <string name="no_follows_found">لم يُعثر على متابَعين</string>
@@ -1477,15 +1561,50 @@
     <string name="event_sync_relays_progress">المرحّلات: %1$d / %2$d</string>
     <string name="event_sync_events_sent">الأحداث المعاد توزيعها: %1$d جديد من أصل %2$d مُرسَل و%3$d مُستَقبَل</string>
     <string name="event_sync_done_title">اكتملت المزامنة</string>
-    <string name="event_sync_done_sent">تمت إعادة توجيه %1$d حدث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</string>
-    <string name="event_sync_done_accepted">%1$d حدث قُبِل كجديد من قِبل المرحّلات الوجهة.</string>
-    <string name="event_sync_done_duration">اكتمل في %1$d ثانية.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="zero">تمت إعادة توجيه %1$d حدث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+        <item quantity="one">تمت إعادة توجيه %1$d حدث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+        <item quantity="two">تمت إعادة توجيه %1$d حدثين إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+        <item quantity="few">تمت إعادة توجيه %1$d أحداث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+        <item quantity="many">تمت إعادة توجيه %1$d حدثًا إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+        <item quantity="other">تمت إعادة توجيه %1$d حدث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="zero">%1$d حدث قُبِل كجديد من قِبل المرحّلات الوجهة.</item>
+        <item quantity="one">%1$d حدث قُبِل كجديد من قِبل المرحّلات الوجهة.</item>
+        <item quantity="two">%1$d حدثان قُبِلا كجديدين من قِبل المرحّلات الوجهة.</item>
+        <item quantity="few">%1$d أحداث قُبِلت كجديدة من قِبل المرحّلات الوجهة.</item>
+        <item quantity="many">%1$d حدثًا قُبِل كجديد من قِبل المرحّلات الوجهة.</item>
+        <item quantity="other">%1$d حدث قُبِل كجديد من قِبل المرحّلات الوجهة.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="zero">اكتمل في %1$d ثانية.</item>
+        <item quantity="one">اكتمل في %1$d ثانية.</item>
+        <item quantity="two">اكتمل في %1$d ثانيتين.</item>
+        <item quantity="few">اكتمل في %1$d ثوانٍ.</item>
+        <item quantity="many">اكتمل في %1$d ثانية.</item>
+        <item quantity="other">اكتمل في %1$d ثانية.</item>
+    </plurals>
     <string name="event_sync_error_title">خطأ في المزامنة</string>
     <string name="event_sync_sending_to">الإرسال إلى</string>
     <string name="event_sync_outbox_relays">صندوق الصادر</string>
     <string name="event_sync_inbox_relays">صندوق الوارد</string>
-    <string name="event_sync_activity_log">جارٍ الفحص الآن (%1$d مرحّل)</string>
-    <string name="event_sync_activity_log_finished">انتهى (%1$d مرحّل)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="zero">جارٍ الفحص الآن (%1$d مرحّل)</item>
+        <item quantity="one">جارٍ الفحص الآن (%1$d مرحّل)</item>
+        <item quantity="two">جارٍ الفحص الآن (%1$d مرحّلان)</item>
+        <item quantity="few">جارٍ الفحص الآن (%1$d مرحّلات)</item>
+        <item quantity="many">جارٍ الفحص الآن (%1$d مرحّلًا)</item>
+        <item quantity="other">جارٍ الفحص الآن (%1$d مرحّل)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="zero">انتهى (%1$d مرحّل)</item>
+        <item quantity="one">انتهى (%1$d مرحّل)</item>
+        <item quantity="two">انتهى (%1$d مرحّلان)</item>
+        <item quantity="few">انتهى (%1$d مرحّلات)</item>
+        <item quantity="many">انتهى (%1$d مرحّلًا)</item>
+        <item quantity="other">انتهى (%1$d مرحّل)</item>
+    </plurals>
     <string name="event_sync_log_sent">أُرسِل %1$s</string>
     <string name="event_sync_log_recv">استُقبِل %1$s</string>
     <string name="event_sync_log_new">جديد %1$s</string>
@@ -1645,7 +1764,14 @@
     <string name="manage">إدارة</string>
     <string name="relay_members">الأعضاء</string>
     <string name="relay_members_title">أعضاء %1$s</string>
-    <string name="relay_members_count">%1$d أعضاء</string>
+    <plurals name="relay_members_count">
+        <item quantity="zero">%1$d عضو</item>
+        <item quantity="one">%1$d عضو</item>
+        <item quantity="two">%1$d عضوان</item>
+        <item quantity="few">%1$d أعضاء</item>
+        <item quantity="many">%1$d عضوًا</item>
+        <item quantity="other">%1$d عضو</item>
+    </plurals>
     <string name="relay_members_loading">جارٍ تحميل الأعضاء…</string>
     <string name="relay_members_empty">لم يُعثر على أعضاء</string>
     <string name="relay_members_request_join">طلب الانضمام</string>
@@ -1655,9 +1781,23 @@
     <string name="relay_members_you_are_member">أنت عضو</string>
     <string name="relay_membership_list">قائمة عضوية الـ relay</string>
     <string name="relay_member_added">تمت إضافة عضو إلى الـ relay</string>
-    <string name="relay_members_added">تمت إضافة %1$d أعضاء إلى الـ relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="zero">تمت إضافة %1$d عضو إلى الـ relay</item>
+        <item quantity="one">تمت إضافة %1$d عضو إلى الـ relay</item>
+        <item quantity="two">تمت إضافة %1$d عضوين إلى الـ relay</item>
+        <item quantity="few">تمت إضافة %1$d أعضاء إلى الـ relay</item>
+        <item quantity="many">تمت إضافة %1$d عضوًا إلى الـ relay</item>
+        <item quantity="other">تمت إضافة %1$d عضو إلى الـ relay</item>
+    </plurals>
     <string name="relay_member_removed">تمت إزالة عضو من الـ relay</string>
-    <string name="relay_members_removed">تمت إزالة %1$d أعضاء من الـ relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="zero">تمت إزالة %1$d عضو من الـ relay</item>
+        <item quantity="one">تمت إزالة %1$d عضو من الـ relay</item>
+        <item quantity="two">تمت إزالة %1$d عضوين من الـ relay</item>
+        <item quantity="few">تمت إزالة %1$d أعضاء من الـ relay</item>
+        <item quantity="many">تمت إزالة %1$d عضوًا من الـ relay</item>
+        <item quantity="other">تمت إزالة %1$d عضو من الـ relay</item>
+    </plurals>
     <string name="relay_join_request">طلب الانضمام إلى relay</string>
     <string name="relay_leave_request">طلب مغادرة relay</string>
     <string name="ai_writing_use_this">استخدام هذا</string>
@@ -1683,7 +1823,14 @@
     <string name="emoji_pack_upload_image_cta">رفع صورة غلاف</string>
     <string name="emoji_pack_upload_image_hint">اختر صورة مربعة لتمثيل حزمة الإيموجي هذه.</string>
     <string name="no_emoji_packs">ليس لديك أي حزم إيموجي بعد</string>
-    <string name="emoji_pack_count">%1$d إيموجي</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="zero">%1$d إيموجي</item>
+        <item quantity="one">%1$d إيموجي</item>
+        <item quantity="two">%1$d إيموجي</item>
+        <item quantity="few">%1$d إيموجي</item>
+        <item quantity="many">%1$d إيموجي</item>
+        <item quantity="other">%1$d إيموجي</item>
+    </plurals>
     <string name="my_emoji_list_title">قائمة الإيموجي الخاصة بي</string>
     <string name="my_emoji_list_explainer">حزم الإيموجي التي أضفتها إلى اختيارك (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">لم تضف أي حزم إيموجي إلى قائمتك بعد</string>
@@ -1979,7 +2126,14 @@
     <string name="communities">المجتمعات</string>
     <string name="community_rules_violation_kind_size_exceeded">حجم المسودة %1$d بايت؛ يحدد هذا المجتمع الحد الأقصى لهذا النوع بـ %2$d بايت.</string>
     <string name="community_rules_violation_max_size_exceeded">حجم المسودة %1$d بايت؛ يحدد هذا المجتمع الحد الأقصى للأحداث بـ %2$d بايت.</string>
-    <string name="community_rules_violation_quota_exceeded">لقد نشرت بالفعل %1$d أحداث من هذا النوع اليوم (الحد الأقصى %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="zero">لقد نشرت بالفعل %1$d حدث من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+        <item quantity="one">لقد نشرت بالفعل %1$d حدثًا من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+        <item quantity="two">لقد نشرت بالفعل %1$d حدثين من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+        <item quantity="few">لقد نشرت بالفعل %1$d أحداث من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+        <item quantity="many">لقد نشرت بالفعل %1$d حدثًا من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+        <item quantity="other">لقد نشرت بالفعل %1$d حدث من هذا النوع اليوم (الحد الأقصى %2$d).</item>
+    </plurals>
     <string name="compose_settings">إعدادات الكتابة</string>
     <string name="connect_through_your_orbot_setup_short">المنفذ الافتراضي هو 9050</string>
     <string name="connected_section_description">القائمة الحالية للـ relays المستخدمة</string>

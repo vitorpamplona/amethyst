@@ -1030,7 +1030,10 @@
     <string name="napplet_decision_deny">Verweigern</string>
     <string name="nip46_signer_explainer">Lass andere Apps mit deinem Schlüssel signieren. Amethyst lauscht auf deinen Inbox-Relays und prüft vor dem Signieren die Berechtigungen jeder App — mit denselben Vertrauensstufen wie Verbundene Apps.</string>
     <string name="nip46_signer_status_no_relays">Keine Inbox-Relays konfiguriert. Füge Inbox-Relays hinzu, damit Apps deinen Signer erreichen können.</string>
-    <string name="nip46_signer_relays_some_down">%1$d von %2$d Relays verbunden</string>
+    <plurals name="nip46_signer_relays_some_down">
+        <item quantity="one">%1$d von %2$d Relay verbunden</item>
+        <item quantity="other">%1$d von %2$d Relays verbunden</item>
+    </plurals>
     <string name="nip46_signer_copy">Kopieren</string>
     <string name="nip46_signer_regenerate">Neue Adresse</string>
     <string name="nip46_signer_rotate_confirm_title">Neue Adresse generieren?</string>
@@ -1194,7 +1197,10 @@
     <string name="nest_lobby_host_label">Gastgeber</string>
     <string name="nest_lobby_open_action">Öffnen</string>
     <string name="nest_lobby_no_listeners">Im Raum ist gerade niemand.</string>
-    <string name="nest_lobby_listeners_count">%1$d hört zu</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d hört zu</item>
+        <item quantity="other">%1$d hören zu</item>
+    </plurals>
     <string name="nest_role_host">Gastgeber</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon stumm</string>
@@ -1372,7 +1378,10 @@
     <string name="hashtag_label_added_by">hinzugefügt von</string>
     <string name="pinned_notes">Angeheftete Beiträge</string>
     <string name="pinned_notes_explainer">Deine angepinnten Beiträge</string>
-    <string name="deleted_items_banner_title">%1$d Element(e) in dieser Liste wurden von ihren Autoren gelöscht.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d Element in dieser Liste wurde von seinem Autor gelöscht.</item>
+        <item quantity="other">%1$d Elemente in dieser Liste wurden von ihren Autoren gelöscht.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Aus Liste entfernen</string>
     <string name="deleted_items_banner_dismiss">Verwerfen</string>
     <string name="bookmark_lists">Lesezeichenlisten</string>
@@ -1388,7 +1397,10 @@
     <string name="interest_set_name_placeholder">Meine Interessen</string>
     <string name="interest_set_hashtag_add_placeholder">Hashtag hinzufügen</string>
     <string name="interest_set_hashtag_private_toggle">Privat</string>
-    <string name="interest_set_hashtag_count">%1$d Hashtag(s)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d Hashtag</item>
+        <item quantity="other">%1$d Hashtags</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Aktionen für Interessenset</string>
     <string name="interest_set_clone">Klonen</string>
     <string name="interest_set_add_hashtag">Hashtag hinzufügen</string>
@@ -1675,8 +1687,14 @@
     <string name="relay_req_subscriptions">REQ-Abonnements (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-Abonnements (%1$d)</string>
     <string name="relay_outbox_events">Outbox-Ereignisse (%1$d)</string>
-    <string name="relay_filter_authors">%1$d Autoren</string>
-    <string name="relay_filter_ids">%1$d IDs</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d Autor</item>
+        <item quantity="other">%1$d Autoren</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ID</item>
+        <item quantity="other">%1$d IDs</item>
+    </plurals>
     <string name="relay_filter_since">seit %1$s</string>
     <string name="relay_filter_until">bis %1$s</string>
     <string name="relay_filter_limit">Limit %1$d</string>
@@ -1761,7 +1779,10 @@
     <string name="url_preview_open_in_browser">Im Browser öffnen</string>
     <string name="long_form_reading_minutes">%1$d Min. Lesezeit</string>
     <string name="long_form_published">Veröffentlicht</string>
-    <string name="search_waiting_on_relays">Warte auf %1$d von %2$d Relays</string>
+    <plurals name="search_waiting_on_relays">
+        <item quantity="one">Warte auf %1$d von %2$d Relay</item>
+        <item quantity="other">Warte auf %1$d von %2$d Relays</item>
+    </plurals>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d Abschnitt</item>
         <item quantity="other">%1$d Abschnitte</item>
@@ -2750,7 +2771,10 @@
     <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
     <string name="follow_list_item_label">Folge Paket</string>
     <string name="members">Mitglieder</string>
-    <string name="contact_list_containing_label">Folgenliste (%1$d Nutzer):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Folgenliste (%1$d Nutzer):</item>
+        <item quantity="other">Folgenliste (%1$d Nutzer):</item>
+    </plurals>
     <string name="contact_list_screen_title">Folgenliste</string>
     <string name="contact_list_screen_title_with_count">Folgenliste (%1$d)</string>
     <string name="relay_list_screen_title">Relays</string>
@@ -2782,8 +2806,14 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Senden</string>
     <string name="broadcasting_name">Sende %1$s</string>
-    <string name="broadcasting_number_events">Sende %1$d Ereignisse…</string>
-    <string name="sent_number_events">%1$d Ereignisse gesendet</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Sende %1$d Ereignis…</item>
+        <item quantity="other">Sende %1$d Ereignisse…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d Ereignis gesendet</item>
+        <item quantity="other">%1$d Ereignisse gesendet</item>
+    </plurals>
     <string name="bradcasting_result_partial">Einige Ereignisse sind fehlgeschlagen</string>
     <string name="bradcasting_result_success">Alle Ereignisse waren erfolgreich</string>
     <string name="bradcasting_result_failure">Alle Ereignisse sind fehlgeschlagen</string>
@@ -2807,7 +2837,10 @@
     <string name="new_chess_game">Neues Schachspiel</string>
     <string name="chess_loading_game">Spiel wird geladen…</string>
     <string name="chess_game_not_found">Spiel nicht gefunden</string>
-    <string name="badge_and_n_others"> und %1$d weitere</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> und %1$d weiterer</item>
+        <item quantity="other"> und %1$d weitere</item>
+    </plurals>
     <string name="remove_language">%1$s entfernen</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Starte mit einem großartigen Feed, indem du dieselben Personen folgst wie jemand, dem du vertraust.</string>
     <string name="import_follow_list">Folgeliste importieren</string>
@@ -2816,9 +2849,18 @@
     <string name="name_search_npub1_alice_example_com">Namenssuche, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Unterstützt npub, NIP-05, Hex und Namecoin (.bit / d/ / id/)</string>
     <string name="tip">Tipp</string>
-    <string name="accounts_found">%1$d Konten gefunden</string>
-    <string name="num_selected">%1$d ausgewählt</string>
-    <string name="follow_accounts">%1$d Konten folgen</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d Konto gefunden</item>
+        <item quantity="other">%1$d Konten gefunden</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d ausgewählt</item>
+        <item quantity="other">%1$d ausgewählt</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d Konto folgen</item>
+        <item quantity="other">%1$d Konten folgen</item>
+    </plurals>
     <string name="skip_for_now">Vorerst überspringen</string>
     <string name="fetching_follow_list">Folgeliste wird abgerufen…</string>
     <string name="no_follows_found">Keine Follows gefunden</string>
@@ -2850,16 +2892,31 @@
     <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Ereignisse verteilt: %1$d neue von %2$d gesendeten und %3$d empfangenen</string>
     <string name="event_sync_done_title">Synchronisierung abgeschlossen</string>
-    <string name="event_sync_done_sent">%1$d Ereignisse an Ziel-Relays weitergeleitet von %2$d empfangenen.</string>
-    <string name="event_sync_done_accepted">%1$d Ereignisse von Ziel-Relays als neu akzeptiert.</string>
-    <string name="event_sync_done_duration">Abgeschlossen in %1$d Sekunden.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%1$d Ereignis an Ziel-Relays weitergeleitet von %2$d empfangenen.</item>
+        <item quantity="other">%1$d Ereignisse an Ziel-Relays weitergeleitet von %2$d empfangenen.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d Ereignis von Ziel-Relays als neu akzeptiert.</item>
+        <item quantity="other">%1$d Ereignisse von Ziel-Relays als neu akzeptiert.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Abgeschlossen in %1$d Sekunde.</item>
+        <item quantity="other">Abgeschlossen in %1$d Sekunden.</item>
+    </plurals>
     <string name="event_sync_error_title">Synchronisierungsfehler</string>
     <string name="event_sync_sending_to">Senden an</string>
     <string name="event_sync_outbox_relays">Outbox</string>
     <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Wird geprüft (%1$d Relays)</string>
-    <string name="event_sync_activity_log_finished">Abgeschlossen (%1$d Relays)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Wird geprüft (%1$d Relay)</item>
+        <item quantity="other">Wird geprüft (%1$d Relays)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Abgeschlossen (%1$d Relay)</item>
+        <item quantity="other">Abgeschlossen (%1$d Relays)</item>
+    </plurals>
     <string name="event_sync_log_sent">ges. %1$s</string>
     <string name="event_sync_log_recv">empf. %1$s</string>
     <string name="event_sync_log_new">neu %1$s</string>
@@ -3048,7 +3105,10 @@
     <string name="manage">Verwalten</string>
     <string name="relay_members">Mitglieder</string>
     <string name="relay_members_title">Mitglieder von %1$s</string>
-    <string name="relay_members_count">%1$d Mitglieder</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d Mitglied</item>
+        <item quantity="other">%1$d Mitglieder</item>
+    </plurals>
     <string name="relay_members_loading">Mitglieder werden geladen…</string>
     <string name="relay_members_empty">Keine Mitglieder gefunden</string>
     <string name="relay_members_request_join">Beitritt anfragen</string>
@@ -3061,9 +3121,15 @@
     <string name="relay_members_unverifiable">Dieses Relay veröffentlicht seinen Identitätsschlüssel nicht (NIP-11 self), daher kann seine Mitgliederliste nicht überprüft werden</string>
     <string name="relay_membership_list">Relay-Mitgliederliste</string>
     <string name="relay_member_added">Mitglied zum Relay hinzugefügt</string>
-    <string name="relay_members_added">%1$d Mitglieder zum Relay hinzugefügt</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d Mitglied zum Relay hinzugefügt</item>
+        <item quantity="other">%1$d Mitglieder zum Relay hinzugefügt</item>
+    </plurals>
     <string name="relay_member_removed">Mitglied aus Relay entfernt</string>
-    <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d Mitglied aus Relay entfernt</item>
+        <item quantity="other">%1$d Mitglieder aus Relay entfernt</item>
+    </plurals>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
     <string name="compose_signature_setting_title">Signatur</string>
@@ -3106,7 +3172,10 @@
     <string name="emoji_pack_upload_image_cta">Titelbild hochladen</string>
     <string name="emoji_pack_upload_image_hint">Wähle ein quadratisches Bild zur Darstellung dieses Emoji-Pakets.</string>
     <string name="no_emoji_packs">Du hast noch keine Emoji-Pakete</string>
-    <string name="emoji_pack_count">%1$d Emojis</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d Emoji</item>
+        <item quantity="other">%1$d Emojis</item>
+    </plurals>
     <string name="my_emoji_list_title">Meine Emoji-Liste</string>
     <string name="my_emoji_list_explainer">Emoji-Pakete, die du zu deiner Auswahl hinzugefügt hast (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Du hast deiner Liste noch keine Emoji-Pakete hinzugefügt</string>
@@ -3151,7 +3220,10 @@
     <string name="emoji_import_unreadable">Konnte nicht geöffnet werden</string>
     <string name="emoji_import_truncated">Nur teilweise importiert</string>
     <string name="emoji_import_truncated_hint">Aus einem Archiv werden bis zu %1$d Bilder bzw. %2$d MB davon gelesen.</string>
-    <string name="emoji_import_more">+%1$d weitere</string>
+    <plurals name="emoji_import_more">
+        <item quantity="one">+%1$d weiteres</item>
+        <item quantity="other">+%1$d weitere</item>
+    </plurals>
     <string name="emoji_import_cta">Bilder oder .zip importieren</string>
     <string name="emoji_pack_empty_title">Dieses Paket ist leer</string>
     <string name="emoji_pack_empty_body">Füge Emojis einzeln hinzu oder importiere eine ganze Bildersammlung oder eine .zip auf einmal.</string>
@@ -3790,7 +3862,10 @@
     <string name="communities">Communitys</string>
     <string name="community_rules_violation_kind_size_exceeded">Entwurf hat %1$d Bytes; diese Community begrenzt diesen Typ auf %2$d Bytes.</string>
     <string name="community_rules_violation_max_size_exceeded">Entwurf hat %1$d Bytes; diese Community begrenzt Ereignisse auf %2$d Bytes.</string>
-    <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Du hast heute bereits %1$d Ereignis dieses Typs veröffentlicht (Limit %2$d).</item>
+        <item quantity="other">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</item>
+    </plurals>
     <string name="compose_settings">Editor-Einstellungen</string>
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d Kanal</item>
@@ -6461,7 +6536,10 @@
     <string name="cordn_coordinators_purge_body">Beim Entfernen bleiben die Gruppen auf diesem Gerät, sodass sie zurückkommen, wenn du den Koordinator wieder hinzufügst. Beim Löschen werden sie vernichtet: Die Gruppenschlüssel, die Lesepositionen und deine KeyPackages verschwinden, und diese Gruppen können nur über eine neue Einladung wieder betreten werden.\n\nDer Koordinator wird nicht benachrichtigt und behält alles, was er bereits hatte.</string>
     <string name="cordn_coordinators_purge_title">Diesen Koordinator löschen?</string>
     <string name="cordn_coordinators_relays_label">Antwortet auf</string>
-    <string name="cordn_coordinators_relays_more">%1$s +%2$d weitere</string>
+    <plurals name="cordn_coordinators_relays_more">
+        <item quantity="one">%1$s +%2$d weiteres</item>
+        <item quantity="other">%1$s +%2$d weitere</item>
+    </plurals>
     <string name="cordn_coordinators_remove">Entfernen</string>
     <string name="cordn_coordinators_rename">Umbenennen</string>
     <string name="cordn_coordinators_server">Gibt an: %1$s</string>
@@ -6583,7 +6661,10 @@
         <item quantity="one">%1$d Person ist bereits in dieser Gruppe</item>
         <item quantity="other">%1$d Personen sind bereits in dieser Gruppe</item>
     </plurals>
-    <string name="cordn_invitations_members_more">+%1$d weitere</string>
+    <plurals name="cordn_invitations_members_more">
+        <item quantity="one">+%1$d weiteres</item>
+        <item quantity="other">+%1$d weitere</item>
+    </plurals>
     <string name="cordn_invitations_no_coordinators">Du hast keinen Koordinator geöffnet. cordn-Einladungen kommen über einen Koordinator an, daher gibt es noch nirgends etwas nachzusehen.</string>
     <string name="cordn_invitations_none">Keine wartenden Einladungen.</string>
     <string name="cordn_invitations_refresh">Erneut prüfen</string>
@@ -7094,7 +7175,10 @@
         <item quantity="one">%1$d Mitglied</item>
         <item quantity="other">%1$d Mitglieder</item>
     </plurals>
-    <string name="trusted_list_truncated">%1$d von %2$d Mitgliedern angezeigt</string>
+    <plurals name="trusted_list_truncated">
+        <item quantity="one">%1$d von %2$d Mitglied angezeigt</item>
+        <item quantity="other">%1$d von %2$d Mitgliedern angezeigt</item>
+    </plurals>
     <string name="trusted_list_retracted">Zurückgezogen</string>
     <string name="trusted_list_built_from_tag">Erstellt aus dem Tag</string>
     <string name="trusted_list_tag_by">von</string>
@@ -8018,7 +8102,10 @@
     <string name="devtools_kind_no_client">Kein Client-Tag</string>
     <string name="devtools_kind_shape_n">Form %1$d</string>
     <string name="devtools_kind_from_clients">Von: %1$s</string>
-    <string name="devtools_kind_more">+%1$d weitere</string>
+    <plurals name="devtools_kind_more">
+        <item quantity="one">+%1$d weitere</item>
+        <item quantity="other">+%1$d weitere</item>
+    </plurals>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d Ereignis</item>
         <item quantity="other">%1$d Ereignisse</item>
@@ -8052,7 +8139,10 @@
     <string name="devtools_status_timeout">Zeitüberschreitung</string>
     <string name="devtools_status_tor">Wartet auf Tor</string>
     <string name="devtools_console_your_relays">Deine Relays</string>
-    <string name="devtools_console_open_subs">%1$d offen</string>
+    <plurals name="devtools_console_open_subs">
+        <item quantity="one">%1$d offen</item>
+        <item quantity="other">%1$d offen</item>
+    </plurals>
     <string name="devtools_console_close_sub">%1$s schließen</string>
     <string name="devtools_console_build">Frame erstellen</string>
     <string name="devtools_console_composer">Roher Frame, oder + zum Erstellen</string>
@@ -10058,4 +10148,45 @@
     <string name="vanish_history_search_keywords">Löschung, Ereignisse löschen</string>
     <string name="video_player_search_keywords">Video, Player, Wiedergabe, automatische Wiedergabe, stummschalten</string>
     <string name="zaps_search_keywords">Lightning, Sats, Trinkgeld, Wallet, Betrag</string>
+    <string name="composer_pop_out">In separatem Fenster öffnen</string>
+    <string name="media_studio_add">Hinzufügen</string>
+    <string name="media_studio_position">%1$d von %2$d</string>
+    <string name="media_studio_hold_original">Gedrückt halten für Original</string>
+    <string name="media_studio_tool_quality">Qualität</string>
+    <string name="media_studio_tool_alt">Alt-Text</string>
+    <string name="media_studio_tool_privacy">Privatsphäre</string>
+    <string name="media_studio_alt_placeholder">Beschreibe es für Menschen, die es nicht sehen können</string>
+    <string name="media_studio_sensitive">Sensibel</string>
+    <string name="media_studio_sensitive_description">Verschwommen bis zum Antippen</string>
+    <string name="media_studio_remove_location">Standort entfernen</string>
+    <string name="media_studio_remove_location_description">Und Kameradetails</string>
+    <string name="media_studio_remove_location_audio_description">Und Titel, Interpret und andere Tags</string>
+    <string name="media_studio_long_edge">%1$d px</string>
+    <string name="media_studio_no_options">Wird unverändert hochgeladen</string>
+    <string name="media_studio_done">Fertig</string>
+    <string name="media_marker_photo">Foto %1$d</string>
+    <string name="media_marker_video">Video %1$d</string>
+    <string name="media_marker_audio">Audio %1$d</string>
+    <string name="media_marker_file">Datei %1$d</string>
+    <string name="media_marker_missing">Datei fehlt</string>
+    <string name="media_alt_badge">ALT</string>
+    <string name="media_cw_badge">CW</string>
+    <string name="media_post_upload_failed">%1$s wurde nicht hochgeladen</string>
+    <string name="media_studio_caption_placeholder">Bildunterschrift schreiben…</string>
+    <string name="media_studio_retry">Nichts wurde gesendet. Tippe auf %1$s, um es erneut zu versuchen.</string>
+    <string name="media_post_nothing_posted">Nichts wurde veröffentlicht. Tippe auf „Beitrag“, um es erneut zu versuchen.</string>
+    <string name="media_studio_alt_suggested">Auf diesem Gerät vorgeschlagen. Prüfe ihn vor dem Posten.</string>
+    <string name="media_studio_h265">Kleinere Datei (H.265)</string>
+    <string name="media_studio_h265_description">Manche älteren Apps können sie nicht abspielen</string>
+    <string name="media_studio_gif_description">Meist deutlich kleiner</string>
+    <string name="media_studio_encrypt_description">Nur dieser Chat kann sie öffnen</string>
+    <string name="media_crop_hint">Ziehe die Ecken oder verschiebe den Rahmen</string>
+    <string name="media_crop_reset">Zurücksetzen</string>
+    <string name="media_studio_tool_crop">Zuschneiden</string>
+    <string name="media_crop_free">Frei</string>
+    <string name="media_crop_upload_failed">Bild konnte nicht zugeschnitten werden</string>
+    <string name="media_studio_tool_trim">Kürzen</string>
+    <string name="media_trim_hint">Ziehe die Enden, um einen Teil zu behalten</string>
+    <string name="media_trim_upload_failed">Video konnte nicht gekürzt werden</string>
+    <string name="media_crop_failed">Dieses Bild kann hier nicht zugeschnitten werden. Speichern verwendet es unverändert.</string>
 </resources>

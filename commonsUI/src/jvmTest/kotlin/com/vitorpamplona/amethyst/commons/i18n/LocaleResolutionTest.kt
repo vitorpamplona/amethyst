@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.commons.i18n
 
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_discovery_accepted_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_members_count
 import com.vitorpamplona.amethyst.commons.resources.settings
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import java.util.Locale
 import kotlin.test.Test
@@ -68,5 +70,26 @@ class LocaleResolutionTest {
         assertEquals("Kinds aceptados", resolve("es-AR", Res.string.relay_discovery_accepted_kinds))
         assertEquals("設置", resolve("zh-HK", Res.string.settings))
         assertEquals("设置", resolve("zh-SG", Res.string.settings))
+    }
+
+    /** Counted nouns are `<plurals>`, so Czech gets its one/few/other forms instead of an English-shaped string. */
+    @Test
+    fun countsUseTheLanguagesPluralForms() {
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("cs"))
+            runBlocking {
+                assertEquals("1 člen", getPluralString(Res.plurals.relay_members_count, 1, 1))
+                assertEquals("3 členové", getPluralString(Res.plurals.relay_members_count, 3, 3))
+                assertEquals("5 členů", getPluralString(Res.plurals.relay_members_count, 5, 5))
+            }
+            Locale.setDefault(Locale.forLanguageTag("en"))
+            runBlocking {
+                assertEquals("1 member", getPluralString(Res.plurals.relay_members_count, 1, 1))
+                assertEquals("2 members", getPluralString(Res.plurals.relay_members_count, 2, 2))
+            }
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 }

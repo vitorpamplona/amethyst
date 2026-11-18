@@ -75,7 +75,10 @@
     <string name="vanish_confirm_single_relay">Je staat op het punt om %1$s te vragen alle je gegevens tot de geselecteerde datum permanent te verwijderen. Dit kan niet ongedaan worden gemaakt.</string>
     <string name="vanish_confirm_all_relays">Je staat op het punt om ALLE relays te vragen alle je gegevens tot de geselecteerde datum permanent te verwijderen. Dit wordt overal verspreid en kan niet ongedaan worden gemaakt.</string>
     <string name="emoji_pack_upload_image_cta">Cover-afbeelding uploaden</string>
-    <string name="emoji_pack_count">%1$d emojis</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojis</item>
+    </plurals>
     <string name="dvm_pay_invoice_from_dvm">Factuur betalen van de DVM</string>
     <string name="nsite_root_site">Root-site</string>
     <string name="napplet_card_permissions">Machtigingen:</string>

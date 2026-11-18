@@ -1030,7 +1030,10 @@
     <string name="napplet_decision_deny">Neka</string>
     <string name="nip46_signer_explainer">Låt andra appar signera med din nyckel. Amethyst lyssnar på dina inbox-relän och kontrollerar varje apps behörigheter innan signering — med samma förtroendenivåer som Anslutna appar.</string>
     <string name="nip46_signer_status_no_relays">Inga inbox-relän konfigurerade. Lägg till inbox-relän så att appar kan nå din signatär.</string>
-    <string name="nip46_signer_relays_some_down">%1$d av %2$d reläer anslutna</string>
+    <plurals name="nip46_signer_relays_some_down">
+        <item quantity="one">%1$d av %2$d relä anslutna</item>
+        <item quantity="other">%1$d av %2$d reläer anslutna</item>
+    </plurals>
     <string name="nip46_signer_copy">Kopiera</string>
     <string name="nip46_signer_regenerate">Ny adress</string>
     <string name="nip46_signer_rotate_confirm_title">Generera en ny adress?</string>
@@ -1194,7 +1197,10 @@
     <string name="nest_lobby_host_label">Värd</string>
     <string name="nest_lobby_open_action">Öppna</string>
     <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
-    <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d lyssnar</item>
+        <item quantity="other">%1$d lyssnar</item>
+    </plurals>
     <string name="nest_role_host">Värd</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon avstängd</string>
@@ -1372,7 +1378,10 @@
     <string name="hashtag_label_added_by">tillagd av</string>
     <string name="pinned_notes">Fästa anteckningar</string>
     <string name="pinned_notes_explainer">Dina fastnålade anteckningar</string>
-    <string name="deleted_items_banner_title">%1$d objekt i den här listan har raderats av sina författare.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d objekt i den här listan har raderats av sin författare.</item>
+        <item quantity="other">%1$d objekt i den här listan har raderats av sina författare.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Ta bort från lista</string>
     <string name="deleted_items_banner_dismiss">Avvisa</string>
     <string name="bookmark_lists">Bokmärkeslistor</string>
@@ -1388,7 +1397,10 @@
     <string name="interest_set_name_placeholder">Mina intressen</string>
     <string name="interest_set_hashtag_add_placeholder">Lägg till hashtagg</string>
     <string name="interest_set_hashtag_private_toggle">Privat</string>
-    <string name="interest_set_hashtag_count">%1$d hashtaggar</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtagg</item>
+        <item quantity="other">%1$d hashtaggar</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Åtgärder för intresseuppsättning</string>
     <string name="interest_set_clone">Klona</string>
     <string name="interest_set_add_hashtag">Lägg till hashtagg</string>
@@ -1675,8 +1687,14 @@
     <string name="relay_req_subscriptions">REQ-prenumerationer (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-prenumerationer (%1$d)</string>
     <string name="relay_outbox_events">Utgående händelser (%1$d)</string>
-    <string name="relay_filter_authors">%1$d författare</string>
-    <string name="relay_filter_ids">%1$d ID:n</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d författare</item>
+        <item quantity="other">%1$d författare</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ID</item>
+        <item quantity="other">%1$d ID:n</item>
+    </plurals>
     <string name="relay_filter_since">sedan %1$s</string>
     <string name="relay_filter_until">till %1$s</string>
     <string name="relay_filter_limit">gräns %1$d</string>
@@ -1761,7 +1779,10 @@
     <string name="url_preview_open_in_browser">Öppna i webbläsare</string>
     <string name="long_form_reading_minutes">%1$d min läsning</string>
     <string name="long_form_published">Publicerad</string>
-    <string name="search_waiting_on_relays">Väntar på %1$d av %2$d reläer</string>
+    <plurals name="search_waiting_on_relays">
+        <item quantity="one">Väntar på %1$d av %2$d relä</item>
+        <item quantity="other">Väntar på %1$d av %2$d reläer</item>
+    </plurals>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d avsnitt</item>
         <item quantity="other">%1$d avsnitt</item>
@@ -2750,7 +2771,10 @@
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
     <string name="follow_list_item_label">Följpaket</string>
     <string name="members">Medlemmar</string>
-    <string name="contact_list_containing_label">Följlista som innehåller %1$d användare:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Följlista som innehåller %1$d användare:</item>
+        <item quantity="other">Följlista som innehåller %1$d användare:</item>
+    </plurals>
     <string name="contact_list_screen_title">Följlista</string>
     <string name="contact_list_screen_title_with_count">Följlista (%1$d)</string>
     <string name="relay_list_screen_title">Reläer</string>
@@ -2782,8 +2806,14 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Sänder</string>
     <string name="broadcasting_name">Sänder %1$s</string>
-    <string name="broadcasting_number_events">Sänder %1$d händelser…</string>
-    <string name="sent_number_events">%1$d händelser skickade</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Sänder %1$d händelse…</item>
+        <item quantity="other">Sänder %1$d händelser…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d händelse skickad</item>
+        <item quantity="other">%1$d händelser skickade</item>
+    </plurals>
     <string name="bradcasting_result_partial">Vissa händelser misslyckades</string>
     <string name="bradcasting_result_success">Alla händelser lyckades</string>
     <string name="bradcasting_result_failure">Alla händelser misslyckades</string>
@@ -2807,7 +2837,10 @@
     <string name="new_chess_game">Nytt schackparti</string>
     <string name="chess_loading_game">Laddar parti…</string>
     <string name="chess_game_not_found">Parti hittades inte</string>
-    <string name="badge_and_n_others"> och %1$d andra</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> och %1$d annan</item>
+        <item quantity="other"> och %1$d andra</item>
+    </plurals>
     <string name="remove_language">Ta bort %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Kom igång med ett bra flöde genom att följa samma personer som någon du litar på.</string>
     <string name="import_follow_list">Importera följarlista</string>
@@ -2816,9 +2849,18 @@
     <string name="name_search_npub1_alice_example_com">namnsökning, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Stöder npub, NIP-05, hex och Namecoin (.bit / d/ / id/)</string>
     <string name="tip">Tips</string>
-    <string name="accounts_found">%1$d konton hittades</string>
-    <string name="num_selected">%1$d valda</string>
-    <string name="follow_accounts">Följ %1$d konton</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d konto hittades</item>
+        <item quantity="other">%1$d konton hittades</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d vald</item>
+        <item quantity="other">%1$d valda</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Följ %1$d konto</item>
+        <item quantity="other">Följ %1$d konton</item>
+    </plurals>
     <string name="skip_for_now">Hoppa över för nu</string>
     <string name="fetching_follow_list">Hämtar följarlista…</string>
     <string name="no_follows_found">Inga följare hittades</string>
@@ -2850,16 +2892,31 @@
     <string name="event_sync_relays_progress">Reläer: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Omfördelade händelser: %1$d nya av %2$d skickade och %3$d mottagna</string>
     <string name="event_sync_done_title">Synkronisering klar</string>
-    <string name="event_sync_done_sent">Vidarebefordrade %1$d händelser till destinationsreläer av %2$d mottagna.</string>
-    <string name="event_sync_done_accepted">%1$d händelser accepterade som nya av destinationsreläer.</string>
-    <string name="event_sync_done_duration">Slutfört på %1$d sekunder.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Vidarebefordrade %1$d händelse till destinationsreläer av %2$d mottagna.</item>
+        <item quantity="other">Vidarebefordrade %1$d händelser till destinationsreläer av %2$d mottagna.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d händelse accepterad som ny av destinationsreläer.</item>
+        <item quantity="other">%1$d händelser accepterade som nya av destinationsreläer.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Slutfört på %1$d sekund.</item>
+        <item quantity="other">Slutfört på %1$d sekunder.</item>
+    </plurals>
     <string name="event_sync_error_title">Synkroniseringsfel</string>
     <string name="event_sync_sending_to">Skickar till</string>
     <string name="event_sync_outbox_relays">Utkorg</string>
     <string name="event_sync_inbox_relays">Inkorg</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_activity_log">Kontrollerar (%1$d reläer)</string>
-    <string name="event_sync_activity_log_finished">Slutfört (%1$d reläer)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Kontrollerar (%1$d relä)</item>
+        <item quantity="other">Kontrollerar (%1$d reläer)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Slutfört (%1$d relä)</item>
+        <item quantity="other">Slutfört (%1$d reläer)</item>
+    </plurals>
     <string name="event_sync_log_sent">skick. %1$s</string>
     <string name="event_sync_log_recv">mott. %1$s</string>
     <string name="event_sync_log_new">nya %1$s</string>
@@ -3048,7 +3105,10 @@
     <string name="manage">Hantera</string>
     <string name="relay_members">Medlemmar</string>
     <string name="relay_members_title">Medlemmar i %1$s</string>
-    <string name="relay_members_count">%1$d medlemmar</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d medlem</item>
+        <item quantity="other">%1$d medlemmar</item>
+    </plurals>
     <string name="relay_members_loading">Laddar medlemmar…</string>
     <string name="relay_members_empty">Inga medlemmar hittades</string>
     <string name="relay_members_request_join">Begär att gå med</string>
@@ -3061,9 +3121,15 @@
     <string name="relay_members_unverifiable">Det här reläet publicerar inte sin identitetsnyckel (NIP-11 self), så dess medlemslista kan inte verifieras</string>
     <string name="relay_membership_list">Relämedlemslista</string>
     <string name="relay_member_added">Medlem tillagd i relä</string>
-    <string name="relay_members_added">%1$d medlemmar tillagda i relä</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d medlem tillagd i relä</item>
+        <item quantity="other">%1$d medlemmar tillagda i relä</item>
+    </plurals>
     <string name="relay_member_removed">Medlem borttagen från relä</string>
-    <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d medlem borttagen från relä</item>
+        <item quantity="other">%1$d medlemmar borttagna från relä</item>
+    </plurals>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
     <string name="compose_signature_setting_title">Signatur</string>
@@ -3106,7 +3172,10 @@
     <string name="emoji_pack_upload_image_cta">Ladda upp en omslagsbild</string>
     <string name="emoji_pack_upload_image_hint">Välj en fyrkantig bild som ska representera detta emoji-paket.</string>
     <string name="no_emoji_packs">Du har inga emoji-paket ännu</string>
-    <string name="emoji_pack_count">%1$d emojis</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojis</item>
+    </plurals>
     <string name="my_emoji_list_title">Min emoji-lista</string>
     <string name="my_emoji_list_explainer">Emoji-paket som du har lagt till i ditt urval (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Du har inte lagt till några emoji-paket i din lista ännu</string>
@@ -3151,7 +3220,10 @@
     <string name="emoji_import_unreadable">Kunde inte öppnas</string>
     <string name="emoji_import_truncated">Bara delvis importerad</string>
     <string name="emoji_import_truncated_hint">Ett arkiv läses in upp till %1$d bilder eller %2$d MB.</string>
-    <string name="emoji_import_more">+%1$d till</string>
+    <plurals name="emoji_import_more">
+        <item quantity="one">+%1$d till</item>
+        <item quantity="other">+%1$d till</item>
+    </plurals>
     <string name="emoji_import_cta">Importera bilder eller .zip</string>
     <string name="emoji_pack_empty_title">Det här paketet är tomt</string>
     <string name="emoji_pack_empty_body">Lägg till emojis en i taget, eller ta in en hel uppsättning bilder eller en .zip på en gång.</string>
@@ -3790,7 +3862,10 @@
     <string name="communities">Gemenskaper</string>
     <string name="community_rules_violation_kind_size_exceeded">Utkastet är %1$d byte; den här gemenskapen begränsar den här typen till %2$d byte.</string>
     <string name="community_rules_violation_max_size_exceeded">Utkastet är %1$d byte; den här gemenskapen begränsar händelser till %2$d byte.</string>
-    <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Du har redan publicerat %1$d händelse av den här typen idag (gräns %2$d).</item>
+        <item quantity="other">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</item>
+    </plurals>
     <string name="compose_settings">Skrivinställningar</string>
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d kanal</item>
@@ -6459,7 +6534,10 @@
     <string name="cordn_coordinators_purge_body">Att ta bort behåller grupperna på den här enheten, så om du lägger till koordinatorn igen kommer de tillbaka. Att rensa bort raderar dem: gruppnycklarna, lässtatusen och dina nyckelpaket försvinner, och de grupperna kan bara nås igen via en ny inbjudan.\n\nKoordinatorn meddelas inte och behåller allt den redan hade.</string>
     <string name="cordn_coordinators_purge_title">Rensa bort den här koordinatorn?</string>
     <string name="cordn_coordinators_relays_label">Svarar på</string>
-    <string name="cordn_coordinators_relays_more">%1$s +%2$d till</string>
+    <plurals name="cordn_coordinators_relays_more">
+        <item quantity="one">%1$s +%2$d till</item>
+        <item quantity="other">%1$s +%2$d till</item>
+    </plurals>
     <string name="cordn_coordinators_remove">Ta bort</string>
     <string name="cordn_coordinators_rename">Byt namn</string>
     <string name="cordn_coordinators_server">Säger sig vara: %1$s</string>
@@ -6581,7 +6659,10 @@
         <item quantity="one">%1$d person är redan med i den här gruppen</item>
         <item quantity="other">%1$d personer är redan med i den här gruppen</item>
     </plurals>
-    <string name="cordn_invitations_members_more">+%1$d till</string>
+    <plurals name="cordn_invitations_members_more">
+        <item quantity="one">+%1$d till</item>
+        <item quantity="other">+%1$d till</item>
+    </plurals>
     <string name="cordn_invitations_no_coordinators">Du har ingen koordinator öppen. cordn-inbjudningar kommer via en koordinator, så det finns ingenstans att leta ännu.</string>
     <string name="cordn_invitations_none">Inga väntande inbjudningar.</string>
     <string name="cordn_invitations_refresh">Kontrollera igen</string>
@@ -7092,7 +7173,10 @@
         <item quantity="one">%1$d medlem</item>
         <item quantity="other">%1$d medlemmar</item>
     </plurals>
-    <string name="trusted_list_truncated">Visar %1$d av %2$d medlemmar</string>
+    <plurals name="trusted_list_truncated">
+        <item quantity="one">Visar %1$d av %2$d medlem</item>
+        <item quantity="other">Visar %1$d av %2$d medlemmar</item>
+    </plurals>
     <string name="trusted_list_retracted">Återkallad</string>
     <string name="trusted_list_built_from_tag">Byggd från taggen</string>
     <string name="trusted_list_tag_by">av</string>
@@ -8016,7 +8100,10 @@
     <string name="devtools_kind_no_client">Ingen klient-tagg</string>
     <string name="devtools_kind_shape_n">Form %1$d</string>
     <string name="devtools_kind_from_clients">Från: %1$s</string>
-    <string name="devtools_kind_more">+%1$d till</string>
+    <plurals name="devtools_kind_more">
+        <item quantity="one">+%1$d till</item>
+        <item quantity="other">+%1$d till</item>
+    </plurals>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d händelse</item>
         <item quantity="other">%1$d händelser</item>
@@ -8050,7 +8137,10 @@
     <string name="devtools_status_timeout">Tidsgränsen överskreds</string>
     <string name="devtools_status_tor">Väntar på Tor</string>
     <string name="devtools_console_your_relays">Dina reläer</string>
-    <string name="devtools_console_open_subs">%1$d öppna</string>
+    <plurals name="devtools_console_open_subs">
+        <item quantity="one">%1$d öppen</item>
+        <item quantity="other">%1$d öppna</item>
+    </plurals>
     <string name="devtools_console_close_sub">Stäng %1$s</string>
     <string name="devtools_console_build">Bygg en ram</string>
     <string name="devtools_console_composer">Rå ram, eller + för att bygga en</string>
@@ -10019,4 +10109,45 @@
         <item quantity="one">Städade speglarna och tog bort %1$d oanvänd, frigjorde %2$s</item>
         <item quantity="other">Städade speglarna och tog bort %1$d oanvända, frigjorde %2$s</item>
     </plurals>
+    <string name="composer_pop_out">Öppna i ett separat fönster</string>
+    <string name="media_studio_add">Lägg till</string>
+    <string name="media_studio_position">%1$d av %2$d</string>
+    <string name="media_studio_hold_original">Håll ned för original</string>
+    <string name="media_studio_tool_quality">Kvalitet</string>
+    <string name="media_studio_tool_alt">Alt-text</string>
+    <string name="media_studio_tool_privacy">Integritet</string>
+    <string name="media_studio_alt_placeholder">Beskriv det för personer som inte kan se det</string>
+    <string name="media_studio_sensitive">Känsligt</string>
+    <string name="media_studio_sensitive_description">Suddigt tills man trycker</string>
+    <string name="media_studio_remove_location">Ta bort plats</string>
+    <string name="media_studio_remove_location_description">Och kamerauppgifter</string>
+    <string name="media_studio_remove_location_audio_description">Och titel, artist och andra taggar</string>
+    <string name="media_studio_long_edge">%1$d px</string>
+    <string name="media_studio_no_options">Laddas upp som den är</string>
+    <string name="media_studio_done">Klar</string>
+    <string name="media_marker_photo">Foto %1$d</string>
+    <string name="media_marker_video">Video %1$d</string>
+    <string name="media_marker_audio">Ljud %1$d</string>
+    <string name="media_marker_file">Fil %1$d</string>
+    <string name="media_marker_missing">Fil saknas</string>
+    <string name="media_alt_badge">ALT</string>
+    <string name="media_cw_badge">CW</string>
+    <string name="media_post_upload_failed">%1$s laddades inte upp</string>
+    <string name="media_studio_caption_placeholder">Skriv en bildtext…</string>
+    <string name="media_studio_retry">Inget skickades. Tryck på %1$s för att försöka igen.</string>
+    <string name="media_post_nothing_posted">Inget publicerades. Tryck på Dela för att försöka igen.</string>
+    <string name="media_studio_alt_suggested">Föreslagen på den här enheten. Kontrollera den innan du publicerar.</string>
+    <string name="media_studio_h265">Mindre fil (H.265)</string>
+    <string name="media_studio_h265_description">Vissa äldre appar kan inte spela upp den</string>
+    <string name="media_studio_gif_description">Oftast mycket mindre</string>
+    <string name="media_studio_encrypt_description">Bara den här chatten kan öppna dem</string>
+    <string name="media_crop_hint">Dra i hörnen eller flytta ramen</string>
+    <string name="media_crop_reset">Återställ</string>
+    <string name="media_studio_tool_crop">Beskär</string>
+    <string name="media_crop_free">Fri</string>
+    <string name="media_crop_upload_failed">Det gick inte att beskära bilden</string>
+    <string name="media_studio_tool_trim">Klipp</string>
+    <string name="media_trim_hint">Dra i ändarna för att behålla en del</string>
+    <string name="media_trim_upload_failed">Det gick inte att klippa videon</string>
+    <string name="media_crop_failed">Bilden kan inte beskäras här. Spara använder den som den är.</string>
 </resources>

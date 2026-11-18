@@ -471,7 +471,10 @@
     <string name="nest_lobby_host_label">Ev sahibi</string>
     <string name="nest_lobby_open_action">Aç</string>
     <string name="nest_lobby_no_listeners">Şu an odada kimse yok.</string>
-    <string name="nest_lobby_listeners_count">%1$d dinleyici</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d dinleyici</item>
+        <item quantity="other">%1$d dinleyici</item>
+    </plurals>
     <string name="nest_role_host">Ev sahibi</string>
     <string name="nest_role_moderator">Moderatör</string>
     <string name="nest_state_muted">Mikrofon kapalı</string>
@@ -578,7 +581,10 @@
     <string name="hashtag_label_added_by">ekleyen</string>
     <string name="pinned_notes">Sabitlenmiş Notlar</string>
     <string name="pinned_notes_explainer">Sabitlenmiş notlarınız</string>
-    <string name="deleted_items_banner_title">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</item>
+        <item quantity="other">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Listeden kaldır</string>
     <string name="deleted_items_banner_dismiss">Yoksay</string>
     <string name="bookmark_lists">Yer İşareti Listeleri</string>
@@ -594,7 +600,10 @@
     <string name="interest_set_name_placeholder">İlgi alanlarım</string>
     <string name="interest_set_hashtag_add_placeholder">Hashtag ekle</string>
     <string name="interest_set_hashtag_private_toggle">Özel</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">İlgi Seti İşlemleri</string>
     <string name="interest_set_clone">Klonla</string>
     <string name="interest_set_add_hashtag">Hashtag ekle</string>
@@ -798,8 +807,14 @@
     <string name="relay_req_subscriptions">REQ Abonelikleri (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonelikleri (%1$d)</string>
     <string name="relay_outbox_events">Giden Kutusu Etkinlikleri (%1$d)</string>
-    <string name="relay_filter_authors">%1$d yazar</string>
-    <string name="relay_filter_ids">%1$d kimlik</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d yazar</item>
+        <item quantity="other">%1$d yazar</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d kimlik</item>
+        <item quantity="other">%1$d kimlik</item>
+    </plurals>
     <string name="relay_filter_since">%1$s tarihinden itibaren</string>
     <string name="relay_filter_until">%1$s tarihine kadar</string>
     <string name="relay_filter_limit">sınır %1$d</string>
@@ -1389,7 +1404,10 @@
     <string name="remove_user_from_the_list">Kullanıcıyı listeden kaldır</string>
     <string name="follow_list_item_label">Takip Paketi</string>
     <string name="members">Üyeler</string>
-    <string name="contact_list_containing_label">%1$d kullanıcı içeren takip listesi:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">%1$d kullanıcı içeren takip listesi:</item>
+        <item quantity="other">%1$d kullanıcı içeren takip listesi:</item>
+    </plurals>
     <string name="contact_list_screen_title">Takip listesi</string>
     <string name="contact_list_screen_title_with_count">Takip listesi (%1$d)</string>
     <string name="follow_pack_creation_name_label">Paket adı</string>
@@ -1412,8 +1430,14 @@
     <string name="dismiss">Kapat</string>
     <string name="broadcasting">Yayınlanıyor</string>
     <string name="broadcasting_name">%1$s yayınlanıyor</string>
-    <string name="broadcasting_number_events">%1$d olay yayınlanıyor…</string>
-    <string name="sent_number_events">%1$d olay gönderildi</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">%1$d olay yayınlanıyor…</item>
+        <item quantity="other">%1$d olay yayınlanıyor…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d olay gönderildi</item>
+        <item quantity="other">%1$d olay gönderildi</item>
+    </plurals>
     <string name="bradcasting_result_partial">Bazı olaylar başarısız oldu</string>
     <string name="bradcasting_result_success">Tüm olaylar başarıyla tamamlandı</string>
     <string name="bradcasting_result_failure">Tüm olaylar başarısız oldu</string>
@@ -1428,7 +1452,10 @@
     <string name="new_chess_game">Yeni Satranç Oyunu</string>
     <string name="chess_loading_game">Oyun yükleniyor…</string>
     <string name="chess_game_not_found">Oyun Bulunamadı</string>
-    <string name="badge_and_n_others"> ve %1$d diğerleri</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> ve %1$d diğeri</item>
+        <item quantity="other"> ve %1$d diğeri</item>
+    </plurals>
     <string name="remove_language">%1$s dilini kaldır</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Güvendiğiniz biriyle aynı kişileri takip ederek harika bir akışla başlayın.</string>
     <string name="import_follow_list">Takip Listesini İçe Aktar</string>
@@ -1437,9 +1464,18 @@
     <string name="name_search_npub1_alice_example_com">ara, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex ve Namecoin (.bit) destekler</string>
     <string name="tip">İpucu</string>
-    <string name="accounts_found">%1$d hesap bulundu</string>
-    <string name="num_selected">%1$d seçildi</string>
-    <string name="follow_accounts">%1$d hesabı takip et</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d hesap bulundu</item>
+        <item quantity="other">%1$d hesap bulundu</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d seçildi</item>
+        <item quantity="other">%1$d seçildi</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d hesabı takip et</item>
+        <item quantity="other">%1$d hesabı takip et</item>
+    </plurals>
     <string name="skip_for_now">Şimdilik atla</string>
     <string name="fetching_follow_list">Takip listesi alınıyor…</string>
     <string name="no_follows_found">Takip bulunamadı</string>
@@ -1471,15 +1507,30 @@
     <string name="event_sync_relays_progress">Relay'ler: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Yeniden dağıtılan etkinlikler: %2$d gönderilenden ve %3$d alınandan %1$d yeni</string>
     <string name="event_sync_done_title">Senkronizasyon tamamlandı</string>
-    <string name="event_sync_done_sent">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</string>
-    <string name="event_sync_done_accepted">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</string>
-    <string name="event_sync_done_duration">%1$d saniyede tamamlandı.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</item>
+        <item quantity="other">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</item>
+        <item quantity="other">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">%1$d saniyede tamamlandı.</item>
+        <item quantity="other">%1$d saniyede tamamlandı.</item>
+    </plurals>
     <string name="event_sync_error_title">Senkronizasyon hatası</string>
     <string name="event_sync_sending_to">Gönderiliyor</string>
     <string name="event_sync_outbox_relays">Giden Kutusu</string>
     <string name="event_sync_inbox_relays">Gelen Kutusu</string>
-    <string name="event_sync_activity_log">Şu Anda Kontrol Ediliyor (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Tamamlandı (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Şu Anda Kontrol Ediliyor (%1$d relay)</item>
+        <item quantity="other">Şu Anda Kontrol Ediliyor (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Tamamlandı (%1$d relay)</item>
+        <item quantity="other">Tamamlandı (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">%1$s gönderildi</string>
     <string name="event_sync_log_recv">%1$s alındı</string>
     <string name="event_sync_log_new">%1$s yeni</string>
@@ -1639,7 +1690,10 @@
     <string name="manage">Yönet</string>
     <string name="relay_members">Üyeler</string>
     <string name="relay_members_title">%1$s'in Üyeleri</string>
-    <string name="relay_members_count">%1$d üye</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d üye</item>
+        <item quantity="other">%1$d üye</item>
+    </plurals>
     <string name="relay_members_loading">Üyeler yükleniyor…</string>
     <string name="relay_members_empty">Üye bulunamadı</string>
     <string name="relay_members_request_join">Katılım İste</string>
@@ -1649,9 +1703,15 @@
     <string name="relay_members_you_are_member">Üyesiniz</string>
     <string name="relay_membership_list">Relay üyelik listesi</string>
     <string name="relay_member_added">Relay'e üye eklendi</string>
-    <string name="relay_members_added">Relay'e %1$d üye eklendi</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">Relay'e %1$d üye eklendi</item>
+        <item quantity="other">Relay'e %1$d üye eklendi</item>
+    </plurals>
     <string name="relay_member_removed">Üye relay'den kaldırıldı</string>
-    <string name="relay_members_removed">%1$d üye relay'den kaldırıldı</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d üye relay'den kaldırıldı</item>
+        <item quantity="other">%1$d üye relay'den kaldırıldı</item>
+    </plurals>
     <string name="relay_join_request">Relay katılım isteği</string>
     <string name="relay_leave_request">Relay ayrılma isteği</string>
     <string name="ai_writing_use_this">Bunu Kullan</string>
@@ -1676,7 +1736,10 @@
     <string name="emoji_pack_upload_image_cta">Kapak resmi yükle</string>
     <string name="emoji_pack_upload_image_hint">Bu emoji paketini temsil etmek için kare bir resim seçin.</string>
     <string name="no_emoji_packs">Henüz emoji paketiniz yok</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Emoji Listem</string>
     <string name="my_emoji_list_explainer">Seçiminize eklediğiniz emoji paketleri (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Henüz listenize hiç emoji paketi eklemediniz</string>
@@ -1946,7 +2009,10 @@
     <string name="communities">Topluluklar</string>
     <string name="community_rules_violation_kind_size_exceeded">Taslak %1$d bayttır; bu topluluk bu türü en fazla %2$d bayt ile sınırlandırmaktadır.</string>
     <string name="community_rules_violation_max_size_exceeded">Taslak %1$d bayttır; bu topluluk etkinlikleri en fazla %2$d bayt ile sınırlandırmaktadır.</string>
-    <string name="community_rules_violation_quota_exceeded">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</item>
+        <item quantity="other">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</item>
+    </plurals>
     <string name="compose_settings">Oluşturma Ayarları</string>
     <string name="connect_through_your_orbot_setup_short">Varsayılan port 9050'dir</string>
     <string name="connected_section">Bağlı Relay'ler</string>

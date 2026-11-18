@@ -466,7 +466,9 @@
     <string name="nest_lobby_host_label">Chủ phòng</string>
     <string name="nest_lobby_open_action">Mở</string>
     <string name="nest_lobby_no_listeners">Hiện không có ai trong phòng.</string>
-    <string name="nest_lobby_listeners_count">%1$d đang nghe</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d đang nghe</item>
+    </plurals>
     <string name="nest_role_host">Chủ phòng</string>
     <string name="nest_role_moderator">Điều hành viên</string>
     <string name="nest_state_muted">Microphone đã tắt tiếng</string>
@@ -572,7 +574,9 @@
     <string name="hashtag_label_added_by">được thêm bởi</string>
     <string name="pinned_notes">Ghi chú được Ghim</string>
     <string name="pinned_notes_explainer">Các ghi chú được ghim của bạn</string>
-    <string name="deleted_items_banner_title">%1$d mục trong danh sách này đã bị tác giả xóa.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">%1$d mục trong danh sách này đã bị tác giả xóa.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Xóa khỏi danh sách</string>
     <string name="deleted_items_banner_dismiss">Bỏ qua</string>
     <string name="bookmark_lists">Danh sách Dấu trang</string>
@@ -588,7 +592,9 @@
     <string name="interest_set_name_placeholder">Sở thích của tôi</string>
     <string name="interest_set_hashtag_add_placeholder">Thêm hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Riêng tư</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Hành động Bộ Sở thích</string>
     <string name="interest_set_clone">Sao chép</string>
     <string name="interest_set_add_hashtag">Thêm hashtag</string>
@@ -788,8 +794,12 @@
     <string name="relay_error_messages">Lỗi và thông báo từ relay này</string>
     <string name="relay_monitor_reports">Báo cáo giám sát relay</string>
     <string name="relay_active_subscriptions">Đăng ký đang hoạt động</string>
-    <string name="relay_filter_authors">%1$d tác giả</string>
-    <string name="relay_filter_ids">%1$d id</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d tác giả</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d id</item>
+    </plurals>
     <string name="relay_filter_since">từ %1$s</string>
     <string name="relay_filter_until">đến %1$s</string>
     <string name="relay_filter_limit">giới hạn %1$d</string>
@@ -1371,7 +1381,9 @@
     <string name="add_user_to_the_list">Thêm người dùng vào danh sách</string>
     <string name="remove_user_from_the_list">Xóa người dùng khỏi danh sách</string>
     <string name="members">Thành viên</string>
-    <string name="contact_list_containing_label">Danh sách theo dõi có %1$d người dùng:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">Danh sách theo dõi có %1$d người dùng:</item>
+    </plurals>
     <string name="contact_list_screen_title">Danh sách theo dõi</string>
     <string name="contact_list_screen_title_with_count">Danh sách theo dõi (%1$d)</string>
     <string name="follow_pack_creation_name_label">Tên gói</string>
@@ -1394,8 +1406,12 @@
     <string name="dismiss">Bỏ qua</string>
     <string name="broadcasting">Đang phát</string>
     <string name="broadcasting_name">Đang phát %1$s</string>
-    <string name="broadcasting_number_events">Đang phát %1$d sự kiện…</string>
-    <string name="sent_number_events">Đã gửi %1$d sự kiện</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">Đang phát %1$d sự kiện…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">Đã gửi %1$d sự kiện</item>
+    </plurals>
     <string name="bradcasting_result_partial">Một số sự kiện thất bại</string>
     <string name="bradcasting_result_success">Tất cả sự kiện đã thành công</string>
     <string name="bradcasting_result_failure">Tất cả sự kiện đều thất bại</string>
@@ -1410,7 +1426,9 @@
     <string name="new_chess_game">Trò chơi cờ vua mới</string>
     <string name="chess_loading_game">Đang tải trò chơi…</string>
     <string name="chess_game_not_found">Không tìm thấy trò chơi</string>
-    <string name="badge_and_n_others"> và %1$d người khác</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> và %1$d người khác</item>
+    </plurals>
     <string name="remove_language">Xóa %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Bắt đầu với nguồn tin tuyệt vời bằng cách theo dõi những người giống như người bạn tin tưởng.</string>
     <string name="import_follow_list">Nhập danh sách theo dõi</string>
@@ -1419,9 +1437,15 @@
     <string name="name_search_npub1_alice_example_com">tìm kiếm, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Hỗ trợ npub, nprofile, NIP-05, hex và Namecoin (.bit)</string>
     <string name="tip">Mẹo</string>
-    <string name="accounts_found">Tìm thấy %1$d tài khoản</string>
-    <string name="num_selected">Đã chọn %1$d</string>
-    <string name="follow_accounts">Theo dõi %1$d tài khoản</string>
+    <plurals name="accounts_found">
+        <item quantity="other">Tìm thấy %1$d tài khoản</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">Đã chọn %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">Theo dõi %1$d tài khoản</item>
+    </plurals>
     <string name="skip_for_now">Bỏ qua cho bây giờ</string>
     <string name="fetching_follow_list">Đang tải danh sách theo dõi…</string>
     <string name="no_follows_found">Không tìm thấy người theo dõi</string>
@@ -1453,15 +1477,25 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Sự kiện đã phân phối lại: %1$d mới trong số %2$d đã gửi và %3$d đã nhận</string>
     <string name="event_sync_done_title">Đồng bộ hoàn tất</string>
-    <string name="event_sync_done_sent">Đã chuyển tiếp %1$d sự kiện đến các relay đích trong số %2$d đã nhận.</string>
-    <string name="event_sync_done_accepted">%1$d sự kiện được relay đích chấp nhận là mới.</string>
-    <string name="event_sync_done_duration">Hoàn thành trong %1$d giây.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">Đã chuyển tiếp %1$d sự kiện đến các relay đích trong số %2$d đã nhận.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d sự kiện được relay đích chấp nhận là mới.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">Hoàn thành trong %1$d giây.</item>
+    </plurals>
     <string name="event_sync_error_title">Lỗi đồng bộ</string>
     <string name="event_sync_sending_to">Đang gửi đến</string>
     <string name="event_sync_outbox_relays">Hộp thư gửi</string>
     <string name="event_sync_inbox_relays">Hộp thư nhận</string>
-    <string name="event_sync_activity_log">Đang kiểm tra (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Hoàn thành (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">Đang kiểm tra (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">Hoàn thành (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">đã gửi %1$s</string>
     <string name="event_sync_log_recv">đã nhận %1$s</string>
     <string name="event_sync_log_new">mới %1$s</string>
@@ -1620,7 +1654,9 @@
     <string name="manage">Quản lý</string>
     <string name="relay_members">Thành viên</string>
     <string name="relay_members_title">Thành viên của %1$s</string>
-    <string name="relay_members_count">%1$d thành viên</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d thành viên</item>
+    </plurals>
     <string name="relay_members_loading">Đang tải thành viên…</string>
     <string name="relay_members_empty">Không tìm thấy thành viên nào</string>
     <string name="relay_members_request_join">Yêu cầu tham gia</string>
@@ -1630,9 +1666,13 @@
     <string name="relay_members_you_are_member">Bạn là thành viên</string>
     <string name="relay_membership_list">Danh sách thành viên relay</string>
     <string name="relay_member_added">Đã thêm thành viên vào relay</string>
-    <string name="relay_members_added">Đã thêm %1$d thành viên vào relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">Đã thêm %1$d thành viên vào relay</item>
+    </plurals>
     <string name="relay_member_removed">Đã xóa thành viên khỏi relay</string>
-    <string name="relay_members_removed">Đã xóa %1$d thành viên khỏi relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">Đã xóa %1$d thành viên khỏi relay</item>
+    </plurals>
     <string name="relay_join_request">Yêu cầu tham gia relay</string>
     <string name="relay_leave_request">Yêu cầu rời relay</string>
     <string name="ai_writing_use_this">Dùng cái này</string>
@@ -1657,7 +1697,9 @@
     <string name="emoji_pack_upload_image_cta">Tải lên ảnh bìa</string>
     <string name="emoji_pack_upload_image_hint">Chọn ảnh vuông để đại diện cho gói emoji này.</string>
     <string name="no_emoji_packs">Bạn chưa có gói emoji nào</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Danh sách Emoji của tôi</string>
     <string name="my_emoji_list_explainer">Các gói emoji bạn đã thêm vào lựa chọn của mình (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Bạn chưa thêm gói emoji nào vào danh sách</string>
@@ -1922,7 +1964,9 @@
     <string name="communities">Cộng đồng</string>
     <string name="community_rules_violation_kind_size_exceeded">Bản nháp là %1$d byte; cộng đồng này giới hạn loại này ở %2$d byte.</string>
     <string name="community_rules_violation_max_size_exceeded">Bản nháp là %1$d byte; cộng đồng này giới hạn sự kiện ở %2$d byte.</string>
-    <string name="community_rules_violation_quota_exceeded">Bạn đã đăng %1$d sự kiện loại này hôm nay (giới hạn %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">Bạn đã đăng %1$d sự kiện loại này hôm nay (giới hạn %2$d).</item>
+    </plurals>
     <string name="compose_settings">Cài đặt soạn thảo</string>
     <string name="connect_through_your_orbot_setup_short">Cổng mặc định là 9050</string>
     <string name="connected_section">Relay đã kết nối</string>

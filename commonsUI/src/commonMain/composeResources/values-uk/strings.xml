@@ -474,7 +474,12 @@
     <string name="nest_lobby_host_label">Хост</string>
     <string name="nest_lobby_open_action">Відкрити</string>
     <string name="nest_lobby_no_listeners">Зараз у кімнаті нікого немає.</string>
-    <string name="nest_lobby_listeners_count">%1$d слухає</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d слухає</item>
+        <item quantity="few">%1$d слухають</item>
+        <item quantity="many">%1$d слухають</item>
+        <item quantity="other">%1$d слухають</item>
+    </plurals>
     <string name="nest_role_host">Хост</string>
     <string name="nest_role_moderator">Модератор</string>
     <string name="nest_state_muted">Мікрофон вимкнено</string>
@@ -582,7 +587,12 @@
     <string name="hashtag_label_added_by">додано</string>
     <string name="pinned_notes">Закріплені нотатки</string>
     <string name="pinned_notes_explainer">Ваші закріплені нотатки</string>
-    <string name="deleted_items_banner_title">%1$d елемент(ів) у цьому списку видалено їхнім автором.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d елемент у цьому списку видалено його автором.</item>
+        <item quantity="few">%1$d елементи у цьому списку видалено їхнім автором.</item>
+        <item quantity="many">%1$d елементів у цьому списку видалено їхнім автором.</item>
+        <item quantity="other">%1$d елемента у цьому списку видалено їхнім автором.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Видалити зі списку</string>
     <string name="deleted_items_banner_dismiss">Закрити</string>
     <string name="bookmark_lists">Списки закладок</string>
@@ -598,7 +608,12 @@
     <string name="interest_set_name_placeholder">Мої інтереси</string>
     <string name="interest_set_hashtag_add_placeholder">Додати хештег</string>
     <string name="interest_set_hashtag_private_toggle">Приватний</string>
-    <string name="interest_set_hashtag_count">%1$d хештег(ів)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d хештег</item>
+        <item quantity="few">%1$d хештеги</item>
+        <item quantity="many">%1$d хештегів</item>
+        <item quantity="other">%1$d хештега</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Дії з набором інтересів</string>
     <string name="interest_set_clone">Клонувати</string>
     <string name="interest_set_add_hashtag">Додати хештег</string>
@@ -803,8 +818,18 @@
     <string name="relay_req_subscriptions">REQ підписки (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT підписки (%1$d)</string>
     <string name="relay_outbox_events">Outbox події (%1$d)</string>
-    <string name="relay_filter_authors">%1$d авторів</string>
-    <string name="relay_filter_ids">%1$d ід.</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d автор</item>
+        <item quantity="few">%1$d автори</item>
+        <item quantity="many">%1$d авторів</item>
+        <item quantity="other">%1$d автора</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ід.</item>
+        <item quantity="few">%1$d ід.</item>
+        <item quantity="many">%1$d ід.</item>
+        <item quantity="other">%1$d ід.</item>
+    </plurals>
     <string name="relay_filter_since">від %1$s</string>
     <string name="relay_filter_until">до %1$s</string>
     <string name="relay_filter_limit">ліміт %1$d</string>
@@ -1389,7 +1414,12 @@
     <string name="add_user_to_the_list">Додати користувача до списку</string>
     <string name="remove_user_from_the_list">Видалити користувача зі списку</string>
     <string name="members">Учасники</string>
-    <string name="contact_list_containing_label">Список підписок, що містить %1$d користувача(ів):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Список підписок, що містить %1$d користувача:</item>
+        <item quantity="few">Список підписок, що містить %1$d користувачі:</item>
+        <item quantity="many">Список підписок, що містить %1$d користувачів:</item>
+        <item quantity="other">Список підписок, що містить %1$d користувача:</item>
+    </plurals>
     <string name="contact_list_screen_title">Список підписок</string>
     <string name="contact_list_screen_title_with_count">Список підписок (%1$d)</string>
     <string name="follow_pack_creation_name_label">Назва пакету</string>
@@ -1411,8 +1441,18 @@
     <string name="dismiss">Відхилити</string>
     <string name="broadcasting">Поширення</string>
     <string name="broadcasting_name">Поширення %1$s</string>
-    <string name="broadcasting_number_events">Поширення %1$d подій…</string>
-    <string name="sent_number_events">%1$d подій надіслано</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Поширення %1$d події…</item>
+        <item quantity="few">Поширення %1$d подій…</item>
+        <item quantity="many">Поширення %1$d подій…</item>
+        <item quantity="other">Поширення %1$d події…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d подію надіслано</item>
+        <item quantity="few">%1$d події надіслано</item>
+        <item quantity="many">%1$d подій надіслано</item>
+        <item quantity="other">%1$d події надіслано</item>
+    </plurals>
     <string name="bradcasting_result_partial">Деякі події не вдалося надіслати</string>
     <string name="bradcasting_result_success">Усі події успішно надіслано</string>
     <string name="bradcasting_result_failure">Усі події не вдалося надіслати</string>
@@ -1427,7 +1467,12 @@
     <string name="new_chess_game">Нова шахова партія</string>
     <string name="chess_loading_game">Завантаження гри…</string>
     <string name="chess_game_not_found">Гру не знайдено</string>
-    <string name="badge_and_n_others"> та %1$d інших</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> та %1$d інший</item>
+        <item quantity="few"> та %1$d інші</item>
+        <item quantity="many"> та %1$d інших</item>
+        <item quantity="other"> та %1$d інших</item>
+    </plurals>
     <string name="remove_language">Видалити %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Почніть з чудової стрічки, підписавшись на тих самих людей, що й хтось, кому ви довіряєте.</string>
     <string name="import_follow_list">Імпорт списку підписок</string>
@@ -1436,9 +1481,24 @@
     <string name="name_search_npub1_alice_example_com">пошук, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Підтримує npub, nprofile, NIP-05, hex та Namecoin (.bit)</string>
     <string name="tip">Порада</string>
-    <string name="accounts_found">Знайдено %1$d акаунтів</string>
-    <string name="num_selected">Вибрано %1$d</string>
-    <string name="follow_accounts">Підписатись на %1$d акаунтів</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Знайдено %1$d акаунт</item>
+        <item quantity="few">Знайдено %1$d акаунти</item>
+        <item quantity="many">Знайдено %1$d акаунтів</item>
+        <item quantity="other">Знайдено %1$d акаунта</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">Вибрано %1$d</item>
+        <item quantity="few">Вибрано %1$d</item>
+        <item quantity="many">Вибрано %1$d</item>
+        <item quantity="other">Вибрано %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Підписатись на %1$d акаунт</item>
+        <item quantity="few">Підписатись на %1$d акаунти</item>
+        <item quantity="many">Підписатись на %1$d акаунтів</item>
+        <item quantity="other">Підписатись на %1$d акаунта</item>
+    </plurals>
     <string name="skip_for_now">Пропустити зараз</string>
     <string name="fetching_follow_list">Завантаження списку підписок…</string>
     <string name="no_follows_found">Підписки не знайдено</string>
@@ -1470,13 +1530,38 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Перерозподілено подій: %1$d нових із %2$d надісланих і %3$d отриманих</string>
     <string name="event_sync_done_title">Синхронізацію завершено</string>
-    <string name="event_sync_done_sent">Переслано %1$d подій до цільових relay із %2$d отриманих.</string>
-    <string name="event_sync_done_accepted">%1$d подій прийнято як нові цільовими relay.</string>
-    <string name="event_sync_done_duration">Завершено за %1$d секунд.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Переслано %1$d подію до цільових relay із %2$d отриманих.</item>
+        <item quantity="few">Переслано %1$d події до цільових relay із %2$d отриманих.</item>
+        <item quantity="many">Переслано %1$d подій до цільових relay із %2$d отриманих.</item>
+        <item quantity="other">Переслано %1$d події до цільових relay із %2$d отриманих.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d подію прийнято як нову цільовими relay.</item>
+        <item quantity="few">%1$d події прийнято як нові цільовими relay.</item>
+        <item quantity="many">%1$d подій прийнято як нові цільовими relay.</item>
+        <item quantity="other">%1$d події прийнято як нові цільовими relay.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Завершено за %1$d секунду.</item>
+        <item quantity="few">Завершено за %1$d секунди.</item>
+        <item quantity="many">Завершено за %1$d секунд.</item>
+        <item quantity="other">Завершено за %1$d секунди.</item>
+    </plurals>
     <string name="event_sync_error_title">Помилка синхронізації</string>
     <string name="event_sync_sending_to">Надсилання до</string>
-    <string name="event_sync_activity_log">Зараз перевіряється (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Завершено (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="few">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="many">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="other">Зараз перевіряється (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Завершено (%1$d relay)</item>
+        <item quantity="few">Завершено (%1$d relay)</item>
+        <item quantity="many">Завершено (%1$d relay)</item>
+        <item quantity="other">Завершено (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">надіслано %1$s</string>
     <string name="event_sync_log_recv">отримано %1$s</string>
     <string name="event_sync_log_new">нове %1$s</string>
@@ -1636,7 +1721,12 @@
     <string name="manage">Управляти</string>
     <string name="relay_members">Учасники</string>
     <string name="relay_members_title">Учасники %1$s</string>
-    <string name="relay_members_count">%1$d учасників</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d учасник</item>
+        <item quantity="few">%1$d учасники</item>
+        <item quantity="many">%1$d учасників</item>
+        <item quantity="other">%1$d учасника</item>
+    </plurals>
     <string name="relay_members_loading">Завантаження учасників…</string>
     <string name="relay_members_empty">Учасників не знайдено</string>
     <string name="relay_members_request_join">Запит на вступ</string>
@@ -1646,9 +1736,19 @@
     <string name="relay_members_you_are_member">Ви є учасником</string>
     <string name="relay_membership_list">Список учасників relay</string>
     <string name="relay_member_added">Учасника додано до relay</string>
-    <string name="relay_members_added">%1$d учасників додано до relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d учасника додано до relay</item>
+        <item quantity="few">%1$d учасники додано до relay</item>
+        <item quantity="many">%1$d учасників додано до relay</item>
+        <item quantity="other">%1$d учасника додано до relay</item>
+    </plurals>
     <string name="relay_member_removed">Учасника видалено з relay</string>
-    <string name="relay_members_removed">%1$d учасників видалено з relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d учасника видалено з relay</item>
+        <item quantity="few">%1$d учасники видалено з relay</item>
+        <item quantity="many">%1$d учасників видалено з relay</item>
+        <item quantity="other">%1$d учасника видалено з relay</item>
+    </plurals>
     <string name="relay_join_request">Запит на вступ до relay</string>
     <string name="relay_leave_request">Запит на вихід з relay</string>
     <string name="ai_writing_use_this">Використати</string>
@@ -1674,7 +1774,12 @@
     <string name="emoji_pack_upload_image_cta">Завантажити обкладинку</string>
     <string name="emoji_pack_upload_image_hint">Оберіть квадратне зображення для представлення цього пакету емодзі.</string>
     <string name="no_emoji_packs">У вас ще немає жодного пакету емодзі</string>
-    <string name="emoji_pack_count">%1$d емодзі</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d емодзі</item>
+        <item quantity="few">%1$d емодзі</item>
+        <item quantity="many">%1$d емодзі</item>
+        <item quantity="other">%1$d емодзі</item>
+    </plurals>
     <string name="my_emoji_list_title">Мій список емодзі</string>
     <string name="my_emoji_list_explainer">Пакети емодзі, які ви додали до свого вибору (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Ви ще не додали жодного пакету емодзі до свого списку</string>
@@ -1959,7 +2064,12 @@
     <string name="communities">Спільноти</string>
     <string name="community_rules_violation_kind_size_exceeded">Чернетка займає %1$d байт; ця спільнота обмежує цей kind до %2$d байт.</string>
     <string name="community_rules_violation_max_size_exceeded">Чернетка займає %1$d байт; ця спільнота обмежує події до %2$d байт.</string>
-    <string name="community_rules_violation_quota_exceeded">Ви вже опублікували %1$d подій цього kind сьогодні (ліміт %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Ви вже опублікували %1$d подію цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="few">Ви вже опублікували %1$d події цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="many">Ви вже опублікували %1$d подій цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="other">Ви вже опублікували %1$d події цього kind сьогодні (ліміт %2$d).</item>
+    </plurals>
     <string name="compose_settings">Налаштування редактора</string>
     <string name="connect_through_your_orbot_setup_short">Стандартний порт — 9050</string>
     <string name="connected_section">Підключені relay-сервери</string>

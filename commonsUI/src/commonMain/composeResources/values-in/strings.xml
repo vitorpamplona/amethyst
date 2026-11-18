@@ -463,7 +463,9 @@
     <string name="nest_join">Bergabung ke nest</string>
     <string name="nest_lobby_open_action">Buka</string>
     <string name="nest_lobby_no_listeners">Tidak ada yang berada di ruang saat ini.</string>
-    <string name="nest_lobby_listeners_count">%1$d mendengarkan</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d mendengarkan</item>
+    </plurals>
     <string name="nest_state_muted">Mikrofon dibisukan</string>
     <string name="nest_state_speaking">Sedang berbicara</string>
     <string name="nest_state_mic_open">Mikrofon terbuka</string>
@@ -566,7 +568,9 @@
     <string name="hashtag_label_added_by">ditambahkan oleh</string>
     <string name="pinned_notes">Catatan yang Disematkan</string>
     <string name="pinned_notes_explainer">Catatan yang Anda sematkan</string>
-    <string name="deleted_items_banner_title">%1$d item dalam daftar ini telah dihapus oleh penulisnya.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">%1$d item dalam daftar ini telah dihapus oleh penulisnya.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Hapus dari daftar</string>
     <string name="deleted_items_banner_dismiss">Tutup</string>
     <string name="bookmark_lists">Daftar Bookmark</string>
@@ -582,7 +586,9 @@
     <string name="interest_set_name_placeholder">Minat saya</string>
     <string name="interest_set_hashtag_add_placeholder">Tambah hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Pribadi</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Tindakan Kumpulan Minat</string>
     <string name="interest_set_clone">Salin</string>
     <string name="interest_set_add_hashtag">Tambah hashtag</string>
@@ -786,8 +792,12 @@
     <string name="relay_req_subscriptions">Langganan REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Langganan COUNT (%1$d)</string>
     <string name="relay_outbox_events">Acara Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d penulis</string>
-    <string name="relay_filter_ids">%1$d id</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d penulis</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d id</item>
+    </plurals>
     <string name="relay_filter_since">sejak %1$s</string>
     <string name="relay_filter_until">sampai %1$s</string>
     <string name="relay_filter_limit">batas %1$d</string>
@@ -1366,7 +1376,9 @@
     <string name="add_user_to_the_list">Tambah pengguna ke daftar</string>
     <string name="remove_user_from_the_list">Hapus pengguna dari daftar</string>
     <string name="members">Anggota</string>
-    <string name="contact_list_containing_label">Daftar ikutan berisi %1$d pengguna:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">Daftar ikutan berisi %1$d pengguna:</item>
+    </plurals>
     <string name="contact_list_screen_title">Daftar ikutan</string>
     <string name="contact_list_screen_title_with_count">Daftar ikutan (%1$d)</string>
     <string name="follow_pack_creation_name_label">Nama pack</string>
@@ -1389,8 +1401,12 @@
     <string name="dismiss">Tutup</string>
     <string name="broadcasting">Menyiarkan</string>
     <string name="broadcasting_name">Menyiarkan %1$s</string>
-    <string name="broadcasting_number_events">Menyiarkan %1$d event…</string>
-    <string name="sent_number_events">%1$d event terkirim</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">Menyiarkan %1$d event…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">%1$d event terkirim</item>
+    </plurals>
     <string name="bradcasting_result_partial">Beberapa event gagal</string>
     <string name="bradcasting_result_success">Semua event berhasil</string>
     <string name="bradcasting_result_failure">Semua event gagal</string>
@@ -1405,7 +1421,9 @@
     <string name="new_chess_game">Permainan Catur Baru</string>
     <string name="chess_loading_game">Memuat permainan…</string>
     <string name="chess_game_not_found">Permainan Tidak Ditemukan</string>
-    <string name="badge_and_n_others"> dan %1$d lainnya</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> dan %1$d lainnya</item>
+    </plurals>
     <string name="remove_language">Hapus %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Mulai dengan feed yang bagus dengan mengikuti orang-orang yang sama seperti seseorang yang Anda percaya.</string>
     <string name="import_follow_list">Impor Daftar Ikut</string>
@@ -1413,9 +1431,15 @@
     <string name="profile_to_import_from">Profil untuk diimpor</string>
     <string name="name_search_npub1_alice_example_com">cari, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Mendukung npub, nprofile, NIP-05, hex, dan Namecoin (.bit)</string>
-    <string name="accounts_found">%1$d akun ditemukan</string>
-    <string name="num_selected">%1$d dipilih</string>
-    <string name="follow_accounts">Ikuti %1$d akun</string>
+    <plurals name="accounts_found">
+        <item quantity="other">%1$d akun ditemukan</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">%1$d dipilih</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">Ikuti %1$d akun</item>
+    </plurals>
     <string name="skip_for_now">Lewati untuk sekarang</string>
     <string name="fetching_follow_list">Mengambil daftar ikut…</string>
     <string name="no_follows_found">Tidak ada ikutan yang ditemukan</string>
@@ -1447,13 +1471,23 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Acara didistribusikan ulang: %1$d baru dari %2$d dikirim dan %3$d diterima</string>
     <string name="event_sync_done_title">Sinkronisasi selesai</string>
-    <string name="event_sync_done_sent">Diteruskan %1$d acara ke relay tujuan dari %2$d yang diterima.</string>
-    <string name="event_sync_done_accepted">%1$d acara diterima sebagai baru oleh relay tujuan.</string>
-    <string name="event_sync_done_duration">Selesai dalam %1$d detik.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">Diteruskan %1$d acara ke relay tujuan dari %2$d yang diterima.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d acara diterima sebagai baru oleh relay tujuan.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">Selesai dalam %1$d detik.</item>
+    </plurals>
     <string name="event_sync_error_title">Kesalahan sinkronisasi</string>
     <string name="event_sync_sending_to">Mengirim Ke</string>
-    <string name="event_sync_activity_log">Sedang Diperiksa (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Selesai (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">Sedang Diperiksa (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">Selesai (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">terkirim %1$s</string>
     <string name="event_sync_log_recv">diterima %1$s</string>
     <string name="event_sync_log_new">baru %1$s</string>
@@ -1611,7 +1645,9 @@
     <string name="manage">Kelola</string>
     <string name="relay_members">Anggota</string>
     <string name="relay_members_title">Anggota dari %1$s</string>
-    <string name="relay_members_count">%1$d anggota</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d anggota</item>
+    </plurals>
     <string name="relay_members_loading">Memuat anggota…</string>
     <string name="relay_members_empty">Tidak ada anggota yang ditemukan</string>
     <string name="relay_members_request_join">Minta untuk Bergabung</string>
@@ -1621,9 +1657,13 @@
     <string name="relay_members_you_are_member">Anda adalah anggota</string>
     <string name="relay_membership_list">Daftar keanggotaan relay</string>
     <string name="relay_member_added">Anggota ditambahkan ke relay</string>
-    <string name="relay_members_added">%1$d anggota ditambahkan ke relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">%1$d anggota ditambahkan ke relay</item>
+    </plurals>
     <string name="relay_member_removed">Anggota dihapus dari relay</string>
-    <string name="relay_members_removed">%1$d anggota dihapus dari relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">%1$d anggota dihapus dari relay</item>
+    </plurals>
     <string name="relay_join_request">Permintaan bergabung relay</string>
     <string name="relay_leave_request">Permintaan keluar relay</string>
     <string name="ai_writing_use_this">Gunakan Ini</string>
@@ -1648,7 +1688,9 @@
     <string name="emoji_pack_upload_image_cta">Unggah gambar sampul</string>
     <string name="emoji_pack_upload_image_hint">Pilih gambar persegi untuk mewakili paket emoji ini.</string>
     <string name="no_emoji_packs">Anda belum memiliki paket emoji</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Daftar Emoji Saya</string>
     <string name="my_emoji_list_explainer">Paket emoji yang telah Anda tambahkan ke pilihan Anda (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Anda belum menambahkan paket emoji apa pun ke daftar Anda</string>
@@ -1911,7 +1953,9 @@
     <string name="communities">Komunitas</string>
     <string name="community_rules_violation_kind_size_exceeded">Draf berukuran %1$d byte; komunitas ini membatasi kind ini sebesar %2$d byte.</string>
     <string name="community_rules_violation_max_size_exceeded">Draf berukuran %1$d byte; komunitas ini membatasi acara sebesar %2$d byte.</string>
-    <string name="community_rules_violation_quota_exceeded">Anda telah memposting %1$d acara jenis ini hari ini (batas %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">Anda telah memposting %1$d acara jenis ini hari ini (batas %2$d).</item>
+    </plurals>
     <string name="compose_settings">Pengaturan Compose</string>
     <string name="connect_through_your_orbot_setup_short">Port default adalah 9050</string>
     <string name="connected_section">Relay Terhubung</string>

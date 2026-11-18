@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_via
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
@@ -322,7 +323,7 @@ private fun InvitationCard(
                     }
                     if (welcome.members.size > MEMBER_FACES) {
                         Text(
-                            text = stringRes(Res.string.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES),
+                            text = pluralStringRes(Res.plurals.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES, welcome.members.size - MEMBER_FACES),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

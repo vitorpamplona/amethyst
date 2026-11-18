@@ -478,7 +478,11 @@
     <string name="nest_lobby_host_label">Saimnieks</string>
     <string name="nest_lobby_open_action">Atvērt</string>
     <string name="nest_lobby_no_listeners">Telpā pašlaik nav neviena.</string>
-    <string name="nest_lobby_listeners_count">%1$d klausās</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="zero">%1$d klausās</item>
+        <item quantity="one">%1$d klausās</item>
+        <item quantity="other">%1$d klausās</item>
+    </plurals>
     <string name="nest_role_host">Saimnieks</string>
     <string name="nest_role_moderator">Moderators</string>
     <string name="nest_state_muted">Mikrofons izslēgts</string>
@@ -583,7 +587,11 @@
     <string name="hashtag_label_added_by">pievienoja</string>
     <string name="pinned_notes">Piespraustas piezīmes</string>
     <string name="pinned_notes_explainer">Jūsu piespraustas piezīmes</string>
-    <string name="deleted_items_banner_title">%1$d vienumi(-s) šajā sarakstā ir dzēsti to autora.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="zero">%1$d vienumus šajā sarakstā ir izdzēsuši to autori.</item>
+        <item quantity="one">%1$d vienumu šajā sarakstā ir izdzēsis tā autors.</item>
+        <item quantity="other">%1$d vienumus šajā sarakstā ir izdzēsuši to autori.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Noņemt no saraksta</string>
     <string name="deleted_items_banner_dismiss">Noraidīt</string>
     <string name="bookmark_lists">Grāmatzīmju saraksti</string>
@@ -599,7 +607,11 @@
     <string name="interest_set_name_placeholder">Manas intereses</string>
     <string name="interest_set_hashtag_add_placeholder">Pievienot hashtagu</string>
     <string name="interest_set_hashtag_private_toggle">Privāts</string>
-    <string name="interest_set_hashtag_count">%1$d hashtags(-i)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="zero">%1$d hashtagi</item>
+        <item quantity="one">%1$d hashtags</item>
+        <item quantity="other">%1$d hashtagi</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Interešu kopas darbības</string>
     <string name="interest_set_clone">Klonēt</string>
     <string name="interest_set_add_hashtag">Pievienot hashtagu</string>
@@ -802,8 +814,16 @@
     <string name="relay_req_subscriptions">REQ abonementi (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT abonementi (%1$d)</string>
     <string name="relay_outbox_events">Izejošo notikumi (%1$d)</string>
-    <string name="relay_filter_authors">%1$d autori</string>
-    <string name="relay_filter_ids">%1$d ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="zero">%1$d autori</item>
+        <item quantity="one">%1$d autors</item>
+        <item quantity="other">%1$d autori</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="zero">%1$d ID</item>
+        <item quantity="one">%1$d ID</item>
+        <item quantity="other">%1$d ID</item>
+    </plurals>
     <string name="relay_filter_since">kopš %1$s</string>
     <string name="relay_filter_until">līdz %1$s</string>
     <string name="relay_filter_limit">ierobežojums %1$d</string>
@@ -1393,7 +1413,11 @@
     <string name="remove_user_from_the_list">Noņemt lietotāju no saraksta</string>
     <string name="follow_list_item_label">Sekošanas pakotne</string>
     <string name="members">Dalībnieki</string>
-    <string name="contact_list_containing_label">Sekošanas saraksts, kurā ir %1$d lietotājs(-i):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="zero">Sekošanas saraksts, kurā ir %1$d lietotāji:</item>
+        <item quantity="one">Sekošanas saraksts, kurā ir %1$d lietotājs:</item>
+        <item quantity="other">Sekošanas saraksts, kurā ir %1$d lietotāji:</item>
+    </plurals>
     <string name="contact_list_screen_title">Sekošanas saraksts</string>
     <string name="contact_list_screen_title_with_count">Sekošanas saraksts (%1$d)</string>
     <string name="follow_pack_creation_name_label">Pakotnes nosaukums</string>
@@ -1416,8 +1440,16 @@
     <string name="dismiss">Noraidīt</string>
     <string name="broadcasting">Pārraida</string>
     <string name="broadcasting_name">Pārraida %1$s</string>
-    <string name="broadcasting_number_events">Pārraida %1$d notikumus…</string>
-    <string name="sent_number_events">%1$d notikumi nosūtīti</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="zero">Pārraida %1$d notikumus…</item>
+        <item quantity="one">Pārraida %1$d notikumu…</item>
+        <item quantity="other">Pārraida %1$d notikumus…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="zero">%1$d notikumi nosūtīti</item>
+        <item quantity="one">%1$d notikums nosūtīts</item>
+        <item quantity="other">%1$d notikumi nosūtīti</item>
+    </plurals>
     <string name="bradcasting_result_partial">Daži notikumi neizdevās</string>
     <string name="bradcasting_result_success">Visi notikumi izdevās</string>
     <string name="bradcasting_result_failure">Visi notikumi neizdevās</string>
@@ -1432,7 +1464,11 @@
     <string name="new_chess_game">Jauna šaha spēle</string>
     <string name="chess_loading_game">Ielādē spēli…</string>
     <string name="chess_game_not_found">Spēle nav atrasta</string>
-    <string name="badge_and_n_others"> un vēl %1$d</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="zero"> un vēl %1$d</item>
+        <item quantity="one"> un vēl %1$d</item>
+        <item quantity="other"> un vēl %1$d</item>
+    </plurals>
     <string name="remove_language">Noņemt %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Sāciet ar labu plūsmu, sekojot tiem pašiem cilvēkiem kā kādam, kam uzticaties.</string>
     <string name="import_follow_list">Importēt sekojamo sarakstu</string>
@@ -1441,9 +1477,21 @@
     <string name="name_search_npub1_alice_example_com">meklēt, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Atbalsta npub, nprofile, NIP-05, hex un Namecoin (.bit)</string>
     <string name="tip">Padoms</string>
-    <string name="accounts_found">Atrasti %1$d konti</string>
-    <string name="num_selected">%1$d atlasīts</string>
-    <string name="follow_accounts">Sekot %1$d kontiem</string>
+    <plurals name="accounts_found">
+        <item quantity="zero">Atrasti %1$d konti</item>
+        <item quantity="one">Atrasts %1$d konts</item>
+        <item quantity="other">Atrasti %1$d konti</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="zero">%1$d atlasīti</item>
+        <item quantity="one">%1$d atlasīts</item>
+        <item quantity="other">%1$d atlasīti</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="zero">Sekot %1$d kontiem</item>
+        <item quantity="one">Sekot %1$d kontam</item>
+        <item quantity="other">Sekot %1$d kontiem</item>
+    </plurals>
     <string name="skip_for_now">Izlaist pagaidām</string>
     <string name="fetching_follow_list">Ielādē sekojamo sarakstu…</string>
     <string name="no_follows_found">Nav atrasts neviens sekojamais</string>
@@ -1475,15 +1523,35 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Pārdistribuēti notikumi: %1$d jauni no %2$d nosūtītajiem un %3$d saņemtajiem</string>
     <string name="event_sync_done_title">Sinhronizācija pabeigta</string>
-    <string name="event_sync_done_sent">Pārsūtīti %1$d notikumi uz galamērķa relay no %2$d saņemtajiem.</string>
-    <string name="event_sync_done_accepted">%1$d notikumi galamērķa relay pieņemti kā jauni.</string>
-    <string name="event_sync_done_duration">Pabeigts %1$d sekundēs.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="zero">Pārsūtīti %1$d notikumi uz galamērķa relay no %2$d saņemtajiem.</item>
+        <item quantity="one">Pārsūtīts %1$d notikums uz galamērķa relay no %2$d saņemtajiem.</item>
+        <item quantity="other">Pārsūtīti %1$d notikumi uz galamērķa relay no %2$d saņemtajiem.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="zero">%1$d notikumi galamērķa relay pieņemti kā jauni.</item>
+        <item quantity="one">%1$d notikums galamērķa relay pieņemts kā jauns.</item>
+        <item quantity="other">%1$d notikumi galamērķa relay pieņemti kā jauni.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="zero">Pabeigts %1$d sekundēs.</item>
+        <item quantity="one">Pabeigts %1$d sekundē.</item>
+        <item quantity="other">Pabeigts %1$d sekundēs.</item>
+    </plurals>
     <string name="event_sync_error_title">Sinhronizācijas kļūda</string>
     <string name="event_sync_sending_to">Nosūtīšana uz</string>
     <string name="event_sync_outbox_relays">Izejošie</string>
     <string name="event_sync_inbox_relays">Ienākošie</string>
-    <string name="event_sync_activity_log">Pašlaik pārbauda (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Pabeigts (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="zero">Pašlaik pārbauda (%1$d relay)</item>
+        <item quantity="one">Pašlaik pārbauda (%1$d relay)</item>
+        <item quantity="other">Pašlaik pārbauda (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="zero">Pabeigts (%1$d relay)</item>
+        <item quantity="one">Pabeigts (%1$d relay)</item>
+        <item quantity="other">Pabeigts (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">nosūtīts %1$s</string>
     <string name="event_sync_log_recv">saņemts %1$s</string>
     <string name="event_sync_log_new">jauns %1$s</string>
@@ -1644,7 +1712,11 @@
     <string name="manage">Pārvaldīt</string>
     <string name="relay_members">Dalībnieki</string>
     <string name="relay_members_title">%1$s dalībnieki</string>
-    <string name="relay_members_count">%1$d dalībnieki</string>
+    <plurals name="relay_members_count">
+        <item quantity="zero">%1$d dalībnieki</item>
+        <item quantity="one">%1$d dalībnieks</item>
+        <item quantity="other">%1$d dalībnieki</item>
+    </plurals>
     <string name="relay_members_loading">Tiek ielādēti dalībnieki…</string>
     <string name="relay_members_empty">Nav atrasts neviens dalībnieks</string>
     <string name="relay_members_request_join">Pieprasīt pievienošanos</string>
@@ -1654,9 +1726,17 @@
     <string name="relay_members_you_are_member">Jūs esat dalībnieks</string>
     <string name="relay_membership_list">Relay dalībnieku saraksts</string>
     <string name="relay_member_added">Dalībnieks pievienots relay serverim</string>
-    <string name="relay_members_added">%1$d dalībnieki pievienoti relay serverim</string>
+    <plurals name="relay_members_added">
+        <item quantity="zero">%1$d dalībnieki pievienoti relay serverim</item>
+        <item quantity="one">%1$d dalībnieks pievienots relay serverim</item>
+        <item quantity="other">%1$d dalībnieki pievienoti relay serverim</item>
+    </plurals>
     <string name="relay_member_removed">Dalībnieks noņemts no relay servera</string>
-    <string name="relay_members_removed">%1$d dalībnieki noņemti no relay servera</string>
+    <plurals name="relay_members_removed">
+        <item quantity="zero">%1$d dalībnieki noņemti no relay servera</item>
+        <item quantity="one">%1$d dalībnieks noņemts no relay servera</item>
+        <item quantity="other">%1$d dalībnieki noņemti no relay servera</item>
+    </plurals>
     <string name="relay_join_request">Relay pievienošanās pieprasījums</string>
     <string name="relay_leave_request">Relay aiziešanas pieprasījums</string>
     <string name="ai_writing_use_this">Izmantot šo</string>
@@ -1681,7 +1761,11 @@
     <string name="emoji_pack_upload_image_cta">Augšupielādēt vāka attēlu</string>
     <string name="emoji_pack_upload_image_hint">Izvēlieties kvadrātisku attēlu, lai pārstāvētu šo emoji pakotni.</string>
     <string name="no_emoji_packs">Jums vēl nav nevienas emoji pakotnes</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="zero">%1$d emoji</item>
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Mans emoji saraksts</string>
     <string name="my_emoji_list_explainer">Emoji pakotnes, ko esat pievienojis savai izvēlei (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Jūs vēl neesat pievienojis nevienu emoji pakotni savam sarakstam</string>
@@ -1957,7 +2041,11 @@
     <string name="communities">Kopienas</string>
     <string name="community_rules_violation_kind_size_exceeded">Melnraksts ir %1$d baiti; šī kopiena ierobežo šo veidu līdz %2$d baitiem.</string>
     <string name="community_rules_violation_max_size_exceeded">Melnraksts ir %1$d baiti; šī kopiena ierobežo notikumus līdz %2$d baitiem.</string>
-    <string name="community_rules_violation_quota_exceeded">Jūs šodien jau esat publicējis %1$d šā veida notikumus (limits %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="zero">Jūs šodien jau esat publicējis %1$d šā veida notikumus (limits %2$d).</item>
+        <item quantity="one">Jūs šodien jau esat publicējis %1$d šā veida notikumu (limits %2$d).</item>
+        <item quantity="other">Jūs šodien jau esat publicējis %1$d šā veida notikumus (limits %2$d).</item>
+    </plurals>
     <string name="compose_settings">Rakstīšanas iestatījumi</string>
     <string name="concord_channel_rename">Pārsaukt kanālu</string>
     <string name="concord_channel_rename_save">@string/rename</string>

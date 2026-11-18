@@ -475,7 +475,10 @@
     <string name="nest_lobby_host_label">میزبان</string>
     <string name="nest_lobby_open_action">باز کردن</string>
     <string name="nest_lobby_no_listeners">در حال حاضر هیچ‌کس در اتاق نیست.</string>
-    <string name="nest_lobby_listeners_count">%1$d نفر در حال گوش دادن</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d نفر در حال گوش دادن</item>
+        <item quantity="other">%1$d نفر در حال گوش دادن</item>
+    </plurals>
     <string name="nest_role_host">میزبان</string>
     <string name="nest_role_moderator">ناظر</string>
     <string name="nest_state_muted">میکروفون بی‌صدا است</string>
@@ -582,7 +585,10 @@
     <string name="hashtag_label_added_by">افزوده شده توسط</string>
     <string name="pinned_notes">یادداشت‌های سنجاق‌شده</string>
     <string name="pinned_notes_explainer">یادداشت‌های سنجاق‌شده شما</string>
-    <string name="deleted_items_banner_title">%1$d مورد در این لیست توسط نویسنده‌شان حذف شده است.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d مورد در این لیست توسط نویسنده‌اش حذف شده است.</item>
+        <item quantity="other">%1$d مورد در این لیست توسط نویسنده‌شان حذف شده است.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">حذف از لیست</string>
     <string name="deleted_items_banner_dismiss">رد کردن</string>
     <string name="bookmark_lists">لیست‌های نشانک</string>
@@ -598,7 +604,10 @@
     <string name="interest_set_name_placeholder">علایق من</string>
     <string name="interest_set_hashtag_add_placeholder">افزودن هشتگ</string>
     <string name="interest_set_hashtag_private_toggle">خصوصی</string>
-    <string name="interest_set_hashtag_count">%1$d هشتگ</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d هشتگ</item>
+        <item quantity="other">%1$d هشتگ</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">اقدامات مجموعه علایق</string>
     <string name="interest_set_clone">کپی</string>
     <string name="interest_set_add_hashtag">افزودن هشتگ</string>
@@ -803,8 +812,14 @@
     <string name="relay_req_subscriptions">اشتراک‌های REQ (%1$d)</string>
     <string name="relay_count_subscriptions">اشتراک‌های COUNT (%1$d)</string>
     <string name="relay_outbox_events">رویدادهای Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d نویسنده</string>
-    <string name="relay_filter_ids">%1$d شناسه</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d نویسنده</item>
+        <item quantity="other">%1$d نویسنده</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d شناسه</item>
+        <item quantity="other">%1$d شناسه</item>
+    </plurals>
     <string name="relay_filter_since">از %1$s</string>
     <string name="relay_filter_until">تا %1$s</string>
     <string name="relay_filter_limit">محدودیت %1$d</string>
@@ -1396,7 +1411,10 @@
     <string name="remove_user_from_the_list">حذف کاربر از لیست</string>
     <string name="follow_list_item_label">بسته دنبال‌کردن</string>
     <string name="members">اعضا</string>
-    <string name="contact_list_containing_label">لیست دنبال‌کردن شامل %1$d کاربر:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">لیست دنبال‌کردن شامل %1$d کاربر:</item>
+        <item quantity="other">لیست دنبال‌کردن شامل %1$d کاربر:</item>
+    </plurals>
     <string name="contact_list_screen_title">لیست دنبال‌کردن</string>
     <string name="contact_list_screen_title_with_count">لیست دنبال‌کردن (%1$d)</string>
     <string name="follow_pack_creation_name_label">نام بسته</string>
@@ -1419,8 +1437,14 @@
     <string name="dismiss">رد کردن</string>
     <string name="broadcasting">در حال انتشار</string>
     <string name="broadcasting_name">در حال انتشار %1$s</string>
-    <string name="broadcasting_number_events">در حال انتشار %1$d رویداد…</string>
-    <string name="sent_number_events">%1$d رویداد ارسال شد</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">در حال انتشار %1$d رویداد…</item>
+        <item quantity="other">در حال انتشار %1$d رویداد…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d رویداد ارسال شد</item>
+        <item quantity="other">%1$d رویداد ارسال شد</item>
+    </plurals>
     <string name="bradcasting_result_partial">برخی رویدادها ناموفق بودند</string>
     <string name="bradcasting_result_success">همه رویدادها موفق بودند</string>
     <string name="bradcasting_result_failure">همه رویدادها ناموفق بودند</string>
@@ -1435,7 +1459,10 @@
     <string name="new_chess_game">بازی شطرنج جدید</string>
     <string name="chess_loading_game">در حال بارگذاری بازی…</string>
     <string name="chess_game_not_found">بازی یافت نشد</string>
-    <string name="badge_and_n_others"> و %1$d نفر دیگر</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> و %1$d نفر دیگر</item>
+        <item quantity="other"> و %1$d نفر دیگر</item>
+    </plurals>
     <string name="remove_language">حذف %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">با دنبال‌کردن همان افرادی که شخص مورد اعتمادتان دنبال می‌کند، یک فید عالی شروع کنید.</string>
     <string name="import_follow_list">وارد کردن فهرست دنبال‌شدگان</string>
@@ -1444,9 +1471,18 @@
     <string name="name_search_npub1_alice_example_com">جستجو، npub1…، alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">پشتیبانی از npub، nprofile، NIP-05، hex و Namecoin ‎(.bit)</string>
     <string name="tip">راهنمایی</string>
-    <string name="accounts_found">%1$d حساب یافت شد</string>
-    <string name="num_selected">%1$d انتخاب‌شده</string>
-    <string name="follow_accounts">دنبال‌کردن %1$d حساب</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d حساب یافت شد</item>
+        <item quantity="other">%1$d حساب یافت شد</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d انتخاب‌شده</item>
+        <item quantity="other">%1$d انتخاب‌شده</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">دنبال‌کردن %1$d حساب</item>
+        <item quantity="other">دنبال‌کردن %1$d حساب</item>
+    </plurals>
     <string name="skip_for_now">فعلاً رد شو</string>
     <string name="fetching_follow_list">در حال دریافت فهرست دنبال‌شدگان…</string>
     <string name="no_follows_found">هیچ دنبال‌شده‌ای یافت نشد</string>
@@ -1478,14 +1514,29 @@
     <string name="event_sync_relays_progress">relay ها: %1$d / %2$d</string>
     <string name="event_sync_events_sent">رویدادهای توزیع‌مجدد: %1$d جدید از %2$d ارسال‌شده و %3$d دریافت‌شده</string>
     <string name="event_sync_done_title">همگام‌سازی کامل شد</string>
-    <string name="event_sync_done_sent">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</string>
-    <string name="event_sync_done_accepted">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</string>
-    <string name="event_sync_done_duration">در %1$d ثانیه تکمیل شد.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</item>
+        <item quantity="other">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</item>
+        <item quantity="other">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">در %1$d ثانیه تکمیل شد.</item>
+        <item quantity="other">در %1$d ثانیه تکمیل شد.</item>
+    </plurals>
     <string name="event_sync_error_title">خطای همگام‌سازی</string>
     <string name="event_sync_sending_to">ارسال به</string>
     <string name="event_sync_dm_relays">پیام‌های خصوصی</string>
-    <string name="event_sync_activity_log">در حال بررسی (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">تمام شد (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">در حال بررسی (%1$d relay)</item>
+        <item quantity="other">در حال بررسی (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">تمام شد (%1$d relay)</item>
+        <item quantity="other">تمام شد (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">ارسال‌شده %1$s</string>
     <string name="event_sync_log_recv">دریافت‌شده %1$s</string>
     <string name="event_sync_log_new">جدید %1$s</string>
@@ -1645,7 +1696,10 @@
     <string name="manage">مدیریت</string>
     <string name="relay_members">اعضا</string>
     <string name="relay_members_title">اعضای %1$s</string>
-    <string name="relay_members_count">%1$d عضو</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d عضو</item>
+        <item quantity="other">%1$d عضو</item>
+    </plurals>
     <string name="relay_members_loading">در حال بارگذاری اعضا…</string>
     <string name="relay_members_empty">عضوی یافت نشد</string>
     <string name="relay_members_request_join">درخواست عضویت</string>
@@ -1655,9 +1709,15 @@
     <string name="relay_members_you_are_member">شما عضو هستید</string>
     <string name="relay_membership_list">لیست عضویت relay</string>
     <string name="relay_member_added">عضو به relay اضافه شد</string>
-    <string name="relay_members_added">%1$d عضو به relay اضافه شد</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d عضو به relay اضافه شد</item>
+        <item quantity="other">%1$d عضو به relay اضافه شد</item>
+    </plurals>
     <string name="relay_member_removed">عضو از relay حذف شد</string>
-    <string name="relay_members_removed">%1$d عضو از relay حذف شد</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d عضو از relay حذف شد</item>
+        <item quantity="other">%1$d عضو از relay حذف شد</item>
+    </plurals>
     <string name="relay_join_request">درخواست پیوستن به relay</string>
     <string name="relay_leave_request">درخواست خروج از relay</string>
     <string name="ai_writing_use_this">استفاده از این</string>
@@ -1683,7 +1743,10 @@
     <string name="emoji_pack_upload_image_cta">بارگذاری تصویر جلد</string>
     <string name="emoji_pack_upload_image_hint">یک تصویر مربعی برای نمایش این بسته ایموجی انتخاب کنید.</string>
     <string name="no_emoji_packs">هنوز هیچ بسته ایموجی‌ای ندارید</string>
-    <string name="emoji_pack_count">%1$d ایموجی</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d ایموجی</item>
+        <item quantity="other">%1$d ایموجی</item>
+    </plurals>
     <string name="my_emoji_list_title">فهرست ایموجی من</string>
     <string name="my_emoji_list_explainer">بسته‌های ایموجی که به انتخاب خود افزوده‌اید (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">هنوز هیچ بسته ایموجی‌ای به فهرست خود اضافه نکرده‌اید</string>
@@ -1954,7 +2017,10 @@
     <string name="communities">جوامع</string>
     <string name="community_rules_violation_kind_size_exceeded">پیش‌نویس %1$d بایت است؛ این انجمن این نوع را تا %2$d بایت محدود می‌کند.</string>
     <string name="community_rules_violation_max_size_exceeded">پیش‌نویس %1$d بایت است؛ این انجمن رویدادها را تا %2$d بایت محدود می‌کند.</string>
-    <string name="community_rules_violation_quota_exceeded">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</item>
+        <item quantity="other">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</item>
+    </plurals>
     <string name="compose_settings">تنظیمات نوشتن</string>
     <string name="connect_through_your_orbot_setup_short">درگاه پیش فرض 9050 است</string>
     <string name="connected_section">relay های متصل</string>

@@ -475,7 +475,12 @@
     <string name="nest_lobby_host_label">Хост</string>
     <string name="nest_lobby_open_action">Открыть</string>
     <string name="nest_lobby_no_listeners">Сейчас в комнате никого нет.</string>
-    <string name="nest_lobby_listeners_count">%1$d слушает</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d слушает</item>
+        <item quantity="few">%1$d слушают</item>
+        <item quantity="many">%1$d слушают</item>
+        <item quantity="other">%1$d слушают</item>
+    </plurals>
     <string name="nest_role_host">Хост</string>
     <string name="nest_role_moderator">Модератор</string>
     <string name="nest_state_muted">Микрофон выключен</string>
@@ -581,7 +586,12 @@
     <string name="hashtag_label_added_by">добавил</string>
     <string name="pinned_notes">Закрепленные заметки</string>
     <string name="pinned_notes_explainer">Ваши закреплённые заметки</string>
-    <string name="deleted_items_banner_title">%1$d элемент(ов) в этом списке удалён автором.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d элемент в этом списке удалён автором.</item>
+        <item quantity="few">%1$d элемента в этом списке удалены авторами.</item>
+        <item quantity="many">%1$d элементов в этом списке удалены авторами.</item>
+        <item quantity="other">%1$d элемента в этом списке удалено авторами.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Удалить из списка</string>
     <string name="deleted_items_banner_dismiss">Закрыть</string>
     <string name="bookmark_lists">Списки закладок</string>
@@ -597,7 +607,12 @@
     <string name="interest_set_name_placeholder">Мои интересы</string>
     <string name="interest_set_hashtag_add_placeholder">Добавить хэштег</string>
     <string name="interest_set_hashtag_private_toggle">Приватный</string>
-    <string name="interest_set_hashtag_count">%1$d хэштег(ов)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d хэштег</item>
+        <item quantity="few">%1$d хэштега</item>
+        <item quantity="many">%1$d хэштегов</item>
+        <item quantity="other">%1$d хэштега</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Действия с набором интересов</string>
     <string name="interest_set_clone">Клонировать</string>
     <string name="interest_set_add_hashtag">Добавить хэштег</string>
@@ -802,8 +817,18 @@
     <string name="relay_req_subscriptions">REQ-подписки (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-подписки (%1$d)</string>
     <string name="relay_outbox_events">Исходящие события (%1$d)</string>
-    <string name="relay_filter_authors">%1$d авторов</string>
-    <string name="relay_filter_ids">%1$d ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d автор</item>
+        <item quantity="few">%1$d автора</item>
+        <item quantity="many">%1$d авторов</item>
+        <item quantity="other">%1$d автора</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ID</item>
+        <item quantity="few">%1$d ID</item>
+        <item quantity="many">%1$d ID</item>
+        <item quantity="other">%1$d ID</item>
+    </plurals>
     <string name="relay_filter_since">с %1$s</string>
     <string name="relay_filter_until">до %1$s</string>
     <string name="relay_filter_limit">лимит %1$d</string>
@@ -1390,7 +1415,12 @@
     <string name="remove_user_from_the_list">Удалить пользователя из списка</string>
     <string name="follow_list_item_label">Пакет подписок</string>
     <string name="members">Участники</string>
-    <string name="contact_list_containing_label">Список подписок, содержащий %1$d пользов.:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Список подписок, содержащий %1$d пользователя:</item>
+        <item quantity="few">Список подписок, содержащий %1$d пользователя:</item>
+        <item quantity="many">Список подписок, содержащий %1$d пользователей:</item>
+        <item quantity="other">Список подписок, содержащий %1$d пользователя:</item>
+    </plurals>
     <string name="contact_list_screen_title">Список подписок</string>
     <string name="contact_list_screen_title_with_count">Список подписок (%1$d)</string>
     <string name="follow_pack_creation_name_label">Название пакета</string>
@@ -1413,8 +1443,18 @@
     <string name="dismiss">Закрыть</string>
     <string name="broadcasting">Трансляция</string>
     <string name="broadcasting_name">Трансляция %1$s</string>
-    <string name="broadcasting_number_events">Трансляция %1$d событий…</string>
-    <string name="sent_number_events">%1$d событий отправлено</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Трансляция %1$d события…</item>
+        <item quantity="few">Трансляция %1$d событий…</item>
+        <item quantity="many">Трансляция %1$d событий…</item>
+        <item quantity="other">Трансляция %1$d события…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">Отправлено %1$d событие</item>
+        <item quantity="few">Отправлено %1$d события</item>
+        <item quantity="many">Отправлено %1$d событий</item>
+        <item quantity="other">Отправлено %1$d события</item>
+    </plurals>
     <string name="bradcasting_result_partial">Некоторые события не удалось отправить</string>
     <string name="bradcasting_result_success">Все события успешно отправлены</string>
     <string name="bradcasting_result_failure">Все события не удалось отправить</string>
@@ -1429,7 +1469,12 @@
     <string name="new_chess_game">Новая шахматная партия</string>
     <string name="chess_loading_game">Загрузка партии…</string>
     <string name="chess_game_not_found">Партия не найдена</string>
-    <string name="badge_and_n_others"> и ещё %1$d</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> и ещё %1$d</item>
+        <item quantity="few"> и ещё %1$d</item>
+        <item quantity="many"> и ещё %1$d</item>
+        <item quantity="other"> и ещё %1$d</item>
+    </plurals>
     <string name="remove_language">Удалить %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Начните с отличной ленты, подписавшись на тех же людей, что и кто-то, кому вы доверяете.</string>
     <string name="import_follow_list">Импортировать список подписок</string>
@@ -1438,9 +1483,24 @@
     <string name="name_search_npub1_alice_example_com">поиск, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Поддерживает npub, nprofile, NIP-05, hex и Namecoin (.bit)</string>
     <string name="tip">Подсказка</string>
-    <string name="accounts_found">%1$d аккаунтов найдено</string>
-    <string name="num_selected">%1$d выбрано</string>
-    <string name="follow_accounts">Подписаться на %1$d аккаунтов</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Найден %1$d аккаунт</item>
+        <item quantity="few">Найдено %1$d аккаунта</item>
+        <item quantity="many">Найдено %1$d аккаунтов</item>
+        <item quantity="other">Найдено %1$d аккаунта</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">Выбрано: %1$d</item>
+        <item quantity="few">Выбрано: %1$d</item>
+        <item quantity="many">Выбрано: %1$d</item>
+        <item quantity="other">Выбрано: %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Подписаться на %1$d аккаунт</item>
+        <item quantity="few">Подписаться на %1$d аккаунта</item>
+        <item quantity="many">Подписаться на %1$d аккаунтов</item>
+        <item quantity="other">Подписаться на %1$d аккаунта</item>
+    </plurals>
     <string name="skip_for_now">Пропустить пока</string>
     <string name="fetching_follow_list">Загрузка списка подписок…</string>
     <string name="no_follows_found">Подписки не найдены</string>
@@ -1472,16 +1532,41 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Перераспределено событий: %1$d новых из %2$d отправленных и %3$d полученных</string>
     <string name="event_sync_done_title">Синхронизация завершена</string>
-    <string name="event_sync_done_sent">Переслано %1$d событий на целевые relay из %2$d полученных.</string>
-    <string name="event_sync_done_accepted">%1$d событий принято как новые целевыми relay.</string>
-    <string name="event_sync_done_duration">Завершено за %1$d секунд.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Переслано %1$d событие на целевые relay из %2$d полученных.</item>
+        <item quantity="few">Переслано %1$d события на целевые relay из %2$d полученных.</item>
+        <item quantity="many">Переслано %1$d событий на целевые relay из %2$d полученных.</item>
+        <item quantity="other">Переслано %1$d события на целевые relay из %2$d полученных.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d событие принято как новое целевыми relay.</item>
+        <item quantity="few">%1$d события приняты как новые целевыми relay.</item>
+        <item quantity="many">%1$d событий принято как новые целевыми relay.</item>
+        <item quantity="other">%1$d события принято как новые целевыми relay.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Завершено за %1$d секунду.</item>
+        <item quantity="few">Завершено за %1$d секунды.</item>
+        <item quantity="many">Завершено за %1$d секунд.</item>
+        <item quantity="other">Завершено за %1$d секунды.</item>
+    </plurals>
     <string name="event_sync_error_title">Ошибка синхронизации</string>
     <string name="event_sync_sending_to">Отправка на</string>
     <string name="event_sync_outbox_relays">Исходящие</string>
     <string name="event_sync_inbox_relays">Входящие</string>
     <string name="event_sync_dm_relays">ЛС</string>
-    <string name="event_sync_activity_log">Выполняется проверка (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Завершено (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Выполняется проверка (%1$d relay)</item>
+        <item quantity="few">Выполняется проверка (%1$d relay)</item>
+        <item quantity="many">Выполняется проверка (%1$d relay)</item>
+        <item quantity="other">Выполняется проверка (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Завершено (%1$d relay)</item>
+        <item quantity="few">Завершено (%1$d relay)</item>
+        <item quantity="many">Завершено (%1$d relay)</item>
+        <item quantity="other">Завершено (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">отправлено %1$s</string>
     <string name="event_sync_log_recv">получено %1$s</string>
     <string name="event_sync_log_new">новое %1$s</string>
@@ -1641,7 +1726,12 @@
     <string name="manage">Управление</string>
     <string name="relay_members">Участники</string>
     <string name="relay_members_title">Участники %1$s</string>
-    <string name="relay_members_count">%1$d участников</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d участник</item>
+        <item quantity="few">%1$d участника</item>
+        <item quantity="many">%1$d участников</item>
+        <item quantity="other">%1$d участника</item>
+    </plurals>
     <string name="relay_members_loading">Загрузка участников…</string>
     <string name="relay_members_empty">Участники не найдены</string>
     <string name="relay_members_request_join">Запрос на вступление</string>
@@ -1651,9 +1741,19 @@
     <string name="relay_members_you_are_member">Вы являетесь участником</string>
     <string name="relay_membership_list">Список участников relay</string>
     <string name="relay_member_added">Участник добавлен в relay</string>
-    <string name="relay_members_added">%1$d участников добавлено в relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d участник добавлен в relay</item>
+        <item quantity="few">%1$d участника добавлены в relay</item>
+        <item quantity="many">%1$d участников добавлено в relay</item>
+        <item quantity="other">%1$d участника добавлено в relay</item>
+    </plurals>
     <string name="relay_member_removed">Участник удалён из relay</string>
-    <string name="relay_members_removed">%1$d участников удалено из relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d участник удалён из relay</item>
+        <item quantity="few">%1$d участника удалены из relay</item>
+        <item quantity="many">%1$d участников удалено из relay</item>
+        <item quantity="other">%1$d участника удалено из relay</item>
+    </plurals>
     <string name="relay_join_request">Запрос на вступление в relay</string>
     <string name="relay_leave_request">Запрос на выход из relay</string>
     <string name="ai_writing_use_this">Использовать</string>
@@ -1679,7 +1779,12 @@
     <string name="emoji_pack_upload_image_cta">Загрузить обложку</string>
     <string name="emoji_pack_upload_image_hint">Выберите квадратное изображение для этого набора эмодзи.</string>
     <string name="no_emoji_packs">У вас пока нет наборов эмодзи</string>
-    <string name="emoji_pack_count">%1$d эмодзи</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d эмодзи</item>
+        <item quantity="few">%1$d эмодзи</item>
+        <item quantity="many">%1$d эмодзи</item>
+        <item quantity="other">%1$d эмодзи</item>
+    </plurals>
     <string name="my_emoji_list_title">Мой список эмодзи</string>
     <string name="my_emoji_list_explainer">Наборы эмодзи, добавленные в вашу подборку (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Вы ещё не добавили ни одного набора эмодзи в свой список</string>
@@ -1964,7 +2069,12 @@
     <string name="communities">Сообщества</string>
     <string name="community_rules_violation_kind_size_exceeded">Черновик занимает %1$d байт; в этом сообществе для данного kind установлено ограничение %2$d байт.</string>
     <string name="community_rules_violation_max_size_exceeded">Черновик занимает %1$d байт; в этом сообществе установлено ограничение %2$d байт для событий.</string>
-    <string name="community_rules_violation_quota_exceeded">Сегодня вы уже опубликовали %1$d событий этого kind (лимит: %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Сегодня вы уже опубликовали %1$d событие этого kind (лимит: %2$d).</item>
+        <item quantity="few">Сегодня вы уже опубликовали %1$d события этого kind (лимит: %2$d).</item>
+        <item quantity="many">Сегодня вы уже опубликовали %1$d событий этого kind (лимит: %2$d).</item>
+        <item quantity="other">Сегодня вы уже опубликовали %1$d события этого kind (лимит: %2$d).</item>
+    </plurals>
     <string name="compose_settings">Настройки редактора</string>
     <string name="concord_channels_empty">Каналов еще нет.</string>
     <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>

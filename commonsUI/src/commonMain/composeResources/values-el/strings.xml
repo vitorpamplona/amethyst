@@ -470,7 +470,10 @@
     <string name="nest_lobby_host_label">Οικοδεσπότης</string>
     <string name="nest_lobby_open_action">Άνοιγμα</string>
     <string name="nest_lobby_no_listeners">Δεν υπάρχει κανείς στο δωμάτιο αυτή τη στιγμή.</string>
-    <string name="nest_lobby_listeners_count">%1$d ακούνε</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d ακούει</item>
+        <item quantity="other">%1$d ακούνε</item>
+    </plurals>
     <string name="nest_role_host">Οικοδεσπότης</string>
     <string name="nest_role_moderator">Συντονιστής</string>
     <string name="nest_state_muted">Μικρόφωνο σε σίγαση</string>
@@ -577,7 +580,10 @@
     <string name="hashtag_label_added_by">προστέθηκε από</string>
     <string name="pinned_notes">Καρφιτσωμένες σημειώσεις</string>
     <string name="pinned_notes_explainer">Οι καρφιτσωμένες σημειώσεις σας</string>
-    <string name="deleted_items_banner_title">%1$d στοιχεία σε αυτή τη λίστα έχουν διαγραφεί από τον δημιουργό τους.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d στοιχείο σε αυτή τη λίστα έχει διαγραφεί από τον δημιουργό του.</item>
+        <item quantity="other">%1$d στοιχεία σε αυτή τη λίστα έχουν διαγραφεί από τον δημιουργό τους.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Αφαίρεση από τη λίστα</string>
     <string name="deleted_items_banner_dismiss">Απόρριψη</string>
     <string name="bookmark_lists">Λίστες σελιδοδεικτών</string>
@@ -797,7 +803,10 @@
     <string name="relay_req_subscriptions">REQ Συνδρομές (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Συνδρομές (%1$d)</string>
     <string name="relay_outbox_events">Γεγονότα εξερχομένων (%1$d)</string>
-    <string name="relay_filter_authors">%1$d συντάκτες</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d συντάκτης</item>
+        <item quantity="other">%1$d συντάκτες</item>
+    </plurals>
     <string name="relay_filter_since">από %1$s</string>
     <string name="relay_filter_until">έως %1$s</string>
     <string name="relay_filter_limit">όριο %1$d</string>
@@ -1374,7 +1383,10 @@
     <string name="add_user_to_the_list">Προσθήκη χρήστη στη λίστα</string>
     <string name="remove_user_from_the_list">Αφαίρεση χρήστη από τη λίστα</string>
     <string name="members">Μέλη</string>
-    <string name="contact_list_containing_label">Λίστα ακολουθίας που περιέχει %1$d χρήστη/ες:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Λίστα ακολουθίας που περιέχει %1$d χρήστη:</item>
+        <item quantity="other">Λίστα ακολουθίας που περιέχει %1$d χρήστες:</item>
+    </plurals>
     <string name="contact_list_screen_title">Λίστα ακολουθίας</string>
     <string name="contact_list_screen_title_with_count">Λίστα ακολουθίας (%1$d)</string>
     <string name="follow_pack_creation_name_label">Όνομα πακέτου</string>
@@ -1397,8 +1409,14 @@
     <string name="dismiss">Απόρριψη</string>
     <string name="broadcasting">Μετάδοση</string>
     <string name="broadcasting_name">Μετάδοση %1$s</string>
-    <string name="broadcasting_number_events">Μετάδοση %1$d συμβάντων…</string>
-    <string name="sent_number_events">%1$d συμβάντα στάλθηκαν</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Μετάδοση %1$d συμβάντος…</item>
+        <item quantity="other">Μετάδοση %1$d συμβάντων…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d συμβάν στάλθηκε</item>
+        <item quantity="other">%1$d συμβάντα στάλθηκαν</item>
+    </plurals>
     <string name="bradcasting_result_partial">Ορισμένα συμβάντα απέτυχαν</string>
     <string name="bradcasting_result_success">Όλα τα συμβάντα ήταν επιτυχή</string>
     <string name="bradcasting_result_failure">Όλα τα συμβάντα απέτυχαν</string>
@@ -1413,7 +1431,10 @@
     <string name="new_chess_game">Νέο παιχνίδι σκακιού</string>
     <string name="chess_loading_game">Φόρτωση παιχνιδιού…</string>
     <string name="chess_game_not_found">Το παιχνίδι δεν βρέθηκε</string>
-    <string name="badge_and_n_others"> και %1$d άλλοι</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> και %1$d άλλος</item>
+        <item quantity="other"> και %1$d άλλοι</item>
+    </plurals>
     <string name="remove_language">Αφαίρεση %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Ξεκινήστε με εξαιρετική ροή ακολουθώντας τα ίδια άτομα με κάποιον που εμπιστεύεστε.</string>
     <string name="import_follow_list">Εισαγωγή Λίστας Ακολούθων</string>
@@ -1422,9 +1443,18 @@
     <string name="name_search_npub1_alice_example_com">αναζήτηση, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Υποστηρίζει npub, nprofile, NIP-05, hex και Namecoin (.bit)</string>
     <string name="tip">Συμβουλή</string>
-    <string name="accounts_found">%1$d λογαριασμοί βρέθηκαν</string>
-    <string name="num_selected">%1$d επιλεγμένα</string>
-    <string name="follow_accounts">Ακολούθηση %1$d λογαριασμών</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d λογαριασμός βρέθηκε</item>
+        <item quantity="other">%1$d λογαριασμοί βρέθηκαν</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d επιλεγμένο</item>
+        <item quantity="other">%1$d επιλεγμένα</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Ακολούθηση %1$d λογαριασμού</item>
+        <item quantity="other">Ακολούθηση %1$d λογαριασμών</item>
+    </plurals>
     <string name="skip_for_now">Παράλειψη προς το παρόν</string>
     <string name="fetching_follow_list">Λήψη λίστας ακολούθων…</string>
     <string name="no_follows_found">Δεν βρέθηκαν ακόλουθοι</string>
@@ -1455,15 +1485,30 @@
     <string name="event_sync_cancel">Ακύρωση</string>
     <string name="event_sync_events_sent">Συμβάντα αναδιανεμημένα: %1$d νέα από %2$d αποστολών και %3$d ληφθέντων</string>
     <string name="event_sync_done_title">Ο συγχρονισμός ολοκληρώθηκε</string>
-    <string name="event_sync_done_sent">Προωθήθηκαν %1$d συμβάντα στα relay προορισμού από τα %2$d που ελήφθησαν.</string>
-    <string name="event_sync_done_accepted">%1$d συμβάντα αποδεκτά ως νέα από τα relay προορισμού.</string>
-    <string name="event_sync_done_duration">Ολοκληρώθηκε σε %1$d δευτερόλεπτα.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Προωθήθηκε %1$d συμβάν στα relay προορισμού από τα %2$d που ελήφθησαν.</item>
+        <item quantity="other">Προωθήθηκαν %1$d συμβάντα στα relay προορισμού από τα %2$d που ελήφθησαν.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d συμβάν έγινε αποδεκτό ως νέο από τα relay προορισμού.</item>
+        <item quantity="other">%1$d συμβάντα αποδεκτά ως νέα από τα relay προορισμού.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Ολοκληρώθηκε σε %1$d δευτερόλεπτο.</item>
+        <item quantity="other">Ολοκληρώθηκε σε %1$d δευτερόλεπτα.</item>
+    </plurals>
     <string name="event_sync_error_title">Σφάλμα συγχρονισμού</string>
     <string name="event_sync_sending_to">Αποστολή Σε</string>
     <string name="event_sync_outbox_relays">Εξερχόμενα</string>
     <string name="event_sync_inbox_relays">Εισερχόμενα</string>
-    <string name="event_sync_activity_log">Τρέχων Έλεγχος (%1$d relays)</string>
-    <string name="event_sync_activity_log_finished">Ολοκληρώθηκε (%1$d relays)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Τρέχων Έλεγχος (%1$d relay)</item>
+        <item quantity="other">Τρέχων Έλεγχος (%1$d relays)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Ολοκληρώθηκε (%1$d relay)</item>
+        <item quantity="other">Ολοκληρώθηκε (%1$d relays)</item>
+    </plurals>
     <string name="event_sync_log_sent">εστάλη %1$s</string>
     <string name="event_sync_log_recv">ελήφθη %1$s</string>
     <string name="event_sync_log_new">νέο %1$s</string>
@@ -1624,7 +1669,10 @@
     <string name="manage">Διαχείριση</string>
     <string name="relay_members">Μέλη</string>
     <string name="relay_members_title">Μέλη του %1$s</string>
-    <string name="relay_members_count">%1$d μέλη</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d μέλος</item>
+        <item quantity="other">%1$d μέλη</item>
+    </plurals>
     <string name="relay_members_loading">Φόρτωση μελών…</string>
     <string name="relay_members_empty">Δεν βρέθηκαν μέλη</string>
     <string name="relay_members_request_join">Αίτηση Συμμετοχής</string>
@@ -1634,9 +1682,15 @@
     <string name="relay_members_you_are_member">Είστε μέλος</string>
     <string name="relay_membership_list">Λίστα μελών relay</string>
     <string name="relay_member_added">Το μέλος προστέθηκε στο relay</string>
-    <string name="relay_members_added">%1$d μέλη προστέθηκαν στο relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d μέλος προστέθηκε στο relay</item>
+        <item quantity="other">%1$d μέλη προστέθηκαν στο relay</item>
+    </plurals>
     <string name="relay_member_removed">Το μέλος αφαιρέθηκε από το relay</string>
-    <string name="relay_members_removed">%1$d μέλη αφαιρέθηκαν από το relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d μέλος αφαιρέθηκε από το relay</item>
+        <item quantity="other">%1$d μέλη αφαιρέθηκαν από το relay</item>
+    </plurals>
     <string name="relay_join_request">Αίτηση συμμετοχής σε relay</string>
     <string name="relay_leave_request">Αίτηση αποχώρησης από relay</string>
     <string name="ai_writing_use_this">Χρήση Αυτού</string>
@@ -1661,7 +1715,10 @@
     <string name="emoji_pack_upload_image_cta">Ανεβάστε εικόνα εξωφύλλου</string>
     <string name="emoji_pack_upload_image_hint">Επιλέξτε τετράγωνη εικόνα για να αντιπροσωπεύει αυτό το πακέτο emoji.</string>
     <string name="no_emoji_packs">Δεν έχετε ακόμη πακέτα emoji</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Η Λίστα Emoji Μου</string>
     <string name="my_emoji_list_explainer">Πακέτα emoji που έχετε προσθέσει στην επιλογή σας (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Δεν έχετε προσθέσει ακόμη πακέτα emoji στη λίστα σας</string>
@@ -1929,7 +1986,10 @@
     <string name="communities">Κοινότητες</string>
     <string name="community_rules_violation_kind_size_exceeded">Το προχείρο είναι %1$d bytes· αυτή η κοινότητα περιορίζει αυτόν τον τύπο στα %2$d bytes.</string>
     <string name="community_rules_violation_max_size_exceeded">Το προχείρο είναι %1$d bytes· αυτή η κοινότητα περιορίζει τα συμβάντα στα %2$d bytes.</string>
-    <string name="community_rules_violation_quota_exceeded">Έχετε ήδη δημοσιεύσει %1$d συμβάντα αυτού του τύπου σήμερα (όριο %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Έχετε ήδη δημοσιεύσει %1$d συμβάν αυτού του τύπου σήμερα (όριο %2$d).</item>
+        <item quantity="other">Έχετε ήδη δημοσιεύσει %1$d συμβάντα αυτού του τύπου σήμερα (όριο %2$d).</item>
+    </plurals>
     <string name="compose_settings">Ρυθμίσεις Σύνταξης</string>
     <string name="connect_through_your_orbot_setup_short">Η προεπιλεγμένη θύρα είναι 9050</string>
     <string name="connected_section">Συνδεδεμένα Relay</string>

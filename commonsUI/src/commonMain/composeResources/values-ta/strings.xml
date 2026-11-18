@@ -473,7 +473,10 @@
     <string name="nest_lobby_host_label">வழங்குனர்</string>
     <string name="nest_lobby_open_action">திறக்கவும்</string>
     <string name="nest_lobby_no_listeners">இப்போது அறையில் யாரும் இல்லை.</string>
-    <string name="nest_lobby_listeners_count">%1$d கேட்கிறார்கள்</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d கேட்கிறார்</item>
+        <item quantity="other">%1$d கேட்கிறார்கள்</item>
+    </plurals>
     <string name="nest_role_host">வழங்குனர்</string>
     <string name="nest_role_moderator">மதிப்பாளர்</string>
     <string name="nest_state_muted">மைக்ரோஃபோன் ஒலியடக்கப்பட்டது</string>
@@ -578,7 +581,10 @@
     <string name="hashtag_label_added_by">சேர்த்தவர்</string>
     <string name="pinned_notes">பொருத்தப்பட்ட குறிப்புகள்</string>
     <string name="pinned_notes_explainer">உங்கள் பொருத்தப்பட்ட குறிப்புகள்</string>
-    <string name="deleted_items_banner_title">இந்த பட்டியலில் %1$d உருப்படி(கள்) அவற்றின் ஆசிரியரால் நீக்கப்பட்டன.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">இந்த பட்டியலில் %1$d உருப்படி அதன் ஆசிரியரால் நீக்கப்பட்டது.</item>
+        <item quantity="other">இந்த பட்டியலில் %1$d உருப்படிகள் அவற்றின் ஆசிரியரால் நீக்கப்பட்டன.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">பட்டியலிலிருந்து நீக்கு</string>
     <string name="deleted_items_banner_dismiss">நிராகரி</string>
     <string name="bookmark_lists">புக்மார்க் பட்டியல்கள்</string>
@@ -594,7 +600,10 @@
     <string name="interest_set_name_placeholder">என் ஆர்வங்கள்</string>
     <string name="interest_set_hashtag_add_placeholder">ஹேஷ்டேக் சேர்</string>
     <string name="interest_set_hashtag_private_toggle">தனிப்பட்ட</string>
-    <string name="interest_set_hashtag_count">%1$d ஹேஷ்டேக்(கள்)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d ஹேஷ்டேக்</item>
+        <item quantity="other">%1$d ஹேஷ்டேக்குகள்</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">ஆர்வ தொகுப்பு செயல்கள்</string>
     <string name="interest_set_clone">நகல் எடு</string>
     <string name="interest_set_add_hashtag">ஹேஷ்டேக் சேர்</string>
@@ -799,8 +808,14 @@
     <string name="relay_req_subscriptions">REQ சந்தாக்கள் (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT சந்தாக்கள் (%1$d)</string>
     <string name="relay_outbox_events">Outbox நிகழ்வுகள் (%1$d)</string>
-    <string name="relay_filter_authors">%1$d ஆசிரியர்கள்</string>
-    <string name="relay_filter_ids">%1$d ஐடிகள்</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d ஆசிரியர்</item>
+        <item quantity="other">%1$d ஆசிரியர்கள்</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ஐடி</item>
+        <item quantity="other">%1$d ஐடிகள்</item>
+    </plurals>
     <string name="relay_filter_since">%1$s முதல்</string>
     <string name="relay_filter_until">%1$s வரை</string>
     <string name="relay_filter_limit">வரம்பு %1$d</string>
@@ -1382,7 +1397,10 @@
     <string name="add_user_to_the_list">பயனரை பட்டியலில் சேர்க்கவும்</string>
     <string name="remove_user_from_the_list">பட்டியலிலிருந்து பயனரை அகற்று</string>
     <string name="members">உறுப்பினர்கள்</string>
-    <string name="contact_list_containing_label">%1$d பயனர்(களை) கொண்டுள்ள follow பட்டியல்:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">%1$d பயனரைக் கொண்டுள்ள follow பட்டியல்:</item>
+        <item quantity="other">%1$d பயனர்களைக் கொண்டுள்ள follow பட்டியல்:</item>
+    </plurals>
     <string name="contact_list_screen_title">Follow பட்டியல்</string>
     <string name="contact_list_screen_title_with_count">Follow பட்டியல் (%1$d)</string>
     <string name="follow_pack_creation_name_label">Pack பெயர்</string>
@@ -1405,8 +1423,14 @@
     <string name="dismiss">நிராகரி</string>
     <string name="broadcasting">ஒளிபரப்புகிறது</string>
     <string name="broadcasting_name">%1$s ஒளிபரப்புகிறது</string>
-    <string name="broadcasting_number_events">%1$d நிகழ்வுகள் ஒளிபரப்பப்படுகின்றன…</string>
-    <string name="sent_number_events">%1$d நிகழ்வுகள் அனுப்பப்பட்டன</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">%1$d நிகழ்வு ஒளிபரப்பப்படுகிறது…</item>
+        <item quantity="other">%1$d நிகழ்வுகள் ஒளிபரப்பப்படுகின்றன…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d நிகழ்வு அனுப்பப்பட்டது</item>
+        <item quantity="other">%1$d நிகழ்வுகள் அனுப்பப்பட்டன</item>
+    </plurals>
     <string name="bradcasting_result_partial">சில நிகழ்வுகள் தோல்வியுற்றன</string>
     <string name="bradcasting_result_success">அனைத்து நிகழ்வுகளும் வெற்றிகரமாக முடிந்தன</string>
     <string name="bradcasting_result_failure">அனைத்து நிகழ்வுகளும் தோல்வியுற்றன</string>
@@ -1421,7 +1445,10 @@
     <string name="new_chess_game">புதிய சதுரங்க விளையாட்டு</string>
     <string name="chess_loading_game">விளையாட்டை ஏற்றுகிறது…</string>
     <string name="chess_game_not_found">விளையாட்டு கண்டுபிடிக்கப்படவில்லை</string>
-    <string name="badge_and_n_others"> மற்றும் %1$d பேர்</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> மற்றும் %1$d பேர்</item>
+        <item quantity="other"> மற்றும் %1$d பேர்</item>
+    </plurals>
     <string name="remove_language">%1$s-ஐ அகற்று</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">நீங்கள் நம்பும் ஒருவரைப் போலவே அதே நபர்களை follow செய்வதன் மூலம் சிறந்த ஊட்டத்தைத் தொடங்குங்கள்.</string>
     <string name="import_follow_list">Follow பட்டியலை இறக்குமதி செய்</string>
@@ -1430,9 +1457,18 @@
     <string name="name_search_npub1_alice_example_com">தேடல், npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex மற்றும் Namecoin (.bit) ஆகியவற்றை ஆதரிக்கிறது</string>
     <string name="tip">குறிப்பு</string>
-    <string name="accounts_found">%1$d கணக்குகள் கண்டுபிடிக்கப்பட்டன</string>
-    <string name="num_selected">%1$d தேர்ந்தெடுக்கப்பட்டது</string>
-    <string name="follow_accounts">%1$d கணக்குகளை follow செய்</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d கணக்கு கண்டுபிடிக்கப்பட்டது</item>
+        <item quantity="other">%1$d கணக்குகள் கண்டுபிடிக்கப்பட்டன</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d தேர்ந்தெடுக்கப்பட்டது</item>
+        <item quantity="other">%1$d தேர்ந்தெடுக்கப்பட்டன</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d கணக்கை follow செய்</item>
+        <item quantity="other">%1$d கணக்குகளை follow செய்</item>
+    </plurals>
     <string name="skip_for_now">இப்போது தவிர்</string>
     <string name="fetching_follow_list">Follow பட்டியலை பெறுகிறது…</string>
     <string name="no_follows_found">Follows எதுவும் கண்டுபிடிக்கப்படவில்லை</string>
@@ -1463,15 +1499,30 @@
     <string name="event_sync_cancel">ரத்துசெய்</string>
     <string name="event_sync_events_sent">நிகழ்வுகள் மறுவிநியோகிக்கப்பட்டன: %2$d அனுப்பப்பட்ட மற்றும் %3$d பெறப்பட்டதில் %1$d புதியது</string>
     <string name="event_sync_done_title">ஒத்திசைவு முடிந்தது</string>
-    <string name="event_sync_done_sent">%2$d பெறப்பட்டதில் %1$d நிகழ்வுகள் இலக்கு relays-க்கு அனுப்பப்பட்டன.</string>
-    <string name="event_sync_done_accepted">%1$d நிகழ்வுகள் இலக்கு relays-ஆல் புதியதாக ஏற்றுக்கொள்ளப்பட்டன.</string>
-    <string name="event_sync_done_duration">%1$d வினாடிகளில் முடிந்தது.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%2$d பெறப்பட்டதில் %1$d நிகழ்வு இலக்கு relays-க்கு அனுப்பப்பட்டது.</item>
+        <item quantity="other">%2$d பெறப்பட்டதில் %1$d நிகழ்வுகள் இலக்கு relays-க்கு அனுப்பப்பட்டன.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d நிகழ்வு இலக்கு relays-ஆல் புதியதாக ஏற்றுக்கொள்ளப்பட்டது.</item>
+        <item quantity="other">%1$d நிகழ்வுகள் இலக்கு relays-ஆல் புதியதாக ஏற்றுக்கொள்ளப்பட்டன.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">%1$d வினாடியில் முடிந்தது.</item>
+        <item quantity="other">%1$d வினாடிகளில் முடிந்தது.</item>
+    </plurals>
     <string name="event_sync_error_title">ஒத்திசைவு பிழை</string>
     <string name="event_sync_sending_to">அனுப்புகிறது</string>
     <string name="event_sync_outbox_relays">அஞ்சல் வெளி</string>
     <string name="event_sync_inbox_relays">அஞ்சல் உள்</string>
-    <string name="event_sync_activity_log">தற்போது சரிபார்க்கிறது (%1$d relays)</string>
-    <string name="event_sync_activity_log_finished">முடிந்தது (%1$d relays)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">தற்போது சரிபார்க்கிறது (%1$d relay)</item>
+        <item quantity="other">தற்போது சரிபார்க்கிறது (%1$d relays)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">முடிந்தது (%1$d relay)</item>
+        <item quantity="other">முடிந்தது (%1$d relays)</item>
+    </plurals>
     <string name="event_sync_log_sent">அனுப்பப்பட்டது %1$s</string>
     <string name="event_sync_log_recv">பெறப்பட்டது %1$s</string>
     <string name="event_sync_log_new">புதியது %1$s</string>
@@ -1631,7 +1682,10 @@
     <string name="manage">நிர்வகிக்கவும்</string>
     <string name="relay_members">உறுப்பினர்கள்</string>
     <string name="relay_members_title">%1$s-ன் உறுப்பினர்கள்</string>
-    <string name="relay_members_count">%1$d உறுப்பினர்கள்</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d உறுப்பினர்</item>
+        <item quantity="other">%1$d உறுப்பினர்கள்</item>
+    </plurals>
     <string name="relay_members_loading">உறுப்பினர்களை ஏற்றுகிறது…</string>
     <string name="relay_members_empty">உறுப்பினர்கள் எவரும் இல்லை</string>
     <string name="relay_members_request_join">சேர கோரிக்கை</string>
@@ -1641,9 +1695,15 @@
     <string name="relay_members_you_are_member">நீங்கள் உறுப்பினர்</string>
     <string name="relay_membership_list">Relay உறுப்பினர்கள் பட்டியல்</string>
     <string name="relay_member_added">relay-க்கு உறுப்பினர் சேர்க்கப்பட்டார்</string>
-    <string name="relay_members_added">%1$d உறுப்பினர்கள் relay-க்கு சேர்க்கப்பட்டனர்</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d உறுப்பினர் relay-க்கு சேர்க்கப்பட்டார்</item>
+        <item quantity="other">%1$d உறுப்பினர்கள் relay-க்கு சேர்க்கப்பட்டனர்</item>
+    </plurals>
     <string name="relay_member_removed">relay-லிருந்து உறுப்பினர் நீக்கப்பட்டார்</string>
-    <string name="relay_members_removed">%1$d உறுப்பினர்கள் relay-லிருந்து நீக்கப்பட்டனர்</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d உறுப்பினர் relay-லிருந்து நீக்கப்பட்டார்</item>
+        <item quantity="other">%1$d உறுப்பினர்கள் relay-லிருந்து நீக்கப்பட்டனர்</item>
+    </plurals>
     <string name="relay_join_request">Relay சேரும் கோரிக்கை</string>
     <string name="relay_leave_request">Relay விலகும் கோரிக்கை</string>
     <string name="ai_writing_use_this">இதை பயன்படுத்து</string>
@@ -1938,7 +1998,10 @@
     <string name="communities">சமூகங்கள்</string>
     <string name="community_rules_violation_kind_size_exceeded">வரைவு %1$d bytes; இந்த சமூகம் இந்த வகைக்கு %2$d bytes வரை அனுமதிக்கிறது.</string>
     <string name="community_rules_violation_max_size_exceeded">வரைவு %1$d bytes; இந்த சமூகம் நிகழ்வுகளை %2$d bytes வரை மட்டுமே அனுமதிக்கிறது.</string>
-    <string name="community_rules_violation_quota_exceeded">நீங்கள் இன்று இந்த வகையில் %1$d நிகழ்வுகளை ஏற்கனவே இடுகையிட்டுள்ளீர்கள் (வரம்பு %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">நீங்கள் இன்று இந்த வகையில் %1$d நிகழ்வை ஏற்கனவே இடுகையிட்டுள்ளீர்கள் (வரம்பு %2$d).</item>
+        <item quantity="other">நீங்கள் இன்று இந்த வகையில் %1$d நிகழ்வுகளை ஏற்கனவே இடுகையிட்டுள்ளீர்கள் (வரம்பு %2$d).</item>
+    </plurals>
     <string name="compose_settings">எழுதும் அமைப்புகள்</string>
     <string name="connect_through_your_orbot_setup_short">இயல்புநிலை போர்ட் 9050</string>
     <string name="connected_section">இணைந்த Relays</string>
@@ -2915,7 +2978,10 @@
     <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_placeholder">https://example.com</string>
     <string name="ai_tone_emojify">+ Emoji</string>
-    <string name="emoji_pack_count">%1$d emojis</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emojis</item>
+    </plurals>
     <string name="gif">Gif</string>
     <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_relays_header">Relays</string>

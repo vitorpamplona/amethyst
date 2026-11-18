@@ -684,7 +684,7 @@ private fun LeftoverGroup(
                 }
                 if (names.size > MAX_NAMES_PER_GROUP) {
                     Pill(
-                        text = stringRes(Res.string.emoji_import_more, names.size - MAX_NAMES_PER_GROUP),
+                        text = pluralStringRes(Res.plurals.emoji_import_more, names.size - MAX_NAMES_PER_GROUP, names.size - MAX_NAMES_PER_GROUP),
                         container = Color.Transparent,
                         content = colors.primary,
                         small = true,

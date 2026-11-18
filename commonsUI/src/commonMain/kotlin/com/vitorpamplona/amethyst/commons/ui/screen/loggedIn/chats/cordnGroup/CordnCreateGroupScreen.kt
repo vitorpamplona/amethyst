@@ -774,7 +774,7 @@ private fun relayLabel(relays: List<NormalizedRelayUrl>): String? {
     return if (hosts.size <= 2) {
         shown
     } else {
-        stringRes(Res.string.cordn_coordinators_relays_more, shown, hosts.size - 2)
+        pluralStringRes(Res.plurals.cordn_coordinators_relays_more, hosts.size - 2, shown, hosts.size - 2)
     }
 }
 

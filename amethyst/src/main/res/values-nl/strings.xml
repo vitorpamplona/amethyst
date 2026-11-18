@@ -208,4 +208,18 @@
     <string name="mute_button">Geluid aan. Tik voor dempen</string>
     <string name="play">Afspelen</string>
     <string name="pause">Pauzeren</string>
+    <string name="front_page_print_channel_name">The Observer wordt gedrukt</string>
+    <string name="front_page_print_channel_description">Toont The Observer tijdens het drukken, zodat hij af kan komen nadat je de app verlaat.</string>
+    <string name="front_page_print_cancel">Annuleren</string>
+    <string name="front_page_print_title">The Observer drukken</string>
+    <string name="front_page_print_step_probe">Je rangschikking controleren</string>
+    <string name="front_page_print_step_pull">De redacties lezen · %1$d van %2$d</string>
+    <string name="front_page_print_step_write">Schrijven</string>
+    <string name="front_page_print_step_fix">De pagina repareren</string>
+    <string name="front_page_print_step_check">Citaten, afbeeldingen en links controleren</string>
+    <string name="front_page_print_step_publish">Je Observer publiceren</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Bestanden</string>
+    <string name="napplet_cap_common">Sociale acties</string>
+    <string name="napplet_cap_intent">Andere apps openen</string>
 </resources>

@@ -222,4 +222,18 @@
     <string name="mute_button">Dźwięk włączony. Kliknij, aby wyciszyć</string>
     <string name="play">Odtwórz</string>
     <string name="pause">Pauza</string>
+    <string name="front_page_print_channel_name">The Observer – drukowanie</string>
+    <string name="front_page_print_channel_description">Pokazuje Observera podczas drukowania, aby mógł zostać ukończony po wyjściu z aplikacji.</string>
+    <string name="front_page_print_cancel">Anuluj</string>
+    <string name="front_page_print_title">Drukowanie Observera</string>
+    <string name="front_page_print_step_probe">Sprawdzanie Twojego rankingu</string>
+    <string name="front_page_print_step_pull">Czytanie działów · %1$d z %2$d</string>
+    <string name="front_page_print_step_write">Pisanie</string>
+    <string name="front_page_print_step_fix">Poprawianie strony</string>
+    <string name="front_page_print_step_check">Sprawdzanie cytatów, zdjęć i linków</string>
+    <string name="front_page_print_step_publish">Publikowanie Twojego Observera</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Pliki</string>
+    <string name="napplet_cap_common">Działania społecznościowe</string>
+    <string name="napplet_cap_intent">Otwieranie innych aplikacji</string>
 </resources>

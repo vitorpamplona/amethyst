@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.resources.unaccept_badge
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
@@ -297,7 +298,7 @@ private fun BadgeAwardeesRow(
         }
         if (awardees.size > 24) {
             Text(
-                text = stringRes(Res.string.badge_and_n_others, awardees.size - 24),
+                text = pluralStringRes(Res.plurals.badge_and_n_others, awardees.size - 24, awardees.size - 24),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp),

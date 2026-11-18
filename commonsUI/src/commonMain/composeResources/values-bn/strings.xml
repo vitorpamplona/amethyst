@@ -472,7 +472,10 @@
     <string name="nest_lobby_host_label">হোস্ট</string>
     <string name="nest_lobby_open_action">খুলুন</string>
     <string name="nest_lobby_no_listeners">এখন রুমে কেউ নেই।</string>
-    <string name="nest_lobby_listeners_count">%1$d জন শুনছে</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d জন শুনছে</item>
+        <item quantity="other">%1$d জন শুনছে</item>
+    </plurals>
     <string name="nest_role_host">হোস্ট</string>
     <string name="nest_role_moderator">মডারেটর</string>
     <string name="nest_state_muted">মাইক্রোফোন মিউট করা আছে</string>
@@ -576,7 +579,10 @@
     <string name="hashtag_label_added_by">যোগ করেছেন</string>
     <string name="pinned_notes">পিন করা নোট</string>
     <string name="pinned_notes_explainer">আপনার পিন করা নোট</string>
-    <string name="deleted_items_banner_title">এই তালিকায় %1$d টি আইটেম লেখক কর্তৃক মুছে ফেলা হয়েছে।</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">এই তালিকায় %1$d টি আইটেম লেখক কর্তৃক মুছে ফেলা হয়েছে।</item>
+        <item quantity="other">এই তালিকায় %1$d টি আইটেম লেখক কর্তৃক মুছে ফেলা হয়েছে।</item>
+    </plurals>
     <string name="deleted_items_banner_remove">তালিকা থেকে সরান</string>
     <string name="deleted_items_banner_dismiss">খারিজ করুন</string>
     <string name="bookmark_lists">বুকমার্ক তালিকা</string>
@@ -592,7 +598,10 @@
     <string name="interest_set_name_placeholder">আমার আগ্রহ</string>
     <string name="interest_set_hashtag_add_placeholder">হ্যাশট্যাগ যোগ করুন</string>
     <string name="interest_set_hashtag_private_toggle">ব্যক্তিগত</string>
-    <string name="interest_set_hashtag_count">%1$d টি হ্যাশট্যাগ</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d টি হ্যাশট্যাগ</item>
+        <item quantity="other">%1$d টি হ্যাশট্যাগ</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">আগ্রহ সেটের কার্যক্রম</string>
     <string name="interest_set_clone">ক্লোন করুন</string>
     <string name="interest_set_add_hashtag">হ্যাশট্যাগ যোগ করুন</string>
@@ -796,8 +805,14 @@
     <string name="relay_req_subscriptions">REQ সাবস্ক্রিপশন (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT সাবস্ক্রিপশন (%1$d)</string>
     <string name="relay_outbox_events">Outbox ইভেন্ট (%1$d)</string>
-    <string name="relay_filter_authors">%1$d জন লেখক</string>
-    <string name="relay_filter_ids">%1$d টি আইডি</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d জন লেখক</item>
+        <item quantity="other">%1$d জন লেখক</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d টি আইডি</item>
+        <item quantity="other">%1$d টি আইডি</item>
+    </plurals>
     <string name="relay_filter_since">%1$s থেকে</string>
     <string name="relay_filter_until">%1$s পর্যন্ত</string>
     <string name="relay_filter_limit">সীমা %1$d</string>
@@ -1381,7 +1396,10 @@
     <string name="remove_user_from_the_list">তালিকা থেকে ব্যবহারকারী সরান</string>
     <string name="follow_list_item_label">ফলো প্যাক</string>
     <string name="members">সদস্য</string>
-    <string name="contact_list_containing_label">%1$d জন ব্যবহারকারী সম্বলিত ফলো তালিকা:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">%1$d জন ব্যবহারকারী সম্বলিত ফলো তালিকা:</item>
+        <item quantity="other">%1$d জন ব্যবহারকারী সম্বলিত ফলো তালিকা:</item>
+    </plurals>
     <string name="contact_list_screen_title">ফলো তালিকা</string>
     <string name="contact_list_screen_title_with_count">ফলো তালিকা (%1$d)</string>
     <string name="follow_pack_creation_name_label">প্যাকের নাম</string>
@@ -1404,8 +1422,14 @@
     <string name="dismiss">বাতিল করুন</string>
     <string name="broadcasting">প্রচার করা হচ্ছে</string>
     <string name="broadcasting_name">%1$s প্রচার করা হচ্ছে</string>
-    <string name="broadcasting_number_events">%1$d ইভেন্ট প্রচার করা হচ্ছে…</string>
-    <string name="sent_number_events">%1$d ইভেন্ট পাঠানো হয়েছে</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">%1$d ইভেন্ট প্রচার করা হচ্ছে…</item>
+        <item quantity="other">%1$d ইভেন্ট প্রচার করা হচ্ছে…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d ইভেন্ট পাঠানো হয়েছে</item>
+        <item quantity="other">%1$d ইভেন্ট পাঠানো হয়েছে</item>
+    </plurals>
     <string name="bradcasting_result_partial">কিছু ইভেন্ট ব্যর্থ হয়েছে</string>
     <string name="bradcasting_result_success">সব ইভেন্ট সফল হয়েছে</string>
     <string name="bradcasting_result_failure">সব ইভেন্ট ব্যর্থ হয়েছে</string>
@@ -1420,7 +1444,10 @@
     <string name="new_chess_game">নতুন দাবা খেলা</string>
     <string name="chess_loading_game">খেলা লোড হচ্ছে…</string>
     <string name="chess_game_not_found">খেলা পাওয়া যায়নি</string>
-    <string name="badge_and_n_others"> এবং আরো %1$d জন</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> এবং আরো %1$d জন</item>
+        <item quantity="other"> এবং আরো %1$d জন</item>
+    </plurals>
     <string name="remove_language">%1$s সরান</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">আপনার বিশ্বাসযোগ্য কারো মতো একই মানুষদের অনুসরণ করে একটি দুর্দান্ত ফিড দিয়ে শুরু করুন।</string>
     <string name="import_follow_list">ফলো তালিকা আমদানি করুন</string>
@@ -1429,9 +1456,18 @@
     <string name="name_search_npub1_alice_example_com">অনুসন্ধান, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex, এবং Namecoin (.bit) সমর্থন করে</string>
     <string name="tip">টিপ</string>
-    <string name="accounts_found">%1$d অ্যাকাউন্ট পাওয়া গেছে</string>
-    <string name="num_selected">%1$d নির্বাচিত</string>
-    <string name="follow_accounts">%1$d অ্যাকাউন্ট অনুসরণ করুন</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d অ্যাকাউন্ট পাওয়া গেছে</item>
+        <item quantity="other">%1$d অ্যাকাউন্ট পাওয়া গেছে</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d নির্বাচিত</item>
+        <item quantity="other">%1$d নির্বাচিত</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d অ্যাকাউন্ট অনুসরণ করুন</item>
+        <item quantity="other">%1$d অ্যাকাউন্ট অনুসরণ করুন</item>
+    </plurals>
     <string name="skip_for_now">এখনের জন্য এড়িয়ে যান</string>
     <string name="fetching_follow_list">ফলো তালিকা আনা হচ্ছে…</string>
     <string name="no_follows_found">কোনো ফলো পাওয়া যায়নি</string>
@@ -1463,15 +1499,30 @@
     <string name="event_sync_relays_progress">relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">ইভেন্ট পুনরায় বিতরণ করা হয়েছে: %2$d পাঠানো এবং %3$d প্রাপ্তের মধ্যে %1$d নতুন</string>
     <string name="event_sync_done_title">সিঙ্ক সম্পন্ন</string>
-    <string name="event_sync_done_sent">%2$d প্রাপ্তের মধ্যে %1$d ইভেন্ট গন্তব্য relay-এ ফরওয়ার্ড করা হয়েছে।</string>
-    <string name="event_sync_done_accepted">গন্তব্য relay দ্বারা %1$d ইভেন্ট নতুন হিসেবে গৃহীত হয়েছে।</string>
-    <string name="event_sync_done_duration">%1$d সেকেন্ডে সম্পন্ন।</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%2$d প্রাপ্তের মধ্যে %1$d ইভেন্ট গন্তব্য relay-এ ফরওয়ার্ড করা হয়েছে।</item>
+        <item quantity="other">%2$d প্রাপ্তের মধ্যে %1$d ইভেন্ট গন্তব্য relay-এ ফরওয়ার্ড করা হয়েছে।</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">গন্তব্য relay দ্বারা %1$d ইভেন্ট নতুন হিসেবে গৃহীত হয়েছে।</item>
+        <item quantity="other">গন্তব্য relay দ্বারা %1$d ইভেন্ট নতুন হিসেবে গৃহীত হয়েছে।</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">%1$d সেকেন্ডে সম্পন্ন।</item>
+        <item quantity="other">%1$d সেকেন্ডে সম্পন্ন।</item>
+    </plurals>
     <string name="event_sync_error_title">সিঙ্ক ত্রুটি</string>
     <string name="event_sync_sending_to">পাঠানো হচ্ছে</string>
     <string name="event_sync_outbox_relays">আউটবক্স</string>
     <string name="event_sync_inbox_relays">ইনবক্স</string>
-    <string name="event_sync_activity_log">বর্তমানে পরীক্ষা করা হচ্ছে (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">সম্পন্ন (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">বর্তমানে পরীক্ষা করা হচ্ছে (%1$d relay)</item>
+        <item quantity="other">বর্তমানে পরীক্ষা করা হচ্ছে (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">সম্পন্ন (%1$d relay)</item>
+        <item quantity="other">সম্পন্ন (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">পাঠানো হয়েছে %1$s</string>
     <string name="event_sync_log_recv">প্রাপ্ত %1$s</string>
     <string name="event_sync_log_new">নতুন %1$s</string>
@@ -1631,7 +1682,10 @@
     <string name="manage">পরিচালনা করুন</string>
     <string name="relay_members">সদস্যরা</string>
     <string name="relay_members_title">%1$s-এর সদস্যরা</string>
-    <string name="relay_members_count">%1$d জন সদস্য</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d জন সদস্য</item>
+        <item quantity="other">%1$d জন সদস্য</item>
+    </plurals>
     <string name="relay_members_loading">সদস্যরা লোড হচ্ছে…</string>
     <string name="relay_members_empty">কোনো সদস্য পাওয়া যায়নি</string>
     <string name="relay_members_request_join">যোগ দেওয়ার অনুরোধ</string>
@@ -1641,9 +1695,15 @@
     <string name="relay_members_you_are_member">আপনি একজন সদস্য</string>
     <string name="relay_membership_list">Relay সদস্যপদ তালিকা</string>
     <string name="relay_member_added">Relay-তে সদস্য যোগ করা হয়েছে</string>
-    <string name="relay_members_added">Relay-তে %1$d জন সদস্য যোগ করা হয়েছে</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">Relay-তে %1$d জন সদস্য যোগ করা হয়েছে</item>
+        <item quantity="other">Relay-তে %1$d জন সদস্য যোগ করা হয়েছে</item>
+    </plurals>
     <string name="relay_member_removed">Relay থেকে সদস্য সরানো হয়েছে</string>
-    <string name="relay_members_removed">Relay থেকে %1$d জন সদস্য সরানো হয়েছে</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">Relay থেকে %1$d জন সদস্য সরানো হয়েছে</item>
+        <item quantity="other">Relay থেকে %1$d জন সদস্য সরানো হয়েছে</item>
+    </plurals>
     <string name="relay_join_request">Relay যোগ দেওয়ার অনুরোধ</string>
     <string name="relay_leave_request">Relay ছেড়ে যাওয়ার অনুরোধ</string>
     <string name="ai_writing_use_this">এটি ব্যবহার করুন</string>
@@ -1669,7 +1729,10 @@
     <string name="emoji_pack_upload_image_cta">একটি কভার ছবি আপলোড করুন</string>
     <string name="emoji_pack_upload_image_hint">এই ইমোজি প্যাকটি উপস্থাপন করতে একটি বর্গাকার ছবি বেছে নিন।</string>
     <string name="no_emoji_packs">আপনার এখনো কোনো ইমোজি প্যাক নেই</string>
-    <string name="emoji_pack_count">%1$d টি ইমোজি</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d টি ইমোজি</item>
+        <item quantity="other">%1$d টি ইমোজি</item>
+    </plurals>
     <string name="my_emoji_list_title">আমার ইমোজি তালিকা</string>
     <string name="my_emoji_list_explainer">আপনার নির্বাচনে যোগ করা ইমোজি প্যাক (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">আপনি এখনো আপনার তালিকায় কোনো ইমোজি প্যাক যোগ করেননি</string>
@@ -1944,7 +2007,10 @@
     <string name="communities">কমিউনিটি</string>
     <string name="community_rules_violation_kind_size_exceeded">খসড়াটি %1$d বাইট; এই কমিউনিটি এই ধরনটি %2$d বাইটে সীমাবদ্ধ করেছে।</string>
     <string name="community_rules_violation_max_size_exceeded">খসড়াটি %1$d বাইট; এই কমিউনিটি ইভেন্টকে %2$d বাইটে সীমাবদ্ধ করেছে।</string>
-    <string name="community_rules_violation_quota_exceeded">আপনি আজ এই ধরনের %1$d টি ইভেন্ট ইতিমধ্যে পোস্ট করেছেন (সীমা %2$d)।</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">আপনি আজ এই ধরনের %1$d টি ইভেন্ট ইতিমধ্যে পোস্ট করেছেন (সীমা %2$d)।</item>
+        <item quantity="other">আপনি আজ এই ধরনের %1$d টি ইভেন্ট ইতিমধ্যে পোস্ট করেছেন (সীমা %2$d)।</item>
+    </plurals>
     <string name="compose_settings">কম্পোজ সেটিংস</string>
     <string name="connect_through_your_orbot_setup_short">ডিফল্ট পোর্ট হলো 9050</string>
     <string name="connected_section">সংযুক্ত Relay</string>

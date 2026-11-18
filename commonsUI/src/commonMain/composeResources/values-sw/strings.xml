@@ -468,7 +468,10 @@
     <string name="nest_lobby_host_label">Mwenyeji</string>
     <string name="nest_lobby_open_action">Fungua</string>
     <string name="nest_lobby_no_listeners">Hakuna mtu katika chumba kwa sasa.</string>
-    <string name="nest_lobby_listeners_count">%1$d wanasikiliza</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d anasikiliza</item>
+        <item quantity="other">%1$d wanasikiliza</item>
+    </plurals>
     <string name="nest_role_host">Mwenyeji</string>
     <string name="nest_role_moderator">Msimamizi</string>
     <string name="nest_state_muted">Maikrofoni imenyamazishwa</string>
@@ -574,7 +577,10 @@
     <string name="hashtag_label_added_by">iliongezwa na</string>
     <string name="pinned_notes">Maelezo Yaliyobandikwa</string>
     <string name="pinned_notes_explainer">Maelezo yako yaliyobandikwa</string>
-    <string name="deleted_items_banner_title">%1$d kipande(vipande) katika orodha hii kimefutwa na mwandishi wake.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">Kipande %1$d katika orodha hii kimefutwa na mwandishi wake.</item>
+        <item quantity="other">Vipande %1$d katika orodha hii vimefutwa na waandishi wake.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Ondoa kutoka orodha</string>
     <string name="deleted_items_banner_dismiss">Ondoa</string>
     <string name="bookmark_lists">Orodha za Alama za Kurasa</string>
@@ -795,8 +801,14 @@
     <string name="relay_req_subscriptions">Usajili wa REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Usajili wa COUNT (%1$d)</string>
     <string name="relay_outbox_events">Matukio ya Outbox (%1$d)</string>
-    <string name="relay_filter_authors">waandishi %1$d</string>
-    <string name="relay_filter_ids">vitambulisho %1$d</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">mwandishi %1$d</item>
+        <item quantity="other">waandishi %1$d</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">kitambulisho %1$d</item>
+        <item quantity="other">vitambulisho %1$d</item>
+    </plurals>
     <string name="relay_filter_since">tangu %1$s</string>
     <string name="relay_filter_until">hadi %1$s</string>
     <string name="relay_filter_limit">kikomo %1$d</string>
@@ -1379,7 +1391,10 @@
     <string name="remove_user_from_the_list">Ondoa mtumiaji kutoka kwenye orodha</string>
     <string name="follow_list_item_label">Pakiti ya Kufuata</string>
     <string name="members">Wanachama</string>
-    <string name="contact_list_containing_label">Orodha ya kufuata ikiwa na %1$d mtumiaji(watu):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Orodha ya kufuata ikiwa na mtumiaji %1$d:</item>
+        <item quantity="other">Orodha ya kufuata ikiwa na watumiaji %1$d:</item>
+    </plurals>
     <string name="contact_list_screen_title">Orodha ya kufuata</string>
     <string name="contact_list_screen_title_with_count">Orodha ya kufuata (%1$d)</string>
     <string name="follow_pack_creation_name_label">Jina la pakiti</string>
@@ -1402,8 +1417,14 @@
     <string name="dismiss">Ondoa</string>
     <string name="broadcasting">Inatangaza</string>
     <string name="broadcasting_name">Inatangaza %1$s</string>
-    <string name="broadcasting_number_events">Inatangaza matukio %1$d…</string>
-    <string name="sent_number_events">Matukio %1$d yametumwa</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Inatangaza tukio %1$d…</item>
+        <item quantity="other">Inatangaza matukio %1$d…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">Tukio %1$d limetumwa</item>
+        <item quantity="other">Matukio %1$d yametumwa</item>
+    </plurals>
     <string name="bradcasting_result_partial">Baadhi ya matukio yameshindwa</string>
     <string name="bradcasting_result_success">Matukio yote yamefanikiwa</string>
     <string name="bradcasting_result_failure">Matukio yote yameshindwa</string>
@@ -1418,7 +1439,10 @@
     <string name="new_chess_game">Mchezo Mpya wa Sataranji</string>
     <string name="chess_loading_game">Inapakia mchezo…</string>
     <string name="chess_game_not_found">Mchezo Haukupatikana</string>
-    <string name="badge_and_n_others"> na wengine %1$d</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> na mwingine %1$d</item>
+        <item quantity="other"> na wengine %1$d</item>
+    </plurals>
     <string name="remove_language">Ondoa %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Anza na maudhui mazuri kwa kufuata watu wanaofuatwa na mtu unayemwamini.</string>
     <string name="import_follow_list">Ingiza Orodha ya Wanaofuatwa</string>
@@ -1427,9 +1451,18 @@
     <string name="name_search_npub1_alice_example_com">tafuta, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Inaunga mkono npub, nprofile, NIP-05, hex, na Namecoin (.bit)</string>
     <string name="tip">Kidokezo</string>
-    <string name="accounts_found">Akaunti %1$d zimepatikana</string>
-    <string name="num_selected">%1$d zilizochaguliwa</string>
-    <string name="follow_accounts">Fuata akaunti %1$d</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Akaunti %1$d imepatikana</item>
+        <item quantity="other">Akaunti %1$d zimepatikana</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d iliyochaguliwa</item>
+        <item quantity="other">%1$d zilizochaguliwa</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Fuata akaunti %1$d</item>
+        <item quantity="other">Fuata akaunti %1$d</item>
+    </plurals>
     <string name="skip_for_now">Ruka kwa sasa</string>
     <string name="fetching_follow_list">Inachukua orodha ya wanaofuatwa…</string>
     <string name="no_follows_found">Hakuna wanaofuatwa waliopatikana</string>
@@ -1461,13 +1494,28 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Matukio yaliyosambazwa upya: %1$d mapya kati ya %2$d yaliyotumwa na %3$d yaliyopokelewa</string>
     <string name="event_sync_done_title">Usawazishaji umekamilika</string>
-    <string name="event_sync_done_sent">Matukio %1$d yalipitishwa kwenye relay za marudio kati ya %2$d yaliyopokelewa.</string>
-    <string name="event_sync_done_accepted">Matukio %1$d yakakubaliwa kama mapya na relay za marudio.</string>
-    <string name="event_sync_done_duration">Imekamilika katika sekunde %1$d.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Tukio %1$d lilipitishwa kwenye relay za marudio kati ya %2$d yaliyopokelewa.</item>
+        <item quantity="other">Matukio %1$d yalipitishwa kwenye relay za marudio kati ya %2$d yaliyopokelewa.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">Tukio %1$d likakubaliwa kama jipya na relay za marudio.</item>
+        <item quantity="other">Matukio %1$d yakakubaliwa kama mapya na relay za marudio.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Imekamilika katika sekunde %1$d.</item>
+        <item quantity="other">Imekamilika katika sekunde %1$d.</item>
+    </plurals>
     <string name="event_sync_error_title">Hitilafu ya usawazishaji</string>
     <string name="event_sync_sending_to">Inatuma Kwa</string>
-    <string name="event_sync_activity_log">Inachunguza Sasa Hivi (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Imekamilika (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Inachunguza Sasa Hivi (%1$d relay)</item>
+        <item quantity="other">Inachunguza Sasa Hivi (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Imekamilika (%1$d relay)</item>
+        <item quantity="other">Imekamilika (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">imetuma %1$s</string>
     <string name="event_sync_log_recv">imepokelewa %1$s</string>
     <string name="event_sync_log_new">mpya %1$s</string>
@@ -1628,7 +1676,10 @@
     <string name="manage">Simamia</string>
     <string name="relay_members">Wanachama</string>
     <string name="relay_members_title">Wanachama wa %1$s</string>
-    <string name="relay_members_count">%1$d wanachama</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d mwanachama</item>
+        <item quantity="other">%1$d wanachama</item>
+    </plurals>
     <string name="relay_members_loading">Inapakia wanachama…</string>
     <string name="relay_members_empty">Hakuna wanachama waliopatikana</string>
     <string name="relay_members_request_join">Ombi la Kujiunga</string>
@@ -1638,9 +1689,15 @@
     <string name="relay_members_you_are_member">Wewe ni mwanachama</string>
     <string name="relay_membership_list">Orodha ya uanachama wa relay</string>
     <string name="relay_member_added">Mwanachama ameongezwa kwenye relay</string>
-    <string name="relay_members_added">%1$d wanachama wameongezwa kwenye relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d mwanachama ameongezwa kwenye relay</item>
+        <item quantity="other">%1$d wanachama wameongezwa kwenye relay</item>
+    </plurals>
     <string name="relay_member_removed">Mwanachama ameondolewa kutoka relay</string>
-    <string name="relay_members_removed">%1$d wanachama wameondolewa kutoka relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d mwanachama ameondolewa kutoka relay</item>
+        <item quantity="other">%1$d wanachama wameondolewa kutoka relay</item>
+    </plurals>
     <string name="relay_join_request">Ombi la kujiunga na relay</string>
     <string name="relay_leave_request">Ombi la kuacha relay</string>
     <string name="ai_writing_use_this">Tumia Hii</string>
@@ -1665,7 +1722,10 @@
     <string name="emoji_pack_upload_image_cta">Pakia picha ya jalada</string>
     <string name="emoji_pack_upload_image_hint">Chagua picha ya mraba kuwakilisha pakiti hii ya emoji.</string>
     <string name="no_emoji_packs">Bado huna pakiti zozote za emoji</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Orodha Yangu ya Emoji</string>
     <string name="my_emoji_list_explainer">Pakiti za emoji ulizoziongeza kwenye uteuzi wako (NIP-51 aina 10030)</string>
     <string name="my_emoji_list_empty">Bado hujaongeza pakiti zozote za emoji kwenye orodha yako</string>
@@ -1938,7 +1998,10 @@
     <string name="communities">Jumuiya</string>
     <string name="community_rules_violation_kind_size_exceeded">Rasimu ina %1$d baiti; jamii hii inapunguza aina hii hadi baiti %2$d.</string>
     <string name="community_rules_violation_max_size_exceeded">Rasimu ina %1$d baiti; jamii hii inapunguza matukio hadi baiti %2$d.</string>
-    <string name="community_rules_violation_quota_exceeded">Umeshatuma matukio %1$d ya aina hii leo (kikomo %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Umeshatuma tukio %1$d la aina hii leo (kikomo %2$d).</item>
+        <item quantity="other">Umeshatuma matukio %1$d ya aina hii leo (kikomo %2$d).</item>
+    </plurals>
     <string name="compose_settings">Mipangilio ya Kutunga</string>
     <string name="connect_through_your_orbot_setup_short">Bandari ya kawaida ni 9050</string>
     <string name="connected_section">Relay Zilizounganishwa</string>

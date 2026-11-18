@@ -470,7 +470,11 @@
     <string name="nest_lobby_host_label">Domaćin</string>
     <string name="nest_lobby_open_action">Otvori</string>
     <string name="nest_lobby_no_listeners">Trenutno nema nikoga u sobi.</string>
-    <string name="nest_lobby_listeners_count">%1$d sluša</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d sluša</item>
+        <item quantity="few">%1$d slušaju</item>
+        <item quantity="other">%1$d sluša</item>
+    </plurals>
     <string name="nest_role_host">Domaćin</string>
     <string name="nest_state_muted">Mikrofon je utišan</string>
     <string name="nest_state_speaking">Govori sada</string>
@@ -573,7 +577,11 @@
     <string name="hashtag_label_added_by">dodao/la</string>
     <string name="pinned_notes">Zakačene beleške</string>
     <string name="pinned_notes_explainer">Vaše zakačene beleške</string>
-    <string name="deleted_items_banner_title">%1$d stavka/e u ovoj listi su obrisane od strane autora.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d stavka u ovoj listi je obrisana od strane autora.</item>
+        <item quantity="few">%1$d stavke u ovoj listi su obrisane od strane autora.</item>
+        <item quantity="other">%1$d stavki u ovoj listi je obrisano od strane autora.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Ukloni iz liste</string>
     <string name="deleted_items_banner_dismiss">Odbaci</string>
     <string name="bookmark_lists">Liste oznaka</string>
@@ -589,7 +597,11 @@
     <string name="interest_set_name_placeholder">Moja interesovanja</string>
     <string name="interest_set_hashtag_add_placeholder">Dodaj hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Privatno</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag(ova)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="few">%1$d hashtaga</item>
+        <item quantity="other">%1$d hashtagova</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Radnje skupa interesovanja</string>
     <string name="interest_set_clone">Kloniraj</string>
     <string name="interest_set_add_hashtag">Dodaj hashtag</string>
@@ -791,8 +803,16 @@
     <string name="relay_req_subscriptions">REQ pretplate (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT pretplate (%1$d)</string>
     <string name="relay_outbox_events">Događaji u izlaznom sandučetu (%1$d)</string>
-    <string name="relay_filter_authors">%1$d autora</string>
-    <string name="relay_filter_ids">%1$d ID-ova</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d autor</item>
+        <item quantity="few">%1$d autora</item>
+        <item quantity="other">%1$d autora</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ID</item>
+        <item quantity="few">%1$d ID-a</item>
+        <item quantity="other">%1$d ID-ova</item>
+    </plurals>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
     <string name="relay_filter_limit">ograničenje %1$d</string>
@@ -1379,7 +1399,11 @@
     <string name="add_user_to_the_list">Dodaj korisnika na listu</string>
     <string name="remove_user_from_the_list">Ukloni korisnika sa liste</string>
     <string name="members">Чланови</string>
-    <string name="contact_list_containing_label">Lista praćenja koja sadrži %1$d korisnika:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Lista praćenja koja sadrži %1$d korisnika:</item>
+        <item quantity="few">Lista praćenja koja sadrži %1$d korisnika:</item>
+        <item quantity="other">Lista praćenja koja sadrži %1$d korisnika:</item>
+    </plurals>
     <string name="contact_list_screen_title">Lista praćenja</string>
     <string name="contact_list_screen_title_with_count">Lista praćenja (%1$d)</string>
     <string name="follow_pack_creation_name_label">Naziv paketa</string>
@@ -1402,8 +1426,16 @@
     <string name="dismiss">Odbaci</string>
     <string name="broadcasting">Emitovanje</string>
     <string name="broadcasting_name">Emitovanje %1$s</string>
-    <string name="broadcasting_number_events">Emitovanje %1$d događaja…</string>
-    <string name="sent_number_events">%1$d događaja poslato</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Emitovanje %1$d događaja…</item>
+        <item quantity="few">Emitovanje %1$d događaja…</item>
+        <item quantity="other">Emitovanje %1$d događaja…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">Poslat %1$d događaj</item>
+        <item quantity="few">Poslata %1$d događaja</item>
+        <item quantity="other">Poslato %1$d događaja</item>
+    </plurals>
     <string name="bradcasting_result_partial">Neki događaji nisu uspeli</string>
     <string name="bradcasting_result_success">Svi događaji su uspeli</string>
     <string name="bradcasting_result_failure">Svi događaji nisu uspeli</string>
@@ -1418,7 +1450,11 @@
     <string name="new_chess_game">Nova partija šaha</string>
     <string name="chess_loading_game">Učitavanje partije…</string>
     <string name="chess_game_not_found">Partija nije pronađena</string>
-    <string name="badge_and_n_others"> i još %1$d</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> i još %1$d</item>
+        <item quantity="few"> i još %1$d</item>
+        <item quantity="other"> i još %1$d</item>
+    </plurals>
     <string name="remove_language">Ukloni %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Počnite sa odličnim feedom prateći iste ljude kao neko kome verujete.</string>
     <string name="import_follow_list">Uvezi listu praćenja</string>
@@ -1427,9 +1463,21 @@
     <string name="name_search_npub1_alice_example_com">pretraga, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Podržava npub, nprofile, NIP-05, hex i Namecoin (.bit)</string>
     <string name="tip">Savet</string>
-    <string name="accounts_found">Pronađeno %1$d naloga</string>
-    <string name="num_selected">Izabrano %1$d</string>
-    <string name="follow_accounts">Prati %1$d naloga</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Pronađen %1$d nalog</item>
+        <item quantity="few">Pronađena %1$d naloga</item>
+        <item quantity="other">Pronađeno %1$d naloga</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">Izabran %1$d</item>
+        <item quantity="few">Izabrana %1$d</item>
+        <item quantity="other">Izabrano %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Prati %1$d nalog</item>
+        <item quantity="few">Prati %1$d naloga</item>
+        <item quantity="other">Prati %1$d naloga</item>
+    </plurals>
     <string name="skip_for_now">Preskoči za sada</string>
     <string name="fetching_follow_list">Preuzimanje liste praćenja…</string>
     <string name="no_follows_found">Nisu pronađena praćenja</string>
@@ -1461,16 +1509,36 @@
     <string name="event_sync_relays_progress">Relay-i: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Redistribuirani događaji: %1$d novi od %2$d poslatih i %3$d primljenih</string>
     <string name="event_sync_done_title">Sinhronizacija završena</string>
-    <string name="event_sync_done_sent">Prosleđeno %1$d događaja na odredišne relay-e od %2$d primljenih.</string>
-    <string name="event_sync_done_accepted">%1$d događaja prihvaćeno kao novo od strane odredišnih relay-a.</string>
-    <string name="event_sync_done_duration">Završeno za %1$d sekundi.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Prosleđen %1$d događaj na odredišne relay-e od %2$d primljenih.</item>
+        <item quantity="few">Prosleđena %1$d događaja na odredišne relay-e od %2$d primljenih.</item>
+        <item quantity="other">Prosleđeno %1$d događaja na odredišne relay-e od %2$d primljenih.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d događaj prihvaćen kao nov od strane odredišnih relay-a.</item>
+        <item quantity="few">%1$d događaja prihvaćena kao nova od strane odredišnih relay-a.</item>
+        <item quantity="other">%1$d događaja prihvaćeno kao novo od strane odredišnih relay-a.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Završeno za %1$d sekundu.</item>
+        <item quantity="few">Završeno za %1$d sekunde.</item>
+        <item quantity="other">Završeno za %1$d sekundi.</item>
+    </plurals>
     <string name="event_sync_error_title">Greška sinhronizacije</string>
     <string name="event_sync_sending_to">Slanje na</string>
     <string name="event_sync_outbox_relays">Odlazni</string>
     <string name="event_sync_inbox_relays">Dolazni</string>
     <string name="event_sync_dm_relays">DM-ovi</string>
-    <string name="event_sync_activity_log">Trenutna provera (%1$d relay-a)</string>
-    <string name="event_sync_activity_log_finished">Završeno (%1$d relay-a)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Trenutna provera (%1$d relay)</item>
+        <item quantity="few">Trenutna provera (%1$d relay-a)</item>
+        <item quantity="other">Trenutna provera (%1$d relay-a)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Završeno (%1$d relay)</item>
+        <item quantity="few">Završeno (%1$d relay-a)</item>
+        <item quantity="other">Završeno (%1$d relay-a)</item>
+    </plurals>
     <string name="event_sync_log_sent">poslato %1$s</string>
     <string name="event_sync_log_recv">primljeno %1$s</string>
     <string name="event_sync_log_new">novo %1$s</string>
@@ -1630,7 +1698,11 @@
     <string name="manage">Upravljaj</string>
     <string name="relay_members">Članovi</string>
     <string name="relay_members_title">Članovi %1$s</string>
-    <string name="relay_members_count">%1$d članova</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d član</item>
+        <item quantity="few">%1$d člana</item>
+        <item quantity="other">%1$d članova</item>
+    </plurals>
     <string name="relay_members_loading">Učitavanje članova…</string>
     <string name="relay_members_empty">Nisu pronađeni članovi</string>
     <string name="relay_members_request_join">Zahtev za pridruživanje</string>
@@ -1640,9 +1712,17 @@
     <string name="relay_members_you_are_member">Vi ste član</string>
     <string name="relay_membership_list">Lista članstva relay-a</string>
     <string name="relay_member_added">Član dodat u relay</string>
-    <string name="relay_members_added">%1$d članova dodato u relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d član dodat u relay</item>
+        <item quantity="few">%1$d člana dodata u relay</item>
+        <item quantity="other">%1$d članova dodato u relay</item>
+    </plurals>
     <string name="relay_member_removed">Član uklonjen iz relay-a</string>
-    <string name="relay_members_removed">%1$d članova uklonjeno iz relay-a</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d član uklonjen iz relay-a</item>
+        <item quantity="few">%1$d člana uklonjena iz relay-a</item>
+        <item quantity="other">%1$d članova uklonjeno iz relay-a</item>
+    </plurals>
     <string name="relay_join_request">Zahtev za pridruživanje relay-u</string>
     <string name="relay_leave_request">Zahtev za napuštanje relay-a</string>
     <string name="ai_writing_use_this">Koristi ovo</string>
@@ -1667,7 +1747,11 @@
     <string name="emoji_pack_upload_image_cta">Otpremi naslovnu sliku</string>
     <string name="emoji_pack_upload_image_hint">Izaberite kvadratnu sliku koja će predstavljati ovaj emoji paket.</string>
     <string name="no_emoji_packs">Još nemate nijedan emoji paket</string>
-    <string name="emoji_pack_count">%1$d emojija</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="few">%1$d emojija</item>
+        <item quantity="other">%1$d emojija</item>
+    </plurals>
     <string name="my_emoji_list_title">Moja emoji lista</string>
     <string name="my_emoji_list_explainer">Emoji paketi koje ste dodali u svoju selekciju (NIP-51 vrsta 10030)</string>
     <string name="my_emoji_list_empty">Još niste dodali nijedan emoji paket na svoju listu</string>
@@ -1936,7 +2020,11 @@
     <string name="communities">Zajednice</string>
     <string name="community_rules_violation_kind_size_exceeded">Nacrt ima %1$d bajtova; ova zajednica ograničava ovu vrstu na %2$d bajtova.</string>
     <string name="community_rules_violation_max_size_exceeded">Nacrt ima %1$d bajtova; ova zajednica ograničava događaje na %2$d bajtova.</string>
-    <string name="community_rules_violation_quota_exceeded">Danas ste već objavili %1$d događaja ove vrste (ograničenje %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Danas ste već objavili %1$d događaj ove vrste (ograničenje %2$d).</item>
+        <item quantity="few">Danas ste već objavili %1$d događaja ove vrste (ograničenje %2$d).</item>
+        <item quantity="other">Danas ste već objavili %1$d događaja ove vrste (ograničenje %2$d).</item>
+    </plurals>
     <string name="compose_settings">Postavke pisanja</string>
     <string name="connect_through_your_orbot_setup_short">Podrazumevani port je 9050</string>
     <string name="connected_section">Povezani Relay-i</string>

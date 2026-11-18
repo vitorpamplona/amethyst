@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDotNoDay
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
@@ -191,7 +192,7 @@ fun EventScreenBody(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = stringRes(Res.string.event_sync_activity_log, runningSize),
+                    text = pluralStringRes(Res.plurals.event_sync_activity_log, runningSize, runningSize),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -213,7 +214,7 @@ fun EventScreenBody(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = stringRes(Res.string.event_sync_activity_log_finished, completedSize),
+                    text = pluralStringRes(Res.plurals.event_sync_activity_log_finished, completedSize, completedSize),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -430,20 +431,20 @@ private fun DoneCard(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = stringRes(Res.string.event_sync_done_sent, state.totalEventsSent, state.totalEventsReceived),
+                text = pluralStringRes(Res.plurals.event_sync_done_sent, state.totalEventsSent, state.totalEventsSent, state.totalEventsReceived),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = stringRes(Res.string.event_sync_done_accepted, state.totalEventsAccepted),
+                text = pluralStringRes(Res.plurals.event_sync_done_accepted, state.totalEventsAccepted, state.totalEventsAccepted),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringRes(Res.string.event_sync_done_duration, (state.durationMs / 1000).toInt()),
+                text = pluralStringRes(Res.plurals.event_sync_done_duration, (state.durationMs / 1000).toInt(), (state.durationMs / 1000).toInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )

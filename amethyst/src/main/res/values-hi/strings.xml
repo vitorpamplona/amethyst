@@ -208,4 +208,18 @@
     <string name="mute_button">ध्वनि सक्रिय। मौन करने के लिए टाँकें</string>
     <string name="play">चलाएँ</string>
     <string name="pause">विराम</string>
+    <string name="front_page_print_channel_name">प्रेक्षक का मुद्रण</string>
+    <string name="front_page_print_channel_description">मुद्रण के समय प्रेक्षक दिखाता है, ताकि क्रमक छोड़ने के बाद भी वह पूर्ण हो सके।</string>
+    <string name="front_page_print_cancel">निरस्त</string>
+    <string name="front_page_print_title">प्रेक्षक मुद्रित हो रहा है</string>
+    <string name="front_page_print_step_probe">आपकी श्रेणी की जाँच</string>
+    <string name="front_page_print_step_pull">विभागों का पठन · %2$d में से %1$d</string>
+    <string name="front_page_print_step_write">लेखन</string>
+    <string name="front_page_print_step_fix">पृष्ठ का सुधार</string>
+    <string name="front_page_print_step_check">उद्धरण चित्र तथा योजक जाँचे जा रहे हैं</string>
+    <string name="front_page_print_step_publish">आपके प्रेक्षक का प्रकाशन</string>
+    <string name="napplet_cap_outbox">निर्गमपेटिका</string>
+    <string name="napplet_cap_fs">अभिलेख</string>
+    <string name="napplet_cap_common">सामाजिक क्रियाएँ</string>
+    <string name="napplet_cap_intent">अन्य क्रमक खोलें</string>
 </resources>

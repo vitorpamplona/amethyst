@@ -473,7 +473,10 @@
     <string name="nest_lobby_host_label">Gastiganto</string>
     <string name="nest_lobby_open_action">Malfermi</string>
     <string name="nest_lobby_no_listeners">Neniu estas en la ĉambro nun.</string>
-    <string name="nest_lobby_listeners_count">%1$d aŭskultantaj</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d aŭskultanta</item>
+        <item quantity="other">%1$d aŭskultantaj</item>
+    </plurals>
     <string name="nest_role_host">Gastiganto</string>
     <string name="nest_role_moderator">Moderiganto</string>
     <string name="nest_state_muted">Mikrofono silentiĝis</string>
@@ -580,7 +583,10 @@
     <string name="hashtag_label_added_by">aldonita de</string>
     <string name="pinned_notes">Alpinglitaj notoj</string>
     <string name="pinned_notes_explainer">Viaj alpinglitaj notoj</string>
-    <string name="deleted_items_banner_title">%1$d ero(j) en ĉi tiu listo estis forigita(j) de siaj aŭtoroj.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d ero en ĉi tiu listo estis forigita de sia aŭtoro.</item>
+        <item quantity="other">%1$d eroj en ĉi tiu listo estis forigitaj de siaj aŭtoroj.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Forigi el listo</string>
     <string name="deleted_items_banner_dismiss">Ignori</string>
     <string name="bookmark_lists">Signolibraj listoj</string>
@@ -596,7 +602,10 @@
     <string name="interest_set_name_placeholder">Miaj interesoj</string>
     <string name="interest_set_hashtag_add_placeholder">Aldoni kradelvorton</string>
     <string name="interest_set_hashtag_private_toggle">Privata</string>
-    <string name="interest_set_hashtag_count">%1$d kradelvorto(j)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d kradelvorto</item>
+        <item quantity="other">%1$d kradelvortoj</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Agoj pri interesa aro</string>
     <string name="interest_set_clone">Kloni</string>
     <string name="interest_set_add_hashtag">Aldoni kradelvorton</string>
@@ -802,8 +811,14 @@
     <string name="relay_req_subscriptions">REQ Abonamentoj (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonamentoj (%1$d)</string>
     <string name="relay_outbox_events">Elsendkestaj Eventoj (%1$d)</string>
-    <string name="relay_filter_authors">%1$d aŭtoroj</string>
-    <string name="relay_filter_ids">%1$d identigiloj</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d aŭtoro</item>
+        <item quantity="other">%1$d aŭtoroj</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d identigilo</item>
+        <item quantity="other">%1$d identigiloj</item>
+    </plurals>
     <string name="relay_filter_since">de %1$s</string>
     <string name="relay_filter_until">ĝis %1$s</string>
     <string name="relay_filter_limit">limo %1$d</string>
@@ -1394,7 +1409,10 @@
     <string name="remove_user_from_the_list">Forigi uzanton el la listo</string>
     <string name="follow_list_item_label">Sekva Pako</string>
     <string name="members">Membroj</string>
-    <string name="contact_list_containing_label">Sekvolisto enhavanta %1$d uzanto(j)n:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Sekvolisto enhavanta %1$d uzanton:</item>
+        <item quantity="other">Sekvolisto enhavanta %1$d uzantojn:</item>
+    </plurals>
     <string name="contact_list_screen_title">Sekvolisto</string>
     <string name="contact_list_screen_title_with_count">Sekvolisto (%1$d)</string>
     <string name="follow_pack_creation_name_label">Paka nomo</string>
@@ -1417,8 +1435,14 @@
     <string name="dismiss">Ignori</string>
     <string name="broadcasting">Elsendante</string>
     <string name="broadcasting_name">Elsendante %1$s</string>
-    <string name="broadcasting_number_events">Elsendante %1$d eventojn…</string>
-    <string name="sent_number_events">%1$d eventoj senditaj</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Elsendante %1$d eventon…</item>
+        <item quantity="other">Elsendante %1$d eventojn…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d evento sendita</item>
+        <item quantity="other">%1$d eventoj senditaj</item>
+    </plurals>
     <string name="bradcasting_result_partial">Kelkaj eventoj malsukcesis</string>
     <string name="bradcasting_result_success">Ĉiuj eventoj sukcesis</string>
     <string name="bradcasting_result_failure">Ĉiuj eventoj malsukcesis</string>
@@ -1433,7 +1457,10 @@
     <string name="new_chess_game">Nova Ŝaka Ludo</string>
     <string name="chess_loading_game">Ŝargante ludon…</string>
     <string name="chess_game_not_found">Ludo Ne Trovita</string>
-    <string name="badge_and_n_others"> kaj %1$d aliaj</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> kaj %1$d alia</item>
+        <item quantity="other"> kaj %1$d aliaj</item>
+    </plurals>
     <string name="remove_language">Forigi %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Komencu per bonega fluo sekvante la samajn homojn kiel iu en kiu vi fidas.</string>
     <string name="import_follow_list">Importi Sekvan Liston</string>
@@ -1442,9 +1469,18 @@
     <string name="name_search_npub1_alice_example_com">serĉi, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Subtenas npub, nprofile, NIP-05, heksa, kaj Namecoin (.bit)</string>
     <string name="tip">Konsileto</string>
-    <string name="accounts_found">%1$d kontoj trovitaj</string>
-    <string name="num_selected">%1$d elektita</string>
-    <string name="follow_accounts">Sekvi %1$d kontojn</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d konto trovita</item>
+        <item quantity="other">%1$d kontoj trovitaj</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d elektita</item>
+        <item quantity="other">%1$d elektitaj</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Sekvi %1$d konton</item>
+        <item quantity="other">Sekvi %1$d kontojn</item>
+    </plurals>
     <string name="skip_for_now">Preteriri nuntempe</string>
     <string name="fetching_follow_list">Alŝutanta sekvan liston…</string>
     <string name="no_follows_found">Neniuj sekvoj trovitaj</string>
@@ -1476,15 +1512,30 @@
     <string name="event_sync_relays_progress">relay-oj: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Eventoj redistribuitaj: %1$d novaj el %2$d senditaj kaj %3$d ricevitaj</string>
     <string name="event_sync_done_title">Sinkronigo kompleta</string>
-    <string name="event_sync_done_sent">Plusenditaj %1$d eventoj al cela relay-oj el %2$d ricevitaj.</string>
-    <string name="event_sync_done_accepted">%1$d eventoj akceptitaj kiel novaj de cela relay-oj.</string>
-    <string name="event_sync_done_duration">Kompletita en %1$d sekundoj.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Plusendita %1$d evento al celaj relay-oj el %2$d ricevitaj.</item>
+        <item quantity="other">Plusenditaj %1$d eventoj al celaj relay-oj el %2$d ricevitaj.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d evento akceptita kiel nova de celaj relay-oj.</item>
+        <item quantity="other">%1$d eventoj akceptitaj kiel novaj de celaj relay-oj.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Kompletita en %1$d sekundo.</item>
+        <item quantity="other">Kompletita en %1$d sekundoj.</item>
+    </plurals>
     <string name="event_sync_error_title">Sinkroniga eraro</string>
     <string name="event_sync_sending_to">Sendante Al</string>
     <string name="event_sync_outbox_relays">Elirejo</string>
     <string name="event_sync_inbox_relays">Enirejo</string>
-    <string name="event_sync_activity_log">Nuntempe Kontrolanta (%1$d relay-oj)</string>
-    <string name="event_sync_activity_log_finished">Finita (%1$d relay-oj)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Nuntempe Kontrolanta (%1$d relay-o)</item>
+        <item quantity="other">Nuntempe Kontrolanta (%1$d relay-oj)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Finita (%1$d relay-o)</item>
+        <item quantity="other">Finita (%1$d relay-oj)</item>
+    </plurals>
     <string name="event_sync_log_sent">sendita %1$s</string>
     <string name="event_sync_log_recv">ricevita %1$s</string>
     <string name="event_sync_log_new">nova %1$s</string>
@@ -1645,7 +1696,10 @@
     <string name="manage">Administri</string>
     <string name="relay_members">Membroj</string>
     <string name="relay_members_title">Membroj de %1$s</string>
-    <string name="relay_members_count">%1$d membroj</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d membro</item>
+        <item quantity="other">%1$d membroj</item>
+    </plurals>
     <string name="relay_members_loading">Ŝargado de membroj…</string>
     <string name="relay_members_empty">Neniuj membroj trovitaj</string>
     <string name="relay_members_request_join">Peti Aliĝon</string>
@@ -1655,9 +1709,15 @@
     <string name="relay_members_you_are_member">Vi estas membro</string>
     <string name="relay_membership_list">Listo de relay-membreco</string>
     <string name="relay_member_added">Membro aldonita al relay</string>
-    <string name="relay_members_added">%1$d membroj aldonitaj al relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d membro aldonita al relay</item>
+        <item quantity="other">%1$d membroj aldonitaj al relay</item>
+    </plurals>
     <string name="relay_member_removed">Membro forigita el relay</string>
-    <string name="relay_members_removed">%1$d membroj forigitaj el relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d membro forigita el relay</item>
+        <item quantity="other">%1$d membroj forigitaj el relay</item>
+    </plurals>
     <string name="relay_join_request">Peto pri aliĝo al relay</string>
     <string name="relay_leave_request">Peto pri foriro el relay</string>
     <string name="ai_writing_use_this">Uzi Ĉi Tion</string>
@@ -1683,7 +1743,10 @@
     <string name="emoji_pack_upload_image_cta">Alŝuti kovrilbildon</string>
     <string name="emoji_pack_upload_image_hint">Elektu kvadratan bildon por reprezenti ĉi tiun emodžio-pakon.</string>
     <string name="no_emoji_packs">Vi ankoraŭ ne havas iujn ajn emodžio-pakojn</string>
-    <string name="emoji_pack_count">%1$d emodžioj</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emodžio</item>
+        <item quantity="other">%1$d emodžioj</item>
+    </plurals>
     <string name="my_emoji_list_title">Mia Emodžio-Listo</string>
     <string name="my_emoji_list_explainer">Emodžio-pakoj kiujn vi aldonis al via elekto (NIP-51 tipo 10030)</string>
     <string name="my_emoji_list_empty">Vi ankoraŭ ne aldonis iujn ajn emodžio-pakojn al via listo</string>
@@ -1953,7 +2016,10 @@
     <string name="communities">Komunumoj</string>
     <string name="community_rules_violation_kind_size_exceeded">Skizo havas %1$d bajtojn; ĉi tiu komunumo limigas ĉi tiun tipon al %2$d bajtoj.</string>
     <string name="community_rules_violation_max_size_exceeded">Skizo havas %1$d bajtojn; ĉi tiu komunumo limigas eventojn al %2$d bajtoj.</string>
-    <string name="community_rules_violation_quota_exceeded">Vi jam afiŝis %1$d eventojn de ĉi tiu tipo hodiaŭ (limo %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Vi jam afiŝis %1$d eventon de ĉi tiu tipo hodiaŭ (limo %2$d).</item>
+        <item quantity="other">Vi jam afiŝis %1$d eventojn de ĉi tiu tipo hodiaŭ (limo %2$d).</item>
+    </plurals>
     <string name="compose_settings">Agordoj de Verkado</string>
     <string name="connect_through_your_orbot_setup_short">Defaŭlta pordo estas 9050</string>
     <string name="connected_section">Konektitaj Relay-oj</string>
