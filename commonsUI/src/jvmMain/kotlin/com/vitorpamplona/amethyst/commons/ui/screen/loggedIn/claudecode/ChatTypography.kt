@@ -40,18 +40,28 @@ import com.halilibo.richtext.ui.ListStyle
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.TableStyle
 import com.halilibo.richtext.ui.string.RichTextStringStyle
+import com.vitorpamplona.amethyst.commons.ui.markdown.InlineCodeChips
 
 /**
- * The chat's reading text: a size up from the feed's body, with room between lines, since a
- * Claude reply is read like a document, not skimmed like a note.
+ * The chat's reading text, a Claude reply read like a document: lines close enough (1.4) that a
+ * paragraph holds together, and the room goes between paragraphs instead (see
+ * [rememberChatMarkdownStyle]). No added tracking: the system UI font is set tight at this size.
  */
 internal val ChatTextStyle: TextStyle
     @Composable @ReadOnlyComposable
-    get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 23.sp, letterSpacing = 0.1.sp)
+    get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp, letterSpacing = 0.sp)
+
+/** Paragraphs that draw their inline code as rounded chips; pairs with [rememberChatMarkdownStyle]. */
+@Composable
+internal fun rememberChatCodeChips(): InlineCodeChips {
+    // Translucent, so the chip reads on the page and on the gray of the user's bubble alike.
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+    return remember(color) { InlineCodeChips(color) }
+}
 
 /**
  * Markdown for replies: paragraphs spaced like prose, modest headings (a reply's `##` is a
- * section, not a page title), inline code that sits on the line instead of a gray slab, and code
+ * section, not a page title), inline code in a monospace face (its chip comes from [rememberChatCodeChips]), and code
  * blocks on a quiet rounded surface.
  */
 @Composable
@@ -59,12 +69,13 @@ internal fun rememberChatMarkdownStyle(codeBackground: Color = MaterialTheme.col
     val colors = MaterialTheme.colorScheme
     return remember(colors, codeBackground) {
         RichTextStyle(
-            paragraphSpacing = 10.sp,
+            // About three quarters of a line: paragraphs read as blocks, not one even wall.
+            paragraphSpacing = 16.sp,
             headingStyle = { level, base ->
                 when (level) {
                     0, 1 -> base.copy(fontSize = 19.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold)
                     2 -> base.copy(fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
-                    else -> base.copy(fontSize = 15.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold)
+                    else -> base.copy(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
                 }
             },
             listStyle = ListStyle(itemSpacing = 4.sp),
@@ -84,11 +95,12 @@ internal fun rememberChatMarkdownStyle(codeBackground: Color = MaterialTheme.col
                 ),
             stringStyle =
                 RichTextStringStyle(
+                    // No span background: [rememberChatCodeChips] draws a rounded chip instead,
+                    // where a span background would fill the whole line as a square slab.
                     codeStyle =
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.5.sp,
-                            background = colors.onSurface.copy(alpha = 0.07f),
                             color = colors.onSurface,
                         ),
                 ),
