@@ -182,6 +182,7 @@ private fun NostrApp(
     }
 
     // Its own windows, above the app's: one question at a time, the oldest first.
-    ConsentWindows(setOf(session.launch.identity.coordinate), titleOf = { title }, host)
+    val app = session.launch.identity.coordinate
+    ConsentWindows(apps = { it == app }, titleOf = { _, _ -> title }, queues = host.consent)
     if (showAccess) AccessWindow(session, host, parent = null, onDone = { showAccess = false })
 }

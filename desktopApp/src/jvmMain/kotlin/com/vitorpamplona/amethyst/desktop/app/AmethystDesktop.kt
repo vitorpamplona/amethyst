@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletWindows
+import com.vitorpamplona.amethyst.desktop.napplet.Nip46ConsentWindows
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -523,6 +524,9 @@ fun main(args: Array<String>) {
 
                                     // Each open napplet, in its own window.
                                     DesktopNappletWindows(nappletHost)
+
+                                    // A NIP-46 app asking this desktop's bunker, in a window of its own.
+                                    Nip46ConsentWindows(modules.nip46Consent, onQuestion = { windows.showMainWindow() })
                                 }
                             }
                         }
