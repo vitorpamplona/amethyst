@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
+import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
@@ -210,7 +211,8 @@ private fun NappletWindow(
         }
 
         // Its own window, above Chromium's: one question at a time, the oldest first.
-        ConsentWindows(setOf(session.launch.identity.coordinate), titleOf = { session.launch.title }, host)
+        val app = session.launch.identity.coordinate
+        ConsentWindows(apps = { it == app }, titleOf = { session.launch.title }, queues = host.consent)
 
         if (showAccess) AccessWindow(session, host, parent = window, onDone = { showAccess = false })
     }
@@ -488,18 +490,19 @@ internal fun AccessWindow(
  */
 @Composable
 internal fun ConsentWindows(
-    apps: Set<String>,
+    /** Which asking apps this window shows the questions of. */
+    apps: (app: String?) -> Boolean,
     /** The name the question's window gives the app that asks. */
     titleOf: (app: String?) -> String,
-    host: DesktopNappletHost,
+    queues: NappletPromptQueues,
 ) {
-    val capabilities by host.consent.capabilities.pending
+    val capabilities by queues.capabilities.pending
         .collectAsState()
-    val connects by host.consent.connects.pending
+    val connects by queues.connects.pending
         .collectAsState()
-    val signerOps by host.consent.signerOps.pending
+    val signerOps by queues.signerOps.pending
         .collectAsState()
-    val question = (capabilities + connects + signerOps).filter { it.app in apps }.minByOrNull { it.order } ?: return
+    val question = (capabilities + connects + signerOps).filter { apps(it.app) }.minByOrNull { it.order } ?: return
     val mySignerOps = signerOps.filter { it.app == question.app }
     // Best-effort note preview of what would be signed; without it the card shows the JSON.
     val accountViewModel = CallSessionBridge.accountViewModel
@@ -507,23 +510,23 @@ internal fun ConsentWindows(
     key(question) {
         ConsentWindow(titleOf(question.app), onClose = { question.dismiss() }) {
             when (val info = question.info) {
-                is NappletConsentInfo -> NappletConsentCard(info, onDecision = { host.consent.capabilities.answer(question.token, it) })
+                is NappletConsentInfo -> NappletConsentCard(info, onDecision = { queues.capabilities.answer(question.token, it) })
                 is SignerConnectInfo ->
                     SignerConnectCard(
                         info = info,
-                        onConnect = { host.consent.connects.answer(question.token, AppConnectResult.Connected(it)) },
-                        onBlock = { host.consent.connects.answer(question.token, AppConnectResult.Blocked) },
-                        onCancel = { host.consent.connects.answer(question.token, AppConnectResult.Cancelled) },
+                        onConnect = { queues.connects.answer(question.token, AppConnectResult.Connected(it)) },
+                        onBlock = { queues.connects.answer(question.token, AppConnectResult.Blocked) },
+                        onCancel = { queues.connects.answer(question.token, AppConnectResult.Cancelled) },
                     )
                 is SignerConsentInfo -> {
                     val batch = mySignerOps.oldestAccountGroup()
                     if (batch.size == 1) {
-                        SignerConsentCard(info, accountViewModel, onGrant = { host.consent.signerOps.answer(question.token, it) })
+                        SignerConsentCard(info, accountViewModel, onGrant = { queues.signerOps.answer(question.token, it) })
                     } else {
                         BatchedConsentCard(
                             pending = batch,
                             accountViewModel = accountViewModel,
-                            onResolve = { tokens, grant -> tokens.forEach { host.consent.signerOps.answer(it, grant) } },
+                            onResolve = { tokens, grant -> tokens.forEach { queues.signerOps.answer(it, grant) } },
                         )
                     }
                 }
