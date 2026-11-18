@@ -70,3 +70,28 @@ After the P0/P1 work:
 - Point the "what Buzz's own client renders" advice at `block/buzz-app` and `mobile/lib`.
 - Add NIP-CL (`t`/`P`/`created_at`, labels, `system`), the guest role and `join_role`, and the DM `history` tag.
 - Use upstream's `test-fixtures/solo-creation.json` (the NIP-CL identity-tag fixture used by `channel.rs` tests) as a vector, alongside `quartz/src/jvmTest/resources/buzz/`.
+
+## Status (2026-11-18, P0/P1 implementation in Amethyst, branch `wt/buzz`)
+
+No Quartz change was made: Quartz belongs to another agent this round, and everything fits on the
+published 2.17.0 API. The protocol rules written in `commons` are candidates to move to Quartz's
+`buzz/` package later (listed below).
+
+| # | Status | What changed |
+|---|---|---|
+| 1 | **Done** | `relayGroupEditTemplate` (commons `model/AccountRelayGroupActions.kt`) drops `hashtags` and the 39000's unmanaged tags (`join_role`, `auto_join`, `P`, …) on Buzz; labels change only through the new `buzzLabels` (null: unchanged, empty: `["t",""]`), validated by `BuzzChannelLabels` (`model/buzz/`, ported from `parse_channel_labels` and its tests, plus the `solo-creation.json` identity tags). `createRelayGroup` sends no `t` on its follow-up 9002 on Buzz; labels, if any, ride the 9007. `amy relaygroup edit` uses the same template, detecting Buzz from the 39000's shape (`BuzzChannelLabels.looksLikeBuzzGroupState`: a type `t` plus `P`). No label editor UI (row 6). |
+| 2 | **Done** | `relayGroupPutUserTemplate`: on Buzz a bare `["p", pk]` plus `["role", buzzRole]`, the shape of Buzz's own `build_add_member`, read the same by pre- and post-`d0dee1cb5` relays. Used by `putRelayGroupUser` and `amy relaygroup put-user --buzz-role`. The members screen sends only the new role on Buzz (it used to send `entry.roles + new`). Vanilla NIP-29 keeps `["p", pk, roles…]`. |
+| 3 | **Done** | `RelayGroupChannel`: `guests` (39002 `p[3] == "guest"`), `buzzJoinRole()` (missing: `member`; unknown: `guest`, fail-closed like the relay), `isBuzzAnnounceChannel()`, `isBuzzGuest()`. `canPost` is false for guests, and for non-roster keys (community members included) on announce channels; `requiresMembershipToPost` is true there. The composer shows a "only members can post" notice instead, and the Buzz auto-join-before-posting skips announce channels. The `closed` KDoc now says private-only. Not done: hiding reactions/typing for guests (the relay refuses them; refusals stay visible). |
+| 4 | **Done** | `addBuzzDmMember` sends `["history","include"]` (`BuzzDmRules.addMemberTemplate`), waits for the OK (with the NIP-42 warm-retry `openBuzzDm` had) and returns the resulting DM; the DM list opens it when it differs. The add dialog says the newcomer will see the history. Participant cap: `BuzzDmRules.canAdd` (9 people with me, agents by NIP-OA owner or kind-10100 profile don't count) in `BuzzNewDmViewModel`; `openBuzzDm` builds the 41010 itself since `DmOpenEvent.build` still stops at 8. `amy buzz dm add-member` gains `--include-history` (opt-in, as buzz-cli) and reports `channel_id`/`created`; `amy buzz dm open` leaves the cap to the relay. `history=ask` / `needs-choice: history` is not offered (constant only). |
+| 5 | **Done** | `createRelayGroup` signs the 9007, waits for its OK and returns `RelayGroupCreateResult`; on an explicit refusal nothing else is sent or followed, and the create form shows the relay's reason ("The relay did not create it"). A relay that never answers is treated as before. `buzzListedNameTaken` pre-checks the loaded directory (open, listed, stream/forum, not deleted; archived keep their names) and the form refuses a clash before sending. Renames are not pre-checked (row 14). |
+
+Follow-ups for Quartz (when its owner has a window):
+- `DmAddMemberEvent.build(…, history)` and a `DmOpenEvent` cap that counts people, not participants.
+- `BuzzChannelLabels` rules and `BuzzChannelTypeTag.TYPES += "system"` (row 6); a reader for 39000 `join_role` and 39002 roles.
+- Quartz `buzz/README.md`: record `b624eb0f2` as the sync point and point "what Buzz's own client renders" at `block/buzz-app` and `mobile/lib` (not done here: no Quartz worktree was opened).
+
+Verification: `:commons:jvmTest` for `BuzzChannelLabelsTest`, `BuzzDmRulesTest`,
+`RelayGroupTemplatesTest`, `RelayGroupChannelTest` and `BuzzRoleForTest` (44 tests) pass, and
+`:cli:compileKotlin` passes. `:commonsUI:compileKotlinJvm` was OOM-killed four times on the shared
+machine, so the commonsUI edits (metadata form, members screen, DM list, channel view) are not
+compiled yet, and the desktop UI was not run.
