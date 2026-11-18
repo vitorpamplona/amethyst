@@ -369,7 +369,7 @@ private fun CordnBubbleContents(
     // and the blob is still on the host either way.
     if (text != null) {
         CordnMediaTag.parseAll(message.envelope.tags).forEach { attachment ->
-            CordnAttachment(attachment, room, accountViewModel)
+            CordnAttachment(attachment, message, room, accountViewModel)
         }
     }
 }

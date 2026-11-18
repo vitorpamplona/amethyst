@@ -199,7 +199,9 @@ class CordnGroupChatroom(
      * a newer message that live delivery already put here.
      */
     fun restorePreview(newest: CordnDeliveredMessage) {
-        if (byId.isEmpty()) setNewest(newest)
+        // The summary is the newest entry the store appended, which can be a
+        // reaction or a poll vote: never a row, so never the preview either.
+        if (byId.isEmpty() && !CordnMessageKinds.isStreamHidden(newest.envelope.kind)) setNewest(newest)
     }
 
     /** Restores what the store remembered for this room. */
@@ -250,11 +252,15 @@ class CordnGroupChatroom(
         recountUnread()
 
         val everything = byId.values.toList()
-        _annotations.value = CordnAnnotationIndex.of(everything)
+        val index = CordnAnnotationIndex.of(everything)
+        _annotations.value = index
 
+        // Not only annotations: poll votes and RSVPs are their poll's and
+        // event's aggregate, and a calendar revision replaces the one before
+        // it in place (CordnAnnotationIndex.isHidden).
         val visible =
             everything
-                .filterNot { CordnMessageKinds.isAnnotation(it.envelope.kind) }
+                .filterNot { index.isHidden(it.envelope.id) }
                 .sortedWith(ORDER)
 
         _messages.value = visible

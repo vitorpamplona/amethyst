@@ -7071,6 +7071,9 @@
     <string name="cordn_admin_no_self_remove">You cannot remove yourself from a cordn group.</string>
     <string name="cordn_admin_no_welcome">%1$s could not be given a way into the group, so the add was abandoned.</string>
     <string name="cordn_admin_not_a_member">%1$s is not in this group.</string>
+    <string name="cordn_admin_commit_lost">Someone else changed this group at the same moment and their change went first. Yours did not happen. Try again.</string>
+    <string name="cordn_admin_commit_unconfirmed">The change was sent, but the coordinator has not confirmed it. It may still go through, so check again before repeating it.</string>
+    <string name="cordn_admin_behind">This device could not open some recent messages and may have missed a change to the group. Changes are paused until a new message arrives that it can read.</string>
     <string name="cordn_admin_someone">That person</string>
     <string name="cordn_admin_wrong_key_package">This coordinator served a key package that belongs to someone else, so %1$s was not added. Nothing was changed.</string>
     <string name="cordn_backup_contents_body">Your group encryption keys, your key packages, and every message in those groups. Anyone who opens it can read the conversations. The passphrase is the only thing protecting it once it leaves Amethyst.</string>
@@ -7290,6 +7293,8 @@
         <item quantity="other">%1$d members</item>
     </plurals>
     <string name="cordn_message_deleted">Message deleted</string>
+    <string name="cordn_calendar_event">Event: %1$s</string>
+    <string name="cordn_calendar_event_cancelled">Cancelled event: %1$s</string>
     <string name="cordn_message_details_coordinator">Coordinator</string>
     <string name="cordn_message_details_cursor">Cursor</string>
     <string name="cordn_message_details_sent_at">Sent</string>
