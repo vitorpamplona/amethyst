@@ -364,6 +364,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazine
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazineIssue
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderManagedAgent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMavenPublication
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
@@ -962,6 +963,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -3030,6 +3033,7 @@ internal fun RenderNoteRow(
             is AssetBundleEvent -> RenderAssetBundle(baseNote, backgroundColor, accountViewModel, nav)
             is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote, backgroundColor, accountViewModel, nav)
+            is MavenReleaseEvent, is MavenSnapshotEvent -> RenderMavenPublication(baseNote)
             is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
             is AppDataEvent -> RenderAppData(baseNote)
             is NNSEvent -> RenderNNS(baseNote)

@@ -520,6 +520,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
@@ -4488,6 +4490,7 @@ open class EventCache :
                 is FeedDefinitionEvent,
                 is IdentityProofEvent,
                 is LongFormDraftEvent,
+                is MavenSnapshotEvent,
                 is MostroDisputeEvent,
                 is MostroUserRatingEvent,
                 is P2POrderEvent,
@@ -4617,6 +4620,7 @@ open class EventCache :
                 // their own handling above, so they only pick up the remaining job requests/results.
                 is AssetBundleEvent,
                 is CiManualTriggerEvent,
+                is MavenReleaseEvent,
                 is CiServiceRequestEvent,
                 is CiServiceStopEvent,
                 is MostroDevFeePaymentEvent,

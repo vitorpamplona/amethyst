@@ -110,6 +110,8 @@ import com.vitorpamplona.amethyst.commons.resources.kind_live_chats
 import com.vitorpamplona.amethyst.commons.resources.kind_live_streams
 import com.vitorpamplona.amethyst.commons.resources.kind_magazine
 import com.vitorpamplona.amethyst.commons.resources.kind_magazine_issue
+import com.vitorpamplona.amethyst.commons.resources.kind_maven_release
+import com.vitorpamplona.amethyst.commons.resources.kind_maven_snapshot
 import com.vitorpamplona.amethyst.commons.resources.kind_medical_data
 import com.vitorpamplona.amethyst.commons.resources.kind_meeting_room
 import com.vitorpamplona.amethyst.commons.resources.kind_meeting_space
@@ -350,6 +352,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
@@ -468,6 +472,8 @@ fun kindDisplayName(kind: Int): StringResource? =
         MeetingSpaceEvent.KIND -> Res.string.kind_meeting_space
         MetadataEvent.KIND -> Res.string.kind_profile
         MuteListEvent.KIND -> Res.string.kind_mute_list
+        MavenReleaseEvent.KIND -> Res.string.kind_maven_release
+        MavenSnapshotEvent.KIND -> Res.string.kind_maven_snapshot
         NNSEvent.KIND -> Res.string.kind_nns
         NipTextEvent.KIND -> Res.string.kind_nip
         NostrConnectEvent.KIND -> Res.string.kind_nostr_connect
