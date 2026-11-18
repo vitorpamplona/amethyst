@@ -79,7 +79,14 @@ class ProcessTransport(
         flow {
             val reader = process.inputStream.bufferedReader(Charsets.UTF_8)
             while (true) {
-                val line = runInterruptible { reader.readLine() } ?: break
+                val line =
+                    try {
+                        runInterruptible { reader.readLine() }
+                    } catch (e: IOException) {
+                        // Killing the process closes its stdout under the read: that is its end too,
+                        // not an error to throw into whoever reads (it went uncaught there).
+                        null
+                    } ?: break
                 emit(line)
             }
         }.flowOn(Dispatchers.IO)

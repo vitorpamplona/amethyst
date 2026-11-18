@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.util.ShareSite
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -36,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -44,6 +47,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * The pubkeys an `a`-tagging event addresses, read straight from the coordinates
@@ -197,6 +201,49 @@ class EventBroadcaster(
         account.client.publish(event, account.followPlusAllMineWithIndex.flow.value + account.client.availableRelaysFlow().value)
         account.cache.justConsumeMyOwnEvent(event)
     }
+
+    /**
+     * Copies [note] to the share relay once the user has shared its web link, so the page the link
+     * opens ([ShareSite.link]) can find it wherever it was posted. Private, relay-gated and
+     * already-copied content is left out: see [ShareRelayPolicy].
+     *
+     * The share relay is usually outside the user's lists, so their Tor settings may route it
+     * through Tor; while Tor is down the copy waits there, as the user's other untrusted relays do.
+     */
+    fun pushToShareRelay(note: Note) = pushToShareRelay(ShareRelayPolicy.eventsToPush(note, ::cachedProfile, ::isPublicRelay))
+
+    /** Copies [user]'s profile and relay list to the share relay once their web link is shared. */
+    fun pushToShareRelay(user: User) = pushToShareRelay(ShareRelayPolicy.eventsToPush(user, ::cachedProfile, ::isPublicRelay))
+
+    /**
+     * Events already copied to the share relay this session. The policy skips what the cache saw on
+     * that relay, but the cache records a relay's OK only for events it keys by id, not for profiles
+     * and relay lists, and records nothing while the copy waits (Tor down); this keeps a second share
+     * from sending them again.
+     */
+    private val copiedToShareRelay = LruCache<HexKey, Unit>(1000)
+
+    private fun pushToShareRelay(events: List<Event>) {
+        val fresh = events.filter { copiedToShareRelay.put(it.id, Unit) == null }
+        if (fresh.isEmpty()) return
+        Log.d("EventBroadcaster") { "Copying ${fresh.size} shared events (kinds ${fresh.map { it.kind }}) to ${ShareSite.RELAYS.map { it.url }}" }
+        fresh.forEach { account.client.publish(it, ShareSite.RELAYS) }
+    }
+
+    private fun cachedProfile(user: User) = account.cache.getAddressableNoteIfExists(Address(MetadataEvent.KIND, user.pubkeyHex, ""))
+
+    /**
+     * Whether a relay serves the public: not on this machine or network, not one of the user's local
+     * or private storage relays, and (when its NIP-11 document is cached) not one that requires AUTH.
+     */
+    private fun isPublicRelay(relay: NormalizedRelayUrl): Boolean =
+        !relay.isLocalHost() &&
+            relay !in account.localRelayList.flow.value &&
+            relay !in account.privateStorageRelayList.flow.value &&
+            account.cache.appHost.nip11Cache
+                .peek(relay)
+                ?.limitation
+                ?.auth_required != true
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

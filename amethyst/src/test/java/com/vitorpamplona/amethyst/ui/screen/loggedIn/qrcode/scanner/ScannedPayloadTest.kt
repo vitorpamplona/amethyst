@@ -126,6 +126,13 @@ class ScannedPayloadTest {
     }
 
     @Test
+    fun `a Brainstorm share link resolves as the entity in its path`() {
+        // Amethyst's own Share and QR links point at brainstorm.world; scanning one opens the app's page.
+        assertTrue(classifyScannedPayload("https://brainstorm.world/p/$npub") is ScannedPayload.Nostr)
+        assertTrue(classifyScannedPayload("https://brainstorm.world/$npub") is ScannedPayload.Nostr)
+    }
+
+    @Test
     fun `plain text and blanks fall through to unknown`() {
         assertTrue(classifyScannedPayload("WIFI:S:cafe;T:WPA;P:hunter2;;") is ScannedPayload.Unknown)
         assertTrue(classifyScannedPayload("") is ScannedPayload.Unknown)

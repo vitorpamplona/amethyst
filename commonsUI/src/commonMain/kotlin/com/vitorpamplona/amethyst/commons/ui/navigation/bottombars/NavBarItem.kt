@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.badges
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_apps
@@ -41,7 +42,6 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_main
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_other
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_you
 import com.vitorpamplona.amethyst.commons.resources.browser
-import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.communities
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
@@ -312,7 +312,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.CLAUDE_CODE to
             NavBarItemDef(
                 id = NavBarItem.CLAUDE_CODE,
-                label = { Res.string.claude_code_title },
+                label = { Res.string.ai_code_title },
                 icon = MaterialSymbols.Assistant,
                 resolveRoute = { Route.ClaudeCode },
             ),

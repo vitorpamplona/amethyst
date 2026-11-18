@@ -9742,7 +9742,6 @@
     <string name="geohash_area_neighborhood">~1,2 km</string>
     <string name="geohash_area_block">~150 m</string>
     <string name="geohash_area_building">~38 m</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Nova sessão</string>
     <string name="claude_code_search_hint">Buscar sessões</string>
     <string name="claude_code_no_sessions">Ainda não há sessões do Claude Code neste computador. Inicie uma aqui, ou execute claude em um terminal e ela aparecerá nesta lista.</string>
@@ -9799,14 +9798,11 @@
     <string name="claude_code_changes">Alterações</string>
     <string name="claude_code_no_changes">Nada foi alterado nesta branch ainda.</string>
     <string name="claude_code_untracked">Arquivos novos não adicionados ao git</string>
-    <string name="claude_code_propose">Propor</string>
-    <string name="claude_code_update_proposal">Atualizar proposta</string>
     <string name="claude_code_propose_desc">Assinada por você e enviada aos servidores do repositório, como o ngit faz.</string>
     <string name="claude_code_propose_desc_no_grasp">Assinada por você; os commits dela vão para um remote que você escolhe abaixo.</string>
     <string name="claude_code_propose_update_desc">Já é uma proposta: publicar de novo torna estes commits a nova versão dela.</string>
     <string name="claude_code_propose_title">Título</string>
     <string name="claude_code_propose_description">Descrição</string>
-    <string name="claude_code_draft_with_claude">Redigir com o Claude</string>
     <string name="claude_code_gate">Verificações de build</string>
     <string name="claude_code_gate_desc">Executa as verificações pre-push do repositório na pasta desta branch.</string>
     <string name="claude_code_gate_none">Este repositório não tem verificações pre-push para executar.</string>
