@@ -280,6 +280,7 @@ open class ShortNotePostViewModel :
     val mediaUploadTracker = MediaUploadTracker()
     override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
     override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingDrawing: Boolean get() = mediaUploadTracker.isUploadingDrawing
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null

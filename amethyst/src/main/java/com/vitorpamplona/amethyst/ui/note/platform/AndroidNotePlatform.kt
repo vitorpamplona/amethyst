@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as A
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.service.playback.composable.TrimPreviewPlayer as AppTrimPreviewPlayer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
@@ -217,6 +218,18 @@ object AndroidNotePlatform : NotePlatform {
         isLiveStream = isLiveStream,
         accountViewModel = accountViewModel,
     )
+
+    override val canPlayTrimPreview: Boolean get() = true
+
+    @Composable
+    override fun TrimPreviewPlayer(
+        videoUri: String,
+        startMs: Long,
+        endMs: Long,
+        durationMs: Long,
+        onPositionMs: (Long) -> Unit,
+        modifier: Modifier,
+    ) = AppTrimPreviewPlayer(videoUri, startMs, endMs, onPositionMs, modifier)
 
     @Composable
     override fun UrlPreview(

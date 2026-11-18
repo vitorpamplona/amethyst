@@ -71,4 +71,42 @@ class AttachedMediaStateTest {
         text.setTextAndPlaceCursorAtEnd(before)
         assertEquals(1, state.inOrder().size, "the file is back with its marker")
     }
+
+    private val testServer = ServerName("Test", "https://test.example/", ServerType.Blossom)
+
+    private fun AttachedMediaState.attach(vararg names: String) {
+        pick(names.map { SelectedMedia(StringMediaUri("/tmp/$it.mp4"), "video/mp4") }, stripMetadata = true)
+        attachPicked(chosenServer = testServer)
+    }
+
+    @Test
+    fun mediaInAnEmptyComposerLeavesTheCursorOnALineAboveIt() {
+        val text = TextFieldState()
+        val state = AttachedMediaState(text)
+        state.attach("a")
+        assertEquals("\n${MediaMarkers.of(1)}\n", text.text.toString())
+        assertEquals(0, text.selection.start, "the cursor waits above the card for the text")
+
+        // Writing there puts the text above the video.
+        text.edit { replace(0, 0, "My video") }
+        assertEquals("My video\n${MediaMarkers.of(1)}\n", text.text.toString())
+    }
+
+    @Test
+    fun aSecondVideoAddedFromTheTopGoesAboveTheFirst() {
+        val text = TextFieldState()
+        val state = AttachedMediaState(text)
+        state.attach("a")
+        state.attach("b")
+        assertEquals("\n${MediaMarkers.of(2)}\n${MediaMarkers.of(1)}\n", text.text.toString())
+        assertEquals(0, text.selection.start)
+        assertEquals(2, state.inOrder().size)
+    }
+
+    @Test
+    fun mediaAfterTextNeedsNoExtraLine() {
+        val (text, _) = attached("a")
+        assertEquals("Look\n${MediaMarkers.of(1)}\n", text.text.toString())
+        assertEquals(text.text.length, text.selection.start)
+    }
 }

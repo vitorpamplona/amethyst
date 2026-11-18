@@ -46,6 +46,9 @@ interface IComposerMediaTools {
     val isUploadingImage: Boolean
     val isUploadingFile: Boolean
 
+    /** A hand drawing is uploading: the toolbar's own upload, which no card shows. */
+    val isUploadingDrawing: Boolean
+
     fun selectImage(uris: ImmutableList<SelectedMedia>)
 
     fun uploadDrawing(
@@ -80,9 +83,12 @@ interface IComposerPostOptions {
  */
 @Composable
 fun ComposerMediaTools(vm: IComposerMediaTools) {
+    // The picked files upload on Post and show it on their cards; the buttons only wait. A spinner
+    // here too made three for one video (card, Post, gallery).
+    val busy = vm.isUploadingImage || vm.isUploadingFile
     SelectFromGallery(
-        isUploading = vm.isUploadingImage,
-        enabled = !vm.isUploadingFile,
+        isUploading = vm.isUploadingDrawing,
+        enabled = !busy,
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier,
     ) {
@@ -90,8 +96,8 @@ fun ComposerMediaTools(vm: IComposerMediaTools) {
     }
 
     SelectFromFiles(
-        isUploading = vm.isUploadingFile,
-        enabled = !vm.isUploadingImage,
+        isUploading = false,
+        enabled = !busy,
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier,
     ) {
@@ -102,7 +108,7 @@ fun ComposerMediaTools(vm: IComposerMediaTools) {
 
     TakeVideoButton(onVideoTaken = { vm.selectImage(it) })
 
-    DrawingButton(vm.accountViewModel, enabled = !vm.isUploadingImage && !vm.isUploadingFile) { drawing, alt ->
+    DrawingButton(vm.accountViewModel, enabled = !busy) { drawing, alt ->
         vm.uploadDrawing(drawing, alt, vm.accountViewModel.toastManager::toast)
     }
 }

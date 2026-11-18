@@ -142,6 +142,25 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /** Whether [TrimPreviewPlayer] can play a picked video here. */
+    val canPlayTrimPreview: Boolean get() = false
+
+    /**
+     * The media Studio's trim preview: the picked video at [videoUri] (a file on this device)
+     * playing from [startMs] to [endMs] of its [durationMs], over and over, with its sound, fitted
+     * into [modifier]. [onPositionMs] gets where it is in the whole video, for the filmstrip's
+     * playhead. It plays while it is composed; only called where [canPlayTrimPreview].
+     */
+    @Composable
+    fun TrimPreviewPlayer(
+        videoUri: String,
+        startMs: Long,
+        endMs: Long,
+        durationMs: Long,
+        onPositionMs: (Long) -> Unit,
+        modifier: Modifier,
+    ) {}
+
     /**
      * A video filling a full-screen viewer, playing at once. [controllerVisible] shows and hides
      * its playback controls, so the viewer can toggle them with its own chrome.

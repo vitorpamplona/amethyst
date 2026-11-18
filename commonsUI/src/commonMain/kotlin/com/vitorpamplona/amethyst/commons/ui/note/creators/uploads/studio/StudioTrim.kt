@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,11 +34,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -53,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -60,34 +68,101 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_crop_reset
 import com.vitorpamplona.amethyst.commons.resources.media_trim_hint
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.roundToLong
 
-/** The Studio's trim, shared by its stage and its panel: the video's length and the moment the stage shows. */
+/** The Studio's trim, shared by its stage and its panel: the moment the stage shows, and whether the kept part plays. */
 @Stable
 internal class TrimSession {
     /** The moment of the video the stage shows: the edge last dragged; null shows the trim's start. */
     var focusMs by mutableStateOf<Long?>(null)
+
+    /** The kept part plays on the stage, over and over; dragging an edge stops it. */
+    var playing by mutableStateOf(false)
+
+    /** Where the playing video is, for the filmstrip's playhead; null when the platform doesn't say. */
+    var playheadMs by mutableStateOf<Long?>(null)
+
+    fun stop() {
+        playing = false
+        playheadMs = null
+    }
 }
 
-/** How long [item]'s video runs, once [uploader] has read it. */
+/** Whether the Trim tool can play [item]'s kept part here: a GIF always (its trimmed copy loops), a video where the platform has a player for it. */
+@Composable
+internal fun canPlayTrim(
+    item: SelectedMediaProcessing,
+    uploader: MediaUploader,
+): Boolean = if (item.media.isGif()) uploader.gifTrim else LocalNotePlatform.current.canPlayTrimPreview
+
+/**
+ * What a GIF plays as once trimmed: the item's shared copy holding only the frames its
+ * [com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions.trim] keeps
+ * ([SelectedMediaProcessing.trimmedGif]), so every preview loops what will be sent and the upload
+ * sends that same copy (a crop is drawn over it, as on the picked file). The picked file while there
+ * is no trim and until the first copy is written; the last copy while the next one is.
+ */
+@Composable
+internal fun rememberTrimmedGif(
+    item: SelectedMediaProcessing,
+    uploader: MediaUploader?,
+): String {
+    val media = item.media
+    val trim = item.options.trim
+    if (uploader == null || !media.isGif()) return media.uri.toString()
+    // Held while shown, so the copy outlives neither this preview nor the last one using it.
+    DisposableEffect(item, uploader) {
+        item.holdTrimmedGif()
+        onDispose { item.releaseTrimmedGif() }
+    }
+    var shown by remember(item) { mutableStateOf(item.trimmedGifNow(trim)) }
+    LaunchedEffect(item, trim, uploader) {
+        if (trim == null) return@LaunchedEffect
+        item.trimmedGifNow(trim)?.let {
+            shown = it
+            return@LaunchedEffect
+        }
+        // Lets a drag settle before writing a copy.
+        delay(300)
+        item.trimmedGif(uploader, trim)?.let { shown = it }
+    }
+    return if (trim == null) media.uri.toString() else (shown ?: media.uri).toString()
+}
+
+/** How long [item]'s video runs, once [uploader] has read it; at once when the open Studio read it before. */
 @Composable
 internal fun rememberVideoDuration(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ): Long? {
-    val duration by produceState<Long?>(null, item.media) { value = uploader.videoDurationMs(item.media.uri) }
+    val reads = LocalStudioReads.current
+    val media = item.media
+    val duration by produceState(reads?.durationNow(media), media, reads) {
+        if (value != null) return@produceState
+        value = reads?.duration(media) { uploader.videoDurationMs(media.uri) } ?: uploader.videoDurationMs(media.uri)
+    }
     return duration
 }
 
-/** One frame of [item]'s video near [atMs] as JPEG bytes, keeping the last one while the next loads. */
+/**
+ * One frame of [item]'s video near [atMs] as JPEG bytes, keeping the last one while the next loads.
+ * In the Studio, a frame another part of it read (the still under every tool, Trim opening on the
+ * same moment) shows at once, and one being read is waited for rather than decoded again.
+ */
 @Composable
 internal fun rememberVideoFrame(
     item: SelectedMediaProcessing,
@@ -95,12 +170,20 @@ internal fun rememberVideoFrame(
     atMs: Long,
     maxEdge: Int,
 ): ByteArray? {
-    var shown by remember(item.media) { mutableStateOf<ByteArray?>(null) }
+    val reads = LocalStudioReads.current
+    val media = item.media
     val bucket = atMs / FRAME_STEP_MS
-    LaunchedEffect(item.media, bucket) {
-        // Lets a drag settle before decoding.
-        delay(80)
-        uploader.videoFrame(item.media.uri, bucket * FRAME_STEP_MS, maxEdge)?.let { shown = it }
+    val key = StudioReads.FrameKey(media, bucket, maxEdge)
+    var shown by remember(media) { mutableStateOf(reads?.frameNow(key)) }
+    LaunchedEffect(media, bucket, reads) {
+        reads?.frameNow(key)?.let {
+            shown = it
+            return@LaunchedEffect
+        }
+        // Lets a drag settle before decoding, unless that frame is already on its way.
+        if (reads == null || !reads.hasFrame(key)) delay(80)
+        val read: suspend () -> ByteArray? = { uploader.videoFrame(media.uri, bucket * FRAME_STEP_MS, maxEdge) }
+        (reads?.frame(key, read) ?: read())?.let { shown = it }
     }
     return shown
 }
@@ -108,21 +191,74 @@ internal fun rememberVideoFrame(
 /** Frames are decoded at this step, so a drag doesn't ask for one per pixel. */
 private const val FRAME_STEP_MS = 100L
 
-/** The stage while Trim is open: the frame at the edge being moved, and that moment. */
+/**
+ * The stage while Trim is open: the frame at the edge being moved and that moment or, while
+ * [TrimSession.playing], the kept part playing over and over. Tapping it plays or stops.
+ */
 @Composable
 internal fun StudioTrimStage(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
     session: TrimSession,
 ) {
-    val at = session.focusMs ?: item.options.trim?.startMs ?: 0L
-    val frame = rememberVideoFrame(item, uploader, at, STAGE_FRAME_EDGE)
-    Box(Modifier.fillMaxSize()) {
+    val canPlay = canPlayTrim(item, uploader)
+    val duration = rememberVideoDuration(item, uploader)
+    val start = item.options.trim?.startMs ?: 0L
+    val end = item.options.trim?.endMs ?: duration ?: 0L
+    val playing = session.playing && canPlay && duration != null
+    // Written as the edges move, not when Play is pressed, so it plays the part kept at once.
+    val trimmedGif = if (item.media.isGif()) rememberTrimmedGif(item, uploader) else null
+    // A stage left playing (another tool, another file) starts stopped next time.
+    DisposableEffect(session) { onDispose { session.stop() } }
+
+    // While it plays, the still under the player is the moment it starts from, not the edge dragged last.
+    val at = if (playing) start else session.focusMs ?: start
+    Box(
+        Modifier.fillMaxSize().then(
+            if (canPlay && duration != null) {
+                Modifier.clickable(interactionSource = null, indication = null) { if (session.playing) session.stop() else session.playing = true }
+            } else {
+                Modifier
+            },
+        ),
+    ) {
+        // The frame stays under the player: the stage never goes black while a player opens, or
+        // when one can't play the file.
+        val frame = rememberVideoFrame(item, uploader, at, STAGE_FRAME_EDGE)
         if (frame != null) {
             AsyncImage(model = frame, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
         }
+        if (playing && duration != null) {
+            if (trimmedGif != null) {
+                // The trimmed copy itself: it loops the kept frames as the note will.
+                CroppedImage(trimmedGif, null, null, ContentScale.Fit, Modifier.fillMaxSize(), animated = true)
+            } else {
+                LocalNotePlatform.current.TrimPreviewPlayer(
+                    videoUri = item.media.uri.toString(),
+                    startMs = start,
+                    endMs = end,
+                    durationMs = duration,
+                    onPositionMs = { session.playheadMs = it },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        } else if (canPlay && duration != null) {
+            Icon(
+                MaterialSymbols.PlayArrow,
+                contentDescription = stringRes(Res.string.play),
+                tint = Color.White,
+                filled = true,
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(12.dp),
+            )
+        }
         Text(
-            formatClock(at),
+            if (playing) "${formatClock(start)} – ${formatClock(end)}" else formatClock(at),
             color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
@@ -137,7 +273,7 @@ internal fun StudioTrimStage(
     }
 }
 
-private const val STAGE_FRAME_EDGE = 1280
+internal const val STAGE_FRAME_EDGE = 1280
 private const val STRIP_FRAMES = 8
 private const val STRIP_FRAME_EDGE = 160
 
@@ -145,7 +281,7 @@ private enum class TrimHandle { START, END, MOVE }
 
 /**
  * The Trim tool's panel: a filmstrip of the video with the kept part framed. Dragging an end moves
- * it (never closer than [VideoTrim.MIN_MS] to the other), dragging inside moves both, and the
+ * it (never closer than [VideoTrim.MIN_MS], or [VideoTrim.MIN_GIF_MS] for a GIF, to the other), dragging inside moves both, and the
  * stage follows the edge being moved. Writes [item]'s
  * [com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions.trim]; null when all of it is kept.
  */
@@ -161,13 +297,27 @@ internal fun TrimTool(
     val start = trim?.startMs ?: 0L
     val end = trim?.endMs ?: duration ?: 0L
 
+    val canPlay = canPlayTrim(item, uploader) && duration != null
+
     Column(Modifier.fillMaxWidth()) {
-        Filmstrip(item, uploader, duration, start, end, enabled) { newStart, newEnd, focus ->
+        // Read in the filmstrip's drawing only: the playhead moves many times a second and only redraws there.
+        Filmstrip(item, uploader, duration, start, end, enabled, playheadMs = { session.playheadMs.takeIf { session.playing } }) { newStart, newEnd, focus ->
             val total = duration ?: return@Filmstrip
+            // The stage shows the edge being moved; it plays the new part when asked again.
+            session.stop()
             item.options = item.options.copy(trim = VideoTrim(newStart, newEnd).orNullIfWhole(total))
             session.focusMs = focus
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (canPlay) {
+                IconButton(onClick = { if (session.playing) session.stop() else session.playing = true }) {
+                    if (session.playing) {
+                        Icon(MaterialSymbols.Pause, contentDescription = stringRes(Res.string.pause), filled = true)
+                    } else {
+                        Icon(MaterialSymbols.PlayArrow, contentDescription = stringRes(Res.string.play), filled = true)
+                    }
+                }
+            }
             Text(
                 if (duration != null) "${formatClock(start)} – ${formatClock(end)} · ${formatLength(end - start)}" else stringRes(Res.string.media_trim_hint),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -177,6 +327,7 @@ internal fun TrimTool(
             TextButton(
                 enabled = enabled && trim != null,
                 onClick = {
+                    session.stop()
                     item.options = item.options.copy(trim = null)
                     session.focusMs = null
                 },
@@ -195,6 +346,8 @@ private fun Filmstrip(
     start: Long,
     end: Long,
     enabled: Boolean,
+    /** Where the kept part is playing, drawn as a line; null draws none. Read while drawing, so it moves without a recomposition. */
+    playheadMs: () -> Long?,
     onChange: (start: Long, end: Long, focus: Long) -> Unit,
 ) {
     val frames = remember(item.media) { mutableStateListOf<ByteArray?>() }
@@ -230,50 +383,72 @@ private fun Filmstrip(
             }
         }
         var handle by remember { mutableStateOf<TrimHandle?>(null) }
+        // Where the finger went down. The drag starts only past the touch slop, up to ~20 px on:
+        // judged there, a handle grabbed and pulled inward read as "move both", which does nothing
+        // while all of it is kept.
+        val downX = remember { floatArrayOf(Float.NaN) }
+        val minMs = if (item.media.isGif()) VideoTrim.MIN_GIF_MS else VideoTrim.MIN_MS
         Canvas(
-            Modifier.fillMaxSize().pointerInput(duration, enabled) {
-                val total = duration ?: return@pointerInput
-                if (!enabled || total <= 0) return@pointerInput
-                val touch = with(density) { 24.dp.toPx() }
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitEachGesture { downX[0] = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial).position.x }
+                }.pointerInput(duration, enabled, minMs) {
+                    val total = duration ?: return@pointerInput
+                    if (!enabled || total <= 0) return@pointerInput
+                    val touch = with(density) { 24.dp.toPx() }
 
-                fun xOf(ms: Long) = ms.toFloat() / total * size.width
-                detectDragGestures(
-                    onDragStart = { at ->
-                        val sx = xOf(latestStart)
-                        val ex = xOf(latestEnd)
-                        handle =
-                            when {
-                                abs(at.x - sx) <= touch && abs(at.x - sx) <= abs(at.x - ex) -> TrimHandle.START
-                                abs(at.x - ex) <= touch -> TrimHandle.END
-                                at.x in sx..ex -> TrimHandle.MOVE
-                                else -> null
+                    fun xOf(ms: Long) = ms.toFloat() / total * size.width
+
+                    // The trim when the drag began and how far it has gone since: each step is
+                    // worked out from there, not added to the last one. Steps of a few ms each
+                    // were snapped back to "all of it" (see VideoTrim.orNullIfWhole) one by one,
+                    // so on a one-second GIF the start never left the edge.
+                    var fromStart = 0L
+                    var fromEnd = 0L
+                    var dragged = 0f
+                    detectDragGestures(
+                        onDragStart = { at ->
+                            val x = downX[0].takeUnless { it.isNaN() } ?: at.x
+                            fromStart = latestStart
+                            fromEnd = latestEnd
+                            dragged = 0f
+                            val sx = xOf(latestStart)
+                            val ex = xOf(latestEnd)
+                            handle =
+                                when {
+                                    abs(x - sx) <= touch && abs(x - sx) <= abs(x - ex) -> TrimHandle.START
+                                    abs(x - ex) <= touch -> TrimHandle.END
+                                    x in sx..ex -> TrimHandle.MOVE
+                                    else -> null
+                                }
+                        },
+                        onDragEnd = { handle = null },
+                        onDragCancel = { handle = null },
+                        onDrag = { change, drag ->
+                            val which = handle ?: return@detectDragGestures
+                            change.consume()
+                            dragged += drag.x
+                            val dMs = (dragged / size.width * total).roundToLong()
+                            val min = minMs.coerceAtMost(total)
+                            when (which) {
+                                TrimHandle.START -> {
+                                    val s = (fromStart + dMs).coerceIn(0L, fromEnd - min)
+                                    latestOnChange(s, fromEnd, s)
+                                }
+                                TrimHandle.END -> {
+                                    val e = (fromEnd + dMs).coerceIn(fromStart + min, total)
+                                    latestOnChange(fromStart, e, e)
+                                }
+                                TrimHandle.MOVE -> {
+                                    val length = fromEnd - fromStart
+                                    val s = (fromStart + dMs).coerceIn(0L, total - length)
+                                    latestOnChange(s, s + length, s)
+                                }
                             }
-                    },
-                    onDragEnd = { handle = null },
-                    onDragCancel = { handle = null },
-                    onDrag = { change, drag ->
-                        val which = handle ?: return@detectDragGestures
-                        change.consume()
-                        val dMs = (drag.x / size.width * total).toLong()
-                        val min = VideoTrim.MIN_MS.coerceAtMost(total)
-                        when (which) {
-                            TrimHandle.START -> {
-                                val s = (latestStart + dMs).coerceIn(0L, latestEnd - min)
-                                latestOnChange(s, latestEnd, s)
-                            }
-                            TrimHandle.END -> {
-                                val e = (latestEnd + dMs).coerceIn(latestStart + min, total)
-                                latestOnChange(latestStart, e, e)
-                            }
-                            TrimHandle.MOVE -> {
-                                val length = latestEnd - latestStart
-                                val s = (latestStart + dMs).coerceIn(0L, total - length)
-                                latestOnChange(s, s + length, s)
-                            }
-                        }
-                    },
-                )
-            },
+                        },
+                    )
+                },
         ) {
             val total = duration ?: return@Canvas
             if (total <= 0) return@Canvas
@@ -291,6 +466,11 @@ private fun Filmstrip(
             val notchH = size.height / 3
             drawLine(notch, Offset(sx + grip / 2, (size.height - notchH) / 2), Offset(sx + grip / 2, (size.height + notchH) / 2), 2.dp.toPx())
             drawLine(notch, Offset(ex - grip / 2, (size.height - notchH) / 2), Offset(ex - grip / 2, (size.height + notchH) / 2), 2.dp.toPx())
+            val playhead = playheadMs()
+            if (playhead != null) {
+                val px = (playhead.coerceIn(start, end).toFloat() / total * size.width).coerceIn(sx + grip, ex - grip)
+                drawLine(notch, Offset(px, 0f), Offset(px, size.height), 2.dp.toPx())
+            }
         }
     }
 }

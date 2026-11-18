@@ -284,20 +284,8 @@ fun UploadingState(
                 strokeWidth = 5.dp,
             )
 
-            val txt =
-                when (progressState) {
-                    is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
-                    is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
-                    is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
-                    is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
-                    is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
-                    is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
-                    is UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
-                    is UploadingState.Error -> stringRes(Res.string.uploading_state_error)
-                }
-
             Text(
-                txt,
+                uploadingStateLabel(progressState),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center,
@@ -305,6 +293,20 @@ fun UploadingState(
         }
     }
 }
+
+/** What an upload is doing right now, in one word: Compressing, Uploading, Verifying... */
+@Composable
+fun uploadingStateLabel(state: UploadingState): String =
+    when (state) {
+        is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
+        is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
+        is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
+        is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
+        is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
+        is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
+        is UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
+        is UploadingState.Error -> stringRes(Res.string.uploading_state_error)
+    }
 
 @Composable
 fun FilePreviewPlaceholder(
