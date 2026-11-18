@@ -492,7 +492,7 @@ class ClaudeCodeService(
             info.sessionId,
             cwd ?: File(System.getProperty("user.home")),
             info.title,
-            PermissionMode.DEFAULT,
+            savedModeOf(info.sessionId),
             null,
             agent = backendOf(info.sessionId),
             folderKnown = cwd != null,
@@ -569,7 +569,7 @@ class ClaudeCodeService(
         val sessionId = source?.sessionId ?: saved.value.firstOrNull { it.sessionId == key }?.sessionId ?: return null
         val cwd = source?.cwd ?: saved.value.firstOrNull { it.sessionId == sessionId }?.cwd ?: return null
         val agent = chats.value[key]?.backend ?: backendOf(sessionId)
-        return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: PermissionMode.DEFAULT, null, fork = true, agent = agent)
+        return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: savedModeOf(sessionId), null, fork = true, agent = agent)
     }
 
     /**
@@ -586,7 +586,7 @@ class ClaudeCodeService(
         val source = chat?.state?.value
         val sessionId = source?.sessionId ?: saved.value.firstOrNull { it.sessionId == key }?.sessionId ?: return null
         val cwd = source?.cwd ?: saved.value.firstOrNull { it.sessionId == sessionId }?.cwd ?: return null
-        val mode = source?.permissionMode ?: PermissionMode.DEFAULT
+        val mode = source?.permissionMode ?: savedModeOf(sessionId)
         val model = source?.modelChoice
         // The same prompt can be sent more than once: the one with as many before it as on screen.
         val repeats = source?.items?.takeWhile { it.id != message.id }?.count { it is ChatItem.UserText && it.text == message.text } ?: 0
@@ -600,6 +600,28 @@ class ClaudeCodeService(
             }
         copy.draft = message.text
         return copy
+    }
+
+    /** The mode [sessionId] was last left in here, if its agent still offers it; else the default. */
+    private fun savedModeOf(sessionId: String): PermissionMode =
+        PermissionMode
+            .fromWire(_preferences.value.sessionModes[sessionId])
+            ?.takeIf { it in backendOf(sessionId).capabilities.modes }
+            ?: PermissionMode.DEFAULT
+
+    /** Keeps the mode [sessionId] is in, so it reopens in it after a restart ([savedModeOf]). */
+    private suspend fun rememberMode(
+        sessionId: String,
+        mode: PermissionMode,
+    ) {
+        val wire = mode.wire.takeIf { mode != PermissionMode.DEFAULT }
+        if (_preferences.value.sessionModes[sessionId] == wire) return
+        _preferences.value =
+            withContext(Dispatchers.IO) {
+                agentWorkspaces.updatePreferences { prefs ->
+                    prefs.copy(sessionModes = if (wire == null) prefs.sessionModes - sessionId else prefs.sessionModes + (sessionId to wire))
+                }
+            }
     }
 
     /** The saved prompts the user typed, with their text as the chat shows it. */
@@ -649,6 +671,16 @@ class ClaudeCodeService(
         chats.update { it + (key to chat) }
         watchers[key] =
             scope.launch {
+                // The mode the user picks outlives the app. A copy still on its source's id
+                // ([ClaudeChatState.forking]) is not that session, and the settings chat is not a session to reopen.
+                if (kind == ChatKind.CODE) {
+                    launch {
+                        chat.state
+                            .map { Triple(it.sessionId, it.permissionMode, it.forking) }
+                            .distinctUntilChanged()
+                            .collect { (sessionId, mode, forking) -> if (sessionId != null && !forking) rememberMode(sessionId, mode) }
+                    }
+                }
                 // The list only shows these; streamed text must not rebuild it.
                 launch {
                     chat.state
@@ -771,7 +803,10 @@ class ClaudeCodeService(
             rebuildRows()
         }
         val sessionId = row.sessionId
-        if (sessionId != null) withContext(Dispatchers.IO) { backendOf(sessionId).delete(sessionId) }
+        if (sessionId != null) {
+            withContext(Dispatchers.IO) { backendOf(sessionId).delete(sessionId) }
+            rememberMode(sessionId, PermissionMode.DEFAULT)
+        }
         refresh()
     }
 
