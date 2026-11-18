@@ -26,13 +26,23 @@ import androidx.compose.runtime.Composable
 fun interface TextSharer {
     /**
      * Shares [text], labelled [title] where the target shows one, behind a chooser titled
-     * [chooserTitle] where the platform has a chooser.
+     * [chooserTitle] where the platform has a chooser. [onShared] runs once the text has actually
+     * gone somewhere: the user picked a target in the chooser, or it was copied to the clipboard.
+     * It never runs when the user dismisses the chooser.
      */
     fun share(
         text: String,
         title: String?,
         chooserTitle: String,
+        onShared: () -> Unit,
     )
+
+    /** [share] for a caller with nothing to do once the text is shared. */
+    fun share(
+        text: String,
+        title: String?,
+        chooserTitle: String,
+    ) = share(text, title, chooserTitle) {}
 }
 
 /**

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Bottom drawer that offers the note's Share options ([ShareActionRows]), opened from the
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 @Composable
 fun ShareOptionsBottomSheet(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
 ) {
@@ -73,6 +75,7 @@ fun ShareOptionsBottomSheet(
             M3ActionSection {
                 ShareActionRows(
                     note = note,
+                    accountViewModel = accountViewModel,
                     nav = nav,
                     onDismiss = onDismiss,
                 )
