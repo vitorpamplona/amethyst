@@ -60,6 +60,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_write
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -102,8 +105,15 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.RefocusOn
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.rememberMediaMarkerField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
@@ -169,8 +179,10 @@ private fun GitNewIssueForm(
                     Button(
                         enabled = viewModel.canSend(),
                         onClick = {
-                            accountViewModel.launchSigner { viewModel.send(repoNote) }
-                            nav.popBack()
+                            accountViewModel.launchSigner {
+                                // False when an attached file failed to upload: nothing was sent, so stay.
+                                if (viewModel.send(repoNote, accountViewModel.mediaUploader)) onUiThread { nav.popBack() }
+                            }
                         },
                         shape = GitShape,
                         colors = ButtonDefaults.buttonColors(containerColor = gitPalette().open, contentColor = Color.White),
@@ -206,20 +218,9 @@ private fun GitNewIssueForm(
 
             DescriptionBox(viewModel, accountViewModel, nav)
 
-            viewModel.multiOrchestrator?.let {
-                ImageVideoDescription(
-                    it,
-                    accountViewModel.account.settings.defaultFileServer,
-                    isUploading = viewModel.mediaUploadTracker.isUploading,
-                    onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                        viewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                        accountViewModel.account.settings.changeDefaultFileServer(server)
-                    },
-                    onDelete = viewModel::deleteMediaToUpload,
-                    onCancel = { viewModel.multiOrchestrator = null },
-                    accountViewModel = accountViewModel,
-                )
-            }
+            AttachedMediaFailureBanner(viewModel.media.inOrder())
+
+            AttachedMediaStudioDialogs(viewModel.media, viewModel.mediaUploadTracker.isUploading, accountViewModel)
 
             LabelPicker(repoNote, viewModel)
         }
@@ -267,13 +268,13 @@ private fun DescriptionBox(
 
         if (preview) {
             Box(Modifier.fillMaxWidth().heightIn(min = 168.dp).padding(14.dp)) {
-                if (viewModel.body.isBlank()) {
+                if (viewModel.body.text.isBlank()) {
                     Text(stringRes(Res.string.git_new_issue_nothing_to_preview), style = gitMetaStyle())
                 } else {
                     val background = MaterialTheme.colorScheme.background
                     val backgroundColor = remember { mutableStateOf(background) }
                     RichTextViewer(
-                        content = viewModel.body,
+                        content = AttachedMediaState.stripMarkers(viewModel.body.text.toString()),
                         canPreview = true,
                         quotesLeft = 1,
                         modifier = Modifier.fillMaxWidth(),
@@ -285,13 +286,24 @@ private fun DescriptionBox(
                 }
             }
         } else {
-            SpellCheckedOutlinedTextField(
-                value = viewModel.body,
-                onValueChange = { viewModel.body = it },
+            val bodyFocus = remember { FocusRequester() }
+            RefocusOn(viewModel.media.attachCount.takeIf { it > 0 }, bodyFocus)
+            val markers =
+                rememberMediaMarkerField(
+                    viewModel.body,
+                    mediaBlocks = rememberAttachedMediaBlocks(viewModel.media, accountViewModel.mediaUploader) { viewModel.mediaUploadTracker.isUploading },
+                )
+            OutlinedThinPaddingTextField(
+                state = viewModel.body,
+                inputTransformation = MentionPreservingInputTransformation,
+                outputTransformation = markers.outputTransformation,
+                cursorBrush = markers.cursorBrush,
+                textOverlay = markers.textOverlay,
+                spellCheck = true,
                 placeholder = { Text(stringRes(Res.string.git_new_issue_body_hint)) },
                 minLines = 8,
                 colors = gitFieldColors(borderless = true),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().focusRequester(bodyFocus),
             )
         }
     }

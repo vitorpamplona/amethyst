@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataViewModel
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
@@ -63,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.GallerySelectSingleCropped
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size100dp
@@ -193,8 +194,10 @@ private fun ProfilePictureUploadButton(
 
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
-        GallerySelectSingle(
-            onImageUri = { media ->
+        GallerySelectSingleCropped(
+            shape = ImageCropShape.Avatar,
+            uploader = accountViewModel.mediaUploader,
+            onImage = { media ->
                 showGallerySelect = false
                 if (media != null) {
                     postViewModel.uploadPictureAndSave(media, accountViewModel.mediaUploader, accountViewModel.toastManager::toast)

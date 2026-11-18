@@ -183,23 +183,27 @@ private fun qualityLabel(
     videoMode: Boolean,
     info: VideoInfo?,
 ): String {
-    val name =
-        when (quality) {
-            CompressorQuality.VERY_LOW -> stringRes(Res.string.media_compression_quality_very_low)
-            CompressorQuality.LOW -> stringRes(Res.string.media_compression_quality_low)
-            CompressorQuality.MEDIUM -> stringRes(Res.string.media_compression_quality_medium)
-            CompressorQuality.HIGH -> stringRes(Res.string.media_compression_quality_high)
-            CompressorQuality.VERY_HIGH -> stringRes(Res.string.media_compression_quality_very_high)
-            CompressorQuality.UNCOMPRESSED -> stringRes(Res.string.media_compression_quality_uncompressed)
-        }
+    val name = qualityName(quality)
     val imagePart = quality.imageMaxDimension?.takeIf { hasCompressibleImage }?.let { stringRes(Res.string.media_compression_images_up_to, it) }
     val videoPart = if (videoMode && quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality, info) else null
     return listOfNotNull(name, imagePart, videoPart).joinToString(" · ")
 }
 
+/** The level's name: `Low`, `High`, `Uncompressed`, ... */
+@Composable
+internal fun qualityName(quality: CompressorQuality): String =
+    when (quality) {
+        CompressorQuality.VERY_LOW -> stringRes(Res.string.media_compression_quality_very_low)
+        CompressorQuality.LOW -> stringRes(Res.string.media_compression_quality_low)
+        CompressorQuality.MEDIUM -> stringRes(Res.string.media_compression_quality_medium)
+        CompressorQuality.HIGH -> stringRes(Res.string.media_compression_quality_high)
+        CompressorQuality.VERY_HIGH -> stringRes(Res.string.media_compression_quality_very_high)
+        CompressorQuality.UNCOMPRESSED -> stringRes(Res.string.media_compression_quality_uncompressed)
+    }
+
 /** The picked video's own standard and target; the 1080p row, named as an example, when it could not be probed. */
 @Composable
-private fun videoPhrase(
+internal fun videoPhrase(
     quality: CompressorQuality,
     info: VideoInfo?,
 ): String? {
@@ -285,13 +289,13 @@ private val PreviewHeight = 260.dp
  */
 private const val MAX_ZOOM_DECODE_EDGE = 3072
 
-private fun ImageFileStats.aspectRatio(): Float? {
+internal fun ImageFileStats.aspectRatio(): Float? {
     val w = width ?: return null
     val h = height ?: return null
     return if (w > 0 && h > 0) w.toFloat() / h else null
 }
 
-private fun ImageFileStats.longEdge(): Int? {
+internal fun ImageFileStats.longEdge(): Int? {
     val w = width ?: return null
     val h = height ?: return null
     return max(w, h)
@@ -417,7 +421,7 @@ private fun CompressionPreview(
  * while a new level's file is still decoding, so the box never flashes empty.
  */
 @Composable
-private fun ComparisonImages(
+internal fun ComparisonImages(
     originalUri: String,
     compressedUri: String?,
     showOriginal: Boolean,

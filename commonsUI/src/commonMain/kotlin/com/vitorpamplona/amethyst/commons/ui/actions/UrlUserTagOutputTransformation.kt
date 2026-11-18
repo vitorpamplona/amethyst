@@ -26,9 +26,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.TextReplacement
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
 import com.vitorpamplona.amethyst.commons.ui.text.MENTION_REGEX
@@ -42,14 +47,44 @@ import kotlin.coroutines.cancellation.CancellationException
  * focused field's keyboard session and drops the mention cache.
  */
 @Composable
-fun rememberUrlUserTagOutputTransformation(color: Color = MaterialTheme.colorScheme.primary): UrlUserTagOutputTransformation = remember(color) { UrlUserTagOutputTransformation(color) }
+fun rememberUrlUserTagOutputTransformation(
+    color: Color = MaterialTheme.colorScheme.primary,
+    mediaMarkers: MediaMarkerRendering? = null,
+): UrlUserTagOutputTransformation = remember(color, mediaMarkers) { UrlUserTagOutputTransformation(color, mediaMarkers) }
+
+/** How a composer that holds media markers ([MediaMarkers]) draws them in its text. */
+sealed interface MediaMarkerRendering
+
+/**
+ * Each marker as an inline chip: [label] names the marker with [id] that is the [ordinal]-th
+ * (1-based) in the text, e.g. "Photo 2", in [chip] / [onChip] colors. For fields too small to
+ * show the media itself.
+ */
+class MediaMarkerChips(
+    val chip: Color,
+    val onChip: Color,
+    val label: (id: Int, ordinal: Int) -> String,
+) : MediaMarkerRendering
+
+/**
+ * Each marker as an empty paragraph [lineHeight] tall (by the marker's id: each media keeps its
+ * own shape): a gap in the text where the field's owner draws the media itself (see
+ * `ThinPaddingTextField.textOverlay`), so the composer reads like the note will. The marker becomes
+ * a single invisible character, so the cursor steps over it in one move and Backspace removes the
+ * whole marker.
+ */
+class MediaMarkerBlocks(
+    val lineHeight: (id: Int) -> TextUnit,
+) : MediaMarkerRendering
 
 class UrlUserTagOutputTransformation(
     val color: Color,
+    val mediaMarkers: MediaMarkerRendering? = null,
 ) : OutputTransformation,
     VisualOffsetMapping {
     override fun TextFieldBuffer.transformOutput() {
-        val replacements = replacements(asCharSequence().toString())
+        val rawText = asCharSequence().toString()
+        val replacements = replacements(rawText)
 
         // Phase 1: replace mentions back to front, so earlier indices stay valid after each replace.
         // Styles come after: addStyle must be called after all text mutations.
@@ -60,10 +95,22 @@ class UrlUserTagOutputTransformation(
 
         // Phase 2: style the display names, front to back, tracking the shift of earlier replacements.
         val style = SpanStyle(color = color, textDecoration = TextDecoration.None)
+        val markers = mediaMarkers
+        val chipStyle = (markers as? MediaMarkerChips)?.let { SpanStyle(color = it.onChip, background = it.chip, fontWeight = FontWeight.Medium) }
+        val blocks = markers as? MediaMarkerBlocks
         var cumulativeShift = 0
         for (replacement in replacements) {
             val adjustedStart = replacement.rawStart + cumulativeShift
-            addStyle(style, adjustedStart, adjustedStart + replacement.visual.length)
+            val adjustedEnd = adjustedStart + replacement.visual.length
+            when {
+                !replacement.isMediaMarker -> addStyle(style, adjustedStart, adjustedEnd)
+                chipStyle != null -> addStyle(chipStyle, adjustedStart, adjustedEnd)
+                blocks != null -> {
+                    val id = MediaMarkers.idAt(rawText, replacement.rawStart)
+                    if (id != null) addStyle(ParagraphStyle(lineHeight = blocks.lineHeight(id), lineHeightStyle = BlockLineHeightStyle), adjustedStart, adjustedEnd)
+                    addStyle(HiddenStyle, adjustedStart, adjustedEnd)
+                }
+            }
             cumulativeShift += replacement.visual.length - (replacement.rawEnd - replacement.rawStart)
         }
 
@@ -77,7 +124,10 @@ class UrlUserTagOutputTransformation(
     private var lastText: String? = null
     private var lastReplacements: List<TextReplacement> = emptyList()
 
-    /** Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, in order. */
+    /**
+     * Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, and, when
+     * [mediaMarkers] is set, each media marker and what it draws as, in order.
+     */
     override fun replacements(rawText: String): List<TextReplacement> {
         if (rawText == lastText) return lastReplacements
         return findReplacements(rawText).also {
@@ -86,7 +136,24 @@ class UrlUserTagOutputTransformation(
         }
     }
 
-    private fun findReplacements(rawText: String): List<TextReplacement> =
+    private fun findReplacements(rawText: String): List<TextReplacement> {
+        val mentions = findMentions(rawText)
+        val rendering = mediaMarkers ?: return mentions
+        if (!rawText.contains(MediaMarkers.PREFIX)) return mentions
+        val markers =
+            MediaMarkers.REGEX.findAll(rawText).mapIndexedTo(ArrayList()) { index, match ->
+                val visual =
+                    when (rendering) {
+                        // Non-breaking spaces pad the chip's background on both sides.
+                        is MediaMarkerChips -> "\u00A0${rendering.label(match.groupValues[1].toInt(), index + 1)}\u00A0"
+                        is MediaMarkerBlocks -> "\u00A0"
+                    }
+                TextReplacement(match.range.first, match.range.last + 1, visual, isMediaMarker = true)
+            }
+        return (mentions + markers).sortedBy { it.rawStart }
+    }
+
+    private fun findMentions(rawText: String): List<TextReplacement> =
         MENTION_REGEX.findAll(rawText).mapNotNullTo(ArrayList()) { match ->
             try {
                 val bech32 =
@@ -102,6 +169,10 @@ class UrlUserTagOutputTransformation(
             }
         }
 }
+
+// The gap's character sits at the top of its tall line, invisible: the media is drawn over the gap.
+private val BlockLineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Top, LineHeightStyle.Trim.None)
+private val HiddenStyle = SpanStyle(color = Color.Transparent)
 
 // The same detector the note renderer links with, so the editor highlights what the posted
 // note will make clickable.

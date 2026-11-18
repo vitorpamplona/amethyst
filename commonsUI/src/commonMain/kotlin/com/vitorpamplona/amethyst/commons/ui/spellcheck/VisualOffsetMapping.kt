@@ -28,6 +28,8 @@ data class TextReplacement(
     val rawStart: Int,
     val rawEnd: Int,
     val visual: String,
+    /** A media marker drawn as a chip, not a mention drawn as a name. */
+    val isMediaMarker: Boolean = false,
 )
 
 /**

@@ -140,6 +140,9 @@ fun EditGroupInfoScreen(
                             if (avatarUrlChanged && isCurrentProfile) {
                                 accountViewModel.setMarmotGroupAvatarUrl(nostrGroupId, avatarUrl.trim())
                             }
+                            // Saved: a crop made for the icon is ours to remove. Not before, so a
+                            // failed save can be retried with it.
+                            pickedIcon?.let { if (it.temporary) accountViewModel.mediaUploader.discardTempFile(it.uri) }
                             launch(Dispatchers.Main) {
                                 shortNotice.show(loadStringRes(Res.string.marmot_group_info_updated))
                             }

@@ -51,6 +51,9 @@ interface VideoCompressor {
     /** The source's dimensions and frame rate, for the slider label; null when it cannot be read. */
     suspend fun probe(source: File): VideoInfo?
 
+    /** Width and height as the video plays (after any rotation flag): an `imeta` `dim`. Null when unknown. */
+    suspend fun displaySize(source: File): Pair<Int, Int>? = probe(source)?.resolution?.let { it.width to it.height }
+
     /**
      * Transcodes [source] at [quality] (through its video level), H.265 when [useH265] and an
      * HEVC encoder works. [onProgress] receives fractions in 0..1.
@@ -70,4 +73,31 @@ interface VideoCompressor {
 
     /** A remuxed copy of [source] with no metadata, chapters, subtitle or data tracks; null when unavailable or failed. */
     suspend fun strip(source: File): File?
+
+    /** The sound of [source] in its own container with no tags (artist, title, location); null when it could not be written. */
+    suspend fun stripAudio(source: File): File? = null
+
+    /** [source] from [startMs] to [endMs], stream-copied into a temp MP4 without metadata; null when it could not be written. */
+    suspend fun trim(
+        source: File,
+        startMs: Long,
+        endMs: Long,
+    ): File? = null
+
+    /** A JPEG of the frame near [atMs], upright, at most [maxEdge] on its long side; null when unavailable. */
+    suspend fun frame(
+        source: File,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = null
+
+    /** [frame] at each of [times], in order; an implementation may get them all in one go. */
+    suspend fun frames(
+        source: File,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> = times.map { frame(source, it, maxEdge) }
+
+    /** How long [source] runs, in milliseconds; null when unknown. */
+    suspend fun durationMs(source: File): Long? = null
 }

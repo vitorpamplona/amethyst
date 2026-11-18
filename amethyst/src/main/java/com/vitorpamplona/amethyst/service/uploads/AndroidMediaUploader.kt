@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.exifinterface.media.ExifInterface
@@ -39,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
@@ -51,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
@@ -66,12 +73,16 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.io.File
+import java.io.FileInputStream
+import java.nio.ByteBuffer
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -831,6 +842,204 @@ class AndroidMediaUploader(
         }
     }
 
+    override suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? =
+        withContext(Dispatchers.IO) {
+            try {
+                appContext.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                    FileInputStream(descriptor.fileDescriptor).channel.use { channel ->
+                        val buffer = ByteBuffer.allocate(length)
+                        var position = offset
+                        while (buffer.hasRemaining()) {
+                            val read = channel.read(buffer, position)
+                            if (read <= 0) break
+                            position += read
+                        }
+                        buffer.array().copyOf(buffer.position())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("AndroidMediaUploader", "Could not read $uri", e)
+                null
+            }
+        }
+
+    override val videoTrim: Boolean get() = true
+
+    // GIFs are edited, timed and drawn by the shared GifEditor, which stays a GIF.
+    override val gifCrop: Boolean get() = true
+
+    override val gifTrim: Boolean get() = true
+
+    override suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.IO) {
+            val active = currentCoroutineContext()
+            val edited = VideoTrimmer.editGif(appContext, uri, crop, trim) { active.isActive } ?: return@withContext null
+            val file = File.createTempFile("gif_", ".gif", appContext.cacheDir)
+            try {
+                file.writeBytes(edited)
+            } catch (e: Exception) {
+                if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
+                throw e
+            }
+            MediaCompressorResult(Uri.fromFile(file), "image/gif", file.length())
+        }
+
+    override suspend fun videoDurationMs(uri: MediaUri): Long? = withContext(Dispatchers.IO) { VideoTrimmer.durationMs(appContext, uri) }
+
+    override suspend fun trimVideo(
+        uri: MediaUri,
+        mimeType: String?,
+        trim: VideoTrim,
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.IO) {
+            val file = File.createTempFile("trim_", ".mp4", appContext.cacheDir)
+            if (VideoTrimmer.trim(appContext, uri, trim.startMs, trim.endMs, file)) {
+                MediaCompressorResult(Uri.fromFile(file), "video/mp4", file.length())
+            } else {
+                if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
+                null
+            }
+        }
+
+    override suspend fun videoFrame(
+        uri: MediaUri,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = videoFrames(uri, listOf(atMs), maxEdge).firstOrNull()
+
+    override suspend fun videoFrames(
+        uri: MediaUri,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> =
+        withContext(Dispatchers.IO) {
+            val active = currentCoroutineContext()
+            VideoTrimmer.frames(appContext, uri, times, maxEdge) { active.isActive }
+        }
+
+    override suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.IO) {
+            val resolver = appContext.contentResolver
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            runCatching { resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+            val orientation =
+                runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } }
+                    .getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+
+            // Only the part kept is decoded, from the picture as stored, at full resolution unless
+            // that part alone is over CROP_MAX_PIXELS: a crop of a 50 MP photo keeps its detail.
+            val (x, y, w, h) = crop.inStored(orientation).pixels(bounds.outWidth, bounds.outHeight).toList()
+            var sample = 1
+            while (w.toLong() * h / (sample.toLong() * sample) > CROP_MAX_PIXELS) sample *= 2
+            val part = decodeRegion(uri, Rect(x, y, x + w, y + h), sample)
+            val cropped =
+                if (part != null) {
+                    applyExifOrientation(part, orientation).also { if (it !== part) part.recycle() }
+                } else {
+                    // A format the region decoder can't read: the whole picture, sampled to fit.
+                    cropWhole(uri, bounds, orientation, crop) ?: return@withContext null
+                }
+            // A PNG stays lossless (a screenshot's text stays sharp); a picture with transparency keeps it.
+            val png = cropped.hasAlpha() || mimeType.equals("image/png", ignoreCase = true)
+            val file = File.createTempFile("crop_", if (png) ".png" else ".jpg", appContext.cacheDir)
+            try {
+                file.outputStream().use { out ->
+                    if (!cropped.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, CROP_JPEG_QUALITY, out)) error("could not encode the crop")
+                }
+            } catch (e: Exception) {
+                if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
+                throw e
+            } finally {
+                cropped.recycle()
+            }
+            MediaCompressorResult(Uri.fromFile(file), if (png) "image/png" else "image/jpeg", file.length())
+        }
+
+    /** [rect] of the stored picture at [uri], sampled by [sample]; null when the region decoder can't read it. */
+    private fun decodeRegion(
+        uri: Uri,
+        rect: Rect,
+        sample: Int,
+    ): Bitmap? =
+        try {
+            appContext.contentResolver.openInputStream(uri)?.use { input ->
+                val decoder =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        BitmapRegionDecoder.newInstance(input)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        BitmapRegionDecoder.newInstance(input, false)
+                    } ?: return@use null
+                try {
+                    decoder.decodeRegion(rect, BitmapFactory.Options().apply { inSampleSize = sample })
+                } finally {
+                    decoder.recycle()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("AndroidMediaUploader", "Region decode of $uri failed; decoding all of it", e)
+            null
+        }
+
+    /** [crop] of the whole picture at [uri], decoded sampled to at most CROP_MAX_PIXELS and turned upright. */
+    private fun cropWhole(
+        uri: Uri,
+        bounds: BitmapFactory.Options,
+        orientation: Int,
+        crop: ImageCrop,
+    ): Bitmap? {
+        var sample = 1
+        while (bounds.outWidth.toLong() * bounds.outHeight / (sample.toLong() * sample) > CROP_MAX_PIXELS) sample *= 2
+        val decoded =
+            runCatching {
+                appContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
+            }.getOrNull() ?: return null
+        val upright = applyExifOrientation(decoded, orientation)
+        if (upright !== decoded) decoded.recycle()
+        val (x, y, w, h) = crop.pixels(upright.width, upright.height).toList()
+        val cropped = Bitmap.createBitmap(upright, x, y, w, h)
+        if (cropped !== upright) upright.recycle()
+        return cropped
+    }
+
+    /** [bitmap] as it displays under the EXIF [orientation]. */
+    private fun applyExifOrientation(
+        bitmap: Bitmap,
+        orientation: Int,
+    ): Bitmap {
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(-90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+            else -> return bitmap
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
     /** Pixel size as displayed (EXIF rotation applied) and byte length, without decoding the pixels. */
     private fun imageStats(uri: Uri): ImageFileStats {
         val resolver = appContext.contentResolver
@@ -902,3 +1111,8 @@ class AndroidMediaUploader(
 
 /** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */
 private const val BUZZ_UPLOAD_TOKEN_SECS = 55L
+
+/** The most pixels a crop is decoded at (4096 x 4096, 64 MB as ARGB): more is sampled down. */
+private const val CROP_MAX_PIXELS = 4096L * 4096L
+
+private const val CROP_JPEG_QUALITY = 92

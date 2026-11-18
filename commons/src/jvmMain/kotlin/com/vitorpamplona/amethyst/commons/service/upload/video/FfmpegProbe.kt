@@ -35,7 +35,20 @@ data class ProbeResult(
     val info: VideoInfo,
     val durationSeconds: Double?,
     val isHdr: Boolean,
-)
+    /**
+     * Degrees the player turns the frames (a phone's portrait clip is often stored landscape with
+     * a 90° flag). [info] keeps the stored size; [displaySize] is what viewers see.
+     */
+    val rotation: Int = 0,
+) {
+    /** Width and height as the video plays, after [rotation]: what an `imeta` `dim` describes. */
+    val displaySize: Pair<Int, Int>
+        get() {
+            val w = info.resolution.width
+            val h = info.resolution.height
+            return if (((rotation % 180) + 180) % 180 == 90) h to w else w to h
+        }
+}
 
 /** Parses the JSON of the `ffprobe` call in [FfmpegProbe]. */
 object FfprobeOutputParser {
@@ -52,7 +65,16 @@ object FfprobeOutputParser {
         val framerate = parseFramerate(stream.stringOrNull("avg_frame_rate") ?: "")
         val duration = root.objOrNull("format")?.stringOrNull("duration")?.toDoubleOrNull()
         val isHdr = stream.stringOrNull("color_transfer") in hdrTransfers
-        return ProbeResult(VideoInfo(VideoResolution(width, height), framerate), duration, isHdr)
+        return ProbeResult(VideoInfo(VideoResolution(width, height), framerate), duration, isHdr, rotation(stream))
+    }
+
+    /** The display-matrix rotation (side data), or the older `rotate` tag; 0 when neither is there. */
+    private fun rotation(stream: JsonObject): Int {
+        val sideData =
+            stream.arrayOrNull("side_data_list")?.firstNotNullOfOrNull { entry ->
+                (entry as? JsonObject)?.intOrNull("rotation")
+            }
+        return sideData ?: stream.objOrNull("tags")?.stringOrNull("rotate")?.toIntOrNull() ?: 0
     }
 
     /** [width] times the `num:den` [sampleAspectRatio]; as is when that is missing, `N/A` or `0:1` (unknown). */
@@ -97,6 +119,8 @@ class FfmpegProbe(
                 "stream=width,height,sample_aspect_ratio,avg_frame_rate,color_transfer",
                 "-show_entries",
                 "format=duration",
+                "-show_entries",
+                "stream_side_data=rotation:stream_tags=rotate",
                 "-of",
                 "json",
                 file.absolutePath,

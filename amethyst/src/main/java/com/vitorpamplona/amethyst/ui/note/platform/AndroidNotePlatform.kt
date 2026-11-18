@@ -184,6 +184,7 @@ object AndroidNotePlatform : NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         onError: () -> Unit,
+        local: Boolean,
     ) = AsyncImage(
         model = url,
         contentDescription = contentDescription,

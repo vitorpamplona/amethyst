@@ -31,6 +31,7 @@ import com.davotoula.lightcompressor.video.GifToMp4Converter
 import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
+import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
@@ -81,7 +82,11 @@ class MediaCompressor {
             }
 
             isReencodableImage(contentType) -> {
-                if (isCartridge(uri, contentType, applicationContext)) {
+                if (isAnimatedWebp(uri, contentType, applicationContext)) {
+                    // A re-encode keeps one frame: an animated WebP goes up as it is.
+                    Log.d("MediaCompressor", "Animated WebP detected, uploading it unchanged.")
+                    MediaCompressorResult(uri, contentType, null)
+                } else if (isCartridge(uri, contentType, applicationContext)) {
                     // A game cart lives in the low bits of its pixels: any re-encode destroys it.
                     Log.d("MediaCompressor", "Game cartridge detected, uploading it unchanged.")
                     MediaCompressorResult(uri, contentType, null)
@@ -166,6 +171,30 @@ class MediaCompressor {
 
     companion object {
         private const val MAX_CART_BYTES = 256 * 1024
+
+        /** Whether [uri] is a WebP whose header flags animation; false for anything else or an unreadable file. */
+        fun isAnimatedWebp(
+            uri: Uri,
+            contentType: String?,
+            context: Context,
+        ): Boolean {
+            if (contentType?.contains("webp", ignoreCase = true) != true) return false
+            val header =
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        // Not readNBytes: it needs API 33.
+                        val header = ByteArray(PictureHeaders.WEBP_HEADER_BYTES)
+                        var read = 0
+                        while (read < header.size) {
+                            val n = stream.read(header, read, header.size - read)
+                            if (n < 0) break
+                            read += n
+                        }
+                        header.copyOf(read)
+                    }
+                }.getOrNull() ?: return false
+            return PictureHeaders.isAnimatedWebp(header)
+        }
 
         /** Still images this compressor re-encodes; animated GIFs, SVGs and AVIFs go up as they are. */
         fun isReencodableImage(contentType: String?): Boolean =

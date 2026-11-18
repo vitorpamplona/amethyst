@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.ExifOrientation
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.upload.ImageCompressionTarget
+import com.vitorpamplona.amethyst.commons.service.upload.ImageCropper
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
 import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
@@ -47,17 +48,22 @@ import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressionR
 import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressor
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
+import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
@@ -73,9 +79,13 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.io.File
+import java.io.RandomAccessFile
+import java.lang.ref.SoftReference
 import java.net.URI
 import java.nio.file.Files
 import javax.imageio.ImageIO
@@ -133,7 +143,9 @@ class DesktopMediaUploader(
     private fun isBlossom(server: ServerName) = server.type == ServerType.Blossom || server.type == ServerType.BuzzWorkspace
 
     // Each server it tries goes out on its own client, so a fallback keeps its own route.
-    private fun pipeline(server: ServerName) = BlossomUploadPipeline(clientFor(server.baseUrl), clientFor)
+    private fun pipeline(server: ServerName) = BlossomUploadPipeline(client = clientFor(server.baseUrl), readMetadata = ::readUploadMetadata, clientFor = clientFor)
+
+    private suspend fun readUploadMetadata(file: File) = readDesktopUploadMetadata(file, videoCompressor::displaySize)
 
     // After the selected server, the rest of the Blossom servers the picker offered, as Android tries
     // them (blossomUploadOrder). A Buzz workspace keeps its single target.
@@ -270,7 +282,7 @@ class DesktopMediaUploader(
         stripMetadata: Boolean,
         cipher: AESGCM?,
     ): Payload =
-        BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget()) { ready, metadata ->
+        BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget(), ::readUploadMetadata) { ready, metadata ->
             val plain = withContext(Dispatchers.IO) { ready.readBytes() }
             if (cipher == null) {
                 Payload(plain, metadata.mimeType, metadata, encrypted = false)
@@ -385,6 +397,8 @@ class DesktopMediaUploader(
                 isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, onProgress)
                 // The dialog promised a strip; without an encode only the remux can keep it.
                 isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
+                // Sound keeps its tags (artist, title, a phone's location) unless ffmpeg drops them.
+                isAudio(mime) && stripMetadata -> VideoCompressionResult.Original(videoCompressor.stripAudio(source))
                 else -> return null
             }
         when (result) {
@@ -395,6 +409,8 @@ class DesktopMediaUploader(
     }
 
     private fun isVideo(mime: String?) = mime?.startsWith("video/") == true
+
+    private fun isAudio(mime: String?) = mime?.startsWith("audio/") == true
 
     /** Maps the encoder's 0..1 into the Compressing band of the bar, which ends where the upload stage starts. */
     private fun compressingProgress(
@@ -432,7 +448,7 @@ class DesktopMediaUploader(
             is VideoCompressionResult.Original -> {
                 val stripped = result.stripped
                 if (stripped == null) {
-                    val stripOwed = stripMetadata && isVideo(mime)
+                    val stripOwed = stripMetadata && (isVideo(mime) || isAudio(mime))
                     if (stripOwed && !onStrippingFailed()) return progress.error(UploadError.UPLOAD_CANCELLED)
                     return block(source, false)
                 }
@@ -502,6 +518,95 @@ class DesktopMediaUploader(
         }
     }
 
+    override val videoTrim: Boolean get() = videoCompressor.available
+
+    // GIFs are edited, timed and drawn by the shared GifEditor: no ffmpeg needed.
+    override val gifCrop: Boolean get() = true
+
+    override val gifTrim: Boolean get() = true
+
+    override suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? =
+        withContext(Dispatchers.Default) {
+            val bytes = gifBytes(uri) ?: return@withContext null
+            val active = currentCoroutineContext()
+            val edited = GifEditor.edit(bytes, crop, trim) { active.isActive } ?: return@withContext null
+            val file = AmethystTempDir.createTempFile("amethyst_gif_", ".gif")
+            try {
+                file.writeBytes(edited)
+            } catch (e: Exception) {
+                file.deleteOrWarn(TAG, "failed GIF edit")
+                throw e
+            }
+            MediaCompressorResult(StringMediaUri(file.absolutePath), GIF_CONTENT_TYPE, file.length())
+        }
+
+    override suspend fun videoDurationMs(uri: MediaUri): Long? = gifBytes(uri)?.let { withContext(Dispatchers.Default) { PictureHeaders.gifDurationMs(it) } } ?: videoCompressor.durationMs(fileOf(uri))
+
+    // The last GIF read, kept for the Trim tool's many frame requests on the same file. Soft, so a
+    // short heap can take it back.
+    @Volatile
+    private var lastGif: Pair<String, SoftReference<ByteArray>>? = null
+
+    /** The whole file when [uri] is a GIF of at most [GifEditor.MAX_FILE_BYTES], else null. */
+    private suspend fun gifBytes(uri: MediaUri): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val file = fileOf(uri)
+            val key = "${file.absolutePath}:${file.length()}:${file.lastModified()}"
+            lastGif
+                ?.takeIf { it.first == key }
+                ?.second
+                ?.get()
+                ?.let { return@withContext it }
+            val header = readRange(uri, 0, PictureHeaders.GIF_HEADER_BYTES) ?: return@withContext null
+            if (PictureHeaders.gifSize(header) == null || file.length() > GifEditor.MAX_FILE_BYTES) return@withContext null
+            file.readBytes().also { lastGif = key to SoftReference(it) }
+        }
+
+    override suspend fun trimVideo(
+        uri: MediaUri,
+        mimeType: String?,
+        trim: VideoTrim,
+    ): MediaCompressorResult? {
+        val file = videoCompressor.trim(fileOf(uri), trim.startMs, trim.endMs) ?: return null
+        return MediaCompressorResult(StringMediaUri(file.absolutePath), MP4_CONTENT_TYPE, file.length())
+    }
+
+    override suspend fun videoFrame(
+        uri: MediaUri,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = videoFrames(uri, listOf(atMs), maxEdge).firstOrNull()
+
+    // A GIF is decoded off the UI thread, all asked moments in one pass, and stops when the caller
+    // is cancelled (a drag moved on); a video asks one ffmpeg run for all of them.
+    override suspend fun videoFrames(
+        uri: MediaUri,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> {
+        val gif = gifBytes(uri) ?: return videoCompressor.frames(fileOf(uri), times, maxEdge)
+        return withContext(Dispatchers.Default) {
+            val active = currentCoroutineContext()
+            GifEditor.framesAt(gif, times, maxEdge) { active.isActive }
+        }
+    }
+
+    // ImageIO and Skia read neither: the Studio offers no crop for them here.
+    override fun canCrop(media: SelectedMedia): Boolean = media.canCrop() && media.mimeType?.lowercase()?.let { "heic" in it || "heif" in it } != true
+
+    override suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? {
+        val cropped = ImageCropper.crop(fileOf(uri), crop, fallbackDecode = ::decodeImageWithSkia, keepPng = mimeType.equals("image/png", ignoreCase = true)) ?: return null
+        return MediaCompressorResult(StringMediaUri(cropped.file.absolutePath), cropped.mimeType, cropped.file.length())
+    }
+
     private suspend fun imageStats(file: File): ImageFileStats =
         withContext(Dispatchers.IO) {
             val size =
@@ -556,8 +661,8 @@ class DesktopMediaUploader(
 
     override fun fileSize(uri: MediaUri): Long? = fileOf(uri).takeIf { it.isFile }?.length()
 
-    // A video is remuxed without its tags when ffmpeg is at hand; otherwise the JVM pipeline's
-    // EXIF strip: JPEGs lose their tags, other formats come back as they were.
+    // A video or a sound file is remuxed without its tags when ffmpeg is at hand; otherwise the
+    // JVM pipeline's EXIF strip: JPEGs lose their tags, other formats come back as they were.
     override suspend fun stripMetadata(
         uri: MediaUri,
         mimeType: String?,
@@ -567,9 +672,29 @@ class DesktopMediaUploader(
         if (isVideo(mime) && videoCompressor.available) {
             return videoCompressor.strip(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
         }
+        if (isAudio(mime) && videoCompressor.available) {
+            return videoCompressor.stripAudio(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
+        }
         val stripped = withContext(Dispatchers.IO) { MediaCompressor.stripExif(source) }
         return if (stripped == source) uri else StringMediaUri(stripped.absolutePath)
     }
+
+    override suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                RandomAccessFile(fileOf(uri), "r").use { file ->
+                    if (offset >= file.length()) return@use ByteArray(0)
+                    file.seek(offset)
+                    val out = ByteArray(minOf(length.toLong(), file.length() - offset).toInt())
+                    file.readFully(out)
+                    out
+                }
+            }.getOrNull()
+        }
 
     override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { fileOf(uri).takeIf { it.isFile }?.readBytes() }
 
@@ -586,6 +711,7 @@ class DesktopMediaUploader(
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
         const val OCTET_STREAM = "application/octet-stream"
         const val MP4_CONTENT_TYPE = "video/mp4"
+        const val GIF_CONTENT_TYPE = "image/gif"
 
         // Compression progress climbs from the floor to the level where the upload stage starts,
         // so the bar never jumps backwards.
@@ -595,6 +721,23 @@ class DesktopMediaUploader(
         // Where the bar stands once a Blossom upload has sent its last byte; the server's reply finishes it.
         const val BLOSSOM_SENT_CEILING = 0.95
     }
+}
+
+/**
+ * What the desktop reports about the bytes it uploads: ImageIO's reading, Skia for the images
+ * ImageIO cannot decode (WebP, ...), and [displaySize] (ffprobe, after any rotation flag) for a
+ * video or an image neither decodes (AVIF). Without these an `imeta` lost its `dim` for every
+ * video and for a WebP or AVIF sent as the original.
+ */
+internal suspend fun readDesktopUploadMetadata(
+    file: File,
+    displaySize: suspend (File) -> Pair<Int, Int>?,
+): MediaMetadata {
+    val mime = MediaMetadataReader.guessMimeType(file)
+    val read = withContext(Dispatchers.IO) { MediaMetadataReader.compute(file.readBytes(), mime, ::decodeImageWithSkia) }
+    if (read.width != null || !(mime.startsWith("video/") || mime.startsWith("image/"))) return read
+    val (width, height) = displaySize(file) ?: return read
+    return read.copy(width = width, height = height)
 }
 
 /** Skia decodes what ImageIO cannot, WebP above all: the same decoder the previews draw with. */

@@ -91,13 +91,18 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.InvoiceRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.RefocusOn
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.rememberMediaMarkerField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -141,10 +146,9 @@ fun EditPostView(
                 PostingTopBar(
                     isActive = postViewModel::canPost,
                     onPost = {
-                        postViewModel.sendPost()
-                        scope.launch {
-                            delay(100)
-                            onClose()
+                        accountViewModel.launchSigner {
+                            // False when an attached file failed to upload: nothing was sent, so stay.
+                            if (postViewModel.sendPostSync()) onUiThread { onClose() }
                         }
                     },
                     onCancel = {
@@ -207,7 +211,7 @@ fun EditPostView(
                                     }
                                 }
 
-                                MessageField(postViewModel)
+                                MessageField(postViewModel, accountViewModel)
 
                                 val myUrlPreview = postViewModel.urlPreview
                                 if (myUrlPreview != null) {
@@ -264,25 +268,12 @@ fun EditPostView(
                                     }
                                 }
 
-                                postViewModel.multiOrchestrator?.let {
-                                    Row(
-                                        verticalAlignment = CenterVertically,
-                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                                    ) {
-                                        ImageVideoDescription(
-                                            it,
-                                            accountViewModel.account.settings.defaultFileServer,
-                                            isUploading = postViewModel.mediaUploadTracker.isUploading,
-                                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                                            },
-                                            onDelete = postViewModel::deleteMediaToUpload,
-                                            onCancel = { postViewModel.multiOrchestrator = null },
-                                            accountViewModel = accountViewModel,
-                                        )
-                                    }
-                                }
+                                AttachedMediaFailureBanner(
+                                    items = postViewModel.media.inOrder(),
+                                    modifier = Modifier.padding(horizontal = Size10dp),
+                                )
+
+                                AttachedMediaStudioDialogs(postViewModel.media, postViewModel.mediaUploadTracker.isUploading, accountViewModel)
 
                                 if (postViewModel.wantsInvoice) {
                                     val user = postViewModel.account.userProfile()
@@ -374,9 +365,18 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
 }
 
 @Composable
-private fun MessageField(postViewModel: EditPostViewModel) {
+private fun MessageField(
+    postViewModel: EditPostViewModel,
+    accountViewModel: AccountViewModel,
+) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    RefocusOn(postViewModel.media.attachCount.takeIf { it > 0 }, focusRequester)
+    val markers =
+        rememberMediaMarkerField(
+            postViewModel.message,
+            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media, accountViewModel.mediaUploader) { postViewModel.mediaUploadTracker.isUploading },
+        )
 
     LaunchedEffect(Unit) {
         launch {
@@ -390,7 +390,9 @@ private fun MessageField(postViewModel: EditPostViewModel) {
         onTextChanged = { postViewModel.onMessageChanged() },
         inputTransformation = MentionPreservingInputTransformation,
         spellCheck = true,
-        outputTransformation = rememberUrlUserTagOutputTransformation(),
+        outputTransformation = markers.outputTransformation,
+        cursorBrush = markers.cursorBrush,
+        textOverlay = markers.textOverlay,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,

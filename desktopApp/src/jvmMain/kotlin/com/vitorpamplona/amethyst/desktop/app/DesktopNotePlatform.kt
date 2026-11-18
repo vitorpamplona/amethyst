@@ -451,7 +451,8 @@ object DesktopNotePlatform : NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         onError: () -> Unit,
-    ) = AnimatedGifImage(url = url, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale, onError = onError)
+        local: Boolean,
+    ) = AnimatedGifImage(url = url, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale, onError = onError, local = local)
 
     @Composable
     override fun VideoView(

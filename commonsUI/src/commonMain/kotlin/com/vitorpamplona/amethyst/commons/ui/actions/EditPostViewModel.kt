@@ -33,25 +33,18 @@ import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -78,7 +71,16 @@ open class EditPostViewModel : ViewModel() {
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
     // Images and Videos
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    /** The media attached to [message]: picked, in the text as markers, uploaded on Post. */
+    val media = AttachedMediaState(message)
+
+    /** The files just picked, open in the media studio. */
+    var multiOrchestrator: MultiOrchestrator?
+        get() = media.picking
+        set(value) {
+            media.picking = value
+        }
 
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
@@ -97,7 +99,7 @@ open class EditPostViewModel : ViewModel() {
         versionLookingAt: Note?,
     ) {
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
-        multiOrchestrator = null
+        media.clear()
 
         message.setTextAndPlaceCursorAtEnd(versionLookingAt?.event?.content ?: edit.event?.content ?: "")
         urlPreview = findUrlInMessage()
@@ -112,6 +114,26 @@ open class EditPostViewModel : ViewModel() {
         accountViewModel.launchSigner(::innerSendPost)
     }
 
+    /**
+     * Uploads the attached files, then sends the edit. False when an upload failed: nothing was
+     * sent, the text and files are as they were, and the failed file says why; Post tries again.
+     * An edit carries no tags (they are never replaced), so only the links go in.
+     */
+    suspend fun sendPostSync(): Boolean {
+        val uploaded =
+            media.uploadAll(
+                defaultServer = account.settings.defaultFileServer,
+                account = account,
+                uploader = accountViewModel.mediaUploader,
+                tracker = mediaUploadTracker,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                forcedSigner = null,
+            ) { result, _ -> result.url }
+        if (!uploaded) return false
+        innerSendPost()
+        return true
+    }
+
     suspend fun innerSendPost() {
         val notify =
             if (editedFromNote?.author?.pubkeyHex == account.userProfile().pubkeyHex) {
@@ -122,7 +144,7 @@ open class EditPostViewModel : ViewModel() {
             }
 
         account.sendEdit(
-            message = message.text.toString(),
+            message = AttachedMediaState.stripMarkers(message.text.toString()),
             originalNote = editedFromNote!!,
             notify = notify,
             summary = subject.text.ifBlank { null },
@@ -151,81 +173,13 @@ open class EditPostViewModel : ViewModel() {
         }
     }
 
-    fun upload(
-        alt: String?,
-        sensitiveContent: Boolean,
-        mediaQuality: Int,
-        isPrivate: Boolean = false,
-        server: ServerName,
-        onError: (String, String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-    }
-
-    fun uploadUnsafe(
-        alt: String?,
-        sensitiveContent: Boolean,
-        mediaQuality: Int,
-        isPrivate: Boolean = false,
-        server: ServerName,
-        onError: (String, String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        accountViewModel.launchSigner {
-            val myAccount = account
-            val myMultiOrchestrator = multiOrchestrator ?: return@launchSigner
-
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-
-            try {
-                val results =
-                    myMultiOrchestrator.upload(
-                        alt,
-                        if (sensitiveContent) "" else null,
-                        CompressorQuality.fromSlider(mediaQuality),
-                        server,
-                        myAccount,
-                        uploader,
-                        useH265,
-                        stripMetadata,
-                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                        convertGifToMp4 = convertGifToMp4,
-                    )
-
-                if (results.allGood) {
-                    val urls =
-                        // An edit carries no tags (they are never replaced), so only the links go in.
-                        results.successful.mapNotNull { (it.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.url }
-
-                    onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
-                    urlPreview = findUrlInMessage()
-
-                    this@EditPostViewModel.multiOrchestrator = null
-                } else {
-                    val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-
-                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-                }
-            } finally {
-                mediaUploadTracker.finishUpload()
-            }
-        }
-    }
-
     open fun cancel() {
         message.setTextAndPlaceCursorAtEnd("")
         subject = TextFieldValue("")
 
         editedFromNote = null
 
-        multiOrchestrator = null
+        media.clear()
         urlPreview = null
         mediaUploadTracker.finishUpload()
 
@@ -236,7 +190,7 @@ open class EditPostViewModel : ViewModel() {
     }
 
     open fun findUrlInMessage(): String? =
-        message.text.toString().split('\n').firstNotNullOfOrNull { paragraph ->
+        AttachedMediaState.stripMarkers(message.text.toString()).split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 RichTextParser.isValidURL(word) || RichTextParser.isUrlWithoutScheme(word)
             }
@@ -269,14 +223,7 @@ open class EditPostViewModel : ViewModel() {
 
     fun canPost() = message.text.isNotBlank() && !mediaUploadTracker.isUploading && !wantsInvoice && multiOrchestrator == null
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
-    }
+    fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        val orchestrator = multiOrchestrator ?: return
-        orchestrator.remove(selected)
-        // An empty orchestrator still renders the gallery, which reads its first item.
-        if (orchestrator.size() == 0) multiOrchestrator = null
-    }
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
 }

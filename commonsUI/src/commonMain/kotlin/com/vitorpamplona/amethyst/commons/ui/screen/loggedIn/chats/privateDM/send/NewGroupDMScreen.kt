@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawing_open
+import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
@@ -107,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.Expiration
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.NewPostInvoiceRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinkedImageMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
@@ -114,7 +116,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerPostOptionTools
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
@@ -123,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.sen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.EncryptedUploadErrorDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.RecipientMissingRelaysWarning
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -283,24 +285,24 @@ fun GroupDMScreenContent(
                 }
 
                 postViewModel.uploadState?.let { uploading ->
-                    uploading.multiOrchestrator?.let { selectedFiles ->
-                        ImageVideoDescription(
-                            selectedFiles,
-                            accountViewModel.account.settings.defaultFileServer,
-                            isUploading = uploading.mediaUploadTracker.isUploading,
-                            onAdd = { _, server, _, _, _, _, _ ->
-                                postViewModel.uploadAndHold(
-                                    accountViewModel.toastManager::toast,
-                                    accountViewModel.mediaUploader,
-                                    onceUploaded = { },
-                                )
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            },
-                            onDelete = { postViewModel.uploadState?.deleteMediaToUpload(it) },
-                            onCancel = uploading::reset,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
+                    // Attached to the message, which goes out with Send: each file keeps its own choices.
+                    ChatFileUploadDialog(
+                        state = uploading,
+                        title = {},
+                        upload = {
+                            postViewModel.uploadAndHold(
+                                accountViewModel.toastManager::toast,
+                                accountViewModel.mediaUploader,
+                                onceUploaded = { },
+                            )
+                            if (uploading.lockedServer == null) accountViewModel.account.settings.changeDefaultFileServer(uploading.selectedServer)
+                        },
+                        onCancel = {},
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        isNip17 = true,
+                        confirmLabel = Res.string.media_studio_add,
+                    )
                 }
 
                 postViewModel.encryptedUploadErrorTitle?.let { title ->
@@ -347,6 +349,8 @@ fun MessageFieldRow(
     accountViewModel: AccountViewModel,
     requestFocus: Boolean = false,
     onContentReceived: ((MediaUri, String?) -> Unit)? = null,
+    mediaBlocks: MediaBlocks? = null,
+    refocusKey: Any? = null,
 ) {
     Row {
         BaseUserPicture(
@@ -354,7 +358,7 @@ fun MessageFieldRow(
             Size35dp,
             accountViewModel,
         )
-        MessageField(Res.string.write_a_message, postViewModel, requestFocus, onContentReceived)
+        MessageField(Res.string.write_a_message, postViewModel, requestFocus, onContentReceived, mediaBlocks = mediaBlocks, refocusKey = refocusKey)
     }
 }
 

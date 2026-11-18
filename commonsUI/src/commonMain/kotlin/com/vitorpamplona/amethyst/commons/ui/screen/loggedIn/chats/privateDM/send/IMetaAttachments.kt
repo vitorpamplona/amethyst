@@ -170,7 +170,9 @@ class IMetaAttachments {
                 hash(result.fileHeader.hash)
                 size(result.fileHeader.size)
                 result.fileHeader.mimeType?.let { mimeType(it) }
-                result.fileHeader.dim?.let { dims(it) }
+                result.fileHeader.dim
+                    ?.takeIf { it.hasSize() }
+                    ?.let { dims(it) }
                 result.fileHeader.blurHash?.let { blurhash(it.blurhash) }
                 result.fileHeader.thumbHash?.let { thumbhash(it.thumbhash) }
                 result.magnet?.let { magnet(it) }

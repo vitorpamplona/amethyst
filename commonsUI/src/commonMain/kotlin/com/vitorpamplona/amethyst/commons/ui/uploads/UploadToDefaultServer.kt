@@ -93,6 +93,8 @@ suspend fun uploadToDefaultServerWithMetadata(
         is UploadingState.Finished -> {
             val uploaded = state.result
             if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                // A crop made for this field is ours to remove once it is up.
+                if (media.temporary) uploader.discardTempFile(media.uri)
                 uploaded
             } else {
                 onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading))

@@ -116,12 +116,14 @@ fun AnimatedImage(
     contentScale: ContentScale,
     modifier: Modifier,
     onError: () -> Unit,
+    local: Boolean = false,
 ) = LocalNotePlatform.current.AnimatedImage(
     url = url,
     contentDescription = contentDescription,
     contentScale = contentScale,
     modifier = modifier,
     onError = onError,
+    local = local,
 )
 
 @Composable

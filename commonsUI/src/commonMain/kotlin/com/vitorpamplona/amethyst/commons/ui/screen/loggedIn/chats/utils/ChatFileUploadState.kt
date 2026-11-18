@@ -22,13 +22,12 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -68,15 +67,13 @@ class ChatFileUploadState(
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
-    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
-
     var stripMetadata by mutableStateOf(defaultStripMetadata)
     var encryptFiles by mutableStateOf(true)
 
     fun load(uris: ImmutableList<SelectedMedia>) {
         reset()
-        this.multiOrchestrator = MultiOrchestrator(uris)
+        val strip = stripMetadata
+        this.multiOrchestrator = MultiOrchestrator(uris) { MediaUploadOptions.defaultFor(it, stripMetadata = strip) }
     }
 
     fun isImage(

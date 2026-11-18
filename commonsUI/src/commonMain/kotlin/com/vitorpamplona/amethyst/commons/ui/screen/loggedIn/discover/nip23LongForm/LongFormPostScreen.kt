@@ -66,6 +66,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -105,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.resources.your_article_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
@@ -120,13 +121,18 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.Watc
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.RefocusOn
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.rememberMediaMarkerField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerMediaTools
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerPostOptionTools
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolsFormStartPadding
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
@@ -185,8 +191,8 @@ fun LongFormPostScreen(
                 isActive = postViewModel::canPost,
                 onPost = {
                     accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
+                        // False when an attached file failed to upload: nothing was posted, so stay.
+                        if (postViewModel.sendPostSync()) nav.popBack()
                     }
                 },
                 onCancel = {
@@ -390,7 +396,7 @@ private fun MarkdownPostScreenBody(
                                 .padding(Size10dp),
                     ) {
                         LocalRichTextPlatform.current.Markdown(
-                            content = postViewModel.message.text.toString(),
+                            content = AttachedMediaState.stripMarkers(postViewModel.message.text.toString()),
                             tags = EmptyTagList,
                             canPreview = true,
                             quotesLeft = 1,
@@ -401,7 +407,14 @@ private fun MarkdownPostScreenBody(
                         )
                     }
                 } else {
-                    // Markdown editor
+                    // Markdown editor: the attached media drawn where it goes in the article.
+                    val bodyFocus = remember { FocusRequester() }
+                    RefocusOn(postViewModel.media.attachCount.takeIf { it > 0 }, bodyFocus)
+                    val markers =
+                        rememberMediaMarkerField(
+                            postViewModel.message,
+                            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media, accountViewModel.mediaUploader) { postViewModel.mediaUploadTracker.isUploading },
+                        )
                     ThinPaddingTextField(
                         state = postViewModel.message,
                         onTextChanged = postViewModel::onMessageChanged,
@@ -412,7 +425,8 @@ private fun MarkdownPostScreenBody(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = Size10dp, vertical = Size5dp),
+                                .padding(horizontal = Size10dp, vertical = Size5dp)
+                                .focusRequester(bodyFocus),
                         placeholder = {
                             Text(
                                 text = stringRes(Res.string.start_writing_article),
@@ -431,7 +445,9 @@ private fun MarkdownPostScreenBody(
                                 unfocusedBorderColor = Color.Transparent,
                             ),
                         spellCheck = true,
-                        outputTransformation = rememberUrlUserTagOutputTransformation(),
+                        outputTransformation = markers.outputTransformation,
+                        cursorBrush = markers.cursorBrush,
+                        textOverlay = markers.textOverlay,
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 capitalization = KeyboardCapitalization.Sentences,
@@ -488,25 +504,12 @@ private fun MarkdownPostScreenBody(
                 }
 
                 // Image upload section
-                postViewModel.multiOrchestrator?.let {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        ImageVideoDescription(
-                            it,
-                            accountViewModel.account.settings.defaultFileServer,
-                            isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            },
-                            onDelete = postViewModel::deleteMediaToUpload,
-                            onCancel = { postViewModel.multiOrchestrator = null },
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                }
+                AttachedMediaFailureBanner(
+                    items = postViewModel.media.inOrder(),
+                    modifier = Modifier.padding(horizontal = Size10dp),
+                )
+
+                AttachedMediaStudioDialogs(postViewModel.media, postViewModel.mediaUploadTracker.isUploading, accountViewModel)
 
                 if (postViewModel.wantsInvoice) {
                     postViewModel.lnAddress()?.let { lud16 ->

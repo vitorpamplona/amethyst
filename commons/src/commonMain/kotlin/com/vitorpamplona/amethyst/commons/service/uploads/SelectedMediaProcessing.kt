@@ -20,16 +20,106 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlin.concurrent.Volatile
 
 class SelectedMediaProcessing(
-    val media: SelectedMedia,
+    media: SelectedMedia,
     val orchestrator: UploadOrchestrator = UploadOrchestrator(),
+    options: MediaUploadOptions = MediaUploadOptions.defaultFor(media),
 ) {
+    /**
+     * The picked file, labelled by what it holds once [checkType] has looked: a voice memo saved as
+     * `.mp4` is picked as `video/mp4` and becomes `audio/mp4`. Snapshot state, so the Studio's tools
+     * and the composer's card follow.
+     */
+    var media: SelectedMedia by mutableStateOf(media)
+        private set
+
+    @Volatile
+    private var typeChecked = false
+
+    /**
+     * Relabels [media] by its content, once: an MP4-family file whose tracks are all sound is audio,
+     * a WebP that moves is [SelectedMedia.animated], and a moving picture's header gives [displayAspectRatio].
+     * The Studio runs it as it opens, and every upload runs it first, so nothing is sent as a video
+     * that has no picture.
+     */
+    suspend fun checkType(uploader: MediaUploader) {
+        if (typeChecked) return
+        val refined = uploader.refineMediaType(media)
+        typeChecked = true
+        if (refined.mimeType != media.mimeType || refined.animated != media.animated) media = refined
+        // A moving picture is drawn by a player that reports no size: its header gives the card its shape.
+        if (displayAspectRatio == null && media.isAnimated()) {
+            val size =
+                if (media.isGif()) {
+                    uploader.readRange(media.uri, 0, PictureHeaders.GIF_HEADER_BYTES)?.let(PictureHeaders::gifSize)
+                } else {
+                    uploader.readRange(media.uri, 0, PictureHeaders.WEBP_HEADER_BYTES)?.let(PictureHeaders::webpCanvasSize)
+                }
+            size?.let { (w, h) -> displayAspectRatio = w.toFloat() / h }
+        }
+    }
+
+    /** This file's own upload options, edited in the media studio; snapshot state so its UI follows. */
+    var options: MediaUploadOptions by mutableStateOf(options)
+
+    /** Width over height as the file displays, once its picture (or a video's frame) has loaded; null until then. */
+    var displayAspectRatio: Float? by mutableStateOf(null)
+
+    /** Width over height as it will be sent: [displayAspectRatio] after the [MediaUploadOptions.crop]; null until the picture loads. */
+    val sentAspectRatio: Float?
+        get() = displayAspectRatio?.let { aspect -> options.crop?.let { aspect * it.width / it.height } ?: aspect }
+
+    /**
+     * What [MultiOrchestrator.uploadEach] last sent for this file in plaintext, kept so a retry after
+     * another file failed doesn't send this one again. Dropped when its options or the server change.
+     */
+    @Volatile
+    internal var sentPlain: MultiOrchestrator.SentPlain? = null
+
     /**
      * The encrypted blob [MultiOrchestrator.uploadEncrypted] last sent for this file, with its cipher,
      * kept so a retry reuses it instead of sealing the file again. Dropped when the file is sent again.
      */
     @Volatile
     internal var sentEncrypted: MultiOrchestrator.SentEncrypted? = null
+
+    /**
+     * Runs [send] on the file to upload: a temp copy holding [crop] of a picture, [trim] of a
+     * video, or either of a GIF (still a GIF) when there is one, deleted once [send] returns; else
+     * the picked file. [checkType] runs first, so a voice memo goes up as audio even when no Studio
+     * looked at it. An edit that cannot be written ends in [onFailed] with
+     * [UploadError.CROP_FAILED] or [UploadError.TRIM_FAILED] instead of sending all of it.
+     *
+     * Every upload of a Studio file goes through here: [MultiOrchestrator] for most screens, and the
+     * chats that run their own upload (Marmot, cordn).
+     */
+    suspend fun <T> withEdits(
+        uploader: MediaUploader,
+        crop: ImageCrop? = options.crop,
+        trim: VideoTrim? = options.trim,
+        onFailed: (UploadError) -> T,
+        send: suspend (MediaUri, String?) -> T,
+    ): T {
+        checkType(uploader)
+        val picked = media
+        val edited =
+            when {
+                // An edited GIF stays a GIF; "Convert GIF to MP4" still applies to it afterwards.
+                picked.isGif() && (crop != null || trim != null) ->
+                    uploader.editGif(picked.uri, crop, trim) ?: return onFailed(if (crop != null) UploadError.CROP_FAILED else UploadError.TRIM_FAILED)
+                crop != null && picked.canCrop() -> uploader.cropImage(picked.uri, picked.mimeType, crop) ?: return onFailed(UploadError.CROP_FAILED)
+                trim != null && picked.isVideo() == true -> uploader.trimVideo(picked.uri, picked.mimeType, trim) ?: return onFailed(UploadError.TRIM_FAILED)
+                else -> return send(picked.uri, picked.mimeType)
+            }
+        return try {
+            send(edited.uri, edited.contentType)
+        } finally {
+            uploader.discardTempFile(edited.uri)
+        }
+    }
 }

@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -219,6 +220,8 @@ fun NewUserMetadataScreen(
                             isUploading = postViewModel.isUploadingImageForPicture,
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
+                            crop = ImageCropShape.Avatar,
+                            uploader = accountViewModel.mediaUploader,
                         ) {
                             postViewModel.uploadForPicture(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
@@ -244,6 +247,8 @@ fun NewUserMetadataScreen(
                             isUploading = postViewModel.isUploadingImageForBanner,
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
+                            crop = ImageCropShape.Banner,
+                            uploader = accountViewModel.mediaUploader,
                         ) {
                             postViewModel.uploadForBanner(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }

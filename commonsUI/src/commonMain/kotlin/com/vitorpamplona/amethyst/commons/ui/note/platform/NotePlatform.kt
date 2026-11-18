@@ -124,6 +124,8 @@ interface NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         onError: () -> Unit,
+        /** [url] is a file the user picked on this device (the media Studio), read from disk; never set for content from the network. */
+        local: Boolean,
     ) {}
 
     @Composable

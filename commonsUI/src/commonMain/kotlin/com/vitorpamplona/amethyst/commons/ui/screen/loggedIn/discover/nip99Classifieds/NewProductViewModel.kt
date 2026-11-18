@@ -48,17 +48,13 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
@@ -71,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -426,81 +421,53 @@ open class NewProductViewModel :
         }
     }
 
-    fun upload(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
+    /**
+     * The media studio's Add: uploads every picked file with its own options to [server]. Photos
+     * join the listing's images; other files are linked in the description. When any fails, the
+     * studio stays open with the reason on the file, and Add sends only what failed.
+     */
+    fun uploadFromStudio(server: ServerName) {
         viewModelScope.launch(Dispatchers.IO) {
-            val myAccount = account
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+            val batch = multiOrchestrator ?: return@launch
+            mediaUploadTracker.startUpload(batch.hasNonMedia())
+            try {
+                val results =
+                    batch.uploadEach(
+                        server,
+                        account,
+                        accountViewModel.mediaUploader,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    )
+                if (!results.allGood) return@launch
 
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-
-            val results =
-                myMultiOrchestrator.upload(
-                    alt,
-                    contentWarningReason,
-                    CompressorQuality.fromSlider(mediaQuality),
-                    server,
-                    myAccount,
-                    uploader,
-                    useH265 = useH265,
-                    stripMetadata = stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                    convertGifToMp4 = convertGifToMp4,
-                )
-
-            if (results.allGood) {
-                val urls =
-                    results.successful.mapNotNull { finished ->
-                        val uploaded = finished.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            if (uploaded.fileHeader.mimeType
-                                    ?.startsWith("image") == true
-                            ) {
-                                productImages = productImages +
-                                    ProductImageMeta(
-                                        url = uploaded.url,
-                                        mimeType = uploaded.fileHeader.mimeType,
-                                        blurhash =
-                                            uploaded.fileHeader.blurHash
-                                                ?.blurhash,
-                                        dimension = uploaded.fileHeader.dim,
-                                        alt = alt,
-                                        hash = uploaded.fileHeader.hash,
-                                        size = uploaded.fileHeader.size,
-                                        thumbhash =
-                                            uploaded.fileHeader.thumbHash
-                                                ?.thumbhash,
-                                    )
-                            } else {
-                                iMetaDescription.add(uploaded, alt, contentWarningReason)
-
-                                uploaded.url
-                            }
-                        } else {
+                val links =
+                    results.successful.mapNotNull { done ->
+                        val uploaded = done.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult ?: return@mapNotNull null
+                        val options = done.item.options
+                        if (uploaded.fileHeader.mimeType?.startsWith("image") == true) {
+                            productImages = productImages +
+                                ProductImageMeta(
+                                    url = uploaded.url,
+                                    mimeType = uploaded.fileHeader.mimeType,
+                                    blurhash = uploaded.fileHeader.blurHash?.blurhash,
+                                    dimension = uploaded.fileHeader.dim,
+                                    alt = options.altOrNull,
+                                    hash = uploaded.fileHeader.hash,
+                                    size = uploaded.fileHeader.size,
+                                    thumbhash = uploaded.fileHeader.thumbHash?.thumbhash,
+                                )
                             null
+                        } else {
+                            iMetaDescription.add(uploaded, options.altOrNull, options.contentWarningReason)
+                            uploaded.url
                         }
                     }
-
-                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
+                if (links.isNotEmpty()) onUiThread { message.insertUrlAtCursor(links.joinToString(" ")) }
                 urlPreviews.update(message.text.toString())
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                if (multiOrchestrator === batch) multiOrchestrator = null
+            } finally {
+                mediaUploadTracker.finishUpload()
             }
-
-            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -640,7 +607,8 @@ open class NewProductViewModel :
     }
 
     override fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
+        val strip = account.settings.stripLocationOnUpload
+        multiOrchestrator = MultiOrchestrator(uris) { MediaUploadOptions.defaultFor(it, stripMetadata = strip) }
     }
 
     override fun locationFlow(): StateFlow<LocationResult> {

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,20 +31,15 @@ import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -52,18 +48,8 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.issue.notify
 import com.vitorpamplona.quartz.nip34Git.issue.repository
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
-import com.vitorpamplona.quartz.nip94FileMetadata.dims
-import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.magnet
-import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
-import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
-import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
-import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -80,10 +66,18 @@ class GitNewIssueViewModel : ViewModel() {
     private lateinit var account: Account
 
     var subject by mutableStateOf("")
-    var body by mutableStateOf("")
+    val body = TextFieldState()
     var labels by mutableStateOf("")
 
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+    /** The media attached to [body]: picked, in the text as markers, uploaded when the issue is created. */
+    val media = AttachedMediaState(body)
+
+    /** The files just picked, open in the media studio. */
+    var multiOrchestrator: MultiOrchestrator?
+        get() = media.picking
+        set(value) {
+            media.picking = value
+        }
     val mediaUploadTracker = MediaUploadTracker()
     val strippingFailureConfirmation = SuspendableConfirmation()
 
@@ -93,18 +87,13 @@ class GitNewIssueViewModel : ViewModel() {
         this.account = account
     }
 
-    fun canSend() = subject.isNotBlank() && !mediaUploadTracker.isUploading
+    fun canSend() = subject.isNotBlank() && !mediaUploadTracker.isUploading && media.picking == null
 
     fun selectMedia(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = if (uris.isNotEmpty()) MultiOrchestrator(uris) else null
+        if (uris.isNotEmpty()) media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
     }
 
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        val orchestrator = multiOrchestrator ?: return
-        orchestrator.remove(selected)
-        // An empty orchestrator still renders the gallery, which reads its first item.
-        if (orchestrator.size() == 0) multiOrchestrator = null
-    }
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
 
     /** Uploads a hand drawing ([uploadDrawing]) and links its GIF at the end of the body. */
     fun uploadDrawing(
@@ -120,104 +109,47 @@ class GitNewIssueViewModel : ViewModel() {
         }
     }
 
-    fun upload(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-    }
-
-    private fun uploadUnsafe(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val orchestrator = multiOrchestrator ?: return@launch
-
-            mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
-
-            val results =
-                orchestrator.upload(
-                    alt,
-                    contentWarningReason,
-                    CompressorQuality.fromSlider(mediaQuality),
-                    server,
-                    account,
-                    uploader,
-                    useH265 = useH265,
-                    stripMetadata = stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                    convertGifToMp4 = convertGifToMp4,
+    /** A drawing's link goes on a line of its own at the end. */
+    private suspend fun appendToBody(links: String) {
+        onUiThread {
+            body.edit {
+                val text = asCharSequence()
+                append(
+                    when {
+                        text.isBlank() -> links
+                        text.endsWith("\n") -> links
+                        else -> "\n" + links
+                    },
                 )
-
-            if (results.allGood) {
-                val links =
-                    results.successful.mapNotNull { state ->
-                        when (val uploaded = state.result) {
-                            is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                                val iMeta =
-                                    IMetaTagBuilder(uploaded.url)
-                                        .apply {
-                                            hash(uploaded.fileHeader.hash)
-                                            size(uploaded.fileHeader.size)
-                                            uploaded.fileHeader.mimeType?.let { mimeType(it) }
-                                            uploaded.fileHeader.dim?.let { dims(it) }
-                                            uploaded.fileHeader.blurHash?.let { blurhash(it.blurhash) }
-                                            uploaded.fileHeader.thumbHash?.let { thumbhash(it.thumbhash) }
-                                            uploaded.magnet?.let { magnet(it) }
-                                            uploaded.uploadedHash?.let { originalHash(it) }
-                                            alt?.let { alt(it) }
-                                            contentWarningReason?.let { sensitiveContent(it) }
-                                        }.build()
-
-                                iMetaAttachments.replace(iMeta.url, iMeta)
-                                uploaded.url
-                            }
-                        }
-                    }
-
-                if (links.isNotEmpty()) appendToBody(links.joinToString(" "))
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
-
-            mediaUploadTracker.finishUpload()
         }
     }
 
-    /** A plain text field has no cursor to insert at, so new links go on a line of their own at the end. */
-    private fun appendToBody(links: String) {
-        body =
-            when {
-                body.isBlank() -> links
-                body.endsWith("\n") -> body + links
-                else -> body + "\n" + links
-            }
-    }
-
     /**
-     * Signs and broadcasts the issue for [repoNote] (run it through `launchSigner`, which outlives
-     * this screen), with an `imeta` tag for each uploaded file still linked from the body.
+     * Uploads the attached files, then signs and broadcasts the issue for [repoNote] (run it through
+     * `launchSigner`, which outlives this screen), with an `imeta` tag for each uploaded file still
+     * linked from the body. False when an upload failed: nothing was sent, and the failed file
+     * says why; Create tries again.
      */
-    suspend fun send(repoNote: AddressableNote) {
-        val repositoryHint = repoNote.toEventHint<GitRepositoryEvent>() ?: return
-        val body = body.trim()
+    suspend fun send(
+        repoNote: AddressableNote,
+        uploader: MediaUploader,
+    ): Boolean {
+        val repositoryHint = repoNote.toEventHint<GitRepositoryEvent>() ?: return true
+        val uploaded =
+            media.uploadAll(
+                defaultServer = account.settings.defaultFileServer,
+                account = account,
+                uploader = uploader,
+                tracker = mediaUploadTracker,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                forcedSigner = null,
+            ) { result, options ->
+                iMetaAttachments.add(result, options.altOrNull, options.contentWarningReason)
+                result.url
+            }
+        if (!uploaded) return false
+        val body = AttachedMediaState.stripMarkers(body.text.toString()).trim()
 
         val usedIMetas = iMetaAttachments.filterIsIn(findURLs(body).toSet())
 
@@ -235,6 +167,7 @@ class GitNewIssueViewModel : ViewModel() {
                 if (usedIMetas.isNotEmpty()) imetas(usedIMetas)
             }
         account.signAndComputeBroadcast(template)
+        return true
     }
 }
 
