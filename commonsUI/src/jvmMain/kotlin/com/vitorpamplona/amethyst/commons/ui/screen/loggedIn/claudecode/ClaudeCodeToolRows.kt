@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -186,7 +186,6 @@ internal fun ToolCallRow(
             running = (turnRunning && !call.isDone) || call.subagentRunning,
             error = call.isError,
             expanded = expanded,
-            monospace = true,
             onClick = { expanded = !expanded },
         )
         AnimatedVisibility(expanded) {
@@ -237,10 +236,11 @@ private fun SubagentBody(
     val uriHandler = LocalUriHandler.current
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
     val style = rememberChatMarkdownStyle()
+    val codeChips = rememberChatCodeChips()
     call.subagent.forEach { item ->
         when (item) {
             is ChatItem.ToolCall -> ToolCallRow(item, cwd, running)
-            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall)
+            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall, blockComposer = codeChips)
             else -> {}
         }
     }
@@ -272,7 +272,6 @@ internal fun ToolLine(
     running: Boolean,
     error: Boolean,
     expanded: Boolean,
-    monospace: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -284,7 +283,8 @@ internal fun ToolLine(
             .padding(top = 4.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText
+        // Dark enough to read as text (about 5:1 on the surface), still a step under the reply.
+        val tint = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface65
         Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
             if (running) {
                 CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
@@ -295,13 +295,14 @@ internal fun ToolLine(
         Spacer(Modifier.width(10.dp))
         Text(
             text,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
+            style = MaterialTheme.typography.bodyMedium,
             color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            // Not filling: the chevron follows the label instead of sitting at the far edge.
+            modifier = Modifier.weight(1f, fill = false),
         )
+        Spacer(Modifier.width(4.dp))
         Icon(
             if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = null,
