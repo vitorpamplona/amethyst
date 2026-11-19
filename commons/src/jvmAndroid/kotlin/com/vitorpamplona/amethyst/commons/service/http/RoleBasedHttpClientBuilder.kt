@@ -157,7 +157,8 @@ class RoleBasedHttpClientBuilder(
             TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.newRelaysViaTor.value)
         }
 
-    fun okHttpClientForRelayDirectory(url: String): OkHttpClient = metered(UsageKeys.ROLE_OTHER, okHttpClient.getHttpClient(shouldUseTorForRelayDirectory(url)))
+    // Not [metered]: untagged requests already count as UsageKeys.ROLE_OTHER.
+    fun okHttpClientForRelayDirectory(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelayDirectory(url))
 
     override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(shouldUseTorForVideoDownload(url))
 
