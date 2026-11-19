@@ -305,7 +305,7 @@ fun noteActionSections(
                 if (handlers.onShare != null) {
                     add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
                 } else {
-                    addAll(shareNoteActions(note, nav, handlers.onDismiss))
+                    addAll(shareNoteActions(note, accountViewModel, nav, handlers.onDismiss))
                 }
             }
         }

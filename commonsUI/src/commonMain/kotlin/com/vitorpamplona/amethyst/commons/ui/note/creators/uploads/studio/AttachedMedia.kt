@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,7 +55,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -291,22 +289,16 @@ fun AttachedMediaCard(
             else ->
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                     // The wheel says how far, the word what for: compressing, uploading, the server's checks.
-                    val wheel = @Composable { size: Dp ->
-                        CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(size))
+                    val wheelAndWord = @Composable {
+                        CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(if (isPicture) 44.dp else 24.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Pill(uploadingStateLabel(state))
                     }
+                    // A file's row is one line tall: the word goes beside the wheel, not under it.
                     if (isPicture) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            wheel(44.dp)
-                            Spacer(Modifier.height(8.dp))
-                            Pill(uploadingStateLabel(state))
-                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { wheelAndWord() }
                     } else {
-                        // A file's row is one line tall: the word goes beside the wheel.
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            wheel(24.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Pill(uploadingStateLabel(state))
-                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) { wheelAndWord() }
                     }
                 }
         }
