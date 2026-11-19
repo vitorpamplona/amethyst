@@ -43,7 +43,7 @@ class ThreadEventLoaderSubAssembler(
     val cache: ICacheProvider,
     client: INostrClient,
     allKeys: () -> Set<ThreadQueryState>,
-    /** Called each time this loader re-plans (every EOSE and live event). Only queue work here. */
+    /** Called each time this loader re-plans (every EOSE and live event), on the relay listener thread: only queue work here. */
     private val onReplan: () -> Unit,
 ) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
     override fun newEose(
