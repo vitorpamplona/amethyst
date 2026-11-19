@@ -61,8 +61,11 @@ class UploadOrchestrator {
     }
 
     /**
-     * Maps the bytes an upload body has sent onto [from]..[to] of the progress bar, reporting
-     * only whole-percent changes. A retried request starts again from zero, and so does the bar.
+     * Maps the bytes an upload body has read from the file onto [from]..[to] of the progress bar,
+     * reporting only whole-percent changes. Those bytes reach the network's send buffer, not the
+     * server: once the last one is read the file is [UploadingState.Sending] until the server
+     * answers, rather than a bar stuck almost full. A retried request starts again from zero, and so
+     * does the bar. Each file has its own: files sent together each fill their own buffer.
      */
     fun uploadProgress(
         from: Double,
@@ -70,10 +73,10 @@ class UploadOrchestrator {
     ): (bytesWritten: Long, totalBytes: Long) -> Unit {
         var lastPercent = -1L
         return { written, total ->
-            val percent = if (total > 0) written * 100 / total else 0
+            val percent = if (total > 0) (written * 100 / total).coerceAtMost(100) else 0
             if (percent != lastPercent) {
                 lastPercent = percent
-                updateState(from + (to - from) * percent / 100, UploadingState.Uploading)
+                updateState(from + (to - from) * percent / 100, if (percent == 100L) UploadingState.Sending else UploadingState.Uploading)
             }
         }
     }

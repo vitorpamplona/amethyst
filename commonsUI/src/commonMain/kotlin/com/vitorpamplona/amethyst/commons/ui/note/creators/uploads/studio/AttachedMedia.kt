@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadWheel
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.uploadingStateLabel
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
@@ -290,7 +290,7 @@ fun AttachedMediaCard(
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                     // The wheel says how far, the word what for: compressing, uploading, the server's checks.
                     val wheelAndWord = @Composable {
-                        CircularProgressIndicator(progress = { progress.toFloat() }, color = Color.White, trackColor = Color.White.copy(alpha = 0.25f), modifier = Modifier.size(if (isPicture) 44.dp else 24.dp))
+                        UploadWheel(progress, state, Modifier.size(if (isPicture) 44.dp else 24.dp), color = Color.White, trackColor = Color.White.copy(alpha = 0.25f))
                         Spacer(Modifier.size(8.dp))
                         Pill(uploadingStateLabel(state))
                     }

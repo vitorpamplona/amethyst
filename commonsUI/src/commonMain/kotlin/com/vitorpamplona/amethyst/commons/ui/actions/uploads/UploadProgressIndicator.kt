@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,15 +37,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_downloading
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_error
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_finished
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
-import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState
@@ -75,14 +63,9 @@ fun UploadProgressIndicator(
             modifier = Modifier.size(55.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val animatedProgress =
-                animateFloatAsState(
-                    targetValue = progressValue.toFloat(),
-                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                ).value
-
-            CircularProgressIndicator(
-                progress = { animatedProgress },
+            UploadWheel(
+                progress = progressValue,
+                state = progressStatusValue,
                 modifier =
                     Size55Modifier
                         .clip(CircleShape)
@@ -90,20 +73,8 @@ fun UploadProgressIndicator(
                 strokeWidth = 5.dp,
             )
 
-            val txt =
-                when (progressStatusValue) {
-                    is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
-                    is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
-                    is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
-                    is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
-                    is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
-                    is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
-                    is UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
-                    is UploadingState.Error -> stringRes(Res.string.uploading_state_error)
-                }
-
             Text(
-                txt,
+                uploadingStateLabel(progressStatusValue),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center,

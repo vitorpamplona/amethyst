@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,10 +34,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -270,13 +267,9 @@ fun UploadingState(
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-            val animatedProgress by animateFloatAsState(
-                targetValue = progress.toFloat(),
-                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-            )
-
-            CircularProgressIndicator(
-                progress = { animatedProgress },
+            UploadWheel(
+                progress = progress,
+                state = progressState,
                 modifier =
                     Size55Modifier
                         .clip(CircleShape)
@@ -300,7 +293,7 @@ fun uploadingStateLabel(state: UploadingState): String =
     when (state) {
         is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
         is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
-        is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
+        is UploadingState.Uploading, is UploadingState.Sending -> stringRes(Res.string.uploading_state_uploading)
         is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
         is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
         is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
