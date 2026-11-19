@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.desktop.ui.search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
@@ -94,6 +96,21 @@ class TokenizedSearchFieldUiTest {
         field.performTextInput("kind:pictur")
         compose.onNodeWithText("picture", substring = true, useUnmergedTree = true).assertExists()
         field.performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+        assertEquals("kind:picture", state.text.trimEnd())
+    }
+
+    @Test
+    fun aMouseClickOnAPickerRowPicksIt() {
+        // A mouse press asks for focus. If the row takes it, the field blurs, the picker closes
+        // under the pointer and the release lands on nothing. Touch input never asked, which is
+        // why performClick() alone would not catch this.
+        val state = SearchFieldState()
+        setField(state)
+        val field = compose.onNode(hasSetTextAction())
+        field.performClick()
+        field.performTextInput("kind:pictur")
+        compose.onNodeWithText("picture", useUnmergedTree = true).performMouseInput { click() }
         compose.waitForIdle()
         assertEquals("kind:picture", state.text.trimEnd())
     }
