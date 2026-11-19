@@ -37,6 +37,7 @@ import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import coil3.size.Precision
 import coil3.util.Logger
+import com.vitorpamplona.amethyst.commons.service.http.BlossomBlobName
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
@@ -94,19 +95,22 @@ fun buildAmethystImageLoader(
             add(BlurHashFetcher.BKeyer)
             add(SnoFetcher.SKeyer)
             add(ThumbHashFetcher.TKeyer)
-            add(OkHttpFactory(callFactory, concurrentRequests, readAuth, wrapNetworkFetcher))
+            add(OkHttpFactory(callFactory, concurrentRequests, readAuth, blossomServerResolver, wrapNetworkFetcher))
         }.build()
 }
 
 /**
  * Coil's OkHttp network fetcher, with the client a function of the URL so Tor and non-Tor
- * clients can be used, and the BUD-01 read-auth retry.
+ * clients can be used, the BUD-01 read-auth retry, and, given [blossomServerResolver], a Blossom
+ * blob that its server lost loaded from another server ([BlossomFallbackFetcher]).
  */
 @OptIn(ExperimentalCoilApi::class)
 class OkHttpFactory(
     val networkClient: (url: String) -> Call.Factory,
     concurrentRequestStrategy: ConcurrentRequestStrategy,
     private val readAuth: BlossomReadAuthTokenProvider? = null,
+    private val blossomServerResolver: (() -> BlossomServerResolver)? = null,
+    // Last, so callers can pass it as a trailing lambda.
     private val wrapFetcher: (fetcher: Fetcher, diskCacheKey: String) -> Fetcher = { fetcher, _ -> fetcher },
 ) : Fetcher.Factory<Uri> {
     private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
@@ -121,10 +125,30 @@ class OkHttpFactory(
         if (!isApplicable(data)) return null
 
         val url = data.toString()
+        // The key NetworkFetcher derives for the same request.
+        val diskCacheKey = options.diskCacheKey ?: url
 
-        // The key the wrapper gets is the one NetworkFetcher derives for the same request
-        // (`options.diskCacheKey ?: url`).
-        return wrapFetcher(
+        val resolver = blossomServerResolver
+        val blob = if (resolver != null) BlossomBlobName.parse(url) else null
+        if (resolver == null || blob == null) return networkFetcher(url, options, diskCacheKey, imageLoader)
+
+        return BlossomFallbackFetcher(
+            url = url,
+            blob = blob,
+            resolve = { uri -> resolver().findServers(uri)?.serverUrl },
+            primary = { networkFetcher(url, options, diskCacheKey, imageLoader) },
+            // Filed under the original URL's key: the note asks for that URL again next time.
+            fallback = { other -> networkFetcher(other, options.copy(diskCacheKey = diskCacheKey), diskCacheKey, imageLoader) },
+        )
+    }
+
+    private fun networkFetcher(
+        url: String,
+        options: Options,
+        diskCacheKey: String,
+        imageLoader: ImageLoader,
+    ): Fetcher =
+        wrapFetcher(
             readAuthAware(url, readAuth) { authHeader ->
                 NetworkFetcher(
                     url = url,
@@ -136,9 +160,8 @@ class OkHttpFactory(
                     concurrentRequestStrategy = concurrentRequestStrategyLazy,
                 )
             },
-            options.diskCacheKey ?: url,
+            diskCacheKey,
         )
-    }
 
     private fun isApplicable(data: Uri): Boolean = data.scheme == "http" || data.scheme == "https"
 }
