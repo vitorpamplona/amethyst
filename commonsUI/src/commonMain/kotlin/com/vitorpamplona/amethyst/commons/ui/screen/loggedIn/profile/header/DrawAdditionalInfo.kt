@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.resources.x
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.AccountLifecycleBanner
 import com.vitorpamplona.amethyst.commons.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -116,7 +117,12 @@ fun DrawAdditionalInfo(
     nav: INav,
 ) {
     val userState by observeUserInfo(baseUser, accountViewModel)
-    val user = userState ?: return
+    val user = userState
+    if (user == null) {
+        // Retained signed associations can still produce a stale warning without current metadata.
+        AccountLifecycleBanner(baseUser, accountViewModel, nav)
+        return
+    }
     val uri = LocalUriHandler.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -132,6 +138,7 @@ fun DrawAdditionalInfo(
         // the nickname the account gave this user, on top of (not replacing)
         // the profile's own display name below
         UserNicknameCard(baseUser, accountViewModel)
+        AccountLifecycleBanner(baseUser, accountViewModel, nav)
 
         if (displayName != null) {
             Row(

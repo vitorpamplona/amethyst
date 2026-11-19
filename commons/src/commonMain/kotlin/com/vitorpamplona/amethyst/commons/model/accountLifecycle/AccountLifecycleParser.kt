@@ -332,6 +332,68 @@ object AccountLifecycleParser {
             .sortedByDescending { it.event.createdAt }
     }
 
+    /**
+     * Finds exact OLD bindings whose valid lifecycle entry names this NEW key. This is only a
+     * candidate list: the caller must still evaluate OLD's signed backlink and NEW's latest kind 0
+     * before exposing a reciprocal predecessor link. Unknown states and malformed entries do not
+     * become candidates. At most the entries in one 520-byte inline record are returned.
+     */
+    fun predecessorSubjects(
+        identifier: String,
+        successorPubkey: String,
+        rawRecord: String,
+    ): List<String> {
+        if (!LOWERCASE_PUBKEY.matches(successorPubkey) || rawRecord.encodeToByteArray().size > NAMECOIN_MAX_VALUE_BYTES) {
+            return emptyList()
+        }
+        val context =
+            try {
+                NamecoinNameContexts.parse(identifier)
+            } catch (_: IllegalArgumentException) {
+                return emptyList()
+            }
+        if (context.mapPath.isNotEmpty()) return emptyList()
+        val root =
+            try {
+                StrictLifecycleJson.parse(rawRecord) as? JsonObject
+            } catch (_: Exception) {
+                null
+            } ?: return emptyList()
+        if (root["delegate"].isPresentNonNull() || root["import"].isPresentNonNull()) return emptyList()
+        if ((root["map"] as? JsonObject)?.get("").isPresentNonNull()) return emptyList()
+        val nostr = root["nostr"] as? JsonObject ?: return emptyList()
+        val lifecycle = nostr["lifecycle"] as? JsonObject ?: return emptyList()
+        val names = nostr["names"] as? JsonObject
+
+        return lifecycle.entries
+            .mapNotNull { (localPart, element) ->
+                val bound =
+                    when {
+                        names?.containsKey(localPart) == true -> names[localPart]
+                        localPart == "_" -> nostr["pubkey"]
+                        else -> null
+                    }
+                val subject = (bound as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                if (subject == null ||
+                    !LOWERCASE_PUBKEY.matches(subject) ||
+                    subject == successorPubkey ||
+                    exactBindingError(nostr, localPart, subject) != null
+                ) {
+                    return@mapNotNull null
+                }
+                val candidate =
+                    try {
+                        parseCandidate(localPart, element, subject)
+                    } catch (_: CandidateFailure) {
+                        return@mapNotNull null
+                    }
+                subject.takeIf { candidate.successor == successorPubkey }
+            }.distinct()
+            .sorted()
+    }
+
+    private fun JsonElement?.isPresentNonNull(): Boolean = this != null && this !is JsonNull
+
     fun unavailable(diagnostic: String = "lookup_unavailable"): AccountLifecycleResult =
         AccountLifecycleResult(
             status = AccountLifecycleStatus.UNAVAILABLE,

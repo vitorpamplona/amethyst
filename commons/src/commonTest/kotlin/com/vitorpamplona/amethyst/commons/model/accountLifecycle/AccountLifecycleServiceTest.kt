@@ -148,6 +148,61 @@ class AccountLifecycleServiceTest {
         }
 
     @Test
+    fun retainedWarningIsExposedBeforeRestartRefreshReturns() =
+        runTest {
+            val store = InMemoryLifecycleAssociationStore()
+            val initialService =
+                AccountLifecycleService(
+                    transport = { AccountLifecycleTestFixtures.raw() },
+                    store = store,
+                    scope = backgroundScope,
+                )
+            initialService.resolve(request(), AccountLifecycleTestFixtures.metadata)
+
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val restartedService =
+                AccountLifecycleService(
+                    transport = {
+                        started.complete(Unit)
+                        release.await()
+                        AccountLifecycleTestFixtures.raw()
+                    },
+                    store = store,
+                    scope = backgroundScope,
+                )
+            val resolution =
+                async {
+                    restartedService.resolveSubject(
+                        viewerNamespace = "viewer",
+                        subjectPubkey = AccountLifecycleTestFixtures.old,
+                        currentIdentifier = null,
+                        oldEvents = emptyList(),
+                        metadataProvider = AccountLifecycleTestFixtures.metadata,
+                    )
+                }
+            runCurrent()
+            started.await()
+
+            val restored = restartedService.subjectState("viewer", AccountLifecycleTestFixtures.old).value
+            assertTrue(restored.loading)
+            val warning = restored.evaluations.single()
+            assertEquals(AccountLifecycleStatus.STALE, warning.result.status)
+            assertTrue(warning.result.isCompromiseWarning)
+            assertEquals(SuccessorConfirmation.STALE, warning.result.successorConfirmation)
+            assertEquals(AccountLifecycleTestFixtures.compromised, warning.selectedRecord)
+
+            release.complete(Unit)
+            assertEquals(
+                AccountLifecycleStatus.CURRENT,
+                resolution
+                    .await()
+                    .single()
+                    .result.status,
+            )
+        }
+
+    @Test
     fun negativeCacheIsNotStaleWarningEvidence() =
         runTest {
             var fail = false
@@ -258,6 +313,50 @@ class AccountLifecycleServiceTest {
             assertEquals(BaseNip05Status.UNVERIFIED, rewritten.result.baseNip05)
             assertTrue(rewritten.result.diagnostics.contains("historical_old_backlink"))
             assertFalse(rewritten.backlinks.single { it.localPart == "_" }.current)
+        }
+
+    @Test
+    fun successorProfileGetsOnlyCurrentlyConfirmedPredecessorEvidence() =
+        runTest {
+            var newEvent = AccountLifecycleTestFixtures.event("new_current")
+            val provider =
+                LifecycleMetadataProvider { pubkey ->
+                    when (pubkey) {
+                        AccountLifecycleTestFixtures.old -> listOf(AccountLifecycleTestFixtures.event("old_root"))
+                        AccountLifecycleTestFixtures.new -> listOf(newEvent)
+                        else -> emptyList()
+                    }
+                }
+            val store = InMemoryLifecycleAssociationStore()
+            val service =
+                AccountLifecycleService(
+                    transport = { AccountLifecycleTestFixtures.raw() },
+                    store = store,
+                    scope = backgroundScope,
+                )
+
+            suspend fun resolveSuccessor() =
+                service.resolveSubject(
+                    viewerNamespace = "viewer",
+                    subjectPubkey = AccountLifecycleTestFixtures.new,
+                    currentIdentifier = "current@example.bit",
+                    oldEvents = listOf(newEvent),
+                    metadataProvider = provider,
+                )
+
+            val confirmed = resolveSuccessor()
+            assertEquals(AccountLifecycleStatus.NO_DECLARATION, confirmed.single { it.subjectPubkey == AccountLifecycleTestFixtures.new }.result.status)
+            val predecessor = confirmed.single { it.subjectPubkey == AccountLifecycleTestFixtures.old }
+            assertTrue(predecessor.result.isCompromiseWarning)
+            assertEquals(SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED, predecessor.result.successorConfirmation)
+
+            newEvent = AccountLifecycleTestFixtures.event("new_withdrawn")
+            val withdrawn = resolveSuccessor()
+            assertEquals(1, withdrawn.size)
+            assertEquals(AccountLifecycleTestFixtures.new, withdrawn.single().subjectPubkey)
+            val oldWarning = assertNotNull(store.load("viewer", "example.bit", AccountLifecycleTestFixtures.old, true))
+            assertTrue(oldWarning.result.isCompromiseWarning)
+            assertEquals(SuccessorConfirmation.WITHDRAWN, oldWarning.result.successorConfirmation)
         }
 
     @Test

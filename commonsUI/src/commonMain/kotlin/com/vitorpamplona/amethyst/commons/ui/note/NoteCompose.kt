@@ -116,6 +116,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.AccountLifecycleBanner
+import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.shouldRenderAccountLifecycleOnNote
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
@@ -1002,37 +1004,45 @@ fun NoteCompose(
     // community, a channel, a hidden-note warning) keeps its media inside. A boosted note's own
     // body gets its bleed from LocalBoostedNoteFrame instead.
     ProvideMediaBleed(0.dp) {
-        WatchNoteEvent(
-            baseNote = baseNote,
-            accountViewModel = accountViewModel,
-            nav,
-            modifier,
-        ) {
-            CheckHiddenFeedWatchBlockAndReport(
-                note = baseNote,
-                modifier = modifier,
-                ignoreAllBlocksAndReports = isHiddenFeed,
-                showHiddenWarning = isQuotedNote || isBoostedNote,
+        Column {
+            // Outside report hiding: a hidden or "show anyway" note must not erase account context.
+            if (shouldRenderAccountLifecycleOnNote(isQuotedNote, isBoostedNote)) {
+                baseNote.author?.let { author ->
+                    AccountLifecycleBanner(author, accountViewModel, nav, compact = true)
+                }
+            }
+            WatchNoteEvent(
+                baseNote = baseNote,
                 accountViewModel = accountViewModel,
-                nav = nav,
-            ) { canPreview ->
-                AcceptableNote(
-                    baseNote = baseNote,
+                nav,
+                modifier,
+            ) {
+                CheckHiddenFeedWatchBlockAndReport(
+                    note = baseNote,
                     modifier = modifier,
-                    routeForLastRead = routeForLastRead,
-                    isBoostedNote = isBoostedNote,
-                    isQuotedNote = isQuotedNote,
-                    unPackReply = unPackReply,
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    isPinned = isPinned,
-                    quotesLeft = quotesLeft,
-                    parentBackgroundColor = parentBackgroundColor,
+                    ignoreAllBlocksAndReports = isHiddenFeed,
+                    showHiddenWarning = isQuotedNote || isBoostedNote,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    onClick = onClick,
-                    moreOptions = moreOptions,
-                )
+                ) { canPreview ->
+                    AcceptableNote(
+                        baseNote = baseNote,
+                        modifier = modifier,
+                        routeForLastRead = routeForLastRead,
+                        isBoostedNote = isBoostedNote,
+                        isQuotedNote = isQuotedNote,
+                        unPackReply = unPackReply,
+                        makeItShort = makeItShort,
+                        canPreview = canPreview,
+                        isPinned = isPinned,
+                        quotesLeft = quotesLeft,
+                        parentBackgroundColor = parentBackgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onClick = onClick,
+                        moreOptions = moreOptions,
+                    )
+                }
             }
         }
     }

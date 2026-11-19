@@ -320,6 +320,21 @@ class AccountLifecycleService(
                     }
                 }
             }
+        val restoredWarnings =
+            requests.mapNotNull { request ->
+                val cached = load(request)
+                if (cached.selectedRecord == null || !cached.result.isAccountWarning) {
+                    null
+                } else {
+                    AccountLifecycleEvaluation(
+                        result = AccountLifecycleParser.stale(cached.result, "retained_association"),
+                        context = NamecoinNameContexts.parse(request.identifier, request.subjectOnly),
+                        subjectPubkey = request.subjectPubkey,
+                        selectedRecord = cached.selectedRecord,
+                        backlinks = cached.backlinks,
+                    )
+                }
+            }
         val fingerprint =
             requests.joinToString(separator = "|") { "${it.identifier}:${it.subjectOnly}" } +
                 ":" + oldEvents.map { it.id }.sorted().joinToString(",")
@@ -333,11 +348,24 @@ class AccountLifecycleService(
                 } else {
                     existing?.deferred?.cancel()
                     val requestId = ++entry.latestRequest
-                    entry.state.value = entry.state.value.copy(loading = true)
+                    entry.state.value =
+                        entry.state.value.copy(
+                            loading = true,
+                            evaluations =
+                                entry.state.value.evaluations
+                                    .ifEmpty { restoredWarnings },
+                        )
                     val deferred =
                         scope.async {
                             try {
-                                val evaluations = requests.map { resolve(it, metadataProvider) }
+                                val evaluations =
+                                    resolveWithConfirmedPredecessors(
+                                        requests = requests,
+                                        viewerNamespace = viewerNamespace,
+                                        subjectPubkey = subjectPubkey,
+                                        metadataProvider = metadataProvider,
+                                        forceRefresh = forceRefresh,
+                                    )
                                 subjectMutex.withLock {
                                     if (entry.latestRequest == requestId) {
                                         entry.state.value = AccountLifecycleSubjectState(loading = false, evaluations = evaluations)
@@ -357,6 +385,46 @@ class AccountLifecycleService(
                 }
             }
         return inFlight.deferred.await()
+    }
+
+    /** One reviewed reverse hop. The OLD evaluation is returned as link evidence, never as NEW's warning. */
+    private suspend fun resolveWithConfirmedPredecessors(
+        requests: List<AccountLifecycleRequest>,
+        viewerNamespace: String,
+        subjectPubkey: String,
+        metadataProvider: LifecycleMetadataProvider,
+        forceRefresh: Boolean,
+    ): List<AccountLifecycleEvaluation> {
+        val evaluations = requests.map { resolve(it, metadataProvider) }.toMutableList()
+        val predecessorRequests =
+            evaluations
+                .filter { it.subjectPubkey == subjectPubkey }
+                .flatMap { own ->
+                    val rawRecord = own.selectedRecord ?: return@flatMap emptyList()
+                    val identifier = NamecoinNameContexts.canonicalIdentifier(own.context, subjectOnly = false)
+                    AccountLifecycleParser
+                        .predecessorSubjects(identifier, subjectPubkey, rawRecord)
+                        .map { oldPubkey ->
+                            AccountLifecycleRequest(
+                                viewerNamespace = viewerNamespace,
+                                identifier = NamecoinNameContexts.canonicalIdentifier(own.context, subjectOnly = true),
+                                subjectPubkey = oldPubkey,
+                                subjectOnly = true,
+                                forceRefresh = forceRefresh,
+                            )
+                        }
+                }.distinctBy { it.identifier to it.subjectPubkey }
+
+        predecessorRequests.forEach { request ->
+            val predecessor = resolve(request, metadataProvider)
+            if (predecessor.result.isAccountWarning &&
+                predecessor.result.successorPubkey == subjectPubkey &&
+                predecessor.result.successorConfirmation == SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED
+            ) {
+                evaluations += predecessor
+            }
+        }
+        return evaluations
     }
 
     fun invalidate() {
