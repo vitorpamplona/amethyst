@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -113,8 +114,13 @@ fun AccountLifecycleBanner(
     accountViewModel: AccountViewModel,
     nav: INav,
     compact: Boolean = false,
+    onEvaluation: (AccountLifecycleEvaluation?) -> Unit = {},
 ) {
-    val lifecycle = accountViewModel.host.namecoinLifecycle?.accountLifecycle ?: return
+    val lifecycle = accountViewModel.host.namecoinLifecycle?.accountLifecycle
+    if (lifecycle == null) {
+        SideEffect { onEvaluation(null) }
+        return
+    }
     val userInfo by observeUserInfo(user, accountViewModel)
     val currentEvent = userInfo?.event
     val currentIdentifier = userInfo?.info?.nip05
@@ -158,7 +164,8 @@ fun AccountLifecycleBanner(
                             ?.event,
                     )
                 },
-            forceRefresh = refreshVersion > 0,
+            // A NEW kind-0 replacement must supersede, not join, an older in-flight confirmation.
+            forceRefresh = refreshVersion > 0 || successorMetadataVersion > 0,
         )
     }
 
@@ -172,7 +179,9 @@ fun AccountLifecycleBanner(
             subjectState.evaluations,
             user.pubkeyHex,
             includeErrors = !compact,
-        ) ?: return
+        )
+    SideEffect { onEvaluation(evaluation) }
+    if (evaluation == null) return
     var showDetails by remember(evaluation) { mutableStateOf(false) }
     val result = evaluation.result
     val compromised = result.state == AccountLifecycleState.COMPROMISED

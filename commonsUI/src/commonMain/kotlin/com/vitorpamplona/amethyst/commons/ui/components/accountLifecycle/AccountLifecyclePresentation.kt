@@ -38,6 +38,12 @@ fun shouldRenderAccountLifecycleOnNote(
     outerAuthorPubkeys: Set<String>,
 ): Boolean = (!isQuotedNote && !isBoostedNote) || authorPubkey == null || authorPubkey !in outerAuthorPubkeys
 
+fun accountLifecycleWarningAuthors(
+    outerAuthorPubkeys: Set<String>,
+    authorPubkey: String?,
+    warningRendered: Boolean,
+): Set<String> = if (warningRendered && authorPubkey != null) outerAuthorPubkeys + authorPubkey else outerAuthorPubkeys
+
 fun primaryAccountLifecycleEvaluationForSubject(
     evaluations: List<AccountLifecycleEvaluation>,
     subjectPubkey: String,

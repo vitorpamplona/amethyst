@@ -47,6 +47,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -118,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.AccountLifecycleBanner
 import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.LocalAccountLifecycleWarningAuthors
+import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.accountLifecycleWarningAuthors
 import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.shouldRenderAccountLifecycleOnNote
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
@@ -1008,15 +1010,22 @@ fun NoteCompose(
         Column {
             val lifecycleAuthor = baseNote.author?.pubkeyHex
             val outerLifecycleAuthors = LocalAccountLifecycleWarningAuthors.current
+            var ownLifecycleWarning by remember(baseNote.idHex, lifecycleAuthor) { mutableStateOf(false) }
             // Outside report hiding: a hidden or "show anyway" note must not erase account context.
             if (shouldRenderAccountLifecycleOnNote(isQuotedNote, isBoostedNote, lifecycleAuthor, outerLifecycleAuthors)) {
                 baseNote.author?.let { author ->
-                    AccountLifecycleBanner(author, accountViewModel, nav, compact = true)
+                    AccountLifecycleBanner(
+                        user = author,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        compact = true,
+                        onEvaluation = { evaluation -> ownLifecycleWarning = evaluation?.result?.isAccountWarning == true },
+                    )
                 }
             }
             CompositionLocalProvider(
                 LocalAccountLifecycleWarningAuthors provides
-                    if (lifecycleAuthor == null) outerLifecycleAuthors else outerLifecycleAuthors + lifecycleAuthor,
+                    accountLifecycleWarningAuthors(outerLifecycleAuthors, lifecycleAuthor, ownLifecycleWarning),
             ) {
                 WatchNoteEvent(
                     baseNote = baseNote,
@@ -1025,7 +1034,7 @@ fun NoteCompose(
                     modifier,
                 ) {
                     CheckHiddenFeedWatchBlockAndReport(
-                        baseNote = baseNote,
+                        note = baseNote,
                         modifier = modifier,
                         ignoreAllBlocksAndReports = isHiddenFeed,
                         showHiddenWarning = isQuotedNote || isBoostedNote,

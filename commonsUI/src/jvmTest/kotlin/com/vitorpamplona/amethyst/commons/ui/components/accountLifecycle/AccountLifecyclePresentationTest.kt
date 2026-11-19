@@ -49,6 +49,14 @@ class AccountLifecyclePresentationTest {
     }
 
     @Test
+    fun nestedSuppressionRequiresAnActuallyRenderedOuterWarning() {
+        val old = "a".repeat(64)
+        assertEquals(emptySet(), accountLifecycleWarningAuthors(emptySet(), old, warningRendered = false))
+        assertEquals(setOf(old), accountLifecycleWarningAuthors(emptySet(), old, warningRendered = true))
+        assertEquals(emptySet(), accountLifecycleWarningAuthors(emptySet(), null, warningRendered = true))
+    }
+
+    @Test
     fun compromiseHasPriorityAndFreshEvidenceBeatsStaleEvidence() {
         val staleCompromise = evaluation(AccountLifecycleState.COMPROMISED, AccountLifecycleStatus.STALE)
         val currentCompromise = evaluation(AccountLifecycleState.COMPROMISED)
