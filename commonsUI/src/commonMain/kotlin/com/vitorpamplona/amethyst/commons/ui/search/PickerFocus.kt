@@ -34,4 +34,7 @@ import androidx.compose.ui.focus.focusProperties
  * typing. The keyboard path is the field's own: the arrow keys walk the rows while the caret stays
  * where it is.
  */
-fun Modifier.keepsFieldFocus(): Modifier = focusProperties { canFocus = false }
+fun Modifier.keepsFieldFocus(): Modifier = this then NotFocusable
+
+// One instance for every row, rather than a new element per row per recomposition.
+private val NotFocusable = Modifier.focusProperties { canFocus = false }

@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -39,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import org.junit.Rule
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The shared search field driven through a real Compose text field: what it draws over the
@@ -142,5 +144,24 @@ class TokenizedSearchFieldUiTest {
         field.performKeyInput { withKeyDown(Key.ShiftLeft) { pressKey(Key.MoveEnd) } }
         compose.waitForIdle()
         assertEquals(TextRange(6, 12), state.textState.selection)
+    }
+
+    @Test
+    fun mouseClicksInTheCalendarKeepItOpenAndPick() {
+        val state = SearchFieldState()
+        setField(state)
+        val field = compose.onNode(hasSetTextAction())
+        field.performClick()
+        field.performTextInput("since:")
+        // Paging the month must leave the calendar up: it only exists under a focused field.
+        compose.onNodeWithContentDescription("Next month", useUnmergedTree = true).performMouseInput { click() }
+        compose.onNodeWithText("15", useUnmergedTree = true).performMouseInput { click() }
+        compose.waitForIdle()
+        assertTrue(Regex("since:\\d{4}-\\d{2}-15").matches(state.text.trimEnd()), state.text)
+
+        field.performTextInput("until:")
+        compose.onNodeWithText("Today", useUnmergedTree = true).performMouseInput { click() }
+        compose.waitForIdle()
+        assertTrue(Regex("since:\\S+ until:\\d{4}-\\d{2}-\\d{2}").matches(state.text.trimEnd()), state.text)
     }
 }
