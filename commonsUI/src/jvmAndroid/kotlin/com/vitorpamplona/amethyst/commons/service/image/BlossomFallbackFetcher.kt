@@ -44,8 +44,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * viewer's own) with a HEAD each. A resolver that finds nothing, or only the same URL, leaves the
  * original failure in place.
  *
- * [primary] and [fallback] build the network fetchers; the fallback keeps the original URL's disk
- * cache key, so the next load of this note's URL is a cache hit wherever the bytes came from.
+ * [primary] and [fallback] build the network fetchers. The fallback files the bytes under the
+ * blob's own disk-cache key (`blossom:<sha256>`), not the original URL's: Coil answers a second
+ * request under the key that just failed with that same failure, without asking the mirror.
  */
 class BlossomFallbackFetcher(
     private val url: String,
@@ -81,6 +82,7 @@ class BlossomFallbackFetcher(
             fallback(other).fetch()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            Log.w(TAG, "$other failed too", e)
             failure.addSuppressed(e)
             throw failure
         }

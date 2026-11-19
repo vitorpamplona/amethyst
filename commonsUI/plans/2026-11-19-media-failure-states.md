@@ -60,8 +60,9 @@ throwable checks are the URL-preview favicon (`HttpException`) and the 401 read-
 0. **Blossom fallback (implemented with this review).** When a URL whose last segment is
    `<sha256>[.ext]` fails with 404, 410, 5xx or a network error, ask the BUD-10 resolver for the
    same hash on the author's kind 10063 servers and the viewer's own servers, then load it from
-   the first server that answers its HEAD. The bytes are filed under the original URL's disk-cache
-   key, so the next view is a cache hit. Answers about access (401, 402, 403) are not overridden.
+   the first server that answers its HEAD. The bytes are filed under the blob's own disk-cache key
+   (`blossom:<sha256>`, as `blossom:` URIs are). Answers about access (401, 402, 403) are not
+   overridden.
    - `BlossomFallbackFetcher` (commonsUI `jvmAndroid`) wraps Coil's network fetcher in
      `OkHttpFactory`, so it covers inline images, gallery tiles, fullscreen and the URL preview's
      image on both platforms. It is `suspend`, so no OkHttp dispatcher thread is held.

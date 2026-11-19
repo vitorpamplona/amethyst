@@ -86,7 +86,10 @@ class BlossomFetcher(
          * were served from. Keying on it (instead of the resolved server URL) finds the
          * blob again after a restart, a probe flip or a different server answering.
          */
-        fun diskCacheKey(uri: String): String = BlossomUri.parse(uri)?.let { "blossom:${it.sha256}" } ?: uri
+        fun diskCacheKey(uri: String): String = BlossomUri.parse(uri)?.let { blobDiskCacheKey(it.sha256) } ?: uri
+
+        /** The disk-cache key of the blob with this [sha256], whichever server or URI it came through. */
+        fun blobDiskCacheKey(sha256: String): String = "blossom:$sha256"
     }
 
     @OptIn(ExperimentalCoilApi::class)

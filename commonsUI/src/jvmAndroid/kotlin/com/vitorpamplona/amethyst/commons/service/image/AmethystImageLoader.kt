@@ -137,8 +137,12 @@ class OkHttpFactory(
             blob = blob,
             resolve = { uri -> resolver().findServers(uri)?.serverUrl },
             primary = { networkFetcher(url, options, diskCacheKey, imageLoader) },
-            // Filed under the original URL's key: the note asks for that URL again next time.
-            fallback = { other -> networkFetcher(other, options.copy(diskCacheKey = diskCacheKey), diskCacheKey, imageLoader) },
+            // Filed under the blob's own key, as `blossom:` URIs are: the original URL's key would
+            // hand back the failure that was just answered for it instead of asking the mirror.
+            fallback = { other ->
+                val blobKey = BlossomFetcher.blobDiskCacheKey(blob.sha256)
+                networkFetcher(other, options.copy(diskCacheKey = blobKey), blobKey, imageLoader)
+            },
         )
     }
 
