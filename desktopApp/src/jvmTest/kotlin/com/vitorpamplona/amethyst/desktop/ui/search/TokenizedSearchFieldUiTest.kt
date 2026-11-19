@@ -32,6 +32,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.withKeyDown
+import androidx.compose.ui.text.TextRange
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import org.junit.Rule
@@ -113,5 +115,32 @@ class TokenizedSearchFieldUiTest {
         compose.onNodeWithText("picture", useUnmergedTree = true).performMouseInput { click() }
         compose.waitForIdle()
         assertEquals("kind:picture", state.text.trimEnd())
+    }
+
+    @Test
+    fun endLandsPastTheSpaceAPickLeaves() {
+        // A pick always leaves one trailing space. Compose's End stops at the line's visible
+        // end, before that space, so the next token typed after End was glued to the chip.
+        val state = SearchFieldState("from:$NPUB ")
+        setField(state)
+        val field = compose.onNode(hasSetTextAction())
+        field.performMouseInput { click() }
+        state.textState.edit { selection = TextRange(0) }
+        field.performKeyInput { pressKey(Key.MoveEnd) }
+        compose.waitForIdle()
+        field.performTextInput("kind:pic")
+        assertEquals("from:$NPUB kind:pic", state.text)
+    }
+
+    @Test
+    fun shiftEndSelectsThroughTheTrailingSpace() {
+        val state = SearchFieldState("hello world ")
+        setField(state)
+        val field = compose.onNode(hasSetTextAction())
+        field.performMouseInput { click() }
+        state.textState.edit { selection = TextRange(6) }
+        field.performKeyInput { withKeyDown(Key.ShiftLeft) { pressKey(Key.MoveEnd) } }
+        compose.waitForIdle()
+        assertEquals(TextRange(6, 12), state.textState.selection)
     }
 }
