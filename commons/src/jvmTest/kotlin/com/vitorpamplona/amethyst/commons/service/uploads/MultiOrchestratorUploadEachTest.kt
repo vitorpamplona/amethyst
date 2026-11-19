@@ -429,7 +429,7 @@ class MultiOrchestratorUploadEachTest {
 
         report(500, 1000)
         assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
-        assertEquals(0.575, orchestrator.progress.value, 1e-9)
+        assertEquals(0.575, orchestrator.status.value.progress, 1e-9)
 
         // The last byte is in the send buffer, not at the server: no "95% done" while it travels.
         report(1000, 1000)
@@ -438,7 +438,7 @@ class MultiOrchestratorUploadEachTest {
         // A retry, or the next server, starts again from zero as a bar that fills.
         report(100, 1000)
         assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
-        assertEquals(0.275, orchestrator.progress.value, 1e-9)
+        assertEquals(0.275, orchestrator.status.value.progress, 1e-9)
     }
 
     @Test
@@ -453,18 +453,40 @@ class MultiOrchestratorUploadEachTest {
                 }
 
             val upload = async { media.uploadEach(server, account, uploader) }
-            // Each file fills its own send buffer: every one of them waits, none stuck almost full.
-            withContext(Dispatchers.Default) {
-                withTimeout(5_000) {
-                    while (media.items().any { it.orchestrator.progressState.value != UploadingState.Sending }) delay(10)
+            try {
+                // Each file fills its own send buffer: every one of them waits, none stuck almost full.
+                withContext(Dispatchers.Default) {
+                    withTimeout(5_000) {
+                        while (media.items().any { it.orchestrator.progressState.value != UploadingState.Sending }) delay(10)
+                    }
                 }
+            } finally {
+                // Answered even when the wait failed, so the upload ends and the test reports the failure.
+                answer.complete(Unit)
             }
-
-            answer.complete(Unit)
             assertTrue(upload.await().allGood)
             media.items().forEach {
                 assertIs<UploadingState.Finished>(it.orchestrator.progressState.value)
-                assertEquals(1.0, it.orchestrator.progress.value)
+                assertEquals(1.0, it.orchestrator.status.value.progress)
             }
         }
+
+    @Test
+    fun aViewNeverSeesTheLastBytesNumberWithoutItsStage() {
+        val orchestrator = UploadOrchestrator()
+        val seen = mutableListOf<UploadStatus>()
+        val report = orchestrator.uploadProgress(0.2, 0.95)
+        for (read in 0L..1000L step 10) {
+            report(read, 1000)
+            seen += orchestrator.status.value
+        }
+        report(100, 1000)
+        seen += orchestrator.status.value
+
+        // The bar's end comes with Sending, and a retry's restart with Uploading: never mixed.
+        assertTrue(seen.none { it.state == UploadingState.Uploading && it.progress >= 0.95 }, "$seen")
+        assertEquals(UploadStatus(UploadingState.Sending, 0.95), seen[seen.size - 2])
+        assertEquals(UploadStatus(UploadingState.Uploading, 0.275), seen.last())
+        assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
+    }
 }

@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.FilePreviewPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingStateIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ComparisonImages
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.longEdge
@@ -148,7 +149,6 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import org.jetbrains.compose.resources.StringResource
 import kotlin.math.min
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState as UploadingStateIndicator
 
 /**
  * The media studio: what opens right after files are picked. Every choice belongs to one file
@@ -688,11 +688,10 @@ private fun VideoPreview(
 /** A file's upload progress over its preview, while Add runs. */
 @Composable
 private fun UploadOverlay(item: SelectedMediaProcessing) {
-    val progress by item.orchestrator.progress.collectAsState()
-    val state by item.orchestrator.progressState.collectAsState()
-    if (state is UploadingState.Ready || state is UploadingState.Error) return
+    val status by item.orchestrator.status.collectAsState()
+    if (status.state is UploadingState.Ready || status.state is UploadingState.Error) return
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))) {
-        UploadingStateIndicator(progress, state)
+        UploadingStateIndicator(status)
     }
 }
 

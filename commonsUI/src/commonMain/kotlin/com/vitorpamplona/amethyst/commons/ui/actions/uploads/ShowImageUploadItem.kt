@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadStatus
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -177,16 +177,15 @@ fun OrchestratorOverlay(
     orchestrator: UploadOrchestrator,
     onDelete: () -> Unit,
 ) {
-    val progress by orchestrator.progress.collectAsState()
-    val progressState by orchestrator.progressState.collectAsState()
+    val status by orchestrator.status.collectAsState()
 
-    val state = progressState
+    val state = status.state
     if (state is UploadingState.Ready) {
         DeleteButton(onDelete)
     } else if (state is UploadingState.Error) {
-        UploadErrorBadge(progress, state, onDelete)
+        UploadErrorBadge(status, state, onDelete)
     } else {
-        UploadingState(progress, state)
+        UploadingStateIndicator(status)
     }
 }
 
@@ -197,7 +196,7 @@ fun OrchestratorOverlay(
  */
 @Composable
 private fun UploadErrorBadge(
-    progress: Double,
+    status: UploadStatus,
     state: UploadingState.Error,
     onDelete: () -> Unit,
 ) {
@@ -209,7 +208,7 @@ private fun UploadErrorBadge(
                 .fillMaxSize()
                 .clickable { showDetails = true },
     ) {
-        UploadingState(progress, state)
+        UploadingStateIndicator(status)
     }
 
     if (showDetails) {
@@ -257,33 +256,11 @@ fun DeleteButton(onDelete: () -> Unit) {
     }
 }
 
+/** One file's upload over its preview: the wheel and the stage's word, centred. */
 @Composable
-fun UploadingState(
-    progress: Double,
-    progressState: UploadingState,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-            UploadWheel(
-                progress = progress,
-                state = progressState,
-                modifier =
-                    Size55Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.background),
-                strokeWidth = 5.dp,
-            )
-
-            Text(
-                uploadingStateLabel(progressState),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
+fun UploadingStateIndicator(status: UploadStatus) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        LabelledUploadWheel(status)
     }
 }
 

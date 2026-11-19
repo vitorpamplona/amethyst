@@ -21,14 +21,27 @@
 package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadStatus
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
 /**
  * How far one file's upload is: a ring that fills, or one that spins while the file is
@@ -37,17 +50,37 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
  */
 @Composable
 fun UploadWheel(
-    progress: Double,
-    state: UploadingState,
+    status: UploadStatus,
     modifier: Modifier = Modifier,
     color: Color = ProgressIndicatorDefaults.circularColor,
     trackColor: Color = ProgressIndicatorDefaults.circularDeterminateTrackColor,
     strokeWidth: Dp = ProgressIndicatorDefaults.CircularStrokeWidth,
 ) {
-    if (state is UploadingState.Sending) {
+    if (status.state is UploadingState.Sending) {
         CircularProgressIndicator(modifier = modifier, color = color, strokeWidth = strokeWidth, trackColor = trackColor)
     } else {
-        val animated by animateFloatAsState(progress.toFloat(), ProgressIndicatorDefaults.ProgressAnimationSpec)
+        val animated by animateFloatAsState(status.progress.toFloat(), ProgressIndicatorDefaults.ProgressAnimationSpec)
         CircularProgressIndicator(progress = { animated }, modifier = modifier, color = color, strokeWidth = strokeWidth, trackColor = trackColor)
+    }
+}
+
+/** The [UploadWheel] with the stage's word inside it: one file's upload over its preview, or on its own. */
+@Composable
+fun LabelledUploadWheel(
+    status: UploadStatus,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.size(55.dp), contentAlignment = Alignment.Center) {
+        UploadWheel(
+            status = status,
+            modifier = Size55Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.background),
+            strokeWidth = 5.dp,
+        )
+        Text(
+            uploadingStateLabel(status.state),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }

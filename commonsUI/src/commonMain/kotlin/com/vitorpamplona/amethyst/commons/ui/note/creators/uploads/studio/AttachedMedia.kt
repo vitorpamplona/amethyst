@@ -182,8 +182,8 @@ fun AttachedMediaCard(
     modifier: Modifier = Modifier,
     uploader: MediaUploader? = null,
 ) {
-    val state by item.orchestrator.progressState.collectAsState()
-    val progress by item.orchestrator.progress.collectAsState()
+    val status by item.orchestrator.status.collectAsState()
+    val state = status.state
     val shape = RoundedCornerShape(16.dp)
     val media = item.media
     val failed = state is UploadingState.Error
@@ -290,7 +290,7 @@ fun AttachedMediaCard(
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                     // The wheel says how far, the word what for: compressing, uploading, the server's checks.
                     val wheelAndWord = @Composable {
-                        UploadWheel(progress, state, Modifier.size(if (isPicture) 44.dp else 24.dp), color = Color.White, trackColor = Color.White.copy(alpha = 0.25f))
+                        UploadWheel(status, Modifier.size(if (isPicture) 44.dp else 24.dp), color = Color.White, trackColor = Color.White.copy(alpha = 0.25f))
                         Spacer(Modifier.size(8.dp))
                         Pill(uploadingStateLabel(state))
                     }
