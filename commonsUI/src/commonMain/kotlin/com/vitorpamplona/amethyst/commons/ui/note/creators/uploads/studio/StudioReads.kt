@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
@@ -36,8 +37,9 @@ import kotlinx.coroutines.async
  * read once however many parts of the Studio ask at the same time (the stage, its still, the Trim
  * panel), shown at once when a tool asks again, and dropped with the Studio, whose [scope] runs the
  * reads. A read that found nothing is forgotten, so the next ask tries again: a probe that failed
- * once isn't taken as the file's answer. Keyed by the pick itself, not its path, which a camera or a
- * temp file can reuse for another file. UI thread only.
+ * once isn't taken as the file's answer. A read nobody waits for any more (a drag moved on to
+ * another frame) is stopped. Keyed by the pick itself, not its path, which a camera or a temp file
+ * can reuse for another file. UI thread only.
  */
 @Stable
 internal class StudioReads(
@@ -49,43 +51,56 @@ internal class StudioReads(
         val maxEdge: Int,
     )
 
-    private val frames = Recent<FrameKey, ByteArray>(KEEP_FRAMES)
-    private val durations = Recent<SelectedMedia, Long>(KEEP_FILES)
-    private val probes = Recent<SelectedMedia, VideoInfo>(KEEP_FILES)
+    val frames = Shared<FrameKey, ByteArray>(KEEP_FRAMES)
+    val durations = Shared<SelectedMedia, Long>(KEEP_FILES)
+    val probes = Shared<SelectedMedia, VideoInfo>(KEEP_FILES)
 
-    fun frameNow(key: FrameKey): ByteArray? = frames[key].finished()
+    /** One kind of read, the last [keep] of them kept, the least recently used dropped first. */
+    inner class Shared<K : Any, V : Any>(
+        keep: Int,
+    ) {
+        private val reads = LruCache<K, Read<V>>(keep)
 
-    /** Whether [key] was read or is being read: a caller that would wait for a drag to settle needn't. */
-    fun hasFrame(key: FrameKey): Boolean = frames.contains(key)
+        /** What [key] read, if it is done; never waits. */
+        fun now(key: K): V? = reads[key]?.finished()
 
-    suspend fun frame(
-        key: FrameKey,
-        read: suspend () -> ByteArray?,
-    ): ByteArray? = shared(frames, key, read)
+        /** Whether [key] was read or is being read: a caller that would wait for a drag to settle needn't. */
+        fun has(key: K): Boolean = reads[key] != null
 
-    fun durationNow(media: SelectedMedia): Long? = durations[media].finished()
+        /** What [key] reads, sharing a read already running. */
+        suspend fun get(
+            key: K,
+            read: suspend () -> V?,
+        ): V? {
+            val entry = reads[key] ?: Read(scope.async { readOrNull(read) }).also { reads.put(key, it) }
+            entry.waiters++
+            try {
+                return entry.job.await().also { if (it == null) forget(key, entry) }
+            } finally {
+                entry.waiters--
+                if (entry.waiters == 0 && !entry.job.isCompleted) {
+                    entry.job.cancel()
+                    forget(key, entry)
+                }
+            }
+        }
 
-    suspend fun duration(
-        media: SelectedMedia,
-        read: suspend () -> Long?,
-    ): Long? = shared(durations, media, read)
+        private fun forget(
+            key: K,
+            entry: Read<V>,
+        ) {
+            if (reads[key] === entry) reads.remove(key)
+        }
+    }
 
-    fun probeNow(media: SelectedMedia): VideoInfo? = probes[media].finished()
+    private class Read<V>(
+        val job: Deferred<V?>,
+    ) {
+        /** Callers awaiting [job]; when the last one leaves before it is done, it is cancelled. */
+        var waiters = 0
 
-    suspend fun probe(
-        media: SelectedMedia,
-        read: suspend () -> VideoInfo?,
-    ): VideoInfo? = shared(probes, media, read)
-
-    private suspend fun <K, V : Any> shared(
-        reads: Recent<K, V>,
-        key: K,
-        read: suspend () -> V?,
-    ): V? {
-        val job = reads[key] ?: scope.async { readOrNull(read) }.also { reads[key] = it }
-        val result = job.await()
-        if (result == null) reads.removeIf(key, job)
-        return result
+        @OptIn(ExperimentalCoroutinesApi::class)
+        fun finished(): V? = job.takeIf { it.isCompleted && !it.isCancelled }?.getCompleted()
     }
 
     /** A read that throws is a read that found nothing; one failure mustn't cancel the Studio's other reads. */
@@ -99,41 +114,17 @@ internal class StudioReads(
             null
         }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun <V> Deferred<V?>?.finished(): V? = this?.takeIf { it.isCompleted && !it.isCancelled }?.getCompleted()
-
     private companion object {
         const val KEEP_FRAMES = 12
         const val KEEP_FILES = 16
     }
-
-    /** The last [keep] reads, the least recently used dropped first. Plain common collections: this runs on iOS too. */
-    private class Recent<K, V>(
-        private val keep: Int,
-    ) {
-        private val reads = LinkedHashMap<K, Deferred<V?>>()
-
-        operator fun get(key: K): Deferred<V?>? = reads.remove(key)?.also { reads[key] = it }
-
-        operator fun set(
-            key: K,
-            read: Deferred<V?>,
-        ) {
-            reads.remove(key)
-            reads[key] = read
-            while (reads.size > keep) reads.remove(reads.keys.first())
-        }
-
-        fun contains(key: K): Boolean = key in reads
-
-        fun removeIf(
-            key: K,
-            read: Deferred<V?>,
-        ) {
-            if (reads[key] === read) reads.remove(key)
-        }
-    }
 }
+
+/** [key] through the open Studio's shared reads ([this]), or read here when there is no Studio. */
+internal suspend fun <K : Any, V : Any> StudioReads.Shared<K, V>?.getOrRead(
+    key: K,
+    read: suspend () -> V?,
+): V? = if (this != null) get(key, read) else read()
 
 /** The open Studio's [StudioReads]; null outside it (a composer's card reads on its own). */
 internal val LocalStudioReads = staticCompositionLocalOf<StudioReads?> { null }
