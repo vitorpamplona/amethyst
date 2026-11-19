@@ -43,6 +43,7 @@ import okio.IOException
 const val ACCOUNT_LIFECYCLE_LOOKUP_TIMEOUT_MS = 40_000L
 const val ACCOUNT_LIFECYCLE_POSITIVE_TTL_SECONDS = 3_600L
 const val ACCOUNT_LIFECYCLE_RETRY_TTL_SECONDS = 300L
+const val NAMECOIN_TARGET_BLOCK_SECONDS = 600L
 
 data class NamecoinRawRecord(
     val value: String,
@@ -553,10 +554,18 @@ class AccountLifecycleService(
             rawMutex.withLock {
                 val existing = rawEntries[canonicalName]
                 val ready = (existing?.state?.value as? RawLookupState.Ready)?.lookup
+                val recordTtl =
+                    ready
+                        ?.record
+                        ?.provenance
+                        ?.expiresIn
+                        ?.let { blocks ->
+                            minOf(positiveTtlSeconds, blocks.toLong() * NAMECOIN_TARGET_BLOCK_SECONDS).coerceAtLeast(0)
+                        } ?: positiveTtlSeconds
                 val fresh =
                     ready != null &&
                         now() - ready.observedAt <
-                        if (ready.record != null && ready.diagnostic == null) positiveTtlSeconds else retryTtlSeconds
+                        if (ready.record != null && ready.diagnostic == null) recordTtl else retryTtlSeconds
                 if (existing != null && !forceRefresh && (ready == null || fresh)) {
                     existing
                 } else {

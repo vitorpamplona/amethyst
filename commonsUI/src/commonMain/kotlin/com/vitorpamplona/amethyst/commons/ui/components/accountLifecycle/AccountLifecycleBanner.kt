@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
-import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.DisplayFollowUnfollowButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.highlightMarker
@@ -116,7 +115,7 @@ fun AccountLifecycleBanner(
     nav: INav,
     compact: Boolean = false,
 ) {
-    val lifecycle = LocalAppServices.current.namecoinLifecycle?.accountLifecycle ?: return
+    val lifecycle = accountViewModel.host.namecoinLifecycle?.accountLifecycle ?: return
     val userInfo by observeUserInfo(user, accountViewModel)
     val currentEvent = userInfo?.event
     val currentIdentifier = userInfo?.info?.nip05

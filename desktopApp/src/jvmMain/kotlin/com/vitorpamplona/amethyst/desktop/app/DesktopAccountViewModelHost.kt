@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
@@ -62,6 +63,8 @@ class DesktopAccountViewModelHost(
     override val localBlossomCacheAvailable: Flow<Boolean> get() = flowOf(false)
 
     override val powPublishFailures: Flow<PoWJobFailure> get() = modules.powPublishQueue.failures
+
+    override val namecoinLifecycle: NamecoinLifecycleService get() = modules.namecoinLifecycle
 
     override val relayStats: RelayStats get() = modules.relayStats
 
