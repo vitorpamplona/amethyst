@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
@@ -125,6 +126,9 @@ interface AppServices {
 
     /** The live Namecoin clients the settings screen tests and reconfigures. */
     val namecoinClients: NamecoinClients get() = NamecoinClients.None
+
+    /** Lifecycle warnings over the configured Namecoin backend, or null on unsupported front ends. */
+    val namecoinLifecycle: NamecoinLifecycleService? get() = null
 
     /** The OpenTimestamps blockchain explorer setting. */
     val otsSettings: OtsSettingsStore

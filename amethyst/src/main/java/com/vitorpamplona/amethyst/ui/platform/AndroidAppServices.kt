@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
@@ -128,6 +129,8 @@ object AndroidAppServices : AppServices {
     override val namecoinSettings: NamecoinSettingsStore get() = Amethyst.instance.namecoinPrefs
 
     override val namecoinClients: NamecoinClients get() = Amethyst.instance.namecoinServices
+
+    override val namecoinLifecycle: NamecoinLifecycleService get() = Amethyst.instance.namecoinLifecycle
 
     override val otsSettings: OtsSettingsStore get() = Amethyst.instance.otsPrefs
 

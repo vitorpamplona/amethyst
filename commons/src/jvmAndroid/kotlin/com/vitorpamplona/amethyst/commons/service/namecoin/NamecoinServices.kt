@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.namecoin
 
+import com.vitorpamplona.amethyst.commons.model.accountLifecycle.LifecycleAssociationStore
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NAMECOIN_LOOKUP_TIMEOUT_MS
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
@@ -136,6 +137,16 @@ class NamecoinServices(
             }
         }
     }
+
+    /** A separate security-status cache over the same backend, settings, HTTP, and Tor composition. */
+    fun lifecycleService(store: LifecycleAssociationStore): NamecoinLifecycleService =
+        ConfiguredNamecoinLifecycleService(
+            backendProvider = ::buildBackend,
+            serverListProvider = { settings.customServersOrNull ?: defaultServers() },
+            settings = settings.settings,
+            store = store,
+            scope = scope,
+        )
 
     val resolver by lazy {
         NamecoinNameResolver(
