@@ -31,9 +31,11 @@ implementation for any future IETF target; see
 
 ## Libraries (their own repos)
 
-On Maven Central, except Quartz (since 2.19.0) and crypto-kmp, which release on Nostr + Blossom
-through Magpie: `settings.gradle.kts` applies its plugin and `gradle/magpie.lock` pins their release
-key and files (a lock failure means a key or a release changed; ask before editing it).
+Quartz (since 2.19.0), crypto-kmp, mls-kmp (since 1.3.1) and quic-kmp (since 1.2.1) release on
+Nostr + Blossom through Magpie: `settings.gradle.kts` applies its plugin and `gradle/magpie.lock`
+pins their release key and files (a lock failure means a key or a release changed; ask before
+editing it). kiko-kmp and the current marmot-kmp and cordn-kmp pins are on Maven Central; their next
+releases are Magpie-only, so bumping them adds their groups to `magpie { }`.
 `-P<name>Dir=../<repo>` builds a local checkout instead.
 
 | Repo (`libs.*`) | Holds | `-P…Dir` |
