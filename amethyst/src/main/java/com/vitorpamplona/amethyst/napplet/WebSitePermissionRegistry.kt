@@ -28,6 +28,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermissionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,11 +61,11 @@ private val webSitePermissionDataStore: DataStore<Preferences>
  * screen shows and resets it. In-memory state is authoritative for the session, written through to a
  * DataStore stored under `"<origin>|<permission>"` keys.
  */
-object WebSitePermissionRegistry {
+object WebSitePermissionRegistry : BrowserSitePermissionStore {
     private val _decisions = MutableStateFlow<Map<String, Map<BrowserSitePermission, Decision>>>(emptyMap())
 
     /** origin → permission → decision (only answered permissions appear). */
-    val decisions: StateFlow<Map<String, Map<BrowserSitePermission, Decision>>> = _decisions.asStateFlow()
+    override val decisions: StateFlow<Map<String, Map<BrowserSitePermission, Decision>>> = _decisions.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -94,7 +95,7 @@ object WebSitePermissionRegistry {
         permission: BrowserSitePermission,
     ): Decision = _decisions.value[origin]?.get(permission) ?: Decision.ASK
 
-    fun set(
+    override fun set(
         origin: String,
         permission: BrowserSitePermission,
         decision: Decision,

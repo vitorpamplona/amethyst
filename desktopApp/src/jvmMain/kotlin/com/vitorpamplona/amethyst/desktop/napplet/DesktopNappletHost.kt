@@ -573,6 +573,15 @@ class DesktopNappletHost(
         runtime.engine.shutdown()
     }
 
+    /**
+     * Drops the "allow for this session" signer grants every live broker holds for [coordinate], so a
+     * trust-level change or a Forget on the Connected Apps screen applies to open napplets right away.
+     */
+    suspend fun revokeSessionGrants(coordinate: String) {
+        val live = synchronized(this) { brokers.values.map { it.second } }
+        live.forEach { it.revokeSessionGrants(coordinate) }
+    }
+
     @Synchronized
     private fun brokerFor(account: Account): NappletBroker =
         brokers[account.pubKey]?.takeIf { it.first === account }?.second

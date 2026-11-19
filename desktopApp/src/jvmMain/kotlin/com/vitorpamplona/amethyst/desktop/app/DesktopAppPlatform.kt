@@ -120,6 +120,10 @@ class DesktopAppPlatform(
 
     override val hasFinePointer: Boolean get() = true
 
+    override suspend fun revokeNappletSessionGrants(coordinate: String) {
+        nappletHost?.revokeSessionGrants(coordinate)
+    }
+
     // Only the addresses the login screen makes: never a scheme a page or note could slip in.
     override fun openNostrConnect(
         uri: String,
