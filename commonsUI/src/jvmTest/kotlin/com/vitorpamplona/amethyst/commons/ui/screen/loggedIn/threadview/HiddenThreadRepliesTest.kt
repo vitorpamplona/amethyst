@@ -47,9 +47,9 @@ class HiddenThreadRepliesTest {
         val thread = listOf(root, a, b)
         val levels = mapOf(root to 0, a to 1, b to 1)
 
-        val hidden = hiddenThreadReplies(thread, levels, root.idHex) { it == a }
+        val hidden = hiddenThreadReplies(thread, levels, root.idHex, setOf(a))
 
-        assertEquals(setOf(a.idHex), hidden.dropped)
+        assertEquals(listOf(root, b), hidden.thread)
         assertEquals(emptySet(), hidden.placeholders)
     }
 
@@ -62,9 +62,9 @@ class HiddenThreadRepliesTest {
         val thread = listOf(root, a, a1)
         val levels = mapOf(root to 0, a to 1, a1 to 2)
 
-        val hidden = hiddenThreadReplies(thread, levels, root.idHex) { it == a }
+        val hidden = hiddenThreadReplies(thread, levels, root.idHex, setOf(a))
 
-        assertEquals(emptySet(), hidden.dropped)
+        assertEquals(thread, hidden.thread)
         assertEquals(setOf(a.idHex), hidden.placeholders)
     }
 
@@ -78,9 +78,9 @@ class HiddenThreadRepliesTest {
         val thread = listOf(root, a, a1, b)
         val levels = mapOf(root to 0, a to 1, a1 to 2, b to 1)
 
-        val hidden = hiddenThreadReplies(thread, levels, root.idHex) { it == a || it == a1 }
+        val hidden = hiddenThreadReplies(thread, levels, root.idHex, setOf(a, a1))
 
-        assertEquals(setOf(a.idHex, a1.idHex), hidden.dropped)
+        assertEquals(listOf(root, b), hidden.thread)
         assertEquals(emptySet(), hidden.placeholders)
     }
 
@@ -93,9 +93,9 @@ class HiddenThreadRepliesTest {
         val thread = listOf(root, a, a1)
         val levels = mapOf(root to 0, a to 1, a1 to 2)
 
-        val hidden = hiddenThreadReplies(thread, levels, a1.idHex) { it == a || it == a1 }
+        val hidden = hiddenThreadReplies(thread, levels, a1.idHex, setOf(a, a1))
 
-        assertEquals(emptySet(), hidden.dropped)
+        assertEquals(thread, hidden.thread)
         assertEquals(setOf(a.idHex, a1.idHex), hidden.placeholders)
     }
 
@@ -106,9 +106,9 @@ class HiddenThreadRepliesTest {
         val thread = listOf(root, a)
         val levels = mapOf(root to 0, a to 1)
 
-        val hidden = hiddenThreadReplies(thread, levels, root.idHex) { true }
+        val hidden = hiddenThreadReplies(thread, levels, root.idHex, setOf(root, a))
 
-        assertEquals(setOf(a.idHex), hidden.dropped)
+        assertEquals(listOf(root), hidden.thread)
         assertEquals(emptySet(), hidden.placeholders)
     }
 
