@@ -326,7 +326,7 @@ class DesktopMediaUploader(
                         sensitiveContent = contentWarningReason,
                         server = ServerInfoRetriever().loadInfo(server.baseUrl, httpClients::okHttpClientForUploads),
                         okHttpClient = httpClients::okHttpClientForUploads,
-                        onProgress = { percent -> progress.updateState(0.4 + (0.2 * percent), UploadingState.Uploading) },
+                        onProgress = { percent -> progress.updateState(0.4 + (0.2 * percent), UploadingState.ServerProcessing) },
                         httpAuth = httpAuth,
                         onUploadProgress = progress.uploadProgress(0.2, 0.4),
                     )
