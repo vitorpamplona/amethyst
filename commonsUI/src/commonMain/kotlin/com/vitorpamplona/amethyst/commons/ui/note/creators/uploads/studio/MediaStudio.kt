@@ -68,7 +68,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -133,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.FilePreviewPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressOverMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ComparisonImages
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.longEdge
@@ -149,7 +149,6 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import org.jetbrains.compose.resources.StringResource
 import kotlin.math.min
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState as UploadingStateIndicator
 
 /**
  * The media studio: what opens right after files are picked. Every choice belongs to one file
@@ -337,17 +336,18 @@ fun MediaStudio(
 
             Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
                 // A video's first frame to be sent stays under every tool's stage, so switching tools
-                // never shows a black frame while the next stage loads its own.
-                if (current.media.isVideo() == true && uploader.videoTrim) {
+                // never shows a black frame while the next stage loads its own. Trim opens on a still
+                // and needs the length: read them now, so the first visit to Trim doesn't open on
+                // black with no times. Trim's stage draws that same frame itself.
+                val videoStill = current.media.isVideo() == true && uploader.videoTrim
+                val canTrim = StudioTool.TRIM in tools
+                if (videoStill || (canTrim && current.media.isGif())) {
                     val still = rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
-                    if (still != null) AsyncImage(model = still, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                    if (still != null && videoStill && tool != StudioTool.TRIM) {
+                        AsyncImage(model = still, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                    }
                 }
-                // Trim opens on a still and needs the length: read them now, so the first visit to Trim
-                // doesn't open on black with no times. A video's still is the one just above.
-                if (StudioTool.TRIM in tools) {
-                    if (current.media.isGif()) rememberVideoFrame(current, uploader, current.options.trim?.startMs ?: 0L, STAGE_FRAME_EDGE)
-                    rememberVideoDuration(current, uploader)
-                }
+                if (canTrim) rememberVideoDuration(current, uploader)
                 if (tool == StudioTool.TRIM) {
                     StudioTrimStage(current, uploader, trimSession)
                 } else if (tool == StudioTool.CROP) {
@@ -688,12 +688,9 @@ private fun VideoPreview(
 /** A file's upload progress over its preview, while Add runs. */
 @Composable
 private fun UploadOverlay(item: SelectedMediaProcessing) {
-    val progress by item.orchestrator.progress.collectAsState()
-    val state by item.orchestrator.progressState.collectAsState()
-    if (state is UploadingState.Ready || state is UploadingState.Error) return
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))) {
-        UploadingStateIndicator(progress, state)
-    }
+    val status by item.orchestrator.status.collectAsState()
+    if (status.state is UploadingState.Ready || status.state is UploadingState.Error) return
+    UploadProgressOverMedia(status)
 }
 
 @Composable
@@ -957,15 +954,18 @@ private fun rememberVideoProbe(
     item: SelectedMediaProcessing,
     uploader: MediaUploader,
 ): VideoProbe {
-    val reads = LocalStudioReads.current
+    val reads = LocalStudioReads.current?.probes
     val media = item.media
-    val known = reads?.probeNow(media)
-    val probe by produceState(VideoProbe(known != null, known), media, reads) {
-        if (value.done) return@produceState
-        val info = reads?.probe(media) { uploader.probeVideo(media.uri) } ?: uploader.probeVideo(media.uri)
-        value = VideoProbe(true, info)
+    // Per file: the Studio switches files in place, and produceState would keep the last file's probe.
+    val probe =
+        remember(media, reads) {
+            val known = reads?.now(media)
+            mutableStateOf(VideoProbe(known != null, known))
+        }
+    LaunchedEffect(probe) {
+        if (!probe.value.done) probe.value = VideoProbe(true, reads.getOrRead(media) { uploader.probeVideo(media.uri) })
     }
-    return probe
+    return probe.value
 }
 
 /** In the studio the top level is "Original": the file as picked, the same word the preview uses. */

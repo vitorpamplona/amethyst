@@ -387,7 +387,8 @@ object GitWorkspace {
      * waits on a terminal password prompt here: there is no terminal to answer it. With
      * [noLoginWindow] it opens no login window either (Git Credential Manager): for hosts named
      * in events, which anyone can publish. The user's own push keeps it. [input] goes to the
-     * command's standard input.
+     * command's standard input. Git works on [dir] whatever repository the app was started in
+     * ([forgetInheritedRepository]).
      */
     internal fun run(
         dir: File,
@@ -402,6 +403,7 @@ object GitWorkspace {
                     .directory(dir)
                     .redirectErrorStream(true)
                     .apply {
+                        environment().forgetInheritedRepository()
                         environment()["GIT_TERMINAL_PROMPT"] = "0"
                         if (noLoginWindow) environment()["GCM_INTERACTIVE"] = "never"
                     }.start()
@@ -486,3 +488,30 @@ object GitWorkspace {
     private val SHORTSTAT_INS = Regex("(\\d+) insertions?")
     private val SHORTSTAT_DEL = Regex("(\\d+) deletions?")
 }
+
+/**
+ * Drops the variables that tell git which repository to use: `git rev-parse --local-env-vars`
+ * less the config ones, which carry the user's own settings. A process started from a git hook,
+ * or from a shell inside one, inherits GIT_DIR and GIT_INDEX_FILE, and those win over the
+ * directory git runs in: a `git init` or `git commit` meant for that directory lands in the
+ * other repository instead.
+ */
+internal fun MutableMap<String, String>.forgetInheritedRepository() {
+    REPOSITORY_GIT_ENV.forEach { remove(it) }
+}
+
+private val REPOSITORY_GIT_ENV =
+    listOf(
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_IMPLICIT_WORK_TREE",
+        "GIT_GRAFT_FILE",
+        "GIT_INDEX_FILE",
+        "GIT_NO_REPLACE_OBJECTS",
+        "GIT_REPLACE_REF_BASE",
+        "GIT_PREFIX",
+        "GIT_SHALLOW_FILE",
+        "GIT_COMMON_DIR",
+    )

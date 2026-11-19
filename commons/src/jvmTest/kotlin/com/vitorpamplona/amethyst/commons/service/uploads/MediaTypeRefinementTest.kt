@@ -28,6 +28,7 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -51,7 +52,9 @@ class MediaTypeRefinementTest {
     private class FileUploader(
         val files: Map<String, ByteArray>,
     ) : MediaUploader {
-        val sentTypes = mutableListOf<String?>()
+        // uploadEach sends each file from a coroutine of its own on Dispatchers.IO: two appends to a
+        // plain list at once can lose one.
+        val sentTypes = CopyOnWriteArrayList<String?>()
 
         override suspend fun readRange(
             uri: MediaUri,
