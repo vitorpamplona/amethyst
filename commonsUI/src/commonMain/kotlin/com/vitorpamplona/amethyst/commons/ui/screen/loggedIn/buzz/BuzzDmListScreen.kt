@@ -43,6 +43,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -52,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +66,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.BuzzDmAddResult
+import com.vitorpamplona.amethyst.commons.model.BuzzDmHistory
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmAgents
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
@@ -72,8 +77,14 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member
-import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_history
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_choice_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_history_body
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_history_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_invalid
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_new_conversation
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_new_dm
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_no_answer
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_share_history
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_body
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_title
@@ -100,7 +111,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 /**
  * Bottom room the inbox leaves for its extended FAB — same clearance the community view uses, and
@@ -226,19 +239,11 @@ private fun DmRowCard(
 
     if (addMemberOpen) {
         AddDmMemberDialog(
+            groupId = groupId,
+            participants = row.allParticipants,
+            accountViewModel = accountViewModel,
+            nav = nav,
             onDismiss = { addMemberOpen = false },
-            onAdd = { hex ->
-                addMemberOpen = false
-                accountViewModel.launchSigner {
-                    val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-                    // The relay may answer with another DM (those people already share one): open
-                    // it, since the newcomer is there and not here.
-                    val landedIn = accountViewModel.account.relayGroups.addBuzzDmMember(channel, hex)
-                    if (landedIn != null && landedIn != groupId) {
-                        withContext(Dispatchers.Main) { nav.nav(Route.RelayGroup(landedIn.id, landedIn.relayUrl.url)) }
-                    }
-                }
-            },
         )
     }
 
@@ -400,25 +405,119 @@ private fun DmAvatars(
     }
 }
 
+/** Where the add-member dialog is: typing a key, waiting for the relay, or asking about history. */
+private sealed interface AddDmMemberPhase {
+    data object Input : AddDmMemberPhase
+
+    data object Sending : AddDmMemberPhase
+
+    data class AskHistory(
+        val member: HexKey,
+    ) : AddDmMemberPhase
+}
+
 /**
- * Dialog to add another person to an existing group DM: accepts an npub or 64-char hex key,
- * validates it locally, and hands the resolved hex to [onAdd] (which publishes kind-41011).
+ * Dialog to add another person to an existing DM: accepts an npub or 64-char hex key, sends the
+ * kind-41011 with `["history", "ask"]`, and stays open until the relay answers. When the relay
+ * needs a choice (the newcomer would join this conversation and see its history) it asks the user,
+ * and sends again with it. On success it closes, and opens the DM the relay names when that is not
+ * this one; a refusal or silence is shown in the dialog.
+ *
+ * The add runs in the account's scope and is awaited from the dialog's: closing the dialog never
+ * stops an add that is out, and a late answer never navigates from wherever the user went since.
  */
 @Composable
 private fun AddDmMemberDialog(
+    groupId: GroupId,
+    participants: List<HexKey>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     onDismiss: () -> Unit,
-    onAdd: (HexKey) -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var phase by remember { mutableStateOf<AddDmMemberPhase>(AddDmMemberPhase.Input) }
+    val scope = rememberCoroutineScope()
     val invalidMsg = stringRes(Res.string.buzz_dm_add_member_invalid)
+    val noAnswerMsg = stringRes(Res.string.buzz_dm_add_member_no_answer)
+    // A DM of one person (me, perhaps with agents) never grows: adding someone starts a DM of
+    // everyone, without this history. Otherwise the relay asks before anyone sees it.
+    val solo = remember(participants) { participants.count { !BuzzDmAgents.isLikelyAgent(it) } < 2 }
+
+    fun send(
+        member: HexKey,
+        history: BuzzDmHistory,
+    ) {
+        phase = AddDmMemberPhase.Sending
+        error = null
+        scope.launch {
+            val account = accountViewModel.account
+            val result =
+                account.scope
+                    .async(Dispatchers.IO) {
+                        var outcome: BuzzDmAddResult? = null
+                        accountViewModel.reportSignerErrors {
+                            outcome = account.relayGroups.addBuzzDmMember(LocalCache.getOrCreateRelayGroupChannel(groupId), member, history)
+                        }
+                        outcome
+                    }.await()
+            when (result) {
+                is BuzzDmAddResult.Added -> {
+                    onDismiss()
+                    // The newcomer is in another DM (those people already share one): open it.
+                    if (result.moved) nav.nav(Route.RelayGroup(result.groupId.id, result.groupId.relayUrl.url))
+                }
+
+                BuzzDmAddResult.NeedsHistoryChoice -> {
+                    phase = AddDmMemberPhase.AskHistory(member)
+                }
+
+                is BuzzDmAddResult.Refused -> {
+                    error = result.message
+                    phase = AddDmMemberPhase.Input
+                }
+
+                BuzzDmAddResult.NoAnswer -> {
+                    error = noAnswerMsg
+                    phase = AddDmMemberPhase.Input
+                }
+
+                null -> {
+                    // The signer refused or failed; reportSignerErrors already said so.
+                    phase = AddDmMemberPhase.Input
+                }
+            }
+        }
+    }
+
+    val asking = phase as? AddDmMemberPhase.AskHistory
+    if (asking != null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringRes(Res.string.buzz_dm_add_member_history_title)) },
+            text = { Text(stringRes(Res.string.buzz_dm_add_member_history_body)) },
+            confirmButton = {
+                TextButton(onClick = { send(asking.member, BuzzDmHistory.SHARE) }) {
+                    Text(stringRes(Res.string.buzz_dm_add_member_share_history))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { send(asking.member, BuzzDmHistory.DONT_SHARE) }) {
+                    Text(stringRes(Res.string.buzz_dm_add_member_new_conversation))
+                }
+            },
+        )
+        return
+    }
+
+    val sending = phase == AddDmMemberPhase.Sending
 
     fun submit() {
         val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() }
         if (hex == null) {
             error = invalidMsg
         } else {
-            onAdd(hex)
+            send(hex, BuzzDmHistory.ASK)
         }
     }
 
@@ -436,20 +535,21 @@ private fun AddDmMemberDialog(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringRes(Res.string.buzz_dm_add_hint)) },
                     singleLine = true,
+                    enabled = !sending,
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
                 )
-                // The add carries ["history", "include"]: say so before it happens.
                 Text(
-                    text = stringRes(Res.string.buzz_dm_add_member_history),
+                    text = stringRes(if (solo) Res.string.buzz_dm_add_member_new_dm else Res.string.buzz_dm_add_member_choice_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
+                if (sending) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         },
         confirmButton = {
-            TextButton(onClick = { submit() }, enabled = input.isNotBlank()) {
+            TextButton(onClick = { submit() }, enabled = input.isNotBlank() && !sending) {
                 Text(stringRes(Res.string.buzz_dm_add_member))
             }
         },

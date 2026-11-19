@@ -23,8 +23,9 @@ package com.vitorpamplona.amethyst.commons.buzz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmAgents
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -53,7 +54,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class BuzzNewDmViewModel(
     /** Whether the relay would count a key as an agent; agents don't count toward a DM's people. */
-    private val isAgent: (HexKey) -> Boolean = BuzzDmRules::isLikelyAgent,
+    private val isAgent: (HexKey) -> Boolean = BuzzDmAgents::isLikelyAgent,
 ) : ViewModel() {
     @Volatile private var account: Account? = null
 
@@ -84,8 +85,31 @@ class BuzzNewDmViewModel(
         data object Sending : Status
 
         data class Error(
-            val message: String,
+            val problem: Problem,
         ) : Status
+    }
+
+    /** Why a pick or a start was refused; the screen words it. */
+    sealed interface Problem {
+        data object NotAKey : Problem
+
+        data object ThatsYou : Problem
+
+        data object AlreadyAdded : Problem
+
+        /** A DM holds at most [maxOthers] people besides me; agents don't count. */
+        data class TooManyPeople(
+            val maxOthers: Int,
+        ) : Problem
+
+        data object NoRelay : Problem
+
+        data object NoParticipants : Problem
+
+        /** Opening failed: the signer refused, the relay timed out, … ([detail] is the cause's message, untranslated). */
+        data class OpenFailed(
+            val detail: String?,
+        ) : Problem
     }
 
     /** Binds scoped to a single community [relayUrl] — a new DM is created on that community. */
@@ -149,18 +173,18 @@ class BuzzNewDmViewModel(
     }
 
     /**
-     * Adds an already-resolved [hex] pubkey (a tapped search result). Returns an error string to
+     * Adds an already-resolved [hex] pubkey (a tapped search result). Returns the problem to
      * surface, or null on success. Rejects me, duplicates, invalid keys and a ninth person (counting
-     * me; agents don't count, as on the relay).
+     * me; agents don't count, as on the relay). Not bound yet reads as nothing to add.
      * Also clears the query so the suggestion list collapses after a pick.
      */
-    fun addParticipant(hex: HexKey): String? {
-        val account = account ?: return "Not ready"
-        if (!hex.isValid()) return "Not a valid key"
-        if (hex == account.userProfile().pubkeyHex) return "That's you"
+    fun addParticipant(hex: HexKey): Problem? {
+        val account = account ?: return null
+        if (!hex.isValid()) return Problem.NotAKey
+        if (hex == account.userProfile().pubkeyHex) return Problem.ThatsYou
         val current = _participants.value
-        if (hex in current) return "Already added"
-        if (!BuzzDmRules.canAdd(current, hex, isAgent)) return "At most ${BuzzDmRules.MAX_PEOPLE - 1} others"
+        if (hex in current) return Problem.AlreadyAdded
+        if (!BuzzDmRules.canAdd(current, hex, isAgent)) return Problem.TooManyPeople(BuzzDmRules.MAX_PEOPLE - 1)
         _participants.value = current + hex
         _query.value = ""
         _suggestions.value = emptyList()
@@ -169,10 +193,10 @@ class BuzzNewDmViewModel(
 
     /**
      * Resolves a pasted npub/hex [input] and adds it — the escape hatch for someone not yet in the
-     * local cache (so they never surface in [updateQuery]'s search). Returns an error or null.
+     * local cache (so they never surface in [updateQuery]'s search). Returns a problem or null.
      */
-    fun addRawKey(input: String): String? {
-        val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() } ?: return "Not a valid npub or hex key"
+    fun addRawKey(input: String): Problem? {
+        val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() } ?: return Problem.NotAKey
         return addParticipant(hex)
     }
 
@@ -189,12 +213,12 @@ class BuzzNewDmViewModel(
         val account = account ?: return
         val relay =
             _relay.value ?: run {
-                _status.value = Status.Error("Pick a workspace relay")
+                _status.value = Status.Error(Problem.NoRelay)
                 return
             }
         val others = _participants.value
         if (others.isEmpty()) {
-            _status.value = Status.Error("Add at least one person")
+            _status.value = Status.Error(Problem.NoParticipants)
             return
         }
 
@@ -210,7 +234,7 @@ class BuzzNewDmViewModel(
                 // openBuzzDm can throw signer / IO / timeout errors (not just IllegalArgumentException);
                 // catch them all so a failure surfaces as an error instead of crashing and leaving the
                 // Start button stuck disabled on `Sending`.
-                _status.value = Status.Error(e.message ?: "Could not open the DM")
+                _status.value = Status.Error(Problem.OpenFailed(e.message))
             }
         }
     }

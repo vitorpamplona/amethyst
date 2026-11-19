@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -1843,34 +1844,6 @@ open class BaseAccountViewModel(
      */
     fun leaveConcordCommunity(communityId: String) = launchSigner { account.concord.leaveConcordCommunity(communityId) }
 
-    fun createRelayGroup(
-        relay: NormalizedRelayUrl,
-        groupId: String,
-        name: String,
-        about: String?,
-        picture: String?,
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-        hashtags: List<String>,
-        geohashes: List<String>,
-    ) = launchSigner {
-        account.relayGroups.createRelayGroup(
-            relay,
-            groupId,
-            name,
-            about,
-            picture,
-            isPrivate,
-            isClosed,
-            isHidden,
-            isRestricted,
-            hashtags,
-            geohashes,
-        )
-    }
-
     fun createRelayGroupInvite(
         channel: RelayGroupChannel,
         code: String,
@@ -1920,32 +1893,6 @@ open class BaseAccountViewModel(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
     ) = launchSigner { account.relayGroups.removeCommunityMember(relay, pubkey) }
-
-    fun editRelayGroupMetadata(
-        channel: RelayGroupChannel,
-        name: String?,
-        about: String?,
-        picture: String?,
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-        hashtags: List<String>,
-        geohashes: List<String>,
-    ) = launchSigner {
-        account.relayGroups.editRelayGroupMetadata(
-            channel,
-            name,
-            about,
-            picture,
-            isPrivate,
-            isClosed,
-            isHidden,
-            isRestricted,
-            hashtags,
-            geohashes,
-        )
-    }
 
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
@@ -2801,7 +2748,7 @@ open class BaseAccountViewModel(
     }
 
     /** One row per member ACCOUNT (its first leaf), however many devices it has in the group. */
-    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId)?.distinctBy { it.pubkey } ?: emptyList()
+    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberRows(nostrGroupId) ?: emptyList()
 
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,

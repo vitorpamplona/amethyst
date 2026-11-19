@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDevicePairing
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -35,6 +34,7 @@ import com.vitorpamplona.marmot.client.MarmotIngestResult
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotReceiver
 import com.vitorpamplona.marmot.client.ingestWelcome
+import com.vitorpamplona.marmot.features.devicePairing.MarmotDevicePairingKinds
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -604,10 +604,10 @@ class SealEventHandler(
             eventNote.event = event.copyNoContent()
             return
         }
-        // Marmot device pairing (kinds 452-456, gift-wrapped by an account to itself): another
+        // Marmot device pairing (MarmotDevicePairingKinds, gift-wrapped by an account to itself): another
         // client of this account linking its devices. Not a message for the user, and this client
         // does not link devices, so the rumor is neither cached nor shown.
-        if (MarmotDevicePairing.isPairingRumor(innerRumor)) {
+        if (MarmotDevicePairingKinds.isPairingKind(innerRumor.kind)) {
             eventNote.event = event.copyNoContent()
             return
         }

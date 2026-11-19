@@ -506,10 +506,10 @@ class AccountMarmotActions(
                 .orEmpty()
         // Every device of the account: one KeyPackage per publication slot,
         // fresh (30 days), at most 20, none a kind-5 slot deletion withdrew and
-        // none the group could not take (foundation/key-packages.md). White
-        // Noise's MDK may still publish legacy kind:443 only; a valid 443 is
-        // the fallback (MIP-00 migration rules). Every package that comes back
-        // is valid, so it has content.
+        // none the group could not take (foundation/key-packages.md). Only the
+        // current kind:30443 counts: a member who publishes legacy kind:443 alone
+        // has to republish before they can be invited. Every package that comes
+        // back is valid, so it has content.
         val lookup =
             KeyPackageFetcher.fetchForInvite(
                 client = account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS),

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.util
 
 import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.utils.Log
@@ -92,6 +93,9 @@ suspend fun notifySignerErrors(
         } else {
             Log.w(TAG, e::class.simpleName ?: "SignerExceptions", e)
         }
+    } catch (e: UserNoticeException) {
+        // A refusal that says why itself (see UserNoticeException): its notice, not a signer failure.
+        notices.notify(e.notice)
     } catch (e: IllegalStateException) {
         notices.notify(SignerNotice.Failed(e))
     } catch (e: IllegalArgumentException) {

@@ -310,7 +310,7 @@ private fun CordnGroupInfo(
                 // Not e.message. Those are written for a log and name pubkeys
                 // and gids in full, so the screen that had just shown a face
                 // answered with 64 hex characters.
-                Log.w("CordnGroupInfo", "admin action failed in ${room.gid}: ${e.message}", e)
+                Log.w("CordnGroupInfo", "admin action failed", e)
                 adminError = adminFailureText(e, who, failed)
             } finally {
                 busy = false
@@ -952,7 +952,7 @@ private fun JoinRequests(
                             runtime.acceptJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
                             currentCoroutineContext().ensureActive()
-                            Log.w("CordnGroupInfo", "accepting a join request to ${request.gid} failed: ${e.message}", e)
+                            Log.w("CordnGroupInfo", "accepting a join request failed", e)
                             // Accepting is an Add commit, so it can lose a race
                             // or wait on the coordinator like any other change.
                             error = adminFailureText(e, null, failed)

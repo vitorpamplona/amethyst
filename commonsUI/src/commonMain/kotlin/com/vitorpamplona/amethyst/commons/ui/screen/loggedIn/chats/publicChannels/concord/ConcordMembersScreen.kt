@@ -176,6 +176,7 @@ fun ConcordMembersScreen(
     // which IS ban-aware — a thin margin for the escalation in docs/concord-soft-ban-audit.md.
     val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.BAN) } == true
     val iCanManageRoles = state?.authority?.hasPermission(myPubKey, ConcordPermissions.MANAGE_ROLES) == true
+    val rolesV2 = state?.isRolesV2 == true
     val iCanKick = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.KICK) } == true
 
     // The roles this viewer may actually hand out. The fold drops a grant whose granter does
@@ -231,6 +232,9 @@ fun ConcordMembersScreen(
                         communityId = communityId,
                         isSelf = entry.pubkey.equals(myPubKey, ignoreCase = true),
                         viewerIsOwner = iAmOwner,
+                        // Roles v2 (CORD-04 §2): its ranked roles and grants are a shape this client
+                        // can't write yet, so neither "Make admin" nor "Roles…" is offered there.
+                        rolesV2 = rolesV2,
                         viewerCanBan = iCanBan,
                         // Ban/Remove are rank-gated the same way Roles… is. The owner short-circuits
                         // because canActOn begins at hasPermission, which is false while banned, and
@@ -244,7 +248,7 @@ fun ConcordMembersScreen(
                         // In a Private community a ban also Refounds (CORD-05 §5), so the dialog must not
                         // promise they keep reading.
                         banRotatesKeys = state?.banRequiresRefounding(listOf(entry.pubkey)) == true,
-                        viewerCanManageRoles = iCanManageRoles,
+                        viewerCanManageRoles = iCanManageRoles && !rolesV2,
                         // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
                         // banned, the target isn't the owner (unremovable), and we strictly outrank
                         // them — which also rules out acting on ourselves (equal cannot act on equal).
@@ -266,6 +270,7 @@ private fun ConcordMemberRow(
     communityId: String,
     isSelf: Boolean,
     viewerIsOwner: Boolean,
+    rolesV2: Boolean,
     viewerCanBan: Boolean,
     canBanTarget: Boolean,
     canKickTarget: Boolean,
@@ -284,7 +289,7 @@ private fun ConcordMemberRow(
     // Owner can promote/demote anyone but the owner; ban is available to owner + BAN holders that
     // strictly outrank the target, never against the owner or yourself. A banned user only offers
     // "unban" — and unban is rank-gated too, so whoever cannot ban you cannot lift your ban either.
-    val canToggleAdmin = viewerIsOwner && !isOwnerTarget && !isBanned && !isSelf
+    val canToggleAdmin = viewerIsOwner && !rolesV2 && !isOwnerTarget && !isBanned && !isSelf
     val canBan = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
     // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
     val canRemove = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf

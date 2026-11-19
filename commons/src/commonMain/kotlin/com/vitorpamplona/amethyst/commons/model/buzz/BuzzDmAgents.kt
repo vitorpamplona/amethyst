@@ -18,25 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model
+package com.vitorpamplona.amethyst.commons.model.buzz
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-class BuzzRoleForTest {
-    @Test
-    fun picksTheMostPrivilegedBuzzRole() {
-        assertEquals("owner", buzzRoleFor(listOf("admin", "owner")))
-        assertEquals("admin", buzzRoleFor(listOf("admin")))
-        assertEquals("admin", buzzRoleFor(listOf("Admin")))
-        assertEquals("bot", buzzRoleFor(listOf("bot")))
-        assertEquals("guest", buzzRoleFor(listOf("guest")))
-    }
-
-    @Test
-    fun unknownOrEmptyRolesBecomeMember() {
-        // Buzz has no moderator; an unparseable role would fail the whole put-user.
-        assertEquals("member", buzzRoleFor(listOf("moderator")))
-        assertEquals("member", buzzRoleFor(emptyList()))
-    }
+/**
+ * Who this client takes for an agent in a Buzz DM, the input Quartz's
+ * [com.vitorpamplona.quartz.buzz.dm.BuzzDmRules] needs: agents neither count toward a DM's people
+ * cap nor fork it. The relay decides from its own records; this reads what we have cached.
+ */
+object BuzzDmAgents {
+    /**
+     * Best local guess at whether the relay counts [pubkey] as an agent: it has a NIP-OA owner in
+     * its profile, or a Buzz agent profile (kind 10100). A miss only means the cap is applied as if
+     * they were a person.
+     */
+    fun isLikelyAgent(pubkey: HexKey): Boolean =
+        LocalCache
+            .getUserIfExists(pubkey)
+            ?.metadataOrNull()
+            ?.flow
+            ?.value
+            ?.nipOaOwner != null || BuzzIdentityNames.hasCachedAgentProfile(pubkey)
 }

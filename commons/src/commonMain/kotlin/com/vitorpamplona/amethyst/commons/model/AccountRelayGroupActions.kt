@@ -21,19 +21,20 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelLabels
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.dm.dmHistory
+import com.vitorpamplona.quartz.buzz.dm.tags.DmHistoryTag
 import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
@@ -47,13 +48,9 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_BOT
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_GUEST
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_OWNER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
+import com.vitorpamplona.quartz.buzz.workspace.buzzRoleFor
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -66,7 +63,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithH
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -91,8 +87,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
@@ -199,27 +197,32 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Publishes [signed] to [relay] alone and waits for its OK.
+     * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK.
      *
      * NIP-42 write race: on a cold connection the relay rejects the first publish with
      * `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm the
-     * connection with a pendingOnAuthRequired read so the auth coordinator completes the handshake,
-     * then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
+     * connection with a pendingOnAuthRequired read of [warmUpKind] so the auth coordinator
+     * completes the handshake, then retry the publish on the now-authed socket. Mirrors the amy
+     * CLI fix.
      */
     private suspend fun publishAwaitingOk(
         signed: Event,
         relay: NormalizedRelayUrl,
+        timeoutSecs: Long = OK_TIMEOUT_SECS,
+        warmUpKind: Int = DmOpenEvent.KIND,
     ): Map<NormalizedRelayUrl, PublishResult> {
-        val results = account.client.publishAndCollectResults(signed, setOf(relay))
+        // Same delivery tracking as every other group command, so the chat shows it as sent.
+        account.chatDeliveryTracker.trackPublic(signed.id, setOf(relay))
+        val results = account.client.publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
         if (results.values.any { it.accepted } || results.values.none { it.message.contains("auth-required", ignoreCase = true) }) {
             return results
         }
         account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
-            filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
-            idleTimeoutMs = 8_000,
+            filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
+            idleTimeoutMs = AUTH_WARM_UP_MS,
             pendingOnAuthRequired = true,
         ) { _, _ -> false }
-        return account.client.publishAndCollectResults(signed, setOf(relay))
+        return account.client.publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
     }
 
     /** The relay-assigned DM channel id from a DM command's OK message (`response:{"channel_id":"…"}`). */
@@ -247,24 +250,38 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Add [member] to the Buzz DM [channel] with a kind-41011 command and return the DM the
-     * conversation now lives in, or null when the relay refused or never confirmed.
+     * Add [member] to the Buzz DM [channel] with a kind-41011 command.
      *
-     * With [includeHistory] (the default) the add carries `["history", "include"]`: the DM grows in
-     * place and [member] sees its history, unless those people already share a DM, which the relay
-     * answers with instead. Without it the relay adds no one in place and finds or creates the DM of
-     * the old people plus [member]. Either way the OK names the resulting DM, so the caller can
-     * follow it rather than stay in a conversation the newcomer is not in. See [BuzzDmRules].
+     * [history] says what to do with the DM's earlier messages (see [BuzzDmRules] and
+     * [DmHistoryTag]). [BuzzDmHistory.ASK], the default, lets the relay decide when there is nothing
+     * to decide (a DM of one person forks a new DM without history; people who already share a DM
+     * land there) and answer [BuzzDmAddResult.NeedsHistoryChoice] when the newcomer would join this
+     * conversation in place, so the caller asks the user and sends again with [BuzzDmHistory.SHARE]
+     * or [BuzzDmHistory.DONT_SHARE]. An agent account may not send the tag: the relay's refusal is
+     * answered by sending the add again untagged.
      */
     suspend fun addBuzzDmMember(
         channel: RelayGroupChannel,
         member: HexKey,
-        includeHistory: Boolean = true,
-    ): GroupId? {
+        history: BuzzDmHistory = BuzzDmHistory.ASK,
+    ): BuzzDmAddResult {
         val relay = channel.groupId.relayUrl
-        val signed = account.signer.sign(BuzzDmRules.addMemberTemplate(channel.groupId.id, member, includeHistory))
+        val signed =
+            account.signer.sign(
+                DmAddMemberEvent.build(channel.groupId.id, member) {
+                    when (history) {
+                        BuzzDmHistory.ASK -> dmHistory(DmHistoryTag.ASK)
+                        BuzzDmHistory.SHARE -> dmHistory(DmHistoryTag.INCLUDE)
+                        BuzzDmHistory.DONT_SHARE -> {}
+                    }
+                },
+            )
         account.cache.justConsumeMyOwnEvent(signed)
-        return buzzDmChannelIdFromAck(publishAwaitingOk(signed, relay))?.let { GroupId(it, relay) }
+        val result = buzzDmAddResult(publishAwaitingOk(signed, relay), relay, fromChannelId = channel.groupId.id)
+        if (result is BuzzDmAddResult.Refused && result.message == ONLY_PEOPLE_SHARE_HISTORY && history != BuzzDmHistory.DONT_SHARE) {
+            return addBuzzDmMember(channel, member, BuzzDmHistory.DONT_SHARE)
+        }
+        return result
     }
 
     /**
@@ -422,14 +439,19 @@ class AccountRelayGroupActions(
      * Create a new group on [relay]: kind 9007 (create-group) then kind 9002
      * (edit-metadata) with the chosen name/visibility, then remember it.
      *
-     * Waits for the relay's OK on the 9007 first. A relay that refuses it (Buzz refuses a listed
-     * channel whose name another listed channel has, ignoring case — buzz `5f8d0aab9`; any relay may
-     * refuse for policy) has created nothing, so nothing else is sent or followed and the refusal
-     * comes back as [RelayGroupCreateResult.Refused]. A relay that never answers is treated as before:
+     * Waits for the relay's OK on the 9007 first, for at most [CREATE_OK_TIMEOUT_SECS] (the AUTH
+     * warm-up included). A relay that refuses it (Buzz refuses a listed channel whose name another
+     * listed channel has, ignoring case — buzz `5f8d0aab9`; any relay may refuse for policy) has
+     * created nothing, so nothing else is sent or followed and the refusal comes back as
+     * [RelayGroupCreateResult.Refused]. A relay that does not answer in time is treated as before:
      * the channel is assumed created, since the publish may still land when the socket comes back.
      *
-     * [hashtags] are NIP-29 topics. On a Buzz relay `t` tags are channel labels instead, so they are
-     * not sent; [buzzLabels] (valid per [BuzzChannelLabels]) ride the 9007 there.
+     * Once the 9007 is out, the 9002 and the follow run to completion even if the caller is
+     * cancelled: stopping between them would leave a group with no name that is in nobody's list.
+     * Callers still run this from a scope that outlives a screen (the account's).
+     *
+     * [hashtags] are NIP-29 topics. On a Buzz relay `t` tags are channel labels instead, so they
+     * are not sent.
      */
     suspend fun createRelayGroup(
         relay: NormalizedRelayUrl,
@@ -446,12 +468,8 @@ class AccountRelayGroupActions(
         parent: String? = null,
         channelType: String? = null,
         banner: String? = null,
-        buzzLabels: List<String>? = null,
     ): RelayGroupCreateResult {
         val isBuzz = BuzzRelayDialect.isBuzz(relay)
-        if (isBuzz && buzzLabels != null && !BuzzChannelLabels.isValidSet(buzzLabels)) {
-            return RelayGroupCreateResult.Refused("invalid channel labels: ${buzzLabels.joinToString()}")
-        }
 
         // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
         // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
@@ -464,33 +482,37 @@ class AccountRelayGroupActions(
                 about = about,
                 visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
                 channelType = channelType,
-            ) {
-                if (isBuzz && !buzzLabels.isNullOrEmpty()) buzzLabels.distinct().forEach { add(arrayOf("t", it)) }
-            }
-        val signedCreate = account.signer.sign(create)
-        account.cache.justConsumeMyOwnEvent(signedCreate)
-        val results = publishAwaitingOk(signedCreate, relay)
-        relayGroupCreateRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
-
-        val edit =
-            GroupEditMetadataEvent.build(
-                groupId,
-                name = name,
-                about = about,
-                picture = picture,
-                banner = banner,
-                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                // Never on Buzz: there `t` tags replace the channel's labels, and the labels the user
-                // chose already rode the 9007.
-                hashtags = if (isBuzz) emptyList() else hashtags,
-                geohashes = geohashes,
-                parent = parent,
             )
-        account.broadcaster.signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
+        val signedCreate = account.signer.sign(create)
+        // Sign the 9002 up front too, so a signer that asks the user does it before anything is sent.
+        val edit =
+            account.signer.sign(
+                GroupEditMetadataEvent.build(
+                    groupId,
+                    name = name,
+                    about = about,
+                    picture = picture,
+                    banner = banner,
+                    status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                    // Never on Buzz: there `t` tags replace the channel's labels.
+                    hashtags = if (isBuzz) emptyList() else hashtags,
+                    geohashes = geohashes,
+                    parent = parent,
+                ),
+            )
+        account.cache.justConsumeMyOwnEvent(signedCreate)
+        val results = publishAwaitingOk(signedCreate, relay, CREATE_OK_TIMEOUT_SECS, warmUpKind = GroupMetadataEvent.KIND)
+        relayGroupCommandRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
 
-        val id = GroupId(groupId, relay)
-        account.follow(LocalCache.getOrCreateRelayGroupChannel(id))
-        return RelayGroupCreateResult.Created(id)
+        return withContext(NonCancellable) {
+            account.cache.justConsumeMyOwnEvent(edit)
+            account.chatDeliveryTracker.trackPublic(edit.id, setOf(relay))
+            account.client.publish(edit, setOf(relay))
+
+            val id = GroupId(groupId, relay)
+            account.follow(LocalCache.getOrCreateRelayGroupChannel(id))
+            RelayGroupCreateResult.Created(id)
+        }
     }
 
     /**
@@ -656,14 +678,14 @@ class AccountRelayGroupActions(
         // Buzz has one role per member, in its own vocabulary, and reads it from `p[2]` before the
         // `role` tag: our NIP-29 roles there (`moderator`, or the old role first in an edit) were
         // refused or won over the new one. Map ours onto its set and send the role tag alone (see
-        // relayGroupPutUserTemplate). An unmapped role becomes `member` rather than travel.
+        // GroupPutUserEvent.buildRoleChange). An unmapped role becomes `member` rather than travel.
         val buzzRole =
             if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
                 buzzRoleFor(roles)
             } else {
                 null
             }
-        val template = relayGroupPutUserTemplate(channel.groupId.id, pubkey, roles, buzzRole)
+        val template = GroupPutUserEvent.buildRoleChange(channel.groupId.id, pubkey, roles, buzzRole)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -706,8 +728,11 @@ class AccountRelayGroupActions(
      *
      * On a Buzz relay [hashtags] are ignored: there the 39000's `t` tags are the channel type and its
      * labels, and a 9002 `t` tag replaces the label set — echoing them back (the type included) made
-     * the relay refuse every rename (buzz `2f79374f4`). Labels change only through [buzzLabels]:
-     * null leaves them as they are, an empty list clears them. See [BuzzChannelLabels].
+     * the relay refuse every rename (buzz `2f79374f4`). The labels are left as they are.
+     *
+     * A Buzz relay refuses a rename for policy (a listed name another listed channel holds), so there
+     * this waits for the OK and returns the relay's reason, or null when it took the edit or did not
+     * answer in time. A NIP-29 relay's edit goes out without waiting, and this returns null.
      */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
@@ -723,13 +748,13 @@ class AccountRelayGroupActions(
         parent: String? = channel.parentGroupId(),
         children: List<String> = channel.childGroupIds(),
         banner: String? = channel.bannerPicture(),
-        buzzLabels: List<String>? = null,
-    ) {
+    ): String? {
+        val isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
         val template =
-            relayGroupEditTemplate(
+            GroupEditMetadataEvent.buildEdit(
                 channel.groupId.id,
                 currentMetadata = channel.event,
-                isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl),
+                isBuzz = isBuzz,
                 name = name,
                 about = about,
                 picture = picture,
@@ -739,9 +764,15 @@ class AccountRelayGroupActions(
                 geohashes = geohashes,
                 parent = parent,
                 children = children,
-                buzzLabels = buzzLabels,
+                buzzLabels = null,
             )
-        account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        if (!isBuzz) {
+            account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+            return null
+        }
+        val signed = account.signer.sign(template)
+        account.cache.justConsumeMyOwnEvent(signed)
+        return relayGroupCommandRefusal(publishAwaitingOk(signed, channel.groupId.relayUrl, CREATE_OK_TIMEOUT_SECS, warmUpKind = GroupMetadataEvent.KIND))
     }
 
     /**
@@ -755,21 +786,6 @@ class AccountRelayGroupActions(
     ) {
         val template = GroupEditMetadataEvent.build(channel.groupId.id, archived = archived)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-}
-
-/**
- * Maps NIP-29 role names onto Buzz's closed role set (owner/admin/member/guest/bot), picking the
- * most privileged one present. Anything else, including NIP-29's `moderator`, becomes `member`.
- */
-internal fun buzzRoleFor(roles: List<String>): String {
-    fun has(role: String) = roles.any { it.equals(role, true) }
-    return when {
-        has(BUZZ_ROLE_OWNER) -> BUZZ_ROLE_OWNER
-        has(RelayGroupMembership.ROLE_ADMIN) || has(BUZZ_ROLE_ADMIN) -> BUZZ_ROLE_ADMIN
-        has(BUZZ_ROLE_BOT) -> BUZZ_ROLE_BOT
-        has(BUZZ_ROLE_GUEST) -> BUZZ_ROLE_GUEST
-        else -> BUZZ_ROLE_MEMBER
     }
 }
 
@@ -791,52 +807,6 @@ fun relayGroupStatus(
         if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
     }
 
-/**
- * The kind:9002 behind [AccountRelayGroupActions.editRelayGroupMetadata].
- *
- * On a Buzz relay ([isBuzz]) visibility rides a `visibility` ("open"/"private") tag, since the relay
- * does not read NIP-29's `private` flag; [hashtags] are dropped, because there `t` tags are channel
- * labels and the 39000's include the channel type, which the relay refuses as a label; the labels
- * change only through [buzzLabels] (null: unchanged; empty: cleared), validated by
- * [BuzzChannelLabels.editTags], which throws on a set the relay would refuse; and the tags this form
- * doesn't manage are not echoed, since Buzz stamps relay-internal ones (`join_role`, `auto_join`,
- * `P`, …) that a channel admin may not set. A NIP-29 relay gets [currentMetadata]'s unmanaged tags
- * verbatim, so an edit doesn't erase them.
- */
-fun relayGroupEditTemplate(
-    groupId: String,
-    currentMetadata: GroupMetadataEvent?,
-    isBuzz: Boolean,
-    name: String?,
-    about: String?,
-    picture: String?,
-    banner: String?,
-    status: Set<GroupMetadataEvent.GroupStatus>,
-    hashtags: List<String>,
-    geohashes: List<String>,
-    parent: String?,
-    children: List<String>,
-    buzzLabels: List<String>?,
-): EventTemplate<GroupEditMetadataEvent> {
-    val labelTags = if (isBuzz) BuzzChannelLabels.editTags(buzzLabels) else emptyList()
-    return GroupEditMetadataEvent.build(
-        groupId,
-        name = name,
-        about = about,
-        picture = picture,
-        banner = banner,
-        status = status,
-        hashtags = if (isBuzz) emptyList() else hashtags,
-        geohashes = geohashes,
-        parent = parent,
-        children = children,
-        visibility = if (isBuzz) (if (GroupMetadataEvent.GroupStatus.PRIVATE in status) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
-        extraTags = if (isBuzz) emptyList() else currentMetadata?.unmanagedTags() ?: emptyList(),
-    ) {
-        labelTags.forEach { add(it) }
-    }
-}
-
 /** What became of a [AccountRelayGroupActions.createRelayGroup]. */
 sealed interface RelayGroupCreateResult {
     /** The relay accepted the create (or never answered, and it may still land). */
@@ -851,11 +821,11 @@ sealed interface RelayGroupCreateResult {
 }
 
 /**
- * The relay's reason when it explicitly refused a group create, or null when it accepted it or
- * never answered (a transport failure says nothing about the group). Relay prefixes (`invalid:`,
- * `restricted:`, …) are dropped so the reason reads as a sentence.
+ * The relay's reason when it explicitly refused a group command (a create, an edit, a DM add), or
+ * null when it accepted it or never answered (a transport failure says nothing about the group).
+ * Relay prefixes (`invalid:`, `restricted:`, …) are dropped so the reason reads as a sentence.
  */
-internal fun relayGroupCreateRefusal(results: Map<NormalizedRelayUrl, PublishResult>): String? {
+internal fun relayGroupCommandRefusal(results: Map<NormalizedRelayUrl, PublishResult>): String? {
     if (results.values.any { it.accepted }) return null
     val refusal = results.values.firstOrNull { !it.isTransportFailure } ?: return null
     val message = refusal.message
@@ -863,26 +833,65 @@ internal fun relayGroupCreateRefusal(results: Map<NormalizedRelayUrl, PublishRes
     return if (prefix.isNotEmpty() && prefix.none { it.isWhitespace() }) message.substringAfter(':').trim() else message
 }
 
-/**
- * The kind:9000 that sets [pubkey]'s roles in [groupId].
- *
- * NIP-29 relays read the roles inside the `p` tag (`["p", pubkey, role, …]`). Buzz reads `p[2]`
- * first and the top-level `role` tag only as a fallback (buzz `d0dee1cb5`, `put_user_targets` in
- * `side_effects.rs`), refusing the whole event for a role outside owner/admin/member/guest/bot. So
- * with a [buzzRole] the `p` tag stays bare and the role travels in the `role` tag alone, the shape
- * Buzz's own SDK sends (`build_add_member`), which both old and new Buzz relays read the same way.
- */
-fun relayGroupPutUserTemplate(
-    groupId: String,
-    pubkey: HexKey,
-    roles: List<String>,
-    buzzRole: String?,
-): EventTemplate<GroupPutUserEvent> =
-    if (buzzRole != null) {
-        GroupPutUserEvent.build(groupId, listOf(pubkey to emptyList()), buzzRole = buzzRole)
-    } else {
-        GroupPutUserEvent.build(groupId, listOf(pubkey to roles))
+/** What a Buzz DM add does with the conversation's earlier messages ([AccountRelayGroupActions.addBuzzDmMember]). */
+enum class BuzzDmHistory {
+    /** Let the relay decide where it can, and ask ([BuzzDmAddResult.NeedsHistoryChoice]) where it can't. */
+    ASK,
+
+    /** Grow this DM in place: the newcomer sees its history. */
+    SHARE,
+
+    /** Move to the DM of these people and the newcomer, found or made, without this history. */
+    DONT_SHARE,
+}
+
+/** What became of a [AccountRelayGroupActions.addBuzzDmMember]. */
+sealed interface BuzzDmAddResult {
+    /** The newcomer is in [groupId], which is not the DM the add was sent from when [moved]. */
+    data class Added(
+        val groupId: GroupId,
+        val moved: Boolean,
+    ) : BuzzDmAddResult
+
+    /** The add would let them see this DM's history: ask the user and send again with a choice. */
+    data object NeedsHistoryChoice : BuzzDmAddResult
+
+    /** The relay refused the add; [message] is its reason. */
+    data class Refused(
+        val message: String,
+    ) : BuzzDmAddResult
+
+    /** The relay did not answer in time (or answered without naming a DM). */
+    data object NoAnswer : BuzzDmAddResult
+}
+
+/** Reads the relay's answer to a DM add sent from the DM on [relay] whose id the event's `h` names. */
+internal fun buzzDmAddResult(
+    results: Map<NormalizedRelayUrl, PublishResult>,
+    relay: NormalizedRelayUrl,
+    fromChannelId: String? = null,
+): BuzzDmAddResult {
+    val accepted = results.values.firstOrNull { it.accepted }
+    if (accepted != null) {
+        val landed = BuzzDmRules.channelIdFromOk(accepted.message) ?: return BuzzDmAddResult.NoAnswer
+        return BuzzDmAddResult.Added(GroupId(landed, relay), moved = fromChannelId != null && landed != fromChannelId)
     }
+    if (results.values.any { it.message.startsWith(BuzzDmRules.NEEDS_HISTORY_CHOICE) }) return BuzzDmAddResult.NeedsHistoryChoice
+    val refused = results.values.firstOrNull { !it.isTransportFailure } ?: return BuzzDmAddResult.NoAnswer
+    return BuzzDmAddResult.Refused(refused.message)
+}
+
+/** The relay's refusal of a history tag from an agent (buzz `handle_dm_add_member`). */
+internal const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's history"
+
+/** How long a group command waits for its OK; the AUTH warm-up can double it. */
+private const val OK_TIMEOUT_SECS = 15L
+
+/** How long a create or a Buzz edit waits for its OK, each attempt: the screen waits on it. */
+private const val CREATE_OK_TIMEOUT_SECS = 8L
+
+/** How long the AUTH warm-up read may take. */
+private const val AUTH_WARM_UP_MS = 5_000L
 
 /** A profile signed this recently is within Buzz's timestamp window and can be relayed as-is. */
 private const val BUZZ_FRESH_PROFILE_SECS = 60L

@@ -391,7 +391,7 @@ class CordnGroupChatroomTest {
     fun `only the latest revision of a calendar event is a row`() {
         // calendar-events.md §5: a revision replaces the event in place.
         val room = room()
-        val tags = arrayOf(arrayOf("d", "standup"), arrayOf("title", "Standup"))
+        val tags = arrayOf(arrayOf("d", "standup"), arrayOf("title", "Standup"), arrayOf("start", "1757000000"))
         room.add(message("1", at = 10, cursor = 1, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))
         room.add(message("2", at = 20, cursor = 2, content = "hello"))
         room.add(message("3", at = 30, cursor = 3, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))

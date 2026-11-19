@@ -233,10 +233,7 @@ class RelayGroupChannel(
      * as `guest`, as the relay's own `ChannelJoinRole::parse_fail_closed` does, so it never widens
      * who may write.
      */
-    fun buzzJoinRole(): String {
-        val value = event?.tags?.firstOrNull { it.size > 1 && it[0] == BUZZ_JOIN_ROLE_TAG }?.get(1) ?: return BUZZ_ROLE_MEMBER
-        return if (value == BUZZ_ROLE_MEMBER) BUZZ_ROLE_MEMBER else BUZZ_ROLE_GUEST
-    }
+    fun buzzJoinRole(): String = event?.buzzJoinRole() ?: BUZZ_ROLE_MEMBER
 
     /**
      * Buzz only: an **announce channel**, an open channel whose joiners become read-only guests
@@ -278,7 +275,7 @@ class RelayGroupChannel(
     fun updateMembers(event: GroupMembersEvent) {
         if (event.createdAt <= membersUpdatedAt) return
         members = event.members().toSet()
-        guests = buzzGuestsOf(event)
+        guests = event.buzzGuests()
         membersUpdatedAt = event.createdAt
         recomputeAllMembers()
         updateChannelInfo()
@@ -459,18 +456,4 @@ class RelayGroupChannel(
     companion object {
         fun placeholderIdHex(groupId: GroupId): HexKey = "relaygroup-empty-${groupId.toKey()}"
     }
-}
-
-/** Buzz's 39000 tag naming the role a joiner gets (`member` or `guest`). */
-private const val BUZZ_JOIN_ROLE_TAG = "join_role"
-
-/** The guests on a Buzz 39002: `p` tags whose fourth value (the role) is `guest`. */
-private fun buzzGuestsOf(event: GroupMembersEvent): Set<HexKey> {
-    var guests: MutableSet<HexKey>? = null
-    event.tags.forEach { tag ->
-        if (tag.size > 3 && tag[0] == "p" && tag[3] == BUZZ_ROLE_GUEST) {
-            (guests ?: HashSet<HexKey>().also { guests = it }).add(tag[1])
-        }
-    }
-    return guests ?: emptySet()
 }

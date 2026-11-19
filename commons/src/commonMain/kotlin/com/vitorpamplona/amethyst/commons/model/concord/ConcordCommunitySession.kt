@@ -37,13 +37,17 @@ import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelDelivery
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWebxdc
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWritersLedger
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPinLists
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -54,6 +58,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +86,27 @@ data class ExpiredConcordRumor(
     val expiresAt: Long,
     /** The URLs of the rumor's encrypted attachments, whose decryption keys go with it (CORD-08 §3). */
     val attachmentUrls: List<String> = emptyList(),
+)
+
+/** A key delivery buffered on [channelIdHex]'s access plane (CORD-03 §5), opened, carried by wrap [wrapId]. */
+class PendingAccessDelivery(
+    val channelIdHex: HexKey,
+    val wrapId: HexKey,
+    val delivery: ChannelDelivery,
+)
+
+/**
+ * A moderation hide (CORD-03 §3) a session holds for one channel: the kind 5 [deletionId] that
+ * [hider] wrote on [channelIdHex], citing [citation], naming [targets]. Kept rather than applied
+ * once, because whether it is honored depends on the fold (the hider's Grant, their rank over each
+ * target's author), and the fold or the target can arrive after it.
+ */
+class ConcordModerationHide(
+    val channelIdHex: HexKey,
+    val deletionId: HexKey,
+    val hider: HexKey,
+    val citation: AuthorityCitation?,
+    val targets: Set<HexKey>,
 )
 
 /**
@@ -323,11 +349,29 @@ class ConcordCommunitySession(
     // and judged against the folded Writers ledger. No secret: never AUTHed or written as.
     private var writerChannelKeysByAddress = HashMap<HexKey, ChannelPlane>()
 
+    // Channel id -> writer-address wraps whose post did not stand on the fold that judged them,
+    // re-judged on every fold while the buffer still holds them.
+    private val heldBackWriterWraps = HashMap<HexKey, LinkedHashSet<HexKey>>()
+
     // Each Private Channel's access plane on Roles v2 (CORD-03 §5) -> (channel id, plane key). Key
     // deliveries land here; opening one takes the account signer, so they are buffered for a drain.
     @Volatile
     private var accessKeys: Map<HexKey, Pair<HexKey, GroupKey>> = emptyMap()
+
+    // Access-plane wraps waiting for the drain, oldest first and bounded ([MAX_ACCESS_WRAPS]).
     private val accessWraps = LinkedHashMap<HexKey, Event>()
+
+    // Each buffered access wrap opened and parsed once (null: it did not open or parse), so a drain
+    // that runs on every structural tick does not NIP-44-open the whole buffer again.
+    private val accessDeliveryByWrapId = HashMap<HexKey, ChannelDelivery?>()
+
+    // Access wraps the drain judged for good (adopted, for someone else, stale): a re-delivery is
+    // dropped unbuffered. Bounded like [sweptWrapIds].
+    private val retiredAccessWrapIds = LinkedHashSet<HexKey>()
+
+    /** Access-plane wraps opened so far (cache misses), for a test to assert each opens once. */
+    internal var accessOpens = 0
+        private set
 
     // The held Private Channel keys the current channel planes were derived from, so a later list
     // entry carrying different keys re-derives them (see [adoptPrivateChannels]).
@@ -599,6 +643,45 @@ class ConcordCommunitySession(
             accessWraps.values.mapNotNull { w -> keys[w.pubKey]?.let { it.first to w } }
         }
 
+    /**
+     * The buffered access-plane deliveries (CORD-03 §5), each opened once ([accessOpens]): a wrap
+     * that does not open or parse is retired here, never offered again. The drain settles the rest
+     * with [retireAccessWrap] once it has judged them for good.
+     */
+    fun pendingAccessDeliveries(): List<PendingAccessDelivery> {
+        val (keys, toOpen) =
+            lock.withLock {
+                accessKeys to accessWraps.values.filter { it.id !in accessDeliveryByWrapId }
+            }
+        val opened =
+            toOpen.associate { wrap ->
+                val plane = keys[wrap.pubKey]?.second
+                wrap.id to plane?.let { ConcordStreamEnvelope.openOrNull(wrap, it) }?.let { ConcordChannelAccess.parse(it) }
+            }
+        return lock.withLock {
+            accessOpens += opened.size
+            opened.forEach { (id, delivery) ->
+                if (id in accessWraps) accessDeliveryByWrapId[id] = delivery
+                if (delivery == null) retireAccessLocked(id)
+            }
+            accessWraps.values.mapNotNull { wrap ->
+                val channelIdHex = keys[wrap.pubKey]?.first ?: return@mapNotNull null
+                val delivery = accessDeliveryByWrapId[wrap.id] ?: return@mapNotNull null
+                PendingAccessDelivery(channelIdHex, wrap.id, delivery)
+            }
+        }
+    }
+
+    /** Drops access wrap [wrapId] from the buffer for good: a re-delivery of it is not buffered again. */
+    fun retireAccessWrap(wrapId: HexKey) = lock.withLock { retireAccessLocked(wrapId) }
+
+    private fun retireAccessLocked(wrapId: HexKey) {
+        accessWraps.remove(wrapId)
+        accessDeliveryByWrapId.remove(wrapId)
+        retiredAccessWrapIds.add(wrapId)
+        while (retiredAccessWrapIds.size > MAX_SWEPT_WRAP_IDS) retiredAccessWrapIds.remove(retiredAccessWrapIds.first())
+    }
+
     /** The access plane key at [address], or null. */
     fun accessPlaneKey(address: HexKey): GroupKey? = accessKeys[address]?.second
 
@@ -741,9 +824,16 @@ class ConcordCommunitySession(
             }
             in accessKeys -> {
                 // A key delivery (CORD-03 §5): buffered like a rekey, since opening a blob takes the
-                // account signer and the deliverer is judged against the fold at drain time.
+                // account signer and the deliverer is judged against the fold at drain time. One the
+                // drain already settled is not buffered again.
                 lock.withLock {
+                    if (wrap.id in retiredAccessWrapIds) return ConcordIngestOutcome.NON_STRUCTURAL
                     if (accessWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
+                    while (accessWraps.size > MAX_ACCESS_WRAPS) {
+                        val oldest = accessWraps.keys.first()
+                        accessWraps.remove(oldest)
+                        accessDeliveryByWrapId.remove(oldest)
+                    }
                 }
                 return ConcordIngestOutcome.STRUCTURAL
             }
@@ -896,6 +986,7 @@ class ConcordCommunitySession(
         // they arrived — re-projecting all channels on every control edition would be
         // O(channels × history) of redundant decryption.
         for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
+        rejudgeHeldBackWriterPosts()
     }
 
     /**
@@ -976,11 +1067,41 @@ class ConcordCommunitySession(
 
     /** Re-decrypts and re-projects a channel's WHOLE wrap buffer at the current epoch. Only for a
      *  re-fold (keys may change). Prior-epoch wraps in the buffer simply won't open under the current
-     *  key and are skipped — they were already emitted when they landed (the sink dedups by id). */
+     *  key and are skipped — they were already emitted when they landed (the sink dedups by id). A
+     *  restricted Channel's writer-address wraps re-open on their own writer plane (CORD-03 §1). */
     private fun reprojectChannel(channelIdHex: HexKey) {
         val plane = currentChannelPlane(channelIdHex) ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        emitChannelRumors(channelIdHex, plane.key, plane.epoch, wraps)
+        val writers = lock.withLock { writerChannelKeysByAddress.filterValues { it.channelIdHex == channelIdHex } }
+        val (atWriters, atRead) = wraps.partition { it.pubKey in writers }
+        emitChannelRumors(channelIdHex, plane.key, plane.epoch, atRead)
+        atWriters.groupBy { it.pubKey }.forEach { (address, held) ->
+            val writer = writers.getValue(address)
+            emitChannelRumors(channelIdHex, writer.key, writer.epoch, held, writerEpoch = writer.writerEpoch)
+        }
+    }
+
+    /**
+     * Re-judges the writer-address posts [writerPostStands] held back (CORD-03 §1) against the
+     * ledger and Roster just folded: a post that arrived before the ledger entry or the
+     * certificate's epoch that lets it stand was refused then and is let in now.
+     */
+    private fun rejudgeHeldBackWriterPosts() {
+        val retry =
+            lock.withLock {
+                heldBackWriterWraps.mapNotNull { (channelIdHex, ids) ->
+                    val buffer = channelWrapsById[channelIdHex] ?: return@mapNotNull null
+                    // A held-back wrap the buffer has since trimmed can never be re-opened.
+                    ids.retainAll { it in buffer }
+                    if (ids.isEmpty()) null else channelIdHex to ids.mapNotNull { buffer[it] }
+                }
+            }
+        for ((channelIdHex, wraps) in retry) {
+            wraps.groupBy { it.pubKey }.forEach { (address, held) ->
+                val writer = lock.withLock { writerChannelKeysByAddress[address] } ?: return@forEach
+                emitChannelRumors(channelIdHex, writer.key, writer.epoch, held, writerEpoch = writer.writerEpoch)
+            }
+        }
     }
 
     /**
@@ -1003,7 +1124,19 @@ class ConcordCommunitySession(
             // A post at a writer address stands only inside its window, with a certificate from the
             // epoch's certifier, before any stop naming its author (CORD-03 §1). One that doesn't is
             // held back: a manager would see it flagged, everyone else nothing.
-            if (writerEpoch != null && !writerPostStands(channelIdHex, key.publicKeyHex, rumor)) continue
+            if (writerEpoch != null) {
+                val stands = writerPostStands(channelIdHex, key.publicKeyHex, rumor)
+                lock.withLock {
+                    if (stands) {
+                        heldBackWriterWraps[channelIdHex]?.remove(wrap.id)
+                    } else {
+                        heldBackWriterWraps.getOrPut(channelIdHex) { LinkedHashSet() }.add(wrap.id)
+                    }
+                }
+                // Re-judged on the next fold ([rejudgeHeldBackWriterPosts]): the ledger entry or
+                // Grant that lets it stand may simply not have folded yet.
+                if (!stands) continue
+            }
             // A WebXDC signal (kind 3310) rides the plane but is never a chat row: held apart for a
             // WebXDC host, never handed to the store, so it can't reach a feed, a preview or an
             // unread count. Its author is still observably present (CORD-02 §5).
@@ -1033,6 +1166,11 @@ class ConcordCommunitySession(
             }
             authors.add(rumor.pubKey.lowercase())
             observe(rumor)
+            // A moderation hide is held for the channel, so it applies to a target that arrives later
+            // and keeps applying across re-projections (CORD-03 §3). A target it already covers is
+            // never handed to the store.
+            if (rumor is DeletionRequestEvent) recordModerationHide(channelIdHex, rumor)
+            if (isHiddenByModeration(channelIdHex, rumor.id, rumor.pubKey)) continue
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
@@ -1227,6 +1365,95 @@ class ConcordCommunitySession(
         wrapId: HexKey,
     ): Boolean = lock.withLock { channelWrapsById[channelIdHex]?.containsKey(wrapId) == true }
 
+    // ---- Moderation hides (CORD-03 §3) ------------------------------------------------------
+
+    // Channel id -> the moderation hides seen on it, by the deleting rumor's id, oldest first.
+    private val hidesByChannel = HashMap<HexKey, LinkedHashMap<HexKey, ConcordModerationHide>>()
+
+    // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
+    private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
+
+    private val _moderationHideRevision = MutableStateFlow(0L)
+
+    /** Bumps whenever a new moderation hide is held, so a store re-applies the hides it covers. */
+    val moderationHideRevision: StateFlow<Long> = _moderationHideRevision
+
+    /**
+     * Holds [deletion] as a possible moderation hide on [channelIdHex]. Every kind 5 of the channel
+     * is held, an author's own delete included: [isHiddenByModeration] judges each one against the
+     * current fold, and an author's own delete is never a moderation hide there.
+     */
+    private fun recordModerationHide(
+        channelIdHex: HexKey,
+        deletion: DeletionRequestEvent,
+    ) {
+        val targets = deletion.deleteEventIds().mapTo(HashSet()) { it.lowercase() }
+        if (targets.isEmpty()) return
+        val citation = deletion.tags.firstOrNull(VacTag::isTag)?.let(VacTag::parse)
+        val hide = ConcordModerationHide(channelIdHex, deletion.id, deletion.pubKey.lowercase(), citation, targets)
+        val added = lock.withLock { holdHideLocked(hide) }
+        if (added) _moderationHideRevision.update { it + 1 }
+    }
+
+    private fun holdHideLocked(hide: ConcordModerationHide): Boolean {
+        val held = hidesByChannel.getOrPut(hide.channelIdHex) { LinkedHashMap() }
+        if (held.containsKey(hide.deletionId)) return false
+        held[hide.deletionId] = hide
+        val byTarget = hidesByTarget.getOrPut(hide.channelIdHex) { HashMap() }
+        hide.targets.forEach { byTarget.getOrPut(it) { ArrayList(1) }.add(hide) }
+        // Bounded like the wrap buffer: any member can post deletes, so the oldest go first.
+        while (held.size > MAX_MODERATION_HIDES_PER_CHANNEL) {
+            val oldest = held.remove(held.keys.first()) ?: break
+            oldest.targets.forEach { target ->
+                val list = byTarget[target] ?: return@forEach
+                list.remove(oldest)
+                if (list.isEmpty()) byTarget.remove(target)
+            }
+        }
+        return true
+    }
+
+    /**
+     * True when a held moderation hide on [channelIdHex] names [rumorId], written by [author], and
+     * the current fold honors it: the hider holds MANAGE_MESSAGES in the Channel, strictly outranks
+     * the author, and their citation resolves. False before the Control Plane folds.
+     */
+    fun isHiddenByModeration(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+        author: HexKey,
+    ): Boolean {
+        val hides = lock.withLock { hidesByTarget[channelIdHex]?.get(rumorId.lowercase())?.toList() } ?: return false
+        val folded = _state.value ?: return false
+        return hides.any { folded.honorsModerationHide(it.hider, author, channelIdHex, it.citation) }
+    }
+
+    /** Channel id -> every rumor id a held moderation hide names there (honored or not yet). */
+    fun moderationHideTargets(): Map<HexKey, Set<HexKey>> = lock.withLock { hidesByTarget.mapValues { it.value.keys.toSet() } }
+
+    /** True when [channelIdHex]'s buffer holds the wrap that carried [rumorId]. */
+    fun holdsRumorOn(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+    ): Boolean =
+        lock.withLock {
+            val wrapId = wrapIdByRumorId[rumorId] ?: return@withLock false
+            channelWrapsById[channelIdHex]?.containsKey(wrapId) == true
+        }
+
+    /** Every moderation hide this session holds — handed to the session that replaces it. */
+    fun heldModerationHides(): List<ConcordModerationHide> = lock.withLock { hidesByChannel.values.flatMap { it.values } }
+
+    /**
+     * Adopts [hides] held by the session this one replaces (a Refounding rebuilds the session), so a
+     * hidden message stays hidden when a later re-projection re-emits it.
+     */
+    fun carryModerationHides(hides: Collection<ConcordModerationHide>) {
+        if (hides.isEmpty()) return
+        val added = lock.withLock { hides.count { holdHideLocked(it) } }
+        if (added > 0) _moderationHideRevision.update { it + 1 }
+    }
+
     // ---- Pins (CORD-04 §7) ------------------------------------------------------------------
 
     /**
@@ -1273,7 +1500,8 @@ class ConcordCommunitySession(
             lock.withLock {
                 val wrapId = wrapIdByRumorId[rumorId] ?: return null
                 val wrap = channelWrapsById[channelIdHex]?.get(wrapId) ?: return null
-                val plane = channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey] ?: return null
+                // A restricted Channel's post at a writer address reopens on that writer plane (CORD-03 §1).
+                val plane = channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey] ?: writerChannelKeysByAddress[wrap.pubKey] ?: return null
                 wrap to plane
             }
         if (plane.channelIdHex != channelIdHex) return null
@@ -1303,5 +1531,11 @@ class ConcordCommunitySession(
 
         /** How many swept (expired) wrap ids a session remembers to drop their re-deliveries unopened. */
         const val MAX_SWEPT_WRAP_IDS = 4096
+
+        /** Access-plane wraps buffered for the drain; any member can deliver, so this is bounded. */
+        const val MAX_ACCESS_WRAPS = 256
+
+        /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
+        const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
     }
 }
