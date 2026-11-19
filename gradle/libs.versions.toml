@@ -79,25 +79,23 @@ media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz. Released on Nostr +
-# Blossom through Magpie since 2.19.0 (settings.gradle.kts); 2.19.0 has everything the JitPack pin of
-# quartz main carried, and takes libschnorr256k1-kotlin 1.0.2 through Magpie instead of JitPack.
-quartzKmp = "2.19.0"
+# Blossom through Magpie since 2.19.0 (settings.gradle.kts), like every library below.
+quartzKmp = "2.20.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
-# and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
-# the version above: 2.9.0 removed no public API they use.
-marmotKmp = "2.2.1"
-cordnKmp = "1.2.1"
+# and cordn (vitorpamplona/cordn-kmp), both built against the quartz and mls-kmp versions here. Released
+# on Nostr + Blossom only since marmot 2.3.0 and cordn 1.3.0.
+marmotKmp = "2.3.0"
+cordnKmp = "1.3.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
-# versions those libraries were built against. crypto-kmp is on Nostr + Blossom (Magpie) since 2.1.1,
-# which quartz 2.19.0 takes; it has the same sources as 2.1.0.
+# versions those libraries were built against. crypto-kmp is on Nostr + Blossom (Magpie) since 2.1.1.
 cryptoKmp = "2.1.1"
 # The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp): kiko runs a
 # cart, kiko-player plays it in real time (commons), kiko-compose shows it (commonsUI).
-kikoKmp = "0.2.4"
-mlsKmp = "1.3.0"
+kikoKmp = "0.2.5"
+mlsKmp = "1.3.1"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
-quicKmp = "1.2.0"
+quicKmp = "1.2.1"
 # Navigation 3, the Compose Multiplatform build (Apache-2.0): Android, desktop and iOS. The
 # ViewModel decorator scopes each back-stack entry's ViewModels; match it to the lifecycle version.
 navigation3 = "1.2.0"
