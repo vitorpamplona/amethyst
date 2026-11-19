@@ -43,11 +43,8 @@ class ThreadEventLoaderSubAssembler(
     val cache: ICacheProvider,
     client: INostrClient,
     allKeys: () -> Set<ThreadQueryState>,
-    /**
-     * Runs with this loader's own re-plan: after each EOSE and each live event, since what it loaded
-     * may change other plans. Callers should only queue work (an `invalidateFilters`), not do it here.
-     */
-    private val onEose: () -> Unit,
+    /** Called each time this loader re-plans (every EOSE and live event). Only queue work here. */
+    private val onReplan: () -> Unit,
 ) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
     override fun newEose(
         key: ThreadQueryState,
@@ -56,7 +53,7 @@ class ThreadEventLoaderSubAssembler(
         filters: List<Filter>?,
     ) {
         super.newEose(key, relayUrl, time, filters)
-        onEose()
+        onReplan()
     }
 
     override fun updateFilter(
