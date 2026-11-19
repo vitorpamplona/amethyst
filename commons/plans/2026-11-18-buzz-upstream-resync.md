@@ -95,3 +95,39 @@ Verification: `:commons:jvmTest` for `BuzzChannelLabelsTest`, `BuzzDmRulesTest`,
 `:cli:compileKotlin` passes. `:commonsUI:compileKotlinJvm` was OOM-killed four times on the shared
 machine, so the commonsUI edits (metadata form, members screen, DM list, channel view) are not
 compiled yet, and the desktop UI was not run.
+
+## Audit fixes (2026-11-19)
+
+An audit of this branch (Buzz, Concord, Marmot and cordn work) found the issues below. Built
+against the unreleased Quartz, marmot-kmp, cordn-kmp and mls-kmp branches (`-PquartzDir`,
+`-PmarmotKmpDir`, `-PcordnKmpDir`, `-PmlsKmpDir`): this needs Quartz 2.21, marmot-kmp 2.3.0 and
+cordn-kmp 1.3.0 released, and `gradle/libs.versions.toml` and `magpie {}` bumped, before it can merge.
+
+| Finding | Status | What changed |
+|---|---|---|
+| Concord moderation hide could prune any cached note | **Fixed** | `ConcordModerationHideSweep` removes only a Chat rumor of that very channel (in its `ConcordChannel`, or carried by a wrap the session holds there). Test: a hide citing a DM, a public note, a public NIP-C7 chat and another community's message changes nothing. |
+| Moderation hides applied once, never stored | **Fixed** | The session holds every kind 5 of each channel (bounded) and judges it against the current fold. Its ingest gate keeps a covered target out of the store, so a hide that arrives first, or before the hider's Grant folds, still applies, and a re-projection cannot bring a hidden message back. The account sweeps on arrival and on every fold. A Refounding carries the hides into the new session. |
+| `createRelayGroup` blocked up to about 40 s and half-created on back | **Fixed** | Both events are signed up front. The OK wait is 8 s per attempt plus a 5 s AUTH warm-up, now on kind 39000. After the 9007, the 9002 and follow run `NonCancellable`. The form publishes in the account scope, shows progress, and navigates only while open. A refusal reads "That name is taken" (local check), "The relay did not create it", or, on Buzz, "The relay did not save the changes". Renames are pre-checked (`except`), and a Buzz edit waits for its OK. Delivery tracking is back. |
+| Buzz DM add always shared history; hint wrong; no feedback; late navigation | **Fixed** | The add sends `["history","ask"]`. On `needs-choice: history` the dialog asks whether to share history or start a new conversation, and an agent's refusal of the tag is retried untagged. The hint differs for a DM of one person (it forks without history) and for one of several. The dialog stays open with progress and shows refusals and silence. It navigates only while open. amy defaults to `ask` too (`--history ask|include|exclude`, `needs_history_choice`); `--include-history` still works. |
+| Access-plane wraps buffered forever and reopened on every tick | **Fixed** | The session opens each wrap once, bounds the buffer at 256, and retires what the drain settles (`ConcordAccessDrain`: no blob at our locator, a stale epoch, or opened). A retired wrap delivered again is not buffered. Tests use Armada's `cord25` fixtures. |
+| Roles v2 refusals as a generic signer toast; legacy editors still offered | **Fixed** | `UserNoticeException(ConcordNotice.RolesV2Unsupported)`, which `notifySignerErrors` reports as that notice. On v2 the UI hides Make admin, Roles…, the Private toggle, make private/public, and the rename and delete of a Private Channel. A Kick there skips the legacy role strip, which v2 refuses (app and amy). |
+| Writer-address posts excluded from pinning and re-projection; AUTH | **Fixed / finding wrong** | `pinSource` and `ConcordPinning.sourceOf` handle writer planes (`acceptWriterOpened`). A re-projection reopens writer wraps on their own plane, and a post held back by `writerPostStands` is re-judged on every fold. AUTH: CORD-03 §1 says a relay that serves a plane only to its key "can't serve a writer address to readers, who hold no key for it". A reader has no writer secret to AUTH with, so there is nothing to add. |
+| Low and quality items | **Fixed** | The Buzz and NIP-29 helpers now come from Quartz (`BuzzChannelLabels`, `BuzzDmRules`, `buzzRoleFor`, `DmHistoryTag`, `buzzJoinRole`, `buzzGuests`, `buildEdit`, `buildRoleChange`), and the Amethyst copies and their ported tests are deleted. Device pairing uses marmot-kmp's `MarmotDevicePairingKinds`. Members come from `memberAccounts` (`memberRows`). Rotation staff use `staffMembers(recipients)`. `CordnGroupInfoScreen` logs with the throwable. `BuzzNewDmViewModel` problems are typed, worded from resources, with a plural for the cap. Dead `buzzLabels` parameters and `BaseAccountViewModel.createRelayGroup`/`editRelayGroupMetadata` are removed. amy's Buzz detection accepts pre-`P` relays (channel-type `t` plus a UUID group id). |
+| Build against pinned releases | **Not fixed here** | This needs the library releases listed above. |
+
+Checked against the libraries' behaviour changes:
+- marmot-kmp: member removals already go through `removeAccount`, no signing-key rotation is offered, and comments no longer promise a kind:443
+  fallback.
+- cordn-kmp: a lost Commit is reported once. `CordnRuntime` only logs `Delivery.CommitLost`, and
+  the UI words `COMMIT_LOST`, so nothing is reported twice. A calendar test event gained the
+  `start` the new validation requires.
+
+Not covered by a test: the re-judging of a held-back writer post. The fixture's ledger never holds
+one back, and Amethyst cannot write a writer-address post.
+
+Verification:
+- `:commons:jvmTest` for Concord, RelayGroup, Marmot, Cordn and Buzz: 444 tests pass.
+- `:cli:compileKotlin` and `:commonsUI:compileKotlinJvm` pass.
+- The desktop app ran headless with the local libraries. Messages › New conversation › Relay Group
+  › browse › a relay › Create opened the create form without errors. With a read-only npub and no
+  reachable NIP-29 relay, the create itself could not be driven.
