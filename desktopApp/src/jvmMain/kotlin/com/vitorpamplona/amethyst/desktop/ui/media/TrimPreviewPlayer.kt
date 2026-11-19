@@ -43,6 +43,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.io.File
 import java.net.URI
 
@@ -87,7 +90,7 @@ fun DesktopTrimPreviewPlayer(
             if (total <= 0L) return@collect
             val at = state.currentTime
             latestOnPosition(at)
-            val ended = !state.isPlaying && !state.isBuffering && state.position >= ENDED
+            val ended = !state.isPlaying && !state.isBuffering && state.position >= GlobalMediaPlayer.ENDED_POSITION
             when {
                 // Past the kept part, or before it (the engine restored where this file was last time).
                 state.isPlaying && (at >= endMs || at < startMs - SLACK_MS) -> GlobalMediaPlayer.seekVideo(startMs.toFloat() / total)
@@ -98,11 +101,17 @@ fun DesktopTrimPreviewPlayer(
     }
 
     val surfaceOwner by GlobalMediaPlayer.videoSurfaceOwner.collectAsState()
-    val state by GlobalMediaPlayer.videoState.collectAsState()
+
+    // Only whether the engine has this file and failed on it: the position ticks many times a second.
+    fun isLoaded(state: MediaPlaybackState) = state.url == url
+
+    fun hasFailed(state: MediaPlaybackState) = state.url == url && state.errorReason != null
+    val videoState = GlobalMediaPlayer.videoState
+    val loaded by remember(url) { videoState.map(::isLoaded).distinctUntilChanged() }.collectAsState(isLoaded(videoState.value))
+    val failed by remember(url) { videoState.map(::hasFailed).distinctUntilChanged() }.collectAsState(hasFailed(videoState.value))
     Box(modifier) {
         val engine = GlobalMediaPlayer.activeVideoPlayerState
-        val failed = state.url == url && state.errorReason != null
-        if (!failed && engine != null && state.url == url && (surfaceOwner == null || surfaceOwner === owner)) {
+        if (!failed && engine != null && loaded && (surfaceOwner == null || surfaceOwner === owner)) {
             VideoSurface(playerState = engine, url = url, modifier = Modifier.fillMaxSize())
         }
         // No engine here (Linux without GStreamer reports "Video playback unavailable") or one that
@@ -129,5 +138,3 @@ class StudioPreviewOwner
 // How far before the kept part the engine may report without being sent back: a seek lands on the
 // keyframe before the asked moment.
 private const val SLACK_MS = 1_000L
-
-private const val ENDED = 0.99f

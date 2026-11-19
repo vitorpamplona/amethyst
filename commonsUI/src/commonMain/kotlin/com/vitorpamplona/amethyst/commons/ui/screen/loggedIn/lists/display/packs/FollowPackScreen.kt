@@ -81,7 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
-import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.shareNoteLink
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.DrawUser
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.PeopleListView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.RenderAddUserFieldAndSuggestions
@@ -237,6 +237,7 @@ private fun ListActionsMenuButton(
 ) {
     ListActionsMenuButton(
         note = viewModel::selectedNote,
+        accountViewModel = accountViewModel,
         onEditList = {
             nav.nav { Route.FollowPackMetadataEdit(viewModel.selectedDTag.value) }
         },
@@ -259,6 +260,7 @@ private fun ListActionsMenuButton(
 @Composable
 private fun ListActionsMenuButton(
     note: () -> AddressableNote,
+    accountViewModel: AccountViewModel,
     onEditList: () -> Unit,
     onBroadcastList: () -> Unit,
     onDeleteList: () -> Unit,
@@ -292,7 +294,7 @@ private fun ListActionsMenuButton(
         ) {
             M3ActionSection {
                 M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
-                    textSharer.share(externalLinkForNote(note()), quickActionShareBrowserLinkStr, quickActionShareStr)
+                    textSharer.shareNoteLink(note(), accountViewModel, quickActionShareBrowserLinkStr, quickActionShareStr)
                     isActionListOpen.value = false
                 }
                 M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.follow_pack_edit_list_metadata)) {

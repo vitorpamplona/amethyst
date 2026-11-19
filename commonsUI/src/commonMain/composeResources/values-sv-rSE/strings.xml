@@ -9825,7 +9825,6 @@
     <string name="geohash_area_neighborhood">~1,2 km</string>
     <string name="geohash_area_block">~150 m</string>
     <string name="geohash_area_building">~38 m</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Ny session</string>
     <string name="claude_code_search_hint">Sök sessioner</string>
     <string name="claude_code_no_sessions">Inga Claude Code-sessioner på den här datorn än. Starta en här, eller kör claude i en terminal så dyker den upp i den här listan.</string>
@@ -9882,14 +9881,11 @@
     <string name="claude_code_changes">Ändringar</string>
     <string name="claude_code_no_changes">Inget har ändrats på den här grenen än.</string>
     <string name="claude_code_untracked">Nya filer som inte lagts till i git</string>
-    <string name="claude_code_propose">Föreslå</string>
-    <string name="claude_code_update_proposal">Uppdatera förslag</string>
     <string name="claude_code_propose_desc">Signerat av dig och skickat till repositoryts servrar, som ngit gör.</string>
     <string name="claude_code_propose_desc_no_grasp">Signerat av dig; dess commits går till en remote som du väljer nedan.</string>
     <string name="claude_code_propose_update_desc">Redan ett förslag: när du publicerar igen blir dessa commits dess nya version.</string>
     <string name="claude_code_propose_title">Titel</string>
     <string name="claude_code_propose_description">Beskrivning</string>
-    <string name="claude_code_draft_with_claude">Skriv utkast med Claude</string>
     <string name="claude_code_gate">Byggkontroller</string>
     <string name="claude_code_gate_desc">Kör repositoryts pre-push-kontroller i den här grenens mapp.</string>
     <string name="claude_code_gate_none">Det här repositoryt har inga pre-push-kontroller att köra.</string>

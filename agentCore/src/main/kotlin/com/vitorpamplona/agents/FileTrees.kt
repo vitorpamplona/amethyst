@@ -79,9 +79,14 @@ fun deleteTree(dir: File): Boolean {
     return !Files.exists(root, LinkOption.NOFOLLOW_LINKS)
 }
 
-private fun makeWritable(path: Path) {
+/**
+ * Returns whether [path] is writable now. A failure is not acted on: the delete is still tried
+ * (POSIX deletes a read-only file the folder lets it), and anything that stays is reported by
+ * deleteTree's result.
+ */
+private fun makeWritable(path: Path): Boolean {
     val file = path.toFile()
-    if (!file.canWrite()) file.setWritable(true)
+    return file.canWrite() || file.setWritable(true)
 }
 
 private fun deleteQuietly(path: Path) {

@@ -38,7 +38,9 @@ import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.rememberNipsDefining
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
@@ -125,11 +127,15 @@ fun routeTitle(
                 .ifBlank { spellOut("NostrApp") }
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
+        is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
         else -> {}
     }
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }
     if (section != null && route !is Route.Profile) return stringRes(section.labelRes)
-    return spellOut(route::class.simpleName ?: "")
+    val name = route::class.simpleName.orEmpty()
+    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "AI Code changes".
+    if (name.startsWith(AGENT_ROUTE_PREFIX)) return stringRes(Res.string.ai_code_title) + " " + spellOut(name.removePrefix(AGENT_ROUTE_PREFIX)).lowercase()
+    return spellOut(name)
 }
 
 /** The icon a tab shows for [route] when it has no picture of its own: the bar's icon for a section. */
@@ -197,6 +203,8 @@ fun rememberRouteActivity(
     }
 
 /** "NewShortNote" to "New short note". */
+private const val AGENT_ROUTE_PREFIX = "ClaudeCode"
+
 internal fun spellOut(className: String): String =
     className
         .replace(CamelCaseBoundary, " ")

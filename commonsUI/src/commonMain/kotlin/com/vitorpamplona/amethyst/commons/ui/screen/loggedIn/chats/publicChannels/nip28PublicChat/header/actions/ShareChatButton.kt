@@ -34,10 +34,10 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.shareChannelLink
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
-import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
@@ -56,7 +56,7 @@ fun ShareChatButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            sharer.share(njumpLink(channel.toNEvent()), quickActionShareBrowserLinkStr, quickActionShareStr)
+            sharer.shareChannelLink(channel, accountViewModel, quickActionShareBrowserLinkStr, quickActionShareStr)
         },
         contentPadding = ZeroPadding,
     ) {

@@ -26,8 +26,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
 /** Which of the two payloads the QR code currently encodes. */
 enum class QrPayloadMode {
     /**
-     * An `https://njump.to/…` link. The default, because a stock phone camera will offer to
-     * open an http(s) URL but may treat a bare custom scheme as inert text.
+     * An `https://brainstorm.world/nevent1…` link ([com.vitorpamplona.amethyst.commons.util.ShareSite]).
+     * The default, because a stock phone camera will offer to open an http(s) URL but may treat a
+     * bare custom scheme as inert text.
      */
     Web,
 
