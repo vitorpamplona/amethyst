@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.service.georelay
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -58,6 +62,19 @@ object GeohashRelays {
         val loaded = directory.size > GeoRelayDirectory.FALLBACK.size
         refreshed = loaded
         return loaded
+    }
+
+    /**
+     * Waits until the account follows a geohash ([followedCells]) with geohash chats on
+     * ([enabledFeeds]), then [ensureLoaded]. An account that follows none never downloads the
+     * directory: it only routes followed cells, and an opened chat loads it on its own.
+     */
+    suspend fun ensureLoadedOnceNeeded(
+        followedCells: Flow<Set<String>>,
+        enabledFeeds: Flow<Set<ChatFeedType>>,
+    ): Boolean {
+        combine(followedCells, enabledFeeds) { cells, enabled -> cells.isNotEmpty() && ChatFeedType.GEOHASH in enabled }.first { it }
+        return ensureLoaded()
     }
 
     /** The relays nearest [geohash]'s center. Synchronous — uses whatever is loaded (fallback if not yet refreshed). */
