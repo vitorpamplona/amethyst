@@ -137,6 +137,39 @@ class AccountLifecycleConformanceTest {
     }
 
     @Test
+    fun nonStringNostrPrimitivesAreInvalidButLegacyStringsRemainSupported() {
+        val old =
+            document
+                .getValue("constants")
+                .jsonObject
+                .getValue("OLD")
+                .jsonPrimitive.content
+        listOf("true", "42", "null").forEach { primitive ->
+            val result =
+                AccountLifecycleParser
+                    .evaluateInlineRoot(
+                        identifier = "example.bit",
+                        subjectPubkey = old,
+                        rawRecord = "{\"nostr\":$primitive}",
+                        oldEvents = listOf(event("old_root")),
+                    ).result
+            assertEquals(AccountLifecycleStatus.INVALID, result.status, primitive)
+            assertEquals(listOf("invalid_nostr"), result.diagnostics, primitive)
+        }
+
+        val legacy =
+            AccountLifecycleParser
+                .evaluateInlineRoot(
+                    identifier = "example.bit",
+                    subjectPubkey = old,
+                    rawRecord = "{\"nostr\":\"$old\"}",
+                    oldEvents = listOf(event("old_root")),
+                ).result
+        assertEquals(AccountLifecycleStatus.NO_DECLARATION, legacy.status)
+        assertEquals(BaseNip05Status.VERIFIED, legacy.baseNip05)
+    }
+
+    @Test
     fun duplicateKeysFailClosed() {
         val old =
             document

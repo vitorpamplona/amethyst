@@ -44,6 +44,7 @@ const val ACCOUNT_LIFECYCLE_LOOKUP_TIMEOUT_MS = 40_000L
 const val ACCOUNT_LIFECYCLE_POSITIVE_TTL_SECONDS = 3_600L
 const val ACCOUNT_LIFECYCLE_RETRY_TTL_SECONDS = 300L
 const val NAMECOIN_TARGET_BLOCK_SECONDS = 600L
+const val NAMECOIN_REGISTRATION_EXPIRY_BLOCKS = 36_000L
 
 data class NamecoinRawRecord(
     val value: String,
@@ -116,6 +117,7 @@ private class ValidatedEntry {
     var latestRequest = 0L
     var fingerprint: ValidationFingerprint? = null
     var inFlight: ValidatedInFlight? = null
+    var lastUsed = 0L
 }
 
 private data class ValidatedInFlight(
@@ -144,7 +146,14 @@ private class SubjectEntry {
     val state = MutableStateFlow(AccountLifecycleSubjectState())
     var latestRequest = 0L
     var inFlight: SubjectInFlight? = null
+    var lastUsed = 0L
 }
+
+internal data class AccountLifecycleCacheStats(
+    val raw: Int,
+    val validated: Int,
+    val subjects: Int,
+)
 
 private data class SubjectInFlight(
     val fingerprint: String,
@@ -175,13 +184,18 @@ class AccountLifecycleService(
     private val validationMutex = Mutex()
     private val validatedEntries = mutableMapOf<AccountLifecycleRequestKey, ValidatedEntry>()
     private var validationSequence = 0L
+    private var validatedUsageSequence = 0L
 
     private val subjectMutex = Mutex()
     private val subjectEntries = mutableMapOf<Pair<String, String>, SubjectEntry>()
+    private var subjectUsageSequence = 0L
 
     suspend fun stateFor(request: AccountLifecycleRequest): StateFlow<AccountLifecycleRequestState> {
         val key = requestKey(request)
-        return validationMutex.withLock { validatedEntries.getOrPut(key) { ValidatedEntry() }.state }
+        return validationMutex.withLock {
+            if (key !in validatedEntries) pruneValidatedEntriesLocked()
+            validatedEntries.getOrPut(key) { ValidatedEntry() }.also { it.lastUsed = ++validatedUsageSequence }.state
+        }
     }
 
     suspend fun subjectState(
@@ -189,8 +203,17 @@ class AccountLifecycleService(
         subjectPubkey: String,
     ): StateFlow<AccountLifecycleSubjectState> =
         subjectMutex.withLock {
-            subjectEntries.getOrPut(viewerNamespace to subjectPubkey) { SubjectEntry() }.state
+            val key = viewerNamespace to subjectPubkey
+            if (key !in subjectEntries) pruneSubjectEntriesLocked()
+            subjectEntries.getOrPut(key) { SubjectEntry() }.also { it.lastUsed = ++subjectUsageSequence }.state
         }
+
+    internal suspend fun cacheStatsForTest(): AccountLifecycleCacheStats =
+        AccountLifecycleCacheStats(
+            raw = rawMutex.withLock { rawEntries.size },
+            validated = validationMutex.withLock { validatedEntries.size },
+            subjects = subjectMutex.withLock { subjectEntries.size },
+        )
 
     suspend fun resolve(
         request: AccountLifecycleRequest,
@@ -206,7 +229,9 @@ class AccountLifecycleService(
                 .joinToString(",")
         val inFlight =
             validationMutex.withLock {
+                if (key !in validatedEntries) pruneValidatedEntriesLocked()
                 val entry = validatedEntries.getOrPut(key) { ValidatedEntry() }
+                entry.lastUsed = ++validatedUsageSequence
                 val existing = entry.inFlight
                 if (!canonicalRequest.forceRefresh && existing != null && existing.initialFingerprint == initialFingerprint) {
                     existing
@@ -342,7 +367,9 @@ class AccountLifecycleService(
         val subjectKey = viewerNamespace to subjectPubkey
         val inFlight =
             subjectMutex.withLock {
+                if (subjectKey !in subjectEntries) pruneSubjectEntriesLocked()
                 val entry = subjectEntries.getOrPut(subjectKey) { SubjectEntry() }
+                entry.lastUsed = ++subjectUsageSequence
                 val existing = entry.inFlight
                 if (!forceRefresh && existing != null && existing.fingerprint == fingerprint) {
                     existing
@@ -458,25 +485,36 @@ class AccountLifecycleService(
         }
         ensureLatest(key, entry, requestId)
 
-        if (lookup.record == null || lookup.diagnostic != null) {
-            return unavailableOutcome(request, context, cached, lookup.diagnostic ?: "name_not_found")
+        val (currentOldEvents, oldMetadataAvailable) = metadataEvents(metadataProvider, request.subjectPubkey)
+        val discoveryOldEvents = (request.oldEvents + currentOldEvents).distinctBy { it.id }
+        val discoveryBacklinks = verifiedAssociations(request, discoveryOldEvents)
+        val record = lookup.record
+        if (record == null || lookup.diagnostic != null) {
+            return unavailableOutcome(request, context, cached, lookup.diagnostic ?: "name_not_found", discoveryBacklinks)
         }
-        if (lookup.record.provenance.expiresIn
+        if (record.provenance.expiresIn
                 ?.let { it <= 0 } == true
         ) {
-            return unavailableOutcome(request, context, cached, "name_expired")
+            return unavailableOutcome(request, context, cached, "name_expired", discoveryBacklinks)
         }
 
-        val (currentOldEvents, oldMetadataAvailable) = metadataEvents(metadataProvider, request.subjectPubkey)
         val oldEvents = (request.oldEvents + cached.backlinks.map { it.event.toEvent() } + currentOldEvents).distinctBy { it.id }
-        val observation = if (lookup.record.provenance.height == 0) LifecycleObservation.PROVISIONAL else LifecycleObservation.CURRENT
-        val previousConfirmation = cached.result.successorConfirmation == SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED
+        val verifiedAssociations = verifiedAssociations(request, oldEvents)
+        val observation =
+            when {
+                record.provenance.height == 0 -> LifecycleObservation.PROVISIONAL
+                requiresFreshAuthority(cached, record) -> LifecycleObservation.REREGISTERED
+                else -> LifecycleObservation.CURRENT
+            }
+        val previousConfirmation =
+            observation != LifecycleObservation.REREGISTERED &&
+                cached.result.successorConfirmation == SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED
         val first =
             AccountLifecycleParser.evaluateInlineRoot(
                 identifier = request.identifier,
                 subjectPubkey = request.subjectPubkey,
                 subjectOnly = request.subjectOnly,
-                rawRecord = lookup.record.value,
+                rawRecord = record.value,
                 oldEvents = oldEvents,
                 previousConfirmation = previousConfirmation,
                 observation = observation,
@@ -497,7 +535,7 @@ class AccountLifecycleService(
                     identifier = request.identifier,
                     subjectPubkey = request.subjectPubkey,
                     subjectOnly = request.subjectOnly,
-                    rawRecord = lookup.record.value,
+                    rawRecord = record.value,
                     oldEvents = oldEvents,
                     newEvents = successorEvents,
                     previousConfirmation = previousConfirmation,
@@ -518,27 +556,19 @@ class AccountLifecycleService(
                 )
         }
         if (!oldMetadataAvailable && currentOldEvents.isEmpty() && cached.result.isCompromiseWarning) {
-            return staleOutcome(request, context, cached, "old_metadata_unavailable")
+            return staleOutcome(request, context, cached, "old_metadata_unavailable", verifiedAssociations)
+        }
+        if (observation == LifecycleObservation.REREGISTERED && !evaluated.result.isAccountWarning && cached.result.isAccountWarning) {
+            return staleOutcome(request, context, cached, "reregistered_without_fresh_authority", verifiedAssociations)
         }
         if (shouldRetainStaleWarning(evaluated.result, cached.result)) {
-            return staleOutcome(request, context, cached, "current_record_not_evaluable")
+            return staleOutcome(request, context, cached, "current_record_not_evaluable", verifiedAssociations)
         }
 
-        val verifiedAssociations =
-            try {
-                AccountLifecycleParser.verifiedBacklinks(
-                    identifier = request.identifier,
-                    subjectPubkey = request.subjectPubkey,
-                    oldEvents = oldEvents,
-                    subjectOnly = request.subjectOnly,
-                )
-            } catch (_: IllegalArgumentException) {
-                emptyList()
-            }
         val completed = evaluated.copy(backlinks = (evaluated.backlinks + verifiedAssociations).distinctBy { it.event.id })
         return EvaluationOutcome(
             evaluation = completed,
-            selectedRecord = lookup.record.value,
+            selectedRecord = record.value,
             observedAt = lookup.observedAt,
             oldEventIds = oldEvents.map { it.id }.sorted(),
             newEventIds = successorEvents.map { it.id }.sorted(),
@@ -546,37 +576,85 @@ class AccountLifecycleService(
         )
     }
 
+    private fun verifiedAssociations(
+        request: AccountLifecycleRequest,
+        oldEvents: List<Event>,
+    ): List<LifecycleBacklink> =
+        try {
+            AccountLifecycleParser.verifiedBacklinks(
+                identifier = request.identifier,
+                subjectPubkey = request.subjectPubkey,
+                oldEvents = oldEvents,
+                subjectOnly = request.subjectOnly,
+            )
+        } catch (_: IllegalArgumentException) {
+            emptyList()
+        }
+
+    private fun requiresFreshAuthority(
+        cached: LifecycleAssociationRecord,
+        current: NamecoinRawRecord,
+    ): Boolean {
+        if (cached.selectedRecord == null) return false
+        if (cached.result.diagnostics.any { it == "stale_after_name_expired" || it == "stale_after_name_not_found" }) return true
+
+        val previous = cached.result.provenance ?: return false
+        if (previous.txid != null && current.provenance.txid != null && previous.txid == current.provenance.txid) return false
+        val previousHeight = previous.height ?: return false
+        val currentHeight = current.provenance.height ?: return false
+        return currentHeight.toLong() > previousHeight.toLong() + NAMECOIN_REGISTRATION_EXPIRY_BLOCKS
+    }
+
     private suspend fun raw(
         canonicalName: String,
         forceRefresh: Boolean,
     ): RawLookup {
-        val entry =
-            rawMutex.withLock {
-                val existing = rawEntries[canonicalName]
-                val ready = (existing?.state?.value as? RawLookupState.Ready)?.lookup
-                val recordTtl =
-                    ready
-                        ?.record
-                        ?.provenance
-                        ?.expiresIn
-                        ?.let { blocks ->
-                            minOf(positiveTtlSeconds, blocks.toLong() * NAMECOIN_TARGET_BLOCK_SECONDS).coerceAtLeast(0)
-                        } ?: positiveTtlSeconds
-                val fresh =
-                    ready != null &&
-                        now() - ready.observedAt <
-                        if (ready.record != null && ready.diagnostic == null) recordTtl else retryTtlSeconds
-                if (existing != null && !forceRefresh && (ready == null || fresh)) {
-                    existing
-                } else {
-                    pruneCompletedEntries()
-                    RawEntry(now(), generation).also { newEntry ->
-                        rawEntries[canonicalName] = newEntry
-                        startLookup(canonicalName, newEntry)
+        while (true) {
+            var capacityWait: Deferred<RawLookup>? = null
+            val entry =
+                rawMutex.withLock {
+                    val existing = rawEntries[canonicalName]
+                    val ready = (existing?.state?.value as? RawLookupState.Ready)?.lookup
+                    val recordTtl =
+                        ready
+                            ?.record
+                            ?.provenance
+                            ?.expiresIn
+                            ?.let { blocks ->
+                                minOf(positiveTtlSeconds, blocks.toLong() * NAMECOIN_TARGET_BLOCK_SECONDS).coerceAtLeast(0)
+                            } ?: positiveTtlSeconds
+                    val fresh =
+                        ready != null &&
+                            now() - ready.observedAt <
+                            if (ready.record != null && ready.diagnostic == null) recordTtl else retryTtlSeconds
+                    if (existing != null && !forceRefresh && (ready == null || fresh)) {
+                        existing
+                    } else {
+                        pruneCompletedEntries()
+                        if (existing == null && rawEntries.size >= MAX_RAW_NAMES) {
+                            capacityWait =
+                                rawEntries.entries
+                                    .minByOrNull { it.value.startedAt }
+                                    ?.value
+                                    ?.deferred
+                            null
+                        } else {
+                            RawEntry(now(), generation).also { newEntry ->
+                                rawEntries[canonicalName] = newEntry
+                                startLookup(canonicalName, newEntry)
+                            }
+                        }
                     }
                 }
+            if (entry != null) return entry.deferred.await()
+
+            val pending = capacityWait ?: continue
+            try {
+                pending.await()
+            } catch (error: CancellationException) {
+                if (!currentCoroutineContext().isActive) throw error
             }
-        return entry.deferred.await()
+        }
     }
 
     private fun startLookup(
@@ -624,6 +702,71 @@ class AccountLifecycleService(
         }
     }
 
+    private suspend fun pruneValidatedEntriesLocked() {
+        while (validatedEntries.size >= MAX_VALIDATED_REQUESTS) {
+            val candidate =
+                validatedEntries.entries
+                    .filter { it.value.inFlight == null && it.value.state.subscriptionCount.value == 0 }
+                    .sortedBy { it.value.lastUsed }
+                    .firstOrNull { canEvictValidatedEntry(it.key, it.value) }
+                    ?: return
+            validatedEntries.remove(candidate.key)
+        }
+    }
+
+    private suspend fun canEvictValidatedEntry(
+        key: AccountLifecycleRequestKey,
+        entry: ValidatedEntry,
+    ): Boolean {
+        val evaluation = entry.state.value.evaluation ?: return true
+        if (!evaluation.result.isAccountWarning) return true
+        val persisted =
+            load(
+                AccountLifecycleRequest(
+                    viewerNamespace = key.viewerNamespace,
+                    identifier = key.identifier,
+                    subjectPubkey = key.subjectPubkey,
+                    subjectOnly = key.subjectOnly,
+                ),
+            )
+        return persisted.selectedRecord != null && persisted.result.isAccountWarning
+    }
+
+    private suspend fun pruneSubjectEntriesLocked() {
+        while (subjectEntries.size >= MAX_SUBJECTS) {
+            val candidate =
+                subjectEntries.entries
+                    .filter { it.value.inFlight == null && it.value.state.subscriptionCount.value == 0 }
+                    .sortedBy { it.value.lastUsed }
+                    .firstOrNull { canEvictSubjectEntry(it.key, it.value) }
+                    ?: return
+            subjectEntries.remove(candidate.key)
+        }
+    }
+
+    private suspend fun canEvictSubjectEntry(
+        key: Pair<String, String>,
+        entry: SubjectEntry,
+    ): Boolean {
+        val warnings =
+            entry.state.value.evaluations
+                .filter { it.result.isAccountWarning }
+        if (warnings.isEmpty()) return true
+        val persisted = retainedAssociations(key.first, key.second).filter { it.selectedRecord != null && it.result.isAccountWarning }
+        return warnings.all { warning ->
+            persisted.any { record ->
+                if (record.selectedRecord != warning.selectedRecord) return@any false
+                val recordName =
+                    try {
+                        NamecoinNameContexts.parse(record.identifier, record.subjectOnly).name
+                    } catch (_: IllegalArgumentException) {
+                        return@any false
+                    }
+                recordName == warning.context.name
+            }
+        }
+    }
+
     private suspend fun currentGeneration(): Long = rawMutex.withLock { generation }
 
     private suspend fun ensureLatest(
@@ -661,10 +804,12 @@ class AccountLifecycleService(
         context: NamecoinNameContext,
         cached: LifecycleAssociationRecord,
         diagnostic: String,
+        discoveryBacklinks: List<LifecycleBacklink>,
     ): EvaluationOutcome {
         if (cached.selectedRecord != null && cached.result.isAccountWarning) {
-            return staleOutcome(request, context, cached, diagnostic)
+            return staleOutcome(request, context, cached, diagnostic, discoveryBacklinks)
         }
+        val backlinks = (cached.backlinks + discoveryBacklinks).distinctBy { it.event.id }
         return EvaluationOutcome(
             evaluation =
                 AccountLifecycleEvaluation(
@@ -672,12 +817,13 @@ class AccountLifecycleService(
                     context = context,
                     subjectPubkey = request.subjectPubkey,
                     selectedRecord = null,
+                    backlinks = backlinks,
                 ),
             selectedRecord = null,
             observedAt = cached.observedAt,
-            oldEventIds = emptyList(),
+            oldEventIds = backlinks.map { it.event.id }.sorted(),
             newEventIds = emptyList(),
-            persist = false,
+            persist = backlinks.isNotEmpty(),
         )
     }
 
@@ -686,21 +832,25 @@ class AccountLifecycleService(
         context: NamecoinNameContext,
         cached: LifecycleAssociationRecord,
         diagnostic: String,
-    ) = EvaluationOutcome(
-        evaluation =
-            AccountLifecycleEvaluation(
-                result = AccountLifecycleParser.stale(cached.result, diagnostic),
-                context = context,
-                subjectPubkey = request.subjectPubkey,
-                selectedRecord = cached.selectedRecord,
-                backlinks = cached.backlinks,
-            ),
-        selectedRecord = cached.selectedRecord,
-        observedAt = cached.observedAt,
-        oldEventIds = cached.backlinks.map { it.event.id }.sorted(),
-        newEventIds = emptyList(),
-        persist = cached.selectedRecord != null,
-    )
+        additionalBacklinks: List<LifecycleBacklink> = emptyList(),
+    ): EvaluationOutcome {
+        val backlinks = (cached.backlinks + additionalBacklinks).distinctBy { it.event.id }
+        return EvaluationOutcome(
+            evaluation =
+                AccountLifecycleEvaluation(
+                    result = AccountLifecycleParser.stale(cached.result, diagnostic),
+                    context = context,
+                    subjectPubkey = request.subjectPubkey,
+                    selectedRecord = cached.selectedRecord,
+                    backlinks = backlinks,
+                ),
+            selectedRecord = cached.selectedRecord,
+            observedAt = cached.observedAt,
+            oldEventIds = backlinks.map { it.event.id }.sorted(),
+            newEventIds = emptyList(),
+            persist = cached.selectedRecord != null || backlinks.isNotEmpty(),
+        )
+    }
 
     private fun shouldRetainStaleWarning(
         current: AccountLifecycleResult,
@@ -785,6 +935,8 @@ class AccountLifecycleService(
 
     companion object {
         private const val MAX_RAW_NAMES = 128
+        private const val MAX_VALIDATED_REQUESTS = 1_024
+        private const val MAX_SUBJECTS = 1_024
         private const val MAX_CONCURRENT_LOOKUPS = 4
     }
 }

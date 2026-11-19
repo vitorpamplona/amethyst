@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.AccountLifecycleBanner
+import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.LocalAccountLifecycleWarningAuthors
 import com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle.shouldRenderAccountLifecycleOnNote
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
@@ -1005,43 +1006,50 @@ fun NoteCompose(
     // body gets its bleed from LocalBoostedNoteFrame instead.
     ProvideMediaBleed(0.dp) {
         Column {
+            val lifecycleAuthor = baseNote.author?.pubkeyHex
+            val outerLifecycleAuthors = LocalAccountLifecycleWarningAuthors.current
             // Outside report hiding: a hidden or "show anyway" note must not erase account context.
-            if (shouldRenderAccountLifecycleOnNote(isQuotedNote, isBoostedNote)) {
+            if (shouldRenderAccountLifecycleOnNote(isQuotedNote, isBoostedNote, lifecycleAuthor, outerLifecycleAuthors)) {
                 baseNote.author?.let { author ->
                     AccountLifecycleBanner(author, accountViewModel, nav, compact = true)
                 }
             }
-            WatchNoteEvent(
-                baseNote = baseNote,
-                accountViewModel = accountViewModel,
-                nav,
-                modifier,
+            CompositionLocalProvider(
+                LocalAccountLifecycleWarningAuthors provides
+                    if (lifecycleAuthor == null) outerLifecycleAuthors else outerLifecycleAuthors + lifecycleAuthor,
             ) {
-                CheckHiddenFeedWatchBlockAndReport(
-                    note = baseNote,
-                    modifier = modifier,
-                    ignoreAllBlocksAndReports = isHiddenFeed,
-                    showHiddenWarning = isQuotedNote || isBoostedNote,
+                WatchNoteEvent(
+                    baseNote = baseNote,
                     accountViewModel = accountViewModel,
-                    nav = nav,
-                ) { canPreview ->
-                    AcceptableNote(
+                    nav,
+                    modifier,
+                ) {
+                    CheckHiddenFeedWatchBlockAndReport(
                         baseNote = baseNote,
                         modifier = modifier,
-                        routeForLastRead = routeForLastRead,
-                        isBoostedNote = isBoostedNote,
-                        isQuotedNote = isQuotedNote,
-                        unPackReply = unPackReply,
-                        makeItShort = makeItShort,
-                        canPreview = canPreview,
-                        isPinned = isPinned,
-                        quotesLeft = quotesLeft,
-                        parentBackgroundColor = parentBackgroundColor,
+                        ignoreAllBlocksAndReports = isHiddenFeed,
+                        showHiddenWarning = isQuotedNote || isBoostedNote,
                         accountViewModel = accountViewModel,
                         nav = nav,
-                        onClick = onClick,
-                        moreOptions = moreOptions,
-                    )
+                    ) { canPreview ->
+                        AcceptableNote(
+                            baseNote = baseNote,
+                            modifier = modifier,
+                            routeForLastRead = routeForLastRead,
+                            isBoostedNote = isBoostedNote,
+                            isQuotedNote = isQuotedNote,
+                            unPackReply = unPackReply,
+                            makeItShort = makeItShort,
+                            canPreview = canPreview,
+                            isPinned = isPinned,
+                            quotesLeft = quotesLeft,
+                            parentBackgroundColor = parentBackgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onClick = onClick,
+                            moreOptions = moreOptions,
+                        )
+                    }
                 }
             }
         }

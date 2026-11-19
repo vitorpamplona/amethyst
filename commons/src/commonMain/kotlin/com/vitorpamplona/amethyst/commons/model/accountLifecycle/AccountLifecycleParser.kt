@@ -105,7 +105,7 @@ object AccountLifecycleParser {
         val nostrElement = root["nostr"]
         val baseNip05 = baseNip05(context, subjectOnly, subjectPubkey, nostrElement, latestOld)
 
-        if (nostrElement == null || nostrElement is JsonPrimitive) {
+        if (nostrElement == null || (nostrElement is JsonPrimitive && nostrElement.isString)) {
             val result =
                 AccountLifecycleResult(
                     status = AccountLifecycleStatus.NO_DECLARATION,
@@ -206,7 +206,12 @@ object AccountLifecycleParser {
                         subjectPubkey,
                     )
             }
-        val backlinked = candidates.filter { backlinksByCandidate[it.localPart] != null }
+        val backlinked =
+            candidates.filter { candidate ->
+                val backlink = backlinksByCandidate[candidate.localPart]
+                backlink != null &&
+                    (observation != LifecycleObservation.REREGISTERED || latestOld?.id == backlink.id)
+            }
         if (backlinked.isEmpty()) {
             val candidate = candidates.first()
             val result =

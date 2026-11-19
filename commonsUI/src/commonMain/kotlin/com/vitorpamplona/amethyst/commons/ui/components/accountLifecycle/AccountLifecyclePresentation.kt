@@ -20,17 +20,23 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components.accountLifecycle
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.vitorpamplona.amethyst.commons.model.accountLifecycle.AccountLifecycleEvaluation
 import com.vitorpamplona.amethyst.commons.model.accountLifecycle.AccountLifecycleScope
 import com.vitorpamplona.amethyst.commons.model.accountLifecycle.AccountLifecycleState
 import com.vitorpamplona.amethyst.commons.model.accountLifecycle.AccountLifecycleStatus
 import com.vitorpamplona.amethyst.commons.model.accountLifecycle.SuccessorConfirmation
 
-/** Quotes and boosts suppress their nested copy so one author warning is not duplicated in a card. */
+/** Authors whose warnings already wrap this note, including quotes and boosts several levels deep. */
+val LocalAccountLifecycleWarningAuthors = staticCompositionLocalOf<Set<String>> { emptySet() }
+
+/** Nested rows suppress only an identical author warning already rendered by an outer row. */
 fun shouldRenderAccountLifecycleOnNote(
     isQuotedNote: Boolean,
     isBoostedNote: Boolean,
-): Boolean = !isQuotedNote && !isBoostedNote
+    authorPubkey: String?,
+    outerAuthorPubkeys: Set<String>,
+): Boolean = (!isQuotedNote && !isBoostedNote) || authorPubkey == null || authorPubkey !in outerAuthorPubkeys
 
 fun primaryAccountLifecycleEvaluationForSubject(
     evaluations: List<AccountLifecycleEvaluation>,

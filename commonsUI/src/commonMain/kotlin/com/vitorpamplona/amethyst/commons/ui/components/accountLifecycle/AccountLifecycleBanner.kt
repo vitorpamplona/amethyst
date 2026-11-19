@@ -102,7 +102,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.highlightMarkerText
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.launch
 
 /**
  * A Namecoin-owner attestation, never an active/safe badge or an automatic migration control.
@@ -121,33 +120,46 @@ fun AccountLifecycleBanner(
     val currentIdentifier = userInfo?.info?.nip05
     val viewerNamespace = accountViewModel.account.userProfile().pubkeyHex
     var refreshVersion by remember(user.pubkeyHex) { mutableIntStateOf(0) }
+    var successorMetadataVersion by remember(user.pubkeyHex, lifecycle) { mutableIntStateOf(0) }
     var subjectState by remember(user.pubkeyHex, lifecycle) { mutableStateOf(AccountLifecycleSubjectState()) }
 
-    LaunchedEffect(user.pubkeyHex, currentIdentifier, currentEvent?.id, refreshVersion, lifecycle) {
+    LaunchedEffect(user.pubkeyHex, viewerNamespace, lifecycle) {
         val sharedState = lifecycle.subjectState(viewerNamespace, user.pubkeyHex)
-        val observer = launch { sharedState.collect { subjectState = it } }
-        try {
-            lifecycle.resolveSubject(
-                viewerNamespace = viewerNamespace,
-                subjectPubkey = user.pubkeyHex,
-                currentIdentifier = currentIdentifier,
-                oldEvents = listOfNotNull(currentEvent),
-                metadataProvider =
-                    LifecycleMetadataProvider { pubkey ->
-                        listOfNotNull(
-                            LocalCache
-                                .getUserIfExists(pubkey)
-                                ?.metadataOrNull()
-                                ?.flow
-                                ?.value
-                                ?.event,
-                        )
-                    },
-                forceRefresh = refreshVersion > 0,
-            )
-        } finally {
-            observer.cancel()
+        sharedState.collect { subjectState = it }
+    }
+
+    val successorPubkeys = subjectState.evaluations.mapNotNull { it.result.successorPubkey }.distinct()
+    successorPubkeys.forEach { successor ->
+        LoadUser(successor) { successorUser ->
+            if (successorUser != null) {
+                val successorInfo by observeUserInfo(successorUser, accountViewModel)
+                val successorEventId = successorInfo?.event?.id
+                LaunchedEffect(successor, successorEventId) {
+                    if (successorEventId != null) successorMetadataVersion++
+                }
+            }
         }
+    }
+
+    LaunchedEffect(user.pubkeyHex, currentIdentifier, currentEvent?.id, successorMetadataVersion, refreshVersion, lifecycle) {
+        lifecycle.resolveSubject(
+            viewerNamespace = viewerNamespace,
+            subjectPubkey = user.pubkeyHex,
+            currentIdentifier = currentIdentifier,
+            oldEvents = listOfNotNull(currentEvent),
+            metadataProvider =
+                LifecycleMetadataProvider { pubkey ->
+                    listOfNotNull(
+                        LocalCache
+                            .getUserIfExists(pubkey)
+                            ?.metadataOrNull()
+                            ?.flow
+                            ?.value
+                            ?.event,
+                    )
+                },
+            forceRefresh = refreshVersion > 0,
+        )
     }
 
     if (!compact) {

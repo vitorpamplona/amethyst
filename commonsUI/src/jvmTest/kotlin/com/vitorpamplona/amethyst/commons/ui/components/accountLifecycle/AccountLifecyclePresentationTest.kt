@@ -37,11 +37,15 @@ import kotlin.test.assertSame
 
 class AccountLifecyclePresentationTest {
     @Test
-    fun nestedQuoteAndBoostDoNotDuplicateAuthorWarning() {
-        assertEquals(true, shouldRenderAccountLifecycleOnNote(isQuotedNote = false, isBoostedNote = false))
-        assertEquals(false, shouldRenderAccountLifecycleOnNote(isQuotedNote = true, isBoostedNote = false))
-        assertEquals(false, shouldRenderAccountLifecycleOnNote(isQuotedNote = false, isBoostedNote = true))
-        assertEquals(false, shouldRenderAccountLifecycleOnNote(isQuotedNote = true, isBoostedNote = true))
+    fun nestedRowsSuppressOnlyTheSameAuthorWarning() {
+        val old = "a".repeat(64)
+        val reposter = "b".repeat(64)
+        assertEquals(true, shouldRenderAccountLifecycleOnNote(false, false, old, emptySet()))
+        assertEquals(false, shouldRenderAccountLifecycleOnNote(true, false, old, setOf(old)))
+        assertEquals(false, shouldRenderAccountLifecycleOnNote(false, true, old, setOf(old)))
+        assertEquals(true, shouldRenderAccountLifecycleOnNote(true, false, old, setOf(reposter)))
+        assertEquals(true, shouldRenderAccountLifecycleOnNote(false, true, old, setOf(reposter)))
+        assertEquals(true, shouldRenderAccountLifecycleOnNote(true, false, null, setOf(old)))
     }
 
     @Test

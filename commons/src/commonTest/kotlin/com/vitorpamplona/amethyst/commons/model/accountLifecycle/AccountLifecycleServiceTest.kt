@@ -384,6 +384,245 @@ class AccountLifecycleServiceTest {
             assertEquals("example.bit", evaluations.single().context.host)
         }
 
+    @Test
+    fun failedLookupPersistsSignedAssociationWithoutFabricatingAWarning() =
+        runTest {
+            val store = InMemoryLifecycleAssociationStore()
+            val failedService =
+                AccountLifecycleService(
+                    transport = { throw LifecycleLookupException("lookup_timeout") },
+                    store = store,
+                    scope = backgroundScope,
+                )
+
+            val unavailable = failedService.resolve(request(), AccountLifecycleTestFixtures.metadata)
+            assertEquals(AccountLifecycleStatus.UNAVAILABLE, unavailable.result.status)
+            assertFalse(unavailable.result.isAccountWarning)
+            assertNull(unavailable.selectedRecord)
+            assertEquals(1, unavailable.backlinks.size)
+            val retained = assertNotNull(store.load("viewer", "example.bit", AccountLifecycleTestFixtures.old, false))
+            assertNull(retained.selectedRecord)
+            assertFalse(retained.result.isAccountWarning)
+            assertEquals(1, retained.backlinks.size)
+
+            val restartedService =
+                AccountLifecycleService(
+                    transport = { AccountLifecycleTestFixtures.raw() },
+                    store = store,
+                    scope = backgroundScope,
+                )
+            val withdrawnProvider =
+                LifecycleMetadataProvider { pubkey ->
+                    when (pubkey) {
+                        AccountLifecycleTestFixtures.old -> listOf(AccountLifecycleTestFixtures.event("old_root_withdrawn"))
+                        AccountLifecycleTestFixtures.new -> listOf(AccountLifecycleTestFixtures.event("new_current"))
+                        else -> emptyList()
+                    }
+                }
+            val warning =
+                restartedService
+                    .resolveSubject(
+                        viewerNamespace = "viewer",
+                        subjectPubkey = AccountLifecycleTestFixtures.old,
+                        currentIdentifier = null,
+                        oldEvents = emptyList(),
+                        metadataProvider = withdrawnProvider,
+                    ).single()
+            assertTrue(warning.result.isCompromiseWarning)
+            assertTrue(warning.result.diagnostics.contains("historical_old_backlink"))
+            assertFalse(warning.backlinks.single { it.localPart == "_" }.current)
+        }
+
+    @Test
+    fun reRegistrationAfterExpiryRequiresCurrentOldAuthorityAndFreshConfirmation() =
+        runTest {
+            var record = AccountLifecycleTestFixtures.raw()
+            var oldEvent = AccountLifecycleTestFixtures.event("old_root")
+            val provider =
+                LifecycleMetadataProvider { pubkey ->
+                    when (pubkey) {
+                        AccountLifecycleTestFixtures.old -> listOf(oldEvent)
+                        AccountLifecycleTestFixtures.new -> listOf(AccountLifecycleTestFixtures.event("new_current"))
+                        else -> emptyList()
+                    }
+                }
+            val service =
+                AccountLifecycleService(
+                    transport = { record },
+                    store = InMemoryLifecycleAssociationStore(),
+                    scope = backgroundScope,
+                )
+            assertEquals(AccountLifecycleStatus.CURRENT, service.resolve(request(), provider).result.status)
+
+            record = AccountLifecycleTestFixtures.raw(txid = "b".repeat(64), height = 900_100, expiresIn = 0)
+            val expired = service.resolve(request(forceRefresh = true), provider)
+            assertEquals(AccountLifecycleStatus.STALE, expired.result.status)
+            assertTrue(expired.result.diagnostics.contains("stale_after_name_expired"))
+
+            oldEvent = AccountLifecycleTestFixtures.event("old_root_withdrawn")
+            record = AccountLifecycleTestFixtures.raw(txid = "c".repeat(64), height = 910_000)
+            val reRegistered = service.resolve(request(forceRefresh = true), provider)
+            assertEquals(AccountLifecycleStatus.STALE, reRegistered.result.status)
+            assertEquals(SuccessorConfirmation.STALE, reRegistered.result.successorConfirmation)
+            assertTrue(reRegistered.result.diagnostics.contains("stale_after_reregistered_without_fresh_authority"))
+
+            oldEvent = AccountLifecycleTestFixtures.event("old_root")
+            val freshlyBound = service.resolve(request(forceRefresh = true), provider)
+            assertEquals(AccountLifecycleStatus.CURRENT, freshlyBound.result.status)
+            assertEquals(SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED, freshlyBound.result.successorConfirmation)
+            assertTrue(freshlyBound.result.diagnostics.contains("fresh_registration"))
+        }
+
+    @Test
+    fun reRegistrationBeyondPreviousLifetimeDoesNotPromoteRetainedHistory() =
+        runTest {
+            var record = AccountLifecycleTestFixtures.raw()
+            val withdrawnProvider =
+                LifecycleMetadataProvider { pubkey ->
+                    when (pubkey) {
+                        AccountLifecycleTestFixtures.old -> listOf(AccountLifecycleTestFixtures.event("old_root_withdrawn"))
+                        AccountLifecycleTestFixtures.new -> listOf(AccountLifecycleTestFixtures.event("new_current"))
+                        else -> emptyList()
+                    }
+                }
+            val service =
+                AccountLifecycleService(
+                    transport = { record },
+                    store = InMemoryLifecycleAssociationStore(),
+                    scope = backgroundScope,
+                )
+            service.resolve(request(), AccountLifecycleTestFixtures.metadata)
+
+            record = AccountLifecycleTestFixtures.raw(txid = "b".repeat(64), height = 940_000)
+            val reRegistered = service.resolve(request(forceRefresh = true), withdrawnProvider)
+            assertEquals(AccountLifecycleStatus.STALE, reRegistered.result.status)
+            assertEquals(SuccessorConfirmation.STALE, reRegistered.result.successorConfirmation)
+            assertTrue(reRegistered.result.diagnostics.contains("stale_after_reregistered_without_fresh_authority"))
+        }
+
+    @Test
+    fun ordinaryNonExpiredUpdateRetainsHistoricalAssociation() =
+        runTest {
+            var record = AccountLifecycleTestFixtures.raw()
+            var oldEvent = AccountLifecycleTestFixtures.event("old_root")
+            val provider =
+                LifecycleMetadataProvider { pubkey ->
+                    when (pubkey) {
+                        AccountLifecycleTestFixtures.old -> listOf(oldEvent)
+                        AccountLifecycleTestFixtures.new -> listOf(AccountLifecycleTestFixtures.event("new_current"))
+                        else -> emptyList()
+                    }
+                }
+            val service =
+                AccountLifecycleService(
+                    transport = { record },
+                    store = InMemoryLifecycleAssociationStore(),
+                    scope = backgroundScope,
+                )
+            service.resolve(request(), provider)
+
+            oldEvent = AccountLifecycleTestFixtures.event("old_root_withdrawn")
+            record = AccountLifecycleTestFixtures.raw(txid = "b".repeat(64), height = 900_100)
+            val updated = service.resolve(request(forceRefresh = true), provider)
+            assertEquals(AccountLifecycleStatus.CURRENT, updated.result.status)
+            assertTrue(updated.result.isCompromiseWarning)
+            assertTrue(updated.result.diagnostics.contains("historical_old_backlink"))
+            assertEquals(SuccessorConfirmation.RECIPROCAL_ALIAS_CONFIRMED, updated.result.successorConfirmation)
+        }
+
+    @Test
+    fun malformedPrimitiveNostrRetainsCachedCompromiseAsStale() =
+        runTest {
+            var record = AccountLifecycleTestFixtures.raw()
+            val store = InMemoryLifecycleAssociationStore()
+            val service =
+                AccountLifecycleService(
+                    transport = { record },
+                    store = store,
+                    scope = backgroundScope,
+                )
+            service.resolve(request(), AccountLifecycleTestFixtures.metadata)
+
+            record = AccountLifecycleTestFixtures.raw(value = "{\"nostr\":true}")
+            val stale = service.resolve(request(forceRefresh = true), AccountLifecycleTestFixtures.metadata)
+            assertEquals(AccountLifecycleStatus.STALE, stale.result.status)
+            assertTrue(stale.result.isCompromiseWarning)
+            assertTrue(stale.result.diagnostics.contains("stale_after_current_record_not_evaluable"))
+            assertEquals(AccountLifecycleTestFixtures.compromised, stale.selectedRecord)
+        }
+
+    @Test
+    fun rawCapacityWaitsForAnInFlightSlotInsteadOfGrowingWithoutBound() =
+        runTest {
+            val release = CompletableDeferred<Unit>()
+            var lookups = 0
+            val service =
+                AccountLifecycleService(
+                    transport = {
+                        lookups++
+                        release.await()
+                        AccountLifecycleTestFixtures.raw()
+                    },
+                    store = InMemoryLifecycleAssociationStore(),
+                    scope = backgroundScope,
+                )
+            val callers =
+                List(129) { index ->
+                    async { service.resolve(request().copy(identifier = "name$index.bit"), AccountLifecycleTestFixtures.metadata) }
+                }
+            runCurrent()
+
+            assertEquals(128, service.cacheStatsForTest().raw)
+            assertEquals(4, lookups)
+            release.complete(Unit)
+            assertEquals(129, callers.awaitAll().size)
+            assertEquals(129, lookups)
+        }
+
+    @Test
+    fun idleValidatedAndSubjectEntriesAreBoundedAndPersistedWarningsReturn() =
+        runTest {
+            var fail = false
+            val service =
+                AccountLifecycleService(
+                    transport = {
+                        if (fail) throw LifecycleLookupException("lookup_unavailable")
+                        AccountLifecycleTestFixtures.raw()
+                    },
+                    store = InMemoryLifecycleAssociationStore(),
+                    scope = backgroundScope,
+                )
+            service.resolveSubject(
+                viewerNamespace = "viewer",
+                subjectPubkey = AccountLifecycleTestFixtures.old,
+                currentIdentifier = "example.bit",
+                oldEvents = listOf(AccountLifecycleTestFixtures.event("old_root")),
+                metadataProvider = AccountLifecycleTestFixtures.metadata,
+            )
+
+            repeat(1_100) { index ->
+                service.stateFor(request().copy(identifier = "other$index.bit"))
+                service.subjectState("viewer", "subject-$index")
+            }
+            val stats = service.cacheStatsForTest()
+            assertEquals(1_024, stats.validated)
+            assertEquals(1_024, stats.subjects)
+
+            fail = true
+            val restored =
+                service
+                    .resolveSubject(
+                        viewerNamespace = "viewer",
+                        subjectPubkey = AccountLifecycleTestFixtures.old,
+                        currentIdentifier = null,
+                        oldEvents = emptyList(),
+                        metadataProvider = AccountLifecycleTestFixtures.metadata,
+                        forceRefresh = true,
+                    ).single()
+            assertEquals(AccountLifecycleStatus.STALE, restored.result.status)
+            assertTrue(restored.result.isCompromiseWarning)
+        }
+
     private fun request(
         oldEvents: List<Event> = listOf(AccountLifecycleTestFixtures.event("old_root")),
         forceRefresh: Boolean = false,
