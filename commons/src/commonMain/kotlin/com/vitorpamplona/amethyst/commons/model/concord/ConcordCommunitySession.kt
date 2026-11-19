@@ -40,10 +40,12 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWebxdc
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWritersLedger
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPinLists
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -54,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +84,20 @@ data class ExpiredConcordRumor(
     val expiresAt: Long,
     /** The URLs of the rumor's encrypted attachments, whose decryption keys go with it (CORD-08 §3). */
     val attachmentUrls: List<String> = emptyList(),
+)
+
+/**
+ * A moderation hide (CORD-03 §3) a session holds for one channel: the kind 5 [deletionId] that
+ * [hider] wrote on [channelIdHex], citing [citation], naming [targets]. Kept rather than applied
+ * once, because whether it is honored depends on the fold (the hider's Grant, their rank over each
+ * target's author), and the fold or the target can arrive after it.
+ */
+class ConcordModerationHide(
+    val channelIdHex: HexKey,
+    val deletionId: HexKey,
+    val hider: HexKey,
+    val citation: AuthorityCitation?,
+    val targets: Set<HexKey>,
 )
 
 /**
@@ -1033,6 +1050,11 @@ class ConcordCommunitySession(
             }
             authors.add(rumor.pubKey.lowercase())
             observe(rumor)
+            // A moderation hide is held for the channel, so it applies to a target that arrives later
+            // and keeps applying across re-projections (CORD-03 §3). A target it already covers is
+            // never handed to the store.
+            if (rumor is DeletionRequestEvent) recordModerationHide(channelIdHex, rumor)
+            if (isHiddenByModeration(channelIdHex, rumor.id, rumor.pubKey)) continue
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
@@ -1227,6 +1249,95 @@ class ConcordCommunitySession(
         wrapId: HexKey,
     ): Boolean = lock.withLock { channelWrapsById[channelIdHex]?.containsKey(wrapId) == true }
 
+    // ---- Moderation hides (CORD-03 §3) ------------------------------------------------------
+
+    // Channel id -> the moderation hides seen on it, by the deleting rumor's id, oldest first.
+    private val hidesByChannel = HashMap<HexKey, LinkedHashMap<HexKey, ConcordModerationHide>>()
+
+    // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
+    private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
+
+    private val _moderationHideRevision = MutableStateFlow(0L)
+
+    /** Bumps whenever a new moderation hide is held, so a store re-applies the hides it covers. */
+    val moderationHideRevision: StateFlow<Long> = _moderationHideRevision
+
+    /**
+     * Holds [deletion] as a possible moderation hide on [channelIdHex]. Every kind 5 of the channel
+     * is held, an author's own delete included: [isHiddenByModeration] judges each one against the
+     * current fold, and an author's own delete is never a moderation hide there.
+     */
+    private fun recordModerationHide(
+        channelIdHex: HexKey,
+        deletion: DeletionRequestEvent,
+    ) {
+        val targets = deletion.deleteEventIds().mapTo(HashSet()) { it.lowercase() }
+        if (targets.isEmpty()) return
+        val citation = deletion.tags.firstOrNull(VacTag::isTag)?.let(VacTag::parse)
+        val hide = ConcordModerationHide(channelIdHex, deletion.id, deletion.pubKey.lowercase(), citation, targets)
+        val added = lock.withLock { holdHideLocked(hide) }
+        if (added) _moderationHideRevision.update { it + 1 }
+    }
+
+    private fun holdHideLocked(hide: ConcordModerationHide): Boolean {
+        val held = hidesByChannel.getOrPut(hide.channelIdHex) { LinkedHashMap() }
+        if (held.containsKey(hide.deletionId)) return false
+        held[hide.deletionId] = hide
+        val byTarget = hidesByTarget.getOrPut(hide.channelIdHex) { HashMap() }
+        hide.targets.forEach { byTarget.getOrPut(it) { ArrayList(1) }.add(hide) }
+        // Bounded like the wrap buffer: any member can post deletes, so the oldest go first.
+        while (held.size > MAX_MODERATION_HIDES_PER_CHANNEL) {
+            val oldest = held.remove(held.keys.first()) ?: break
+            oldest.targets.forEach { target ->
+                val list = byTarget[target] ?: return@forEach
+                list.remove(oldest)
+                if (list.isEmpty()) byTarget.remove(target)
+            }
+        }
+        return true
+    }
+
+    /**
+     * True when a held moderation hide on [channelIdHex] names [rumorId], written by [author], and
+     * the current fold honors it: the hider holds MANAGE_MESSAGES in the Channel, strictly outranks
+     * the author, and their citation resolves. False before the Control Plane folds.
+     */
+    fun isHiddenByModeration(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+        author: HexKey,
+    ): Boolean {
+        val hides = lock.withLock { hidesByTarget[channelIdHex]?.get(rumorId.lowercase())?.toList() } ?: return false
+        val folded = _state.value ?: return false
+        return hides.any { folded.honorsModerationHide(it.hider, author, channelIdHex, it.citation) }
+    }
+
+    /** Channel id -> every rumor id a held moderation hide names there (honored or not yet). */
+    fun moderationHideTargets(): Map<HexKey, Set<HexKey>> = lock.withLock { hidesByTarget.mapValues { it.value.keys.toSet() } }
+
+    /** True when [channelIdHex]'s buffer holds the wrap that carried [rumorId]. */
+    fun holdsRumorOn(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+    ): Boolean =
+        lock.withLock {
+            val wrapId = wrapIdByRumorId[rumorId] ?: return@withLock false
+            channelWrapsById[channelIdHex]?.containsKey(wrapId) == true
+        }
+
+    /** Every moderation hide this session holds — handed to the session that replaces it. */
+    fun heldModerationHides(): List<ConcordModerationHide> = lock.withLock { hidesByChannel.values.flatMap { it.values } }
+
+    /**
+     * Adopts [hides] held by the session this one replaces (a Refounding rebuilds the session), so a
+     * hidden message stays hidden when a later re-projection re-emits it.
+     */
+    fun carryModerationHides(hides: Collection<ConcordModerationHide>) {
+        if (hides.isEmpty()) return
+        val added = lock.withLock { hides.count { holdHideLocked(it) } }
+        if (added > 0) _moderationHideRevision.update { it + 1 }
+    }
+
     // ---- Pins (CORD-04 §7) ------------------------------------------------------------------
 
     /**
@@ -1303,5 +1414,8 @@ class ConcordCommunitySession(
 
         /** How many swept (expired) wrap ids a session remembers to drop their re-deliveries unopened. */
         const val MAX_SWEPT_WRAP_IDS = 4096
+
+        /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
+        const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
     }
 }

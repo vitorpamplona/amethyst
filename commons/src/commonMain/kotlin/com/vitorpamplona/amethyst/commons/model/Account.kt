@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordModerationHideSweep
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.model.drss.DrssState
@@ -233,7 +234,6 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
-import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -816,36 +816,19 @@ class Account(
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl>,
     ) {
-        val state =
-            concordSessions
-                .sessionFor(communityId)
-                ?.state
-                ?.value
+        val session = concordSessions.sessionFor(communityId)
+        val state = session?.state?.value
         if (state?.authority?.isBanned(rumor.pubKey) == true) return
-        // A moderation hide (CORD-03 §3): a kind 5 by a MANAGE_MESSAGES holder in the Channel who
-        // strictly outranks the author, citing their Grant, is honored like the author's own delete.
-        if (rumor is DeletionRequestEvent && state != null) hideModeratedConcordMessages(state, channelIdHex, rumor)
         // CORD-08 §3: an already-expired rumor is never stored. The session refuses it first; this
         // backs it up for any other caller of the sink.
         if (ConcordDisappearing.isExpired(rumor)) return
         registerConcordEncryptedImages(rumor)
         cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
-    }
-
-    private fun hideModeratedConcordMessages(
-        state: ConcordCommunityState,
-        channelIdHex: String,
-        deletion: DeletionRequestEvent,
-    ) {
-        val citation = deletion.tags.firstOrNull { it.isNotEmpty() && it[0] == VacTag.TAG_NAME }?.let(VacTag::parse)
-        for (target in deletion.deleteEventIds()) {
-            val note = cache.getNoteIfExists(target) ?: continue
-            val author = note.event?.pubKey ?: continue
-            if (author.equals(deletion.pubKey, ignoreCase = true)) continue
-            if (!state.honorsModerationHide(deletion.pubKey, author, channelIdHex, citation)) continue
-            note.detachFromChildren()
-            cache.pruner.unlinkAndRemove(note)
-        }
+        // A moderation hide (CORD-03 §3): the session holds every kind 5 of the channel and judges it
+        // against the fold; apply what it covers now to this channel's notes only. A target that
+        // arrives later, or a Grant that folds later, is handled by the session's gate and the sweep
+        // in refreshConcordChannelIndex.
+        if (rumor is DeletionRequestEvent && session != null) ConcordModerationHideSweep.sweep(cache, session, channelIdHex)
     }
 
     /**
@@ -952,8 +935,20 @@ class Account(
                 }
             }
             concordBannedSwept[communityId] = banned
+            // Moderation hides are judged against the fold, so a hide that arrived before its
+            // hider's Grant applies once the Grant folds. Re-swept only when the fold or the held
+            // hides moved.
+            val hideRevision = session.moderationHideRevision.value
+            val lastSwept = concordHidesSwept[communityId]
+            if (lastSwept == null || lastSwept.first !== state || lastSwept.second != hideRevision) {
+                ConcordModerationHideSweep.sweep(cache, session)
+                concordHidesSwept[communityId] = state to hideRevision
+            }
         }
     }
+
+    /** The fold and hide revision each community's moderation hides were last swept against. */
+    private val concordHidesSwept = HashMap<String, Pair<ConcordCommunityState, Long>>()
 
     /** The banlist each community's loaded notes were last swept against ([refreshConcordChannelIndex]). */
     private val concordBannedSwept = HashMap<String, Set<HexKey>>()
