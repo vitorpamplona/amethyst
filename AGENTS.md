@@ -31,7 +31,10 @@ implementation for any future IETF target; see
 
 ## Libraries (their own repos)
 
-On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
+On Maven Central, except Quartz (since 2.19.0) and crypto-kmp, which release on Nostr + Blossom
+through Magpie: `settings.gradle.kts` applies its plugin and `gradle/magpie.lock` pins their release
+key and files (a lock failure means a key or a release changed; ask before editing it).
+`-P<name>Dir=../<repo>` builds a local checkout instead.
 
 | Repo (`libs.*`) | Holds | `-P…Dir` |
 |---|---|---|

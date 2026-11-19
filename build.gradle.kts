@@ -56,8 +56,11 @@ val appVersion = libs.versions.app.get()
 // for every module and for marmot's and cordn's own dependency on it, so only one quartz is on any
 // classpath. A local checkout (-PquartzDir) is substituted in settings and takes precedence.
 val quartzJitpack =
-    libs.versions.quartzJitpack
-        .get()
+    versionCatalogs
+        .named("libs")
+        .findVersion("quartzJitpack")
+        .map { it.requiredVersion }
+        .orElse("")
         .takeIf { it.isNotBlank() && !providers.gradleProperty("quartzDir").isPresent }
 
 allprojects {
@@ -77,13 +80,10 @@ allprojects {
     // JitPack rewrites the published module metadata and drops each file's classifier: the sources and
     // metadata variants point at `quartz-jvm-<v>.jar` where the files it serves are
     // `quartz-jvm-<v>-sources.jar` and `quartz-iosarm64-<v>-metadata.jar`. Point them back, so the KMP
-    // metadata compiles (iOS) and anything reading the sources resolve. quartz's only while
-    // quartzJitpack is set; libschnorr256k1-kotlin's always, since quartz itself takes it from JitPack
-    // until 1.0.1 is on Maven Central.
+    // metadata compiles (iOS) and anything reading the sources resolve. Only while quartzJitpack is set.
     val jitpackModules =
         buildList {
             if (quartzJitpack != null) add("com.github.vitorpamplona.quartz" to "quartz")
-            add("com.github.vitorpamplona.libschnorr256k1-kotlin" to "schnorr256k1-kotlin")
         }
     jitpackModules.forEach { (group, artifact) ->
         mapOf(
