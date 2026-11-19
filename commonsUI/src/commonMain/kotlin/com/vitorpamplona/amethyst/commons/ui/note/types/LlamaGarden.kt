@@ -23,17 +23,14 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
@@ -199,36 +196,27 @@ private fun ModelTorrentActions(
     var checking by remember { mutableStateOf(false) }
     val canWrite = accountViewModel.account.signer.isWriteable()
 
+    // Rare actions, so small links rather than buttons: the card is for reading what the model is.
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        FilledTonalButton(
-            enabled = !checking,
-            onClick = {
-                checking = true
-                // On the account's scope, not the card's: scrolling the card away must not drop a
-                // download the user asked for.
-                accountViewModel.viewModelScope.launch {
-                    val check =
-                        withTimeoutOrNull(DOWNLOAD_CHECK_TIMEOUT_MS) {
-                            TorrentFileCheck.check(event) { accountViewModel.httpClientBuilder.fetchMedia(it, LlamaGardenDefaults.MAX_TORRENT_FILE_BYTES) }
-                        } ?: TorrentFileCheck.Unreachable
-                    checking = false
-                    openDownload(event, check, uriHandler::openUri, accountViewModel)
-                }
-            },
+        CardAction(
+            icon = MaterialSymbols.Download,
+            label = if (checking) Res.string.llama_garden_checking else Res.string.llama_garden_download,
+            busy = checking,
         ) {
-            if (checking) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(MaterialSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+            checking = true
+            // On the account's scope, not the card's: scrolling the card away must not drop a
+            // download the user asked for.
+            accountViewModel.viewModelScope.launch {
+                val check =
+                    withTimeoutOrNull(DOWNLOAD_CHECK_TIMEOUT_MS) {
+                        TorrentFileCheck.check(event) { accountViewModel.httpClientBuilder.fetchMedia(it, LlamaGardenDefaults.MAX_TORRENT_FILE_BYTES) }
+                    } ?: TorrentFileCheck.Unreachable
+                checking = false
+                openDownload(event, check, uriHandler::openUri, accountViewModel)
             }
-            Text(
-                stringRes(if (checking) Res.string.llama_garden_checking else Res.string.llama_garden_download),
-                modifier = Modifier.padding(start = 8.dp),
-            )
         }
 
         view.huggingFaceUrl?.let { url ->
@@ -280,19 +268,25 @@ private fun openDownload(
 /** Every mirror tried in turn can wait on its own timeout; past this the download goes ahead without one. */
 private const val DOWNLOAD_CHECK_TIMEOUT_MS = 30_000L
 
-/** A secondary card action: an icon and a label, lighter than the card's one tonal button. */
+/** A card action as a small link: an icon (a spinner while [busy]) and a label, in the primary color. */
 @Composable
 private fun CardAction(
     icon: MaterialSymbol,
     label: StringResource,
+    busy: Boolean = false,
     onClick: () -> Unit,
 ) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = !busy, onClick = onClick).padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Text(stringRes(label), modifier = Modifier.padding(start = 6.dp))
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        }
+        Text(stringRes(label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 
