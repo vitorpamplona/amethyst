@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield
 
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -36,10 +36,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerBlocks
@@ -47,8 +48,8 @@ import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerRendering
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.commons.ui.spellcheck.TextReplacement
-import com.vitorpamplona.amethyst.commons.ui.spellcheck.toVisual
+import com.vitorpamplona.amethyst.commons.ui.components.LaidOutText
+import com.vitorpamplona.amethyst.commons.ui.components.TextOverlayState
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -91,7 +92,7 @@ private val MediaBlockGap = 8.dp
 class MediaMarkerField(
     val outputTransformation: UrlUserTagOutputTransformation,
     val cursorBrush: Brush?,
-    val textOverlay: (@Composable BoxScope.(TextLayoutResult) -> Unit)?,
+    val textOverlay: (@Composable BoxScope.(TextOverlayState) -> Unit)?,
 )
 
 /** Media cards ([mediaBlocks]) or chips ([mediaChips]) for the markers in [state]; neither draws only mentions and links. */
@@ -126,10 +127,18 @@ fun rememberMediaMarkerField(
         cursorBrush = if (selectedBlock != null) SolidColor(Color.Transparent) else null,
         textOverlay =
             mediaBlocks?.let { blocks ->
-                { layout ->
-                    val width = layout.fieldWidth().toFloat()
-                    if (width != textWidth.floatValue) SideEffect { textWidth.floatValue = width }
-                    MediaBlockCards(state.text, transformation, layout, blocks, selectedBlock)
+                { overlay ->
+                    // Recomposes only when the width changes, not on every layout.
+                    val width by remember(overlay) {
+                        derivedStateOf {
+                            overlay.laidOut
+                                ?.layout
+                                ?.fieldWidth()
+                                ?.toFloat()
+                        }
+                    }
+                    width?.let { if (it != textWidth.floatValue) SideEffect { textWidth.floatValue = it } }
+                    MediaBlockCards(state.text, transformation, overlay, blocks, selectedBlock, textWidth)
                 }
             },
     )
@@ -150,81 +159,80 @@ fun RefocusOn(
 }
 
 /**
- * The text and its replacements as the field last laid them out. The layout reaches the overlay
- * a frame after the text changes, so the current text is placed against the previous layout for that
- * frame: a key typed before a card moved its marker one character on, onto the next line of the old
- * layout, and the card jumped down and back (or, when the card ended the text, past the old layout,
- * and left the composition, reloading its picture). Each key made the picture blink.
+ * One card per media marker, over the gap the marker leaves in the laid-out text.
+ *
+ * Which cards there are follows the text, in composition. Where each one goes follows the layout,
+ * read from [overlay] as the card is measured: composition only has the last frame's layout, a key
+ * behind the text, and a card placed by it jumped down and back with each key typed above it.
  */
-private class LaidOutText {
-    var raw: String = ""
-    var replacements: List<TextReplacement> = emptyList()
-}
-
-/** One card per media marker, over the gap the marker leaves in the laid-out text. */
 @Composable
 private fun MediaBlockCards(
-    raw: CharSequence,
+    text: CharSequence,
     transformation: UrlUserTagOutputTransformation,
-    layout: TextLayoutResult,
+    overlay: TextOverlayState,
     blocks: MediaBlocks,
     selected: Int?,
+    textWidth: FloatState,
 ) {
-    val laidOut = remember { LaidOutText() }
-    val drawn = layout.layoutInput.text
-    val current = raw.toString()
-    if (current != laidOut.raw) {
-        val replacements = transformation.replacements(current)
-        // Placed against the text the layout drew: the current one once the layout catches up,
-        // until then the one before. The cards stay where they were for that frame.
-        if (replacements.drawsAs(current, drawn) || !laidOut.replacements.drawsAs(laidOut.raw, drawn)) {
-            laidOut.raw = current
-            laidOut.replacements = replacements
-        }
-    }
-    val rawText = laidOut.raw
-    val replacements = laidOut.replacements
-    val density = LocalDensity.current
-    val widthDp = layout.fieldWidth() / density.density
-    replacements.forEach { replacement ->
-        if (!replacement.isMediaMarker) return@forEach
-        val id = MediaMarkers.idAt(rawText, replacement.rawStart) ?: return@forEach
-        val visual = replacements.toVisual(replacement.rawStart) ?: return@forEach
-        if (drawn.isEmpty()) return@forEach
-        // Neither text matches the layout (several edits in one frame): the nearest place for a
-        // frame, rather than taking the card out of the composition, which reloads its picture.
-        val offset = visual.coerceAtMost(drawn.length - 1)
-        // Centred between the text above (the previous line's bottom, which can sit higher than this
-        // line's top) and the end of the gap, so the space above and below the card matches.
-        val cardHeight = blocks.heightOf(id, widthDp)
-        val cardHeightPx = with(density) { cardHeight.toPx() }
-        val line = layout.getLineForOffset(offset)
-        val above = if (line > 0) layout.getLineBottom(line - 1) else layout.getLineTop(line)
-        val top = ((above + layout.getLineBottom(line) - cardHeightPx) / 2).roundToInt()
-        key(id) {
-            blocks.card(id, id == selected, Modifier.offset { IntOffset(0, top) }.fillMaxWidth().height(cardHeight))
+    val markers = remember(transformation) { MarkerOffsets(transformation) }
+    val gap = with(LocalDensity.current) { MediaBlockGap.roundToPx() }
+    // A marker pasted twice shows its file twice: the nth card goes in the nth gap.
+    val seen = HashMap<Int, Int>()
+    MediaMarkers.idsIn(text).forEach { id ->
+        val nth = seen.getOrElse(id) { 0 }
+        seen[id] = nth + 1
+        key(id, nth) {
+            val place =
+                Modifier.layout { measurable, constraints ->
+                    // Before the field knows its width, the gaps are a guess: the card waits a frame.
+                    val laidOut = overlay.laidOut
+                    val offset = laidOut?.let { markers.of(it)[id]?.getOrNull(nth) }
+                    if (offset == null || textWidth.floatValue <= 0f) return@layout layout(0, 0) {}
+                    val layout = laidOut.layout
+                    val width = if (constraints.hasBoundedWidth) constraints.maxWidth else layout.fieldWidth()
+                    // Centred between the text above (the previous line's bottom, which can sit higher
+                    // than this line's top) and the end of the gap, so the space above and below matches.
+                    val line = layout.getLineForOffset(offset)
+                    val above = if (line > 0) layout.getLineBottom(line - 1) else layout.getLineTop(line)
+                    val bottom = layout.getLineBottom(line)
+                    // Never taller than its gap: a gap sized before the card's media had its shape
+                    // would otherwise let the card cover the text above it.
+                    val height =
+                        minOf(
+                            blocks.heightOf(id, width / density).roundToPx(),
+                            (bottom - above).roundToInt() - 2 * gap,
+                        ).coerceAtLeast(0)
+                    val top = ((above + bottom - height) / 2).roundToInt()
+                    val placeable = measurable.measure(Constraints.fixed(width, height))
+                    layout(width, height) { placeable.place(0, top) }
+                }
+            blocks.card(id, id == selected, place)
         }
     }
 }
 
-/** Whether [raw] with these replacements reads as [drawn], without building the drawn text. */
-private fun List<TextReplacement>.drawsAs(
-    raw: String,
-    drawn: CharSequence,
-): Boolean {
-    var length = raw.length
-    forEach { length += it.visual.length - (it.rawEnd - it.rawStart) }
-    if (length != drawn.length) return false
-    var rawAt = 0
-    var drawnAt = 0
-    forEach {
-        if (!raw.regionMatches(rawAt, drawn, drawnAt, it.rawStart - rawAt)) return false
-        drawnAt += it.rawStart - rawAt
-        if (!it.visual.regionMatches(0, drawn, drawnAt, it.visual.length)) return false
-        drawnAt += it.visual.length
-        rawAt = it.rawEnd
+/** Where each marker's id sits in a [LaidOutText]'s drawn text, in order; worked out once per layout. */
+private class MarkerOffsets(
+    private val transformation: UrlUserTagOutputTransformation,
+) {
+    private var last: LaidOutText? = null
+    private var offsets: Map<Int, List<Int>> = emptyMap()
+
+    fun of(laidOut: LaidOutText): Map<Int, List<Int>> {
+        if (laidOut === last) return offsets
+        val raw = laidOut.text.toString()
+        val result = HashMap<Int, MutableList<Int>>()
+        var shift = 0
+        transformation.replacements(raw).forEach { replacement ->
+            if (replacement.isMediaMarker) {
+                MediaMarkers.idAt(raw, replacement.rawStart)?.let { result.getOrPut(it) { ArrayList(1) }.add(replacement.rawStart + shift) }
+            }
+            shift += replacement.visual.length - (replacement.rawEnd - replacement.rawStart)
+        }
+        last = laidOut
+        offsets = result
+        return result
     }
-    return raw.regionMatches(rawAt, drawn, drawnAt, raw.length - rawAt)
 }
 
 /** The width the text may take: the field's, not the laid-out text's own (one short line is narrow). */

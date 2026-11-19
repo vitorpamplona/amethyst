@@ -80,7 +80,7 @@ class MediaBlockCardStabilityUiTest {
                     entered++
                     onDispose { left++ }
                 }
-                Box(modifier)
+                Box(modifier.onGloballyPositioned { ys += it.positionInRoot().y })
             }
         compose.setContent {
             AmethystPreviewTheme(dark = true) {
@@ -163,57 +163,97 @@ class MediaBlockCardStabilityUiTest {
                     },
                 ).build()
         }
-        val png = File.createTempFile("card", ".png").apply { deleteOnExit() }
-        ImageIO.write(BufferedImage(300, 200, BufferedImage.TYPE_INT_RGB), "png", png)
+        try {
+            val png = File.createTempFile("card", ".png").apply { deleteOnExit() }
+            ImageIO.write(BufferedImage(300, 200, BufferedImage.TYPE_INT_RGB), "png", png)
 
-        val field =
-            object : IMessageField {
-                override val message = TextFieldState()
+            val field =
+                object : IMessageField {
+                    override val message = TextFieldState()
 
-                override fun onMessageChanged() {}
-            }
-        val media = AttachedMediaState(field.message)
-        compose.setContent {
-            AmethystPreviewTheme(dark = true) {
-                MessageField(
-                    Res.string.what_s_on_your_mind,
-                    field,
-                    requestFocus = false,
-                    mediaBlocks =
-                        rememberAttachedMediaBlocks(media, null) { false }.let { real ->
-                            remember(real) {
-                                MediaBlocks(real.aspectRatio, fixedHeight = real.fixedHeight) { id, selected, modifier ->
-                                    DisposableEffect(Unit) {
-                                        entered++
-                                        onDispose { left++ }
+                    override fun onMessageChanged() {}
+                }
+            val media = AttachedMediaState(field.message)
+            compose.setContent {
+                AmethystPreviewTheme(dark = true) {
+                    MessageField(
+                        Res.string.what_s_on_your_mind,
+                        field,
+                        requestFocus = false,
+                        mediaBlocks =
+                            rememberAttachedMediaBlocks(media, null) { false }.let { real ->
+                                remember(real) {
+                                    MediaBlocks(real.aspectRatio, fixedHeight = real.fixedHeight) { id, selected, modifier ->
+                                        DisposableEffect(Unit) {
+                                            entered++
+                                            onDispose { left++ }
+                                        }
+                                        real.card(id, selected, modifier.onGloballyPositioned { ys += it.positionInRoot().y })
                                     }
-                                    real.card(id, selected, modifier.onGloballyPositioned { ys += it.positionInRoot().y })
                                 }
-                            }
-                        },
-                )
+                            },
+                    )
+                }
             }
-        }
-        compose.runOnIdle {
-            media.pick(listOf(SelectedMedia(StringMediaUri(png.absolutePath), "image/png")), stripMetadata = false)
-            media.attachPicked(ServerName("test", "https://example.com"))
-        }
-        compose.waitForIdle()
-        val afterAttach = started
-        val enteredAfterAttach = entered
-        val placedAt = ys.last()
-        ys.clear()
-        assertEquals(1, afterAttach, "the card loads its image once")
-
-        "Hello world".forEach { c ->
-            compose.onNode(hasSetTextAction()).performTextInput(c.toString())
+            compose.runOnIdle {
+                media.pick(listOf(SelectedMedia(StringMediaUri(png.absolutePath), "image/png")), stripMetadata = false)
+                media.attachPicked(ServerName("test", "https://example.com"))
+            }
             compose.waitForIdle()
+            val afterAttach = started
+            val enteredAfterAttach = entered
+            val placedAt = ys.last()
+            ys.clear()
+            assertEquals(1, afterAttach, "the card loads its image once")
+
+            "Hello world".forEach { c ->
+                compose.onNode(hasSetTextAction()).performTextInput(c.toString())
+                compose.waitForIdle()
+            }
+            assertEquals("Hello world\n" + MediaMarkers.of(1) + "\n", field.message.text.toString())
+            assertEquals(afterAttach, started, "typing reloaded the card's image")
+            assertEquals(enteredAfterAttach, entered, "the card left composition while typing")
+            // Typing on the line above the card doesn't move it, not even for a frame.
+            assertTrue(ys.all { it == placedAt }, "the card moved from $placedAt while typing: $ys")
+        } finally {
+            SingletonImageLoader.reset()
         }
-        assertEquals("Hello world\n" + MediaMarkers.of(1) + "\n", field.message.text.toString())
-        assertEquals(afterAttach, started, "typing reloaded the card's image")
-        assertEquals(enteredAfterAttach, entered, "the card left composition while typing")
-        // Typing on the line above the card doesn't move it, not even for a frame.
-        assertTrue(ys.all { it == placedAt }, "the card moved from $placedAt while typing: $ys")
-        SingletonImageLoader.reset()
+    }
+
+    /** The text after one frame: [edit] applied, composed, measured and placed once. */
+    private fun oneFrameAfter(edit: () -> Unit) {
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread(edit)
+        compose.mainClock.advanceTimeByFrame()
+    }
+
+    @Test
+    fun aLineAddedAboveMovesTheCardInTheSameFrame() {
+        val state = TextFieldState("Hello\n" + MediaMarkers.of(1) + "\n")
+        show(state)
+        val before = ys.last()
+        oneFrameAfter { state.edit { replace(0, 0, "Line\n") } }
+        val firstFrame = ys.last()
+        compose.mainClock.autoAdvance = true
+        compose.waitForIdle()
+        val after = ys.last()
+        assertTrue(after > before, "a line above pushes the card down: $before -> $after")
+        assertEquals(after, firstFrame, "the card followed the text a frame late: $ys")
+    }
+
+    @Test
+    fun aCardFirstShowsWhereItStays() {
+        val state = TextFieldState("Hello\n" + MediaMarkers.of(1) + "\n")
+        show(state)
+        assertEquals(1, ys.distinct().size, "the card moved as the field first laid out: $ys")
+    }
+
+    @Test
+    fun anAddedCardFirstShowsWhereItStays() {
+        val state = TextFieldState("Hello")
+        show(state)
+        compose.runOnIdle { state.edit { append("\n" + MediaMarkers.of(1) + "\n") } }
+        compose.waitForIdle()
+        assertEquals(1, ys.distinct().size, "the added card moved after it showed: $ys")
     }
 }
