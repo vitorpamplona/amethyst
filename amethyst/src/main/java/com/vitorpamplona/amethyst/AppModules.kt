@@ -723,8 +723,10 @@ class AppModules(
     // event, which is why this sits next to the cache rather than in a later init block.
     init {
         cache.appHost = AmethystLocalCacheHost(this, isDebug)
-        // Geohash chats route through the live georelays directory, fetched over this app's clients.
-        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader { okHttpClients.getHttpClient(false) }.fetch() }
+        // Geohash chats route through the live georelays directory, fetched over this app's clients
+        // and through Tor when the relays it lists would be (never the direct client: that leaked
+        // a clearnet request to GitHub for users who route everything through Tor).
+        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader(roleBasedHttpClientBuilder::okHttpClientForRelayDirectory).fetch() }
     }
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so
