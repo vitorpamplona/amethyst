@@ -25,10 +25,13 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRules
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.dmHistory
+import com.vitorpamplona.quartz.buzz.dm.tags.DmHistoryTag
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteClaim
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -84,7 +87,7 @@ object BuzzCommands {
         |    [--limit N] [--timeout SECS]
         |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM (up to 8 more people; agents extra) (kind-41010)
         |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
-        |amy buzz dm add-member RELAY CHANNEL PUBKEY [--include-history] add a member to a group DM (kind-41011)
+        |amy buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude] add a member to a DM (kind-41011)
         |amy buzz job …                             file/list/show/cancel agent jobs (43001-43006)
         |amy buzz workflow …                        trigger/run/approve Buzz workflows (30620/46020/46030)
         |amy buzz agent serve RELAY --exec CMD       run a parallel backlog scheduler (worktree-isolated)
@@ -122,7 +125,7 @@ object BuzzCommands {
             |amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]
             |amy buzz dm open RELAY PUBKEY [PUBKEY…]
             |amy buzz dm hide RELAY CHANNEL
-            |amy buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]
+            |amy buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]
             """.trimMargin()
         return route(
             "buzz dm",
@@ -266,17 +269,21 @@ object BuzzCommands {
         }
 
     /**
-     * `buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]` → publishes a kind-41011 (`h` +
-     * new `p`). Without `--include-history` the relay adds no one in place: it finds or creates the
-     * DM of this DM's people plus PUBKEY. With it (`["history", "include"]`) the DM grows in place and
-     * the newcomer sees its history. Either way `channel_id` is the DM the conversation is now in, read
+     * `buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]` → publishes a
+     * kind-41011 (`h` + new `p`), with the same default as the app: `ask` (`["history", "ask"]`).
+     * The relay then decides where there is nothing to decide (a DM of one person forks a new DM
+     * without history; people who already share a DM land there) and otherwise refuses with
+     * `needs-choice: history`, which this reports as `needs_history_choice` so the caller sends
+     * again with `include` (the DM grows in place and PUBKEY sees its history) or `exclude` (no tag:
+     * the relay finds or creates the DM of this DM's people plus PUBKEY). `--include-history` is the
+     * old spelling of `--history include`. `channel_id` is the DM the conversation is in now, read
      * from the relay's OK, and `created` says whether the relay made it just now.
      */
     private suspend fun dmAddMember(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY [--include-history]"
+        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]"
         val args = Args(rest)
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
         val channelId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
@@ -285,13 +292,29 @@ object BuzzCommands {
         val member =
             decodePublicKeyAsHexOrNull(memberInput.trim())?.takeIf { it.isValid() }
                 ?: return Output.error("bad_args", "invalid public key (npub or 64-char hex): $memberInput")
-        val includeHistory = args.bool("include-history")
+        val legacyInclude = args.bool("include-history")
+        val history = args.flag("history")?.trim()?.lowercase() ?: if (legacyInclude) HISTORY_INCLUDE else HISTORY_ASK
+        if (history !in setOf(HISTORY_ASK, HISTORY_INCLUDE, HISTORY_EXCLUDE)) return Output.error("bad_args", usage)
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val signed = ctx.signer.sign(BuzzDmRules.addMemberTemplate(channelId, member, includeHistory))
+            val template =
+                DmAddMemberEvent.build(channelId, member) {
+                    when (history) {
+                        HISTORY_ASK -> dmHistory(DmHistoryTag.ASK)
+                        HISTORY_INCLUDE -> dmHistory(DmHistoryTag.INCLUDE)
+                    }
+                }
+            val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, setOf(relay))
+            if (ack.values.none { it.accepted } && ack.values.any { it.message.startsWith(BuzzDmRules.NEEDS_HISTORY_CHOICE) }) {
+                return Output.error(
+                    "needs_history_choice",
+                    "adding $member would let them see this DM's history: send again with --history include or --history exclude",
+                    extra = mapOf("event_id" to signed.id, "group_id" to channelId, "member" to member),
+                )
+            }
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val okMessage = ack.values.firstOrNull { it.accepted }?.message
             Output.emit(
@@ -301,7 +324,7 @@ object BuzzCommands {
                     "relay" to relay.url,
                     "group_id" to channelId,
                     "member" to member,
-                    "include_history" to includeHistory,
+                    "history" to history,
                     "published" to ack.values.any { it.accepted },
                     "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
                     "created" to okMessage?.contains("\"created\":true"),
@@ -311,6 +334,10 @@ object BuzzCommands {
             return 0
         }
     }
+
+    private const val HISTORY_ASK = "ask"
+    private const val HISTORY_INCLUDE = "include"
+    private const val HISTORY_EXCLUDE = "exclude"
 
     private val jsonMedia = "application/json".toMediaType()
     private val jsonParser = Json { ignoreUnknownKeys = true }

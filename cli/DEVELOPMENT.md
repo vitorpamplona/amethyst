@@ -313,7 +313,9 @@ contract.
   written, and the payload carries `count`, `out`, `incomplete_relays` and
   `relay_errors`).
 - **Groups:** `not_member` (you aren't in the group / group unknown),
-  `target_not_member` (the *other* user isn't).
+  `target_not_member` (the *other* user isn't), `needs_history_choice` (a Buzz
+  DM add sent with `--history ask` would let the newcomer see the DM's history:
+  send again with `--history include` or `--history exclude`).
 - **Chess:** `not_your_turn` (a move by a player out of turn, by a
   spectator, or after the game ended), `illegal_move`, `not_a_player` (you
   hold no seat, and cannot take one, in that game), `no_draw_offer` (nothing
