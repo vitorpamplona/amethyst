@@ -40,6 +40,7 @@ class LocalGitObjectsTest {
         val p =
             ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false") + args)
                 .directory(dir)
+                .apply { environment().forgetInheritedRepository() }
                 .redirectErrorStream(true)
                 .start()
         val out = p.inputStream.bufferedReader().readText()
@@ -169,6 +170,7 @@ class LocalGitObjectsTest {
                 val p =
                     ProcessBuilder("sh", "-c", command)
                         .directory(dir)
+                        .apply { environment().forgetInheritedRepository() }
                         .redirectErrorStream(true)
                         .apply { environment().putAll(ClaudeChat.noPushEnvironment()) }
                         .start()
@@ -205,6 +207,7 @@ class LocalGitObjectsTest {
                 val p =
                     ProcessBuilder("git", "push", "-q", "origin", "HEAD:refs/heads/x")
                         .directory(dir)
+                        .apply { environment().forgetInheritedRepository() }
                         .redirectErrorStream(true)
                         .apply { environment().putAll(env) }
                         .start()

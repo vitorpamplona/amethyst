@@ -282,6 +282,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
@@ -385,6 +386,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
@@ -420,6 +422,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
