@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordAccessDrain
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -1918,7 +1919,8 @@ class AccountConcordActions(
         if (session.state.value?.dissolved == true) return false
         val me = account.signer.pubKey
         val authority = session.state.value?.authority
-        if (authority != null && authority.rolesOf(member).isNotEmpty() &&
+        // Roles v2 (CORD-04 §2) has no legacy Grant to strip: the Kick alone departs them there.
+        if (authority != null && !authority.isRolesV2 && authority.rolesOf(member).isNotEmpty() &&
             (authority.isOwner(me) || authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES))
         ) {
             if (!grantConcordRole(communityId, member, emptyList())) {
@@ -2315,10 +2317,11 @@ class AccountConcordActions(
             return false
         }
         // The staff set the new secret goes to: the owner plus everyone holding a
-        // Control-writing bit (CORD-04 §3). They get the 136-byte blob, every other
-        // recipient the 104-byte one carrying the pubkey alone. (The builder mints a
-        // blob per recipient, so staff who aren't recipients are simply never reached.)
-        val staff = authority.staffMembers()
+        // Control-writing bit (CORD-04 §3), every recipient included when `@everyone`
+        // itself carries one. They get the 136-byte blob, every other recipient the
+        // 104-byte one carrying the pubkey alone. (The builder mints a blob per
+        // recipient, so staff who aren't recipients are simply never reached.)
+        val staff = authority.staffMembers(recipients)
         val build =
             try {
                 ConcordActions.buildRefounding(
@@ -3135,21 +3138,36 @@ class AccountConcordActions(
         for (session in account.concordSessions.sessions()) {
             val state = session.state.value ?: continue
             if (state.dissolved || !state.isRolesV2) continue
-            val pending = session.pendingAccessWraps()
-            if (pending.isEmpty()) continue
-            for ((channelIdHex, wrap) in pending) {
-                val plane = session.accessPlaneKey(wrap.pubKey) ?: continue
-                val opened = ConcordStreamEnvelope.openOrNull(wrap, plane) ?: continue
-                val delivery = ConcordChannelAccess.parse(opened) ?: continue
-                if (!ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer)) continue
+            // Each wrap is opened once by the session, and settled here for good once judged, so a
+            // drain on every structural tick costs nothing for deliveries already seen.
+            for (pending in session.pendingAccessDeliveries()) {
+                val channelIdHex = pending.channelIdHex
+                val delivery = pending.delivery
                 val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
-                if (held != null && (delivery.newEpoch <= held.epoch || delivery.newEpoch > held.epoch + ConcordChannelAccess.MAX_EPOCH_JUMP)) continue
-                val key = ConcordChannelAccess.openAccess(delivery, account.signer, channelIdHex.hexToByteArray()) ?: continue
-                val adopted =
-                    updateConcordEntry(session.entry.id) { cur ->
-                        ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))
+                val verdict =
+                    ConcordAccessDrain.verdict(delivery, channelIdHex, me, held?.epoch) {
+                        ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer)
                     }
-                if (adopted) Log.i("Concord") { "Access delivery ${session.entry.id}/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
+                when (verdict) {
+                    ConcordAccessDrain.Verdict.WAIT -> {
+                        continue
+                    }
+
+                    ConcordAccessDrain.Verdict.NOT_FOR_ME, ConcordAccessDrain.Verdict.STALE -> {
+                        session.retireAccessWrap(pending.wrapId)
+                    }
+
+                    ConcordAccessDrain.Verdict.OPEN -> {
+                        val key = ConcordChannelAccess.openAccess(delivery, account.signer, channelIdHex.hexToByteArray())
+                        session.retireAccessWrap(pending.wrapId)
+                        if (key == null) continue
+                        val adopted =
+                            updateConcordEntry(session.entry.id) { cur ->
+                                ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))
+                            }
+                        if (adopted) Log.i("Concord") { "Access delivery ${session.entry.id}/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
+                    }
+                }
             }
         }
     }

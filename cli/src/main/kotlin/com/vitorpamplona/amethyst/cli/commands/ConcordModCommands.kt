@@ -359,7 +359,8 @@ object ConcordModCommands {
             // Strip first, so the target's rank is gone before the departure lands.
             var chain = editions
             var access: Map<String, Any?> = emptyMap()
-            val strip = authority.rolesOf(member).isNotEmpty() && cp.canWrite && authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES)
+            // Roles v2 (CORD-04 §2) has no legacy Grant to strip: the Kick alone departs them there.
+            val strip = !authority.isRolesV2 && authority.rolesOf(member).isNotEmpty() && cp.canWrite && authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES)
             if (strip) {
                 val stripWrap = ConcordModeration.grant(ctx.signer, cp, cid, member, emptyList(), editions, TimeUtils.now(), owner = sc.owner)
                 if (ctx.publish(stripWrap, relays).values.any { it.accepted }) {
@@ -586,7 +587,7 @@ object ConcordModCommands {
                         priorControlWraps = controlWraps,
                         priorControlKeys = cp,
                         recipientsXOnly = recipients,
-                        staffXOnly = authority.staffMembers(),
+                        staffXOnly = authority.staffMembers(recipients),
                         createdAt = TimeUtils.now(),
                         ownerPubKey = sc.owner,
                         authority = citation,

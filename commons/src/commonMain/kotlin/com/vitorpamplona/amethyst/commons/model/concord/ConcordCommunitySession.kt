@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelDelivery
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWebxdc
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWritersLedger
@@ -84,6 +86,13 @@ data class ExpiredConcordRumor(
     val expiresAt: Long,
     /** The URLs of the rumor's encrypted attachments, whose decryption keys go with it (CORD-08 §3). */
     val attachmentUrls: List<String> = emptyList(),
+)
+
+/** A key delivery buffered on [channelIdHex]'s access plane (CORD-03 §5), opened, carried by wrap [wrapId]. */
+class PendingAccessDelivery(
+    val channelIdHex: HexKey,
+    val wrapId: HexKey,
+    val delivery: ChannelDelivery,
 )
 
 /**
@@ -340,11 +349,29 @@ class ConcordCommunitySession(
     // and judged against the folded Writers ledger. No secret: never AUTHed or written as.
     private var writerChannelKeysByAddress = HashMap<HexKey, ChannelPlane>()
 
+    // Channel id -> writer-address wraps whose post did not stand on the fold that judged them,
+    // re-judged on every fold while the buffer still holds them.
+    private val heldBackWriterWraps = HashMap<HexKey, LinkedHashSet<HexKey>>()
+
     // Each Private Channel's access plane on Roles v2 (CORD-03 §5) -> (channel id, plane key). Key
     // deliveries land here; opening one takes the account signer, so they are buffered for a drain.
     @Volatile
     private var accessKeys: Map<HexKey, Pair<HexKey, GroupKey>> = emptyMap()
+
+    // Access-plane wraps waiting for the drain, oldest first and bounded ([MAX_ACCESS_WRAPS]).
     private val accessWraps = LinkedHashMap<HexKey, Event>()
+
+    // Each buffered access wrap opened and parsed once (null: it did not open or parse), so a drain
+    // that runs on every structural tick does not NIP-44-open the whole buffer again.
+    private val accessDeliveryByWrapId = HashMap<HexKey, ChannelDelivery?>()
+
+    // Access wraps the drain judged for good (adopted, for someone else, stale): a re-delivery is
+    // dropped unbuffered. Bounded like [sweptWrapIds].
+    private val retiredAccessWrapIds = LinkedHashSet<HexKey>()
+
+    /** Access-plane wraps opened so far (cache misses), for a test to assert each opens once. */
+    internal var accessOpens = 0
+        private set
 
     // The held Private Channel keys the current channel planes were derived from, so a later list
     // entry carrying different keys re-derives them (see [adoptPrivateChannels]).
@@ -616,6 +643,45 @@ class ConcordCommunitySession(
             accessWraps.values.mapNotNull { w -> keys[w.pubKey]?.let { it.first to w } }
         }
 
+    /**
+     * The buffered access-plane deliveries (CORD-03 §5), each opened once ([accessOpens]): a wrap
+     * that does not open or parse is retired here, never offered again. The drain settles the rest
+     * with [retireAccessWrap] once it has judged them for good.
+     */
+    fun pendingAccessDeliveries(): List<PendingAccessDelivery> {
+        val (keys, toOpen) =
+            lock.withLock {
+                accessKeys to accessWraps.values.filter { it.id !in accessDeliveryByWrapId }
+            }
+        val opened =
+            toOpen.associate { wrap ->
+                val plane = keys[wrap.pubKey]?.second
+                wrap.id to plane?.let { ConcordStreamEnvelope.openOrNull(wrap, it) }?.let { ConcordChannelAccess.parse(it) }
+            }
+        return lock.withLock {
+            accessOpens += opened.size
+            opened.forEach { (id, delivery) ->
+                if (id in accessWraps) accessDeliveryByWrapId[id] = delivery
+                if (delivery == null) retireAccessLocked(id)
+            }
+            accessWraps.values.mapNotNull { wrap ->
+                val channelIdHex = keys[wrap.pubKey]?.first ?: return@mapNotNull null
+                val delivery = accessDeliveryByWrapId[wrap.id] ?: return@mapNotNull null
+                PendingAccessDelivery(channelIdHex, wrap.id, delivery)
+            }
+        }
+    }
+
+    /** Drops access wrap [wrapId] from the buffer for good: a re-delivery of it is not buffered again. */
+    fun retireAccessWrap(wrapId: HexKey) = lock.withLock { retireAccessLocked(wrapId) }
+
+    private fun retireAccessLocked(wrapId: HexKey) {
+        accessWraps.remove(wrapId)
+        accessDeliveryByWrapId.remove(wrapId)
+        retiredAccessWrapIds.add(wrapId)
+        while (retiredAccessWrapIds.size > MAX_SWEPT_WRAP_IDS) retiredAccessWrapIds.remove(retiredAccessWrapIds.first())
+    }
+
     /** The access plane key at [address], or null. */
     fun accessPlaneKey(address: HexKey): GroupKey? = accessKeys[address]?.second
 
@@ -758,9 +824,16 @@ class ConcordCommunitySession(
             }
             in accessKeys -> {
                 // A key delivery (CORD-03 §5): buffered like a rekey, since opening a blob takes the
-                // account signer and the deliverer is judged against the fold at drain time.
+                // account signer and the deliverer is judged against the fold at drain time. One the
+                // drain already settled is not buffered again.
                 lock.withLock {
+                    if (wrap.id in retiredAccessWrapIds) return ConcordIngestOutcome.NON_STRUCTURAL
                     if (accessWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
+                    while (accessWraps.size > MAX_ACCESS_WRAPS) {
+                        val oldest = accessWraps.keys.first()
+                        accessWraps.remove(oldest)
+                        accessDeliveryByWrapId.remove(oldest)
+                    }
                 }
                 return ConcordIngestOutcome.STRUCTURAL
             }
@@ -913,6 +986,7 @@ class ConcordCommunitySession(
         // they arrived — re-projecting all channels on every control edition would be
         // O(channels × history) of redundant decryption.
         for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
+        rejudgeHeldBackWriterPosts()
     }
 
     /**
@@ -993,11 +1067,41 @@ class ConcordCommunitySession(
 
     /** Re-decrypts and re-projects a channel's WHOLE wrap buffer at the current epoch. Only for a
      *  re-fold (keys may change). Prior-epoch wraps in the buffer simply won't open under the current
-     *  key and are skipped — they were already emitted when they landed (the sink dedups by id). */
+     *  key and are skipped — they were already emitted when they landed (the sink dedups by id). A
+     *  restricted Channel's writer-address wraps re-open on their own writer plane (CORD-03 §1). */
     private fun reprojectChannel(channelIdHex: HexKey) {
         val plane = currentChannelPlane(channelIdHex) ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        emitChannelRumors(channelIdHex, plane.key, plane.epoch, wraps)
+        val writers = lock.withLock { writerChannelKeysByAddress.filterValues { it.channelIdHex == channelIdHex } }
+        val (atWriters, atRead) = wraps.partition { it.pubKey in writers }
+        emitChannelRumors(channelIdHex, plane.key, plane.epoch, atRead)
+        atWriters.groupBy { it.pubKey }.forEach { (address, held) ->
+            val writer = writers.getValue(address)
+            emitChannelRumors(channelIdHex, writer.key, writer.epoch, held, writerEpoch = writer.writerEpoch)
+        }
+    }
+
+    /**
+     * Re-judges the writer-address posts [writerPostStands] held back (CORD-03 §1) against the
+     * ledger and Roster just folded: a post that arrived before the ledger entry or the
+     * certificate's epoch that lets it stand was refused then and is let in now.
+     */
+    private fun rejudgeHeldBackWriterPosts() {
+        val retry =
+            lock.withLock {
+                heldBackWriterWraps.mapNotNull { (channelIdHex, ids) ->
+                    val buffer = channelWrapsById[channelIdHex] ?: return@mapNotNull null
+                    // A held-back wrap the buffer has since trimmed can never be re-opened.
+                    ids.retainAll { it in buffer }
+                    if (ids.isEmpty()) null else channelIdHex to ids.mapNotNull { buffer[it] }
+                }
+            }
+        for ((channelIdHex, wraps) in retry) {
+            wraps.groupBy { it.pubKey }.forEach { (address, held) ->
+                val writer = lock.withLock { writerChannelKeysByAddress[address] } ?: return@forEach
+                emitChannelRumors(channelIdHex, writer.key, writer.epoch, held, writerEpoch = writer.writerEpoch)
+            }
+        }
     }
 
     /**
@@ -1020,7 +1124,19 @@ class ConcordCommunitySession(
             // A post at a writer address stands only inside its window, with a certificate from the
             // epoch's certifier, before any stop naming its author (CORD-03 §1). One that doesn't is
             // held back: a manager would see it flagged, everyone else nothing.
-            if (writerEpoch != null && !writerPostStands(channelIdHex, key.publicKeyHex, rumor)) continue
+            if (writerEpoch != null) {
+                val stands = writerPostStands(channelIdHex, key.publicKeyHex, rumor)
+                lock.withLock {
+                    if (stands) {
+                        heldBackWriterWraps[channelIdHex]?.remove(wrap.id)
+                    } else {
+                        heldBackWriterWraps.getOrPut(channelIdHex) { LinkedHashSet() }.add(wrap.id)
+                    }
+                }
+                // Re-judged on the next fold ([rejudgeHeldBackWriterPosts]): the ledger entry or
+                // Grant that lets it stand may simply not have folded yet.
+                if (!stands) continue
+            }
             // A WebXDC signal (kind 3310) rides the plane but is never a chat row: held apart for a
             // WebXDC host, never handed to the store, so it can't reach a feed, a preview or an
             // unread count. Its author is still observably present (CORD-02 §5).
@@ -1384,7 +1500,8 @@ class ConcordCommunitySession(
             lock.withLock {
                 val wrapId = wrapIdByRumorId[rumorId] ?: return null
                 val wrap = channelWrapsById[channelIdHex]?.get(wrapId) ?: return null
-                val plane = channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey] ?: return null
+                // A restricted Channel's post at a writer address reopens on that writer plane (CORD-03 §1).
+                val plane = channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey] ?: writerChannelKeysByAddress[wrap.pubKey] ?: return null
                 wrap to plane
             }
         if (plane.channelIdHex != channelIdHex) return null
@@ -1414,6 +1531,9 @@ class ConcordCommunitySession(
 
         /** How many swept (expired) wrap ids a session remembers to drop their re-deliveries unopened. */
         const val MAX_SWEPT_WRAP_IDS = 4096
+
+        /** Access-plane wraps buffered for the drain; any member can deliver, so this is bounded. */
+        const val MAX_ACCESS_WRAPS = 256
 
         /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
         const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
