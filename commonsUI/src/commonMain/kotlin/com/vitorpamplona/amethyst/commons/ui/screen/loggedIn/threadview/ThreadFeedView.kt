@@ -54,6 +54,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -316,7 +317,11 @@ fun RenderThreadFeed(
                 }
             }
         }
-    val collapsedByDefault = remember(outsideNetwork, resolvedThreads) { if (resolvedThreads.isEmpty()) outsideNetwork else outsideNetwork + resolvedThreads }
+    // A hidden reply's card has no expand control, so it never starts collapsed over its answers.
+    val collapsedByDefault =
+        remember(outsideNetwork, resolvedThreads, hidden) {
+            if (resolvedThreads.isEmpty()) outsideNetwork else outsideNetwork + resolvedThreads - hidden.placeholders
+        }
 
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
@@ -418,7 +423,8 @@ fun RenderThreadFeed(
             // time, and starting from 0 drew every reply un-indented for a frame.
             val levelFlow = remember(item) { viewModel.levelFlowForItem(item) }
             val level = levelFlow.collectAsStateWithLifecycle(viewModel.levelCacheFlow.value[item] ?: 0)
-            var showHiddenAnyway by remember { mutableStateOf(false) }
+            // Saveable: a reply the user chose to see stays shown after scrolling away and back.
+            var showHiddenAnyway by rememberSaveable { mutableStateOf(false) }
 
             val modifier =
                 Modifier
@@ -566,7 +572,8 @@ internal class HiddenThreadReplies(
  * feed shows a hidden parent. The note the user opened ([focusedNoteId]) always keeps its place
  * and counts as visible, so the hidden replies above it keep theirs. The root (index 0) is the
  * thread header's. A dropped reply's own replies are all dropped too, so the result is still a
- * valid depth-first thread.
+ * valid depth-first thread. A reply with no level yet cannot be placed and counts as unanswered:
+ * a hidden reply stays out until the levels catch up, then returns as a card if it was answered.
  */
 internal fun hiddenThreadReplies(
     thread: List<Note>,

@@ -100,6 +100,38 @@ class HiddenThreadRepliesTest {
     }
 
     @Test
+    fun aVisibleReplyDeepDownKeepsEveryHiddenReplyAboveIt() {
+        // root, A (1, hidden), A1 (2, hidden), A2 (3), B (1, hidden)
+        val root = note(0)
+        val a = note(1)
+        val a1 = note(2)
+        val a2 = note(3)
+        val b = note(4)
+        val thread = listOf(root, a, a1, a2, b)
+        val levels = mapOf(root to 0, a to 1, a1 to 2, a2 to 3, b to 1)
+
+        val hidden = hiddenThreadReplies(thread, levels, root.idHex, setOf(a, a1, b))
+
+        assertEquals(listOf(root, a, a1, a2), hidden.thread)
+        assertEquals(setOf(a.idHex, a1.idHex), hidden.placeholders)
+    }
+
+    @Test
+    fun theHiddenRepliesUnderAHiddenOpenedNoteAreDropped() {
+        // root, A (1, hidden, opened), A1 (2, hidden)
+        val root = note(0)
+        val a = note(1)
+        val a1 = note(2)
+        val thread = listOf(root, a, a1)
+        val levels = mapOf(root to 0, a to 1, a1 to 2)
+
+        val hidden = hiddenThreadReplies(thread, levels, a.idHex, setOf(a, a1))
+
+        assertEquals(listOf(root, a), hidden.thread)
+        assertEquals(setOf(a.idHex), hidden.placeholders)
+    }
+
+    @Test
     fun theRootIsLeftToTheThreadHeader() {
         val root = note(0)
         val a = note(1)
@@ -113,10 +145,9 @@ class HiddenThreadRepliesTest {
     }
 
     @Test
-    fun aHiddenReplyIsNeverCollapsedAsOutsideTheNetwork() {
+    fun theNetworkCollapseSkipsHiddenReplies() {
         // root, A (1, hidden, outside), A1 (2, outside), B (1, outside). A keeps its place for A1,
-        // so it is in the thread, but it shows the "hidden by you" card: never the collapsed row
-        // with its author's picture.
+        // so it is in the thread, but the collapse leaves it to the "hidden by you" card.
         val root = note(0)
         val a = note(1)
         val a1 = note(2)
@@ -139,7 +170,7 @@ class HiddenThreadRepliesTest {
         val a1 = note(2)
         val thread = listOf(root, a, a1)
         val levels = mapOf(root to 0, a to 1, a1 to 2)
-        val known: (String) -> Boolean? = { it == a1.author!!.pubkeyHex }
+        val known: (String) -> Boolean? = { it == key(102) } // A1's author
 
         assertEquals(emptySet(), outOfNetworkReplies(thread, levels, root.idHex, skip = emptySet(), isKnown = known))
         assertTrue(a.idHex in outOfNetworkReplies(thread, levels, root.idHex, skip = setOf(a1.idHex), isKnown = known))
