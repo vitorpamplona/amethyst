@@ -27,6 +27,13 @@ sealed class UploadingState {
 
     data object Uploading : UploadingState()
 
+    /**
+     * Every byte of the file has been handed to the network, but how many have reached the server
+     * is unknown until it answers: the system holds several megabytes in its send buffer, so a photo
+     * is "handed over" at once and spends the rest of its upload there. Shown without a number.
+     */
+    data object Sending : UploadingState()
+
     data object ServerProcessing : UploadingState()
 
     data object Downloading : UploadingState()
