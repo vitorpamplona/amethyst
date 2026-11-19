@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,12 +76,13 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
+import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -88,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
+import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCaptureLoadingTracker
@@ -295,7 +298,15 @@ object DesktopNotePlatform : NotePlatform {
                         DisplayBlurHash(content.blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = content.thumbhash)
                     }
                     // With no known shape the image itself sizes the card, so it must not just match it.
-                    MediaImage(url, content.description, contentScale, if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(), shapeUnknown = ratio == null)
+                    MediaImage(
+                        url,
+                        content.description,
+                        contentScale,
+                        if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                        shapeUnknown = ratio == null,
+                        blurhash = content.blurhash,
+                        thumbhash = content.thumbhash,
+                    )
                 }
             }
         }
@@ -307,9 +318,9 @@ object DesktopNotePlatform : NotePlatform {
 
     /**
      * An inline image, animated when it is a GIF, filling [modifier]. With [shapeUnknown] nothing
-     * sizes the slot until the image decodes, so it would be zero pixels tall while loading and stay
-     * so when the load fails: the URL with a loading symbol, then the URL alone, holds the place, as
-     * on Android.
+     * sizes the slot until the image decodes, so it would be zero pixels tall while loading: the URL
+     * with a loading symbol holds the place, as on Android. When the load fails, a
+     * [MediaFailureCard] takes the slot (a compact row when the shape is unknown) and says why.
      */
     @Composable
     private fun MediaImage(
@@ -318,34 +329,64 @@ object DesktopNotePlatform : NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         shapeUnknown: Boolean = false,
+        blurhash: String? = null,
+        thumbhash: String? = null,
     ) {
-        if (isAnimatedGifUrl(url)) {
-            AnimatedGifImage(url = url, contentDescription = description, modifier = modifier, contentScale = contentScale)
-        } else {
-            // Null outside a share-as-image capture.
-            val captureTracker = rememberCaptureLoadingTracker(url)
-            var loadState by remember(url) { mutableStateOf<AsyncImagePainter.State?>(null) }
-            AsyncImage(
-                model = url,
-                contentDescription = description,
-                modifier = modifier,
-                contentScale = contentScale,
-                onState = { state ->
-                    if (state is AsyncImagePainter.State.Success) {
-                        val image = state.result.image
-                        MediaAspectRatioCache.add(url, image.width, image.height)
-                    }
-                    loadState = state
-                    captureTracker?.invoke(state)
-                },
-            )
-            if (shapeUnknown) {
-                when (loadState) {
-                    is AsyncImagePainter.State.Success -> {}
-                    is AsyncImagePainter.State.Error -> ClickableUrlOrBlossom(urlText = "$url ", url = url)
-                    else -> WaitAndDisplay { DisplayUrlWithLoadingSymbol(url) }
+        val animated = isAnimatedGifUrl(url)
+        // Bumped by Retry: a new key starts the load over.
+        var attempt by remember(url) { mutableIntStateOf(0) }
+        var failure by remember(url) { mutableStateOf<MediaLoadFailure?>(null) }
+
+        key(attempt) {
+            if (animated) {
+                AnimatedGifImage(
+                    url = url,
+                    contentDescription = description,
+                    modifier = modifier,
+                    contentScale = contentScale,
+                    onFailure = { failure = mediaLoadFailureOf(it) },
+                )
+            } else {
+                // Null outside a share-as-image capture.
+                val captureTracker = rememberCaptureLoadingTracker(url)
+                var loadState by remember(url) { mutableStateOf<AsyncImagePainter.State?>(null) }
+                AsyncImage(
+                    model = url,
+                    contentDescription = description,
+                    modifier = modifier,
+                    contentScale = contentScale,
+                    onState = { state ->
+                        when (state) {
+                            is AsyncImagePainter.State.Success -> {
+                                val image = state.result.image
+                                MediaAspectRatioCache.add(url, image.width, image.height)
+                            }
+                            is AsyncImagePainter.State.Error -> failure = mediaLoadFailureOf(state.result.throwable)
+                            else -> {}
+                        }
+                        loadState = state
+                        captureTracker?.invoke(state)
+                    },
+                )
+                if (shapeUnknown && loadState !is AsyncImagePainter.State.Success && loadState !is AsyncImagePainter.State.Error) {
+                    WaitAndDisplay { DisplayUrlWithLoadingSymbol(url) }
                 }
             }
+        }
+
+        failure?.let {
+            MediaFailureCard(
+                url = url,
+                failure = it,
+                modifier = modifier,
+                animated = animated,
+                blurhash = blurhash,
+                thumbhash = thumbhash,
+                onRetry = {
+                    failure = null
+                    attempt++
+                },
+            )
         }
     }
 

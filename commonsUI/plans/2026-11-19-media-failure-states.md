@@ -1,6 +1,8 @@
 # What to show when note media fails to load: design review
 
-Status: review and proposal. Step 0 (Blossom fallback) is implemented; the rest is not.
+Status: steps 0–3 are implemented for images and GIFs (Blossom fallback, `MediaLoadFailure`,
+`MediaFailureCard`, wired inline and fullscreen on both platforms). Video, audio, NIP-92
+`fallback` and auto-retry are not.
 
 ## The case that started this
 
@@ -95,6 +97,10 @@ ExoPlayer's error code:
 | `Offline` | Device has no network | You're offline | It will load when you're back online | (auto) |
 | `CantDecrypt` | Missing key, decrypt failure | Can't decrypt this file | — | — |
 
+Implemented so far: `Gone`, `Unreachable`, `Refused`, `PaymentRequired`, `NotMedia`, plus an
+`Unknown` fallback ("Couldn't load this image", Retry). `Offline` needs the connectivity state, so an
+offline device reads as `Unreachable` for now; `CantDecrypt` waits on the interceptor change below.
+
 "Image" becomes "Video", "GIF", "Audio" or "File" by media kind (separate keys, not
 concatenation, for translators). Video keeps its codec copy only for a real codec error.
 
@@ -138,10 +144,14 @@ for a missing image. Add `HideImage` (images, GIFs), `CloudOff` (`Unreachable`, 
 ## Plan
 
 0. Blossom fallback. **Done** (`BlossomFallbackFetcher`, `BlossomAuthorHints`).
-1. `MediaLoadFailure` and its classifier, with unit tests from Coil and ExoPlayer errors.
-2. `MediaFailureCard` in `commonsUI` (the three sizes and the row), strings, icons; previews and a
-   render test for each cause, light and dark.
-3. Wire images and GIFs on both platforms (the reported bug), then fullscreen.
+1. `MediaLoadFailure` (commons) and `mediaLoadFailureOf` (commonsUI, from Coil's throwable).
+   **Done**; ExoPlayer's error codes are still to map.
+2. `MediaFailureCard` in `commonsUI` (the three sizes and the row), strings, icons
+   (`HideImage`, `CloudOff`, `BrokenImage`). **Done**; `MediaFailureCardRenderTest` renders every
+   cause at every size, light and dark, to `commonsUI/build/media-failure-card/`.
+3. Images and GIFs on both platforms, inline and fullscreen. **Done**: Android `UrlImageView`
+   (which also serves its fullscreen viewer) and `GifVideoView`; desktop `MediaImage` (images
+   and GIFs) and `ZoomableImage`. Not yet: the Android local (uploading) image's `BlankNote`.
 4. Video and audio, using the same classifier.
 5. NIP-92 `fallback` for note media; Blossom fallback for the video data source.
 6. Auto-retry on reconnect.

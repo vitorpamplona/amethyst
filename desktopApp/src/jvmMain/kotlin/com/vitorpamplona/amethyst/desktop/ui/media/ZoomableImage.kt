@@ -24,9 +24,13 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,12 +44,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.size.Size
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
+import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
+import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
+import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -64,6 +72,10 @@ fun ZoomableImage(
         val c = coordinates ?: return
         if (loaded) onMediaPositioned?.invoke(c, aspectRatio)
     }
+
+    // Why the image didn't load, shown in its place; Retry bumps [attempt] to load it again.
+    var failure by remember(url) { mutableStateOf<MediaLoadFailure?>(null) }
+    var attempt by remember(url) { mutableIntStateOf(0) }
 
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -129,47 +141,65 @@ fun ZoomableImage(
                     translationX = offsetX,
                     translationY = offsetY,
                 )
-        if (isAnimatedGifUrl(url)) {
-            // No load callback here: the box stands in for the image.
-            loaded = true
-            AnimatedGifImage(
-                url = url,
-                contentDescription = null,
-                modifier = imageModifier,
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            // The picture's own pixels, not the window's: without a size Coil decodes to the box
-            // the image fills, about the window, and zooming in only enlarges that. The phone's
-            // viewer asks for the same (ZoomableContentView's fullResolution).
-            val context = LocalPlatformContext.current
-            val request =
-                remember(url, context) {
-                    ImageRequest
-                        .Builder(context)
-                        .data(url)
-                        .size(Size.ORIGINAL)
-                        .build()
-                }
-            AsyncImage(
-                model = request,
-                contentDescription = null,
-                modifier = imageModifier,
-                contentScale = ContentScale.Fit,
-                onState = { state ->
-                    when (state) {
-                        is AsyncImagePainter.State.Success -> {
-                            val size = state.painter.intrinsicSize
-                            aspectRatio = if (size.isSpecified && size.width > 0f && size.height > 0f) size.width / size.height else null
-                            loaded = true
-                            report()
-                        }
-                        is AsyncImagePainter.State.Error -> {
-                            loaded = true
-                            report()
-                        }
-                        else -> {}
+        val animated = isAnimatedGifUrl(url)
+        key(attempt) {
+            if (animated) {
+                // No load callback here: the box stands in for the image.
+                loaded = true
+                AnimatedGifImage(
+                    url = url,
+                    contentDescription = null,
+                    modifier = imageModifier,
+                    contentScale = ContentScale.Fit,
+                    onFailure = { failure = mediaLoadFailureOf(it) },
+                )
+            } else {
+                // The picture's own pixels, not the window's: without a size Coil decodes to the box
+                // the image fills, about the window, and zooming in only enlarges that. The phone's
+                // viewer asks for the same (ZoomableContentView's fullResolution).
+                val context = LocalPlatformContext.current
+                val request =
+                    remember(url, context) {
+                        ImageRequest
+                            .Builder(context)
+                            .data(url)
+                            .size(Size.ORIGINAL)
+                            .build()
                     }
+                AsyncImage(
+                    model = request,
+                    contentDescription = null,
+                    modifier = imageModifier,
+                    contentScale = ContentScale.Fit,
+                    onState = { state ->
+                        when (state) {
+                            is AsyncImagePainter.State.Success -> {
+                                val size = state.painter.intrinsicSize
+                                aspectRatio = if (size.isSpecified && size.width > 0f && size.height > 0f) size.width / size.height else null
+                                loaded = true
+                                report()
+                            }
+                            is AsyncImagePainter.State.Error -> {
+                                failure = mediaLoadFailureOf(state.result.throwable)
+                                loaded = true
+                                report()
+                            }
+                            else -> {}
+                        }
+                    },
+                )
+            }
+        }
+
+        failure?.let {
+            MediaFailureCard(
+                url = url,
+                failure = it,
+                modifier = Modifier.widthIn(max = 360.dp).height(260.dp),
+                animated = animated,
+                onRetry = {
+                    failure = null
+                    attempt++
                 },
             )
         }
