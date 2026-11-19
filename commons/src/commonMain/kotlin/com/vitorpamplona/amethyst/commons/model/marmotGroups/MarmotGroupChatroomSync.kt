@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
+import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
@@ -66,12 +67,17 @@ fun MarmotManager.syncMetadataTo(
     // someone on two phones is one member, listed once (under the first leaf
     // it holds) and counted once, which is also what direct-chat detection
     // (`memberCount in 1..2`) reads.
-    val leaves = memberPubkeys(nostrGroupId)
-    val members = leaves.distinctBy { it.pubkey }
+    val members = memberRows(nostrGroupId)
     chatroom.members.value = members
     chatroom.memberCount.value = members.size
     Log.d("MarmotDbg") {
         "syncMetadataTo: group=${nostrGroupId.take(8)}… members $previousCount→${members.size} " +
-            "(leafs=${leaves.map { it.leafIndex }})"
+            "(leafs=${members.map { it.leafIndex }})"
     }
 }
+
+/**
+ * The group's members as the UI lists them: one row per account ([MarmotManager.memberAccounts]),
+ * under the first leaf it holds, so someone on two phones is listed and counted once.
+ */
+fun MarmotManager.memberRows(nostrGroupId: HexKey): List<GroupMemberInfo> = memberAccounts(nostrGroupId).map { GroupMemberInfo(leafIndex = it.leafIndices.first(), pubkey = it.pubkey) }

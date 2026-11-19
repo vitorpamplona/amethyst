@@ -91,8 +91,8 @@ object KeyPackageCommands {
             val recipient =
                 ctx.cachedRelayListsOf(targetHex)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
-            // The one `group add` would invite with: newest valid kind:30443,
-            // else newest valid legacy kind:443.
+            // The ones `group add` would invite with: valid kind:30443 slots
+            // only (a legacy kind:443 alone no longer counts).
             val lookup =
                 KeyPackageFetcher.fetchForInvite(
                     client = ctx.client,

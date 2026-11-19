@@ -922,7 +922,9 @@ class CordnRuntime(
 
             // A change of ours settled after the call that made it returned
             // (its post or confirmation failed, and the screen already said
-            // so). The room re-reads the winner's state below.
+            // so). cordn-kmp reports each lost Commit once: here, or as the
+            // COMMIT_LOST a call still waiting throws, never both, so this
+            // only logs. The room re-reads the winner's state below.
             is CordnGroupManager.Delivery.CommitLost -> {
                 Log.w(TAG) { "a change to ${delivery.gid} lost to another commit at ${delivery.cursor}" }
                 groups.getOrCreate(coordinatorPubKey, delivery.gid)

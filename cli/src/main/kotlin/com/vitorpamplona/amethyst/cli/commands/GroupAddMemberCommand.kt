@@ -87,9 +87,9 @@ object GroupAddMemberCommand {
                 // the rule now; their kind:10051 is a legacy hint and our
                 // bootstrap pool a last-resort fallback. Every device: each
                 // fresh valid kind:30443 slot (at most 20, none withdrawn by a
-                // kind-5 slot deletion, none the group could not take), else
-                // the newest valid legacy kind:443 (White Noise's MDK may still
-                // publish only that).
+                // kind-5 slot deletion, none the group could not take). A
+                // legacy kind:443 alone no longer counts: that member has to
+                // republish first.
                 val lookup =
                     KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,
