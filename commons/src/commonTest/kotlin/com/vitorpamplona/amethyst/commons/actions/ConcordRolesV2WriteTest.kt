@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
+import com.vitorpamplona.amethyst.commons.util.notifySignerErrors
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
@@ -34,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -92,15 +97,29 @@ class ConcordRolesV2WriteTest {
                     .any { it.definition.name == "news" },
             )
 
-            // ...and the legacy role, grant and plain private-channel editors are refused.
-            assertFailsWith<IllegalStateException> {
-                ConcordModeration.defineRole(owner, cp, cid, ByteArray(32) { 9 }, RoleEntity(name = "Mods", position = 1), editions, createdAt = 5L, owner = community.ownerPubKey)
-            }
-            assertFailsWith<IllegalStateException> {
+            // ...and the legacy role, grant and plain private-channel editors are refused, each with a
+            // notice the app words (not a generic signer failure).
+            val role =
+                assertFailsWith<UserNoticeException> {
+                    ConcordModeration.defineRole(owner, cp, cid, ByteArray(32) { 9 }, RoleEntity(name = "Mods", position = 1), editions, createdAt = 5L, owner = community.ownerPubKey)
+                }
+            assertEquals(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.ROLES), role.notice)
+            val grant =
+                assertFailsWith<UserNoticeException> {
+                    ConcordModeration.grant(owner, cp, cid, member.pubKey, emptyList(), editions, createdAt = 5L, owner = community.ownerPubKey)
+                }
+            assertEquals(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.GRANTS), grant.notice)
+            val private =
+                assertFailsWith<UserNoticeException> {
+                    ConcordModeration.defineChannel(owner, cp, cid, ByteArray(32) { 10 }, ChannelEntity(name = "vip", private = true), editions, createdAt = 5L, owner = community.ownerPubKey)
+                }
+            assertEquals(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.PRIVATE_CHANNEL), private.notice)
+
+            // launchSigner's reporting hands the user that notice.
+            val heard = mutableListOf<UserNotice>()
+            notifySignerErrors({ heard += it }) {
                 ConcordModeration.grant(owner, cp, cid, member.pubKey, emptyList(), editions, createdAt = 5L, owner = community.ownerPubKey)
             }
-            assertFailsWith<IllegalStateException> {
-                ConcordModeration.defineChannel(owner, cp, cid, ByteArray(32) { 10 }, ChannelEntity(name = "vip", private = true), editions, createdAt = 5L, owner = community.ownerPubKey)
-            }
+            assertEquals(listOf<UserNotice>(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.GRANTS)), heard)
         }
 }

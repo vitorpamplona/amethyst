@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
@@ -125,10 +127,14 @@ object ConcordModeration {
         // they are refused there until the Roles v2 editors land rather than published wrong.
         val binding = RankedRoster.bindingForWrite(current, communityId, owner, kind)
         if (binding != null) {
-            check(kind != ControlEntityKind.ROLE && kind != ControlEntityKind.GRANT) { "This community uses ranked roles (Roles v2); editing its roles is not supported yet" }
-            check(kind != ControlEntityKind.CHANNEL || ConcordJson.decodeOrNull<ChannelEntity>(content)?.private != true) {
-                "This community seals private channel details (Roles v2); creating or editing a private channel is not supported yet"
-            }
+            val refused =
+                when {
+                    kind == ControlEntityKind.ROLE -> ConcordNotice.RolesV2Editor.ROLES
+                    kind == ControlEntityKind.GRANT -> ConcordNotice.RolesV2Editor.GRANTS
+                    kind == ControlEntityKind.CHANNEL && ConcordJson.decodeOrNull<ChannelEntity>(content)?.private == true -> ConcordNotice.RolesV2Editor.PRIVATE_CHANNEL
+                    else -> null
+                }
+            if (refused != null) throw UserNoticeException(ConcordNotice.RolesV2Unsupported(refused))
         }
         val vac = citation ?: AuthorityCitations.forActor(current, communityId, owner, actor.pubKey)
         val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac, binding)

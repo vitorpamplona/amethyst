@@ -82,6 +82,10 @@ import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_large
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_many
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_unavailable
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_grants_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_private_channel_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_roles_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_title
 import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup
 import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
 import com.vitorpamplona.amethyst.commons.resources.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception
@@ -294,6 +298,15 @@ fun UserNotice.text(): NoticeText =
         ConcordNotice.ChannelKeyRotationFailed -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
         ConcordNotice.RolesUpdateFailed -> text(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)
         ConcordNotice.KickFailed -> text(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
+        is ConcordNotice.RolesV2Unsupported ->
+            text(
+                Res.string.concord_roles_v2_title,
+                when (editor) {
+                    ConcordNotice.RolesV2Editor.ROLES -> Res.string.concord_roles_v2_roles_unsupported
+                    ConcordNotice.RolesV2Editor.GRANTS -> Res.string.concord_roles_v2_grants_unsupported
+                    ConcordNotice.RolesV2Editor.PRIVATE_CHANNEL -> Res.string.concord_roles_v2_private_channel_unsupported
+                },
+            )
 
         Bolt12OfferNotice.PaymentSent -> text(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
         MarmotNotice.ResetDone -> text(Res.string.reset_marmot_state, Res.string.reset_marmot_success)

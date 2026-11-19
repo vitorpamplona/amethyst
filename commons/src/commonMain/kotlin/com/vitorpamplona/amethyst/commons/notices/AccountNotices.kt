@@ -122,6 +122,17 @@ sealed interface ConcordNotice : UserNotice {
     data object RolesUpdateFailed : ConcordNotice
 
     data object KickFailed : ConcordNotice
+
+    /**
+     * A write this client can't make yet on a Community that switched to Roles v2 (CORD-04 §1,
+     * §2): the legacy [editor]'s editions are a shape a v2 reader drops, so it was refused rather
+     * than published wrong.
+     */
+    data class RolesV2Unsupported(
+        val editor: RolesV2Editor,
+    ) : ConcordNotice
+
+    enum class RolesV2Editor { ROLES, GRANTS, PRIVATE_CHANNEL }
 }
 
 /** A plain BOLT12 offer payment over NWC (not a zap). */

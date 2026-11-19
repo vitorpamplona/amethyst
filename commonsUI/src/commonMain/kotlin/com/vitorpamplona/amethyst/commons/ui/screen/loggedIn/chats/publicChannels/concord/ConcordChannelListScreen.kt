@@ -276,6 +276,8 @@ fun ConcordChannelListScreen(
         ConcordChannelEditDialog(
             initialName = editor.initialName,
             isCreate = editor.channelIdHex == null,
+            // Roles v2 seals a Private Channel's details, which this client can't write yet.
+            allowPrivate = state?.isRolesV2 != true,
             onDismiss = { channelEditor = null },
             onConfirm = { newName, makePrivate, accessRoleName ->
                 channelEditor = null
@@ -541,6 +543,7 @@ fun ConcordChannelListScreen(
             // and can't be tapped. As contentPadding so rows scroll *through* the strip rather than the
             // viewport shrinking. Gated on [canManageChannels] because that is what renders the FAB:
             // a plain member has nothing to clear, and no reason to lose the space.
+            val rolesV2 = state?.isRolesV2 == true
             LazyColumn(
                 Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
@@ -565,9 +568,12 @@ fun ConcordChannelListScreen(
                         canManageChannels = canManageChannels,
                         accountViewModel = accountViewModel,
                         onClick = { nav.nav(Route.Concord(communityId, entry.key)) },
-                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                        onTogglePrivate = { channelToConvert = ConcordChannelConversion(entry.key, name, toPrivate = !def.private) },
+                        // Roles v2 seals a Private Channel's details (CORD-03 §2) and this client can't
+                        // write that shape yet: no conversion at all, and no rename or delete of a
+                        // Private Channel, rather than an editor whose save is refused.
+                        onRename = if (rolesV2 && def.private) null else ({ channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) }),
+                        onDelete = if (rolesV2 && def.private) null else ({ channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) }),
+                        onTogglePrivate = if (rolesV2) null else ({ channelToConvert = ConcordChannelConversion(entry.key, name, toPrivate = !def.private) }),
                         isPrivate = def.private,
                         onRotateKey = if (holdsKey) ({ accountViewModel.rotateConcordChannelKey(communityId, entry.key) }) else null,
                     )
@@ -593,9 +599,9 @@ private fun ConcordChannelListRow(
     canManageChannels: Boolean,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    onTogglePrivate: () -> Unit,
+    onRename: (() -> Unit)?,
+    onDelete: (() -> Unit)?,
+    onTogglePrivate: (() -> Unit)?,
     isPrivate: Boolean,
     onRotateKey: (() -> Unit)?,
 ) {
@@ -945,9 +951,9 @@ private fun ConcordChannelConvertDialog(
 /** The per-channel-row overflow menu (rename / privacy / rotate / delete), shown only to channel managers. */
 @Composable
 private fun ConcordChannelRowMenu(
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    onTogglePrivate: () -> Unit,
+    onRename: (() -> Unit)?,
+    onDelete: (() -> Unit)?,
+    onTogglePrivate: (() -> Unit)?,
     isPrivate: Boolean,
     onRotateKey: (() -> Unit)?,
 ) {
@@ -961,20 +967,24 @@ private fun ConcordChannelRowMenu(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringRes(Res.string.concord_channel_rename)) },
-                onClick = {
-                    expanded = false
-                    onRename()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(if (isPrivate) Res.string.concord_channel_make_public else Res.string.concord_channel_make_private)) },
-                onClick = {
-                    expanded = false
-                    onTogglePrivate()
-                },
-            )
+            onRename?.let { rename ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(Res.string.concord_channel_rename)) },
+                    onClick = {
+                        expanded = false
+                        rename()
+                    },
+                )
+            }
+            onTogglePrivate?.let { toggle ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(if (isPrivate) Res.string.concord_channel_make_public else Res.string.concord_channel_make_private)) },
+                    onClick = {
+                        expanded = false
+                        toggle()
+                    },
+                )
+            }
             onRotateKey?.let { rotate ->
                 DropdownMenuItem(
                     text = { Text(stringRes(Res.string.concord_channel_rotate_key)) },
@@ -984,18 +994,20 @@ private fun ConcordChannelRowMenu(
                     },
                 )
             }
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringRes(Res.string.concord_channel_delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                },
-                onClick = {
-                    expanded = false
-                    onDelete()
-                },
-            )
+            onDelete?.let { delete ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringRes(Res.string.concord_channel_delete),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        delete()
+                    },
+                )
+            }
         }
     }
 }
@@ -1005,6 +1017,7 @@ private fun ConcordChannelRowMenu(
 private fun ConcordChannelEditDialog(
     initialName: String,
     isCreate: Boolean,
+    allowPrivate: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (name: String, makePrivate: Boolean, accessRoleName: String?) -> Unit,
 ) {
@@ -1037,7 +1050,7 @@ private fun ConcordChannelEditDialog(
                 )
                 // A new channel may be Private (CORD-03): its own key, and an access Role — the
                 // Roles scoped to a channel ARE its access list (CORD-04 §2).
-                if (isCreate) {
+                if (isCreate && allowPrivate) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringRes(Res.string.concord_channel_private_toggle), modifier = Modifier.weight(1f))
                         Switch(checked = makePrivate, onCheckedChange = { makePrivate = it })

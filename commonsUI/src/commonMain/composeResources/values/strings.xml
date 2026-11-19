@@ -2701,7 +2701,13 @@
     <string name="buzz_dm_add_member">Add member</string>
     <string name="buzz_dm_add_member_title">Add someone to this DM</string>
     <string name="buzz_dm_add_member_invalid">Not a valid npub or hex key</string>
-    <string name="buzz_dm_add_member_history">They will see the messages already in this conversation.</string>
+    <string name="buzz_dm_add_member_new_dm">This opens a conversation that includes them, without the messages here.</string>
+    <string name="buzz_dm_add_member_choice_hint">If these people already share a conversation, you continue there. Otherwise you choose whether they see the messages here.</string>
+    <string name="buzz_dm_add_member_history_title">Share the earlier messages?</string>
+    <string name="buzz_dm_add_member_history_body">They can join this conversation and see everything in it, or everyone can move to a new conversation that starts empty.</string>
+    <string name="buzz_dm_add_member_share_history">Join with history</string>
+    <string name="buzz_dm_add_member_new_conversation">New conversation</string>
+    <string name="buzz_dm_add_member_no_answer">The relay did not answer. Try again.</string>
     <string name="buzz_dm_just_you">Just you</string>
     <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">To</string>
@@ -2711,6 +2717,16 @@
     <string name="buzz_dm_start">Start conversation</string>
     <string name="buzz_dm_opening">Opening…</string>
     <string name="buzz_dm_remove">Remove</string>
+    <string name="buzz_dm_not_a_key">Not a valid key</string>
+    <string name="buzz_dm_thats_you">That's you</string>
+    <string name="buzz_dm_already_added">Already added</string>
+    <plurals name="buzz_dm_too_many_people">
+        <item quantity="one">At most %1$d other person</item>
+        <item quantity="other">At most %1$d other people</item>
+    </plurals>
+    <string name="buzz_dm_pick_workspace">Pick a workspace relay</string>
+    <string name="buzz_dm_add_someone">Add at least one person</string>
+    <string name="buzz_dm_open_failed">Could not open the DM</string>
     <string name="buzz_invite_title">Workspace invite</string>
     <string name="buzz_invite_heading">Join this workspace</string>
     <string name="buzz_invite_workspace">Workspace</string>
@@ -4389,6 +4405,10 @@
     <string name="concord_members_remove_admin">Remove admin</string>
     <string name="concord_members_roles_failed">Could not update this member's roles.</string>
     <string name="concord_members_roles_title">Assign roles</string>
+    <string name="concord_roles_v2_title">Ranked roles</string>
+    <string name="concord_roles_v2_roles_unsupported">This community uses ranked roles. Editing its roles is not supported yet.</string>
+    <string name="concord_roles_v2_grants_unsupported">This community uses ranked roles. Assigning roles is not supported yet.</string>
+    <string name="concord_roles_v2_private_channel_unsupported">This community seals its private channels. Creating or changing a private channel is not supported yet.</string>
     <string name="concord_members_title">Members</string>
     <string name="concord_members_unban">Unban</string>
     <string name="concord_remove_admin">Remove admin</string>
@@ -5929,6 +5949,8 @@
     <string name="relay_group_create_title">Create a group</string>
     <string name="relay_group_create_refused">The relay did not create it</string>
     <string name="buzz_channel_name_taken">An open channel named %1$s already exists. Pick another name.</string>
+    <string name="buzz_channel_name_taken_title">That name is taken</string>
+    <string name="relay_group_edit_refused">The relay did not save the changes</string>
     <string name="relay_group_delete">Delete group</string>
     <string name="relay_group_delete_confirm">Delete "%1$s"? This removes the group and its history for everyone, and cannot be undone.</string>
     <string name="relay_group_edit_title">Edit group</string>
