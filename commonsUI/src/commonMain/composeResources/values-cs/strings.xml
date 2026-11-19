@@ -10467,7 +10467,6 @@
     <string name="geohash_area_neighborhood">~1,2 km</string>
     <string name="geohash_area_block">~150 m</string>
     <string name="geohash_area_building">~38 m</string>
-    <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">Nová relace</string>
     <string name="claude_code_search_hint">Hledat relace</string>
     <string name="claude_code_no_sessions">Na tomto počítači zatím nejsou žádné relace Claude Code. Začněte jednu zde, nebo spusťte claude v terminálu a objeví se v tomto seznamu.</string>
@@ -10524,14 +10523,11 @@
     <string name="claude_code_changes">Změny</string>
     <string name="claude_code_no_changes">Na této větvi se zatím nic nezměnilo.</string>
     <string name="claude_code_untracked">Nové soubory nepřidané do gitu</string>
-    <string name="claude_code_propose">Navrhnout</string>
-    <string name="claude_code_update_proposal">Aktualizovat návrh</string>
     <string name="claude_code_propose_desc">Podepsáno vámi a odesláno na servery repozitáře, stejně jako to dělá ngit.</string>
     <string name="claude_code_propose_desc_no_grasp">Podepsáno vámi; jeho commity půjdou do vzdáleného repozitáře, který vyberete níže.</string>
     <string name="claude_code_propose_update_desc">Už jde o návrh: opětovným zveřejněním se tyto commity stanou jeho novou verzí.</string>
     <string name="claude_code_propose_title">Název</string>
     <string name="claude_code_propose_description">Popis</string>
-    <string name="claude_code_draft_with_claude">Sepsat s Claudem</string>
     <string name="claude_code_gate">Kontroly sestavení</string>
     <string name="claude_code_gate_desc">Spustí kontroly repozitáře před pushem ve složce této větve.</string>
     <string name="claude_code_gate_none">Tento repozitář nemá žádné kontroly před pushem.</string>

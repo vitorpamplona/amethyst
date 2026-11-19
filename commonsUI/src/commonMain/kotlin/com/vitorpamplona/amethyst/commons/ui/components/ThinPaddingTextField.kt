@@ -46,10 +46,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -93,10 +91,11 @@ fun ThinPaddingTextField(
     spellCheck: Boolean = false,
     cursorBrush: Brush? = null,
     /**
-     * Drawn over the text, in the text layout's coordinates, after each layout: how a composer
-     * places a media card in the gap its marker leaves in the text.
+     * Drawn over the text, in the text layout's coordinates: how a composer places a media card in
+     * the gap its marker leaves in the text. It reads the layout from [TextOverlayState] as it is
+     * measured, so it moves in the same frame as the text.
      */
-    textOverlay: (@Composable BoxScope.(TextLayoutResult) -> Unit)? = null,
+    textOverlay: (@Composable BoxScope.(TextOverlayState) -> Unit)? = null,
     onKeyboardAction: KeyboardActionHandler? = null,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
@@ -181,14 +180,15 @@ fun ThinPaddingTextField(
     val spell = rememberSpellCheckFieldState(state, spellCheckable && enabled && !readOnly, outputTransformation as? VisualOffsetMapping)
     val scrollState = rememberScrollState()
 
-    var overlayLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val overlay = remember { TextOverlayState() }
     val spellOnTextLayout = spell?.onTextLayout
     val onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? =
         if (textOverlay == null) {
             spellOnTextLayout
         } else {
             { getResult ->
-                overlayLayout = getResult()
+                // Measured now: the text is the one this layout drew.
+                overlay.laidOut = getResult()?.let { LaidOutText(it, state.text) }
                 spellOnTextLayout?.invoke(this, getResult)
             }
         }
@@ -232,7 +232,7 @@ fun ThinPaddingTextField(
                                 } else {
                                     Box {
                                         text()
-                                        overlayLayout?.let { textOverlay(it) }
+                                        textOverlay(overlay)
                                     }
                                 }
                             },

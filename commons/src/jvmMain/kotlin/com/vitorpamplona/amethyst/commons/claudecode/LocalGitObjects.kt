@@ -94,6 +94,7 @@ object LocalGitObjects {
             ProcessBuilder("git", "cat-file", "--batch")
                 .directory(dir)
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .apply { environment().forgetInheritedRepository() }
                 .start()
         // Write the ids from another thread: git answers as it reads, and both pipes have limits.
         val writer =

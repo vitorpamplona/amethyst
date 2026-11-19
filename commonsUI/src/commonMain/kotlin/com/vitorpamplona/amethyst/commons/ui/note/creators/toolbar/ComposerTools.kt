@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
+import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -43,11 +44,7 @@ import kotlinx.collections.immutable.ImmutableList
 /** What a composer's media tools ([ComposerMediaTools]) need from its view model. */
 interface IComposerMediaTools {
     val accountViewModel: AccountViewModel
-    val isUploadingImage: Boolean
-    val isUploadingFile: Boolean
-
-    /** A hand drawing is uploading: the toolbar's own upload, which no card shows. */
-    val isUploadingDrawing: Boolean
+    val mediaUploadTracker: MediaUploadTracker
 
     fun selectImage(uris: ImmutableList<SelectedMedia>)
 
@@ -85,9 +82,9 @@ interface IComposerPostOptions {
 fun ComposerMediaTools(vm: IComposerMediaTools) {
     // The picked files upload on Post and show it on their cards; the buttons only wait. A spinner
     // here too made three for one video (card, Post, gallery).
-    val busy = vm.isUploadingImage || vm.isUploadingFile
+    val busy = vm.mediaUploadTracker.isUploading
     SelectFromGallery(
-        isUploading = vm.isUploadingDrawing,
+        isUploading = vm.mediaUploadTracker.isUploadingDrawing,
         enabled = !busy,
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier,

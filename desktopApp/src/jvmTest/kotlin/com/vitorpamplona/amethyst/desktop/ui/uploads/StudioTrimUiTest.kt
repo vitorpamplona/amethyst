@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.desktop.ui.uploads
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.Studio
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
 import org.junit.Rule
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -48,12 +51,14 @@ class StudioTrimUiTest {
 
     /** Times a file without reading it, as a platform that can trim GIFs and videos does. */
     private class TimingUploader(
-        private val durationMs: Long,
+        private val durationMs: (MediaUri) -> Long,
     ) : MediaUploader by UnavailableMediaUploader {
+        constructor(durationMs: Long) : this({ durationMs })
+
         override val videoTrim = true
         override val gifTrim = true
 
-        override suspend fun videoDurationMs(uri: MediaUri): Long = durationMs
+        override suspend fun videoDurationMs(uri: MediaUri): Long = durationMs(uri)
     }
 
     private val servers = listOf(ServerName("blossom.primal.net", "https://blossom.primal.net"))
@@ -61,8 +66,13 @@ class StudioTrimUiTest {
     private fun show(
         mimeType: String,
         durationMs: Long,
+    ): MultiOrchestrator = show(listOf(SelectedMedia(StringMediaUri("/tmp/trim-test-$durationMs.${mimeType.substringAfter('/')}"), mimeType)), TimingUploader(durationMs))
+
+    private fun show(
+        files: List<SelectedMedia>,
+        uploader: MediaUploader,
     ): MultiOrchestrator {
-        val media = MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/trim-test-$durationMs.${mimeType.substringAfter('/')}"), mimeType)))
+        val media = MultiOrchestrator(files)
         compose.setContent {
             AmethystPreviewTheme(dark = true) {
                 MediaStudio(
@@ -70,7 +80,7 @@ class StudioTrimUiTest {
                     servers = servers,
                     defaultServer = servers[0],
                     isUploading = false,
-                    uploader = TimingUploader(durationMs),
+                    uploader = uploader,
                     altSuggester = null,
                     onAdd = {},
                     onRemove = {},
@@ -113,5 +123,21 @@ class StudioTrimUiTest {
         val trim = assertNotNull(media.get(0).options.trim, "the start moved")
         assertTrue(trim.startMs > 10_000L, "not moved as a whole: ${trim.startMs}")
         assertTrue(trim.endMs == 60_000L, "the end stayed")
+    }
+
+    @Test
+    fun theSecondFileTrimsByItsOwnLength() {
+        val short = SelectedMedia(StringMediaUri("/tmp/trim-test-short.mp4"), "video/mp4")
+        val long = SelectedMedia(StringMediaUri("/tmp/trim-test-long.mp4"), "video/mp4")
+        val media = show(listOf(short, long), TimingUploader { if (it.toString().contains("long")) 60_000L else 6_000L })
+
+        // Trim opens on the 6 s video; then the 60 s one is picked from the strip.
+        compose.onNodeWithContentDescription("2 of 2").performClick()
+        compose.waitForIdle()
+        compose.onRoot().performTouchInput { swipe(startHandle, startHandle + Offset(400f, 0f), 300) }
+        compose.waitForIdle()
+
+        val trim = assertNotNull(media.get(1).options.trim, "the start moved")
+        assertEquals(60_000L, trim.endMs, "the end is the 60 s video's, not the first file's 6 s")
     }
 }
