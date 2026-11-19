@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.markdown.AstBlockNodeComposer
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
@@ -59,6 +60,8 @@ fun RenderMarkdown(
     style: RichTextStyle? = null,
     /** The body text style; the surrounding one when null. */
     textStyle: TextStyle? = null,
+    /** Takes over rendering of some block types, like [InlineCodeChips] for paragraphs. */
+    blockComposer: AstBlockNodeComposer? = null,
 ) {
     val processedContent =
         remember(content, highlightedTexts) {
@@ -116,7 +119,7 @@ fun RenderMarkdown(
                 modifier = modifier,
                 style = style ?: RichTextStyle(),
             ) {
-                BasicMarkdown(astNode)
+                BasicMarkdown(astNode, blockComposer)
             }
         }
         if (textStyle != null) ProvideTextStyle(textStyle, render) else render()

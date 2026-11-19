@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
-import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.shareNoteLink
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -240,7 +240,7 @@ fun BookmarkGroupItemOptionsMenu(
                 }
             }
             M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
-                sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
+                sharer.shareNoteLink(note, accountViewModel, quickActionShareBrowserLinkStr, quickActionShareStr)
                 onDismiss()
             }
         }
