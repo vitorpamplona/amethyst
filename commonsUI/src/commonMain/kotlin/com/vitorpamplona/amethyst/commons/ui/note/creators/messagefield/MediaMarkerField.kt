@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerRendering
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.TextReplacement
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.toVisual
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -148,6 +149,18 @@ fun RefocusOn(
     }
 }
 
+/**
+ * The text and its replacements as the field last laid them out. The layout reaches the overlay
+ * a frame after the text changes, so the current text is placed against the previous layout for that
+ * frame: a key typed before a card moved its marker one character on, onto the next line of the old
+ * layout, and the card jumped down and back (or, when the card ended the text, past the old layout,
+ * and left the composition, reloading its picture). Each key made the picture blink.
+ */
+private class LaidOutText {
+    var raw: String = ""
+    var replacements: List<TextReplacement> = emptyList()
+}
+
 /** One card per media marker, over the gap the marker leaves in the laid-out text. */
 @Composable
 private fun MediaBlockCards(
@@ -157,17 +170,30 @@ private fun MediaBlockCards(
     blocks: MediaBlocks,
     selected: Int?,
 ) {
-    val rawText = raw.toString()
-    val replacements = transformation.replacements(rawText)
+    val laidOut = remember { LaidOutText() }
+    val drawn = layout.layoutInput.text
+    val current = raw.toString()
+    if (current != laidOut.raw) {
+        val replacements = transformation.replacements(current)
+        // Placed against the text the layout drew: the current one once the layout catches up,
+        // until then the one before. The cards stay where they were for that frame.
+        if (replacements.drawsAs(current, drawn) || !laidOut.replacements.drawsAs(laidOut.raw, drawn)) {
+            laidOut.raw = current
+            laidOut.replacements = replacements
+        }
+    }
+    val rawText = laidOut.raw
+    val replacements = laidOut.replacements
     val density = LocalDensity.current
     val widthDp = layout.fieldWidth() / density.density
-    val drawn = layout.layoutInput.text.length
     replacements.forEach { replacement ->
         if (!replacement.isMediaMarker) return@forEach
         val id = MediaMarkers.idAt(rawText, replacement.rawStart) ?: return@forEach
-        val offset = replacements.toVisual(replacement.rawStart) ?: return@forEach
-        // The layout can trail the text by a frame: skip a marker it hasn't laid out yet.
-        if (offset >= drawn) return@forEach
+        val visual = replacements.toVisual(replacement.rawStart) ?: return@forEach
+        if (drawn.isEmpty()) return@forEach
+        // Neither text matches the layout (several edits in one frame): the nearest place for a
+        // frame, rather than taking the card out of the composition, which reloads its picture.
+        val offset = visual.coerceAtMost(drawn.length - 1)
         // Centred between the text above (the previous line's bottom, which can sit higher than this
         // line's top) and the end of the gap, so the space above and below the card matches.
         val cardHeight = blocks.heightOf(id, widthDp)
@@ -179,6 +205,26 @@ private fun MediaBlockCards(
             blocks.card(id, id == selected, Modifier.offset { IntOffset(0, top) }.fillMaxWidth().height(cardHeight))
         }
     }
+}
+
+/** Whether [raw] with these replacements reads as [drawn], without building the drawn text. */
+private fun List<TextReplacement>.drawsAs(
+    raw: String,
+    drawn: CharSequence,
+): Boolean {
+    var length = raw.length
+    forEach { length += it.visual.length - (it.rawEnd - it.rawStart) }
+    if (length != drawn.length) return false
+    var rawAt = 0
+    var drawnAt = 0
+    forEach {
+        if (!raw.regionMatches(rawAt, drawn, drawnAt, it.rawStart - rawAt)) return false
+        drawnAt += it.rawStart - rawAt
+        if (!it.visual.regionMatches(0, drawn, drawnAt, it.visual.length)) return false
+        drawnAt += it.visual.length
+        rawAt = it.rawEnd
+    }
+    return raw.regionMatches(rawAt, drawn, drawnAt, raw.length - rawAt)
 }
 
 /** The width the text may take: the field's, not the laid-out text's own (one short line is narrow). */
