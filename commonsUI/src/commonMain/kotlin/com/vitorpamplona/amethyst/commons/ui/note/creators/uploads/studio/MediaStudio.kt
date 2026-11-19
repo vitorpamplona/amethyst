@@ -132,7 +132,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.FilePreviewPlaceholder
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingStateIndicator
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressOverMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ComparisonImages
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.longEdge
@@ -690,9 +690,7 @@ private fun VideoPreview(
 private fun UploadOverlay(item: SelectedMediaProcessing) {
     val status by item.orchestrator.status.collectAsState()
     if (status.state is UploadingState.Ready || status.state is UploadingState.Error) return
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))) {
-        UploadingStateIndicator(status)
-    }
+    UploadProgressOverMedia(status)
 }
 
 @Composable

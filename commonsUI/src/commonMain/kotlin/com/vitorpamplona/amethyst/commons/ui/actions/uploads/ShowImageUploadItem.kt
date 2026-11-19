@@ -185,7 +185,7 @@ fun OrchestratorOverlay(
     } else if (state is UploadingState.Error) {
         UploadErrorBadge(status, state, onDelete)
     } else {
-        UploadingStateIndicator(status)
+        UploadProgressOverMedia(status)
     }
 }
 
@@ -208,7 +208,7 @@ private fun UploadErrorBadge(
                 .fillMaxSize()
                 .clickable { showDetails = true },
     ) {
-        UploadingStateIndicator(status)
+        UploadProgressOverMedia(status)
     }
 
     if (showDetails) {
@@ -253,14 +253,6 @@ fun DeleteButton(onDelete: () -> Unit) {
                 CloseIcon()
             }
         }
-    }
-}
-
-/** One file's upload over its preview: the wheel and the stage's word, centred. */
-@Composable
-fun UploadingStateIndicator(status: UploadStatus) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-        LabelledUploadWheel(status)
     }
 }
 

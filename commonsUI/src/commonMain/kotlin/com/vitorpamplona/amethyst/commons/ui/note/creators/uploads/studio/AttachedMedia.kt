@@ -75,9 +75,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadWheel
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressOverMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.uploadingStateLabel
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
@@ -287,20 +286,9 @@ fun AttachedMediaCard(
             is UploadingState.Finished ->
                 Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF81C784), filled = true, modifier = Modifier.align(if (isPicture) Alignment.BottomEnd else Alignment.CenterEnd).padding(8.dp).size(24.dp))
             else ->
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                    // The wheel says how far, the word what for: compressing, uploading, the server's checks.
-                    val wheelAndWord = @Composable {
-                        UploadWheel(status, Modifier.size(if (isPicture) 44.dp else 24.dp), color = Color.White, trackColor = Color.White.copy(alpha = 0.25f))
-                        Spacer(Modifier.size(8.dp))
-                        Pill(uploadingStateLabel(state))
-                    }
-                    // A file's row is one line tall: the word goes beside the wheel, not under it.
-                    if (isPicture) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { wheelAndWord() }
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) { wheelAndWord() }
-                    }
-                }
+                // The wheel says how far, the word what for: compressing, uploading, the server's checks.
+                // A file's row is one line tall: the word goes beside the wheel, not under it.
+                UploadProgressOverMedia(status, wheelSize = if (isPicture) 44.dp else 24.dp, inline = !isPicture)
         }
     }
 }

@@ -51,7 +51,7 @@ fun UploadProgressIndicator(
                 .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LabelledUploadWheel(status)
+        UploadProgress(status, colors = UploadProgressDefaults.onBackground())
 
         // The badge fits one word; the reason is what the user can act on.
         if (state is UploadingState.Error) {
