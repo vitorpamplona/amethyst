@@ -129,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayOtsIfInOriginal
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.Expiration
+import com.vitorpamplona.amethyst.commons.ui.note.HiddenNoteByMe
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.LongPressToQuickAction
@@ -214,6 +215,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82So
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -278,13 +280,30 @@ fun RenderThreadFeed(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
+    // Replies the user hid (a blocked or muted author, a muted word, hashtag or thread, sensitive
+    // content) leave the thread: no row, no picture, no divider. One that a visible reply answers
+    // keeps its place as a "hidden by you" card, so that reply still reads as an answer to it, as
+    // a feed shows a hidden parent. Decided before the Web of Trust collapse below, so a blocked
+    // stranger never gets its collapsed row with their picture.
+    val hiddenUsers by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
+    val hidden =
+        remember(items, levels, hiddenUsers, noteId) {
+            // A git timeline row reports a change to the item; it is not a reply to hide.
+            hiddenThreadReplies(items.list, levels, noteId) { !isGitTimelineEvent(it.event) && it.isHiddenFor(hiddenUsers) }
+        }
+    val thread =
+        remember(items, hidden) {
+            if (hidden.dropped.isEmpty()) items.list else items.list.filterNot { it.idHex in hidden.dropped }
+        }
+
     // Replies whose author is outside the Web of Trust network start collapsed. Empty while no
     // network is active, so threads look exactly as before for users without one.
     val verdicts by accountViewModel.account.trustVerdicts
         .collectAsStateWithLifecycle()
     val outsideNetwork =
-        remember(items, levels, verdicts, noteId) {
-            if (!verdicts.isActive) emptySet() else outOfNetworkReplies(items.list, levels, noteId, verdicts)
+        remember(thread, levels, verdicts, noteId, hidden) {
+            if (!verdicts.isActive) emptySet() else outOfNetworkReplies(thread, levels, noteId, hidden.placeholders) { verdicts.explain(it).isKnown }
         }
 
     // A review thread an authorised member marked resolved (NIP-22 reply with `["l","resolved"]`)
@@ -308,9 +327,9 @@ fun RenderThreadFeed(
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
     // strictly deeper reply level.
     val visible by
-        remember(items, levels, collapsedByDefault) {
+        remember(thread, levels, collapsedByDefault) {
             derivedStateOf {
-                val full = items.list
+                val full = thread
                 if (viewModel.collapsedReplies.isEmpty() && collapsedByDefault.isEmpty()) {
                     VisibleThread(full, emptyMap())
                 } else {
@@ -395,6 +414,7 @@ fun RenderThreadFeed(
             contentType = { index, item ->
                 when {
                     index == 0 -> "master"
+                    item.idHex in hidden.placeholders -> "hidden"
                     viewModel.isCollapsed(item.idHex, collapsedByDefault) -> "collapsed"
                     else -> "reply"
                 }
@@ -404,6 +424,7 @@ fun RenderThreadFeed(
             // time, and starting from 0 drew every reply un-indented for a frame.
             val levelFlow = remember(item) { viewModel.levelFlowForItem(item) }
             val level = levelFlow.collectAsStateWithLifecycle(viewModel.levelCacheFlow.value[item] ?: 0)
+            val showHiddenAnyway = remember(item) { mutableStateOf(false) }
 
             val modifier =
                 Modifier
@@ -440,6 +461,10 @@ fun RenderThreadFeed(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            } else if (item.idHex in hidden.placeholders && !showHiddenAnyway.value) {
+                // Takes the thread's modifier, unlike the card a quote or boost draws: it keeps
+                // the reply-level lines so the answers below it line up.
+                HiddenNoteByMe(modifier = modifier) { showHiddenAnyway.value = true }
             } else if (viewModel.isCollapsed(item.idHex, collapsedByDefault)) {
                 CollapsedNoteCompose(
                     baseNote = item,
@@ -480,6 +505,8 @@ fun RenderThreadFeed(
                     modifier = modifier,
                     isBoostedNote = false,
                     unPackReply = ReplyRenderType.NONE,
+                    // "Show anyway" on a hidden reply: skip the check that would hide it again.
+                    isHiddenFeed = showHiddenAnyway.value,
                     quotesLeft = 3,
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
@@ -500,13 +527,16 @@ fun RenderThreadFeed(
  * thread's root, its author, the focused note and the replies above it are never included (a
  * collapsed reply hides everything under it, which would hide the note the user opened), nor
  * is a reply that the root's author or someone in the network answered; neither are follows or
- * the user (see [TrustVerdicts]).
+ * the user. The replies in [skip] (hidden by the user, see [hiddenThreadReplies]) are neither
+ * collapsed nor count as an answer. [isKnown] is the verdict on an author: true in the network,
+ * false outside it, null with no network (see [TrustVerdicts]).
  */
-private fun outOfNetworkReplies(
+internal fun outOfNetworkReplies(
     thread: List<Note>,
     levels: Map<Note, Int>,
     focusedNoteId: String,
-    verdicts: TrustVerdicts,
+    skip: Set<String>,
+    isKnown: (HexKey) -> Boolean?,
 ): Set<String> {
     val root = thread.firstOrNull() ?: return emptySet()
     val rootAuthor = root.author?.pubkeyHex
@@ -514,20 +544,61 @@ private fun outOfNetworkReplies(
     val answered =
         knownReplyBelow(thread, levels) { reply ->
             val author = reply.author?.pubkeyHex
-            author != null && (author == rootAuthor || verdicts.explain(author).isKnown == true)
+            reply.idHex !in skip && author != null && (author == rootAuthor || isKnown(author) == true)
         }
     val result = HashSet<String>()
     for (i in 1 until thread.size) {
         val note = thread[i]
-        if (note.idHex in keepOpen) continue
+        if (note.idHex in keepOpen || note.idHex in skip) continue
         // Levels are computed off the main thread and can trail the list: a reply with none yet
         // cannot be placed (it may be above the focused note), so it is judged once it has one.
         if (levels[note] == null) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
-        if (!answered[i] && verdicts.isOutside(author)) result.add(note.idHex)
+        if (!answered[i] && isKnown(author) == false) result.add(note.idHex)
     }
     return result
+}
+
+/** The thread's hidden replies: the ones that leave it, and the ones kept as a "hidden by you" card. */
+internal class HiddenThreadReplies(
+    val dropped: Set<String>,
+    val placeholders: Set<String>,
+) {
+    companion object {
+        val NONE = HiddenThreadReplies(emptySet(), emptySet())
+    }
+}
+
+/**
+ * Splits the replies [isHidden] matches into the ones a visible reply answers, which keep their
+ * place as a placeholder card so that answer still reads as one, and the rest, which leave the
+ * thread. The note the user opened ([focusedNoteId]) always keeps its place and counts as
+ * visible, so the hidden replies above it keep theirs. The root (index 0) is left to the thread
+ * header, which shows its own card. Dropping only replies that nothing visible answers leaves a
+ * valid depth-first thread: a dropped reply's own replies are dropped too.
+ */
+internal fun hiddenThreadReplies(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+    isHidden: (Note) -> Boolean,
+): HiddenThreadReplies {
+    val hiddenNotes = HashSet<Note>()
+    for (i in 1 until thread.size) {
+        if (isHidden(thread[i])) hiddenNotes.add(thread[i])
+    }
+    if (hiddenNotes.isEmpty()) return HiddenThreadReplies.NONE
+
+    val answered = knownReplyBelow(thread, levels) { it !in hiddenNotes || it.idHex == focusedNoteId }
+    val dropped = HashSet<String>()
+    val placeholders = HashSet<String>()
+    for (i in 1 until thread.size) {
+        val note = thread[i]
+        if (note !in hiddenNotes) continue
+        if (answered[i] || note.idHex == focusedNoteId) placeholders.add(note.idHex) else dropped.add(note.idHex)
+    }
+    return HiddenThreadReplies(dropped, placeholders)
 }
 
 /**
