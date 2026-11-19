@@ -30,6 +30,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /** The georelays directory is a GitHub download: accounts that follow no geohash must never make it. */
 class GeohashRelaysLoadGateTest {
@@ -49,6 +50,8 @@ class GeohashRelaysLoadGateTest {
     @AfterTest
     fun tearDown() {
         GeohashRelays.liveRelayLoader = previousLoader
+        GeohashRelays.refreshed = false
+        GeoRelayDirectory.shared.setRelays(GeoRelayDirectory.FALLBACK)
     }
 
     @Test
@@ -78,5 +81,26 @@ class GeohashRelaysLoadGateTest {
             runCurrent()
             assertEquals(0, downloads)
             load.cancel()
+        }
+
+    @Test
+    fun reroutesWhenAnOpenedChatLoadedTheDirectoryFirst() =
+        runTest {
+            // More relays than the fallback, so a load counts as the live directory.
+            val live = GeoRelayDirectory.FALLBACK + GeoRelayDirectory.parseCsv("extra.example.com,1.0,2.0")
+            GeohashRelays.liveRelayLoader = {
+                downloads++
+                live
+            }
+            val cells = MutableStateFlow(emptySet<String>())
+            val load = async { GeohashRelays.ensureLoadedOnceNeeded(cells, MutableStateFlow(ChatFeedType.ALL)) }
+            runCurrent()
+
+            // An opened geohash chat downloads it while the chat list still waits.
+            assertTrue(GeohashRelays.ensureLoaded())
+            cells.value = setOf("u4pruy")
+
+            assertTrue(load.await(), "the chat list must re-route onto the live directory")
+            assertEquals(1, downloads)
         }
 }

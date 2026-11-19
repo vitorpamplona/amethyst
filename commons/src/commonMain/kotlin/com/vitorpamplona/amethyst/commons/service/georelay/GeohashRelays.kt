@@ -39,7 +39,8 @@ object GeohashRelays {
     // here immediately improves the relay set every geohash subscription resolves.
     private val directory = GeoRelayDirectory.shared
 
-    @Volatile private var refreshed = false
+    // Internal so tests can put the process-wide state back.
+    @Volatile internal var refreshed = false
 
     /**
      * Fetches the live directory. The app installs one at startup over its own HTTP clients, so
@@ -68,13 +69,16 @@ object GeohashRelays {
      * Waits until the account follows a geohash ([followedCells]) with geohash chats on
      * ([enabledFeeds]), then [ensureLoaded]. An account that follows none never downloads the
      * directory: it only routes followed cells, and an opened chat loads it on its own.
+     *
+     * Returns true whenever the live directory is in, also when another caller (an opened geohash
+     * chat) loaded it first: the caller may have built its filters on the fallback list meanwhile.
      */
     suspend fun ensureLoadedOnceNeeded(
         followedCells: Flow<Set<String>>,
         enabledFeeds: Flow<Set<ChatFeedType>>,
     ): Boolean {
         combine(followedCells, enabledFeeds) { cells, enabled -> cells.isNotEmpty() && ChatFeedType.GEOHASH in enabled }.first { it }
-        return ensureLoaded()
+        return ensureLoaded() || refreshed
     }
 
     /** The relays nearest [geohash]'s center. Synchronous — uses whatever is loaded (fallback if not yet refreshed). */
