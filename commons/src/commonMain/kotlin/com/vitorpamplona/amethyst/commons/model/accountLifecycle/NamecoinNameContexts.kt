@@ -82,6 +82,19 @@ object NamecoinNameContexts {
             }
         }
 
+    fun canonicalIdentifier(
+        context: NamecoinNameContext,
+        subjectOnly: Boolean,
+    ): String =
+        if (subjectOnly) {
+            when (context.namespace) {
+                LifecycleNameNamespace.D -> requireNotNull(context.host)
+                LifecycleNameNamespace.ID -> context.name
+            }
+        } else {
+            requireNotNull(identifier(context, context.localPart ?: "_"))
+        }
+
     fun sameContext(
         first: NamecoinNameContext,
         second: NamecoinNameContext,

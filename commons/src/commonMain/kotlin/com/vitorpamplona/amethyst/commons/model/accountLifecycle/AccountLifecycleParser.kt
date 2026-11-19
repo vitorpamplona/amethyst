@@ -296,6 +296,42 @@ object AccountLifecycleParser {
         return evaluation(context, subjectPubkey, rawRecord, finishObservation(result, observation), backlinkEvidence)
     }
 
+    /**
+     * Returns signed OLD claims for this exact name context. These associations are retained even
+     * when the current record has no lifecycle declaration, so a later kind-0 rewrite cannot make a
+     * previously known name undiscoverable. Signature validity and the exact local-part are checked
+     * here rather than trusted from the caller's metadata projection.
+     */
+    fun verifiedBacklinks(
+        identifier: String,
+        subjectPubkey: String,
+        oldEvents: List<Event>,
+        subjectOnly: Boolean = false,
+    ): List<LifecycleBacklink> {
+        val context = NamecoinNameContexts.parse(identifier, subjectOnly)
+        val validEvents = oldEvents.filter { it.isValidKind0() && it.pubKey == subjectPubkey }
+        val latest = latestEvent(validEvents, subjectPubkey)
+        return validEvents
+            .mapNotNull { event ->
+                val claimedIdentifier = eventNip05(event) ?: return@mapNotNull null
+                val claimed =
+                    try {
+                        NamecoinNameContexts.parse(claimedIdentifier)
+                    } catch (_: Exception) {
+                        return@mapNotNull null
+                    }
+                if (!NamecoinNameContexts.sameContext(claimed, context)) return@mapNotNull null
+                val localPart = claimed.localPart ?: return@mapNotNull null
+                if (!eventMatches(event, subjectPubkey, context, localPart)) return@mapNotNull null
+                LifecycleBacklink(
+                    localPart = localPart,
+                    event = SignedLifecycleEvent.fromEvent(event),
+                    current = latest?.id == event.id,
+                )
+            }.distinctBy { it.event.id }
+            .sortedByDescending { it.event.createdAt }
+    }
+
     fun unavailable(diagnostic: String = "lookup_unavailable"): AccountLifecycleResult =
         AccountLifecycleResult(
             status = AccountLifecycleStatus.UNAVAILABLE,
