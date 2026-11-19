@@ -280,6 +280,7 @@ fun RenderVideoPlayer(
                 controllerVisible = controllerVisible,
                 isFullscreen = isFullscreen,
                 isAudio = isAudioContent,
+                videoUri = mediaItem.src.videoUri,
                 modifier = Modifier.align(Alignment.Center),
             )
 

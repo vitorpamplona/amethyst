@@ -28,12 +28,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.playback.controls.PlayPauseButton
+import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 
 /**
@@ -48,6 +52,10 @@ import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerSta
  * held-back-until-tap) and ended videos. Hidden whenever the full controls are up — their center
  * button is the same button — and in fullscreen, where the user opened the video deliberately.
  * Audio (voice notes, podcasts) squares its own player with a visualizer, so it is skipped too.
+ *
+ * While this video is casting, the local player is held paused and every play attempt is
+ * re-paused (see RenderTopButtons), so a Play tap could do nothing — the same casting guard
+ * RenderCenterButtons uses keeps this hidden until the cast ends.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -56,15 +64,20 @@ fun PausedPlayOverlay(
     controllerVisible: MutableState<Boolean>,
     isFullscreen: Boolean,
     isAudio: Boolean,
+    videoUri: String,
     modifier: Modifier = Modifier,
 ) {
     if (isFullscreen || isAudio) return
+
+    val castSessionState by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val isCastingThisVideo = (castSessionState as? CastSessionState.Casting)?.request?.url == videoUri
 
     val state = rememberPlayPauseButtonState(controllerState.controller)
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AnimatedVisibility(
-            visible = !controllerVisible.value && state.isEnabled && state.showPlay,
+            visible = !isCastingThisVideo && !controllerVisible.value && state.isEnabled && state.showPlay,
             enter = remember { fadeIn() },
             exit = remember { fadeOut() },
         ) {
