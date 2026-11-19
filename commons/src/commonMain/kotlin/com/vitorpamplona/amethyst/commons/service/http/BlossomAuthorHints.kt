@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.service.http
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -37,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  */
 object BlossomAuthorHints {
     private val authorsByHash = LruCache<String, Set<HexKey>>(MAX_BLOBS)
+    private val lock = KmpLock()
 
     /** Files [author] as a poster of the blob [url] names; ignored when [url] is not a Blossom blob. */
     fun add(
@@ -44,11 +47,15 @@ object BlossomAuthorHints {
         author: HexKey,
     ) {
         val sha256 = BlossomBlobName.parse(url)?.sha256 ?: return
-        val known = authorsByHash[sha256]
-        if (known == null) {
-            authorsByHash.put(sha256, setOf(author))
-        } else if (author !in known && known.size < MAX_AUTHORS_PER_BLOB) {
-            authorsByHash.put(sha256, known + author)
+        // The parser runs on the feed prefetch and in composition at once: without the lock, two
+        // authors of the same blob can each read "none yet" and one of them is lost.
+        lock.withLock {
+            val known = authorsByHash[sha256]
+            if (known == null) {
+                authorsByHash.put(sha256, setOf(author))
+            } else if (author !in known && known.size < MAX_AUTHORS_PER_BLOB) {
+                authorsByHash.put(sha256, known + author)
+            }
         }
     }
 

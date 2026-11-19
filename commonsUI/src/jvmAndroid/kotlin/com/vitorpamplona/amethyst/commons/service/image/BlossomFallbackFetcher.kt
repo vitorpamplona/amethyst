@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.service.http.BlossomAuthorHints
 import com.vitorpamplona.amethyst.commons.service.http.BlossomBlobName
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -39,14 +42,18 @@ import kotlin.coroutines.cancellation.CancellationException
  * failures that mean "not here" move on (404, 410, 5xx, and a host that can't be reached); a 401,
  * 402 or 403 is the server's answer about this blob, and the read-auth retry handles 401.
  *
- * The other server comes from [resolve], the BUD-10 resolver, asked for a `blossom:` URI that
- * carries the authors [BlossomAuthorHints] knows for the hash, so it probes their servers (and the
- * viewer's own) with a HEAD each. A resolver that finds nothing, or only the same URL, leaves the
- * original failure in place.
+ * After such a failure, in order:
+ * 1. [cached]: a copy a mirror served before, read from disk without the network, so an image
+ *    that was found once still shows offline and after a restart.
+ * 2. When [isOnline], [resolve] (the BUD-10 resolver) is asked, for at most [RESOLVE_WAIT_MS],
+ *    for a `blossom:` URI that carries the authors [BlossomAuthorHints] knows for the hash, so it
+ *    probes their servers (and the viewer's own) with a HEAD each. The resolver keeps going in its
+ *    own scope past the wait, so a slow answer is ready for the next load.
+ * 3. [fallback] loads it from the server found, and [verify] checks the bytes hash to the name
+ *    before they are kept: a mirror is anyone's server, and the copy is filed under the blob's
+ *    content key, where every later load of that hash finds it.
  *
- * [primary] and [fallback] build the network fetchers. The fallback files the bytes under the
- * blob's own disk-cache key (`blossom:<sha256>`), not the original URL's: Coil answers a second
- * request under the key that just failed with that same failure, without asking the mirror.
+ * Anything that finds nothing leaves the original failure in place.
  */
 class BlossomFallbackFetcher(
     private val url: String,
@@ -54,23 +61,39 @@ class BlossomFallbackFetcher(
     private val resolve: suspend (blossomUri: String) -> String?,
     private val primary: () -> Fetcher,
     private val fallback: (url: String) -> Fetcher,
+    private val cached: suspend () -> FetchResult? = { null },
+    private val isOnline: () -> Boolean = { true },
+    private val verify: (FetchResult?) -> Boolean = { true },
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
         val failure =
             try {
                 return primary().fetch()
             } catch (e: Exception) {
-                if (e is CancellationException || !isNotHere(e)) throw e
+                if (e is CancellationException) throw e
+                // OkHttp reports a call Coil cancelled mid-read as an IOException: that's the
+                // user scrolling away, not a server without the file, so nothing more is asked.
+                currentCoroutineContext().ensureActive()
+                if (!isNotHere(e)) throw e
                 e
             }
+
+        try {
+            cached()?.let { return it }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Could not read the cached copy of ${blob.sha256}", e)
+        }
+
+        if (!isOnline()) throw failure
 
         val uri = blossomUriFor(blob, BlossomAuthorHints.authorsOf(blob.sha256))
         val other =
             try {
-                resolve(uri)
+                withTimeoutOrNull(RESOLVE_WAIT_MS) { resolve(uri) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w(TAG, "Could not look for another server for $url", e)
+                Log.w(TAG, "Could not look for another server for the blob", e)
                 null
             }
 
@@ -78,18 +101,31 @@ class BlossomFallbackFetcher(
 
         Log.d(TAG) { "$url failed (${describe(failure)}); loading the same blob from $other" }
 
-        return try {
-            fallback(other).fetch()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "$other failed too", e)
-            failure.addSuppressed(e)
+        val result =
+            try {
+                fallback(other).fetch()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "The mirror failed too", e)
+                failure.addSuppressed(e)
+                throw failure
+            }
+
+        if (!verify(result)) {
+            Log.w(TAG) { "$other served bytes that don't hash to ${blob.sha256}; dropped them" }
             throw failure
         }
+        return result
     }
 
     companion object {
         private const val TAG = "BlossomFallbackFetcher"
+
+        /**
+         * How long a failed image waits for another server before its failure shows. The
+         * resolver's own limit is longer, and it caches what it finds for the next load.
+         */
+        const val RESOLVE_WAIT_MS = 6_000L
 
         /** Whether [e] says the blob is not available from this server, so another may have it. */
         fun isNotHere(e: Throwable): Boolean =

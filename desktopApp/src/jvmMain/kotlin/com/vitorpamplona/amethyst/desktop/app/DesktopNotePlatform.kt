@@ -306,6 +306,14 @@ object DesktopNotePlatform : NotePlatform {
                         shapeUnknown = ratio == null,
                         blurhash = content.blurhash,
                         thumbhash = content.thumbhash,
+                        // A gallery cell fixes its size but gives children no minimum height, so
+                        // the card must fill it or it reads the slot as shapeless and draws a row.
+                        failureModifier =
+                            when {
+                                ratio != null -> Modifier.matchParentSize()
+                                contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
+                                else -> Modifier.fillMaxWidth()
+                            },
                     )
                 }
             }
@@ -331,6 +339,7 @@ object DesktopNotePlatform : NotePlatform {
         shapeUnknown: Boolean = false,
         blurhash: String? = null,
         thumbhash: String? = null,
+        failureModifier: Modifier = modifier,
     ) {
         val animated = isAnimatedGifUrl(url)
         // Bumped by Retry: a new key starts the load over.
@@ -378,7 +387,7 @@ object DesktopNotePlatform : NotePlatform {
             MediaFailureCard(
                 url = url,
                 failure = it,
-                modifier = modifier,
+                modifier = failureModifier,
                 animated = animated,
                 blurhash = blurhash,
                 thumbhash = thumbhash,
@@ -482,7 +491,15 @@ object DesktopNotePlatform : NotePlatform {
                 DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = thumbhash)
             }
             // With no known shape the image itself sizes the box, so it must not just match it.
-            MediaImage(videoUri, contentDescription, contentScale, if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(), shapeUnknown = !fillsSlot && ratio == null)
+            MediaImage(
+                videoUri,
+                contentDescription,
+                contentScale,
+                if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                shapeUnknown = !fillsSlot && ratio == null,
+                blurhash = blurhash,
+                thumbhash = thumbhash,
+            )
         }
     }
 

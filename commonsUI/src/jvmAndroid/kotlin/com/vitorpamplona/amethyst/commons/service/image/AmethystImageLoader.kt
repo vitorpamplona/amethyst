@@ -25,8 +25,11 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
+import coil3.decode.ImageSource
 import coil3.disk.DiskCache
+import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
+import coil3.fetch.SourceFetchResult
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.ConcurrentRequestStrategy
@@ -34,6 +37,7 @@ import coil3.network.ConnectivityChecker
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
+import coil3.request.CachePolicy
 import coil3.request.Options
 import coil3.size.Precision
 import coil3.util.Logger
@@ -41,7 +45,12 @@ import com.vitorpamplona.amethyst.commons.service.http.BlossomBlobName
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Call
+import okio.HashingSink
+import okio.IOException
+import okio.blackholeSink
+import okio.buffer
 
 /**
  * The Coil image loader both apps use: the inline image schemes (base64, blurhash, thumbhash,
@@ -132,18 +141,49 @@ class OkHttpFactory(
         val blob = if (resolver != null) BlossomBlobName.parse(url) else null
         if (resolver == null || blob == null) return networkFetcher(url, options, diskCacheKey, imageLoader)
 
+        // A mirror's copy is filed under the blob's own key, as `blossom:` URIs are: the original
+        // URL's key would hand back the failure that was just answered for it.
+        val blobKey = BlossomFetcher.blobDiskCacheKey(blob.sha256)
+        val blobOptions = options.copy(diskCacheKey = blobKey)
+
         return BlossomFallbackFetcher(
             url = url,
             blob = blob,
-            resolve = { uri -> resolver().findServers(uri)?.serverUrl },
+            resolve = { uri -> resolver().findServers(uri, clientMimeType = BlossomFetcher.IMAGE)?.serverUrl },
             primary = { networkFetcher(url, options, diskCacheKey, imageLoader) },
-            // Filed under the blob's own key, as `blossom:` URIs are: the original URL's key would
-            // hand back the failure that was just answered for it instead of asking the mirror.
-            fallback = { other ->
-                val blobKey = BlossomFetcher.blobDiskCacheKey(blob.sha256)
-                networkFetcher(other, options.copy(diskCacheKey = blobKey), blobKey, imageLoader)
+            fallback = { other -> networkFetcher(other, blobOptions, blobKey, imageLoader) },
+            cached = {
+                val onDisk = options.diskCachePolicy.readEnabled && imageLoader.diskCache?.openSnapshot(blobKey)?.use { true } == true
+                // Read from disk only: the URL is the one that just failed.
+                if (onDisk) networkFetcher(url, blobOptions.copy(networkCachePolicy = CachePolicy.DISABLED), blobKey, imageLoader).fetch() else null
             },
+            isOnline = { connectivityCheckers.get(options.context).isOnline() },
+            verify = { result -> keepIfItHashesTo(result, blob.sha256, imageLoader, blobKey) },
         )
+    }
+
+    /**
+     * Whether the bytes in [result] hash to [sha256]. When they don't, the copy is closed and
+     * removed from the disk cache, so nothing finds it under the blob's key later.
+     */
+    private fun keepIfItHashesTo(
+        result: FetchResult?,
+        sha256: String,
+        imageLoader: ImageLoader,
+        blobKey: String,
+    ): Boolean {
+        val source = (result as? SourceFetchResult)?.source ?: return true
+        val actual =
+            try {
+                source.sha256Hex()
+            } catch (e: IOException) {
+                Log.w("BlossomFallbackFetcher", "Could not hash the mirror's copy", e)
+                null
+            }
+        if (actual == null || actual.equals(sha256, ignoreCase = true)) return true
+        source.close()
+        imageLoader.diskCache?.remove(blobKey)
+        return false
     }
 
     private fun networkFetcher(
@@ -178,4 +218,17 @@ internal class ConnectivityCheckers {
     fun get(context: PlatformContext): ConnectivityChecker =
         last?.takeIf { it.first === context }?.second
             ?: ConnectivityChecker(context).also { last = context to it }
+}
+
+/** The sha256 of every byte this source holds, read from its file when it has one. */
+internal fun ImageSource.sha256Hex(): String {
+    val sink = HashingSink.sha256(blackholeSink())
+    val file = fileOrNull()
+    if (file != null) {
+        fileSystem.source(file).buffer().use { it.readAll(sink) }
+    } else {
+        // Peeking reads the whole body into the source's buffer, where the decoder still finds it.
+        source().peek().readAll(sink)
+    }
+    return sink.hash.hex()
 }

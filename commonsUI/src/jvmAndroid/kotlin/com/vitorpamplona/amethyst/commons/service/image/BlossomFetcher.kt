@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomSe
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 import okhttp3.Call
+import okio.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -50,35 +51,32 @@ class BlossomFetcher(
     private val blossomServerResolver: () -> BlossomServerResolver,
     private val networkFetcher: (url: String, diskCacheKey: String) -> Fetcher,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult? =
-        try {
-            val uri = data.toString()
-            val key = options.diskCacheKey ?: diskCacheKey(uri)
+    override suspend fun fetch(): FetchResult? {
+        val uri = data.toString()
+        val key = options.diskCacheKey ?: diskCacheKey(uri)
 
-            // A blob already on disk is served without resolving: resolution may HEAD
-            // servers and wait on relays, and fails outright offline, where the bytes are
-            // still sitting in the cache. NetworkFetcher reads the snapshot under [key]
-            // before it ever looks at the url.
-            val onDisk = options.diskCachePolicy.readEnabled && imageLoader.diskCache?.openSnapshot(key)?.use { true } ?: false
-            val fromDisk =
-                if (onDisk) {
-                    // Evicted between the check and the read: the fetcher would try the
-                    // network with the unresolvable `blossom:` uri, so resolve after all.
-                    try {
-                        networkFetcher(uri, key).fetch()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
-                    }
-                } else {
-                    null
-                }
-
-            fromDisk ?: networkFetcher(blossomServerResolver().findServers(uri)?.serverUrl ?: uri, key).fetch()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
+        // A blob already on disk is served without resolving: resolution may HEAD
+        // servers and wait on relays, and fails outright offline, where the bytes are
+        // still sitting in the cache. NetworkFetcher reads the snapshot under [key]
+        // before it ever looks at the url.
+        val onDisk = options.diskCachePolicy.readEnabled && imageLoader.diskCache?.openSnapshot(key)?.use { true } ?: false
+        if (onDisk) {
+            try {
+                return networkFetcher(uri, key).fetch()
+            } catch (e: Exception) {
+                // Evicted between the check and the read: the fetcher would try the
+                // network with the unresolvable `blossom:` uri, so resolve after all.
+                if (e is CancellationException) throw e
+            }
         }
+
+        // Errors propagate, so the failure card can say what went wrong; a null here would
+        // make Coil report that no fetcher supports the URI, which reads as "not an image".
+        val server =
+            blossomServerResolver().findServers(uri, clientMimeType = IMAGE)?.serverUrl
+                ?: throw IOException("No Blossom server answered for $uri")
+        return networkFetcher(server, key).fetch()
+    }
 
     companion object {
         /**
@@ -90,6 +88,9 @@ class BlossomFetcher(
 
         /** The disk-cache key of the blob with this [sha256], whichever server or URI it came through. */
         fun blobDiskCacheKey(sha256: String): String = "blossom:$sha256"
+
+        /** Blossom lookups made for the image loader probe through the image client. */
+        const val IMAGE = "image/*"
     }
 
     @OptIn(ExperimentalCoilApi::class)

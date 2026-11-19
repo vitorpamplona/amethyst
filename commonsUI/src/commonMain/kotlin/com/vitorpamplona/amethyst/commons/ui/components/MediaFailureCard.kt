@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_failed_unreachable_det
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import okio.IOException
 
 /**
@@ -82,6 +83,18 @@ fun mediaLoadFailureOf(throwable: Throwable?): MediaLoadFailure =
         throwable is IOException && throwable::class.simpleName?.contains("Decode") != true -> MediaLoadFailure.UNREACHABLE
         else -> MediaLoadFailure.NOT_MEDIA
     }
+
+/**
+ * The server to name for [url]: its host, or for a `blossom:` URI the first server it hints at
+ * (`xs`), else the blob's file name, since the URI itself names no server.
+ */
+private fun failureHost(url: String): String {
+    if (url.startsWith("blossom:", ignoreCase = true)) {
+        val uri = BlossomUri.parse(url) ?: return url
+        return uri.servers.firstNotNullOfOrNull { OmniboxInput.hostOf(it) } ?: uri.filename()
+    }
+    return OmniboxInput.hostOf(url) ?: url
+}
 
 /** What a failed image or GIF says, worded for its [failure] and the [host] it came from. */
 private class FailureWords(
@@ -158,15 +171,25 @@ fun MediaFailureCard(
     thumbhash: String? = null,
     onRetry: (() -> Unit)? = null,
 ) {
-    val host = remember(url) { OmniboxInput.hostOf(url) ?: url }
+    val isBlossomUri = url.startsWith("blossom:", ignoreCase = true)
+    val host = remember(url) { failureHost(url) }
     val words = failureWords(failure, animated, host)
-    val uriHandler = LocalUriHandler.current
     val retry = onRetry?.takeIf { failure.retryable }
+    // A `blossom:` URI isn't a web page: it goes to an app that resolves it, as its link did.
+    val blossomOpener = if (isBlossomUri) rememberBlossomUriOpener() else null
+    val uriHandler = LocalUriHandler.current
+    val open: () -> Unit = {
+        if (blossomOpener != null) {
+            blossomOpener.open(url) { _, _ -> }
+        } else {
+            runCatching { uriHandler.openUri(url) }
+        }
+    }
     val action: Pair<String, () -> Unit> =
         if (retry != null) {
             stringRes(Res.string.retry) to retry
         } else {
-            stringRes(Res.string.media_failed_open_in_browser) to { runCatching { uriHandler.openUri(url) } }
+            stringRes(Res.string.media_failed_open_in_browser) to open
         }
 
     BoxWithConstraints(modifier) {

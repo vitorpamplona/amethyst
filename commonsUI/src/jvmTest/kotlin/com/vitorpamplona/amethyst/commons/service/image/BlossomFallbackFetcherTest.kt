@@ -20,16 +20,29 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import coil3.decode.DataSource
+import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
+import coil3.fetch.SourceFetchResult
 import coil3.network.HttpException
 import coil3.network.NetworkResponse
 import com.vitorpamplona.amethyst.commons.service.http.BlossomAuthorHints
 import com.vitorpamplona.amethyst.commons.service.http.BlossomBlobName
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import okio.Buffer
+import okio.ByteString.Companion.toByteString
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
+import java.io.IOException
 import java.net.UnknownHostException
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -64,16 +77,28 @@ class BlossomFallbackFetcherTest {
     private fun build(
         run: Run,
         url: String = this.url,
+        cached: suspend () -> FetchResult? = { null },
+        isOnline: () -> Boolean = { true },
+        verify: (FetchResult?) -> Boolean = { true },
+        resolveDelayMs: Long = 0,
+        primaryCancels: Boolean = false,
     ) = BlossomFallbackFetcher(
         url = url,
         blob = BlossomBlobName.parse(url)!!,
+        cached = cached,
+        isOnline = isOnline,
+        verify = verify,
         resolve = { uri ->
             run.asked.add(uri)
+            delay(resolveDelayMs)
             run.resolved
         },
         primary = {
             fetcher {
                 run.fetched.add(url)
+                // What OkHttp does when Coil cancels a call mid-read: the job is cancelled and
+                // the read fails with a plain IOException.
+                if (primaryCancels) currentCoroutineContext().cancel()
                 run.primaryError?.let { throw it }
                 null
             }
@@ -183,6 +208,91 @@ class BlossomFallbackFetcherTest {
             build(run, bare).fetch()
             assertEquals("bin", BlossomUri.parse(run.asked.single())!!.extension)
         }
+
+    @Test
+    fun aCancelledLoadDoesNotSearch() =
+        runTest {
+            val run = Run(primaryError = IOException("Canceled"), resolved = mirror)
+            val job = launch { build(run, primaryCancels = true).fetch() }
+            job.join()
+            assertTrue(job.isCancelled)
+            assertTrue(run.asked.isEmpty())
+        }
+
+    @Test
+    fun theDiskIsReadBeforeSearching() =
+        runTest {
+            var read = 0
+            val run = Run(primaryError = UnknownHostException("24242.io"), resolved = mirror)
+            build(run, cached = {
+                read++
+                null.also { run.fetched.add("disk") }
+            }).fetch()
+            assertEquals(1, read)
+            // Nothing on disk here, so it goes on to search.
+            assertEquals(listOf(url, "disk", mirror), run.fetched)
+        }
+
+    @Test
+    fun theCachedCopyWinsOverTheSearch() =
+        runTest {
+            val run = Run(primaryError = UnknownHostException("24242.io"), resolved = mirror)
+            val fromDisk = SourceFetchResult(ImageSource(Buffer().writeUtf8("x"), FileSystem.SYSTEM), null, DataSource.DISK)
+            assertSame(fromDisk, build(run, cached = { fromDisk }).fetch())
+            assertTrue(run.asked.isEmpty())
+        }
+
+    @Test
+    fun offlineDoesNotSearch() =
+        runTest {
+            val error = UnknownHostException("24242.io")
+            val run = Run(primaryError = error, resolved = mirror)
+            assertSame(error, assertFailsWith<UnknownHostException> { build(run, isOnline = { false }).fetch() })
+            assertTrue(run.asked.isEmpty())
+        }
+
+    @Test
+    fun aSlowSearchGivesUpAndKeepsTheFailure() =
+        runTest {
+            val error = http(404)
+            val run = Run(primaryError = error, resolved = mirror)
+            assertSame(error, assertFailsWith<HttpException> { build(run, resolveDelayMs = 60_000).fetch() })
+            assertEquals(listOf(url), run.fetched)
+        }
+
+    @Test
+    fun aMirrorWithOtherBytesIsDropped() =
+        runTest {
+            val error = http(404)
+            val run = Run(primaryError = error, resolved = mirror)
+            assertSame(error, assertFailsWith<HttpException> { build(run, verify = { false }).fetch() })
+            assertEquals(listOf(url, mirror), run.fetched)
+        }
+
+    @Test
+    fun hashesTheBytesFromABufferOrAFile() {
+        val bytes = "not really a jpeg".encodeToByteArray()
+        val expected = bytes.toByteString().sha256().hex()
+
+        val buffered = ImageSource(Buffer().write(bytes), FileSystem.SYSTEM)
+        assertEquals(expected, buffered.sha256Hex())
+        // The decoder still finds every byte after the hash.
+        assertEquals(
+            bytes.size.toLong(),
+            buffered
+                .source()
+                .readByteArray()
+                .size
+                .toLong(),
+        )
+
+        val file = Files.createTempFile("blob", ".bin").toFile().apply { writeBytes(bytes) }
+        try {
+            assertEquals(expected, ImageSource(file.toOkioPath(), FileSystem.SYSTEM).sha256Hex())
+        } finally {
+            file.delete()
+        }
+    }
 
     @Test
     fun onlyBlobNamesAreBlossom() {
