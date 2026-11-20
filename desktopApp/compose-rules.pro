@@ -226,6 +226,18 @@
     native <methods>;
 }
 
+# ============================================================================
+# Desktop-only: the Nucleus libraries (dev.nucleusframework) — the tray
+# (ComposeNativeTray), the OS notification bridges, the dark-mode detector,
+# Rodio audio and the runtime that loads their natives. Their Win32, macOS and
+# Linux libraries call back into these classes by name (menu clicks,
+# notification actions and dismissals), so none may be stripped.
+# ============================================================================
+-keep class dev.nucleusframework.** { *; }
+-keepclassmembers class dev.nucleusframework.** {
+    native <methods>;
+}
+
 # Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
 # fails for the whole table when one declaration is missing, and shrink cannot
 # see those callers. Keep every native of every class that is kept anyway; the

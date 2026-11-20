@@ -121,6 +121,15 @@ dependencies {
         exclude(group = "org.slf4j", module = "slf4j-simple")
     }
 
+    // System tray icon (the NIP-46 signer keeps running with the window closed) — MIT, same author,
+    // now published under dev.nucleusframework (the io.github.kdroidfilter coordinates stopped at
+    // 1.3.3), with its MIT nucleus dependencies. Native trays: Win32 on Windows, an NSStatusItem on
+    // macOS, StatusNotifierItem over D-Bus on Linux (the system's libsystemd, LGPL-2.1, and its
+    // theme detector's libdbus-1, AFL-2.1 or GPL-2.0+, both loaded at runtime, not bundled).
+    implementation(libs.composenativetray)
+    // Its native loader, called directly to check the tray library loads before hiding the window.
+    implementation(libs.nucleus.core.runtime)
+
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
     // wrapper library needed (see VideoThumbnailCache.runFfmpegToImage).

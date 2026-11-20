@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.ObserverFailure
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverPrefs
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverStatus
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverToday
+import com.vitorpamplona.amethyst.commons.frontpage.ObserverWeather
 import com.vitorpamplona.amethyst.commons.frontpage.PastEdition
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLog
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
@@ -217,6 +218,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_dev
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_devices_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by
 import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by_assistant
+import com.vitorpamplona.amethyst.commons.resources.front_page_printed_on
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_confirm
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
@@ -442,6 +444,8 @@ fun FrontPageScreen(
             ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere, viewModel::retryScheduleDecrypt, viewModel::printFromMyDevices) { nav.nav(Route.EditRelays) }
         }
     val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
+    val weatherPlace by viewModel.place.collectAsStateWithLifecycle()
+    val weather = remember(viewModel, weatherPlace) { WeatherSetting(weatherPlace, viewModel::setPlace, viewModel::searchPlaces) }
     val observer by viewModel.observer.collectAsStateWithLifecycle()
 
     val pastDay by viewModel.pastDay.collectAsStateWithLifecycle()
@@ -614,6 +618,7 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            weather = weather,
                             routstrNote = routstrNote,
                             editionSats = viewModel::editionSats,
                         )
@@ -663,6 +668,7 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            weather = weather,
                             routstrNote = routstrNote,
                             editionSats = viewModel::editionSats,
                         )
@@ -897,6 +903,13 @@ private fun PastEditionRow(
                     Spacer(Modifier.width(4.dp))
                     Text(stringRes(Res.string.front_page_by_assistant), style = MaterialTheme.typography.labelSmall, color = scheme.primary)
                 }
+            } else if (edition.printedBy != null) {
+                // Printed on another device of the account, shared through the schedule.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(MaterialSymbols.Sync, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringRes(Res.string.front_page_printed_on, edition.printedBy.orEmpty()), style = MaterialTheme.typography.labelSmall, color = scheme.primary)
+                }
             } else if (edition.published) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(MaterialSymbols.Public, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(14.dp))
@@ -1001,6 +1014,7 @@ private fun PrintControls(
     onCancel: () -> Unit,
     publish: ObserverPrefs?,
     onPublish: (Boolean) -> Unit,
+    weather: WeatherSetting? = null,
     routstrNote: RoutstrPrintNote? = null,
     editionSats: ((AgentModel?) -> Long?)? = null,
 ) {
@@ -1045,6 +1059,7 @@ private fun PrintControls(
         if (routstrNote?.lowBalance == true) RoutstrLowBalance(stringRes(Res.string.routstr_balance_low), routstrNote.onTopUp, ink)
         ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, printedBy, ink, lowBalance = routstrNote?.lowBalance == true)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
+        weather?.let { WeatherRow(it, ink) }
     }
 }
 
@@ -1684,6 +1699,7 @@ private fun Details(
             Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
             Text(fullDate(edition.day), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (edition.byRunner) Text(stringRes(Res.string.front_page_by_assistant), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            edition.printedBy?.let { Text(stringRes(Res.string.front_page_printed_on, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
         }
         // A print running now (the reader's, or the morning's) can be stopped from here too, confirmed.
         if (printing) CancelPrintButton(onCancelPrint, Modifier.fillMaxWidth())
@@ -1760,7 +1776,11 @@ private fun PaperPane(
     modifier: Modifier,
 ) {
     Box(modifier.background(Newsprint)) {
-        val html = shown?.html
+        val page = shown?.html
+        // The weather kept beside the paper, drawn over the copy on screen only, in the reader's words.
+        val weather = shown?.edition?.weather
+        val labels = if (weather != null) rememberWeatherLabels() else null
+        val html = remember(page, weather, labels) { if (page != null && weather != null && labels != null) ObserverWeather.withStrip(page, weather, labels) else page }
         when {
             html != null -> Paper(edition, html, Modifier.fillMaxSize())
             loading -> CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))

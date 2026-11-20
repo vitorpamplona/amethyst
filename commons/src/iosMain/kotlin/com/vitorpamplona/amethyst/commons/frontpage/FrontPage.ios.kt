@@ -37,6 +37,9 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
 
 actual fun paperBoundary(): PaperBoundary? = null
 
+/** No HTTP client here yet: no weather. */
+actual suspend fun IRoleBasedHttpClientBuilder.fetchWeatherText(url: String): String? = null
+
 /*
  * iOS prints no front page yet (there is no HTML boundary there), so its clock is UTC days:
  * enough for the shared code to compile and for a stored edition to have a day.
