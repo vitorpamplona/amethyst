@@ -29,9 +29,10 @@ secrets it needs, the distribution channels, and one-time bootstrap steps.
 
 All platforms:
 
-- **JDK 21** or newer (Zulu or Temurin recommended). The desktop release packages are built on
-  **JDK 25**, the runtime they bundle (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux));
-  JDK 21 still builds and runs everything.
+- **JDK 25** (Temurin recommended, or the JetBrains Runtime 25 that Android Studio bundles). CI
+  and the releases build on it, and the desktop, `amy` and `geode` packages bundle it as their
+  runtime (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux)). The code still compiles to
+  Java 21 bytecode.
 - **Git**
 
 Platform-specific:
@@ -223,9 +224,9 @@ artifact on F-Droid / Zapstore / GitHub was built from this code and nothing
 else. What makes that hold:
 
 - **Pinned toolchain.** AGP, Kotlin, R8, and the Compose compiler are pinned in
-  `gradle/libs.versions.toml`; the build targets **JDK 21**. R8 is deterministic
-  for a fixed version + inputs, so the minified output is stable. Build with the
-  same JDK 21 you see in `BUILDING.md` / CI.
+  `gradle/libs.versions.toml`; the code targets **Java 21** bytecode. R8 is
+  deterministic for a fixed version + inputs, so the minified output is stable.
+  Build on the same JDK 25 you see in `BUILDING.md` / CI.
 - **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
   build dates into `BuildConfig` (`verifyKmpPurity` bans the call in the shared
   source sets of `commons` and `commonsUI`, and quartz keeps its own copy of that

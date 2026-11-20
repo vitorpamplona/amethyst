@@ -12,8 +12,14 @@ application {
     applicationName = "geode"
 }
 
+// Built by the JDK Gradle runs on (JDK 25), as Java 21 bytecode, like the other modules: no
+// separate JDK 21 toolchain to install.
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 kotlin {
-    jvmToolchain(21)
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
     }
@@ -198,7 +204,8 @@ val jlinkModules: String = listOf(
 
 fun javaToolBin(name: String): Provider<String> =
     javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        // The JDK Gradle runs on (JDK 25): its runtime is the one the image bundles.
+        languageVersion.set(JavaLanguageVersion.current())
     }.map {
         val exe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "$name.exe" else name
         it.metadata.installationPath.file("bin/$exe").asFile.absolutePath

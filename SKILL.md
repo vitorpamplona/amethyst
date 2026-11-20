@@ -14,12 +14,12 @@ Build customized Amethyst Nostr clients for Android. Fork, rebrand, customize, a
 
 ### Required Tools
 
-1. **Java 21** (via SDKMAN)
+1. **Java 25** (via SDKMAN)
    ```bash
    curl -s "https://get.sdkman.io" | bash
    source "$HOME/.sdkman/bin/sdkman-init.sh"
-   sdk install java 21.0.5-tem
-   sdk use java 21.0.5-tem
+   sdk install java 25.0.5.1+2-tem
+   sdk use java 25.0.5.1+2-tem
    ```
 
 2. **Android SDK**
@@ -123,7 +123,7 @@ plugins {
 
 ```bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk use java 21.0.5-tem
+sdk use java 25.0.5.1+2-tem
 ./gradlew assembleFdroidRelease
 ```
 
@@ -205,8 +205,8 @@ Disable the Google Services plugin (see step 4).
 
 ### Java version error
 ```bash
-sdk use java 21.0.5-tem
-java -version  # Must show 21.x
+sdk use java 25.0.5.1+2-tem
+java -version  # Must show 25.x
 ```
 
 ### Out of memory

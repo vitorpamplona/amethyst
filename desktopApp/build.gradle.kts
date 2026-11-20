@@ -34,8 +34,8 @@ sourceSets {
     }
 }
 
-// Compiled by the JDK Gradle runs on, as Java 21 bytecode. The packages bundle that JDK (JDK 25 in
-// CI), and a dev run on JDK 21 still works; a toolchain would make CI install a second JDK just to
+// Compiled by the JDK Gradle runs on (JDK 25, BUILDING.md), as Java 21 bytecode like the other
+// modules. The packages bundle that JDK; a toolchain would make CI install a second JDK just to
 // compile.
 java {
     sourceCompatibility = JavaVersion.VERSION_21

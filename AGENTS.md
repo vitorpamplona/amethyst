@@ -178,6 +178,7 @@ there rather than trusting a number copied here).
 | **Serialization** | kotlinx.serialization; Nostr JSON uses quartz's Kite (no Jackson) |
 | **DI** | Manual / Koin |
 | **Build** | Gradle + Kotlin Multiplatform |
+| **JDK** | 25 to build and run (CI, Android Studio's bundled runtime, the desktop/`amy`/`geode` packages); the code compiles to Java 21 bytecode |
 
 ## Skills
 
