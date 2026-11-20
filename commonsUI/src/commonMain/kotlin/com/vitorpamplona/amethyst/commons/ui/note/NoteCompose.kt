@@ -364,6 +364,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazine
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazineIssue
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderManagedAgent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMavenPublication
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
@@ -2234,17 +2235,16 @@ internal fun RenderNoteRow(
             is UnrecognizedKind31985Event,
             -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
-            // llama.garden's model torrents, model, seeder and client releases, and Maven releases
-            // and snapshots on Nostr (NIP-FC, Magpie): typed by Quartz 2.20.0, but Amethyst has no
-            // card for them yet, so they keep the unknown-kind card they had before they were typed.
+            // llama.garden's model torrents, model, seeder and client releases: typed by Quartz
+            // 2.20.0, but Amethyst has no card for them yet, so they keep the unknown-kind card they
+            // had before they were typed. (NIP-FC Maven releases and snapshots have their own card:
+            // RenderMavenPublication, below.)
             is ModelTorrentEvent,
             is UnrecognizedKind30099Event,
             is ClientReleaseEvent,
             is SeederRequestEvent,
             is ModelRequestEvent,
             is UnrecognizedKind30103Event,
-            is MavenReleaseEvent,
-            is MavenSnapshotEvent,
             -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {
@@ -3051,6 +3051,7 @@ internal fun RenderNoteRow(
             is AssetBundleEvent -> RenderAssetBundle(baseNote, backgroundColor, accountViewModel, nav)
             is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote, backgroundColor, accountViewModel, nav)
+            is MavenReleaseEvent, is MavenSnapshotEvent -> RenderMavenPublication(baseNote, accountViewModel, nav)
             is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
             is AppDataEvent -> RenderAppData(baseNote)
             is NNSEvent -> RenderNNS(baseNote)

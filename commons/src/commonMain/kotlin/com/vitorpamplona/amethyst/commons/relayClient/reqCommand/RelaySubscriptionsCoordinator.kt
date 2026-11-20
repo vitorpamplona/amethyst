@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.highlights.HighlightsFilte
 import com.vitorpamplona.amethyst.commons.relayClient.home.HomeFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.livestreams.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.longs.LongsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.mavenReleases.MavenVersionsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.music.MusicPlaylistsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.music.MusicTracksFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.napplets.ConnectedAppsFilterAssembler
@@ -234,6 +235,7 @@ class RelaySubscriptionsCoordinator(
     val myPodcast = MyPodcastFilterAssembler(cache, client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val softwareReleases = SoftwareReleasesFilterAssembler(cache, client) // the open app page's releases
+    val mavenVersions = MavenVersionsFilterAssembler(cache, client) // other versions of an on-screen NIP-FC release
     val napplets = NappletsFilterAssembler(client)
     val connectedApps = ConnectedAppsFilterAssembler(client)
     val nsites = NsitesFilterAssembler(client)
@@ -301,6 +303,7 @@ class RelaySubscriptionsCoordinator(
             myPodcast,
             softwareApps,
             softwareReleases,
+            mavenVersions,
             badges,
             profileBadges,
             gitDashboard,
