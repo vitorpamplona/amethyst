@@ -200,6 +200,13 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.login",
             "amethyst.signup",
             "amethyst.videoTimeline",
+            // ScrollBenchmark: `-Damethyst.scrollBench=<dir>` scrolls the feed, writes frame
+            // timings to <dir> and exits (tools/desktop-run/scroll-bench.sh).
+            "amethyst.scrollBench",
+            "amethyst.scrollBench.waitSeconds",
+            "amethyst.scrollBench.notches",
+            "amethyst.scrollBench.intervalMs",
+            "amethyst.scrollBench.at",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")

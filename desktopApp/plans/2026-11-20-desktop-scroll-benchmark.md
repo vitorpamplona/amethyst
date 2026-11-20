@@ -1,0 +1,105 @@
+# Desktop scroll benchmark
+
+Status: built. The benchmark, its script and the first measurements below.
+
+## What it measures
+
+`-Damethyst.scrollBench=<dir>` makes the app benchmark its own home feed
+(`desktopApp/.../service/bench/ScrollBenchmark.kt`). It waits 30 s for the feed to load, then
+scrolls it with the mouse wheel at a fixed pace, 250 notches 16 ms apart, in three passes:
+
+- `down`: into posts the app has not drawn yet. It composes new cards, decodes their images, and
+  the JIT compiles the scroll path for the first time.
+- `up`: back over the same posts, which shows what the caches kept.
+- `down-again`: the first pass with everything warm.
+
+The wheel events are posted to the window as AWT would deliver them, so they go through Compose's
+own wheel handling and smooth scrolling, the user's path. Nothing reaches into the feed's state.
+After the three passes it writes `summary.tsv`, `frames.tsv` and one screenshot per pass, then exits.
+
+Per frame:
+
+- **Frame gap** (`interval_*`): time between frame starts (`withFrameNanos`). The recorder awaits
+  every frame, so a late frame shows as a long gap rather than as no frame. 16.7 ms is 60 Hz.
+  `jank_pct` counts gaps over 25 ms (a missed vsync), `hitch_pct` gaps over 50 ms.
+- **UI thread work** (`busy_*`, `ui_busy_pct`): time the AWT event dispatch thread spent in events
+  between two frame starts, timed by an `EventQueue` pushed for the benchmark. Compose composes,
+  lays out and draws there, so this is the desktop's counterpart of Android's
+  `frameDurationCpuMs`.
+
+Per pass:
+
+- **GC and JIT** (`gc_ms`, `jit_ms`): from the JVM's management beans. These are the two costs a
+  JVM adds over native code.
+- **Images** (`img_*`): a Coil `EventListener` (`ImageLoadStats`), installed only in benchmark
+  runs, counts where each image came from (memory cache, disk, network) and how long the ones that
+  were not in memory took. Images load and decode off the UI thread, so a cache miss shows here, as
+  an image that appears late, and not in the frame columns.
+
+`tools/desktop-run/scroll-bench.sh` boots the app on the headless display (one warm-up boot, then
+three measured ones) and prints each pass's median; `scroll_bench_summary.py <before> <after>`
+compares two builds. Usage and column meanings: `tools/desktop-run/README.md`, "Scroll benchmark".
+
+## Setup of the numbers below
+
+The same machine as the startup plan: 4 cores, Xvfb, Skia in **software** (no GPU), a 1380x900
+window, JDK 21, the dev `run` with its AppCDS archive. Logged in read-only with Vitor's npub (260
+follows), feed from live relays, image and video disk caches warm (`img_net` was 0 in every pass).
+Each table is the median of 3 boots after 1 warm-up boot.
+
+## Results
+
+### Baseline (main + the image-cache changes)
+
+| pass | fps | gap p50 | gap p90 | gap p99 | jank % | UI busy | JIT ms | images from memory | image load p90 |
+|---|---|---|---|---|---|---|---|---|---|
+| down | 23.7 | 31.3 | 89.2 | 189.5 | 58.9 | 98.8% | 8,737 | 49% | 147 ms |
+| up | 41.5 | 21.7 | 36.4 | 54.3 | 34.2 | 97.9% | 3,073 | 75% | 40 ms |
+| down-again | 46.8 | 18.8 | 31.0 | 48.0 | 25.6 | 94.7% | 1,612 | 94% | 38 ms |
+
+What it says:
+
+1. **Software drawing at this size is the steady-state limit.** Warm, the UI thread is busy
+   95% of the time and the feed draws ~47 fps, a quarter of its frames missing a 60 Hz vsync. That
+   is Skia rasterizing in software under Xvfb. A GPU desktop draws far faster, so absolute numbers
+   here are not what users see. Relative changes are what this measures. On native Wayland the app
+   also draws in software (`WaylandDisplay` sets `skiko.renderApi=SOFTWARE`), so this is closer to
+   those users than to X11, macOS or Windows ones.
+2. **The first scroll is a JIT problem.** The cold `down` pass ran 8.7 s of JIT compilation
+   (on the compiler threads, taking the other cores) inside a 4 s pass. Its first half-second has
+   frames of 200–560 ms, then it settles. A native app has no such first scroll; an AOT cache
+   trained on a scroll (not only a start) is the fix to try (startup plan, "Next").
+3. **GC is not the problem here.** 0–64 ms of collection per pass.
+
+### Is it sensitive? The image memory cache, strong vs weak-only
+
+Run on the build before commit `7e7386e3` (`strongReferencesEnabled(false)`) against after it,
+the same day, one after the other:
+
+| pass | images from memory, strong | weak-only | disk reloads, strong | weak-only |
+|---|---|---|---|---|
+| up | 74–79% (median 75%) | 60–71% (median 63%) | 17–22 | 23–31 |
+| down-again | 92–98% | 69–95% | 2–7 | 4–23 |
+
+Scrolling back over the same posts, the strong cache drew a quarter more of them from memory, with
+ranges that don't overlap across boots. The frame columns showed **no** consistent difference:
+`down`'s fps swung 15–26 on both builds, and the warm passes moved within ±5%. So:
+
+- The image columns detect a caching change; the frame columns do not, and shouldn't be expected
+  to (decoding runs off the UI thread).
+- The `down` pass is too noisy (JIT, relays still answering) for frame comparisons; compare `up`
+  and `down-again`, and expect only differences over ~10% to show with 3 boots.
+
+## Next
+
+1. **Why a quarter of the images on the way back up still come from disk** with a 256 MiB strong
+   cache. Likely different memory-cache keys for the same URL: the feed prefetch
+   (`PrefetchFeedMedia`) and the card may ask for different sizes. Count misses by key to confirm.
+2. **A fixed corpus.** The feed comes from live relays, so its posts differ between boots and
+   days. Serving a recorded event set from a local relay (the `LaunchFixtureRelay` the tests use)
+   would remove that noise.
+3. **A GPU run.** Run it on a real Linux, macOS and Windows desktop (the property works on the dev
+   `run` anywhere) for the absolute numbers, and native Wayland against XWayland with OpenGL.
+4. **An AOT cache trained on scrolling**, measured with the `down` pass's `jit_ms` and gaps.
+5. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
+   `jit_ms` are stable enough to watch there if wanted.

@@ -148,6 +148,44 @@ size known and the first frame. `grep VideoTimeline` the log; `grep 'first frame
   switches: `AMETHYST_RUN_ARGS="-Damethyst.update.devCheck=true -Damethyst.update.pretendVersion=1.0.0"`
   checks for updates five seconds after start, as if version 1.0.0 were running.
 
+## Scroll benchmark
+
+`scroll-bench.sh` measures how smoothly the home feed scrolls. Each boot opens the app logged in
+(`--login`, default Vitor's npub), waits 30 s for the feed, then scrolls it three times with the
+mouse wheel at a fixed pace, 250 notches 16 ms apart: `down` into posts it has not drawn yet, `up`
+back over them, `down-again` with everything warm. It records every frame and exits. The script
+runs one warm-up boot and three measured ones, then prints each pass's median across the boots:
+
+```bash
+tools/desktop-run/scroll-bench.sh --out /tmp/bench-before       # ~7 min
+# change something, then
+tools/desktop-run/scroll-bench.sh --out /tmp/bench-after
+python3 tools/desktop-run/scroll_bench_summary.py /tmp/bench-before /tmp/bench-after
+```
+
+| Column | Means |
+|---|---|
+| `fps` | Frames drawn per second while scrolling |
+| `interval_p50/p90/p99` | Gap between frame starts, ms. 16.7 is a 60 Hz frame |
+| `jank_pct`, `hitch_pct` | Frames whose gap passed 25 ms (missed a vsync) and 50 ms (a visible hitch) |
+| `busy_p50/p90` | UI thread work in each gap, ms: Compose's composition, layout and draw, and input |
+| `ui_busy_pct` | Share of the pass the UI thread was busy. Near 100 means it is the bottleneck |
+| `gc_ms`, `jit_ms` | Garbage collection and JIT compilation during the pass. JIT runs on other threads but takes their cores |
+| `img_mem_pct`, `img_disk`, `img_net` | Where the pass's images came from: the memory cache (drawn at once), the disk cache, the network |
+| `img_load_p50/p90` | Time to load an image that was not in memory, ms: how late it appears on screen |
+
+Images load and decode off the UI thread, so a cache miss shows up as an image appearing late
+(the `img_*` columns), not as a slow frame.
+
+Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, and `after-<pass>.png`: look at
+those to check that each pass moved the feed and did not run out of posts. The feed comes from live
+relays, so its posts differ from boot to boot: compare medians of several boots, and run before and
+after on the same machine close together. Under Xvfb, Skia draws in software, so absolute numbers
+are far from a GPU desktop's; the changes between builds are what this measures. The app itself
+runs the scroll (`ScrollBenchmark` in `desktopApp/.../service/bench/`), so it also works on a real
+display: `./gradlew :desktopApp:run -Damethyst.scrollBench=/tmp/bench` (macOS asks for screen
+recording permission for the screenshots, and the report is written without them).
+
 ## Automated alternative
 
 For a check that should keep passing, write a Compose UI test instead

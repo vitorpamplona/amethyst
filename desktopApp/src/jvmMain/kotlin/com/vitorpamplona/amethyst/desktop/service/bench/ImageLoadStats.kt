@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.service.bench
+
+import coil3.EventListener
+import coil3.decode.DataSource
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Where the images a scroll pass asked for came from, and how long each took: the image loader's
+ * [listener] counts them while the benchmark runs. Frame timing can't see a cache miss, because the
+ * image loads and decodes off the UI thread: a miss shows as an image that appears late, which
+ * these numbers catch.
+ */
+object ImageLoadStats {
+    /** One pass's image loads. [memory] are memory-cache hits, drawn without loading anything. */
+    class Counts(
+        val memory: Int,
+        val disk: Int,
+        val network: Int,
+        val failed: Int,
+        // Milliseconds from request to result of every load that did not come from memory.
+        val loadMs: DoubleArray,
+    ) {
+        val total: Int get() = memory + disk + network + failed
+
+        val memoryPercent: Double get() = if (total == 0) 0.0 else 100.0 * memory / total
+
+        companion object {
+            val NONE = Counts(0, 0, 0, 0, DoubleArray(0))
+        }
+    }
+
+    private val started = ConcurrentHashMap<ImageRequest, Long>()
+
+    // Guarded by this.
+    private var memory = 0
+    private var disk = 0
+    private var network = 0
+    private var failed = 0
+    private var loadNanos = ArrayList<Long>()
+
+    val listener =
+        object : EventListener() {
+            override fun onStart(request: ImageRequest) {
+                started[request] = System.nanoTime()
+            }
+
+            override fun onSuccess(
+                request: ImageRequest,
+                result: SuccessResult,
+            ) {
+                val took = started.remove(request)?.let { System.nanoTime() - it }
+                synchronized(this@ImageLoadStats) {
+                    when (result.dataSource) {
+                        DataSource.MEMORY_CACHE -> memory++
+                        DataSource.DISK -> disk++
+                        DataSource.NETWORK -> network++
+                        // Already in memory as bytes (a data: URI, a blurhash): no load to speak of.
+                        DataSource.MEMORY -> memory++
+                    }
+                    if (result.dataSource != DataSource.MEMORY_CACHE && result.dataSource != DataSource.MEMORY && took != null) loadNanos.add(took)
+                }
+            }
+
+            override fun onError(
+                request: ImageRequest,
+                result: ErrorResult,
+            ) {
+                started.remove(request)
+                synchronized(this@ImageLoadStats) { failed++ }
+            }
+
+            override fun onCancel(request: ImageRequest) {
+                started.remove(request)
+            }
+        }
+
+    /** Starts counting a new pass. */
+    @Synchronized
+    fun reset() {
+        memory = 0
+        disk = 0
+        network = 0
+        failed = 0
+        loadNanos = ArrayList()
+    }
+
+    /** What was counted since [reset]. */
+    @Synchronized
+    fun snapshot(): Counts = Counts(memory, disk, network, failed, DoubleArray(loadNanos.size) { loadNanos[it] / 1e6 })
+}

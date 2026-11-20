@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.service.image.SkiaGifDecoder
 import com.vitorpamplona.amethyst.commons.service.image.buildAmethystImageLoader
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
+import com.vitorpamplona.amethyst.desktop.service.bench.ImageLoadStats
+import com.vitorpamplona.amethyst.desktop.service.bench.ScrollBenchmark
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,7 +57,7 @@ object DesktopImageLoaderSetup {
         blossomServerResolver: (() -> BlossomServerResolver)? = null,
         readAuth: BlossomReadAuthTokenProvider? = null,
     ) {
-        SingletonImageLoader.setUnsafe(
+        val loader =
             buildAmethystImageLoader(
                 context = PlatformContext.INSTANCE,
                 diskCache = { newDiskCache() },
@@ -69,8 +71,9 @@ object DesktopImageLoaderSetup {
                     // After the SVG and GIF decoders: it takes any format, so it must come last.
                     add(SkiaDownsamplingDecoder.Factory())
                 },
-            ),
-        )
+            )
+        // A scroll benchmark counts where each image came from (memory, disk or network).
+        SingletonImageLoader.setUnsafe(if (ScrollBenchmark.enabled) loader.newBuilder().eventListener(ImageLoadStats.listener).build() else loader)
     }
 
     // Where the disk cache unlinks the files it evicts, off its lock (see DeferredDeleteFileSystem).
