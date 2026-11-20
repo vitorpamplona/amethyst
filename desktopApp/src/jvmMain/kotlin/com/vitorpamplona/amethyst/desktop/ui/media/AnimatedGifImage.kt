@@ -108,6 +108,8 @@ fun AnimatedGifImage(
     contentScale: ContentScale = ContentScale.Fit,
     // Called when neither the GIF decoder nor the image loader can draw [url].
     onError: (() -> Unit)? = null,
+    // The same, with the image loader's reason, for a failure card to word it.
+    onFailure: ((Throwable?) -> Unit)? = null,
     // [url] is a file the user picked (the media Studio), read from disk. Off for anything a note
     // names, so remote content never makes the client read a local file.
     local: Boolean = false,
@@ -145,7 +147,15 @@ fun AnimatedGifImage(
                 contentDescription = contentDescription,
                 modifier = modifier,
                 contentScale = contentScale,
-                onError = onError?.let { callback -> { callback() } },
+                onError =
+                    if (onError != null || onFailure != null) {
+                        { state ->
+                            onError?.invoke()
+                            onFailure?.invoke(state.result.throwable)
+                        }
+                    } else {
+                        null
+                    },
             )
         }
 

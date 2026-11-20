@@ -25,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -113,12 +115,26 @@ fun TrimPreviewPlayer(
         player.playWhenReady = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
     }
 
+    // The playhead only moves while it plays: no polling while paused or in the background.
+    var isPlaying by remember(player) { mutableStateOf(player.isPlaying) }
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+
     val latestOnPosition by rememberUpdatedState(onPositionMs)
-    LaunchedEffect(player, startMs) {
-        while (true) {
+    LaunchedEffect(player, startMs, isPlaying) {
+        // Once where it stopped, then every step while it plays.
+        do {
             latestOnPosition(startMs + player.currentPosition)
-            delay(POSITION_STEP_MS)
-        }
+            if (isPlaying) delay(POSITION_STEP_MS)
+        } while (isPlaying)
     }
 
     // No shutter: the Studio's still of the trim's start shows through until the first frame, not a black box.

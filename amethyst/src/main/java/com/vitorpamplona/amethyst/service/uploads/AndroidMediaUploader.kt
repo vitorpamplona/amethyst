@@ -187,7 +187,7 @@ class AndroidMediaUploader(
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                         onProgress = { percent: Float ->
-                            updateState(0.4 + (0.2 * percent), UploadingState.Uploading)
+                            updateState(0.4 + (0.2 * percent), UploadingState.ServerProcessing)
                         },
                         onUploadProgress = uploadProgress(from = 0.2, to = 0.4),
                         httpAuth =
