@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.browser
 
+import kotlinx.coroutines.flow.StateFlow
+
 /**
  * The powerful web features a site must ask for before using, as Chrome's site settings list them. Shared
  * by the keyless `:napplet` browser (which receives the page's request) and the main process (which
@@ -40,4 +42,20 @@ enum class BrowserSitePermission(
     companion object {
         fun fromKey(key: String?): BrowserSitePermission? = entries.firstOrNull { it.key == key }
     }
+}
+
+/**
+ * Where the user's per-origin answers ([BrowserSitePermission.Decision]) are kept, so the shared
+ * Connected Apps detail screen can show and change them. Only a front end whose browser asks for these
+ * permissions has one (Android's `WebSitePermissionRegistry`).
+ */
+interface BrowserSitePermissionStore {
+    /** origin → permission → decision (only answered permissions appear). */
+    val decisions: StateFlow<Map<String, Map<BrowserSitePermission, BrowserSitePermission.Decision>>>
+
+    fun set(
+        origin: String,
+        permission: BrowserSitePermission,
+        decision: BrowserSitePermission.Decision,
+    )
 }

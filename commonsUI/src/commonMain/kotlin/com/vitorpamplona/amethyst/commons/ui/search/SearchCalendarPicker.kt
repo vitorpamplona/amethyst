@@ -135,7 +135,7 @@ fun SearchCalendarPicker(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         ) {
             quickPicks.forEach { pick ->
-                TextButton(onClick = { onPick(pick.value) }, contentPadding = PaddingValues(6.dp, 2.dp)) {
+                TextButton(onClick = { onPick(pick.value) }, modifier = Modifier.keepsFieldFocus(), contentPadding = PaddingValues(6.dp, 2.dp)) {
                     Text(pick.label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                 }
             }
@@ -151,7 +151,7 @@ private fun MonthStep(
 ) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(32.dp).clickable(onClick = onClick),
+        modifier = Modifier.size(32.dp).keepsFieldFocus().clickable(onClick = onClick),
     ) {
         Icon(icon, contentDescription = description, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -187,6 +187,7 @@ private fun DayCell(
                 .padding(1.dp)
                 .size(34.dp)
                 .background(background, CircleShape)
+                .keepsFieldFocus()
                 .clickable { onPick(day.value) },
     ) {
         Text(day.date.day.toString(), style = MaterialTheme.typography.bodySmall, color = content)

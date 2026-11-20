@@ -195,6 +195,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylist
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicTrackScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.NestsScreen
@@ -350,6 +351,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
     composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
     composableFromEndArgs<Route.Nip46Signer> { Nip46SignerScreen(accountViewModel, nav, it.connectUri) }
     composableFromEnd<Route.Nip46ConnectedApps> { Nip46ConnectedAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
