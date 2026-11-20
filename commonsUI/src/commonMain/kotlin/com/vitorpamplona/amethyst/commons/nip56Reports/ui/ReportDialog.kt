@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -137,7 +140,12 @@ fun ReportDialog(
         ) { pad ->
             Column(
                 modifier =
-                    Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
+                    Modifier
+                        .padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding())
+                        // Edge to edge on phones, so the window no longer shrinks for the keyboard:
+                        // pad for it and scroll, or it covers the reason field and Post Report.
+                        .imePaddingSafe()
+                        .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
                 SpacerH16()
