@@ -27,6 +27,8 @@ import androidx.lifecycle.LifecycleRegistry
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
+import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
+import dev.nucleusframework.core.runtime.NativeLibraryLoader
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -73,17 +75,59 @@ fun AccountCacheState.anySignerRunning(): Flow<Boolean> =
         }.distinctUntilChanged()
 
 /**
- * Whether a tray icon would be seen. Windows and macOS always have one (the notification area, the
- * menu bar). On Linux the icon is a StatusNotifierItem, which shows only while a tray host
- * (`org.kde.StatusNotifierWatcher`) runs: KDE, Cinnamon, XFCE and others do, stock GNOME does not
- * without its AppIndicator extension. Blocking: call it off the UI thread.
+ * Whether a tray icon would be seen, asked again each time it matters: the tray library reports no
+ * failure of its own, so the window must never hide on a tray that is not there. Blocking: call it
+ * off the UI thread.
  */
 object SystemTrayHost {
     private const val TAG = "SystemTrayHost"
     private const val WATCHER = "org.kde.StatusNotifierWatcher"
 
-    fun available(): Boolean {
-        if (!PlatformInfo.isLinux) return PlatformInfo.isWindows || PlatformInfo.isMacOS
+    /** How often a Linux desktop without a tray host is asked again, while a signer runs. */
+    const val RECHECK_MS = 30_000L
+
+    /**
+     * The tray's native library loads here (ComposeNativeTray's Win32, AppKit or sd-bus library; on
+     * Linux it needs the system's libsystemd). Loaded through the same loader the library uses, which
+     * remembers it, so the library's own load later is a no-op. Once per run.
+     */
+    private val nativeTrayLoads: Boolean by lazy {
+        val library =
+            when {
+                PlatformInfo.isLinux -> "LinuxTray"
+                PlatformInfo.isWindows -> "WinTray"
+                PlatformInfo.isMacOS -> "MacTray"
+                else -> return@lazy false
+            }
+        try {
+            NativeLibraryLoader.load(library, TrayMenuBuilder::class.java, resourcePrefix = "/composetray/native")
+        } catch (e: Throwable) {
+            Log.w(TAG, "The tray's native library did not load; closing the window will quit", e)
+            false
+        }.also { loaded -> if (!loaded) Log.w(TAG) { "No native tray library for this platform; closing the window will quit" } }
+    }
+
+    /**
+     * True when a tray icon can show now: its native library loads and, on Linux, a tray host runs.
+     * Windows and macOS always have one (the notification area, the menu bar). On Linux the icon is
+     * a StatusNotifierItem, shown only while `org.kde.StatusNotifierWatcher` runs: KDE, Cinnamon,
+     * XFCE and others do, stock GNOME does not without its AppIndicator extension. The host can come
+     * and go while the app runs, so callers ask again before relying on it.
+     */
+    fun available(): Boolean = nativeTrayLoads && (!PlatformInfo.isLinux || nameOwned(WATCHER))
+
+    /**
+     * True when our tray icon is up now, for the moment the window is about to hide behind it. On
+     * Linux that means the tray host still runs and the icon's item owns its bus name,
+     * `org.kde.StatusNotifierItem-<pid>-1`: the library claims it before registering with the host,
+     * and gives up silently when it can't (in a Flatpak sandbox without that `--own-name`, say),
+     * leaving no icon at all. The pid is this process's own, as the library's native side sees it,
+     * inside a sandbox too. Windows and macOS: the native library loaded.
+     */
+    fun showing(): Boolean = available() && (!PlatformInfo.isLinux || nameOwned("org.kde.StatusNotifierItem-${ProcessHandle.current().pid()}-1"))
+
+    /** Whether [name] has an owner on the session bus. False when the bus can't be asked. */
+    private fun nameOwned(name: String): Boolean {
         // Either tool answers the bus's NameHasOwner; desktops ship at least one of them.
         val dbusSend =
             ask(
@@ -94,7 +138,7 @@ object SystemTrayHost {
                     "--dest=org.freedesktop.DBus",
                     "/org/freedesktop/DBus",
                     "org.freedesktop.DBus.NameHasOwner",
-                    "string:$WATCHER",
+                    "string:$name",
                 ),
             )
         if (dbusSend != null) return dbusSend.contains("boolean true")
@@ -110,29 +154,32 @@ object SystemTrayHost {
                     "/org/freedesktop/DBus",
                     "--method",
                     "org.freedesktop.DBus.NameHasOwner",
-                    WATCHER,
+                    name,
                 ),
             )
         if (gdbus != null) return gdbus.contains("true")
-        Log.i(TAG) { "Could not ask the session bus for a tray host; closing the window will quit" }
+        Log.i(TAG) { "Could not ask the session bus about $name; closing the window will quit" }
         return false
     }
 
-    /** [command]'s output, or null when it is missing, fails or hangs. */
+    /**
+     * [command]'s output, or null when it is missing, fails or hangs. Waited on before it is read:
+     * reading first would block for as long as a stuck command holds its output open, past any
+     * timeout. Its answer is a line or two, well under the pipe's buffer.
+     */
     private fun ask(command: List<String>): String? =
         try {
             val process =
                 ProcessBuilder(command)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
-            val output = process.inputStream.bufferedReader().readText()
-            when {
-                !process.waitFor(2, TimeUnit.SECONDS) -> {
-                    process.destroy()
-                    null
-                }
-                process.exitValue() != 0 -> null
-                else -> output
+            if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                null
+            } else if (process.exitValue() != 0) {
+                null
+            } else {
+                process.inputStream.bufferedReader().readText()
             }
         } catch (e: Exception) {
             null

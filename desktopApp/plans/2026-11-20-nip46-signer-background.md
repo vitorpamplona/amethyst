@@ -25,20 +25,31 @@ any loaded account has its signer on (`AccountCacheState.anySignerRunning`).
   coordinates stopped at 1.3.3): Win32, an NSStatusItem, or a StatusNotifierItem over
   D-Bus on Linux. Shown only while a signer runs. Menu: Open Amethyst, Quit Amethyst; a left
   click opens.
-- The icon comes from files (`IconResources.trayIconFiles`: `.ico` on Windows, PNG elsewhere).
+- The icon comes from files (`IconResources.trayIconFiles`: `.ico` on Windows, PNG elsewhere),
+  written to the data folder's `tray/` only when the tray is about to show.
   A Painter is drawn off-screen first and that can fail (no DirectX 12 on Windows), leaving no
   icon while the window hides. 1.3.3's Painter path also crashed on Compose 1.12's Skiko
   (`Image.encodeToData`); 2.1.1 fixed that.
 - Linux shows the icon only while a tray host (`org.kde.StatusNotifierWatcher`) runs. Stock GNOME
-  has none without the AppIndicator extension. `SystemTrayHost` asks the session bus; without a
-  host closing quits, as with no signer: the app never runs on with nothing on screen.
+  has none without the AppIndicator extension. Without a tray closing quits, as with no signer:
+  the app never runs on with nothing on screen.
+- The library reports no failure, so `SystemTrayHost` checks for itself: `available()` (its native
+  library loads, and on Linux a tray host runs) before showing the icon, asked again every 30 s on
+  Linux while there is none; `showing()` again on every close, off the UI thread, before hiding
+  (on Linux the item also owns `org.kde.StatusNotifierItem-<pid>-1`, which it needs to register).
+  A failed check quits instead of hiding.
+- Closing the last screen window with the main one already hidden takes the same route
+  (`onAllClosed`'s `keepRunning`).
 - macOS: Cmd+Q and the Dock's Quit go to a quit handler (`installAppMenuHandlers`), since the
-  `CLOSE_ALL_WINDOWS` strategy alone would only send the window to the tray. A Dock click
-  (`AppReopenedListener`) brings the window back.
+  `CLOSE_ALL_WINDOWS` strategy alone would only send the window to the tray. Its `QuitResponse` is
+  held (`MacQuitResponse`) and cancelled when the app declines (Keep printing, dismissed), so a
+  later Cmd+Q or a logout doesn't stall behind it. A Dock click (`AppReopenedListener`) brings the
+  window back.
 - A relaunch while in the tray reaches the running copy (`HiddenWindowMarker.TRAY_FILE`,
   `amethyst:open` over the instance bus) instead of opening a second one.
-- Flatpak: `--talk-name=org.kde.StatusNotifierWatcher` and `--own-name=org.kde.*` (the item's
-  name carries the pid).
+- Flatpak: `--talk-name=org.kde.StatusNotifierWatcher` and
+  `--own-name=org.kde.StatusNotifierItem-2-1`. The item claims that name before registering and
+  shows no icon without it (checked with a bus that refuses it); in the sandbox the app is pid 2.
 
 ## Background mode
 
@@ -57,12 +68,14 @@ Headless (Xvfb), with a fake tray host on a private session bus and a REQ-loggin
 of a local geode: the icon registers when the signer turns on; closing hides the window; the
 nApplets feed's REQ closes 30 s later while 7 account subscriptions stay; the tray click and a
 relaunch link bring the window back and the feed resubscribes; the tray's Quit exits; with the
-signer off closing still quits; with no tray host the app keeps running and the window stays (since changed: it now quits).
+signer off closing still quits; with no tray host closing quits; a tray host started after the
+app gets the icon within 30 s; a tray host gone before the close, or an item that could not claim
+its name (a bus that refuses it, as Flatpak's would), makes closing quit instead of hiding.
 
 ## Open
 
 - Real trays on Windows, macOS, KDE and GNOME+AppIndicator were not tried, only the D-Bus
-  protocol on Linux.
+  protocol on Linux. Nor a real Flatpak sandbox: the item's pid 2 there is reasoned, not seen.
 - `flathub/gradle-sources.json` must be regenerated for the new dependency at the next release
   (`flathub/tools/regenerate-gradle-sources.sh <tag>`).
 - The release build's ProGuard keep rules for `dev.nucleusframework.**` were not tried in a

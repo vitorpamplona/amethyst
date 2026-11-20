@@ -139,13 +139,15 @@ class DesktopWindowManager(
      * window does: quitting would stop a print that may be paid for. A layout switch closed them
      * instead (it drops the screen windows in the same frame): bring the main window back. Telling
      * the two apart by the layout, rather than by which effect runs first, keeps a settings change
-     * from quitting the app.
+     * from quitting the app. Where it would quit, [keepRunning] may keep the app going in the tray
+     * instead, as closing the main window does: it returns true when it did.
      */
     fun onAllClosed(
         layout: NavArrangement?,
         exit: () -> Unit,
         printing: Boolean = false,
         ask: () -> Unit = exit,
+        keepRunning: () -> Boolean = { false },
     ) {
         if (layout != hiddenIn) {
             showMainWindow(raise = false)
@@ -153,7 +155,7 @@ class DesktopWindowManager(
         }
         when (PrintQuitRules.onQuit(printing)) {
             CloseAction.ASK -> ask()
-            else -> exit()
+            else -> if (!keepRunning()) exit()
         }
     }
 

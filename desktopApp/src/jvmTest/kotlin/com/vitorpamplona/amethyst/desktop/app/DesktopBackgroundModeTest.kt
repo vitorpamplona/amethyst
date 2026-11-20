@@ -99,6 +99,18 @@ class DesktopBackgroundModeTest {
     }
 
     @Test
+    fun closingTheLastScreenWindowAsksTheBackgroundFirst() {
+        val windows = DesktopWindowManager { File.createTempFile("sizes", ".properties").apply { deleteOnExit() } }
+        var quit = false
+        // The main window was hidden while screen windows stayed open; now the last of them closed.
+        windows.onAllClosed(layout = null, exit = { quit = true }, keepRunning = { true })
+        assertFalse(quit)
+
+        windows.onAllClosed(layout = null, exit = { quit = true }, keepRunning = { false })
+        assertTrue(quit)
+    }
+
+    @Test
     fun aCloseThatWouldQuitAsksTheBackgroundFirst() {
         val windows = DesktopWindowManager { File.createTempFile("sizes", ".properties").apply { deleteOnExit() } }
         var quit = false

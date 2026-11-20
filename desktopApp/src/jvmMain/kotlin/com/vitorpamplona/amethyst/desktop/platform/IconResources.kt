@@ -27,7 +27,7 @@ import org.jetbrains.skia.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.nio.file.Files
+import java.io.IOException
 import javax.imageio.ImageIO
 
 /**
@@ -57,15 +57,18 @@ object IconResources {
     /**
      * The icon as files for the system tray, which loads its image from a path: an `.ico` for
      * Windows' notification area, the PNG for macOS's menu bar and Linux's StatusNotifierItem.
-     * Copied out of the jar once; null when that fails, and the tray is then left out.
+     * Kept in [dir] (the app's data folder, so nothing piles up in the temp folder after a crash)
+     * and rewritten only when missing or changed. Null when that fails: the tray is then left out.
+     * Blocking: call it off the UI thread, when the tray is about to show.
      */
-    val trayIconFiles: TrayIconFiles? by lazy {
+    fun trayIconFiles(dir: File): TrayIconFiles? =
         try {
-            val dir = Files.createTempDirectory("amethyst-tray").toFile().apply { deleteOnExit() }
+            if (!dir.isDirectory && !dir.mkdirs()) throw IOException("could not create $dir")
 
             fun copy(resource: String): String {
-                val file = File(dir, resource).apply { deleteOnExit() }
-                IconResources::class.java.getResourceAsStream("/$resource")!!.use { input -> file.outputStream().use { input.copyTo(it) } }
+                val bytes = IconResources::class.java.getResourceAsStream("/$resource")!!.use { it.readBytes() }
+                val file = File(dir, resource)
+                if (!file.isFile || !file.readBytes().contentEquals(bytes)) file.writeBytes(bytes)
                 return file.absolutePath
             }
             TrayIconFiles(png = copy("icon.png"), ico = copy("icon.ico"))
@@ -73,7 +76,6 @@ object IconResources {
             Log.w("IconResources", "Could not write the tray icon", e)
             null
         }
-    }
 
     /** Decoded `BufferedImage` for AWT consumers (Taskbar, Window icon source). */
     val rawBufferedImage: BufferedImage by lazy {

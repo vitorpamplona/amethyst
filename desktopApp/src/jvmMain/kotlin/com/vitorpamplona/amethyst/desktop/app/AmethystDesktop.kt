@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -93,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
 import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
+import com.vitorpamplona.amethyst.desktop.platform.TrayIconFiles
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
@@ -114,6 +116,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.Tray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -364,44 +367,71 @@ fun main(args: Array<String>) {
         // from a background service: the app stays up in the tray (and quits where there is no tray),
         // and the tray's own Quit, the menu's or Cmd+Q end it.
         val signerRunning by remember { modules.accountsCache.anySignerRunning() }.collectAsState(false)
-        var trayAvailable by remember { mutableStateOf(false) }
-        LaunchedEffect(signerRunning) {
-            if (signerRunning) trayAvailable = withContext(Dispatchers.IO) { SystemTrayHost.available() }
+        // The tray icon's files while a tray can show; null when there is none (closing then quits).
+        // From files, not a Painter: a Painter is drawn off-screen first, which can fail (no DirectX
+        // 12 on Windows), leaving no icon while the window hides. (1.3.3's Painter path also crashed
+        // on this Compose's Skiko; 2.1.1 fixed that.)
+        var trayIcon by remember { mutableStateOf<TrayIconFiles?>(null) }
+        val trayIconDir = remember { File(filesDir, "tray") }
+        LaunchedEffect(signerRunning, trayIcon == null) {
+            if (!signerRunning || trayIcon != null) return@LaunchedEffect
+            // A Linux tray host can start after the app does (the AppIndicator extension turned on):
+            // ask again now and then while there is none. Windows and macOS don't change their answer.
+            while (true) {
+                trayIcon = withContext(Dispatchers.IO) { if (SystemTrayHost.available()) IconResources.trayIconFiles(trayIconDir) else null }
+                if (trayIcon != null || !PlatformInfo.isLinux) break
+                delay(SystemTrayHost.RECHECK_MS)
+            }
         }
-        val showFromBackground: () -> Unit = {
-            windowState.isMinimized = false
-            windows.showMainWindow()
-            DesktopDeepLinks.requestForeground()
-        }
-        // Where closing the main window would quit: true when the app keeps running instead.
+        val showFromBackground: () -> Unit =
+            remember(windowState, windows) {
+                {
+                    windowState.isMinimized = false
+                    windows.showMainWindow()
+                    DesktopDeepLinks.requestForeground()
+                }
+            }
+        // Where closing the main window would quit: true when the app keeps running instead. The icon
+        // is checked first (a tray host can go away while the app runs, and the library starts no
+        // icon without a word when it can't), off the UI thread, and the app quits after all when it
+        // isn't up: the window never hides with no icon to return by.
         val keepRunningInBackground: () -> Boolean = {
-            when (BackgroundCloseRules.onClose(signerRunning, trayAvailable && IconResources.trayIconFiles != null)) {
+            when (BackgroundCloseRules.onClose(signerRunning, trayIcon != null)) {
                 BackgroundClose.QUIT -> false
                 BackgroundClose.TRAY -> {
-                    windows.hideToTray(root.navigator.stacks?.arrangement)
+                    quitScope.launch {
+                        if (withContext(Dispatchers.IO) { SystemTrayHost.showing() }) {
+                            windows.hideToTray(root.navigator.stacks?.arrangement)
+                        } else {
+                            trayIcon = null
+                            quit()
+                        }
+                    }
                     true
                 }
             }
         }
         LaunchedEffect(windows) { snapshotFlow { windows.keptInTray }.collect { keptInTray.set(it) } }
-        // From icon files, not a Painter: a Painter is drawn off-screen first, which can fail (no
-        // DirectX 12 on Windows), leaving no icon while the close rule thinks there is a tray and
-        // hides the window. A file can't fail that way. (1.3.3's Painter path also crashed on this
-        // Compose's Skiko; 2.1.1 fixed that.)
-        val trayIcon = remember { IconResources.trayIconFiles }
-        if (signerRunning && trayAvailable && trayIcon != null) {
+        val currentRequestQuit by rememberUpdatedState(requestQuit)
+        val icon = trayIcon
+        if (signerRunning && icon != null) {
             val openLabel = stringRes(Res.string.desktop_tray_open)
             val quitLabel = stringRes(Res.string.desktop_tray_quit)
+            // Remembered: the tray rebuilds its native menu whenever these lambdas change identity.
+            val trayMenu: TrayMenuBuilder.() -> Unit =
+                remember(openLabel, quitLabel, showFromBackground) {
+                    {
+                        Item(openLabel) { showFromBackground() }
+                        Item(quitLabel) { currentRequestQuit() }
+                    }
+                }
             @Suppress("DEPRECATION")
             Tray(
-                iconPath = trayIcon.png,
-                windowsIconPath = trayIcon.ico,
+                iconPath = icon.png,
+                windowsIconPath = icon.ico,
                 tooltip = stringRes(Res.string.desktop_tray_tooltip),
                 primaryAction = showFromBackground,
-                menuContent = {
-                    Item(openLabel) { showFromBackground() }
-                    Item(quitLabel) { requestQuit() }
-                },
+                menuContent = trayMenu,
             )
         }
         // macOS: a click on the Dock icon brings back a window closed to the tray.
@@ -458,7 +488,15 @@ fun main(args: Array<String>) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
                 // The last screen window closed with the main one hidden: a print running asks first.
-                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, quit, printingNow(), ask = askInMainWindow) }
+                .collect {
+                    windows.onAllClosed(
+                        root.navigator.stacks?.arrangement,
+                        quit,
+                        printingNow(),
+                        ask = askInMainWindow,
+                        keepRunning = keepRunningInBackground,
+                    )
+                }
         }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
@@ -592,6 +630,7 @@ fun main(args: Array<String>) {
                                                     PrintQuitDialog(
                                                         onKeepPrinting = {
                                                             askQuit = false
+                                                            MacQuitResponse.declined()
                                                             windows.hideForPrint()
                                                         },
                                                         onQuit = {
@@ -604,7 +643,10 @@ fun main(args: Array<String>) {
                                                                 quit()
                                                             }
                                                         },
-                                                        onDismiss = { askQuit = false },
+                                                        onDismiss = {
+                                                            askQuit = false
+                                                            MacQuitResponse.declined()
+                                                        },
                                                     )
                                                 }
                                             }

@@ -240,6 +240,7 @@ slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
 composemediaplayer-audio = { group = "io.github.kdroidfilter", name = "composemediaplayer-audio", version.ref = "composemediaplayer" }
 composenativetray = { group = "dev.nucleusframework", name = "composenativetray", version.ref = "composenativetray" }
+nucleus-core-runtime = { group = "dev.nucleusframework", name = "nucleus.core-runtime", version.ref = "nucleus" }
 nucleus-notification-linux = { group = "dev.nucleusframework", name = "nucleus.notification-linux", version.ref = "nucleus" }
 nucleus-notification-macos = { group = "dev.nucleusframework", name = "nucleus.notification-macos", version.ref = "nucleus" }
 nucleus-notification-windows = { group = "dev.nucleusframework", name = "nucleus.notification-windows", version.ref = "nucleus" }

@@ -127,6 +127,8 @@ dependencies {
     // macOS, StatusNotifierItem over D-Bus on Linux (the system's libsystemd, LGPL-2.1, and its
     // theme detector's libdbus-1, AFL-2.1 or GPL-2.0+, both loaded at runtime, not bundled).
     implementation(libs.composenativetray)
+    // Its native loader, called directly to check the tray library loads before hiding the window.
+    implementation(libs.nucleus.core.runtime)
 
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
