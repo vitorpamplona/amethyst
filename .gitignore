@@ -197,3 +197,7 @@ benchmark/src/main/jniLibs/
 # Cargo build artifacts for the cross-stack interop sidecars at
 # nestsClient/tests/hang-interop/. Cargo.lock is committed (binary workspace).
 /nestsClient/tests/hang-interop/target/
+
+# Python bytecode (tools/*.py)
+__pycache__/
+*.pyc

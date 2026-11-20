@@ -1,23 +1,14 @@
 {
   "_comment": [
-    "Translator credits source for the changelog, kept by scripts/translators.sh.",
+    "Historical: Amethyst's translator registry from the Crowdin era, last updated by the",
+    "final Crowdin sync (2026-10-28). Nothing updates this file any more; Crowdin is",
+    "retired and translation credits now come from git history (RELEASE_OPS.md,",
+    "\"## Translations\").",
     "",
-    "mappings: a forever-growing Crowdin-username (or numeric id) -> Nostr npub",
-    "  registry. Entries are never deleted. The --seed run appends new",
-    "  contributors with a blank npub; fill those in as translators share theirs.",
-    "  Keys match case-insensitively against the Crowdin username; a numeric key",
-    "  matches the Crowdin user id.",
-    "",
-    "ignore: Crowdin usernames never credited, such as the maintainer account",
-    "  that uploads machine translations and key removals. Hand-kept.",
-    "",
-    "sinceLastTag: a rolling snapshot of who has translated since the last release",
-    "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
-    "  not hand-edit. The changelog '## Translations' block is generated offline",
-    "  from this list and resolved to npubs via mappings (blanks flagged UNMAPPED).",
-    "",
-    "Example mapping (replace with a real Crowdin username):",
-    "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""
+    "mappings: Crowdin username (or numeric user id) -> Nostr npub. Look a past",
+    "  translator up here when crediting them. Keys match case-insensitively.",
+    "ignore: Crowdin usernames that were never credited (machine-translation uploads).",
+    "sinceLastTag: who translated in the last Crowdin cycle, with their languages. Frozen."
   ],
   "mappings": {
     "vitorpamplona": "npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z",

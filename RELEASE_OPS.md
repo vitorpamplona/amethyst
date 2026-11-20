@@ -77,10 +77,10 @@ already be on Nostr when you tag.
      'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
      'amethyst/src/main/res/values-*/strings.xml' | sort | uniq -c | sort -rn
    ```
-   `docs/changelog/translators.json` keeps the npubs of past Crowdin translators
-   under `mappings`. `scripts/translators.sh` still prints a block from that file,
-   but its `sinceLastTag` list was last filled by the Crowdin sync and no longer
-   refreshes (its `--seed` mode needs the retired Crowdin project).
+   Resolve each author to an npub through `docs/changelog/github.json`, as above.
+   For someone who translated through Crowdin before it was retired,
+   `docs/changelog/translators.json` keeps their npub under `mappings` (by Crowdin
+   username). That file is historical: nothing updates it any more.
 
 3. **Publish the release-notes note on Nostr** — *minor releases only.* In
    practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,

@@ -375,7 +375,7 @@ To move keys that already landed in Android `res/`, use
 `tools/strings-migrate/migrate.py <keys…>` (moves every locale byte-for-byte),
 then repoint `R.string.x` → `Res.string.x`.
 
-Translate in `values-es`; `values-es-rES` holds only its differences.
+Translate in `values-es`, not `values-es-rES`: see `find-missing-translations`.
 
 ## Icons
 
