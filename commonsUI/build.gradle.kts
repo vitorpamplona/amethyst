@@ -270,23 +270,29 @@ kotlin {
     }
 }
 
-// Compose resources match a locale on `Locale.getLanguage()`, and Indonesian has two answers: `in`
-// on Android 14 and older, `id` on desktop Java 17+ and on Android 15+ for apps targeting it. A
-// `values-in` folder alone left desktop and Android 15+ users in English. The catalog keeps one
-// folder people edit (`values-in`), and the build serves it under both codes. Android's own `res/`
-// needs nothing: the framework hands the resource system `in` whatever Locale reports.
-val legacyLanguageAliases = mapOf("in" to "id")
+// Compose resources match a locale on `Locale.getLanguage()`, and three languages have two answers:
+// the legacy code (`in` Indonesian, `iw` Hebrew, `ji` Yiddish) on Android 14 and older, the current
+// one (`id`, `he`, `yi`) on desktop Java 17+ and on Android 15+ for apps targeting it. A `values-in`
+// folder alone left desktop and Android 15+ users in English. The catalog keeps one folder people
+// edit (the legacy code, as Android's `res/` uses), and the build serves it under both codes; a
+// missing folder is skipped. Android's own `res/` needs nothing: the framework hands the resource
+// system the legacy code whatever Locale reports.
+val legacyLanguageAliases = mapOf("in" to "id", "iw" to "he", "ji" to "yi")
 val composeResourcesSource = layout.projectDirectory.dir("src/commonMain/composeResources")
 val aliasLegacyLanguageFolders by tasks.registering(Sync::class) {
-    from(composeResourcesSource)
-    legacyLanguageAliases.forEach { (legacy, current) ->
-        from(composeResourcesSource.dir("values-$legacy")) { into("values-$current") }
+    // Locals, so the doFirst action captures only these and not the build script
+    // (a script reference cannot go into the configuration cache).
+    val source = composeResourcesSource
+    val aliases = legacyLanguageAliases
+    from(source)
+    aliases.forEach { (legacy, current) ->
+        from(source.dir("values-$legacy")) { into("values-$current") }
     }
     into(layout.buildDirectory.dir("generated/composeResourcesWithAliases/commonMain"))
     doFirst {
-        legacyLanguageAliases.values.forEach { current ->
-            check(!composeResourcesSource.dir("values-$current").asFile.exists()) {
-                "composeResources/values-$current is generated from values-${legacyLanguageAliases.entries.first { it.value == current }.key}; edit that folder instead"
+        aliases.forEach { (legacy, current) ->
+            check(!source.dir("values-$current").asFile.exists()) {
+                "composeResources/values-$current is generated from values-$legacy; edit that folder instead"
             }
         }
     }

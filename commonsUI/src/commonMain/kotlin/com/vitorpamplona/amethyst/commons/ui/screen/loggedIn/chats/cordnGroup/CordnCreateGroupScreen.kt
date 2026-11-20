@@ -771,10 +771,11 @@ private fun relayLabel(relays: List<NormalizedRelayUrl>): String? {
     if (relays.isEmpty()) return null
     val hosts = relays.map { it.url.substringAfter("://").trim('/') }.distinct()
     val shown = hosts.take(2).joinToString(", ")
-    return if (hosts.size <= 2) {
+    val more = hosts.size - 2
+    return if (more <= 0) {
         shown
     } else {
-        pluralStringRes(Res.plurals.cordn_coordinators_relays_more, hosts.size - 2, shown, hosts.size - 2)
+        pluralStringRes(Res.plurals.cordn_coordinators_relays_more, more, shown, more)
     }
 }
 

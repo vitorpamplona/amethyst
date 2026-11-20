@@ -297,8 +297,9 @@ private fun BadgeAwardeesRow(
             )
         }
         if (awardees.size > 24) {
+            val others = awardees.size - 24
             Text(
-                text = pluralStringRes(Res.plurals.badge_and_n_others, awardees.size - 24, awardees.size - 24),
+                text = pluralStringRes(Res.plurals.badge_and_n_others, others, others),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp),

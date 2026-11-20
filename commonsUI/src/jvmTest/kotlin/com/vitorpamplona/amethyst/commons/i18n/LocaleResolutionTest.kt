@@ -37,18 +37,23 @@ import kotlin.test.assertEquals
  * pin the cases where that differs from the folder name or where a region falls back to its language.
  */
 class LocaleResolutionTest {
-    private fun resolve(
+    private fun <T> withLocale(
         languageTag: String,
-        res: StringResource,
-    ): String {
+        block: suspend () -> T,
+    ): T {
         val previous = Locale.getDefault()
         try {
             Locale.setDefault(Locale.forLanguageTag(languageTag))
-            return runBlocking { getString(res) }
+            return runBlocking { block() }
         } finally {
             Locale.setDefault(previous)
         }
     }
+
+    private fun resolve(
+        languageTag: String,
+        res: StringResource,
+    ): String = withLocale(languageTag) { getString(res) }
 
     /**
      * Java 17+ (desktop) and Android 15+ for apps targeting it report Indonesian as `id`; older
@@ -75,21 +80,14 @@ class LocaleResolutionTest {
     /** Counted nouns are `<plurals>`, so Czech gets its one/few/other forms instead of an English-shaped string. */
     @Test
     fun countsUseTheLanguagesPluralForms() {
-        val previous = Locale.getDefault()
-        try {
-            Locale.setDefault(Locale.forLanguageTag("cs"))
-            runBlocking {
-                assertEquals("1 člen", getPluralString(Res.plurals.relay_members_count, 1, 1))
-                assertEquals("3 členové", getPluralString(Res.plurals.relay_members_count, 3, 3))
-                assertEquals("5 členů", getPluralString(Res.plurals.relay_members_count, 5, 5))
-            }
-            Locale.setDefault(Locale.forLanguageTag("en"))
-            runBlocking {
-                assertEquals("1 member", getPluralString(Res.plurals.relay_members_count, 1, 1))
-                assertEquals("2 members", getPluralString(Res.plurals.relay_members_count, 2, 2))
-            }
-        } finally {
-            Locale.setDefault(previous)
+        withLocale("cs") {
+            assertEquals("1 člen", getPluralString(Res.plurals.relay_members_count, 1, 1))
+            assertEquals("3 členové", getPluralString(Res.plurals.relay_members_count, 3, 3))
+            assertEquals("5 členů", getPluralString(Res.plurals.relay_members_count, 5, 5))
+        }
+        withLocale("en") {
+            assertEquals("1 member", getPluralString(Res.plurals.relay_members_count, 1, 1))
+            assertEquals("2 members", getPluralString(Res.plurals.relay_members_count, 2, 2))
         }
     }
 }

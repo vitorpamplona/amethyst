@@ -49,16 +49,18 @@ def elements(path):
 def scan(fix):
     duplicates = defaultdict(list)  # path -> [key, ...]
     orphaned_regions = []
-    for root in sorted(set(glob.glob(ROOTS[0]) + glob.glob(ROOTS[1]))):
+    for root in sorted({r for pattern in ROOTS for r in glob.glob(pattern)}):
         if not os.path.isdir(os.path.join(root, "values")):
             continue
         for locale_dir in sorted(glob.glob(os.path.join(root, "values-*"))):
             name = os.path.basename(locale_dir)
             match = REGIONAL.match(name)
             path = os.path.join(locale_dir, "strings.xml")
-            if not match or not os.path.exists(path) or name[len("values-"):] in FULL_FILES:
+            if not match or not os.path.exists(path):
                 continue
-            lang = match.group(1)
+            lang, region = match.groups()
+            if f"{lang}-r{region}" in FULL_FILES:
+                continue
             base_dir = os.path.join(root, "values" if lang == "en" else f"values-{lang}")
             base_path = os.path.join(base_dir, "strings.xml")
             if not os.path.exists(base_path):
@@ -81,9 +83,11 @@ def scan(fix):
 def main():
     fix = "--fix" in sys.argv[1:]
     duplicates, orphaned_regions = scan(fix)
-    if not orphaned_regions and (fix or not duplicates):
+    if fix:
         for path, keys in sorted(duplicates.items()):
             print(f"removed {len(keys)} duplicate value(s) from {path}")
+        duplicates = {}
+    if not (duplicates or orphaned_regions):
         return 0
 
     out = sys.stderr

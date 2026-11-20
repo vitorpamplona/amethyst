@@ -443,8 +443,9 @@ private fun DoneCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(4.dp))
+            val seconds = (state.durationMs / 1000).toInt()
             Text(
-                text = pluralStringRes(Res.plurals.event_sync_done_duration, (state.durationMs / 1000).toInt(), (state.durationMs / 1000).toInt()),
+                text = pluralStringRes(Res.plurals.event_sync_done_duration, seconds, seconds),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )

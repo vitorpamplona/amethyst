@@ -322,8 +322,9 @@ private fun InvitationCard(
                         )
                     }
                     if (welcome.members.size > MEMBER_FACES) {
+                        val more = welcome.members.size - MEMBER_FACES
                         Text(
-                            text = pluralStringRes(Res.plurals.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES, welcome.members.size - MEMBER_FACES),
+                            text = pluralStringRes(Res.plurals.cordn_invitations_members_more, more, more),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

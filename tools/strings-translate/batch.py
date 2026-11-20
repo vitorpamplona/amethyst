@@ -24,10 +24,10 @@ Translate into a language's base folder (values-es, not values-es-rES): a region
 that region's differences, so "every key it lacks" is nearly the whole catalog. The tool refuses a
 regional LOCALE whose base folder exists, except zh-rTW / zh-rHK (full Traditional-Chinese files).
 """
-import os
 import argparse
 import collections
 import io
+import os
 import re
 import sys
 import xml.dom.minidom
