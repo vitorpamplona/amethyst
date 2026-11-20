@@ -85,7 +85,17 @@ class BlossomServerResolver(
         blossomHitCache.cache.evictAll()
     }
 
-    suspend fun findServers(uriStr: String): BlossomUriServer? {
+    /**
+     * The server that holds the blob [uriStr] names, or null when none answers in time.
+     *
+     * [clientMimeType] picks the HTTP client the probes go through (and so its Tor rule) when the
+     * URI's extension says nothing, e.g. an image type for a lookup the image loader makes: a blob
+     * named without an extension would otherwise be probed with the preview client.
+     */
+    suspend fun findServers(
+        uriStr: String,
+        clientMimeType: String? = null,
+    ): BlossomUriServer? {
         uriToUrlCache[uriStr]?.let { return it }
         missCache[uriStr]?.let { failedAt ->
             if (TimeUtils.nowMillis() - failedAt < MISS_TTL_MS) return null
@@ -101,7 +111,7 @@ class BlossomServerResolver(
                 scope.async(Dispatchers.IO) {
                     val startedAt = generation.get()
                     try {
-                        val result = withTimeoutOrNull(RESOLVE_TIMEOUT_MS) { findServersInner(uriStr) }
+                        val result = withTimeoutOrNull(RESOLVE_TIMEOUT_MS) { findServersInner(uriStr, clientMimeType) }
                         // Cleared while resolving: answer the waiting callers, remember nothing.
                         if (startedAt == generation.get()) {
                             if (result != null) {
@@ -121,15 +131,19 @@ class BlossomServerResolver(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun findServersInner(uriStr: String): BlossomUriServer? {
+    suspend fun findServersInner(
+        uriStr: String,
+        clientMimeType: String? = null,
+    ): BlossomUriServer? {
         val uri = BlossomUri.parse(uriStr) ?: return null
 
         val expectedMimeType = mimeTypeMap[uri.extension]
+        val probeMimeType = expectedMimeType ?: clientMimeType
 
         // Same rule as the HTTP-level bridge, which Tor-routed clients don't carry: media the
         // user sends through Tor must not be handed to the local cache, which would fetch it
         // from the origin outside Tor.
-        if (useLocalBlossomCache() && !isTorRouted(uri, expectedMimeType) && localCacheProbe?.isAvailable() == true) {
+        if (useLocalBlossomCache() && !isTorRouted(uri, probeMimeType) && localCacheProbe?.isAvailable() == true) {
             return BlossomUriServer(uri, uri.toLocalCacheUrl(LocalBlossomCacheProbe.LOCAL_CACHE_BASE))
         }
         val filename = uri.filename()
@@ -137,7 +151,7 @@ class BlossomServerResolver(
         if (uri.servers.isNotEmpty()) {
             // Bounded well under RESOLVE_TIMEOUT_MS so a hint server that drops packets
             // leaves time for the author's own server list below.
-            val workingUrl = firstWorkingUrl(uri.servers, filename, expectedMimeType, uri.size, XS_TIMEOUT_MS)
+            val workingUrl = firstWorkingUrl(uri.servers, filename, expectedMimeType, uri.size, probeMimeType, XS_TIMEOUT_MS)
             if (workingUrl != null) {
                 return BlossomUriServer(uri, workingUrl)
             }
@@ -161,7 +175,7 @@ class BlossomServerResolver(
                     blossomServerFlow.transformLatest {
                         val servers = it.servers()
                         if (servers.isNotEmpty()) {
-                            firstWorkingUrl(servers, filename, expectedMimeType, uri.size)?.let { serverUrl ->
+                            firstWorkingUrl(servers, filename, expectedMimeType, uri.size, probeMimeType)?.let { serverUrl ->
                                 emit(serverUrl)
                             }
                         }
@@ -181,11 +195,13 @@ class BlossomServerResolver(
         filename: String,
         expectedMimeType: String?,
         expectedSize: Long?,
+        // Picks the client (and its Tor rule) only; the HEAD's type is checked against expectedMimeType.
+        clientMimeType: String?,
         timeoutMs: Long = RESOLVE_TIMEOUT_MS,
     ): String? =
         firstNotNullOrNullAsync(servers, timeoutMs) {
             blossomHitCache.urlIfServerHasFile(it, filename, expectedMimeType, expectedSize) { url ->
-                client(url, expectedMimeType)
+                client(url, clientMimeType)
             }
         }
 

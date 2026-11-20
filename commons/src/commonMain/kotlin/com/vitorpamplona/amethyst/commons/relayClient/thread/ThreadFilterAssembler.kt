@@ -49,10 +49,14 @@ class ThreadFilterAssembler(
     cache: ICacheProvider,
     client: INostrClient,
 ) : ComposeSubscriptionManager<ThreadQueryState>() {
+    private val rootFilter = ThreadFilterSubAssembler(cache, client, ::allKeys)
+
     val group =
         listOf(
-            ThreadFilterSubAssembler(cache, client, ::allKeys),
-            ThreadEventLoaderSubAssembler(cache, client, ::allKeys),
+            rootFilter,
+            // The root, and the relays its replies land on, are only known once the loader has
+            // fetched it, so the root query re-plans whenever the loader does.
+            ThreadEventLoaderSubAssembler(cache, client, ::allKeys, onReplan = rootFilter::invalidateFilters),
         )
 
     override fun invalidateKeys() = invalidateFilters()
