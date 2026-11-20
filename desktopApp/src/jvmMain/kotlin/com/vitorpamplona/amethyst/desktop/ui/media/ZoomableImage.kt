@@ -50,7 +50,6 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.size.Size
-import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
 import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
@@ -141,7 +140,8 @@ fun ZoomableImage(
                     translationX = offsetX,
                     translationY = offsetY,
                 )
-        val animated = isAnimatedGifUrl(url)
+        // The inline card probed the file already, so an animated WebP opens playing too.
+        val animated = AnimatedImageProbe.isAnimated(url)
         key(attempt) {
             if (animated) {
                 // No load callback here: the box stands in for the image.

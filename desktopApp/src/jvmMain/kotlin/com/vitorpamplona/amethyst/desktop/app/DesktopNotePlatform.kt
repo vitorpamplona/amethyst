@@ -42,6 +42,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
+import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedImageProbe
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopTrimPreviewPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -341,7 +342,10 @@ object DesktopNotePlatform : NotePlatform {
         thumbhash: String? = null,
         failureModifier: Modifier = modifier,
     ) {
-        val animated = isAnimatedGifUrl(url)
+        // A `.gif`, or an image whose file turned out to hold frames (an animated WebP): played by
+        // the GIF player, since Coil here draws only the first frame.
+        var animated by remember(url) { mutableStateOf(AnimatedImageProbe.isAnimated(url)) }
+        val scope = rememberCoroutineScope()
         // Bumped by Retry: a new key starts the load over.
         var attempt by remember(url) { mutableIntStateOf(0) }
         var failure by remember(url) { mutableStateOf<MediaLoadFailure?>(null) }
@@ -369,6 +373,8 @@ object DesktopNotePlatform : NotePlatform {
                             is AsyncImagePainter.State.Success -> {
                                 val image = state.result.image
                                 MediaAspectRatioCache.add(url, image.width, image.height)
+                                val diskCacheKey = state.result.diskCacheKey
+                                scope.launch { if (AnimatedImageProbe.probe(url, diskCacheKey)) animated = true }
                             }
                             is AsyncImagePainter.State.Error -> failure = mediaLoadFailureOf(state.result.throwable)
                             else -> {}

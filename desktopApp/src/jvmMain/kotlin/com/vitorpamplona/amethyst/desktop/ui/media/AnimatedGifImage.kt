@@ -289,8 +289,12 @@ private suspend fun gifBytes(
 
     val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
     val key = "gif:$url"
-    disk?.openSnapshot(key)?.use { snapshot ->
-        runCatching { disk.fileSystem.read(snapshot.data) { readByteArray() } }.getOrNull()?.let { return it }
+    // Its own copy, else the image loader's: an animated WebP reaches the player after the loader
+    // fetched it ([AnimatedImageProbe]), so the file is already on disk under its URL.
+    for (cached in arrayOf(key, url)) {
+        disk?.openSnapshot(cached)?.use { snapshot ->
+            runCatching { disk.fileSystem.read(snapshot.data) { readByteArray() } }.getOrNull()?.let { return it }
+        }
     }
 
     val request = Request.Builder().url(url).build()
