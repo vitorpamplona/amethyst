@@ -487,11 +487,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
 
       - name: Resolve tag + version
         id: ver
@@ -744,11 +744,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
 
       - name: Resolve tag + version
         id: ver
@@ -1035,11 +1035,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
 
       - name: Cache gradle
         uses: actions/cache@v6

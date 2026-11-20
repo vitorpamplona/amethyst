@@ -18,8 +18,14 @@ application {
     applicationDefaultJvmArgs = listOf("-Xmx8g")
 }
 
+// Built by the JDK Gradle runs on (JDK 25), as Java 21 bytecode, like the other modules: no
+// separate JDK 21 toolchain to install.
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 kotlin {
-    jvmToolchain(21)
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
     }
