@@ -22,12 +22,9 @@ package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import com.vitorpamplona.quartz.utils.Log
 import org.jetbrains.skia.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.File
-import java.nio.file.Files
 import javax.imageio.ImageIO
 
 /**
@@ -52,27 +49,6 @@ object IconResources {
     /** Raw PNG bytes read from the `/icon.png` classpath resource. */
     val iconBytes: ByteArray by lazy {
         IconResources::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-    }
-
-    /**
-     * The icon as files for the system tray, which loads its image from a path: an `.ico` for
-     * Windows' notification area, the PNG for macOS's menu bar and Linux's StatusNotifierItem.
-     * Copied out of the jar once; null when that fails, and the tray is then left out.
-     */
-    val trayIconFiles: TrayIconFiles? by lazy {
-        try {
-            val dir = Files.createTempDirectory("amethyst-tray").toFile().apply { deleteOnExit() }
-
-            fun copy(resource: String): String {
-                val file = File(dir, resource).apply { deleteOnExit() }
-                IconResources::class.java.getResourceAsStream("/$resource")!!.use { input -> file.outputStream().use { input.copyTo(it) } }
-                return file.absolutePath
-            }
-            TrayIconFiles(png = copy("icon.png"), ico = copy("icon.ico"))
-        } catch (e: Exception) {
-            Log.w("IconResources", "Could not write the tray icon", e)
-            null
-        }
     }
 
     /** Decoded `BufferedImage` for AWT consumers (Taskbar, Window icon source). */
@@ -114,9 +90,3 @@ object IconResources {
         }
     }
 }
-
-/** The tray icon's files: [png] for macOS and Linux, [ico] for Windows. */
-class TrayIconFiles(
-    val png: String,
-    val ico: String,
-)

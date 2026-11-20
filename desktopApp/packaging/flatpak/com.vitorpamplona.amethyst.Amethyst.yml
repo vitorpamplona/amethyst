@@ -36,12 +36,6 @@ finish-args:
   - --talk-name=org.freedesktop.Notifications
   # java-keyring stores the account keys through the Secret Service API.
   - --talk-name=org.freedesktop.secrets
-  # The tray icon (ComposeNativeTray) registers a StatusNotifierItem with the
-  # tray host, which keeps the NIP-46 signer reachable with the window closed.
-  - --talk-name=org.kde.StatusNotifierWatcher
-  # It also owns org.kde.StatusNotifierItem-<pid>-1, the name the host reads the
-  # icon and menu from; the pid varies, hence the prefix (as Electron apps do).
-  - --own-name=org.kde.*
   # The app keeps accounts, drafts and scheduled posts under ~/.amethyst and
   # Java Preferences under ~/.java. Without home access those paths are
   # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst.Amethyst/.

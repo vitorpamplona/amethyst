@@ -4954,9 +4954,6 @@
     <string name="login_nostrconnect_not_supported">That's an app asking to connect to your signer, not a way to sign in. Sign in first, then open it from the NIP-46 signer screen.</string>
     <string name="desktop_key_not_kept_title">Your key was not saved</string>
     <string name="desktop_key_not_kept_description">This computer has no keyring Amethyst can use, so your private key is kept only until Amethyst closes. You will need to log in again next time.</string>
-    <string name="desktop_tray_tooltip">Amethyst: still signing for your connected apps</string>
-    <string name="desktop_tray_open">Open Amethyst</string>
-    <string name="desktop_tray_quit">Quit Amethyst</string>
     <string name="key_storage_keyring_mac">the macOS Keychain</string>
     <string name="key_storage_keyring_secret_service">your system keyring</string>
     <string name="key_storage_keyring_windows">Windows Credential Manager</string>

@@ -93,15 +93,13 @@ object PrintQuitRules {
 }
 
 /**
- * The file that says the main window is hidden while the app runs on (for a print, or in the tray
- * for the NIP-46 signer), so launching the app again brings the running copy back
- * ([DesktopDeepLinks.forwardToRunningInstance]) instead of opening a second.
+ * The file that says the main window is hidden for a print, so launching the app again brings
+ * the running copy back ([DesktopDeepLinks.forwardToRunningInstance]) instead of opening a second.
  */
-class HiddenWindowMarker(
+class KeptForPrintMarker(
     dataDir: File,
-    fileName: String,
 ) {
-    private val file = File(dataDir, fileName)
+    private val file = File(dataDir, FILE)
 
     val present: Boolean get() = file.exists()
 
@@ -113,24 +111,16 @@ class HiddenWindowMarker(
                 Log.w(TAG) { "Could not delete $file" }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Could not mark the window kept hidden", e)
+            Log.w(TAG, "Could not mark the window kept for a print", e)
         }
     }
 
     companion object {
-        private const val TAG = "HiddenWindowMarker"
+        private const val TAG = "KeptForPrintMarker"
+        const val FILE = "kept-for-print"
 
-        /** Hidden for a print. */
-        const val PRINT_FILE = "kept-for-print"
-
-        /** What a relaunch asks the copy kept for a print to open: The Observer, where the print is. */
-        const val PRINT_RESTORE_URI = "amethyst:frontpage"
-
-        /** Hidden in the tray. */
-        const val TRAY_FILE = "kept-in-tray"
-
-        /** What a relaunch asks the copy in the tray to open: nothing but its window, as it was left. */
-        const val TRAY_RESTORE_URI = "amethyst:open"
+        /** What a relaunch asks the running copy to open: The Observer, where the print is. */
+        const val RESTORE_URI = "amethyst:frontpage"
     }
 }
 

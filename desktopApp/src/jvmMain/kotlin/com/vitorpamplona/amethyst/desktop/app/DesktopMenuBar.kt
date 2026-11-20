@@ -84,7 +84,6 @@ import com.vitorpamplona.amethyst.desktop.platform.Platform
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
 import java.awt.Desktop
-import java.awt.EventQueue
 import java.awt.desktop.QuitStrategy
 
 /**
@@ -385,8 +384,8 @@ private fun DesktopNavigator.menuActions(onQuit: () -> Unit) =
 /**
  * The app menu (the one under the app's name) is AppKit's, not Swing's: its Settings… item stays
  * greyed out until a handler is set, and its Quit (Cmd+Q, and the dock's Quit) ends the JVM with
- * `System.exit` unless told otherwise. A quit handler sends it to [onQuit], which quits the way
- * the updater does; closing the windows is only the fallback where no handler can be set.
+ * `System.exit` unless told otherwise. Closing the windows instead runs the window's
+ * `onCloseRequest`, which quits the way the updater does.
  */
 private fun installAppMenuHandlers(
     navigator: DesktopNavigator,
@@ -401,13 +400,6 @@ private fun installAppMenuHandlers(
         if (desktop.isSupported(Desktop.Action.APP_QUIT_STRATEGY)) {
             desktop.setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
         }
-        // Cmd+Q and the Dock's Quit mean quit. Left to the strategy above they would reach the
-        // window as a plain close, which keeps the app in the tray while a NIP-46 signer runs. The
-        // response is left unanswered on purpose: macOS waits (a logout included) while the app
-        // quits its own way, and the process ending answers it.
-        if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
-            desktop.setQuitHandler { _, _ -> EventQueue.invokeLater(onQuit) }
-        }
     } catch (e: Exception) {
         Log.w("DesktopMenuBar", "Could not set up the app menu", e)
     }
@@ -418,7 +410,6 @@ private fun removeAppMenuHandlers() {
         if (!Desktop.isDesktopSupported()) return
         val desktop = Desktop.getDesktop()
         if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) desktop.setPreferencesHandler(null)
-        if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) desktop.setQuitHandler(null)
     } catch (e: Exception) {
         Log.w("DesktopMenuBar", "Could not reset the app menu", e)
     }
