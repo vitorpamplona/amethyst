@@ -63,7 +63,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
@@ -84,8 +83,9 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.BechLink
 import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -137,9 +137,10 @@ fun EditPostView(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    Dialog(
+    // Full screen on a touch screen, a dialog over the note on a wide desktop window, like every other composer.
+    ComposerDialog(
+        size = ComposerSize.QUICK,
         onDismissRequest = { onClose() },
-        properties = edgeToEdgeDialogProperties(dismissOnClickOutside = false),
     ) {
         Scaffold(
             topBar = {
@@ -335,7 +336,7 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
         verticalAlignment = CenterVertically,
     ) {
         // The picked files show their upload on their cards: the buttons spin only for a drawing.
-        val busy = postViewModel.isUploadingImage || postViewModel.isUploadingFile
+        val busy = postViewModel.mediaUploadTracker.isUploading
         SelectFromGallery(
             isUploading = postViewModel.mediaUploadTracker.isUploadingDrawing,
             enabled = !busy,

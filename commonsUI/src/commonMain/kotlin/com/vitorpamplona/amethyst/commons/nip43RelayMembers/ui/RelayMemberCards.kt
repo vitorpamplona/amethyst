@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_added
 import com.vitorpamplona.amethyst.commons.resources.relay_members_count
 import com.vitorpamplona.amethyst.commons.resources.relay_members_removed
 import com.vitorpamplona.amethyst.commons.resources.relay_membership_list
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
@@ -67,7 +68,7 @@ fun RelayMembershipListCard(event: RelayMembershipListEvent) {
     RelayMemberEventCard(
         icon = MaterialSymbols.People,
         title = stringRes(Res.string.relay_membership_list),
-        subtitle = stringRes(Res.string.relay_members_count, memberCount),
+        subtitle = pluralStringRes(Res.plurals.relay_members_count, memberCount, memberCount),
     )
 }
 
@@ -79,7 +80,7 @@ fun RelayAddMemberCard(event: RelayAddMemberEvent) {
         if (memberKeys.size == 1) {
             stringRes(Res.string.relay_member_added)
         } else {
-            stringRes(Res.string.relay_members_added, memberKeys.size)
+            pluralStringRes(Res.plurals.relay_members_added, memberKeys.size, memberKeys.size)
         }
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
@@ -98,7 +99,7 @@ fun RelayRemoveMemberCard(event: RelayRemoveMemberEvent) {
         if (memberKeys.size == 1) {
             stringRes(Res.string.relay_member_removed)
         } else {
-            stringRes(Res.string.relay_members_removed, memberKeys.size)
+            pluralStringRes(Res.plurals.relay_members_removed, memberKeys.size, memberKeys.size)
         }
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 

@@ -270,12 +270,44 @@ kotlin {
     }
 }
 
+// Compose resources match a locale on `Locale.getLanguage()`, and three languages have two answers:
+// the legacy code (`in` Indonesian, `iw` Hebrew, `ji` Yiddish) on Android 14 and older, the current
+// one (`id`, `he`, `yi`) on desktop Java 17+ and on Android 15+ for apps targeting it. A `values-in`
+// folder alone left desktop and Android 15+ users in English. The catalog keeps one folder people
+// edit (the legacy code, as Android's `res/` uses), and the build serves it under both codes; a
+// missing folder is skipped. Android's own `res/` needs nothing: the framework hands the resource
+// system the legacy code whatever Locale reports.
+val legacyLanguageAliases = mapOf("in" to "id", "iw" to "he", "ji" to "yi")
+val composeResourcesSource = layout.projectDirectory.dir("src/commonMain/composeResources")
+val aliasLegacyLanguageFolders by tasks.registering(Sync::class) {
+    // Locals, so the doFirst action captures only these and not the build script
+    // (a script reference cannot go into the configuration cache).
+    val source = composeResourcesSource
+    val aliases = legacyLanguageAliases
+    from(source)
+    aliases.forEach { (legacy, current) ->
+        from(source.dir("values-$legacy")) { into("values-$current") }
+    }
+    into(layout.buildDirectory.dir("generated/composeResourcesWithAliases/commonMain"))
+    doFirst {
+        aliases.forEach { (legacy, current) ->
+            check(!source.dir("values-$current").asFile.exists()) {
+                "composeResources/values-$current is generated from values-$legacy; edit that folder instead"
+            }
+        }
+    }
+}
+
 compose.resources {
     publicResClass = true
     // Kept on the pre-split package so `Res` imports in every consumer
     // (amethyst, desktopApp, nappletHost) keep resolving unchanged.
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
+    customDirectory(
+        sourceSetName = "commonMain",
+        directoryProvider = layout.dir(aliasLegacyLanguageFolders.map { it.destinationDir }),
+    )
 }
 
 // iOS purity gate — shared task, see gradle/kmp-purity.gradle.kts.

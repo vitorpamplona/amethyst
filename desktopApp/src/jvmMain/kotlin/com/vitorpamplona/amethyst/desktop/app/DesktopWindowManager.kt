@@ -80,33 +80,51 @@ class DesktopWindowManager(
     var keptForPrint by mutableStateOf(false)
         private set
 
+    /**
+     * True while the main window is hidden in the system tray: an account's NIP-46 signer still
+     * answers apps, so the app runs on, unseen, until the tray icon (or a relaunch) brings it back.
+     */
+    var keptInTray by mutableStateOf(false)
+        private set
+
     /** Whether any window of the app is on screen. */
     val anyShowing: Boolean get() = mainWindowVisible || screenFrames.isNotEmpty()
 
-    /** Nothing is left on screen: the main window is hidden and the last screen window is gone (not a window kept hidden for a print). */
-    val allClosed: Boolean get() = !mainWindowVisible && screenFrames.isEmpty() && !keptForPrint
+    /** Nothing is left on screen: the main window is hidden and the last screen window is gone (not a window kept hidden for a print or in the tray). */
+    val allClosed: Boolean get() = !mainWindowVisible && screenFrames.isEmpty() && !keptForPrint && !keptInTray
 
     /** Screen windows are open beside the main one. */
     val hasScreenWindows: Boolean get() = screenFrames.isNotEmpty()
 
     /**
      * Closing the main window in [layout] quits, unless screen windows are open: then it only hides.
-     * While a print runs ([printing]) it asks first ([ask]) instead of quitting.
+     * While a print runs ([printing]) it asks first ([ask]) instead of quitting. Where it would quit,
+     * [keepRunning] may keep the app going instead (the tray, for the NIP-46 signer): it returns true
+     * when it did.
      */
     fun closeMainWindow(
         layout: NavArrangement?,
         exit: () -> Unit,
         printing: Boolean = false,
         ask: () -> Unit = exit,
+        keepRunning: () -> Boolean = { false },
     ) {
         when (PrintQuitRules.onClose(printing, screenFrames.isNotEmpty())) {
-            CloseAction.QUIT -> exit()
+            CloseAction.QUIT -> if (!keepRunning()) exit()
             CloseAction.ASK -> ask()
             CloseAction.HIDE -> {
                 hiddenIn = layout
                 mainWindowVisible = false
             }
         }
+    }
+
+    /** Closed to the tray: the main window hides, and the app runs on until it is shown again or quit. */
+    fun hideToTray(layout: NavArrangement?) {
+        hiddenIn = layout
+        keptInTray = true
+        keptForPrint = false
+        mainWindowVisible = false
     }
 
     /** "Keep printing": the main window hides, and the app runs on until the print ends. */
@@ -121,13 +139,15 @@ class DesktopWindowManager(
      * window does: quitting would stop a print that may be paid for. A layout switch closed them
      * instead (it drops the screen windows in the same frame): bring the main window back. Telling
      * the two apart by the layout, rather than by which effect runs first, keeps a settings change
-     * from quitting the app.
+     * from quitting the app. Where it would quit, [keepRunning] may keep the app going in the tray
+     * instead, as closing the main window does: it returns true when it did.
      */
     fun onAllClosed(
         layout: NavArrangement?,
         exit: () -> Unit,
         printing: Boolean = false,
         ask: () -> Unit = exit,
+        keepRunning: () -> Boolean = { false },
     ) {
         if (layout != hiddenIn) {
             showMainWindow(raise = false)
@@ -135,7 +155,7 @@ class DesktopWindowManager(
         }
         when (PrintQuitRules.onQuit(printing)) {
             CloseAction.ASK -> ask()
-            else -> exit()
+            else -> if (!keepRunning()) exit()
         }
     }
 
@@ -143,6 +163,7 @@ class DesktopWindowManager(
     fun showMainWindow(raise: Boolean = true) {
         mainWindowVisible = true
         keptForPrint = false
+        keptInTray = false
         if (raise) {
             mainFrame?.let {
                 it.toFront()

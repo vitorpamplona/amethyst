@@ -6,7 +6,7 @@ Amethyst is a Nostr Client for Android that was made for Android-only and has be
 over to a Kotlin Multiplatform project. The main modules are: `commons`, `commonsUI`, `amethyst`,
 `desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. The protocol code is **not** in this
 repo: Nostr, MLS, the two MLS bindings, QUIC and the crypto primitives are libraries in their own
-repos, consumed from Maven Central (see [Libraries](#libraries-their-own-repos)). Commons stores
+repos, consumed via Magpie (see [Libraries](#libraries-their-own-repos)). Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
@@ -31,7 +31,7 @@ implementation for any future IETF target; see
 
 ## Libraries (their own repos)
 
-On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
+Via Magpie (`gradle/magpie.lock`); `-P<name>Dir=../<repo>` builds a local checkout instead.
 
 | Repo (`libs.*`) | Holds | `-P…Dir` |
 |---|---|---|
@@ -372,8 +372,10 @@ synchronous-platform tier"). If you think a new string belongs in that tier,
 say why in the PR.
 
 To move keys that already landed in Android `res/`, use
-`tools/strings-migrate/migrate.py <keys…>`. It moves every locale byte-for-byte,
-so Crowdin sees a pure move. Then repoint `R.string.x` → `Res.string.x`.
+`tools/strings-migrate/migrate.py <keys…>` (moves every locale byte-for-byte),
+then repoint `R.string.x` → `Res.string.x`.
+
+Translate in `values-es`; `values-es-rES` holds only its differences.
 
 ## Icons
 
@@ -474,9 +476,8 @@ Do this before considering the task complete.
   character is *intentional* (sanitizer strip-lists, adversarial test
   payloads) — that's data, and escapes express it just as well. Exceptions:
   U+200D as part of a real emoji ZWJ sequence in test data (👩‍👧 — functional,
-  not a bidi control), and LRM/RLM inside Crowdin-managed `strings.xml`
-  translations (legitimate RTL typography; don't touch those files by hand
-  anyway). Note the tooling trap: the Edit tool may normalise a typed
+  not a bidi control), and LRM/RLM inside translated `strings.xml` values
+  (legitimate RTL typography). Note the tooling trap: the Edit tool may normalise a typed
   `\uXXXX` back into the raw character — if that happens, do the replacement
   at byte level (`perl -CSD -pe 's/\x{202E}/\\u202E/g'`).
 

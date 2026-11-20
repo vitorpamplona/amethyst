@@ -28,11 +28,18 @@ import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /** [MultiOrchestrator.uploadEach]: every file goes up with its own options, and a retry resends only what failed. */
@@ -51,6 +58,10 @@ class MultiOrchestratorUploadEachTest {
     ) : MediaUploader {
         val sent = ConcurrentLinkedQueue<Sent>()
 
+        /** When set, each upload reads this many bytes into the network, then waits for [serverAnswer]. */
+        var bytes = 0L
+        var serverAnswer: CompletableDeferred<Unit>? = null
+
         override suspend fun upload(
             progress: UploadOrchestrator,
             uri: MediaUri,
@@ -67,6 +78,12 @@ class MultiOrchestratorUploadEachTest {
             forcedSigner: NostrSigner?,
         ): UploadingState.UploadingFinalState {
             sent += Sent(uri.toString(), alt, contentWarningReason, compressionQuality, stripMetadata, server.name)
+            if (bytes > 0) {
+                val report = progress.uploadProgress(0.2, 0.95)
+                for (read in 0L..bytes step 64 * 1024) report(read, bytes)
+                report(bytes, bytes)
+                serverAnswer?.await()
+            }
             if (uri.toString() in failing) return progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, "refused")
             return progress.finish(
                 UploadOrchestrator.OrchestratorResult.ServerResult(FileHeader(mimeType, uri.toString(), 1, null, null), "https://blossom.example$uri", null, null, mimeType, null),
@@ -404,4 +421,72 @@ class MultiOrchestratorUploadEachTest {
             assertEquals(listOf(false, false), uploader.sent.filter { it.path.endsWith(".pdf") }.map { it.stripMetadata })
             assertTrue(uploader.sent.filter { it.path.endsWith(".jpg") }.all { it.stripMetadata })
         }
+
+    @Test
+    fun theBarFillsWithTheBytesReadThenWaitsWithoutANumber() {
+        val orchestrator = UploadOrchestrator()
+        val report = orchestrator.uploadProgress(0.2, 0.95)
+
+        report(500, 1000)
+        assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
+        assertEquals(0.575, orchestrator.status.value.progress, 1e-9)
+
+        // The last byte is in the send buffer, not at the server: no "95% done" while it travels.
+        report(1000, 1000)
+        assertEquals(UploadingState.Sending, orchestrator.progressState.value)
+
+        // A retry, or the next server, starts again from zero as a bar that fills.
+        report(100, 1000)
+        assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
+        assertEquals(0.275, orchestrator.status.value.progress, 1e-9)
+    }
+
+    @Test
+    fun filesSentTogetherEachWaitForTheServerWithoutANumber() =
+        runTest {
+            val media = files("/a.jpg", "/b.jpg", "/c.jpg")
+            val answer = CompletableDeferred<Unit>()
+            val uploader =
+                RecordingUploader().apply {
+                    bytes = 3_000_000
+                    serverAnswer = answer
+                }
+
+            val upload = async { media.uploadEach(server, account, uploader) }
+            try {
+                // Each file fills its own send buffer: every one of them waits, none stuck almost full.
+                withContext(Dispatchers.Default) {
+                    withTimeout(5_000) {
+                        while (media.items().any { it.orchestrator.progressState.value != UploadingState.Sending }) delay(10)
+                    }
+                }
+            } finally {
+                // Answered even when the wait failed, so the upload ends and the test reports the failure.
+                answer.complete(Unit)
+            }
+            assertTrue(upload.await().allGood)
+            media.items().forEach {
+                assertIs<UploadingState.Finished>(it.orchestrator.progressState.value)
+                assertEquals(1.0, it.orchestrator.status.value.progress)
+            }
+        }
+
+    @Test
+    fun aViewNeverSeesTheLastBytesNumberWithoutItsStage() {
+        val orchestrator = UploadOrchestrator()
+        val seen = mutableListOf<UploadStatus>()
+        val report = orchestrator.uploadProgress(0.2, 0.95)
+        for (read in 0L..1000L step 10) {
+            report(read, 1000)
+            seen += orchestrator.status.value
+        }
+        report(100, 1000)
+        seen += orchestrator.status.value
+
+        // The bar's end comes with Sending, and a retry's restart with Uploading: never mixed.
+        assertTrue(seen.none { it.state == UploadingState.Uploading && it.progress >= 0.95 }, "$seen")
+        assertEquals(UploadStatus(UploadingState.Sending, 0.95), seen[seen.size - 2])
+        assertEquals(UploadStatus(UploadingState.Uploading, 0.275), seen.last())
+        assertEquals(UploadingState.Uploading, orchestrator.progressState.value)
+    }
 }

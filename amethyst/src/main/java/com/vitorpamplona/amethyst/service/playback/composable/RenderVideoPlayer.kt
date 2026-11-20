@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.Fullscree
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
 import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
 import com.vitorpamplona.amethyst.service.playback.composable.controls.METERED_MAX_SHORT_SIDE_PX
+import com.vitorpamplona.amethyst.service.playback.composable.controls.PausedPlayOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCaptions
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
@@ -103,6 +104,7 @@ fun RenderVideoPlayer(
     controllerState: MediaControllerState,
     thumbData: VideoThumb?,
     showControls: Boolean = true,
+    showPausedOverlay: Boolean = false,
     contentScale: ContentScale,
     borderModifier: Modifier,
     videoModifier: Modifier,
@@ -174,6 +176,12 @@ fun RenderVideoPlayer(
     // the controls get crammed. Size it square (capped) so the visualizer and controls get room.
     // Voice notes keep their seek-bar strip; the full-screen dialog fills the screen.
     val tracksAreAudio by rememberIsAudioTrack(controllerState.controller)
+    // Voice notes, audio-only streams and audio links: they render their own waveform/visualizer
+    // UI and stay out of the paused-video play overlay.
+    val isAudioContent =
+        mediaItem.src.waveformData != null ||
+            mediaItem.src.mimeType?.startsWith("audio/") == true ||
+            tracksAreAudio
     val squarePlayer =
         shouldSquareAudioPlayer(
             isFullscreen = isFullscreen,
@@ -266,6 +274,21 @@ fun RenderVideoPlayer(
         )
 
         if (showControls && controllerState.playbackError.value == null) {
+            // A loaded-but-paused video (autoplay off, manual pause, scrolled away and back) looks
+            // like a still image until tapped. The center play button, shown on its own, says video.
+            // Only where the feed does not autoplay: with autoplay on, paused videos are just
+            // waiting for the viewport and the center one would flash the button while it spins up.
+            if (showPausedOverlay) {
+                PausedPlayOverlay(
+                    controllerState = controllerState,
+                    controllerVisible = controllerVisible,
+                    isFullscreen = isFullscreen,
+                    isAudio = isAudioContent,
+                    videoUri = mediaItem.src.videoUri,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+
             TopGradientOverlay(
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.TopCenter),

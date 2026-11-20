@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
@@ -373,7 +374,7 @@ private fun MyEmojiListRow(
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
-                Text(text = stringRes(Res.string.emoji_pack_count, selectedPackCount))
+                Text(text = pluralStringRes(Res.plurals.emoji_pack_count, selectedPackCount, selectedPackCount))
             }
         },
     )

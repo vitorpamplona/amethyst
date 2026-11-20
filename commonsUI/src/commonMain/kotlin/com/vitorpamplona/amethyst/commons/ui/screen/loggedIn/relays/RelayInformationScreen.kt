@@ -170,6 +170,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.graspLink
 import com.vitorpamplona.amethyst.commons.ui.note.nipLink
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.KindChip
@@ -529,7 +530,7 @@ private fun FilterVisual(
                 filter.authors?.let { authors ->
                     if (authors.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "👤 ${stringRes(Res.string.relay_filter_authors, authors.size)}",
+                            text = "👤 ${pluralStringRes(Res.plurals.relay_filter_authors, authors.size, authors.size)}",
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             textColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -540,7 +541,7 @@ private fun FilterVisual(
                 filter.ids?.let { ids ->
                     if (ids.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "🆔 ${stringRes(Res.string.relay_filter_ids, ids.size)}",
+                            text = "🆔 ${pluralStringRes(Res.plurals.relay_filter_ids, ids.size, ids.size)}",
                         )
                     }
                 }

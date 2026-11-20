@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -100,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.ui.cartridges.CartSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.cartridges.LocalMediaIsCart
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
@@ -115,9 +115,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
+import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
+import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
@@ -667,7 +669,24 @@ fun UrlImageView(
                     }
 
                     is AsyncImagePainter.State.Error -> {
-                        ClickableUrlOrBlossom(urlText = "${content.url} ", url = content.url)
+                        val error = state as AsyncImagePainter.State.Error
+                        val failure = remember(error) { mediaLoadFailureOf(error.result.throwable) }
+                        // The slot the loading blurhash had, so the note doesn't jump; with no
+                        // known shape the card is a compact row instead.
+                        val slot =
+                            when {
+                                contentScale == ContentScale.Crop -> loadedImageModifier.fillMaxSize()
+                                ratio != null -> loadedImageModifier.aspectRatio(ratio)
+                                else -> Modifier.fillMaxWidth()
+                            }
+                        MediaFailureCard(
+                            url = content.url,
+                            failure = failure,
+                            modifier = slot,
+                            blurhash = content.blurhash,
+                            thumbhash = content.thumbhash,
+                            onRetry = { painter.restart() },
+                        )
                     }
 
                     is AsyncImagePainter.State.Success -> {

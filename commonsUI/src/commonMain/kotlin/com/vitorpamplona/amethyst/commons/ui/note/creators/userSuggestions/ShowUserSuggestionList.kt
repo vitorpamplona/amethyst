@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.search.keepsFieldFocus
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -154,7 +155,9 @@ fun WatchResponses(
                         } else {
                             null
                         }
-                UserLine(item, accountViewModel, trailing, itemColors) { onSelect(item) }
+                // A suggestion list always sits under the field being typed in; picking from it
+                // must leave the caret there.
+                UserLine(item, accountViewModel, trailing, itemColors, Modifier.keepsFieldFocus()) { onSelect(item) }
                 if (showDividers) {
                     HorizontalDivider(
                         thickness = DividerThickness,
@@ -189,11 +192,12 @@ fun UserLine(
     accountViewModel: AccountViewModel,
     trailingContent: (@Composable (User) -> Unit)? = null,
     colors: ListItemColors = ListItemDefaults.colors(),
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     SlimListItem(
         colors = colors,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         leadingContent = {
             ClickableUserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, onClick = null)
         },

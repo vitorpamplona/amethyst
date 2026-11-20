@@ -261,8 +261,10 @@ private fun Nip46AppCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 entry.policy?.let { policy ->
+                    // The trust level is changed on the detail screen, so the chip opens it too
+                    // (it would otherwise swallow the tap that the card underneath should get).
                     SuggestionChip(
-                        onClick = {},
+                        onClick = onClick,
                         label = { Text(policy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
                     )
                 }

@@ -39,6 +39,15 @@ finish-args:
   - --talk-name=org.freedesktop.Notifications
   # Account keys go to the Secret Service keyring.
   - --talk-name=org.freedesktop.secrets
+  # The tray icon (ComposeNativeTray) registers a StatusNotifierItem with the
+  # tray host, which keeps the NIP-46 signer reachable with the window closed.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  # The item claims org.kde.StatusNotifierItem-<pid>-1 before registering, and
+  # shows no icon without it. In the sandbox the app is pid 2 (bwrap is pid 1, and
+  # the launcher script execs the app). Exact, not org.kde.*, which would grant
+  # every KDE name on the bus.
+  # Were it ever wrong, no icon shows and closing the window quits instead.
+  - --own-name=org.kde.StatusNotifierItem-2-1
   # Accounts, drafts and scheduled posts live under ~/.amethyst, Java
   # Preferences under ~/.java; keep both in the app's own data directory.
   - --persist=.amethyst

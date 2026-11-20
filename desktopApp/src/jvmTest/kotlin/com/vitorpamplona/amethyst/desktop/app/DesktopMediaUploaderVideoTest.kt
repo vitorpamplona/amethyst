@@ -287,7 +287,7 @@ class DesktopMediaUploaderVideoTest {
                     assertTrue(prepared)
                     finished()
                 }
-            assertEquals(0.21, progress.progress.value, 1e-9) // 0.02 + 0.38 * 0.5
+            assertEquals(0.21, progress.status.value.progress, 1e-9) // 0.02 + 0.38 * 0.5
             assertEquals(UploadingState.Compressing, progress.progressState.value)
         }
 

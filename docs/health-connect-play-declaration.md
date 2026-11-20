@@ -79,7 +79,7 @@ Both surfaces now justify every permission by a statistic the dashboard shows th
 4-week window and both screens that read, name My Fitness, and describe publishing only as an
 optional, per-item, explicitly-confirmed action under "What Amethyst does not do". The stale
 translations of those strings were deleted so every locale falls back to the corrected English
-until Crowdin re-translates.
+until they are translated again.
 
 **The standing rule this cost us:** the rationale screen, `PRIVACY.md` and this file are one
 document split across three places. A change to any of them is incomplete until the other two

@@ -164,6 +164,17 @@ fun BookmarkGroupItemOptionsMenu(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        // The editor takes over from the options dialog, which would otherwise sit behind it.
+        return
+    }
+
+    if (reportDialogShowing) {
+        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
+            reportDialogShowing = false
+            onDismiss()
+        }
+        // The report takes over from the options dialog, which would otherwise sit behind it.
+        return
     }
 
     M3ActionDialog(
@@ -299,13 +310,6 @@ fun BookmarkGroupItemOptionsMenu(
                     reportDialogShowing = true
                 }
             }
-        }
-    }
-
-    if (reportDialogShowing) {
-        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
-            reportDialogShowing = false
-            onDismiss()
         }
     }
 }
