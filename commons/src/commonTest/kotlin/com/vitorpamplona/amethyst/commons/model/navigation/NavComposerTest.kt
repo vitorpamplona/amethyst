@@ -332,6 +332,50 @@ class NavComposerTest {
     }
 
     @Test
+    fun aPlaceAskedForByAComposerReplacesItInTheStack() {
+        val stacks = stacks()
+        stacks.push(profile)
+        stacks.push(note)
+        val composer = stacks.top
+
+        // The chat the composer created: back from it returns to the profile, not to the form.
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Restart, origin = composer.id))
+        assertEquals(listOf(Route.Home, profile, Route.Message), stacks.stack.map { it.route })
+    }
+
+    @Test
+    fun aPlaceAskedForByAPoppedOutComposerClosesItsWindow() {
+        val stacks = stacks()
+        stacks.push(note)
+        val composer = stacks.top
+        stacks.popOut(composer.id)
+
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Restart, origin = composer.id))
+        assertTrue(stacks.windows().isEmpty())
+        assertEquals(Route.Message, stacks.top.route)
+    }
+
+    @Test
+    fun aComposerWaitingOnItsPostStaysUnderThePlaceItAskedFor() {
+        val stacks = stacks()
+        stacks.push(note)
+        val composer = stacks.top
+        composer.holdOpen = { true }
+
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Restart, origin = composer.id))
+        assertEquals(listOf(Route.Home, note, Route.Message), stacks.stack.map { it.route })
+    }
+
+    @Test
+    fun aRestartWithNoOriginLeavesTheComposerInTheStack() {
+        val stacks = stacks()
+        stacks.push(note)
+
+        stacks.open(NavRequest(Route.Message, NavRequest.Kind.Restart))
+        assertEquals(listOf(Route.Home, note, Route.Message), stacks.stack.map { it.route })
+    }
+
+    @Test
     fun withoutDestinationsNothingIsAComposer() {
         val stacks = NavBackStacks().apply { changeArrangement(NavArrangement.TABS) }
         stacks.push(note)
