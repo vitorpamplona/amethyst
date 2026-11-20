@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_send
@@ -65,12 +64,12 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
-import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
@@ -107,11 +106,11 @@ fun ChatFileUploadDialog(
 ) {
     val scrollState = rememberScrollState()
 
-    Dialog(
+    // Full screen on a touch screen, a dialog over the chat on a wide desktop window, like every other composer.
+    ComposerDialog(
+        size = ComposerSize.QUICK,
         onDismissRequest = { onCancel() },
-        properties = edgeToEdgeDialogProperties(dismissOnClickOutside = false),
     ) {
-        SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
                 ShorterTopAppBar(

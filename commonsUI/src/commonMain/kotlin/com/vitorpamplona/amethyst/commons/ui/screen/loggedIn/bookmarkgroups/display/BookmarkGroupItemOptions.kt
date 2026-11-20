@@ -164,6 +164,8 @@ fun BookmarkGroupItemOptionsMenu(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        // The editor takes over from the options dialog, which would otherwise sit behind it.
+        return
     }
 
     M3ActionDialog(
