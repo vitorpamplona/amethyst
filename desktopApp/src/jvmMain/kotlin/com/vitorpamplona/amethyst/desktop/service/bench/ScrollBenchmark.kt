@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.desktop.service.bench
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -149,11 +151,19 @@ object ScrollBenchmark {
         val passes = listOf("down" to Direction.DOWN, "up" to Direction.UP, "down-again" to Direction.DOWN)
         val stats = mutableListOf<PassStats>()
         val frames = StringBuilder("pass\tframe\tstart_ms\tinterval_ms\tbusy_ms\n")
+        // The image memory cache after each pass: how full it is, and what it holds.
+        val cacheLog = StringBuilder("pass\tsize_bytes\tmax_bytes\tentries\n")
+        cacheLog.append("start\t").append(memoryCacheState()).append('\n')
         for ((name, direction) in passes) {
             // Lets what the last pass started (image loads, a feed page) settle before the next.
             delay(2_000)
             val pass = measurePass(window, config, name, direction, queue)
             stats += pass
+            cacheLog
+                .append(name)
+                .append('\t')
+                .append(memoryCacheState())
+                .append('\n')
             // After the pass, not in it: what the window shows, to check that it moved.
             val bounds = Rectangle(window.locationOnScreen, window.size)
             withContext(Dispatchers.IO) { capture(bounds, File(config.outDir, "after-$name.png")) }
@@ -169,6 +179,8 @@ object ScrollBenchmark {
         summary.append(PassStats.HEADER.joinToString("\t")).append('\n')
         stats.forEach { summary.append(it.row().joinToString("\t")).append('\n') }
         writeFile(File(config.outDir, "frames.tsv"), frames.toString())
+        writeFile(File(config.outDir, "images.tsv"), ImageLoadStats.log())
+        writeFile(File(config.outDir, "memory-cache.tsv"), cacheLog.toString())
         // Written last: the script takes its presence as the run being done.
         writeFile(File(config.outDir, "summary.tsv"), summary.toString())
         Log.i(TAG) { "Scroll benchmark written to ${config.outDir}" }
@@ -186,7 +198,7 @@ object ScrollBenchmark {
             val busy = LongArrayList()
             val gcBefore = gcTotals()
             val jitBefore = jitMillis()
-            ImageLoadStats.reset()
+            ImageLoadStats.reset(name)
 
             var recording = true
             val recorder =
@@ -287,6 +299,11 @@ object ScrollBenchmark {
             "interval_ms" to config.intervalMs.toString(),
             "wait_s" to config.waitSeconds.toString(),
         )
+    }
+
+    private fun memoryCacheState(): String {
+        val cache = SingletonImageLoader.get(PlatformContext.INSTANCE).memoryCache ?: return "none"
+        return "${cache.size}\t${cache.maxSize}\t${cache.keys.size}"
     }
 
     private fun gcTotals(): Pair<Long, Long> {

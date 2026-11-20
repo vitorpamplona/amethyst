@@ -177,7 +177,9 @@ python3 tools/desktop-run/scroll_bench_summary.py /tmp/bench-before /tmp/bench-a
 Images load and decode off the UI thread, so a cache miss shows up as an image appearing late
 (the `img_*` columns), not as a slow frame.
 
-Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, and `after-<pass>.png`: look at
+Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, every image load in
+`images.tsv` (pass, source, decoded size, bytes, cache key, requested size, requester), the memory
+cache's fill after each pass in `memory-cache.tsv`, and `after-<pass>.png`: look at
 those to check that each pass moved the feed and did not run out of posts. The feed comes from live
 relays, so its posts differ from boot to boot: compare medians of several boots, and run before and
 after on the same machine close together. Under Xvfb, Skia draws in software, so absolute numbers

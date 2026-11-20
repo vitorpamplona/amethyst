@@ -25,6 +25,7 @@ import coil3.decode.DataSource
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -73,6 +74,26 @@ object ImageLoadStats {
             ) {
                 val took = started.remove(request)?.let { System.nanoTime() - it }
                 synchronized(this@ImageLoadStats) {
+                    log
+                        .append(
+                            listOf(
+                                pass,
+                                result.dataSource.name,
+                                took?.let { "%.1f".format(Locale.ROOT, it / 1e6) } ?: "",
+                                "${result.image.width}x${result.image.height}",
+                                result.image.size.toString(),
+                                result.isSampled.toString(),
+                                result.memoryCacheKey
+                                    ?.extras
+                                    ?.entries
+                                    ?.joinToString(",") { "${it.key}=${it.value}" }
+                                    .orEmpty(),
+                                result.memoryCacheKey?.key ?: request.data.toString(),
+                                // Who asked: the size it asked for, and its listener (the feed prefetch has one).
+                                request.sizeResolver.toString(),
+                                request.listener?.javaClass?.simpleName ?: "",
+                            ).joinToString("\t"),
+                        ).append('\n')
                     when (result.dataSource) {
                         DataSource.MEMORY_CACHE -> memory++
                         DataSource.DISK -> disk++
@@ -97,9 +118,18 @@ object ImageLoadStats {
             }
         }
 
-    /** Starts counting a new pass. */
+    // Every image the passes loaded, one TSV line each (see [log]).
+    private val log = StringBuilder()
+    private var pass = ""
+
+    /** Every load of the run: pass, source, ms, decoded size, bytes, sampled, key extras, key. */
     @Synchronized
-    fun reset() {
+    fun log(): String = "pass\tsource\tms\tdecoded\tbytes\tsampled\textras\tkey\tsize\tlistener\n" + log
+
+    /** Starts counting the pass [name]. */
+    @Synchronized
+    fun reset(name: String = "") {
+        pass = name
         memory = 0
         disk = 0
         network = 0

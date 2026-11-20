@@ -1,6 +1,6 @@
 # Desktop scroll benchmark
 
-Status: built. The benchmark, its script and the first measurements below.
+Status: built. The benchmark, its script, the first measurements, and the image-prefetch fix it found.
 
 ## What it measures
 
@@ -90,11 +90,42 @@ ranges that don't overlap across boots. The frame columns showed **no** consiste
 - The `down` pass is too noisy (JIT, relays still answering) for frame comparisons; compare `up`
   and `down-again`, and expect only differences over ~10% to show with 3 boots.
 
+### The images that came from disk on the way back up
+
+The image log (`images.tsv`: every load of the run with its pass, source, decoded size, bytes,
+cache key, requested size and requester) and `memory-cache.tsv` (the cache's fill after each pass)
+answered why a quarter of the `up` pass's images came from disk with a strong cache:
+
+- **Most were first loads, not misses.** Images already loaded earlier in the run came from
+  memory 94–99% of the time even before any fix. The `up` pass's disk loads were mostly avatars,
+  link previews and posts that had not been drawn when `down` went by (15–26 a boot), which the
+  `img_mem_pct` column counts with the rest.
+- **The cache never filled** (182 of 256 MB), so nothing was evicted.
+- **But the feed prefetch decoded every image at its original size.** `PrefetchFeedMedia`'s
+  request named no size; on the desktop Coil then decodes the original (Android's default is the
+  screen). 18 prefetch decodes took **171 MiB** (one 4000x2252 photo, 36 MB), against **12 MiB**
+  for the 84 images the cards drew at ~511 px. Where a card had decoded an image first, the
+  prefetch's full-size request did not count its copy as big enough and decoded it again from disk:
+  those were the `up` pass's genuine misses. A few 12 MP photos would fill the whole cache.
+
+Fixed in `PrefetchFeedMedia` (shared with Android): the prefetch decodes to fit the list's
+viewport, which bounds every card in it, so its copy stays a valid hit for the card; and it skips an
+image the memory cache already holds (a card drew it), recording its aspect ratio from that copy.
+
+| per boot | before (3 boots) | after (5 boots) |
+|---|---|---|
+| full-size decodes | 170–172 MiB | 0–2 MiB |
+| memory cache after the run | ~180 MB | 30–34 MB |
+| prefetch decodes | 18, 171 MiB | 15–18, 16–19 MiB |
+| re-visits from memory | 94–99% | 96–99% |
+
+The re-visits left on disk are avatars (25–55 px) drawn at two sizes. Frame timing did not move
+beyond its noise.
+
 ## Next
 
-1. **Why a quarter of the images on the way back up still come from disk** with a 256 MiB strong
-   cache. Likely different memory-cache keys for the same URL: the feed prefetch
-   (`PrefetchFeedMedia`) and the card may ask for different sizes. Count misses by key to confirm.
+1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
+   made the `up` pass look like a caching problem. `images.tsv` has what's needed.
 2. **A fixed corpus.** The feed comes from live relays, so its posts differ between boots and
    days. Serving a recorded event set from a local relay (the `LaunchFixtureRelay` the tests use)
    would remove that noise.
