@@ -167,6 +167,36 @@ class JsoupPaperBoundaryTest {
     private fun markup(body: String) = kinds(body).filter { it == Violation.Kind.MARKUP }
 
     @Test
+    fun nestedCssRulesAreRefusedWhereverTheySit() {
+        val quote = "<main><blockquote><p>The relay answered in <em>three seconds</em> flat</p></blockquote></main>"
+        assertEquals(emptyList(), kinds(quote))
+        assertTrue(markup("<style>main { & blockquote em { display:none } }</style>$quote").isNotEmpty())
+        assertTrue(markup("<style>main { & blockquote::after { content:\" - just kidding\" } }</style>$quote").isNotEmpty())
+        assertTrue(markup("<style>main { blockquote em { display:none } }</style>$quote").isNotEmpty())
+        assertTrue(markup("<style>@media screen { main { & em { display:none } } }</style>$quote").isNotEmpty())
+        assertTrue(markup("<main style=\"& em { display:none }\">$quote</main>").isNotEmpty())
+        // The flat version stays refused.
+        assertTrue(markup("<style>main blockquote em { display:none }</style>$quote").isNotEmpty())
+        // A brace inside a string is not a nested rule.
+        assertEquals(emptyList(), kinds("<style>.rule::after{content:\"\"} p{font-family:\"a{b}\"}</style><p class=\"rule\">x</p>"))
+    }
+
+    @Test
+    fun listMarkersAndHyphensPrintNoWords() {
+        val quote = "<blockquote><p>The relay answered in three seconds flat</p></blockquote>"
+        listOf(
+            "body { list-style-type: \"Nobody believes this: \" } blockquote p { display: list-item }",
+            "body { list-style: 'Nobody believes this: ' inside } blockquote p { display: list-item }",
+            "body { list-style-type: symbols(cyclic \"Nobody\") } blockquote p { display: list-item }",
+            "blockquote p { hyphens: manual; hyphenate-character: \" - not really - \" }",
+        ).forEach { css -> assertTrue(markup("<style>$css</style>$quote").isNotEmpty(), css) }
+        assertTrue(markup("<p style=\"list-style-type:'Nobody: '\">x</p>").isNotEmpty())
+        // Keyword markers and the house's own hyphens are fine.
+        assertEquals(emptyList(), kinds("<style>ul{list-style:disc inside}ol{list-style-type:decimal}p{hyphens:auto}</style>"))
+        assertEquals(emptyList(), kinds("<style>p{hyphenate-character:auto}</style>"))
+    }
+
+    @Test
     fun declarativeShadowDomIsRefused() {
         assertTrue(markup("<div><template shadowrootmode=\"open\"><img src=x onerror=alert(1)></template></div>").isNotEmpty())
     }
