@@ -70,17 +70,15 @@ already be on Nostr when you tag.
    then add their npub or an alias so future releases pick them up. Pass
    `--from`/`--to` to rebuild an older release's list.
 
-   For the `## Translations` section, credit the people whose translation PRs
-   landed since the last `v*` tag (translations no longer go through Crowdin):
+   For the `## Translations` section, run the same script over the locale files:
    ```bash
-   git log --format='%an' "$(git describe --tags --abbrev=0 --match 'v*')"..HEAD -- \
+   scripts/contributors.sh --title Translations -- \
      'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
-     'amethyst/src/main/res/values-*/strings.xml' | sort | uniq -c | sort -rn
+     'amethyst/src/main/res/values-*/strings.xml'
    ```
-   Resolve each author to an npub through `docs/changelog/github.json`, as above.
-   For someone who translated through Crowdin before it was retired,
-   `docs/changelog/translators.json` keeps their npub under `mappings` (by Crowdin
-   username). That file is historical: nothing updates it any more.
+   Add each person's languages by hand, and drop commits that only moved or
+   removed keys. Someone who translated through Crowdin, before it was retired,
+   may have their npub in `docs/changelog/translators.json` (by Crowdin username).
 
 3. **Publish the release-notes note on Nostr** — *minor releases only.* In
    practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,

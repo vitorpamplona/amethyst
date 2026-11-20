@@ -1,14 +1,7 @@
 {
   "_comment": [
-    "Historical: Amethyst's translator registry from the Crowdin era, last updated by the",
-    "final Crowdin sync (2026-10-28). Nothing updates this file any more; Crowdin is",
-    "retired and translation credits now come from git history (RELEASE_OPS.md,",
-    "\"## Translations\").",
-    "",
-    "mappings: Crowdin username (or numeric user id) -> Nostr npub. Look a past",
-    "  translator up here when crediting them. Keys match case-insensitively.",
-    "ignore: Crowdin usernames that were never credited (machine-translation uploads).",
-    "sinceLastTag: who translated in the last Crowdin cycle, with their languages. Frozen."
+    "Historical: Crowdin username (or numeric user id) -> Nostr npub for the people who",
+    "translated through Crowdin, up to its last sync (2026-10-28). Nothing updates it."
   ],
   "mappings": {
     "vitorpamplona": "npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z",
@@ -68,50 +61,5 @@
     "Kevin_1": "",
     "crowdin.pretended462": "",
     "rchk": ""
-  },
-  "ignore": [
-    "vitorpamplona"
-  ],
-  "sinceLastTag": {
-    "tag": "v1.20.0",
-    "since": "2026-10-24T16:25:42-04:00",
-    "translators": [
-      {
-        "user": "Bardesss",
-        "languages": [
-          "Dutch"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "StellarStoic",
-        "languages": [
-          "Slovenian"
-        ]
-      },
-      {
-        "user": "fiddleway",
-        "languages": [
-          "Uzbek"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      }
-    ]
   }
 }

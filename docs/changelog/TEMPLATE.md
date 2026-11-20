@@ -55,7 +55,7 @@ comment and fill in the sections below; drop any section that doesn't apply.
 
 ## Translations
 
-<!-- Credit the authors of translation commits since the last tag; RELEASE_OPS.md has the git log command. -->
+<!-- Generate with scripts/contributors.sh --title Translations -- <locale paths> (RELEASE_OPS.md); add each person's languages. -->
 
 - Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
