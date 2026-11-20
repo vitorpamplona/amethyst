@@ -217,7 +217,16 @@ private fun NappletWindow(
         val app = session.launch.identity.coordinate
         ConsentWindows(apps = { it == app }, titleOf = { _, _ -> session.launch.title }, queues = host.consent)
 
-        if (showAccess) AccessWindow(session, host, parent = window, onDone = { showAccess = false })
+        if (showAccess) {
+            AccessWindow(
+                session,
+                host,
+                parent = window,
+                // The detail screen lives in the main window, which comes forward over this one.
+                onManagePermissions = { host.openPermissions(session) },
+                onDone = { showAccess = false },
+            )
+        }
     }
 }
 
@@ -425,6 +434,8 @@ internal fun AccessWindow(
     host: DesktopNappletHost,
     /** The window it sits over; centred on the screen without one. */
     parent: AwtWindow?,
+    /** Opens the app's Connected Apps detail screen, where its permissions are changed. */
+    onManagePermissions: () -> Unit,
     onDone: () -> Unit,
 ) {
     val isWebsite = session.launch.profile == HostProfile.WEBSITE
@@ -478,8 +489,10 @@ internal fun AccessWindow(
                 isWebsite = isWebsite,
                 capabilities = capabilities,
                 torOn = if (isWebsite && torEnabled) session.useTor else null,
-                // The per-app permission screen is Android's for now.
-                onManagePermissions = null,
+                onManagePermissions = {
+                    onDone()
+                    onManagePermissions()
+                },
                 onDone = onDone,
             )
         }

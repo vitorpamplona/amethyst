@@ -399,6 +399,8 @@ compose.desktop {
                                 <array>
                                     <string>nostr</string>
                                     <string>amethyst</string>
+                                    <!-- NIP-46: an app's offer to pair with Amethyst's signer. -->
+                                    <string>nostrconnect</string>
                                 </array>
                             </dict>
                         </array>
@@ -701,12 +703,12 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
             // StartupWMClass so docks match the window (AmethystDesktop.kt); MimeType + %u so
-            // the desktop offers the app for nostr:/amethyst: links and passes the URI to the
+            // the desktop offers the app for nostr:/amethyst:/nostrconnect: links and passes the URI to the
             // launcher (DesktopDeepLinks.extractFromArgs).
             val desktopEntry =
                 desktopTemplate.trimEnd()
                     .replace(Regex("^Exec=(\\S.*)$", RegexOption.MULTILINE)) { "Exec=${it.groupValues[1]} %u" }
-                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;\n")
+                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;x-scheme-handler/nostrconnect;\n")
             File(resources, "${appName.get()}.desktop").writeText(desktopEntry)
 
             // The task's own options, one per line with quoted values, minus the app-image ones.

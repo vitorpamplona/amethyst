@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
@@ -57,8 +58,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.napplet.NappletBrokerService
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
+import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
@@ -107,6 +110,10 @@ object AndroidAppPlatform : AppPlatform {
 
     // NestActivity.launch adds FLAG_ACTIVITY_NEW_TASK, so the application context can start it.
     override fun openNestRoom(addressValue: String) = NestActivity.launch(Amethyst.instance.appContext, addressValue)
+
+    override suspend fun revokeNappletSessionGrants(coordinate: String) = NappletBrokerService.revokeSessionGrants(coordinate)
+
+    override val browserSitePermissions: BrowserSitePermissionStore get() = WebSitePermissionRegistry
 
     // Per flavour: Play links the hosted policies, F-Droid surfaces none.
     override val appVersionName: String get() = BuildConfig.VERSION_NAME
