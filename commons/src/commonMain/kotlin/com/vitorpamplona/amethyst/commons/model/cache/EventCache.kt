@@ -248,6 +248,12 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVe
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.UnrecognizedKind30103Event
+import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
+import com.vitorpamplona.quartz.llamagarden.seederRequest.SeederRequestEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.UnrecognizedKind30099Event
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
@@ -4474,6 +4480,14 @@ open class EventCache :
                 is UnrecognizedKind30102Event,
                 is UnrecognizedKind30104Event,
                 is UnrecognizedKind31985Event,
+                // llama.garden's model torrents, client releases, seeder requests and model requests,
+                // and the other apps' events on 30099 and 30103, drawn as unknown kinds as before.
+                is ModelTorrentEvent,
+                is ClientReleaseEvent,
+                is SeederRequestEvent,
+                is ModelRequestEvent,
+                is UnrecognizedKind30099Event,
+                is UnrecognizedKind30103Event,
                 // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
                 // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
                 // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so

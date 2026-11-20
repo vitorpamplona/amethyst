@@ -72,6 +72,12 @@ sealed class Route {
 
     @Serializable object NewGitRepository : Route()
 
+    /** llama.garden's "Request a model" form (kind 30103). */
+    @Serializable object LlamaGardenRequestModel : Route()
+
+    /** llama.garden's "Add a torrent" form: list an uploaded `.torrent` (kind 30099). */
+    @Serializable object LlamaGardenAddTorrent : Route()
+
     @Serializable data class EditCommunity(
         val kind: Int,
         val pubKeyHex: HexKey,
