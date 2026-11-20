@@ -149,7 +149,13 @@ Status against Flathub's
    Gradle and jpackage, so the bundled runtime keeps JBR's Wayland toolkit), the
    Gradle distribution, and `gradle-sources.json`: every Maven file the build
    resolves, for x86_64 and aarch64. `flathub-offline.init.gradle` replaces every
-   repository with that local copy. Flathub already ships a prebuilt JBR and
+   repository with that local copy. The groups Magpie resolves from Nostr +
+   Blossom (quartz, its MLS bindings, crypto-kmp, quic-kmp, kiko-kmp, negentropy,
+   libschnorr256k1) are on no Maven repository: their entries are Blossom URLs by
+   sha256, from the servers each release names, laid out as Magpie's own offline
+   mirror (`gradle-home/magpie/mirror/<publisher>/`). Under `--offline` the Magpie
+   plugin reads only that mirror, with the key the tag's `gradle/magpie.lock`
+   pins, and the init script keeps its repositories. Flathub already ships a prebuilt JBR and
    Skiko's natives in `com.prof18.feedflow`, a Compose Desktop app built the same
    way.
 

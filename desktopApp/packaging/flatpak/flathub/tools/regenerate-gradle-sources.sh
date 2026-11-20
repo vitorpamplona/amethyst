@@ -6,9 +6,11 @@
 #
 # For each arch it runs the manifest's own build command online, in a Debian
 # container on the JetBrains Runtime the manifest pins, with a fresh Gradle
-# home; the module cache then holds exactly what the build resolves. The two
-# caches become one list (the arch-specific jars of both, which each arch
-# ignores the other's of). x86_64 runs under emulation on an arm64 host (and
+# home; the module cache then holds exactly what the build resolves, and
+# Magpie's mirror (magpie/mirror/) exactly what it served from Nostr + Blossom,
+# against the tag's own gradle/magpie.lock (frozen: a release that isn't in it
+# fails instead of being added). The two caches become one list (the
+# arch-specific jars of both, which each arch ignores the other's of). x86_64 runs under emulation on an arm64 host (and
 # the reverse), so expect ~10 min native plus ~25 min emulated.
 #
 # Requires: docker, curl, python3. Writes ../gradle-sources.json and prints the
@@ -37,7 +39,7 @@ capture() {  # docker-platform jbr-arch
     apt-get update -qq >/dev/null && apt-get install -y -qq --no-install-recommends ca-certificates binutils >/dev/null
     mkdir -p /jbr /src && tar xzf /dl/$jbr -C /jbr --strip-components=1 && tar xzf /dl/src.tar.gz -C /src --strip-components=1
     cd /src && JAVA_HOME=/jbr GRADLE_USER_HOME=/cap/gradle-home ./gradlew --no-daemon --console=plain \
-      :desktopApp:createReleaseDistributable > /cap/build.log 2>&1 || { tail -40 /cap/build.log; exit 1; }"
+      -Pmagpie.frozenLock=true :desktopApp:createReleaseDistributable > /cap/build.log 2>&1 || { tail -40 /cap/build.log; exit 1; }"
   echo "captured $arch"
 }
 
