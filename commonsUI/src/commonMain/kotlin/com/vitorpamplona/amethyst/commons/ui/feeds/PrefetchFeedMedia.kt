@@ -28,12 +28,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.size.Scale
 import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -163,7 +166,7 @@ private fun PrefetchVisibleMedia(
                 withContext(Dispatchers.IO) {
                     currentNotes.notesAround(ends, radius).forEach { note ->
                         if (note.idHex !in warmed) {
-                            note.warm(context, platform, accountViewModel)?.let { videosByNote[note.idHex] = it.feedVideos() }
+                            note.warm(context, platform, accountViewModel, ends.viewport)?.let { videosByNote[note.idHex] = it.feedVideos() }
                             warmed.add(note.idHex)
                         }
                     }
@@ -235,24 +238,28 @@ private data class FeedVideo(
     val mimeType: String?,
 )
 
-/** The keys (note `idHex`) of the first and last visible feed items. */
+/**
+ * The keys (note `idHex`) of the first and last visible feed items, and the size of the list's
+ * viewport, which bounds every image a card in it draws.
+ */
 private data class VisibleEnds(
     val firstKey: String?,
     val lastKey: String?,
+    val viewport: IntSize,
 )
 
 /** Emits the visible range ends, once per change. */
 private fun LazyListState.visibleEnds(): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String)
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize)
     }.distinctUntilChanged()
 
 /** Grid equivalent of [visibleEnds]. */
 private fun LazyGridState.visibleEnds(): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String)
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize)
     }.distinctUntilChanged()
 
 /** Up to [radius] notes immediately before the first visible and after the last visible. */
@@ -295,11 +302,12 @@ private fun Note.warm(
     context: PlatformContext,
     platform: NotePlatform,
     accountViewModel: AccountViewModel,
+    viewport: IntSize,
 ): WarmTargets? {
     val targets = collectWarmTargets() ?: return null
 
     if (accountViewModel.settings.showImages()) {
-        targets.forEachImage { url, videoUrlForDims -> context.prefetchImage(url, videoUrlForDims) }
+        targets.forEachImage { url, videoUrlForDims -> context.prefetchImage(url, videoUrlForDims, viewport) }
     }
     if (accountViewModel.settings.showUrlPreview()) {
         targets.links.forEach { url ->
@@ -491,16 +499,35 @@ private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
     return CachedRichTextParser.parseText(body, tags, toNostrUri(), author?.pubkeyHex)
 }
 
-/** Enqueues an image prefetch that also records its decoded aspect ratio. */
+/**
+ * Enqueues an image prefetch that also records its decoded aspect ratio.
+ *
+ * Decoded to fit [viewport]: no card in the feed draws an image larger than its list, so the
+ * prefetched image is big enough to be the card's memory-cache hit. A request without a size
+ * decodes the original on the desktop (Coil's default there; Android's is the screen size), and
+ * there one 12 MP photo took ~48 MB of the memory cache, for a card that draws it ~511 px wide: in
+ * a scroll benchmark the prefetch held 171 MiB of the cache against the cards' 12 MiB, and an image
+ * a card had already decoded at its own size was decoded again at full size from disk.
+ */
 private fun PlatformContext.prefetchImage(
     url: String,
     videoUrlForDims: String?,
+    viewport: IntSize,
 ) {
     runCatching {
-        SingletonImageLoader.get(this).enqueue(
+        val loader = SingletonImageLoader.get(this)
+        // Already drawn by a card (a note that was on screen before it came into the prefetch's
+        // reach): nothing to warm, and a prefetch would only decode a second, bigger copy over it.
+        loader.memoryCache?.get(MemoryCache.Key(url))?.let { cached ->
+            CaptureAspectRatio(url, videoUrlForDims).record(cached.image.width, cached.image.height)
+            return
+        }
+        loader.enqueue(
             ImageRequest
                 .Builder(this)
                 .data(url)
+                .apply { if (viewport.width > 0 && viewport.height > 0) size(viewport.width, viewport.height) }
+                .scale(Scale.FIT)
                 .listener(CaptureAspectRatio(url, videoUrlForDims))
                 .build(),
         )
@@ -525,9 +552,12 @@ private class CaptureAspectRatio(
     override fun onSuccess(
         request: ImageRequest,
         result: SuccessResult,
+    ) = record(result.image.width, result.image.height)
+
+    fun record(
+        w: Int,
+        h: Int,
     ) {
-        val w = result.image.width
-        val h = result.image.height
         MediaAspectRatioCache.add(imageUrl, w, h)
         if (videoUrlForDims != null && MediaAspectRatioCache.get(videoUrlForDims) == null) {
             MediaAspectRatioCache.add(videoUrlForDims, w, h)
