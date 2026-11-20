@@ -691,7 +691,16 @@ fun main(args: Array<String>) {
                                     DesktopNappletWindows(nappletHost)
 
                                     // A NIP-46 app asking this desktop's bunker, in a window of its own.
-                                    Nip46ConsentWindows(modules.nip46Consent, onQuestion = { windows.showMainWindow() })
+                                    // The main window comes back (from the tray or the Dock) without
+                                    // raising itself: the question's window raises it, then takes the
+                                    // focus, so the focus lands on the question.
+                                    Nip46ConsentWindows(
+                                        modules.nip46Consent,
+                                        onQuestion = {
+                                            windowState.isMinimized = false
+                                            windows.showMainWindow(raise = false)
+                                        },
+                                    )
                                 }
                             }
                         }

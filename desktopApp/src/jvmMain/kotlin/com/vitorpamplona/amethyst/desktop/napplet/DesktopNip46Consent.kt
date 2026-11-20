@@ -75,8 +75,9 @@ class DesktopNip46Consent(
 
 /**
  * Every NIP-46 question waiting on the user, oldest first, each in a window of its own. A question
- * brings the main window back ([onQuestion]) and comes to the front itself: the bunker answers apps
- * while the user is elsewhere, and a question nobody sees is a silent "no".
+ * brings the main window back ([onQuestion]), and its window then comes in front of every app's
+ * windows and takes the focus (`bringToForeground`): the bunker answers apps while the user is
+ * elsewhere, and a question nobody sees is a silent "no".
  */
 @Composable
 fun Nip46ConsentWindows(
