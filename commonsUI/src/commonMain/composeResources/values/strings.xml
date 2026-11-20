@@ -4891,6 +4891,9 @@
     <string name="desktop_tray_tooltip">Amethyst: signing for your connected apps</string>
     <string name="desktop_tray_open">Open Amethyst</string>
     <string name="desktop_tray_quit">Quit Amethyst</string>
+    <string name="desktop_tray_explain_title">Amethyst keeps running</string>
+    <string name="desktop_tray_explain_text">Your remote signer keeps answering your connected apps while the window is closed. Amethyst stays in the system tray (the menu bar on macOS): open it from there, or quit from its menu.</string>
+    <string name="desktop_tray_explain_keep">Keep running</string>
     <string name="key_storage_keyring_mac">the macOS Keychain</string>
     <string name="key_storage_keyring_secret_service">your system keyring</string>
     <string name="key_storage_keyring_windows">Windows Credential Manager</string>
