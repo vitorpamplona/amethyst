@@ -866,7 +866,11 @@ Every package has the first, and each has one of the other two:
   classes behind.
 - **The trained AOT cache**, in the tarball, the AppImage and the Flatpak bundle
   (`lib/app/amethyst.aot`). `trainReleaseAotCache` starts the release image logged
-  in read-only, lets it load the home feed, and builds the cache from that run.
+  in read-only, lets it load the home feed, scrolls the feed down, back up and down
+  again (`ScrollBenchmark`), and builds the cache from that run: the classes it
+  loaded and the method profiles of both the start and the scroll, so the first
+  scroll of a start doesn't wait on the JIT (36.5 fps on the first pass against 31.7
+  for a cache trained on the start alone; `desktopApp/plans/2026-11-20-desktop-scroll-benchmark.md`).
   It is valid wherever the image is copied as long as every jar keeps its size and
   modification time, so its jars are stamped to time 0 (as OSTree stores them), and
   the AppImage step stamps its copy again. jpackage's installers rewrite those
@@ -879,7 +883,8 @@ loads the classes from the jars. To train locally (Linux, JDK 25):
 xvfb-run ./gradlew :desktopApp:trainReleaseAotCache -Pamethyst.aotTrainingLogin=npub1...
 ```
 
-`-Pamethyst.aotTrainingSeconds` (default 45) sets the training run's length.
+`-Pamethyst.aotTrainingSeconds` (default 45) sets how long the feed loads before the
+training run scrolls it; `-Pamethyst.aotTrainingScroll=false` trains the start alone.
 
 ---
 

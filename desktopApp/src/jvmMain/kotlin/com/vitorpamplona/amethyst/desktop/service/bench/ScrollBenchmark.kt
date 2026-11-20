@@ -56,8 +56,10 @@ import kotlin.system.exitProcess
 /**
  * A scroll benchmark of the running app: `-Damethyst.scrollBench=<dir>` waits for the home feed
  * to load, scrolls it with the mouse wheel at a fixed pace (down, back up, down again), records
- * every frame, writes a report to `<dir>` and exits. Off unless the property is set; only the dev
- * `run` forwards it (desktopApp/build.gradle.kts), and `tools/desktop-run/scroll-bench.sh` drives it.
+ * every frame, writes a report to `<dir>` and exits. Off unless the property is set. The dev `run`
+ * forwards it (desktopApp/build.gradle.kts), `tools/desktop-run/scroll-bench.sh` drives it on the dev
+ * `run` or a packaged image, and `trainReleaseAotCache` scrolls with it while it records the release
+ * image's AOT cache, so the cache covers the scroll path too.
  *
  * The wheel events are posted to the window as AWT would deliver them, so they go through Compose's
  * own wheel handling and smooth scrolling, as a user's do; nothing reaches into the feed's state.
@@ -297,6 +299,8 @@ object ScrollBenchmark {
             "max_heap_mb" to (Runtime.getRuntime().maxMemory() / 1024 / 1024).toString(),
             "render_api" to (System.getProperty("skiko.renderApi") ?: System.getenv("SKIKO_RENDER_API") ?: "default"),
             "headless" to GraphicsEnvironment.isHeadless().toString(),
+            // The class archive or AOT cache the JVM started with: what the first pass's JIT time depends on.
+            "startup_cache" to startupCache(),
             "refresh_hz" to (refresh?.toString() ?: "unknown"),
             "window" to "${window.width}x${window.height}",
             "notches" to config.notches.toString(),
@@ -304,6 +308,14 @@ object ScrollBenchmark {
             "wait_s" to config.waitSeconds.toString(),
         )
     }
+
+    private fun startupCache(): String =
+        ManagementFactory
+            .getRuntimeMXBean()
+            .inputArguments
+            .filter { it.startsWith("-XX:AOTCache=") || it.startsWith("-XX:SharedArchiveFile=") || it.startsWith("-XX:AOTMode=") }
+            .joinToString(" ")
+            .ifEmpty { "none" }
 
     private fun memoryCacheState(): String {
         val cache = SingletonImageLoader.get(PlatformContext.INSTANCE).memoryCache ?: return "none"

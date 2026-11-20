@@ -782,6 +782,10 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
         providers.gradleProperty("amethyst.aotTrainingLogin")
             .orElse("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
     val seconds = providers.gradleProperty("amethyst.aotTrainingSeconds").map(String::toLong).orElse(45L)
+    // The training run also scrolls the home feed (ScrollBenchmark: down, back up, down again), so
+    // the cache holds the scroll path's classes and method profiles too: without them the first
+    // scroll of every start ran ~9 s of JIT compilation (desktopApp/plans/2026-11-20-desktop-scroll-benchmark.md, "The AOT cache, trained on scrolling").
+    val scroll = providers.gradleProperty("amethyst.aotTrainingScroll").map(String::toBoolean).orElse(true)
     val dropped = perUserArchiveArgs
 
     doLast {
@@ -826,15 +830,38 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
         }
 
         try {
-            // 1. Record: a start logged in, through the home feed, then a normal exit.
+            // 1. Record: a start logged in, through the home feed, then a normal exit. With scrolling,
+            // the feed gets the same time to load, then the benchmark scrolls it and exits the app
+            // itself; the exit timer only stops a run that hangs.
+            val scrollDir = File(work, "scroll")
+            val recordOptions =
+                if (scroll.get()) {
+                    listOf(
+                        "-Damethyst.scrollBench=${scrollDir.absolutePath}",
+                        "-Damethyst.scrollBench.waitSeconds=${seconds.get()}",
+                        "-Damethyst.exitAfterSeconds=${seconds.get() + 180}",
+                    )
+                } else {
+                    listOf("-Damethyst.exitAfterSeconds=${seconds.get()}")
+                }
             writeCfg(
                 "-XX:AOTMode=record",
                 "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf",
                 "-Damethyst.dataDir=${File(work, "profile").absolutePath}",
-                "-Damethyst.exitAfterSeconds=${seconds.get()}",
+                *recordOptions.toTypedArray(),
             )
-            launch("record", mapOf("AMETHYST_LOGIN" to login.get(), "SKIKO_RENDER_API" to "SOFTWARE"), seconds.get() + 120)
+            launch("record", mapOf("AMETHYST_LOGIN" to login.get(), "SKIKO_RENDER_API" to "SOFTWARE"), seconds.get() + 300)
             check(config.isFile) { "The training run recorded nothing: no $config" }
+            if (scroll.get()) {
+                // A scroll that failed still leaves a valid cache of the start: worth a warning, not a
+                // failed release.
+                val summary = File(scrollDir, "summary.tsv")
+                if (summary.isFile) {
+                    logger.lifecycle("AOT training scrolled the feed:\n" + summary.readLines().filterNot { it.startsWith("#") }.joinToString("\n"))
+                } else {
+                    logger.warn("w: the AOT training run did not scroll the feed (no $summary): the cache covers the start only")
+                }
+            }
 
             // 2. Create: the launcher's JVM assembles the cache and exits without starting the app.
             writeCfg("-XX:AOTMode=create", "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf", "-XX:AOTCache=\$APPDIR/amethyst.aot")

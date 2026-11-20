@@ -13,6 +13,10 @@
 #   --login <key>   the account whose feed scrolls (default: Vitor's npub, ~260 follows); a public
 #                   key only, as run-headless.sh --login
 #   --out <dir>     where the reports go (default: $AMETHYST_RUN_DIR/scroll-bench/<time>)
+#   --app <dir>     benchmark a packaged image instead of the dev `run`: the folder holding
+#                   bin/Amethyst, e.g. desktopApp/build/compose/binaries/main-release/app/Amethyst
+#                   (createReleaseDistributable, trainReleaseAotCache). Arguments after `--` then go
+#                   to its JVM through _JAVA_OPTIONS, e.g. -XX:AOTMode=on to require its AOT cache
 #
 # Anything after `--` goes to Gradle, for example the benchmark's own settings:
 #   -Damethyst.scrollBench.notches=250      wheel notches per pass
@@ -37,6 +41,7 @@ runs=3
 warmup=1
 login="npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"
 out="$RUN_DIR/scroll-bench/$(date +%Y%m%d-%H%M%S)"
+app=""
 extra=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -44,6 +49,7 @@ while [ $# -gt 0 ]; do
     --warmup) warmup="$2"; shift 2 ;;
     --login) login="$2"; shift 2 ;;
     --out) out="$2"; shift 2 ;;
+    --app) app="$2"; shift 2 ;;
     --) shift; extra=("$@"); break ;;
     *) sed -n '3,27p' "$0"; exit 2 ;;
   esac
@@ -71,11 +77,55 @@ boot_timeout=$((wait_seconds + 3 * notches * interval_ms / 1000 + 180))
 mkdir -p "$out" || exit 1
 echo "Reports: $out"
 
+if [ -n "$app" ]; then
+  [ -x "$app/bin/Amethyst" ] || { echo "No launcher at $app/bin/Amethyst" >&2; exit 2; }
+  # The virtual display run-headless.sh uses, started the same way when it isn't up.
+  export DISPLAY="${AMETHYST_DISPLAY:-:99}"
+  # A socket without its Xvfb is left over from one that exited: start a new one.
+  if ! { [ -S "/tmp/.X11-unix/X${DISPLAY#:}" ] && pgrep -f "^[^ ]*Xvfb $DISPLAY" > /dev/null; }; then
+    Xvfb "$DISPLAY" -screen 0 "${AMETHYST_SCREEN:-1600x1000x24}" -nolisten tcp > "$out/xvfb.log" 2>&1 &
+    for _ in $(seq 1 50); do [ -S "/tmp/.X11-unix/X${DISPLAY#:}" ] && break; sleep 0.1; done
+  fi
+fi
+
+# One boot of the packaged image at $app, reporting to $1; returns once the report is written or
+# the app is gone.
+boot_app() {
+  local dir="$1" log="$2"
+  # The image's own launcher, as a user starts it; the benchmark's settings reach its JVM through
+  # _JAVA_OPTIONS, after the ones the environment already sets.
+  AMETHYST_LOGIN="$login" SKIKO_RENDER_API="${SKIKO_RENDER_API:-SOFTWARE}" \
+    _JAVA_OPTIONS="${_JAVA_OPTIONS:-} -Damethyst.scrollBench=$dir -Damethyst.dataDir=$RUN_DIR/profile-app ${extra[*]+"${extra[*]}"}" \
+    "$app/bin/Amethyst" > "$log" 2>&1 &
+  local pid=$!
+  local deadline=$((SECONDS + boot_timeout + 120))
+  until [ -f "$dir/summary.tsv" ] || [ -f "$dir/error.txt" ]; do
+    if ! kill -0 "$pid" 2> /dev/null; then
+      echo "  the app exited without a report; its log: $log" >&2
+      tail -5 "$log" >&2
+      break
+    fi
+    if [ $SECONDS -ge $deadline ]; then
+      echo "  no report after $((boot_timeout + 120)) s" >&2
+      break
+    fi
+    sleep 2
+  done
+  # It exits by itself after the report; this only cleans up a run that went wrong.
+  for _ in $(seq 1 30); do kill -0 "$pid" 2> /dev/null || break; sleep 1; done
+  kill "$pid" 2> /dev/null
+}
+
 total=$((warmup + runs))
 for i in $(seq 1 "$total"); do
   if [ "$i" -le "$warmup" ]; then dir="$out/warmup-$i"; else dir="$out/run-$((i - warmup))"; fi
   rm -rf "$dir"
   echo "Boot $i of $total -> $dir"
+  if [ -n "$app" ]; then
+    boot_app "$dir" "$out/app-$i.log"
+    [ -f "$dir/error.txt" ] && { echo "  the benchmark failed:" >&2; head -5 "$dir/error.txt" >&2; }
+    continue
+  fi
   if ! AMETHYST_RUN_ARGS="-Damethyst.scrollBench=$dir ${extra[*]+"${extra[*]}"}" "$RUN_HEADLESS" start --login "$login" > "$out/boot-$i.log" 2>&1; then
     echo "  the app did not start; see $out/boot-$i.log" >&2
     tail -20 "$out/boot-$i.log" >&2

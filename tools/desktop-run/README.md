@@ -177,6 +177,12 @@ python3 tools/desktop-run/scroll_bench_summary.py /tmp/bench-before /tmp/bench-a
 Images load and decode off the UI thread, so a cache miss shows up as an image appearing late
 (the `img_*` columns), not as a slow frame.
 
+`--app <image>` benchmarks a packaged image instead of the dev `run`, through its own launcher:
+`desktopApp/build/compose/binaries/main-release/app/Amethyst` after `createReleaseDistributable`
+(and `trainReleaseAotCache` for its AOT cache). Arguments after `--` then reach its JVM through
+`_JAVA_OPTIONS`; `-- -XX:AOTMode=on` makes a boot fail rather than run without the image's AOT
+cache. Each report's `startup_cache` line names the archive or cache the JVM started with.
+
 Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, every image load in
 `images.tsv` (pass, source, decoded size, bytes, cache key, requested size, requester), the memory
 cache's fill after each pass in `memory-cache.tsv`, and `after-<pass>.png`: look at
