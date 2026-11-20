@@ -45,25 +45,21 @@ enum class BackgroundClose {
 
     /** Hide the window and keep running behind the tray icon. */
     TRAY,
-
-    /** No tray to come back from (a Linux desktop without a tray host): minimize instead of hiding. */
-    MINIMIZE,
 }
 
 object BackgroundCloseRules {
     /**
      * Closing the main window when it would quit: an account's signer still answering apps keeps
-     * the app running, in the tray where there is one, minimized where there is none (a hidden
-     * window with no icon to bring it back would leave the user no way in but a relaunch).
+     * the app running in the tray. Without a tray (a Linux desktop with no tray host) the app quits
+     * as before: running on with nothing on screen to show it, or to quit it from, is never wanted.
      */
     fun onClose(
         signerRunning: Boolean,
         trayAvailable: Boolean,
     ): BackgroundClose =
         when {
-            !signerRunning -> BackgroundClose.QUIT
-            trayAvailable -> BackgroundClose.TRAY
-            else -> BackgroundClose.MINIMIZE
+            signerRunning && trayAvailable -> BackgroundClose.TRAY
+            else -> BackgroundClose.QUIT
         }
 }
 
@@ -118,7 +114,7 @@ object SystemTrayHost {
                 ),
             )
         if (gdbus != null) return gdbus.contains("true")
-        Log.i(TAG) { "Could not ask the session bus for a tray host; closing the window will minimize it" }
+        Log.i(TAG) { "Could not ask the session bus for a tray host; closing the window will quit" }
         return false
     }
 

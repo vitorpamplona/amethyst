@@ -29,7 +29,7 @@ any loaded account has its signer on (`AccountCacheState.anySignerRunning`).
   Skiko no longer has: that crashed the app as the tray appeared.
 - Linux shows the icon only while a tray host (`org.kde.StatusNotifierWatcher`) runs. Stock GNOME
   has none without the AppIndicator extension. `SystemTrayHost` asks the session bus; without a
-  host the window is minimized instead of hidden, so it is never lost.
+  host closing quits, as with no signer: the app never runs on with nothing on screen.
 - macOS: Cmd+Q and the Dock's Quit go to a quit handler (`installAppMenuHandlers`), since the
   `CLOSE_ALL_WINDOWS` strategy alone would only send the window to the tray. A Dock click
   (`AppReopenedListener`) brings the window back.
@@ -55,7 +55,7 @@ Headless (Xvfb), with a fake tray host on a private session bus and a REQ-loggin
 of a local geode: the icon registers when the signer turns on; closing hides the window; the
 nApplets feed's REQ closes 30 s later while 7 account subscriptions stay; the tray click and a
 relaunch link bring the window back and the feed resubscribes; the tray's Quit exits; with the
-signer off closing still quits; with no tray host the window stays (minimize) and the app runs.
+signer off closing still quits; with no tray host the app keeps running and the window stays (since changed: it now quits).
 
 ## Open
 

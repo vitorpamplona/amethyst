@@ -38,10 +38,10 @@ class DesktopBackgroundModeTest {
     }
 
     @Test
-    fun aRunningSignerKeepsTheAppInTheTrayOrMinimized() {
+    fun aRunningSignerKeepsTheAppInTheTrayOnlyWhereThereIsOne() {
         assertEquals(BackgroundClose.TRAY, BackgroundCloseRules.onClose(signerRunning = true, trayAvailable = true))
-        // No tray to come back from: never hide the window, minimize it.
-        assertEquals(BackgroundClose.MINIMIZE, BackgroundCloseRules.onClose(signerRunning = true, trayAvailable = false))
+        // No tray to come back from: quit, as without a signer.
+        assertEquals(BackgroundClose.QUIT, BackgroundCloseRules.onClose(signerRunning = true, trayAvailable = false))
     }
 
     private class Window : LifecycleOwner {

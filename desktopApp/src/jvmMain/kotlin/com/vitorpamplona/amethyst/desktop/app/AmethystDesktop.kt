@@ -361,7 +361,7 @@ fun main(args: Array<String>) {
         }
 
         // An account's NIP-46 signer keeps answering apps once the window is closed, as Android's runs
-        // from a background service: the app stays up in the tray (minimized where there is no tray),
+        // from a background service: the app stays up in the tray (and quits where there is no tray),
         // and the tray's own Quit, the menu's or Cmd+Q end it.
         val signerRunning by remember { modules.accountsCache.anySignerRunning() }.collectAsState(false)
         var trayAvailable by remember { mutableStateOf(false) }
@@ -379,11 +379,6 @@ fun main(args: Array<String>) {
                 BackgroundClose.QUIT -> false
                 BackgroundClose.TRAY -> {
                     windows.hideToTray(root.navigator.stacks?.arrangement)
-                    true
-                }
-                BackgroundClose.MINIMIZE -> {
-                    windows.showMainWindow(raise = false)
-                    windowState.isMinimized = true
                     true
                 }
             }
