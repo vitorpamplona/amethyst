@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
+import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -43,8 +44,7 @@ import kotlinx.collections.immutable.ImmutableList
 /** What a composer's media tools ([ComposerMediaTools]) need from its view model. */
 interface IComposerMediaTools {
     val accountViewModel: AccountViewModel
-    val isUploadingImage: Boolean
-    val isUploadingFile: Boolean
+    val mediaUploadTracker: MediaUploadTracker
 
     fun selectImage(uris: ImmutableList<SelectedMedia>)
 
@@ -80,9 +80,12 @@ interface IComposerPostOptions {
  */
 @Composable
 fun ComposerMediaTools(vm: IComposerMediaTools) {
+    // The picked files upload on Post and show it on their cards; the buttons only wait. A spinner
+    // here too made three for one video (card, Post, gallery).
+    val busy = vm.mediaUploadTracker.isUploading
     SelectFromGallery(
-        isUploading = vm.isUploadingImage,
-        enabled = !vm.isUploadingFile,
+        isUploading = vm.mediaUploadTracker.isUploadingDrawing,
+        enabled = !busy,
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier,
     ) {
@@ -90,8 +93,8 @@ fun ComposerMediaTools(vm: IComposerMediaTools) {
     }
 
     SelectFromFiles(
-        isUploading = vm.isUploadingFile,
-        enabled = !vm.isUploadingImage,
+        isUploading = false,
+        enabled = !busy,
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier,
     ) {
@@ -102,7 +105,7 @@ fun ComposerMediaTools(vm: IComposerMediaTools) {
 
     TakeVideoButton(onVideoTaken = { vm.selectImage(it) })
 
-    DrawingButton(vm.accountViewModel, enabled = !vm.isUploadingImage && !vm.isUploadingFile) { drawing, alt ->
+    DrawingButton(vm.accountViewModel, enabled = !busy) { drawing, alt ->
         vm.uploadDrawing(drawing, alt, vm.accountViewModel.toastManager::toast)
     }
 }

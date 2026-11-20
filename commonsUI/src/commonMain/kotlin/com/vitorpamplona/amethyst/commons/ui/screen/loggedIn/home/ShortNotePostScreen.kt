@@ -144,7 +144,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerMedia
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolsStartPadding
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -501,9 +503,16 @@ private fun NewPostScreenBody(
                                     ),
                                 )
                             },
+                            refocusKey = postViewModel.media.attachCount.takeIf { it > 0 },
+                            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media, accountViewModel.mediaUploader) { postViewModel.mediaUploadTracker.isUploading },
                         )
                     }
                 }
+
+                AttachedMediaFailureBanner(
+                    items = postViewModel.media.inOrder(),
+                    modifier = Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, bottom = Size10dp),
+                )
 
                 if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                     // Lined up with the text above and the tools below: the post's text is the poll's question.
@@ -577,25 +586,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                postViewModel.multiOrchestrator?.let {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        ImageVideoDescription(
-                            it,
-                            accountViewModel.account.settings.defaultFileServer,
-                            isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            },
-                            onDelete = postViewModel::deleteMediaToUpload,
-                            onCancel = { postViewModel.multiOrchestrator = null },
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                }
+                AttachedMediaStudioDialogs(postViewModel.media, postViewModel.mediaUploadTracker.isUploading, accountViewModel)
 
                 // Show preview for both uploaded messages (voiceMetadata) and pending recordings
                 (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->

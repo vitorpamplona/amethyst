@@ -48,6 +48,12 @@ class MediaUploadTracker {
 
     val isUploading: Boolean get() = isUploadingImage || isUploadingFile
 
+    /**
+     * Only a side upload (a hand drawing) is running. The batch's files show their own progress on
+     * their cards, so a composer's toolbar spins only for this.
+     */
+    val isUploadingDrawing: Boolean get() = sideUploading
+
     fun startUpload(hasNonMedia: Boolean) {
         if (hasNonMedia) {
             batchFile = true

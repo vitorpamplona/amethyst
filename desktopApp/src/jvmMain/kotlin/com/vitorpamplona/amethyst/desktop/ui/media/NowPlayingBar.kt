@@ -126,7 +126,10 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun rememberIsLoaded(state: StateFlow<MediaPlaybackState>): State<Boolean> = remember(state) { state.map { it.url != null }.distinctUntilChanged() }.collectAsState(state.value.url != null)
+private fun rememberIsLoaded(state: StateFlow<MediaPlaybackState>): State<Boolean> = remember(state) { state.map(::isNowPlaying).distinctUntilChanged() }.collectAsState(isNowPlaying(state.value))
+
+/** Something to show in the bar: a loaded file, but not the media Studio's preview of one being edited, which plays only on its stage. */
+private fun isNowPlaying(state: MediaPlaybackState) = state.url != null && state.owner !is StudioPreviewOwner
 
 /** The bar itself, driven only by its arguments so it renders without a player. */
 @Composable

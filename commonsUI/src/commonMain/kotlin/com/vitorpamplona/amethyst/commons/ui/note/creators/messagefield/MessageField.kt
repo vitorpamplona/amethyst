@@ -40,7 +40,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
-import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -57,9 +57,15 @@ fun MessageField(
     requestFocus: Boolean = true,
     onContentReceived: ((MediaUri, String?) -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
+    mediaChips: MediaMarkerChips? = null,
+    mediaBlocks: MediaBlocks? = null,
+    /** Each new value puts the focus back in the field: after a dialog over it (the media studio) closes. */
+    refocusKey: Any? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    RefocusOn(refocusKey, focusRequester)
 
     if (requestFocus) {
         LaunchedEffect(Unit) {
@@ -69,6 +75,8 @@ fun MessageField(
             }
         }
     }
+
+    val markers = rememberMediaMarkerField(viewModel.message, mediaBlocks, mediaChips)
 
     ThinPaddingTextField(
         state = viewModel.message,
@@ -101,7 +109,9 @@ fun MessageField(
                 unfocusedBorderColor = Color.Transparent,
             ),
         spellCheck = true,
-        outputTransformation = rememberUrlUserTagOutputTransformation(),
+        outputTransformation = markers.outputTransformation,
+        cursorBrush = markers.cursorBrush,
+        textOverlay = markers.textOverlay,
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
             TextFieldDefaults.contentPaddingWithoutLabel(

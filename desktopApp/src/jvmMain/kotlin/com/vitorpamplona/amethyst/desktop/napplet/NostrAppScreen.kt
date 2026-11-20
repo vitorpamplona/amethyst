@@ -182,6 +182,16 @@ private fun NostrApp(
     }
 
     // Its own windows, above the app's: one question at a time, the oldest first.
-    ConsentWindows(setOf(session.launch.identity.coordinate), titleOf = { title }, host)
-    if (showAccess) AccessWindow(session, host, parent = null, onDone = { showAccess = false })
+    val app = session.launch.identity.coordinate
+    ConsentWindows(apps = { it == app }, titleOf = { _, _ -> title }, queues = host.consent)
+    if (showAccess) {
+        AccessWindow(
+            session,
+            host,
+            parent = null,
+            // Already in the main window: the detail screen opens on top of this one.
+            onManagePermissions = { nav.nav(Route.ConnectedAppDetail(session.launch.identity.coordinate)) },
+            onDone = { showAccess = false },
+        )
+    }
 }

@@ -92,6 +92,83 @@ interface MediaUploader {
     ): ImageCompressionPreview? = null
 
     /**
+     * Writes the [crop] of the still image at [uri] to a new temp file, with the camera's
+     * orientation applied to the pixels and no metadata kept: a PNG when the picture has
+     * transparency, else a high-quality JPEG. Null when this platform cannot decode [uri] (a GIF's
+     * animation would be lost, so callers don't offer a crop for one). The caller owns the file.
+     */
+    suspend fun cropImage(
+        uri: MediaUri,
+        mimeType: String?,
+        crop: ImageCrop,
+    ): MediaCompressorResult? = null
+
+    /** Whether [editGif] can crop a GIF here. */
+    val gifCrop: Boolean get() = false
+
+    /** Whether [editGif] can trim a GIF here, and [videoDurationMs] and [videoFrame] read one. */
+    val gifTrim: Boolean get() = false
+
+    /**
+     * The GIF at [uri] holding only its [crop] and [trim] (either may be null), still a GIF
+     * (`GifEditor`), for a GIF the user edited: a GIF left alone goes up as it is. Null when it
+     * could not be written, or when this platform can't apply what was asked ([gifCrop],
+     * [gifTrim]). The caller owns the file.
+     */
+    suspend fun editGif(
+        uri: MediaUri,
+        crop: ImageCrop?,
+        trim: VideoTrim?,
+    ): MediaCompressorResult? = null
+
+    /** [length] bytes of the file at [uri] from [offset] (fewer at its end); null when it can't be read. */
+    suspend fun readRange(
+        uri: MediaUri,
+        offset: Long,
+        length: Int,
+    ): ByteArray? = null
+
+    /** Whether [trimVideo] works here (desktop needs ffmpeg). The Studio hides its Trim tool otherwise. */
+    val videoTrim: Boolean get() = false
+
+    /** How long the video at [uri] runs, in milliseconds; null when unknown. */
+    suspend fun videoDurationMs(uri: MediaUri): Long? = null
+
+    /**
+     * Writes the [trim] of the video at [uri] to a new temp file without re-encoding: the tracks are
+     * copied, so the cut starts at the key frame at or before [VideoTrim.startMs]. No metadata is
+     * kept. Null when it could not be written. The caller owns the file.
+     */
+    suspend fun trimVideo(
+        uri: MediaUri,
+        mimeType: String?,
+        trim: VideoTrim,
+    ): MediaCompressorResult? = null
+
+    /**
+     * [videoFrame] at each of [times], for the Trim tool's filmstrip. A platform that decodes a
+     * file from its start (a GIF) overrides it to make one pass for all of them.
+     */
+    suspend fun videoFrames(
+        uri: MediaUri,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> = times.map { videoFrame(uri, it, maxEdge) }
+
+    /** Whether [cropImage] can read [media] here: a still this platform decodes (a desktop can't read HEIC). */
+    fun canCrop(media: SelectedMedia): Boolean = media.canCrop()
+
+    /**
+     * One frame of the video (or GIF) at [uri] near [atMs], no larger than [maxEdge] on its long
+     * side, as image bytes any loader draws (a JPEG, or a one-frame GIF for a GIF); null when unavailable.
+     */
+    suspend fun videoFrame(
+        uri: MediaUri,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? = null
+
+    /**
      * Downloads the already-hosted file at [url] and computes its [FileHeader] (hash, size,
      * dimensions, preview hashes) for an `imeta` tag, guessing the MIME type from the URL's
      * extension. Null when it cannot be downloaded or decoded.

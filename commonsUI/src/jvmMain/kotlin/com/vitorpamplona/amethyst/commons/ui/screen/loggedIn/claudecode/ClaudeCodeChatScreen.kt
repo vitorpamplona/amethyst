@@ -47,7 +47,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -150,6 +149,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used_little
+import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_edit_message
 import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
@@ -184,7 +184,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setti
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
-import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
@@ -221,7 +220,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_settings
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
-import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
@@ -235,6 +234,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -258,6 +258,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /** The widest a chat column gets: past this, lines are too long to read. */
 internal val ChatColumnMaxWidth = 760.dp
@@ -407,7 +408,7 @@ fun ClaudeCodeChatScreen(
                         val ended = git.proposalId?.let { proposalEnded(it) } ?: false
                         if (git.repo != null && git.ahead > 0 && !ended) {
                             FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
-                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_proposal else Res.string.claude_code_propose))
+                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
                             }
                         }
                     }
@@ -452,6 +453,7 @@ fun ClaudeCodeChatScreen(
                     }
 
                     Messages(
+                        chatKey = chat.key,
                         state = state,
                         readOnly = openElsewhere || folderGone,
                         nav = nav,
@@ -600,8 +602,12 @@ internal fun DiffStat(
 
 internal val AddedColor = Color(0xFF3FB950)
 
+/** Chats that already opened at their newest message: they reopen where they were left. */
+private val landedChats: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
 @Composable
 private fun Messages(
+    chatKey: String,
     state: ClaudeChatState,
     readOnly: Boolean,
     nav: INav,
@@ -609,7 +615,8 @@ private fun Messages(
     onEditFrom: ((ChatItem.UserText) -> Unit)?,
     onStarter: (String) -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    // Kept per chat while the app runs: leaving the chat and coming back finds the same place.
+    val listState = rememberForeverLazyListState("ClaudeCodeChat-$chatKey")
     val rows = remember(state.items) { state.items.toChatRows() }
     val busy = state.isBusy
     val showIntro = state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()
@@ -622,14 +629,16 @@ private fun Messages(
             (if (busy) 1 else 0) +
             (if (showResume) 1 else 0)
     // Opening a chat lands on its newest message: the history arrives after the first frame,
-    // when the only row in view is the loading note at the top.
-    val landed = remember { booleanArrayOf(false) }
+    // when the only row in view is the loading note at the top. Only the first time: coming
+    // back keeps where the user left it.
+    val landed = remember(chatKey) { booleanArrayOf(chatKey in landedChats) }
     // Follows the conversation while its end is in view; someone scrolled up to read is left there.
     LaunchedEffect(itemCount, state.streamingText.length / 200) {
         if (!state.historyLoaded || itemCount == 0) return@LaunchedEffect
         val last = itemCount - 1
         if (!landed[0]) {
             landed[0] = true
+            landedChats.add(chatKey)
             listState.scrollToItem(last)
             return@LaunchedEffect
         }
@@ -643,52 +652,56 @@ private fun Messages(
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = Gutter, vertical = Gutter),
-        verticalArrangement = Arrangement.spacedBy(PartGap),
-    ) {
-        if (!state.historyLoaded) {
-            item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
-        }
-        if (showIntro) {
-            item(key = "intro") { EmptyChatIntro(state, onStarter) }
-        }
-        // A call the user stopped never gets a result: it only spins while the turn runs, and
-        // not while it waits for the user.
-        val turnRunning = state.status == ChatStatus.WORKING
-        items(rows, key = { it.key }) { row ->
-            when (row) {
-                is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
-                is ChatRow.Single ->
-                    when (val item = row.item) {
-                        // A new turn: more room above it than between the parts of a reply.
-                        is ChatItem.UserText ->
-                            Box(Modifier.padding(top = GroupGap - PartGap)) {
-                                UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
-                            }
-                        is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
-                        is ChatItem.ToolCall ->
-                            if (ToolKind.of(item.name) == ToolKind.EDIT) {
-                                FileChangeRow(item, state.cwd, turnRunning)
-                            } else {
-                                ToolCallRow(item, state.cwd, turnRunning)
-                            }
-                        is ChatItem.Notice -> NoticeRow(item)
-                    }
+    val codeChips = rememberChatCodeChips()
+    // One selection for the whole chat: any part of any message, or a run across several, copies.
+    SelectionContainer(modifier.fillMaxWidth()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = Gutter, vertical = Gutter),
+            verticalArrangement = Arrangement.spacedBy(PartGap),
+        ) {
+            if (!state.historyLoaded) {
+                item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
             }
-        }
-        if (state.streamingText.isNotEmpty()) {
-            // Plain until the message is complete: markdown would re-parse on every delta.
-            item(key = "streaming") { SelectionContainer { Text(state.streamingText, style = textStyle) } }
-        }
-        if (busy) {
-            item(key = "status") { LiveStatus(state) }
-        }
-        if (showResume) {
-            // A fork looks like its source until it starts: say what the first message does.
-            item(key = "resume") { CenterNote(stringRes(if (state.forking) Res.string.claude_code_fork_hint else Res.string.claude_code_resume_hint)) }
+            if (showIntro) {
+                item(key = "intro") { EmptyChatIntro(state, onStarter) }
+            }
+            // A call the user stopped never gets a result: it only spins while the turn runs, and
+            // not while it waits for the user.
+            val turnRunning = state.status == ChatStatus.WORKING
+            items(rows, key = { it.key }) { row ->
+                when (row) {
+                    is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
+                    is ChatRow.Single ->
+                        when (val item = row.item) {
+                            // A new turn: more room above it than between the parts of a reply.
+                            is ChatItem.UserText ->
+                                Box(Modifier.padding(top = GroupGap - PartGap)) {
+                                    UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                                }
+                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = codeChips)
+                            is ChatItem.ToolCall ->
+                                if (ToolKind.of(item.name) == ToolKind.EDIT) {
+                                    FileChangeRow(item, state.cwd, turnRunning)
+                                } else {
+                                    ToolCallRow(item, state.cwd, turnRunning)
+                                }
+                            is ChatItem.Notice -> NoticeRow(item)
+                        }
+                }
+            }
+            if (state.streamingText.isNotEmpty()) {
+                // Plain until the message is complete: markdown would re-parse on every delta.
+                item(key = "streaming") { Text(state.streamingText, style = textStyle) }
+            }
+            if (busy) {
+                item(key = "status") { LiveStatus(state) }
+            }
+            if (showResume) {
+                // A fork looks like its source until it starts: say what the first message does.
+                item(key = "resume") { CenterNote(stringRes(if (state.forking) Res.string.claude_code_fork_hint else Res.string.claude_code_resume_hint)) }
+            }
         }
     }
 }
@@ -1007,9 +1020,10 @@ private fun UserBubble(
             // prompts carry fences, which read better as code blocks.
             if (text.contains("```")) {
                 val style = rememberChatMarkdownStyle(codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest)
-                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle)
+                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle, blockComposer = rememberChatCodeChips())
             } else {
-                SelectionContainer { Text(text, padding, style = textStyle) }
+                // Selectable through the chat's SelectionContainer.
+                Text(text, padding, style = textStyle)
             }
         }
     }
@@ -1049,7 +1063,6 @@ private fun ToolGroupRow(
             running = turnRunning && group.running != null,
             error = false,
             expanded = expanded,
-            monospace = false,
             onClick = { expanded = !expanded },
         )
         group.running?.takeIf { turnRunning && !expanded }?.let { running ->

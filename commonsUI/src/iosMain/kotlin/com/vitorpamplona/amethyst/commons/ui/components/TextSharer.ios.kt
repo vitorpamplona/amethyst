@@ -23,7 +23,12 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 import platform.UIKit.UIPasteboard
 
-private val clipboardSharer = TextSharer { text, _, _ -> UIPasteboard.generalPasteboard.string = text }
+// Copying is the share here, so it counts as shared at once.
+private val clipboardSharer =
+    TextSharer { text, _, _, onShared ->
+        UIPasteboard.generalPasteboard.string = text
+        onShared()
+    }
 
 @Composable
 actual fun rememberTextSharer(): TextSharer = clipboardSharer

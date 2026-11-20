@@ -24,6 +24,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.ui.text.TextRange
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 /**
@@ -67,7 +68,7 @@ object MentionPreservingInputTransformation : InputTransformation {
 
         val original = originalText
         // Cheap gate — most keystrokes happen in mention-free text.
-        if (!original.contains("npub1") && !original.contains("nprofile1")) return
+        if (!original.contains("npub1") && !original.contains("nprofile1") && !original.contains(MediaMarkers.PREFIX)) return
 
         val touched =
             MENTION_REGEX.findAll(original).firstOrNull { match ->
@@ -84,7 +85,7 @@ object MentionPreservingInputTransformation : InputTransformation {
                     val isPureDelete = newRange.length == 0
                     overlaps && (!fullyCovers || (isScopeExact && !isPureDelete)) && !landsInProfile(newRange)
                 }
-            } ?: return
+            } ?: touchedMediaMarker(original, changeCount) ?: return
 
         revertAllChanges()
         val mEndExclusive = touched.range.last + 1
@@ -95,6 +96,28 @@ object MentionPreservingInputTransformation : InputTransformation {
                 mEndExclusive
             }
         replace(touched.range.first, deleteEnd, "")
+    }
+
+    /**
+     * A media marker ([MediaMarkers]) the change edits only part of, or replaces with other text. A
+     * marker is drawn as one chip, so like a mention it goes as a whole or stays as it was.
+     */
+    private fun TextFieldBuffer.touchedMediaMarker(
+        original: CharSequence,
+        changeCount: Int,
+    ): MatchResult? {
+        if (!original.contains(MediaMarkers.PREFIX)) return null
+        return MediaMarkers.REGEX.findAll(original).firstOrNull { match ->
+            val mStart = match.range.first
+            val mEndExclusive = match.range.last + 1
+            (0 until changeCount).any { i ->
+                val origRange = changes.getOriginalRange(i)
+                val overlaps = origRange.min < mEndExclusive && origRange.max > mStart
+                val fullyCovers = origRange.min <= mStart && origRange.max >= mEndExclusive
+                val isScopeExact = origRange.min == mStart && origRange.max == mEndExclusive
+                overlaps && (!fullyCovers || (isScopeExact && changes.getRange(i).length != 0))
+            }
+        }
     }
 
     /**

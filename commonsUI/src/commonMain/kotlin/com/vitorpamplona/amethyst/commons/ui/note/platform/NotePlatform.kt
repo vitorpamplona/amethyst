@@ -124,6 +124,8 @@ interface NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         onError: () -> Unit,
+        /** [url] is a file the user picked on this device (the media Studio), read from disk; never set for content from the network. */
+        local: Boolean,
     ) {}
 
     @Composable
@@ -138,6 +140,25 @@ interface NotePlatform {
         nostrUriCallback: String?,
         isLiveStream: Boolean,
         accountViewModel: AccountViewModel,
+    ) {}
+
+    /** Whether [TrimPreviewPlayer] can play a picked video here. */
+    val canPlayTrimPreview: Boolean get() = false
+
+    /**
+     * The media Studio's trim preview: the picked video at [videoUri] (a file on this device)
+     * playing from [startMs] to [endMs] of its [durationMs], over and over, with its sound, fitted
+     * into [modifier]. [onPositionMs] gets where it is in the whole video, for the filmstrip's
+     * playhead. It plays while it is composed; only called where [canPlayTrimPreview].
+     */
+    @Composable
+    fun TrimPreviewPlayer(
+        videoUri: String,
+        startMs: Long,
+        endMs: Long,
+        durationMs: Long,
+        onPositionMs: (Long) -> Unit,
+        modifier: Modifier,
     ) {}
 
     /**

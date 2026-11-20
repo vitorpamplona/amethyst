@@ -59,8 +59,24 @@ import kotlin.concurrent.thread
 object DesktopDeepLinks {
     private const val TAG = "DesktopDeepLinks"
 
-    /** Schemes the packages register; mirrored by the manifest on Android. */
-    private val SCHEMES = listOf("nostr:", "amethyst:")
+    /**
+     * Schemes the packages register; mirrored by the manifest on Android. `nostrconnect:` is an
+     * app's offer to pair with this account's NIP-46 signer (it opens the Remote Signer screen).
+     */
+    private val SCHEMES = listOf("nostr:", "amethyst:", "nostrconnect:")
+
+    /** The same schemes as Windows registry keys. */
+    private val WINDOWS_SCHEMES = SCHEMES.map { it.removeSuffix(":") }
+
+    /** How many of the app's own handed-off codes are remembered; a login makes one at a time. */
+    private const val OWN_HANDOFFS_KEPT = 8
+
+    /**
+     * The `nostrconnect://` codes this app handed to a signer app itself (the login screen's). Now
+     * that Amethyst handles the scheme too, the OS can pick Amethyst for its own code, and pairing
+     * a login with this app's own signer is never what the user meant: such a code is dropped.
+     */
+    private val ownHandoffs = ArrayDeque<String>()
 
     /**
      * The latest URI waiting for a logged-in navigation host. Conflated like Android's launch
@@ -77,9 +93,23 @@ object DesktopDeepLinks {
     /** The first deep-link URI in the process arguments, or null. Linux passes %u, Windows %1. */
     fun extractFromArgs(args: Array<String>): String? = args.firstOrNull(::isDeepLink)?.trim()?.trim('"')
 
+    /** Remembers [uri] as a code this app hands to a signer app, so [offer] drops it if it comes back. */
+    fun markOwnHandoff(uri: String) {
+        synchronized(ownHandoffs) {
+            ownHandoffs.addLast(uri.trim())
+            while (ownHandoffs.size > OWN_HANDOFFS_KEPT) ownHandoffs.removeFirst()
+        }
+    }
+
+    /** Whether [uri] is one of this app's own handed-off codes ([markOwnHandoff]). */
+    internal fun isOwnHandoff(uri: String): Boolean = synchronized(ownHandoffs) { uri.trim().trim('"') in ownHandoffs }
+
     /** Queues [uri] for routing; anything that is not one of our schemes is refused and logged. */
     fun offer(uri: String) {
-        if (isDeepLink(uri)) {
+        if (isOwnHandoff(uri)) {
+            // Only the scheme: the code carries the pairing secret.
+            Log.w(TAG, "Dropped this app's own nostrconnect: code: the OS handed it back to Amethyst, not to a signer app")
+        } else if (isDeepLink(uri)) {
             Log.d(TAG) { "Deep link received: ${uri.take(24)}…" }
             pending.value = uri.trim().trim('"')
         } else {
@@ -123,8 +153,8 @@ object DesktopDeepLinks {
 
     /**
      * Windows has no per-user installer hook in jpackage's MSI, so the app registers the schemes
-     * itself under HKCU (per-user, no elevation): `HKCU\Software\Classes\nostr` and
-     * `...\amethyst`, each pointing `shell\open\command` at the running launcher with `%1`.
+     * itself under HKCU (per-user, no elevation): `HKCU\Software\Classes\nostr`,
+     * `...\amethyst` and `...\nostrconnect`, each pointing `shell\open\command` at the running launcher with `%1`.
      * A scheme is only written when nobody owns it or the current handler already points at this
      * exe — a user who picked another Nostr client keeps it, because the registration would
      * otherwise steal the scheme back on every start. Skipped on dev runs: registering
@@ -145,7 +175,7 @@ object DesktopDeepLinks {
         }
 
         val toRegister =
-            listOf("nostr", "amethyst").filter { scheme ->
+            WINDOWS_SCHEMES.filter { scheme ->
                 val current = currentWindowsHandler(scheme)
                 val ownedElsewhere = current != null && !current.contains(exe, ignoreCase = true)
                 if (ownedElsewhere) {
@@ -255,6 +285,22 @@ object DesktopDeepLinks {
             ?.substringAfter("REG_SZ")
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Whether Windows would open [scheme] links with this app's own launcher. False off Windows,
+     * on a dev run (no launcher .exe) and when the registry can't be read.
+     */
+    fun windowsHandlesWithThisApp(scheme: String): Boolean {
+        if (!PlatformInfo.isWindows) return false
+        val exe =
+            ProcessHandle
+                .current()
+                .info()
+                .command()
+                .orElse(null)
+                ?.takeIf { it.endsWith(".exe", ignoreCase = true) } ?: return false
+        return currentWindowsHandler(scheme)?.contains(exe, ignoreCase = true) == true
     }
 
     /** How a routed link brings the app forward; a test swaps it for a slow one. */

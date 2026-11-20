@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
@@ -54,17 +54,15 @@ class ChatFileUploader(
 
         if (viewState.encryptFiles) {
             val results =
-                orchestrator.uploadEncrypted(
-                    viewState.caption,
-                    viewState.contentWarningReason,
-                    CompressorQuality.fromSlider(viewState.mediaQualitySlider),
+                orchestrator.uploadEncryptedOwnOptions(
                     // A fresh key and nonce per file: an AESGCM seals only one message.
                     { AESGCM() },
                     viewState.selectedServer,
                     account,
                     uploader,
-                    stripMetadata = viewState.stripMetadata,
                     onStrippingFailed = onStrippingFailed,
+                    altFallback = viewState.caption,
+                    contentWarningFallback = viewState.contentWarningReason,
                 )
 
             if (results.allGood) {
@@ -72,7 +70,7 @@ class ChatFileUploader(
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.finished.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
+                            SuccessfulUploads(uploaded, upload.item.captionIn(viewState), upload.item.contentWarningIn(viewState), upload.cipher)
                         } else {
                             null
                         }
@@ -121,16 +119,14 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         val results =
-            orchestrator.upload(
-                viewState.caption,
-                viewState.contentWarningReason,
-                CompressorQuality.fromSlider(viewState.mediaQualitySlider),
+            orchestrator.uploadOwnOptions(
                 viewState.selectedServer,
                 account,
                 uploader,
-                stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
                 keepEncrypted = true,
+                altFallback = viewState.caption,
+                contentWarningFallback = viewState.contentWarningReason,
             )
 
         if (results.allGood) {
@@ -138,16 +134,16 @@ class ChatFileUploader(
                 results.keptEncrypted.mapNotNull { upload ->
                     val uploaded = upload.finished.result
                     if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
+                        SuccessfulUploads(uploaded, upload.item.captionIn(viewState), upload.item.contentWarningIn(viewState), upload.cipher)
                     } else {
                         null
                     }
                 }
             val list =
-                results.successful.mapNotNull { state ->
-                    val uploaded = state.result
+                results.uploaded.mapNotNull { done ->
+                    val uploaded = done.finished.result
                     if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, null)
+                        SuccessfulUploads(uploaded, done.item.captionIn(viewState), done.item.contentWarningIn(viewState), null)
                     } else {
                         null
                     }
@@ -179,23 +175,21 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         val results =
-            orchestrator.upload(
-                viewState.caption,
-                viewState.contentWarningReason,
-                CompressorQuality.fromSlider(viewState.mediaQualitySlider),
+            orchestrator.uploadOwnOptions(
                 viewState.selectedServer,
                 account,
                 uploader,
-                stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
+                altFallback = viewState.caption,
+                contentWarningFallback = viewState.contentWarningReason,
             )
 
         if (results.allGood) {
             val list =
-                results.successful.mapNotNull { state ->
-                    val uploaded = state.result
+                results.uploaded.mapNotNull { done ->
+                    val uploaded = done.finished.result
                     if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, null)
+                        SuccessfulUploads(uploaded, done.item.captionIn(viewState), done.item.contentWarningIn(viewState), null)
                     } else {
                         null
                     }
@@ -212,3 +206,9 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.finishUpload()
     }
 }
+
+/** A file's description in the message: its own alt text from the media studio, else the chat's caption. */
+internal fun SelectedMediaProcessing?.captionIn(state: ChatFileUploadState): String? = this?.options?.altOrNull ?: state.caption.ifBlank { null }
+
+/** A file's content warning: its own, else the chat's. */
+internal fun SelectedMediaProcessing?.contentWarningIn(state: ChatFileUploadState): String? = this?.options?.contentWarningReason ?: state.contentWarningReason

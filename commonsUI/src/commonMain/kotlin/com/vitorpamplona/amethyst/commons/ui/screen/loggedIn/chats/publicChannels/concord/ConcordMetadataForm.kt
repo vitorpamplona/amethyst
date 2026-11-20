@@ -72,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_name_budget
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.remove
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
@@ -80,6 +79,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.RenderRelayIcon
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.GallerySelectSingleCropped
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayUrlEditField
@@ -182,9 +183,9 @@ private fun ConcordIconHero(
 
     var picking by rememberSaveable { mutableStateOf(false) }
     if (picking) {
-        GallerySelectSingle(imagesOnly = true) { media ->
+        GallerySelectSingleCropped(ImageCropShape.Icon, accountViewModel.mediaUploader) { media ->
             picking = false
-            if (media == null) return@GallerySelectSingle
+            if (media == null) return@GallerySelectSingleCropped
             uploading = true
             scope.launch {
                 try {
@@ -255,9 +256,9 @@ private fun ConcordBannerHero(
 
     var picking by rememberSaveable { mutableStateOf(false) }
     if (picking) {
-        GallerySelectSingle(imagesOnly = true) { media ->
+        GallerySelectSingleCropped(ImageCropShape.Banner, accountViewModel.mediaUploader) { media ->
             picking = false
-            if (media == null) return@GallerySelectSingle
+            if (media == null) return@GallerySelectSingleCropped
             uploading = true
             scope.launch {
                 try {

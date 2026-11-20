@@ -102,13 +102,14 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_no_nip29
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.GallerySelectSingleCropped
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocationPreviewMap
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
@@ -235,8 +236,10 @@ private fun RelayGroupMetadataScaffold(
 
     var wantsToPickImage by remember { mutableStateOf(false) }
     if (wantsToPickImage) {
-        GallerySelectSingle(
-            onImageUri = { media ->
+        GallerySelectSingleCropped(
+            shape = ImageCropShape.Icon,
+            uploader = accountViewModel.mediaUploader,
+            onImage = { media ->
                 wantsToPickImage = false
                 if (media != null) viewModel.pickMedia(media)
             },

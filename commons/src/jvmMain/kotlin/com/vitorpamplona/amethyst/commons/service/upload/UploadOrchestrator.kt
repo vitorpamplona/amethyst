@@ -54,6 +54,12 @@ data class EncryptedUploadResult(
 class UploadOrchestrator(
     private val client: BlossomClient = BlossomClient(),
     /**
+     * Reads the hash, size, dimensions and preview hashes of the bytes that will be sent. The
+     * default reads what ImageIO decodes; a platform with more decoders (Skia on desktop, ffprobe
+     * for video) passes its own so every `imeta` gets its `dim`.
+     */
+    private val readMetadata: suspend (File) -> MediaMetadata = { MediaMetadataReader.compute(it) },
+    /**
      * The client for a server: a fallback server goes out on its own route (the app may send one
      * server through Tor and another not), not on the selected server's. Defaults to [client].
      */
@@ -137,7 +143,7 @@ class UploadOrchestrator(
 
             // 3. Compute metadata on the bytes that will actually
             //    leave this machine.
-            val metadata = MediaMetadataReader.compute(finalFile)
+            val metadata = readMetadata(finalFile)
 
             // 4. Create auth header.
             val authHeader =
@@ -237,7 +243,7 @@ class UploadOrchestrator(
 
             // 3. Compute pre-encryption metadata on the bytes that get encrypted
             //    (dimensions, blurhash, mime, originalHash of the final plaintext).
-            val metadata = MediaMetadataReader.compute(finalFile)
+            val metadata = readMetadata(finalFile)
 
             // 4. Read final bytes and encrypt
             val plaintext = finalFile.readBytes()
@@ -373,6 +379,7 @@ class UploadOrchestrator(
             file: File,
             stripExif: Boolean,
             quality: ImageCompressionTarget?,
+            readMetadata: suspend (File) -> MediaMetadata = { MediaMetadataReader.compute(it) },
             block: suspend (prepared: File, metadata: MediaMetadata) -> T,
         ): T {
             var reencodedTemp: File? = null
@@ -396,7 +403,7 @@ class UploadOrchestrator(
                     } else {
                         afterReencode
                     }
-                return block(finalFile, MediaMetadataReader.compute(finalFile))
+                return block(finalFile, readMetadata(finalFile))
             } finally {
                 withContext(NonCancellable) {
                     strippedTemp?.deleteOrWarn("UploadOrchestrator", "prepared stripped temp")

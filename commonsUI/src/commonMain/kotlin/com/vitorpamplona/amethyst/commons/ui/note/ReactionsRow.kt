@@ -382,6 +382,7 @@ private fun InnerReactionRow(
                     if (!isPrivateRumor && !isRelayGroupMessage) {
                         ShareReaction(
                             note = baseNote,
+                            accountViewModel = accountViewModel,
                             nav = nav,
                             grayTint = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -403,6 +404,7 @@ private fun InnerReactionRow(
 @Composable
 fun ShareReaction(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
     grayTint: Color,
     barChartModifier: Modifier = Size19Modifier,
@@ -419,7 +421,7 @@ fun ShareReaction(
         }
 
         if (showShareMenu) {
-            ShareDropdownMenu(note, nav, onDismiss = { showShareMenu = false })
+            ShareDropdownMenu(note, accountViewModel, nav, onDismiss = { showShareMenu = false })
         }
     }
 }

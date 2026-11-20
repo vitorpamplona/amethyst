@@ -78,7 +78,8 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
  *
  * [QUICK] is a message: a note, a reply, a poll, a DM, a find log. [FORM] fills in a standalone
  * piece or a place: a product, an event, a group, a geocache, a profile. [DOCUMENT] is long-form
- * writing that wants most of the window.
+ * writing that wants most of the window. [MEDIA] is the media Studio and the picture crop: a
+ * stage for the picture or video, as large as the window comfortably allows.
  */
 enum class ComposerSize(
     val maxWidth: Dp,
@@ -88,6 +89,7 @@ enum class ComposerSize(
     QUICK(maxWidth = 600.dp, maxHeight = 720.dp, heightFraction = 0.85f),
     FORM(maxWidth = 820.dp, maxHeight = 960.dp, heightFraction = 0.85f),
     DOCUMENT(maxWidth = 1100.dp, maxHeight = 1400.dp, heightFraction = 0.92f),
+    MEDIA(maxWidth = 1000.dp, maxHeight = 1100.dp, heightFraction = 0.9f),
 }
 
 /**

@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
-import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
@@ -116,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNip46Consent
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
 import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageNotifier
@@ -479,6 +479,9 @@ class DesktopAppModules(
 
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
 
+    /** Asks the user before an app connects to an account's bunker, or before an operation it set to ask. */
+    val nip46Consent = DesktopNip46Consent(clientStore = { nip46ClientStore })
+
     // Hydrated as it is made, as Android's Application does: until init() the registry neither reads
     // the stored favorites nor writes any, so every pin was lost when the app closed.
     val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope).also { it.init() } }
@@ -611,7 +614,7 @@ class DesktopAppModules(
             encryptionKeyCache = keyCache,
             saveSettings = { sessionStore.saveAccountSettings(it) },
             marmotNotifier = { MarmotGroupNotifier.None },
-            nip46Consent = Nip46ConsentPrompter.Unanswered,
+            nip46Consent = nip46Consent,
             geohashIdentityStore = { pubKey -> sessionStore.geohashIdentityStore(pubKey) },
             rootFilesDir = { filesDir },
             powQueue = { powPublishQueue },

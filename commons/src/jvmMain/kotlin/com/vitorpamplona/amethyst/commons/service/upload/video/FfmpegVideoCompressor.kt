@@ -55,6 +55,8 @@ class FfmpegVideoCompressor(
 
     override suspend fun probe(source: File): VideoInfo? = probed(source)?.info
 
+    override suspend fun displaySize(source: File): Pair<Int, Int>? = probed(source)?.displaySize
+
     override suspend fun compress(
         source: File,
         quality: CompressorQuality,
@@ -111,6 +113,107 @@ class FfmpegVideoCompressor(
             }
         }
     }
+
+    // Under the gate like [strip]: a remux, one ffmpeg at a time.
+    override suspend fun stripAudio(source: File): File? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        val extension = source.extension.lowercase().takeIf { it in AUDIO_CONTAINERS } ?: return null
+        return gate.withPermit {
+            var out: File? = null
+            try {
+                out = AmethystTempDir.createTempFile("amethyst_audio_", ".$extension")
+                val outcome = runner.run(FfmpegCommandBuilder.stripAudio(ffmpeg, source, out), {}, stallTimeoutMs)
+                if (outcome.exitCode == 0 && out.length() > 0) {
+                    out
+                } else {
+                    Log.w(TAG) { "Audio strip of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                    out.deleteOrWarn(TAG, "failed audio strip")
+                    null
+                }
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) { out?.deleteOrWarn(TAG, "cancelled audio strip") }
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Audio strip of ${source.name} failed", e)
+                out?.deleteOrWarn(TAG, "failed audio strip")
+                null
+            }
+        }
+    }
+
+    override suspend fun trim(
+        source: File,
+        startMs: Long,
+        endMs: Long,
+    ): File? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        if (endMs <= startMs) return null
+        return gate.withPermit {
+            withTempOutput("trim of ${source.name}") { out ->
+                val outcome = runner.run(FfmpegCommandBuilder.trim(ffmpeg, source, startMs, endMs - startMs, out), {}, stallTimeoutMs)
+                if (outcome.exitCode == 0 && out.length() > 0) {
+                    out
+                } else {
+                    Log.w(TAG) { "Trim of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                    null
+                }
+            }
+        }
+    }
+
+    // Not under the gate: a frame is a short decode, and the trim tool asks for several while
+    // nothing else may be running, or while a compression preview holds the gate.
+    override suspend fun frame(
+        source: File,
+        atMs: Long,
+        maxEdge: Int,
+    ): ByteArray? {
+        val ffmpeg = locator.ffmpeg ?: return null
+        var out: File? = null
+        return try {
+            out = AmethystTempDir.createTempFile("amethyst_frame_", ".jpg")
+            val outcome = runner.run(FfmpegCommandBuilder.frame(ffmpeg, source, atMs.coerceAtLeast(0), maxEdge, out), {}, stallTimeoutMs)
+            if (outcome.exitCode == 0 && out.length() > 0) out.readBytes() else null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Frame of ${source.name} failed", e)
+            null
+        } finally {
+            withContext(NonCancellable) { out?.deleteOrWarn(TAG, "frame") }
+        }
+    }
+
+    // One ffmpeg for the whole strip, not one per frame; not under the gate, like [frame]. Falls
+    // back to [frame] per time if that one run fails.
+    override suspend fun frames(
+        source: File,
+        times: List<Long>,
+        maxEdge: Int,
+    ): List<ByteArray?> {
+        if (times.size <= 1) return times.map { frame(source, it, maxEdge) }
+        val ffmpeg = locator.ffmpeg ?: return times.map { null }
+        val outs = ArrayList<File>(times.size)
+        return try {
+            repeat(times.size) { outs.add(AmethystTempDir.createTempFile("amethyst_frame_", ".jpg")) }
+            val outcome = runner.run(FfmpegCommandBuilder.frames(ffmpeg, source, times, maxEdge, outs), {}, stallTimeoutMs)
+            if (outcome.exitCode == 0) {
+                outs.map { out -> out.takeIf { it.length() > 0 }?.readBytes() }
+            } else {
+                Log.w(TAG) { "Frames of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                times.map { frame(source, it, maxEdge) }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Frames of ${source.name} failed", e)
+            times.map { null }
+        } finally {
+            withContext(NonCancellable) { outs.forEach { it.deleteOrWarn(TAG, "frame") } }
+        }
+    }
+
+    override suspend fun durationMs(source: File): Long? = probed(source)?.durationSeconds?.let { (it * 1000).toLong() }
 
     /** What the probe says about [source], read once per file even when the slider asked first. */
     private suspend fun probed(source: File): ProbeResult? {
@@ -230,3 +333,6 @@ class FfmpegVideoCompressor(
         const val TAG = "FfmpegVideoCompressor"
     }
 }
+
+/** Containers [FfmpegVideoCompressor.stripAudio] writes back as they came: the ones the gallery offers. */
+private val AUDIO_CONTAINERS = setOf("mp3", "m4a", "mp4", "aac", "ogg", "oga", "opus", "flac", "wav")

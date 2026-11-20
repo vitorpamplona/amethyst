@@ -185,6 +185,7 @@ fun ChatMessageActionSheet(
     if (showShareSheet) {
         ShareOptionsBottomSheet(
             note = note,
+            accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = onDismiss,
         )

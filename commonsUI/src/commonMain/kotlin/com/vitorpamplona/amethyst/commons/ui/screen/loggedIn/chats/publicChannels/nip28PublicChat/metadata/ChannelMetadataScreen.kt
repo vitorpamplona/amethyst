@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.ImageCropShape
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayUrlEditField
@@ -302,6 +303,8 @@ private fun Picture(
                 isUploading = postViewModel.isUploadingImageForPicture,
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(start = 2.dp),
+                crop = ImageCropShape.Icon,
+                uploader = accountViewModel.mediaUploader,
             ) {
                 postViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
             }

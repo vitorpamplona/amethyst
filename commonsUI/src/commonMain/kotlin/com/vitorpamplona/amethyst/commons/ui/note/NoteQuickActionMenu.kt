@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
 import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.ui.components.TextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -113,7 +115,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.QuickActionPopupShadow
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallestBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.secondaryButtonBackground
-import com.vitorpamplona.amethyst.commons.util.njumpLink
+import com.vitorpamplona.amethyst.commons.util.ShareSite
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -156,7 +158,7 @@ private fun lightenColor(
 }
 
 val externalLinkForUser = { user: User ->
-    njumpLink(user.toNProfile())
+    ShareSite.link(user.toNProfile())
 }
 
 val nipLink = { nipNumber: String ->
@@ -167,18 +169,71 @@ val graspLink = { graspNumber: String ->
     "https://gitworkshop.dev/danconwaydev.com/grasp/tree/master/$graspNumber.md"
 }
 
-val externalLinkForNote = { note: Note ->
-    if (note is AddressableNote) {
-        when {
-            note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
-            note.event is FollowSetEvent -> "https://listr.lol/a/${note.toNAddr()}"
-            note.event is StarterPackEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
-            else -> njumpLink(note.toNAddr())
-        }
-    } else {
-        njumpLink(note.toNEvent())
+/**
+ * The site made for this kind of note, when there is one that presents it better than a generic
+ * note page (bounties, people lists, follow packs); null for everything else.
+ */
+internal fun dedicatedLinkForNote(note: Note): String? {
+    if (note !is AddressableNote) return null
+    return when {
+        note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
+        note.event is FollowSetEvent -> "https://listr.lol/a/${note.toNAddr()}"
+        note.event is StarterPackEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
+        else -> null
     }
 }
+
+// An AddressableNote's toNEvent() is its naddr, so this covers both kinds of note.
+val externalLinkForNote = { note: Note ->
+    dedicatedLinkForNote(note) ?: ShareSite.link(note.toNEvent())
+}
+
+/**
+ * Shares [note]'s web link ([externalLinkForNote]). Once the user has picked where to send it, a
+ * [ShareSite] link also copies the note to the relay its page reads, so the page finds it wherever
+ * it was posted; private and relay-gated notes never are
+ * ([com.vitorpamplona.amethyst.commons.model.ShareRelayPolicy]). Every Share button for a note goes
+ * through here.
+ */
+fun TextSharer.shareNoteLink(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    title: String?,
+    chooserTitle: String,
+) {
+    val dedicated = dedicatedLinkForNote(note)
+    if (dedicated != null) {
+        share(dedicated, title, chooserTitle)
+    } else {
+        share(ShareSite.link(note.toNEvent()), title, chooserTitle) { accountViewModel.pushToShareRelay(note) }
+    }
+}
+
+/** Shares [user]'s profile link; once shared, copies their profile and relay list to the share relay. */
+fun TextSharer.shareUserLink(
+    user: User,
+    accountViewModel: AccountViewModel,
+    title: String?,
+    chooserTitle: String,
+) = share(externalLinkForUser(user), title, chooserTitle) { accountViewModel.pushToShareRelay(user) }
+
+/** Shares a NIP-28 public chat's link; once shared, copies its creation event, which the page reads. */
+fun TextSharer.shareChannelLink(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    title: String?,
+    chooserTitle: String,
+) = share(ShareSite.link(channel.toNEvent()), title, chooserTitle) { channel.creationEventNote?.let { accountViewModel.pushToShareRelay(it) } }
+
+/**
+ * Shares a NIP-29 group's link ([groupNAddr]). Nothing is copied: the group's relay, which the link
+ * names, is where the page reads it, and that relay decides who may read the group.
+ */
+fun TextSharer.shareRelayGroupLink(
+    groupNAddr: String,
+    title: String?,
+    chooserTitle: String,
+) = share(ShareSite.link(groupNAddr), title, chooserTitle)
 
 @Composable
 fun LongPressToQuickAction(
@@ -508,7 +563,7 @@ fun CardBody(
                     icon = MaterialSymbols.Share,
                     label = stringRes(Res.string.quick_action_share),
                 ) {
-                    sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
+                    sharer.shareNoteLink(note, accountViewModel, quickActionShareBrowserLinkStr, quickActionShareStr)
                     onDismiss()
                 }
             }

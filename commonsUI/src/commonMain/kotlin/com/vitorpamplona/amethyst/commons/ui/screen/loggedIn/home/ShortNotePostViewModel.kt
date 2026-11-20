@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestio
 import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
@@ -75,7 +74,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -88,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessage
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.ownNotice
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
@@ -157,18 +156,11 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
-import com.vitorpamplona.quartz.nip94FileMetadata.dims
 import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
-import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
-import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -285,9 +277,9 @@ open class ShortNotePostViewModel :
 
     val urlPreviews = PreviewState()
 
-    val mediaUploadTracker = MediaUploadTracker()
-    override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
-    override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -295,7 +287,16 @@ open class ShortNotePostViewModel :
     var emojiSuggestions: EmojiSuggestionState? = null
 
     // Images and Videos
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    /** The media attached to [message]: picked, in the text as markers, uploaded on Post. */
+    val media = AttachedMediaState(message)
+
+    /** The files just picked, open in the media studio. */
+    var multiOrchestrator: MultiOrchestrator?
+        get() = media.picking
+        set(value) {
+            media.picking = value
+        }
 
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
@@ -815,7 +816,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     /**
@@ -829,7 +830,7 @@ open class ShortNotePostViewModel :
 
         appliedSignature = signature
         message.appendSignature(signature)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -964,7 +965,7 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draftEvent: PollEvent) {
@@ -1044,7 +1045,7 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draftEvent: ZapPollEvent) {
@@ -1122,7 +1123,7 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     /**
@@ -1202,6 +1203,20 @@ open class ShortNotePostViewModel :
     }
 
     private suspend fun publishPost(): Boolean {
+        // Upload the attached files first. One that fails says why on its card and nothing is
+        // posted: the text and the files stay, and Post resends only what failed.
+        val uploaded =
+            media.uploadAll(
+                defaultServer = account.settings.defaultFileServer,
+                account = account,
+                uploader = accountViewModel.mediaUploader,
+                tracker = mediaUploadTracker,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
+            ) { result, options -> attach(result, options.altOrNull, options.contentWarningReason) }
+        if (!uploaded) return false
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
+
         // Upload voice message first if it hasn't been uploaded yet
         if (voiceRecording != null && voiceMetadata == null) {
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
@@ -1468,7 +1483,7 @@ open class ShortNotePostViewModel :
 
         val tagger =
             NewMessageTagger(
-                message.text.toString().trim(),
+                MediaMarkers.strip(message.text.toString()).trim(),
                 activeAudience(),
                 eTags,
                 accountViewModel,
@@ -1640,95 +1655,14 @@ open class ShortNotePostViewModel :
         return ReplyActions.repliesAsComment(replyingToEvent)
     }
 
-    fun upload(
+    /** Records [uploaded]'s `imeta` (with this file's [alt] and content warning) and returns its URL. */
+    private fun attach(
+        uploaded: UploadOrchestrator.OrchestratorResult.ServerResult,
         alt: String?,
         contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean = true,
-        convertGifToMp4: Boolean = false,
-    ) {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-    }
-
-    fun uploadUnsafe(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean = true,
-        convertGifToMp4: Boolean = false,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-
-            val results =
-                myMultiOrchestrator.upload(
-                    alt,
-                    contentWarningReason,
-                    CompressorQuality.fromSlider(mediaQuality),
-                    server,
-                    account,
-                    uploader,
-                    useH265,
-                    stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                    convertGifToMp4 = convertGifToMp4,
-                    forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
-                )
-
-            if (results.allGood) {
-                val urls =
-                    results.successful.mapNotNull { state ->
-                        val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            val iMeta =
-                                IMetaTagBuilder(uploaded.url)
-                                    .apply {
-                                        hash(uploaded.fileHeader.hash)
-                                        size(uploaded.fileHeader.size)
-                                        uploaded.fileHeader.mimeType
-                                            ?.let { mimeType(it) }
-                                        uploaded.fileHeader.dim
-                                            ?.let { dims(it) }
-                                        uploaded.fileHeader.blurHash
-                                            ?.let { blurhash(it.blurhash) }
-                                        uploaded.fileHeader.thumbHash
-                                            ?.let { thumbhash(it.thumbhash) }
-                                        uploaded.magnet?.let { magnet(it) }
-                                        uploaded.uploadedHash?.let { originalHash(it) }
-
-                                        alt?.let { alt(it) }
-                                        contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                                    }.build()
-
-                            iMetaAttachments.replace(iMeta.url, iMeta)
-
-                            uploaded.url
-                        } else {
-                            null
-                        }
-                    }
-
-                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
-                urlPreviews.update(message.text.toString())
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            mediaUploadTracker.finishUpload()
-        }
+    ): String {
+        iMetaAttachments.add(uploaded, alt, contentWarningReason)
+        return uploaded.url
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
@@ -1751,6 +1685,7 @@ open class ShortNotePostViewModel :
         forkedFromNote = null
 
         multiOrchestrator = null
+        media.clear()
         mediaUploadTracker.finishUpload()
         // cancel() is UI-thread confined -- the TextFieldState writes below require it -- and
         // this cleanup deletes files, so the disk work goes to IO. The path is captured here
@@ -1817,16 +1752,11 @@ open class ShortNotePostViewModel :
         resetAiState()
     }
 
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        val orchestrator = multiOrchestrator ?: return
-        orchestrator.remove(selected)
-        // An empty orchestrator still renders the gallery, which reads its first item.
-        if (orchestrator.size() == 0) multiOrchestrator = null
-    }
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
 
     override fun onMessageChanged() {
         activePollOption = null
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -1858,7 +1788,7 @@ open class ShortNotePostViewModel :
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message.text.toString())
+                urlPreviews.update(MediaMarkers.strip(message.text.toString()))
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
                 activePollOption?.let { userSuggestions.replaceCurrentWord(it.state, it.state.currentWord(), item) }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
@@ -1878,7 +1808,7 @@ open class ShortNotePostViewModel :
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
         emojiSuggestions?.autocompleteInto(emojiTarget, item)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         draftTag.newVersion()
     }
@@ -1891,7 +1821,7 @@ open class ShortNotePostViewModel :
         }
 
         emojiTarget.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         emojiSuggestions?.reset()
 
@@ -1928,9 +1858,7 @@ open class ShortNotePostViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    override fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
-    }
+    override fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
     fun selectVoiceRecording(recording: RecordingResult) {
         // Cancel any ongoing processing and delete existing files

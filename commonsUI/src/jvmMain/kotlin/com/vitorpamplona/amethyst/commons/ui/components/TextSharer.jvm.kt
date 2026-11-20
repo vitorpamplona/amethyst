@@ -24,7 +24,12 @@ import androidx.compose.runtime.Composable
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
-private val clipboardSharer = TextSharer { text, _, _ -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) }
+// Copying is the share here, so it counts as shared at once.
+private val clipboardSharer =
+    TextSharer { text, _, _, onShared ->
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
+        onShared()
+    }
 
 @Composable
 actual fun rememberTextSharer(): TextSharer = clipboardSharer

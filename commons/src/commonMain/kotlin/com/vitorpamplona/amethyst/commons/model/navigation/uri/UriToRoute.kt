@@ -140,6 +140,16 @@ fun connectedAppRoute(uri: String): Route.ConnectedAppDetail? {
     return Route.ConnectedAppDetail(coordinate)
 }
 
+/**
+ * The link [connectedAppRoute] reads, for a sandbox window that opens its app's permissions in the
+ * main window. [accountNpub], when given, is the account the app runs as: a front end that routes
+ * `?account=` links switches to it first, since the permissions are kept per account.
+ */
+fun connectedAppUri(
+    coordinate: String,
+    accountNpub: String? = null,
+): String = NOSTR_URI_PREFIX + "connectedapp?coordinate=" + UrlEncoder.encode(coordinate) + (accountNpub?.let { "&account=$it" } ?: "")
+
 fun urlRoute(uri: String): Route.Url? {
     val url =
         runCatching {

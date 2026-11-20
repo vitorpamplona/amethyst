@@ -27,20 +27,26 @@ import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * One file's upload, as the composer sees it: its progress and final state. The work itself is
  * the [MediaUploader]'s, which reports each stage back through [updateState].
  */
 class UploadOrchestrator {
-    val progress = MutableStateFlow(0.0)
-    val progressState = MutableStateFlow<UploadingState>(UploadingState.Ready)
+    private val current = MutableStateFlow(UploadStatus(UploadingState.Ready, 0.0))
 
-    val isUploading =
-        progressState.map {
-            progressState.value !is UploadingState.Ready && progressState.value !is UploadingState.Error && progressState.value !is UploadingState.Finished
-        }
+    /**
+     * The stage and the bar's position as one value, for views of the upload. Read apart, a frame
+     * could pair a new number with the old stage: the bar flashing to 95% just before it starts
+     * spinning, or sweeping back from 95% on a retry.
+     */
+    val status: StateFlow<UploadStatus> = current
+
+    private val stage = MutableStateFlow<UploadingState>(UploadingState.Ready)
+
+    /** The stage alone, for code that only needs how the upload ended (finished, failed). */
+    val progressState: StateFlow<UploadingState> = stage
 
     fun error(
         error: UploadError,
@@ -56,13 +62,16 @@ class UploadOrchestrator {
         newProgress: Double,
         newState: UploadingState,
     ) {
-        progress.value = newProgress
-        progressState.value = newState
+        current.value = UploadStatus(newState, newProgress)
+        stage.value = newState
     }
 
     /**
-     * Maps the bytes an upload body has sent onto [from]..[to] of the progress bar, reporting
-     * only whole-percent changes. A retried request starts again from zero, and so does the bar.
+     * Maps the bytes an upload body has read from the file onto [from]..[to] of the progress bar,
+     * reporting only whole-percent changes. Those bytes reach the network's send buffer, not the
+     * server: once the last one is read the file is [UploadingState.Sending] until the server
+     * answers, rather than a bar stuck almost full. A retried request starts again from zero, and so
+     * does the bar. Each file has its own: files sent together each fill their own buffer.
      */
     fun uploadProgress(
         from: Double,
@@ -70,10 +79,10 @@ class UploadOrchestrator {
     ): (bytesWritten: Long, totalBytes: Long) -> Unit {
         var lastPercent = -1L
         return { written, total ->
-            val percent = if (total > 0) written * 100 / total else 0
+            val percent = if (total > 0) (written * 100 / total).coerceAtMost(100) else 0
             if (percent != lastPercent) {
                 lastPercent = percent
-                updateState(from + (to - from) * percent / 100, UploadingState.Uploading)
+                updateState(from + (to - from) * percent / 100, if (percent == 100L) UploadingState.Sending else UploadingState.Uploading)
             }
         }
     }
@@ -145,3 +154,9 @@ class UploadOrchestrator {
         }
     }
 }
+
+/** Where one file's upload is: its [state] and the bar's position, [progress] from 0 to 1. */
+data class UploadStatus(
+    val state: UploadingState,
+    val progress: Double,
+)

@@ -282,6 +282,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
@@ -342,6 +343,38 @@ class ClaudeCodeServiceTest {
         }
 
     @Test
+    fun aSessionReopensInThePermissionModeItWasLeftIn() =
+        runBlocking {
+            service.refresh()
+            val chat = assertNotNull(service.chat(id))
+            assertEquals(PermissionMode.DEFAULT, chat.state.value.permissionMode)
+            chat.setPermissionMode(PermissionMode.AUTO)
+            waitFor { service.agentWorkspaces.preferences().sessionModes[id] == PermissionMode.AUTO.wire }
+
+            // The app restarts: a new service over the same folders.
+            val restarted =
+                ClaudeCodeService(
+                    backend =
+                        ClaudeBackend(
+                            ClaudeSessionStore(config),
+                            ClaudeCodeStarter { _, _ -> throw IOException("not in tests") },
+                            findExecutable = { null },
+                        ),
+                    scope = scope,
+                    agentWorkspaces = AgentWorkspaces(File(config, "agents")),
+                )
+            restarted.refresh()
+            val reopened = assertNotNull(restarted.chat(id))
+            assertEquals(PermissionMode.AUTO, reopened.state.value.permissionMode)
+            // A copy of it starts in the same mode.
+            assertEquals(PermissionMode.AUTO, assertNotNull(restarted.fork(id)).state.value.permissionMode)
+
+            // Back to the default: nothing is kept for it.
+            reopened.setPermissionMode(PermissionMode.DEFAULT)
+            waitFor { id !in restarted.agentWorkspaces.preferences().sessionModes }
+        }
+
+    @Test
     fun cleaningUpKeepsAWorkspaceWithWorkNotPushed() =
         runBlocking {
             val remote = File(work, "remote.git")
@@ -353,6 +386,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
@@ -388,6 +422,7 @@ class ClaudeCodeServiceTest {
             ) = check(
                 ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.invalid") + args)
                     .directory(dir)
+                    .apply { environment().forgetInheritedRepository() }
                     .redirectErrorStream(true)
                     .start()
                     .waitFor() == 0,
