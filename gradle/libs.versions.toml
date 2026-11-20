@@ -136,7 +136,7 @@ zelory = "3.0.1"
 pdfbox = "3.0.8"
 zoomable = "2.16.0"
 composemediaplayer = "0.11.4"
-composenativetray = "1.3.3"
+composenativetray = "2.1.7"
 jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
 thumbnailator = "0.4.21"
@@ -238,7 +238,7 @@ thumbnailator = { group = "net.coobird", name = "thumbnailator", version.ref = "
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
 composemediaplayer-audio = { group = "io.github.kdroidfilter", name = "composemediaplayer-audio", version.ref = "composemediaplayer" }
-composenativetray = { group = "io.github.kdroidfilter", name = "composenativetray", version.ref = "composenativetray" }
+composenativetray = { group = "dev.nucleusframework", name = "composenativetray", version.ref = "composenativetray" }
 jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
 jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

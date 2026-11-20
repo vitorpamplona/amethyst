@@ -54,7 +54,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.kdroid.composetray.tray.api.Tray
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -115,6 +114,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import dev.nucleusframework.composenativetray.tray.api.Tray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -384,8 +384,10 @@ fun main(args: Array<String>) {
             }
         }
         LaunchedEffect(windows) { snapshotFlow { windows.keptInTray }.collect { keptInTray.set(it) } }
-        // From icon files, not a Painter: the library renders a Painter through a Skia call this
-        // Compose's Skiko no longer has, and that crashed the app as the tray appeared.
+        // From icon files, not a Painter: a Painter is drawn off-screen first, which can fail (no
+        // DirectX 12 on Windows), leaving no icon while the close rule thinks there is a tray and
+        // hides the window. A file can't fail that way. (1.3.3's Painter path also crashed on this
+        // Compose's Skiko; 2.1.1 fixed that.)
         val trayIcon = remember { IconResources.trayIconFiles }
         if (signerRunning && trayAvailable && trayIcon != null) {
             val openLabel = stringRes(Res.string.desktop_tray_open)

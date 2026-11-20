@@ -13,12 +13,12 @@ The distributed binary includes the following third-party components:
 ## kdroidFilter ComposeNativeTray
 
 - License: MIT
-- Version: 1.3.3 (with its MIT dependencies nucleus.core-runtime, nucleus.darkmode-detector
-  and platformtools.core, by the same author)
-- Upstream: https://github.com/kdroidFilter/ComposeNativeTray
+- Version: 2.1.7, `dev.nucleusframework:composenativetray` (with its MIT dependencies
+  nucleus.core-runtime and nucleus.darkmode-detector, by the same author)
+- Upstream: https://github.com/NucleusFramework/ComposeNativeTray
 - License text: `licenses/LICENSE-MIT-composenativetray.txt`
-- On Linux its tray library loads the system's libsystemd (LGPL-2.1-or-later) for D-Bus at
-  runtime; we bundle no libsystemd.
+- On Linux its libraries load the system's libsystemd (LGPL-2.1-or-later) and libdbus-1
+  (AFL-2.1 or GPL-2.0-or-later) at runtime; we bundle neither.
 
 ## JCodec
 

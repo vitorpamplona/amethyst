@@ -122,9 +122,10 @@ dependencies {
     }
 
     // System tray icon (the NIP-46 signer keeps running with the window closed) — MIT, same author,
-    // and its nucleus/platformtools dependencies are MIT too. Native trays: Win32 on Windows, an
-    // NSStatusItem on macOS, StatusNotifierItem over D-Bus on Linux (sd-bus, from the system's
-    // LGPL-2.1 libsystemd, loaded at runtime, not bundled).
+    // now published under dev.nucleusframework (the io.github.kdroidfilter coordinates stopped at
+    // 1.3.3), with its MIT nucleus dependencies. Native trays: Win32 on Windows, an NSStatusItem on
+    // macOS, StatusNotifierItem over D-Bus on Linux (the system's libsystemd, LGPL-2.1, and its
+    // theme detector's libdbus-1, AFL-2.1 or GPL-2.0+, both loaded at runtime, not bundled).
     implementation(libs.composenativetray)
 
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess

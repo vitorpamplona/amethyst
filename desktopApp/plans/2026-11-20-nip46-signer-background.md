@@ -21,12 +21,14 @@ Android keeps its NIP-46 signer answering apps from a background service and ope
 `BackgroundCloseRules`: closing the main window when it would quit keeps the app running while
 any loaded account has its signer on (`AccountCacheState.anySignerRunning`).
 
-- Tray icon from ComposeNativeTray (MIT): Win32, an NSStatusItem, or a StatusNotifierItem over
+- Tray icon from ComposeNativeTray 2.1.7 (`dev.nucleusframework`, MIT; the `io.github.kdroidfilter`
+  coordinates stopped at 1.3.3): Win32, an NSStatusItem, or a StatusNotifierItem over
   D-Bus on Linux. Shown only while a signer runs. Menu: Open Amethyst, Quit Amethyst; a left
   click opens.
 - The icon comes from files (`IconResources.trayIconFiles`: `.ico` on Windows, PNG elsewhere).
-  The library's Painter overloads render through `Image.encodeToData`, which Compose 1.12's
-  Skiko no longer has: that crashed the app as the tray appeared.
+  A Painter is drawn off-screen first and that can fail (no DirectX 12 on Windows), leaving no
+  icon while the window hides. 1.3.3's Painter path also crashed on Compose 1.12's Skiko
+  (`Image.encodeToData`); 2.1.1 fixed that.
 - Linux shows the icon only while a tray host (`org.kde.StatusNotifierWatcher`) runs. Stock GNOME
   has none without the AppIndicator extension. `SystemTrayHost` asks the session bus; without a
   host closing quits, as with no signer: the app never runs on with nothing on screen.
@@ -63,5 +65,5 @@ signer off closing still quits; with no tray host the app keeps running and the 
   protocol on Linux.
 - `flathub/gradle-sources.json` must be regenerated for the new dependency at the next release
   (`flathub/tools/regenerate-gradle-sources.sh <tag>`).
-- The release build's ProGuard keep rule for `com.kdroid.composetray.**` was not tried in a
+- The release build's ProGuard keep rules for `dev.nucleusframework.**` were not tried in a
   packaged build.

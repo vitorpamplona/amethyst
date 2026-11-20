@@ -228,11 +228,13 @@
 
 # ============================================================================
 # Desktop-only: ComposeNativeTray — its Win32, macOS and Linux tray libraries
-# call menu and click callbacks back into com.kdroid.composetray.* by name, and
-# its nucleus dependencies live under io.github.kdroidfilter (kept above).
+# call menu and click callbacks back into dev.nucleusframework.composenativetray.*
+# by name, and its dark-mode detector binds natives of its own.
 # ============================================================================
--keep class com.kdroid.composetray.** { *; }
--keepclassmembers class com.kdroid.composetray.** {
+-keep class dev.nucleusframework.composenativetray.** { *; }
+-keep class dev.nucleusframework.darkmodedetector.** { *; }
+-keep class dev.nucleusframework.core.runtime.** { *; }
+-keepclassmembers class dev.nucleusframework.** {
     native <methods>;
 }
 
