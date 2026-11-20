@@ -21,19 +21,15 @@
 package com.vitorpamplona.amethyst.commons.frontpage
 
 import androidx.compose.runtime.Immutable
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 
 /**
  * Whether an account's editions go to its public Observer site. On by default, but nothing is
  * published until the reader has seen, once, that the site is public ([noticeSeen]): the screen
  * asks before the first print, and an unattended print never publishes before that.
+ *
+ * Kept in the account's synced schedule as the Observer's `publish` param
+ * ([FrontPageParams.publishing]), so every device of the account follows one choice.
  */
 @Immutable
 data class ObserverPrefs(
@@ -43,52 +39,5 @@ data class ObserverPrefs(
     val publishes get() = publish && noticeSeen
 }
 
-interface ObserverPrefsStore {
-    fun flow(account: HexKey): Flow<ObserverPrefs>
-
-    suspend fun get(account: HexKey): ObserverPrefs = flow(account).first()
-
-    suspend fun set(
-        account: HexKey,
-        prefs: ObserverPrefs,
-    )
-
-    object None : ObserverPrefsStore {
-        override fun flow(account: HexKey): Flow<ObserverPrefs> = flowOf(ObserverPrefs(publish = false))
-
-        override suspend fun set(
-            account: HexKey,
-            prefs: ObserverPrefs,
-        ) {}
-    }
-}
-
-/** In the app-wide shared settings file: `frontpage.observer.<pubkey>` = `on|seen`. Per device, like the schedule. */
-class DataStoreObserverPrefsStore(
-    private val stores: AppPreferenceStores,
-) : ObserverPrefsStore {
-    private val store get() = stores.getDataStore(AppPreferenceStores.SHARED_SETTINGS)
-
-    private fun keyFor(account: HexKey) = stringPreferencesKey(PREFIX + account.lowercase())
-
-    override fun flow(account: HexKey): Flow<ObserverPrefs> = store.data.map { decode(it[keyFor(account)]) }
-
-    override suspend fun set(
-        account: HexKey,
-        prefs: ObserverPrefs,
-    ) {
-        store.edit { it[keyFor(account)] = encode(prefs) }
-    }
-
-    companion object {
-        private const val PREFIX = "frontpage.observer."
-
-        fun encode(prefs: ObserverPrefs) = "${if (prefs.publish) "on" else "off"}|${if (prefs.noticeSeen) "seen" else "new"}"
-
-        fun decode(raw: String?): ObserverPrefs {
-            val parts = raw?.split('|') ?: return ObserverPrefs()
-            if (parts.size != 2) return ObserverPrefs()
-            return ObserverPrefs(publish = parts[0] != "off", noticeSeen = parts[1] == "seen")
-        }
-    }
-}
+/** The publishing choice this schedule holds; the default (on, not confirmed) while it can't be read. */
+fun SyncedSchedule.observerPrefs(): ObserverPrefs = FrontPageParams.publishing((this as? SyncedSchedule.Readable)?.task)
