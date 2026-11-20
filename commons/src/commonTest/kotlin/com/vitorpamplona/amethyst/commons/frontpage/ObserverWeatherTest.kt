@@ -134,7 +134,7 @@ class ObserverWeatherTest {
         assertTrue(shown.contains("&lt;b&gt;Somerville&lt;/b&gt;"))
         assertFalse(shown.contains("<b>Somerville</b>"))
         assertTrue(shown.contains("42°F"))
-        assertTrue(shown.contains("Sat 61°/36° 0%"))
+        assertTrue(shown.contains("Saturday 61°/36° 0%"))
         assertTrue(shown.contains(ObserverWeather.CREDIT))
         // Nothing in it fetches.
         assertFalse(Regex("(?i)url\\(|src=|href=|@import").containsMatchIn(ObserverWeather.strip(report)))
@@ -143,6 +143,54 @@ class ObserverWeatherTest {
         assertTrue(noDateline.indexOf("weather-strip") > noDateline.indexOf("</header>"))
         val bare = ObserverWeather.withStrip("<body><p>x</p></body>", report)
         assertTrue(bare.indexOf("weather-strip") in bare.indexOf("<body>")..bare.indexOf("<p>"))
+    }
+
+    @Test
+    fun theStripSpeaksTheReadersLanguage() {
+        val report = ObserverWeather.parseForecast(forecast, somerville.copy(fahrenheit = false))!!
+        val pt =
+            WeatherLabels(
+                title = "Tempo",
+                today = "Hoje",
+                high = "máx.",
+                low = "mín.",
+                rain = "chuva",
+                sun = "sol",
+                weekdays = listOf("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"),
+                conditions = mapOf(WeatherCondition.CLEAR to "Céu limpo", WeatherCondition.OVERCAST to "Nublado"),
+            )
+        val strip = ObserverWeather.strip(report, pt)
+        assertTrue(strip.contains("Tempo · Somerville"))
+        assertTrue(strip.contains("Céu limpo"))
+        assertTrue(strip.contains("Hoje: máx. 65°, mín. 36°, Nublado, 0% chuva, sol 06:41–16:18"))
+        assertTrue(strip.contains("sábado 61°/36° 0%"))
+        // The credit stays as Open-Meteo asks for it.
+        assertTrue(strip.contains(ObserverWeather.CREDIT))
+        // A code with no word in the labels is left out rather than shown in English.
+        assertNull(ObserverWeather.words(95, pt))
+    }
+
+    @Test
+    fun aDatelineWithADivInsideIsSteppedOverWhole() {
+        val report = ObserverWeather.parseForecast(forecast, somerville)!!
+        val page = "<body><div class=\"dateline\"><div><span>a</span></div><span>b</span></div><section class=\"fold\"></section></body>"
+        val shown = ObserverWeather.withStrip(page, report)
+        // After the dateline's own close, not its inner div's.
+        assertTrue(shown.indexOf("weather-strip") > shown.indexOf("<span>b</span></div>"))
+        assertTrue(shown.indexOf("weather-strip") < shown.indexOf("class=\"fold\""))
+    }
+
+    @Test
+    fun theWriterReadsTheRulesAndTheLayoutsButNotTheNotes() {
+        val forWriter = houseCssForWriter(HOUSE_CSS)
+        assertTrue(forWriter.length < HOUSE_CSS.length * 3 / 4, "only ${HOUSE_CSS.length - forWriter.length} chars saved")
+        assertTrue(forWriter.contains("color-scheme: light"))
+        assertTrue(forWriter.contains(".agate {"))
+        assertTrue(forWriter.contains("LAYOUTS THE MARKUP CAN USE"))
+        assertTrue(forWriter.contains("figure.whole"))
+        assertFalse(forWriter.contains("THE FOLIO GOES ON TOP"))
+        assertFalse(forWriter.contains("\n\n"))
+        assertTrue(systemPrompt().contains(forWriter))
     }
 
     @Test

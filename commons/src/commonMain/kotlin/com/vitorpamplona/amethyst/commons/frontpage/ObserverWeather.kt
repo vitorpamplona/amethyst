@@ -85,6 +85,77 @@ data class WeatherReport(
     val sunset: String? = null,
 )
 
+/** The kinds of weather the strip names, from the WMO codes Open-Meteo answers with ([ObserverWeather.condition]). */
+enum class WeatherCondition {
+    CLEAR,
+    MAINLY_CLEAR,
+    PARTLY_CLOUDY,
+    OVERCAST,
+    FOG,
+    DRIZZLE,
+    FREEZING_DRIZZLE,
+    RAIN,
+    HEAVY_RAIN,
+    FREEZING_RAIN,
+    SNOW,
+    HEAVY_SNOW,
+    SHOWERS,
+    VIOLENT_SHOWERS,
+    SNOW_SHOWERS,
+    THUNDERSTORM,
+    THUNDERSTORM_HAIL,
+}
+
+/**
+ * The strip's words, in the reader's language: commons has no resources, so the screen resolves
+ * them from commonsUI's and hands them in. [ENGLISH] is for tests and a platform without them.
+ */
+@Immutable
+data class WeatherLabels(
+    val title: String,
+    val today: String,
+    val high: String,
+    val low: String,
+    val rain: String,
+    val sun: String,
+    /** Monday first, seven of them. */
+    val weekdays: List<String>,
+    val conditions: Map<WeatherCondition, String>,
+) {
+    companion object {
+        val ENGLISH =
+            WeatherLabels(
+                title = "Weather",
+                today = "Today",
+                high = "high",
+                low = "low",
+                rain = "rain",
+                sun = "sun",
+                weekdays = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+                conditions =
+                    mapOf(
+                        WeatherCondition.CLEAR to "Clear",
+                        WeatherCondition.MAINLY_CLEAR to "Mainly clear",
+                        WeatherCondition.PARTLY_CLOUDY to "Partly cloudy",
+                        WeatherCondition.OVERCAST to "Overcast",
+                        WeatherCondition.FOG to "Fog",
+                        WeatherCondition.DRIZZLE to "Drizzle",
+                        WeatherCondition.FREEZING_DRIZZLE to "Freezing drizzle",
+                        WeatherCondition.RAIN to "Rain",
+                        WeatherCondition.HEAVY_RAIN to "Heavy rain",
+                        WeatherCondition.FREEZING_RAIN to "Freezing rain",
+                        WeatherCondition.SNOW to "Snow",
+                        WeatherCondition.HEAVY_SNOW to "Heavy snow",
+                        WeatherCondition.SHOWERS to "Showers",
+                        WeatherCondition.VIOLENT_SHOWERS to "Violent showers",
+                        WeatherCondition.SNOW_SHOWERS to "Snow showers",
+                        WeatherCondition.THUNDERSTORM to "Thunderstorms",
+                        WeatherCondition.THUNDERSTORM_HAIL to "Thunderstorms with hail",
+                    ),
+            )
+    }
+}
+
 /** The Observer's weather: the `place` param, the Open-Meteo requests and readings, and the strip the app draws. */
 object ObserverWeather {
     const val PARAM = FrontPageParams.PLACE
@@ -218,39 +289,46 @@ object ObserverWeather {
             }
         }
 
-    /** WMO weather interpretation codes, as a newspaper says them. */
-    fun words(code: Int?): String? =
+    /** WMO weather interpretation codes, as the kinds of weather a newspaper names. */
+    fun condition(code: Int?): WeatherCondition? =
         when (code) {
             null -> null
-            0 -> "Clear"
-            1 -> "Mainly clear"
-            2 -> "Partly cloudy"
-            3 -> "Overcast"
-            45, 48 -> "Fog"
-            51, 53, 55 -> "Drizzle"
-            56, 57 -> "Freezing drizzle"
-            61, 63 -> "Rain"
-            65 -> "Heavy rain"
-            66, 67 -> "Freezing rain"
-            71, 73 -> "Snow"
-            75 -> "Heavy snow"
-            77 -> "Snow grains"
-            80, 81 -> "Showers"
-            82 -> "Violent showers"
-            85, 86 -> "Snow showers"
-            95 -> "Thunderstorms"
-            96, 99 -> "Thunderstorms with hail"
+            0 -> WeatherCondition.CLEAR
+            1 -> WeatherCondition.MAINLY_CLEAR
+            2 -> WeatherCondition.PARTLY_CLOUDY
+            3 -> WeatherCondition.OVERCAST
+            45, 48 -> WeatherCondition.FOG
+            51, 53, 55 -> WeatherCondition.DRIZZLE
+            56, 57 -> WeatherCondition.FREEZING_DRIZZLE
+            61, 63 -> WeatherCondition.RAIN
+            65 -> WeatherCondition.HEAVY_RAIN
+            66, 67 -> WeatherCondition.FREEZING_RAIN
+            71, 73, 77 -> WeatherCondition.SNOW
+            75 -> WeatherCondition.HEAVY_SNOW
+            80, 81 -> WeatherCondition.SHOWERS
+            82 -> WeatherCondition.VIOLENT_SHOWERS
+            85, 86 -> WeatherCondition.SNOW_SHOWERS
+            95 -> WeatherCondition.THUNDERSTORM
+            96, 99 -> WeatherCondition.THUNDERSTORM_HAIL
             else -> null
         }
 
-    private val WEEKDAYS = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    /** [code] in [labels]' words; null when it names no weather [labels] has a word for. */
+    fun words(
+        code: Int?,
+        labels: WeatherLabels = WeatherLabels.ENGLISH,
+    ): String? = condition(code)?.let { labels.conditions[it] }
 
     /**
-     * The weather as a strip under the paper's dateline: now, today's high and low, rain and sun,
-     * the next days, and Open-Meteo's credit (CC BY 4.0). Every value is escaped; it carries its own
+     * The weather as a strip under the paper's dateline, in [labels]' words (the reader's language,
+     * from the app's resources): now, today's high and low, rain and sun, the next days, and
+     * Open-Meteo's credit (CC BY 4.0, kept as written). Every value is escaped; it carries its own
      * styles, on the house tokens, and nothing that fetches or runs.
      */
-    fun strip(report: WeatherReport): String {
+    fun strip(
+        report: WeatherReport,
+        labels: WeatherLabels = WeatherLabels.ENGLISH,
+    ): String {
         val unit = if (report.fahrenheit) "°F" else "°C"
         val today = report.days.firstOrNull()
         val later = report.days.drop(1)
@@ -263,31 +341,31 @@ object ObserverWeather {
         out.append(".weather-strip .ws-credit{margin-left:auto;font-size:.66rem;color:var(--ink-3)}")
         out.append("@media (max-width:720px){.weather-strip .ws-credit{margin-left:0;flex-basis:100%}}")
         out.append("</style>")
-        out.append("<span class=\"ws-place\">Weather · ").append(escape(report.place)).append("</span>")
+        out.append("<span class=\"ws-place\">").append(escape("${labels.title} · ${report.place}")).append("</span>")
         if (report.now != null) {
             out
                 .append("<span class=\"ws-now\"><b>")
                 .append(report.now)
                 .append(unit)
                 .append("</b>")
-            words(report.nowCode)?.let { out.append(' ').append(escape(it)) }
+            words(report.nowCode, labels)?.let { out.append(' ').append(escape(it)) }
             out.append("</span>")
         }
         if (today != null) {
             val parts = mutableListOf<String>()
-            if (today.high != null && today.low != null) parts += "high ${today.high}°, low ${today.low}°"
-            words(today.code)?.let { parts += it.lowercase() }
-            today.rain?.let { parts += "$it% rain" }
-            if (report.sunrise != null && report.sunset != null) parts += "sun ${report.sunrise}–${report.sunset}"
-            if (parts.isNotEmpty()) out.append("<span class=\"ws-today\">Today: ").append(escape(parts.joinToString(", "))).append("</span>")
+            if (today.high != null && today.low != null) parts += "${labels.high} ${today.high}°, ${labels.low} ${today.low}°"
+            words(today.code, labels)?.let { parts += it }
+            today.rain?.let { parts += "$it% ${labels.rain}" }
+            if (report.sunrise != null && report.sunset != null) parts += "${labels.sun} ${report.sunrise}–${report.sunset}"
+            if (parts.isNotEmpty()) out.append("<span class=\"ws-today\">").append(escape("${labels.today}: " + parts.joinToString(", "))).append("</span>")
         }
         later.forEach { day ->
-            val name = dayOfWeek(day.date)?.let { WEEKDAYS[it - 1] } ?: return@forEach
+            val name = dayOfWeek(day.date)?.let { labels.weekdays.getOrNull(it - 1) } ?: return@forEach
             val temps = if (day.high != null && day.low != null) " ${day.high}°/${day.low}°" else ""
             val rain = day.rain?.let { " $it%" }.orEmpty()
             out.append("<span class=\"ws-day\">").append(escape("$name$temps$rain")).append("</span>")
         }
-        out.append("<span class=\"ws-credit\">").append(escape(CREDIT + (report.asOf?.let { " · as of $it" } ?: ""))).append("</span>")
+        out.append("<span class=\"ws-credit\">").append(escape(CREDIT + (report.asOf?.let { " · $it" } ?: ""))).append("</span>")
         out.append("</div>")
         return out.toString()
     }
@@ -299,21 +377,37 @@ object ObserverWeather {
     fun withStrip(
         html: String,
         report: WeatherReport,
+        labels: WeatherLabels = WeatherLabels.ENGLISH,
     ): String {
-        val strip = strip(report)
-        val at = afterElement(html, "dateline") ?: afterElement(html, "masthead", "</header>") ?: afterOpening(html, "class=\"sheet\"") ?: afterOpening(html, "<body")
+        val strip = strip(report, labels)
+        val at = afterElement(html, "dateline") ?: afterElement(html, "masthead") ?: afterOpening(html, "class=\"sheet\"") ?: afterOpening(html, "<body")
         return if (at == null) strip + html else html.substring(0, at) + strip + html.substring(at)
     }
 
-    /** Right after the first element whose class list starts with [cls], closed by [closer]. */
+    /**
+     * Right after the element whose class list starts with [cls], found by its own closing tag:
+     * nested elements of the same name (a dateline with a `<div>` inside) are counted, not taken
+     * for its end. Null when there is none, or it never closes.
+     */
     private fun afterElement(
         html: String,
         cls: String,
-        closer: String = "</div>",
     ): Int? {
-        val start = Regex("class=\"$cls[\" ]").find(html)?.range?.first ?: return null
-        val end = html.indexOf(closer, start)
-        return if (end < 0) null else end + closer.length
+        val attr = Regex("class=\"$cls[\" ]").find(html)?.range?.first ?: return null
+        val open = html.lastIndexOf('<', attr).takeIf { it >= 0 } ?: return null
+        val name =
+            Regex("^<([a-zA-Z][a-zA-Z0-9]*)")
+                .find(html.substring(open, minOf(html.length, open + 20)))
+                ?.groupValues
+                ?.get(1)
+                ?.lowercase() ?: return null
+        val tags = Regex("<(/?)$name\\b[^>]*>", RegexOption.IGNORE_CASE)
+        var depth = 0
+        tags.findAll(html, open).forEach { tag ->
+            depth += if (tag.groupValues[1].isEmpty()) 1 else -1
+            if (depth == 0) return tag.range.last + 1
+        }
+        return null
     }
 
     /** Right after the opening tag that contains [marker]. */

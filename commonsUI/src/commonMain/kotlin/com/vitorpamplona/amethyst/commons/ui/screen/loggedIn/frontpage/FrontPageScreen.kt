@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.ObserverFailure
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverPrefs
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverStatus
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverToday
+import com.vitorpamplona.amethyst.commons.frontpage.ObserverWeather
 import com.vitorpamplona.amethyst.commons.frontpage.PastEdition
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLog
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
@@ -1775,7 +1776,11 @@ private fun PaperPane(
     modifier: Modifier,
 ) {
     Box(modifier.background(Newsprint)) {
-        val html = shown?.display
+        val page = shown?.html
+        // The weather kept beside the paper, drawn over the copy on screen only, in the reader's words.
+        val weather = shown?.edition?.weather
+        val labels = if (weather != null) rememberWeatherLabels() else null
+        val html = remember(page, weather, labels) { if (page != null && weather != null && labels != null) ObserverWeather.withStrip(page, weather, labels) else page }
         when {
             html != null -> Paper(edition, html, Modifier.fillMaxSize())
             loading -> CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))

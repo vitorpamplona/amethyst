@@ -46,8 +46,8 @@ internal const val HOUSE_CSS: String =
  * LAYOUTS THE MARKUP CAN USE, before reaching for a <style> of its own:
  *   figure.lead-art    the lead's picture, across its column above the story, 3:2
  *   figure.crop-4x3, figure.crop-16x9   a card's or a long read's picture
- *   figure.whole       a screenshot or chart: never cropped, never capped
- *                      (every other picture is capped in height and cropped to fill)
+ *   figure.whole       a picture that may stand taller than the cap
+ *                      (every other picture is capped in height, set narrower, never cropped)
  *   div.spread         a picture spread of <figure>s, the first one large
  *   div.agate          the small-print strip: up to five .cell columns of
  *                      .box-head + .wire-item (headlines, on air, classifieds,
@@ -451,24 +451,33 @@ figure {
   gap: 7px;
 }
 figure img {
-  width: 100%;
+  /* A PICTURE KEEPS TO A NEWSPAPER'S PROPORTIONS, AND STAYS WHOLE.
+   *
+   * Posts arrive as phone portraits as often as not, and set at a column's full
+   * width a portrait stands half a screen tall and pushes its story off the
+   * page. Capped in height, a tall picture is set narrower, centred, never
+   * cropped: a screenshot or a chart keeps every word. Only the crop classes
+   * below crop, and `figure.whole` lifts the cap. */
+  width: auto;
+  max-width: 100%;
   height: auto;
+  max-height: 28rem;
+  align-self: center;
   display: block;
   border: 1px solid var(--rule);
   background: var(--paper-2);
-  /* A PICTURE KEEPS TO A NEWSPAPER'S PROPORTIONS.
-   *
-   * Posts arrive as phone portraits as often as not, and set at a column's full
-   * width a portrait stands half a screen tall and pushes the story it belongs
-   * to off the page. Capped here and cropped to fill, it reads as a picture on
-   * a page rather than a poster. A screenshot or chart, where cropping would cut
-   * the very thing shown, opts out with `figure.whole`. */
-  max-height: 28rem;
+}
+/* The crops a desk sets in its markup: the lead's picture across its column, a
+ * card's or a spread's picture, a long read's cover. Full width, cut to shape. */
+figure.lead-art img,
+figure.crop-4x3 img,
+figure.crop-16x9 img,
+.spread > figure img {
+  width: 100%;
+  align-self: stretch;
   object-fit: cover;
   object-position: center 30%;
 }
-/* The crops a desk sets in its markup: the lead's picture across its column, a
- * card's or a spread's picture, a long read's cover. */
 figure.lead-art img {
   aspect-ratio: 3 / 2;
   max-height: none;
@@ -481,7 +490,6 @@ figure.crop-16x9 img {
 }
 figure.whole img {
   max-height: none;
-  object-fit: contain;
 }
 figcaption {
   font-style: italic;
@@ -744,3 +752,23 @@ td.num {
   }
 }
 """
+
+/**
+ * The house stylesheet as the writer reads it in its prompt: every rule, and the list of layouts it
+ * can use, without the notes kept for the people who edit it. Every byte of the prompt is paid for
+ * on every print, by the reader's own key; the notes are about a third of the sheet.
+ */
+internal val HOUSE_CSS_FOR_WRITER: String by lazy { houseCssForWriter(HOUSE_CSS) }
+
+/** [css] with its comments gone, but for the layout list, and without the blank lines they leave. */
+internal fun houseCssForWriter(css: String): String =
+    css
+        .replace(Regex("/\\*[\\s\\S]*?\\*/")) { comment ->
+            val at = comment.value.indexOf(LAYOUTS_MARKER)
+            if (at < 0) "" else "/* " + comment.value.substring(at).trimEnd()
+        }.lines()
+        .map { it.trimEnd() }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n")
+
+private const val LAYOUTS_MARKER = "LAYOUTS THE MARKUP CAN USE"

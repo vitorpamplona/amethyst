@@ -520,6 +520,35 @@ class FrontPagePrinter(
         return page
     }
 
+    /** The paper a scheduled run kept, for [afterKept] once the run has written `ran`. */
+    @Volatile
+    private var keptForAfter: Pair<SavedEdition, String>? = null
+
+    /**
+     * What follows a kept paper, none of which may lose it: the weather for the schedule's place,
+     * kept beside it ([forecast]), then the record and encrypted copy for the account's other
+     * devices ([shareWithDevices]).
+     */
+    private suspend fun afterKept(
+        kept: SavedEdition,
+        html: String,
+    ) {
+        val edition =
+            forecast()?.let { weather ->
+                kept.copy(weather = weather).also {
+                    try {
+                        store.save(pubKey, it, html)
+                        refresh()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not keep the weather with the edition", e)
+                    }
+                }
+            } ?: kept
+        shareWithDevices(edition, html)
+    }
+
     /**
      * Records the paper just kept in the account's schedule, for its other devices: an encrypted copy
      * on the reader's own Blossom servers ([SharedEditions.seal]) and its key, in the schedule's
@@ -769,7 +798,6 @@ class FrontPagePrinter(
                 rounds = printed.rounds,
                 sha256 = publishedSha256(html),
                 recipe = printed.recipe,
-                weather = forecast(),
             )
         try {
             store.save(pubKey, edition, html)
@@ -780,9 +808,10 @@ class FrontPagePrinter(
             Log.w(TAG, "Could not keep the edition", e)
         }
         if (trigger == PrintTrigger.SCHEDULED || watchers() == 0) notifier.paperReady(pubKey, edition)
-        // Shared before the print ends, like the publish below: the account's other devices see this
-        // paper, published or not, and none of them prints this morning again.
-        shareWithDevices(edition, html)
+        // The weather and the copy for the other devices come after the paper is safe. A scheduled
+        // run does them once its `ran` is written ([printScheduled]): inside the run's budget they
+        // could time it out with the paper kept and the morning never marked done.
+        if (trigger == PrintTrigger.SCHEDULED) keptForAfter = edition to html else afterKept(edition, html)
         // Published before the print ends, so the job (and Android's foreground service, and the
         // platform's scheduled run) lives until it is out, the popup saying so.
         publishPending(trigger, onPublishing = jobs::publishing)
@@ -818,7 +847,9 @@ class FrontPagePrinter(
         try {
             val pending =
                 localEditions.value
-                    .filter { !it.published && it.sha256 != null }
+                    // Another device's paper is that device's to publish: two publishers racing on one
+                    // manifest can drop a day (the site's last write wins).
+                    .filter { !it.published && it.sha256 != null && it.printedBy == null }
                     .mapNotNull { kept -> store.html(pubKey, kept.day)?.let { kept to withPaperCsp(it) } }
                     .filter { (kept, html) -> ObserverPublisher.sha256Hex(html.encodeToByteArray()).equals(kept.sha256, ignoreCase = true) }
             if (pending.isEmpty()) return
@@ -948,27 +979,36 @@ class FrontPagePrinter(
         // never leaves a claim behind.
         if (!slot.tryHold()) return ScheduledOutcome.BUSY
         try {
-            val morning = morning ?: return printOccurrence(waitMs, null, null) { true }
+            val morning =
+                morning ?: return printOccurrence(waitMs, null, null) { true }.also { outcome ->
+                    keptForAfter?.let { (edition, html) -> if (outcome == ScheduledOutcome.PRINTED) afterKept(edition, html) }
+                }
             // "Quit and cancel" while the run waited for the press: nothing claimed, nothing to record.
             if (slot.isCancelRequested) return ScheduledOutcome.CANCELLED
             // The occurrence the claim won: the claim asks whether its paper exists right before it
             // prints ([FrontPageMorning.runOccurrence]), and the paper is dated by it.
             var due: Long? = null
+            keptForAfter = null
             // NIP-FB: only a device the reader turned on, and only the one whose claim wins; a paper
             // that already exists for the occurrence is marked done without printing.
-            return morning.runOccurrence(
-                account,
-                alreadyDone = { occurrence, zone ->
-                    due = occurrence
-                    alreadyPrinted(occurrence, zone)
-                },
-                deadline,
-            ) { budget, keep ->
-                // Cancelled during the claim and its settle: the claim is this install's, and it
-                // ends CANCELLED (recorded as ended), never printed.
-                if (slot.isCancelRequested) ScheduledOutcome.CANCELLED else printOccurrence(waitMs, budget, due, keep)
-            }
+            val outcome =
+                morning.runOccurrence(
+                    account,
+                    alreadyDone = { occurrence, zone ->
+                        due = occurrence
+                        alreadyPrinted(occurrence, zone)
+                    },
+                    deadline,
+                ) { budget, keep ->
+                    // Cancelled during the claim and its settle: the claim is this install's, and it
+                    // ends CANCELLED (recorded as ended), never printed.
+                    if (slot.isCancelRequested) ScheduledOutcome.CANCELLED else printOccurrence(waitMs, budget, due, keep)
+                }
+            // `ran` is written: the weather and the other devices' copy can take their time now.
+            keptForAfter?.let { (edition, html) -> if (outcome == ScheduledOutcome.PRINTED) afterKept(edition, html) }
+            return outcome
         } finally {
+            keptForAfter = null
             slot.release()
         }
     }

@@ -162,10 +162,14 @@ object SharedEditions {
         if (current.any { it.day == record.day && it.printedAt > record.printedAt }) return task
         val kept = (current.filter { it.day != record.day } + record).sortedByDescending { it.printedAt }.take(EditionRecord.KEEP)
         if (record !in kept) return task
-        val public = task.publicTags.filterNot(EditionRecord::isTag)
-        val private = task.privateTags.filterNot(EditionRecord::isTag) + kept.map { it.toTag() }
+        // Only the records read here are rewritten: an `edition` tag this code can't read (another
+        // app's, a later version's) stays where it was, as NIP-FB asks of every writer.
+        val public = task.publicTags.filterNot(::isReadRecord)
+        val private = task.privateTags.filterNot(::isReadRecord) + kept.map { it.toTag() }
         return ScheduledTask(public.toTypedArray(), private.toTypedArray())
     }
+
+    private fun isReadRecord(tag: Array<String>) = EditionRecord.parse(tag) != null
 
     /** [page] (the bytes kept, with the paper's CSP) under a fresh AES-256-GCM key, for the reader's servers. */
     fun seal(page: ByteArray): SealedPage {
@@ -189,7 +193,9 @@ object SharedEditions {
 
     /**
      * The history with the account's other devices' papers: [history] (this device's kept editions
-     * and the Observer sites'), plus each record of a paper none of them has, by hash or by day.
+     * and the Observer sites'), plus each record of a paper none of them has, by hash or by day,
+     * that can be opened here. A record without a copy still counts as printed ("already
+     * printed?", the status line), but never takes today's place with a paper nobody can open.
      */
     fun mergeRecords(
         history: List<SavedEdition>,
@@ -197,7 +203,7 @@ object SharedEditions {
     ): List<SavedEdition> {
         val shas = history.mapNotNull { it.sha256?.lowercase() }.toSet()
         val days = history.map { it.day }.toSet()
-        val others = records.filter { it.sha256 !in shas && it.day !in days }.map { it.asSaved() }
+        val others = records.filter { it.hasCopy && it.sha256 !in shas && it.day !in days }.map { it.asSaved() }
         return if (others.isEmpty()) history else (history + others).sortedByDescending { it.day }
     }
 }

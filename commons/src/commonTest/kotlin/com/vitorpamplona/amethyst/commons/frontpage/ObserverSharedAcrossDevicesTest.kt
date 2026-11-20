@@ -57,6 +57,9 @@ class ObserverSharedAcrossDevicesTest {
         headline = "H$sha",
     )
 
+    /** A record with an encrypted copy to open. */
+    private fun withCopy(record: EditionRecord) = record.copy(blob = "b".repeat(64), key = "c".repeat(64), nonce = "d".repeat(24))
+
     // --- publish ------------------------------------------------------------------------------
 
     @Test
@@ -222,7 +225,7 @@ class ObserverSharedAcrossDevicesTest {
     @Test
     fun theHistoryShowsWhatAnotherDevicePrinted() {
         val here = SavedEdition(day = ObserverSite.utcDay(noon - day), code = "L", printedAt = noon - day, model = "m", sha256 = "1".repeat(64))
-        val history = SharedEditions.mergeRecords(listOf(here), listOf(record(noon, 'a'), record(noon - day, 'b')))
+        val history = SharedEditions.mergeRecords(listOf(here), listOf(withCopy(record(noon, 'a')), withCopy(record(noon - day, 'b'))))
         assertEquals(2, history.size)
         val shared = history.first()
         assertEquals("Desktop (Linux)", shared.printedBy)
@@ -230,14 +233,38 @@ class ObserverSharedAcrossDevicesTest {
         assertFalse(shared.published)
         // A day this device has (or the same bytes, under any day) stays this device's.
         assertEquals(here, history[1])
-        val sameBytes = SharedEditions.mergeRecords(listOf(here), listOf(record(noon, '1')))
+        val sameBytes = SharedEditions.mergeRecords(listOf(here), listOf(withCopy(record(noon, '1'))))
         assertEquals(listOf(here), sameBytes)
+    }
+
+    @Test
+    fun aRecordWithNoCopyCountsAsPrintedButIsNeverShownAsToday() {
+        // The desktop had no Blossom server: the phone can't open it, so it isn't today's paper there...
+        val noCopy = record(noon - 3_600, 'a')
+        assertEquals(emptyList(), SharedEditions.mergeRecords(emptyList(), listOf(noCopy)))
+        val utc = ObserverCalendar.of(CronZone.fixed(0))
+        assertNull(observerToday(SharedEditions.mergeRecords(emptyList(), listOf(noCopy)), noon, utc).paper)
+        // ...but the morning is still printed, for the claim and the status line.
+        val sites = observerSitesOf(emptyList(), emptyList(), emptyList(), listOf(noCopy))
+        assertTrue(ObserverSite.alreadyPrinted(sites.reader, emptyList(), noon - 4 * 3_600, CronZone.fixed(0)))
+    }
+
+    @Test
+    fun anEditionTagThisCodeCantReadIsKept() {
+        val later = arrayOf("edition", "2026-11-20", "1795176000", "a".repeat(64), "C", "Pixel", "", "", "", "", "", "a field from a later version")
+        val unreadable = arrayOf("edition", "a day in a format to come")
+        val task = ScheduledTask(schedule.publicTags + listOf(unreadable), schedule.privateTags)
+        val next = SharedEditions.withRecord(task, record(noon, 'b'))
+        assertTrue(next.publicTags.any { it.contentEquals(unreadable) })
+        assertEquals(listOf(record(noon, 'b')), SharedEditions.records(next))
+        // A readable one with more fields than this code knows is read, and rewritten in its shape.
+        assertNotNull(EditionRecord.parse(later))
     }
 
     @Test
     fun todayIsTheOtherDevicesPaper() {
         val utc = ObserverCalendar.of(CronZone.fixed(0))
-        val today = observerToday(SharedEditions.mergeRecords(emptyList(), listOf(record(noon - 3_600, 'a'))), noon, utc)
+        val today = observerToday(SharedEditions.mergeRecords(emptyList(), listOf(withCopy(record(noon - 3_600, 'a')))), noon, utc)
         assertEquals("Ha", assertNotNull(today.paper).headline)
     }
 

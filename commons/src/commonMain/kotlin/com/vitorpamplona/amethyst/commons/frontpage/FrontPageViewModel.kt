@@ -149,10 +149,8 @@ class FrontPageModels(
 @Immutable
 data class ShownEdition(
     val edition: SavedEdition,
-    /** The page as kept: what Download saves. */
+    /** The page as kept: what Download saves. The screen draws [SavedEdition.weather] over it ([ObserverWeather.withStrip]). */
     val html: String?,
-    /** The page as the screen shows it: with the weather kept beside it drawn in ([ObserverWeather.withStrip]). */
-    val display: String? = html,
 )
 
 /**
@@ -289,10 +287,7 @@ class FrontPageViewModel(
                 if (edition == null) {
                     flowOf<ShownEdition?>(null)
                 } else {
-                    flow<ShownEdition?> {
-                        val html = printer.html(edition.day)
-                        emit(ShownEdition(edition, html, html?.let { page -> edition.weather?.let { ObserverWeather.withStrip(page, it) } ?: page }))
-                    }
+                    flow<ShownEdition?> { emit(ShownEdition(edition, printer.html(edition.day))) }
                 }
             }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
