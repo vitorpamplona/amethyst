@@ -25,7 +25,9 @@
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 AMY="$ROOT/cli/build/install/amy/bin/amy"
 GEODE="$ROOT/geode/build/install/geode/bin/geode"
-IMAGE="ghcr.io/cordn-msg/cordn:latest"
+# CORDN_IMAGE picks another build of the reference coordinator, e.g. one built from the
+# latest Cordn-msg/cordn source with its Dockerfile.
+IMAGE="${CORDN_IMAGE:-ghcr.io/cordn-msg/cordn:latest}"
 
 PORT="${PORT:-7447}"
 RELAY="ws://127.0.0.1:$PORT"
