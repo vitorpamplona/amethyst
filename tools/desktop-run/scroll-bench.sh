@@ -49,12 +49,24 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# How long one boot may take once the window is up: the wait, three passes and their pauses.
+# The report folder goes to the app inside one -D argument, which run-headless.sh word-splits.
+case "$out" in
+  *[[:space:]]*) echo "--out must not contain spaces: $out" >&2; exit 2 ;;
+esac
+
+# How long one boot may take once the window is up: the wait, then three passes of notches x
+# interval each, plus their pauses, screenshots and a slow first pass (180 s).
 wait_seconds=30
+notches=250
+interval_ms=16
 for arg in "${extra[@]+"${extra[@]}"}"; do
-  case "$arg" in -Damethyst.scrollBench.waitSeconds=*) wait_seconds="${arg#*=}" ;; esac
+  case "$arg" in
+    -Damethyst.scrollBench.waitSeconds=*) wait_seconds="${arg#*=}" ;;
+    -Damethyst.scrollBench.notches=*) notches="${arg#*=}" ;;
+    -Damethyst.scrollBench.intervalMs=*) interval_ms="${arg#*=}" ;;
+  esac
 done
-boot_timeout=$((wait_seconds + 180))
+boot_timeout=$((wait_seconds + 3 * notches * interval_ms / 1000 + 180))
 
 mkdir -p "$out" || exit 1
 echo "Reports: $out"

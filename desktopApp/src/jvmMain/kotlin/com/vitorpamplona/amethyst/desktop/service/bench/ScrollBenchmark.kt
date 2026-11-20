@@ -26,6 +26,7 @@ import androidx.compose.runtime.withFrameNanos
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -75,10 +76,9 @@ import kotlin.system.exitProcess
 object ScrollBenchmark {
     private const val TAG = "ScrollBenchmark"
 
+    // Read with its `.waitSeconds`, `.notches`, `.intervalMs` and `.at` settings. The dev `run`
+    // forwards only the properties desktopApp/build.gradle.kts lists: add a new one there too.
     const val PROPERTY = "amethyst.scrollBench"
-
-    /** Every property the benchmark reads, for the dev `run` to forward. */
-    val PROPERTIES = listOf(PROPERTY, "$PROPERTY.waitSeconds", "$PROPERTY.notches", "$PROPERTY.intervalMs", "$PROPERTY.at")
 
     class Config(
         val outDir: File,
@@ -122,6 +122,10 @@ object ScrollBenchmark {
         LaunchedEffect(Unit) {
             try {
                 run(window, config)
+            } catch (e: CancellationException) {
+                // The window's composition went away (a crash rebuilt the window): not a result, and
+                // not a reason to quit. The new window's composition runs the benchmark again.
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "The scroll benchmark failed", e)
                 writeFile(File(config.outDir, "error.txt"), e.stackTraceToString())

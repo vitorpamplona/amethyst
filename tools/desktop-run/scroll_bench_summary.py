@@ -83,15 +83,20 @@ def table(title, env, medians):
 
 
 def compare(before, after):
-    print("\nChange, after vs before (negative is better except fps)")
+    print("\nChange, after vs before (+ better, - worse: each column knows which way is better)")
     print("  " + "pass".ljust(12) + "".join(col.rjust(13) for col, _ in COLUMNS))
     for name in before:
         if name not in after:
             continue
         cells = []
-        for col, _ in COLUMNS:
+        for col, lower_is_better in COLUMNS:
             b, a = before[name][col], after[name][col]
-            cells.append(("n/a" if b == 0 else f"{100.0 * (a - b) / b:+.1f}%").rjust(13))
+            if b == 0:
+                cells.append("n/a".rjust(13))
+                continue
+            change = 100.0 * (a - b) / b
+            better = -change if lower_is_better else change
+            cells.append(f"{better:+.1f}%".rjust(13))
         print("  " + name.ljust(12) + "".join(cells))
 
 

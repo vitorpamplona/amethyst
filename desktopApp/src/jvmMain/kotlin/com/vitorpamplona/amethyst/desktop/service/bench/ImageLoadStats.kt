@@ -25,8 +25,9 @@ import coil3.decode.DataSource
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Where the images a scroll pass asked for came from, and how long each took: the image loader's
@@ -53,7 +54,9 @@ object ImageLoadStats {
         }
     }
 
-    private val started = ConcurrentHashMap<ImageRequest, Long>()
+    // By identity: requests compare by value, and two equal ones in flight at once (two cards
+    // showing the same avatar) would share one start time.
+    private val started: MutableMap<ImageRequest, Long> = Collections.synchronizedMap(IdentityHashMap())
 
     // Guarded by this.
     private var memory = 0

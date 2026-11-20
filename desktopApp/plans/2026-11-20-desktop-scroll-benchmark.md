@@ -108,9 +108,14 @@ answered why a quarter of the `up` pass's images came from disk with a strong ca
   prefetch's full-size request did not count its copy as big enough and decoded it again from disk:
   those were the `up` pass's genuine misses. A few 12 MP photos would fill the whole cache.
 
-Fixed in `PrefetchFeedMedia` (shared with Android): the prefetch decodes to fit the list's
-viewport, which bounds every card in it, so its copy stays a valid hit for the card; and it skips an
-image the memory cache already holds (a card drew it), recording its aspect ratio from that copy.
+Fixed in `PrefetchFeedMedia` (shared with Android): the prefetch decodes each image to the
+smallest box that still covers the card that will draw it, so its copy stays a valid hit for the
+card. A single image fits the list's viewport. A note with several images is drawn as a gallery of
+cropped cells, so it covers a square as wide as the list. A grid covers its cell. It skips an image
+the memory cache already holds only when that copy is as big as the box (or is the original): a
+smaller copy drawn elsewhere, such as the notification panel, would leave the card to decode on
+screen. It warms again when the list grows a quarter past the size it warmed for, and a window
+resize alone no longer re-runs the warm-up on every frame.
 
 | per boot | before (3 boots) | after (5 boots) |
 |---|---|---|
