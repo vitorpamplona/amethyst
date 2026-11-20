@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
 import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
+import com.vitorpamplona.amethyst.desktop.platform.TrayGlyph
 import com.vitorpamplona.amethyst.desktop.platform.TrayIconFiles
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
@@ -368,9 +369,9 @@ fun main(args: Array<String>) {
         // and the tray's own Quit, the menu's or Cmd+Q end it.
         val signerRunning by remember { modules.accountsCache.anySignerRunning() }.collectAsState(false)
         // The tray icon's files while a tray can show; null when there is none (closing then quits).
-        // From files, not a Painter: a Painter is drawn off-screen first, which can fail (no DirectX
-        // 12 on Windows), leaving no icon while the window hides. (1.3.3's Painter path also crashed
-        // on this Compose's Skiko; 2.1.1 fixed that.)
+        // Windows and Linux draw from these files, not a Painter: a Painter is drawn off-screen
+        // first, which can fail (no DirectX 12 on Windows), leaving no icon while the window hides.
+        // macOS draws a one-colour vector instead (TrayGlyph), as its menu bar expects.
         var trayIcon by remember { mutableStateOf<TrayIconFiles?>(null) }
         val trayIconDir = remember { File(filesDir, "tray") }
         LaunchedEffect(signerRunning, trayIcon == null) {
@@ -395,13 +396,20 @@ fun main(args: Array<String>) {
         // is checked first (a tray host can go away while the app runs, and the library starts no
         // icon without a word when it can't), off the UI thread, and the app quits after all when it
         // isn't up: the window never hides with no icon to return by.
+        // The first time, while the window is still on screen, it says where the app went instead.
+        val trayExplained = remember { TrayExplainedMarker(filesDir) }
+        var explainTray by remember { mutableStateOf(false) }
         val keepRunningInBackground: () -> Boolean = {
             when (BackgroundCloseRules.onClose(signerRunning, trayIcon != null)) {
                 BackgroundClose.QUIT -> false
                 BackgroundClose.TRAY -> {
                     quitScope.launch {
                         if (withContext(Dispatchers.IO) { SystemTrayHost.showing() }) {
-                            windows.hideToTray(root.navigator.stacks?.arrangement)
+                            if (windows.mainWindowVisible && !trayExplained.present) {
+                                explainTray = true
+                            } else {
+                                windows.hideToTray(root.navigator.stacks?.arrangement)
+                            }
                         } else {
                             trayIcon = null
                             quit()
@@ -425,14 +433,15 @@ fun main(args: Array<String>) {
                         Item(quitLabel) { currentRequestQuit() }
                     }
                 }
-            @Suppress("DEPRECATION")
-            Tray(
-                iconPath = icon.png,
-                windowsIconPath = icon.ico,
-                tooltip = stringRes(Res.string.desktop_tray_tooltip),
-                primaryAction = showFromBackground,
-                menuContent = trayMenu,
-            )
+            val tooltip = stringRes(Res.string.desktop_tray_tooltip)
+            if (PlatformInfo.isMacOS) {
+                // The menu bar's own style: a one-colour gem the library draws black or white to
+                // match the bar's appearance, switching as it changes.
+                Tray(icon = TrayGlyph.vector, tooltip = tooltip, primaryAction = showFromBackground, menuContent = trayMenu)
+            } else {
+                @Suppress("DEPRECATION")
+                Tray(iconPath = icon.png, windowsIconPath = icon.ico, tooltip = tooltip, primaryAction = showFromBackground, menuContent = trayMenu)
+            }
         }
         // macOS: a click on the Dock icon brings back a window closed to the tray.
         DisposableEffect(Unit) {
@@ -647,6 +656,22 @@ fun main(args: Array<String>) {
                                                             askQuit = false
                                                             MacQuitResponse.declined()
                                                         },
+                                                    )
+                                                }
+                                                if (explainTray) {
+                                                    TrayExplainDialog(
+                                                        onKeepRunning = {
+                                                            explainTray = false
+                                                            trayExplained.set()
+                                                            windows.hideToTray(root.navigator.stacks?.arrangement)
+                                                        },
+                                                        onQuit = {
+                                                            explainTray = false
+                                                            trayExplained.set()
+                                                            requestQuit()
+                                                        },
+                                                        // Dismissed: the window stays, and the next close asks again.
+                                                        onDismiss = { explainTray = false },
                                                     )
                                                 }
                                             }
