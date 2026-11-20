@@ -45,7 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -158,6 +163,10 @@ fun TokenizedSearchField(
                         .onFocusChanged { state.onFocusChanged(it.isFocused) }
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            if (event.isLineEnd()) {
+                                state.moveCaretToEnd(extend = event.isShiftPressed)
+                                return@onPreviewKeyEvent true
+                            }
                             handleKey(event.key, state, picker, highlighted, rows, people, groups, kinds, onSubmit) { highlighted = it }
                         },
                 textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -281,6 +290,15 @@ private fun takeEnter(
             } ?: false
         null -> false
     }
+
+/**
+ * End, or Cmd+Right on a Mac: a jump to the end of the line, which on this one-line field is the
+ * end of the text. Ctrl+End already goes there and is left to the field.
+ */
+private fun KeyEvent.isLineEnd(): Boolean {
+    if (isCtrlPressed || isAltPressed) return false
+    return (key == Key.MoveEnd && !isMetaPressed) || (key == Key.DirectionRight && isMetaPressed)
+}
 
 /** True when the picker consumed the key; false hands it back to the text field. */
 private fun handleKey(

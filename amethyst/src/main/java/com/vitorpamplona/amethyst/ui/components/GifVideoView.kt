@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +50,13 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gif
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
+import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
@@ -164,7 +166,18 @@ fun GifVideoView(
                 }
 
                 is AsyncImagePainter.State.Error -> {
-                    ClickableUrlOrBlossom(urlText = videoUri, url = videoUri)
+                    val error = state as AsyncImagePainter.State.Error
+                    val failure = remember(error) { mediaLoadFailureOf(error.result.throwable) }
+                    // Fills the container when its height is bounded; a compact row when it isn't.
+                    MediaFailureCard(
+                        url = videoUri,
+                        failure = failure,
+                        modifier = Modifier.fillMaxSize(),
+                        animated = true,
+                        blurhash = blurhash,
+                        thumbhash = thumbhash,
+                        onRetry = { painter.restart() },
+                    )
                 }
 
                 else -> {}
