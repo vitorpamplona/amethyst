@@ -81,7 +81,8 @@ its name (a bus that refuses it, as Flatpak's would), makes closing quit instead
 
 - Real trays on Windows, macOS, KDE and GNOME+AppIndicator were not tried, only the D-Bus
   protocol on Linux. Nor a real Flatpak sandbox: the item's pid 2 there is reasoned, not seen.
-- `flathub/gradle-sources.json` must be regenerated for the new dependency at the next release
-  (`flathub/tools/regenerate-gradle-sources.sh <tag>`).
+- `flathub/gradle-sources.json` must be regenerated at the next release
+  (`flathub/tools/regenerate-gradle-sources.sh <tag>`), which also captures the Magpie libraries
+  (see `desktopApp/packaging/flatpak/README.md` § Flathub).
 - The release build's ProGuard keep rules for `dev.nucleusframework.**` were not tried in a
   packaged build.
