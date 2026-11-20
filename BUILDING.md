@@ -468,7 +468,6 @@ provided automatically; everything else you set yourself.)
 | `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
 | ~~`HOMEBREW_TOKEN`~~ | *Not used.* The cask bump runs on a maintainer's machine — see § Homebrew cask | — |
 | ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
-| `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
 Note the **two distinct signing identities** people often conflate:
 `SIGNING_KEY` + `KEY_*` is the **Android keystore**; `MAC_CERTIFICATE_*` +

@@ -28,12 +28,19 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.svg.SvgDecoder
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.image.DeferredDeleteFileSystem
 import com.vitorpamplona.amethyst.commons.service.image.SkiaDownsamplingDecoder
 import com.vitorpamplona.amethyst.commons.service.image.SkiaGifDecoder
 import com.vitorpamplona.amethyst.commons.service.image.buildAmethystImageLoader
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
+import com.vitorpamplona.amethyst.desktop.service.bench.ImageLoadStats
+import com.vitorpamplona.amethyst.desktop.service.bench.ScrollBenchmark
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.Call
+import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -50,7 +57,7 @@ object DesktopImageLoaderSetup {
         blossomServerResolver: (() -> BlossomServerResolver)? = null,
         readAuth: BlossomReadAuthTokenProvider? = null,
     ) {
-        SingletonImageLoader.setUnsafe(
+        val loader =
             buildAmethystImageLoader(
                 context = PlatformContext.INSTANCE,
                 diskCache = { newDiskCache() },
@@ -64,27 +71,44 @@ object DesktopImageLoaderSetup {
                     // After the SVG and GIF decoders: it takes any format, so it must come last.
                     add(SkiaDownsamplingDecoder.Factory())
                 },
-            ),
-        )
+            )
+        // A scroll benchmark counts where each image came from (memory, disk or network).
+        SingletonImageLoader.setUnsafe(if (ScrollBenchmark.enabled) loader.newBuilder().eventListener(ImageLoadStats.listener).build() else loader)
     }
 
-    private fun newMemoryCache(): MemoryCache {
-        val maxMemory = Runtime.getRuntime().maxMemory()
-        val cacheSize = (maxMemory * 0.15).toLong().coerceAtMost(256L * 1024 * 1024)
-        return MemoryCache
+    // Where the disk cache unlinks the files it evicts, off its lock (see DeferredDeleteFileSystem).
+    private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * The decoded images, held strongly up to [MAX_MEMORY_CACHE_BYTES] as on Android. Held only
+     * weakly, an image that scrolled off was gone at the next garbage collection, and scrolling back
+     * read it from disk and decoded it again, popping in late; the feed's prefetch
+     * (`PrefetchFeedMedia`) decoded images ahead that nothing kept.
+     */
+    internal fun newMemoryCache(maxMemory: Long = Runtime.getRuntime().maxMemory()): MemoryCache =
+        MemoryCache
             .Builder()
-            .maxSizeBytes(cacheSize)
-            .strongReferencesEnabled(false)
+            .maxSizeBytes(memoryCacheBytes(maxMemory))
             .build()
-    }
+
+    /** 15% of the heap, at most [MAX_MEMORY_CACHE_BYTES]. */
+    internal fun memoryCacheBytes(maxMemory: Long): Long = (maxMemory * 0.15).toLong().coerceAtMost(MAX_MEMORY_CACHE_BYTES)
 
     private fun newDiskCache(): DiskCache =
         DiskCache
             .Builder()
             // One process per cache: a second copy of the app gets its own (see DesktopInstance).
             .directory(DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.IMAGES).toOkioPath())
-            .maxSizeBytes(512L * 1024 * 1024)
+            // As on Android: a full cache's eviction unlinks files off the cache's lock, so it does
+            // not stall every image read and write of a scrolling feed.
+            .fileSystem(DeferredDeleteFileSystem(FileSystem.SYSTEM, cacheScope))
+            .maxSizeBytes(MAX_DISK_CACHE_BYTES)
             .build()
+
+    private const val MAX_MEMORY_CACHE_BYTES = 256L * 1024 * 1024
+
+    // Android's ceiling (ImageCacheFactory): the images of a few weeks of feeds.
+    private const val MAX_DISK_CACHE_BYTES = 1024L * 1024 * 1024
 
     /** The OS's per-user cache folder. */
     fun cacheDir(): File {

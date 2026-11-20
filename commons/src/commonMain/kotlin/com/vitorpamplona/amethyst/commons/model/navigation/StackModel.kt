@@ -68,9 +68,15 @@ class StackModel(
         }
         when (kind) {
             NavRequest.Kind.Push -> push(request.route)
-            NavRequest.Kind.Drawer -> push(request.route, drawerRoot = true)
+            NavRequest.Kind.Drawer -> {
+                finishComposer(request.origin)
+                push(request.route, drawerRoot = true)
+            }
             NavRequest.Kind.Section -> switchTab(request.route)
-            NavRequest.Kind.Restart -> newStack(request.route)
+            NavRequest.Kind.Restart -> {
+                finishComposer(request.origin)
+                newStack(request.route)
+            }
             is NavRequest.Kind.Replace -> popUpTo(request.route, kind.klass)
         }
     }
@@ -163,6 +169,24 @@ class StackModel(
             top.reArgue(route)
         } else {
             stack.add(ids.entry(route))
+        }
+    }
+
+    /**
+     * A composer that asks for a place of its own (the chat it just created) is done, as in Tabs: it
+     * leaves the stack, or its window closes, so back from that place does not return to the filled-in
+     * form. One whose post still waits for the signer ([NavStackEntry.holdOpen]) stays. A request with
+     * no [origin] (a notification, a deep link) or from a screen that is not a composer changes nothing.
+     */
+    private fun finishComposer(origin: Long?) {
+        if (origin == null) return
+        if (screenWindows.any { it.id == origin }) {
+            close(origin)
+            return
+        }
+        val entry = stack.lastOrNull() ?: return
+        if (entry.id == origin && stack.size > 1 && opensOver(entry.route) && !entry.isHeldOpen()) {
+            stack.removeAt(stack.lastIndex)
         }
     }
 

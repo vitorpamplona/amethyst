@@ -6,10 +6,10 @@ says when to use it; this file says how.
 
 ```bash
 W=$TMPDIR/tr; mkdir -p $W                        # any scratch dir outside the repo
-tools/strings-translate/batch.py extract $W cs de-rDE sv-rSE pt-rBR
+tools/strings-translate/batch.py extract $W cs de sv pt
 # translate each $W/<locale>.en.xml into $W/<locale>.xml (same elements, no <resources> wrapper)
-"$TMPDIR/cldr/bin/python" tools/strings-translate/batch.py validate $W --verbatim key1,key2 cs de-rDE sv-rSE pt-rBR
-"$TMPDIR/cldr/bin/python" tools/strings-translate/batch.py insert   $W --verbatim key1,key2 cs de-rDE sv-rSE pt-rBR
+"$TMPDIR/cldr/bin/python" tools/strings-translate/batch.py validate $W --verbatim key1,key2 cs de sv pt
+"$TMPDIR/cldr/bin/python" tools/strings-translate/batch.py insert   $W --verbatim key1,key2 cs de sv pt
 ```
 
 - `extract` re-diffs every locale on its own, because locale files are asymmetric. It prints counts
@@ -24,6 +24,9 @@ tools/strings-translate/batch.py extract $W cs de-rDE sv-rSE pt-rBR
   and appends only the keys still missing, at the catalog's indentation, before `</resources>`.
   Re-running it is safe.
 - `--base amethyst/src/main/res` targets the Android catalog instead of commonsUI.
+- Name a language's base folder (`es`, `pt`), not a region: a regional folder (`es-rES`) holds only
+  that region's differences, and the tool refuses one. zh-rTW and zh-rHK are the exception: full
+  Traditional-Chinese files.
 
 `validate` and `insert` read the CLDR plural rules from Babel. Create the venv once:
 

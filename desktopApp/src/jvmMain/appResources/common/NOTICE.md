@@ -10,6 +10,19 @@ The distributed binary includes the following third-party components:
 - Upstream: https://github.com/kdroidFilter/ComposeMediaPlayer
 - License text: `licenses/LICENSE-MIT-kdroidfilter.txt`
 
+## kdroidFilter ComposeNativeTray
+
+- License: MIT
+- Version: 2.1.7, `dev.nucleusframework:composenativetray` (with its MIT dependencies
+  nucleus.core-runtime and nucleus.darkmode-detector, by the same author)
+- Upstream: https://github.com/NucleusFramework/ComposeNativeTray
+- License text: `licenses/LICENSE-MIT-composenativetray.txt`
+- On Linux its libraries load the system's libsystemd (LGPL-2.1-or-later) and libdbus-1
+  (AFL-2.1 or GPL-2.0-or-later) at runtime; we bundle neither.
+- The OS notification bridges come from the same project, MIT:
+  `dev.nucleusframework:nucleus.notification-{linux,macos,windows}` 2.5.18. On Linux they load
+  the system's GLib/GIO (LGPL-2.1-or-later) at runtime; we bundle none.
+
 ## JCodec
 
 - License: BSD 2-Clause

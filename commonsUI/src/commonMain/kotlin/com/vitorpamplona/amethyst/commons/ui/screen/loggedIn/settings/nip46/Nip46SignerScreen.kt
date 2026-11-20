@@ -448,7 +448,7 @@ private fun LiveStatusCard(
                 )
                 val relayStatus =
                     if (liveRelayCount < relayCount) {
-                        stringRes(Res.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
+                        pluralStringRes(Res.plurals.nip46_signer_relays_some_down, relayCount, liveRelayCount, relayCount)
                     } else {
                         pluralStringRes(Res.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
                     }

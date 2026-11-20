@@ -298,7 +298,7 @@ private fun VariantCard(
             if (grouping == KindVariantGrouping.SHAPE) {
                 val shown = variant.clients.take(MAX_CLIENTS).joinToString(", ") { (name, count) -> "${name ?: noClient} ($count)" }
                 val hidden = variant.clients.size - MAX_CLIENTS
-                val clients = if (hidden > 0) shown + ", " + stringRes(Res.string.devtools_kind_more, hidden) else shown
+                val clients = if (hidden > 0) shown + ", " + pluralStringRes(Res.plurals.devtools_kind_more, hidden, hidden) else shown
                 Text(stringRes(Res.string.devtools_kind_from_clients, clients), style = MaterialTheme.typography.bodySmall)
             }
 

@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -54,14 +53,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -116,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
 import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
@@ -129,8 +125,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
@@ -296,7 +292,15 @@ fun RenderLikeGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    if (likeEvents.isNotEmpty()) {
+    if (likeEvents.isEmpty()) return
+
+    // A reaction that hides a message in its emoji (emoji coding) opens it below the row, inside
+    // the card, as a secret emoji in a note's text does: no overlay to spill out of a narrow
+    // column (the docked notifications panel, a deck column) and over the rest of the window.
+    val isSecret = remember(reactionType) { EmojiCoder.isCoded(reactionType) }
+    var revealed by remember(reactionType) { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
             GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
                 val modifier = remember(iconAlignment) { Modifier.align(iconAlignment) }
@@ -325,12 +329,10 @@ fun RenderLikeGallery(
                         }
 
                         else -> {
-                            if (EmojiCoder.isCoded(shortReaction)) {
-                                DisplaySecretEmojiAsReaction(
+                            if (isSecret) {
+                                AnimatedBorderTextCornerRadius(
                                     shortReaction,
-                                    modifier,
-                                    accountViewModel,
-                                    nav,
+                                    modifier.clickable { revealed = !revealed },
                                 )
                             } else {
                                 Text(text = shortReaction, modifier = modifier)
@@ -344,11 +346,23 @@ fun RenderLikeGallery(
             // boosted, or zapped) instead of the reactor's profile.
             AuthorGallery(likeEvents, nav, accountViewModel) { Route.Note(it.idHex) }
         }
+
+        if (isSecret && revealed) {
+            Row(Modifier.fillMaxWidth()) {
+                // Empty, so the message lines up with the faces above it.
+                GalleryIconColumn(NotificationIconModifier) {}
+                SecretReactionMessage(reactionType, StdStartPadding, accountViewModel, nav)
+            }
+        }
     }
 }
 
+/**
+ * The message hidden in a secret-emoji [reaction], decoded and laid out like a note body (media,
+ * links, payment cards) in a quote card.
+ */
 @Composable
-fun DisplaySecretEmojiAsReaction(
+private fun SecretReactionMessage(
     reaction: String,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
@@ -358,45 +372,21 @@ fun DisplaySecretEmojiAsReaction(
         mutableStateOf(CachedRichTextParser.cachedText(EmojiCoder.decode(reaction), EmptyTagList))
     }
 
-    var showPopup by remember {
-        mutableStateOf(false)
-    }
-
     if (secretContent == null) {
         LaunchedEffect(reaction) {
-            launch(Dispatchers.IO) {
-                secretContent =
-                    CachedRichTextParser.parseText(
-                        EmojiCoder.decode(reaction),
-                        EmptyTagList,
-                    )
-            }
+            secretContent =
+                withContext(Dispatchers.Default) {
+                    CachedRichTextParser.parseText(EmojiCoder.decode(reaction), EmptyTagList)
+                }
         }
     }
 
-    val localSecretContent = secretContent
-
-    AnimatedBorderTextCornerRadius(
-        reaction,
-        modifier.clickable {
-            showPopup = !showPopup
-        },
-    )
-
-    if (localSecretContent != null && showPopup) {
-        val iconSizePx = with(LocalDensity.current) { -24.dp.toPx().toInt() }
-
-        Popup(
-            alignment = Alignment.TopCenter,
-            offset = IntOffset(0, -iconSizePx),
-            onDismissRequest = { showPopup = false },
-            properties = PopupProperties(focusable = true),
-        ) {
-            Surface(Modifier.padding(10.dp)) {
-                val color = remember { mutableStateOf(Color.Transparent) }
-                LocalRichTextPlatform.current.SecretMessage(localSecretContent, null, 3, color, accountViewModel, nav)
-            }
-        }
+    val content = secretContent ?: return
+    // Several paragraphs come with their own 10 dp inset (SecretMessageContent); one gets it here.
+    val inset = if (content.paragraphs.size > 1) 0.dp else 10.dp
+    Column(modifier.then(MaterialTheme.colorScheme.innerPostModifier).padding(inset)) {
+        val color = remember { mutableStateOf(Color.Transparent) }
+        LocalRichTextPlatform.current.SecretMessage(content, null, 3, color, accountViewModel, nav)
     }
 }
 

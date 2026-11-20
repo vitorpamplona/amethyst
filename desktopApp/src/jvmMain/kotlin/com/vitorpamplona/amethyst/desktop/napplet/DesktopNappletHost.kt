@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.connectedAppUri
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletIntentCatalog
@@ -44,10 +45,13 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
+import com.vitorpamplona.amethyst.desktop.app.DesktopDeepLinks
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -571,6 +575,24 @@ class DesktopNappletHost(
         // Videos and audio that play in Chromium (they aren't napplets, but share its engine).
         ChromiumMediaSession.closeAll()
         runtime.engine.shutdown()
+    }
+
+    /**
+     * Opens [session]'s app on the Connected Apps detail screen in the main window, as the account it
+     * runs as (its permissions are kept per account), and brings that window forward. Goes through
+     * the deep-link queue, which already switches accounts and raises the main window.
+     */
+    fun openPermissions(session: CefNappletSession) {
+        DesktopDeepLinks.offer(connectedAppUri(session.launch.identity.coordinate, session.accountPubKey.hexToByteArray().toNpub()))
+    }
+
+    /**
+     * Drops the "allow for this session" signer grants every live broker holds for [coordinate], so a
+     * trust-level change or a Forget on the Connected Apps screen applies to open napplets right away.
+     */
+    suspend fun revokeSessionGrants(coordinate: String) {
+        val live = synchronized(this) { brokers.values.map { it.second } }
+        live.forEach { it.revokeSessionGrants(coordinate) }
     }
 
     @Synchronized

@@ -42,7 +42,6 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
-import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
@@ -1254,7 +1253,6 @@ class AppModules(
             store = FrontPageEditionStore(File(appContext.filesDir, FrontPageEditionStore.FOLDER).path),
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = frontPageNotifier,
-            observerPrefs = DataStoreObserverPrefsStore(appStores),
             installs = DataStoreFrontPageInstallStore(appStores),
             // How this phone appears in the reader's synced schedule ("Printed each morning by Pixel 8").
             installInfo = FrontPageInstallInfo(name = Build.MODEL?.trim()?.ifEmpty { null } ?: "Android", app = "amethyst-android"),

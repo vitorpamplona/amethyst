@@ -51,7 +51,12 @@ const val MASTHEAD = "The Nostr Observer"
  * provider that caches a prefix reads it once: the brief, then the house stylesheet for reference.
  * The page carries an empty `<style id="house">` that [insertHouseCss] fills.
  */
-fun systemPrompt(): String = "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nFor reference: the app puts this into your page's `<style id=\"house\">`. Do not copy it.\n\n```css\n$HOUSE_CSS\n```"
+fun systemPrompt(): String = SYSTEM_PROMPT
+
+/** Built once: the brief and the stylesheet never change at runtime, and the estimate asks for it on every recomposition. */
+private val SYSTEM_PROMPT: String by lazy {
+    "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nFor reference: the app puts this into your page's `<style id=\"house\">`. Do not copy it.\n\n```css\n$HOUSE_CSS_FOR_WRITER\n```"
+}
 
 /** The size of the day, as the dateline prints it: events read, the voices among them, and the events kept in the digest. */
 class DaySize(

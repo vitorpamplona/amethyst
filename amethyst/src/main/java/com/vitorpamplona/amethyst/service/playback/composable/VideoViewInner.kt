@@ -104,6 +104,7 @@ fun VideoViewInner(
                     controllerState = controller,
                     thumbData = thumb,
                     showControls = showControls,
+                    showPausedOverlay = !automaticallyStartPlayback,
                     contentScale = contentScale,
                     borderModifier = borderModifier,
                     videoModifier = videoModifier,

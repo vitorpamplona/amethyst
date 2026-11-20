@@ -133,6 +133,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowU
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
@@ -1019,7 +1020,7 @@ private fun RelayWaitProgress(viewModel: SearchBarViewModel) {
 
         DropdownMenu(expanded = showing, onDismissRequest = { showing = false }) {
             Text(
-                text = stringRes(Res.string.search_waiting_on_relays, waiting.size, asked.size),
+                text = pluralStringRes(Res.plurals.search_waiting_on_relays, asked.size, waiting.size, asked.size),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
             )

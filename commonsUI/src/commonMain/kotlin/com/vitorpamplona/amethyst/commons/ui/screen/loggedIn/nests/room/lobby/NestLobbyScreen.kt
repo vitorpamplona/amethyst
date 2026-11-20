@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
@@ -459,7 +460,7 @@ private fun CachedListenerCount(roomATag: String) {
             if (count == 0) {
                 stringRes(Res.string.nest_lobby_no_listeners)
             } else {
-                stringRes(Res.string.nest_lobby_listeners_count, count)
+                pluralStringRes(Res.plurals.nest_lobby_listeners_count, count, count)
             },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

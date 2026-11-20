@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">yanıtlanıyor</string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">İzinler:</string>
+    <string name="nsite_root_site">Kök Site</string>
+    <string name="nsite_source">Kaynak:</string>
+    <string name="nsite_servers">Sunucular:</string>
+    <string name="nsite_open">Aç</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Doğrudan URL kullan</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Açık</string>
     <string name="git_status_merged">Birleştirildi</string>
     <string name="git_status_closed">Kapalı</string>
@@ -26,6 +46,7 @@
     <string name="road_event_speed_camera">Hız kamerası</string>
     <string name="road_event_traffic_jam">Trafik sıkışıklığı</string>
     <string name="road_event_unknown">Yol olayı</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Aç</string>
     <string name="relay_monitor_rtt_read">Oku</string>
     <string name="relay_monitor_rtt_write">Yaz</string>
@@ -33,7 +54,6 @@
     <string name="relay_monitor_relay_type">Tür</string>
     <string name="relay_monitor_requirements">Gereksinimler</string>
     <string name="relay_monitor_supported_nips">Desteklenen NIP'ler</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Kabul Edilen Türler</string>
     <string name="relay_discovery_geohash">Konum</string>
     <string name="calendar_rsvp_going">Katılıyorum</string>
@@ -53,7 +73,6 @@
     <string name="post_was_hidden">Bu gönderi, gizlediğiniz kullanıcıları veya kelimeleri içerdiği için gizlendi</string>
     <string name="post_was_flagged_as_inappropriate_by">Gönderi uygun değil olarak işaretlendi tarafından:</string>
     <string name="post_not_found">Gönderi bulunamadı</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal Resmi</string>
     <string name="referenced_event_not_found">Referanslı etkinlik bulunamadı</string>
     <string name="could_not_decrypt_the_message">Mesaj deşifre edilemedi</string>
@@ -86,10 +105,7 @@
     <string name="edited">düzenlendi</string>
     <string name="original">orijinal</string>
     <string name="quote">Alıntı</string>
-    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Satlarda Yeni Miktar</string>
-    <string name="replying_to">yanıtlanıyor</string>
-    <string name="and">ve</string>
     <string name="following">Takip edilenler</string>
     <string name="followers">Takipçiler</string>
     <string name="number_following">%1$s Takip Edilen</string>
@@ -120,10 +136,8 @@
     <string name="send_payment_source_external">Başka bir cüzdan uygulaması</string>
     <string name="send_payment_source_onchain_wallet">Zincir üstü cüzdan</string>
     <string name="send_payment_source_cashu_wallet">Cashu cüzdanı</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK Teklifi</string>
     <string name="send_payment_method_onchain">Zincir üstü</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Miktar</string>
     <string name="send_payment_fixed_price">Teklif tarafından belirlenen fiyat</string>
     <string name="send_payment_receipt_section">Zap makbuzu</string>
@@ -156,7 +170,6 @@
     <string name="secret_note_to_receiver">Alıcıya Gizli Not</string>
     <string name="secret_note_to_receiver_placeholder">Gizli mesajım</string>
     <string name="secret_visible_text">Görünür Ön Ek</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Gönderiye Ekle</string>
     <string name="article">Makale</string>
     <string name="channel_name">Kanal Adı</string>
@@ -169,7 +182,6 @@
     <string name="my_name">@etiket adım</string>
     <string name="display_name">Görüntü Adı</string>
     <string name="my_display_name">Benim görüntü adım</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">Hoş geldin Ostrich!</string>
     <string name="username">Kullanıcı Adı</string>
     <string name="about_me">Hakkımda</string>
@@ -240,7 +252,6 @@
     <string name="refresh">Yenile</string>
     <string name="channel_created">Kanal oluşturuldu</string>
     <string name="channel_information_changed_to">Kanal Bilgisi şuna değiştirildi</string>
-    <string name="marmot_group_no_messages_yet">Henüz mesaj yok</string>
     <string name="paid_relay">Ücretli relay</string>
     <string name="tor_relay">Bağlanırken Tor'u zorlar</string>
     <string name="posts_received">alınan gönderiler</string>
@@ -384,9 +395,6 @@
     <string name="app_definition_handles">İşler</string>
     <string name="app_definition_by">tarafından</string>
     <string name="app_definition_available_on">Şurada mevcut</string>
-    <string name="platform_web">Web</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Egzersiz</string>
     <string name="workout_title">Başlık</string>
     <string name="workout_duration">Süre</string>
@@ -409,10 +417,10 @@
     <string name="workout_minutes">Dakika</string>
     <string name="workout_seconds">Saniye</string>
     <string name="workout_suggestion_connect_button">Bağlan</string>
-    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Health Connect'ten</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Henüz hiç nSite bulunamadı.</string>
-    <string name="browser_reload">Yenile</string>
     <string name="browser_unsupported">Uygulama içi tarayıcı Android 11 veya daha yeni bir sürüm gerektirir.</string>
     <string name="embedded_tab_load_failed">Bu uygulama yüklenemedi.</string>
     <string name="browser_go">Aç</string>
@@ -420,10 +428,6 @@
     <string name="browser_recent_options">Seçenekler</string>
     <string name="browser_recent_remove">Geçmişten kaldır</string>
     <string name="favorite_apps_empty">Henüz favori uygulama yok. Bir web istemcisi veya nSite aç ve buraya sabitlemek için yıldıza dokun.</string>
-    <string name="favorite_app_open_window">Kendi penceresinde aç</string>
-    <string name="favorite_app_access_title">Bu uygulamanın erişebildikleri</string>
-    <string name="favorite_app_access_static">Hesabına özel erişim olmadan korumalı alanda çalışır.</string>
-    <string name="favorite_app_access_show">Erişebildikleri</string>
     <string name="favorite_app_unavailable">Bu uygulama henüz yüklenmedi. Kartından aç ya da bir süre sonra tekrar dene.</string>
     <string name="napplet_manage_permissions">İzinleri yönet</string>
     <string name="napplet_none_found">Henüz hiç nApplet bulunamadı.</string>
@@ -432,7 +436,6 @@
     <string name="napplet_consent_deny_always">Hiçbir zaman izin verme</string>
     <string name="napplet_consent_not_now">Şimdi değil</string>
     <string name="nip82_repository_label">Kaynak: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">İndir</string>
     <string name="nip82_section_about">Hakkında</string>
     <string name="nip82_section_platforms">Platformlar</string>
@@ -468,7 +471,10 @@
     <string name="nest_lobby_host_label">Ev sahibi</string>
     <string name="nest_lobby_open_action">Aç</string>
     <string name="nest_lobby_no_listeners">Şu an odada kimse yok.</string>
-    <string name="nest_lobby_listeners_count">%1$d dinleyici</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d dinleyici</item>
+        <item quantity="other">%1$d dinleyici</item>
+    </plurals>
     <string name="nest_role_host">Ev sahibi</string>
     <string name="nest_role_moderator">Moderatör</string>
     <string name="nest_state_muted">Mikrofon kapalı</string>
@@ -541,7 +547,6 @@
     <string name="nests_servers_add_relay_field">Relay (WebTransport) URL'si</string>
     <string name="nests_servers_add_auth_field">Kimlik doğrulama (JWT mint) URL'si</string>
     <string name="nests_servers_add_pair_button">Ekle</string>
-    <string name="nests_servers_relay_label">Relay</string>
     <string name="nests_servers_auth_label">Kimlik doğrulama</string>
     <string name="nests_servers_use_defaults">Amethyst varsayılanlarını kullan</string>
     <string name="nests_servers_add_recommended">Sunucu ekle</string>
@@ -572,12 +577,14 @@
     <string name="add_hashtag_label">Hashtag ekle</string>
     <string name="add_hashtag_label_title">Hashtag ekle</string>
     <string name="add_hashtag_label_explainer">Bu gönderiyi bir hashtag ile herkese açık olarak etiketleyin (NIP-32 etiketi). Sizi takip edenler bunu o hashtag'in akışında görecek.</string>
-    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Ekle</string>
     <string name="hashtag_label_added_by">ekleyen</string>
     <string name="pinned_notes">Sabitlenmiş Notlar</string>
     <string name="pinned_notes_explainer">Sabitlenmiş notlarınız</string>
-    <string name="deleted_items_banner_title">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</item>
+        <item quantity="other">Bu listedeki %1$d öğe yazarı tarafından silinmiş.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Listeden kaldır</string>
     <string name="deleted_items_banner_dismiss">Yoksay</string>
     <string name="bookmark_lists">Yer İşareti Listeleri</string>
@@ -593,7 +600,10 @@
     <string name="interest_set_name_placeholder">İlgi alanlarım</string>
     <string name="interest_set_hashtag_add_placeholder">Hashtag ekle</string>
     <string name="interest_set_hashtag_private_toggle">Özel</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">İlgi Seti İşlemleri</string>
     <string name="interest_set_clone">Klonla</string>
     <string name="interest_set_add_hashtag">Hashtag ekle</string>
@@ -647,7 +657,6 @@
     <string name="pledge_amount_in_sats">Taahhüt Miktarı (Sat cinsinden)</string>
     <string name="poll_zap_value_min">Minimum zap</string>
     <string name="poll_zap_value_max">Maksimum zap</string>
-    <string name="poll_consensus_threshold">Uzlaşı</string>
     <string name="looking_for_event">%1$s Etkinliği Aranıyor</string>
     <string name="send_zap">Zap Gönder</string>
     <string name="custom_zaps_add_a_message">Herkese açık mesaj ekle</string>
@@ -655,11 +664,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Fatura mesajı ekle</string>
     <string name="custom_zaps_add_a_message_example">Tüm çalışmaların için teşekkürler!</string>
     <string name="lightning_create_and_add_invoice">Oluştur ve Ekle</string>
-    <string name="add_content">Mesaja Ekle</string>
-    <string name="add_caption">Altyazı Ekle</string>
-    <string name="add_caption_example">Sevgili arkadaşım</string>
-    <string name="content_description">İçeriğin açıklaması</string>
-    <string name="content_description_example">Gün batımında beyaz kumlu bir plajda mavi bir tekne</string>
     <string name="ai_suggested_alt_text_hint">Yapay zeka önerisi, düzenleyebilirsiniz</string>
     <string name="ai_suggested_alt_text_dismiss">Yapay zeka önerisini reddet</string>
     <string name="zap_type">Zap Türü</string>
@@ -670,7 +674,6 @@
     <string name="zap_type_private_explainer">Gönderici ve alıcı birbirini görebilir ve mesajı okuyabilir</string>
     <string name="zap_type_anonymous">Anonim</string>
     <string name="zap_type_anonymous_explainer">Alıcı ve halk ödemeyi kimin gönderdiğini bilmez</string>
-    <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Nostr'da iz yok, yalnızca Lightning'de</string>
     <string name="post_anonymously">Anonim</string>
     <string name="use_local_blossom_cache">Yerel Blossom önbelleği kullan</string>
@@ -731,6 +734,9 @@
     <string name="call_calling">Aranıyor…</string>
     <string name="call_connecting">Bağlanıyor…</string>
     <string name="call_ended">Arama bitti</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Kapat</string>
     <string name="call_switch_camera">Kamerayı değiştir</string>
     <string name="call_voice">Sesli arama</string>
@@ -768,8 +774,6 @@
     <string name="show_sensitive_content_explainer">Gönderinin yazarı içeriği hassas olarak işaretlediğinde uyarı mesajı gösterir</string>
     <string name="max_hashtag_limit_title">Gönderi başına maksimum hashtag</string>
     <string name="max_hashtag_limit_explainer">Bu sınırdan fazla hashtag içeren gönderileri gizler. Devre dışı bırakmak için 0 olarak ayarlayın</string>
-    <string name="security_unlimited">∞</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Bu gönderi için toplanacak hedef sat miktarı ekler. Destekleyen istemciler bağışları teşvik etmek için bunu bir ilerleme çubuğu olarak gösterebilir</string>
     <string name="zapraiser_target_amount_in_sats">Sat Cinsinden Hedef Miktar</string>
     <string name="sats_to_complete">Zapraiser: %1$s. Hedefe %2$s sat kaldı</string>
@@ -797,15 +801,20 @@
     <string name="all_languages">Tüm Diller</string>
     <string name="posting_policy">Yayınlama politikası</string>
     <string name="terms_and_conditions">Şartlar &amp; Koşullar</string>
-    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Bu Relay'den Gelen Hatalar ve Bildirimler</string>
     <string name="relay_monitor_reports">Relay İzleme Raporları</string>
     <string name="relay_active_subscriptions">Etkin Abonelikler</string>
     <string name="relay_req_subscriptions">REQ Abonelikleri (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonelikleri (%1$d)</string>
     <string name="relay_outbox_events">Giden Kutusu Etkinlikleri (%1$d)</string>
-    <string name="relay_filter_authors">%1$d yazar</string>
-    <string name="relay_filter_ids">%1$d kimlik</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d yazar</item>
+        <item quantity="other">%1$d yazar</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d kimlik</item>
+        <item quantity="other">%1$d kimlik</item>
+    </plurals>
     <string name="relay_filter_since">%1$s tarihinden itibaren</string>
     <string name="relay_filter_until">%1$s tarihine kadar</string>
     <string name="relay_filter_limit">sınır %1$d</string>
@@ -829,7 +838,6 @@
     <string name="max_filters_per_sub">Abonelik Başına Maks. Filtre</string>
     <string name="max_limit_events_returning">Maks. Sınır (Döndürülen Etkinlikler)</string>
     <string name="max_subid_length">Maks. SubID Uzunluğu</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Kullan</string>
     <string name="cashu_copy_token">Token'ı Kopyala</string>
     <string name="quick_actions_open_in_another_app">Başka Bir Uygulamada Aç</string>
@@ -897,7 +905,7 @@
     <string name="messages_create_public_private_chat_description">Yeni Herkese Açık veya Gizli Grup</string>
     <string name="messages_new_message_to">Kime</string>
     <string name="messages_new_message_subject_caption">Konuşmanın konusu</string>
-    <string name="messages_new_message_to_caption">"@Kullanıcı1, @Kullanıcı2, @Kullanıcı3"</string>
+    <string name="messages_new_message_to_caption">@Kullanıcı1, @Kullanıcı2, @Kullanıcı3</string>
     <string name="messages_group_descriptor">Bu grubun üyeleri</string>
     <string name="messages_new_subject_message">Üyelere açıklama</string>
     <string name="messages_new_subject_message_placeholder">Yeni hedefler için adı değiştirme.</string>
@@ -947,7 +955,6 @@
     <string name="send_the_seller_a_message">Satıcıya mesaj gönderin</string>
     <string name="hi_there_is_this_still_available">Merhaba, bu hâlâ mevcut mu?</string>
     <string name="classifieds_title">Başlık</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Durum</string>
     <string name="classifieds_category">Kategori</string>
     <string name="classifieds_price">Fiyat (Sat cinsinden)</string>
@@ -976,7 +983,6 @@
     <string name="wallet_send">Gönder</string>
     <string name="wallet_receive">Al</string>
     <string name="wallet_transactions">İşlemler</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Bir BOLT-11 faturası yapıştırın</string>
     <string name="wallet_pay">Öde</string>
     <string name="wallet_payment_success">Ödeme başarılı</string>
@@ -995,7 +1001,6 @@
     <string name="wallet_filter_all">Tümü</string>
     <string name="wallet_filter_zaps">Zap'lar</string>
     <string name="wallet_filter_non_zaps">Zap Olmayanlar</string>
-    <string name="wallet_add">Cüzdan Ekle</string>
     <string name="wallet_default">Varsayılan</string>
     <string name="wallet_set_default">Varsayılan Olarak Ayarla</string>
     <string name="wallet_remove">Kaldır</string>
@@ -1072,9 +1077,7 @@
     <string name="cashu_getting_quote">Mint'ten teklif isteniyor…</string>
     <string name="cashu_verify">Doğrula</string>
     <string name="cashu_mint_reachable">✓ Mint'e ulaşılabilir</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Mint'e ulaşılamadı: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Token oluştur</string>
     <string name="cashu_redeem_button">Kullan</string>
     <string name="cashu_done">Tamam</string>
@@ -1090,8 +1093,6 @@
     <string name="cashu_redeemed_amount">%1$s sats cüzdanınıza aktarıldı.</string>
     <string name="wallet_paste_uri">nostr+walletconnect:// URI'sini yapıştırın</string>
     <string name="wallet_save">Kaydet</string>
-    <string name="wallet_rename">Yeniden adlandır</string>
-    <string name="wallet_rename_title">Cüzdanı Yeniden Adlandır</string>
     <string name="wallet_onchain_transactions">Zincir Üstü İşlemler</string>
     <string name="wallet_onchain_no_address">Bu hesap için zincir üstü adres mevcut değil.</string>
     <string name="wallet_onchain_no_backend">Zincir arka ucu yapılandırılmamış.</string>
@@ -1109,11 +1110,9 @@
     <string name="onchain_send_recipient_placeholder">ad, NIP-05 veya npub</string>
     <string name="onchain_send_change_recipient">Alıcıyı değiştir</string>
     <string name="onchain_send_amount">Miktar</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Minimum zincir üstü zap %1$s sats'tır — daha küçük miktarlar madenci ücretlerine gider. Bunun yerine bir Lightning zap kullanın.</string>
     <string name="onchain_send_comment_label">Yorum (isteğe bağlı)</string>
     <string name="onchain_send_priority">Öncelik</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Ücret tahminleri yükleniyor…</string>
     <string name="onchain_send_button_amount">%1$s sats gönder</string>
     <string name="onchain_send_dont_split">Bölme — bunun yerine tek alıcıya öde</string>
@@ -1122,7 +1121,6 @@
     <string name="onchain_send_result_transaction">İşlem</string>
     <string name="onchain_send_result_fee">Ücret</string>
     <string name="onchain_send_result_change">Para üstü</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Tamam</string>
     <string name="onchain_send_failed_at">Başarısız: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Ödeme yayınlandı (tx %1$s) ancak makbuz yayımlanamadı.</string>
@@ -1213,7 +1211,6 @@
     <string name="add_header_image">Başlık resmi ekle</string>
     <string name="your_article_title">Makale başlığınız…</string>
     <string name="article_description_placeholder">Makalenizin kısa bir açıklaması…</string>
-    <string name="url_slug">URL Slug</string>
     <string name="url_slug_placeholder">makale-url-slug</string>
     <string name="tags_label"># Etiketler</string>
     <string name="add_a_tag">Etiket ekle…</string>
@@ -1238,7 +1235,6 @@
     <string name="reactions_settings_boost_description">Bu notu yeniden paylaş veya alıntıla</string>
     <string name="reactions_settings_like">Beğen</string>
     <string name="reactions_settings_like_description">Bu nota emoji ile tepki ver</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Yazara Lightning ödemesi gönder</string>
     <string name="reactions_settings_share">Paylaş</string>
     <string name="reactions_settings_share_description">Bu notu harici olarak paylaş</string>
@@ -1271,14 +1267,12 @@
     <string name="audio_visualizer_classic">Klasik Dalga Formu</string>
     <string name="audio_visualizer_static">Sabit Görüntü</string>
     <string name="profile_image_of_user">%1$s Profil Fotoğrafı</string>
-    <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Relay listesini genişlet</string>
     <string name="note_options">Not seçenekleri</string>
     <string name="poll">Anket</string>
     <string name="disable_poll">Anketi Devre Dışı Bırak</string>
     <string name="add_bitcoin_invoice">Bitcoin Faturası</string>
     <string name="cancel_bitcoin_invoice">Bitcoin Faturasını İptal Et</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Zapraiser'ı İptal Et</string>
     <string name="add_location">Konum</string>
     <string name="remove_location">Konumu Kaldır</string>
@@ -1341,7 +1335,6 @@
     <string name="accessibility_play_username">Kullanıcı adını ses olarak çal</string>
     <string name="accessibility_pushpin">Raptiye</string>
     <string name="accessibility_scan_qr_code">QR kodu tara</string>
-    <string name="accessibility_select_date">Tarih seç</string>
     <string name="load_from_text">Mesajdan</string>
     <string name="dvm_looking_for_app">Uygulama Aranıyor</string>
     <string name="dvm_waiting_status">İş Talep Edildi, yanıt bekleniyor</string>
@@ -1386,7 +1379,6 @@
     <string name="search_filters_section_source">Kaynak</string>
     <string name="search_filters_section_sort">Sıralama ölçütü</string>
     <string name="search_filters_open">Filtreler</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Dil ara</string>
     <string name="add_language">Dil ekle</string>
     <string name="add_language_pair">Dil çifti ekle</string>
@@ -1412,7 +1404,10 @@
     <string name="remove_user_from_the_list">Kullanıcıyı listeden kaldır</string>
     <string name="follow_list_item_label">Takip Paketi</string>
     <string name="members">Üyeler</string>
-    <string name="contact_list_containing_label">%1$d kullanıcı içeren takip listesi:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">%1$d kullanıcı içeren takip listesi:</item>
+        <item quantity="other">%1$d kullanıcı içeren takip listesi:</item>
+    </plurals>
     <string name="contact_list_screen_title">Takip listesi</string>
     <string name="contact_list_screen_title_with_count">Takip listesi (%1$d)</string>
     <string name="follow_pack_creation_name_label">Paket adı</string>
@@ -1433,20 +1428,23 @@
     <string name="timeout">Zaman aşımı</string>
     <string name="retrying">Yeniden deneniyor…</string>
     <string name="dismiss">Kapat</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Yayınlanıyor</string>
     <string name="broadcasting_name">%1$s yayınlanıyor</string>
-    <string name="broadcasting_number_events">%1$d olay yayınlanıyor…</string>
-    <string name="sent_number_events">%1$d olay gönderildi</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">%1$d olay yayınlanıyor…</item>
+        <item quantity="other">%1$d olay yayınlanıyor…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d olay gönderildi</item>
+        <item quantity="other">%1$d olay gönderildi</item>
+    </plurals>
     <string name="bradcasting_result_partial">Bazı olaylar başarısız oldu</string>
     <string name="bradcasting_result_success">Tüm olaylar başarıyla tamamlandı</string>
     <string name="bradcasting_result_failure">Tüm olaylar başarısız oldu</string>
     <string name="closing_time">Kapanış Saati</string>
     <string name="confirm">Onayla</string>
     <string name="next">İleri</string>
-    <string name="go_back">Geri Git</string>
     <string name="approve">Onayla</string>
-    <string name="connected">Bağlandı</string>
     <string name="social_proof">Sosyal kanıt</string>
     <string name="poll_submit">Gönder</string>
     <string name="poll_view_results">Sonuçları gör</string>
@@ -1454,7 +1452,10 @@
     <string name="new_chess_game">Yeni Satranç Oyunu</string>
     <string name="chess_loading_game">Oyun yükleniyor…</string>
     <string name="chess_game_not_found">Oyun Bulunamadı</string>
-    <string name="badge_and_n_others"> ve %1$d diğerleri</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> ve %1$d diğeri</item>
+        <item quantity="other"> ve %1$d diğeri</item>
+    </plurals>
     <string name="remove_language">%1$s dilini kaldır</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Güvendiğiniz biriyle aynı kişileri takip ederek harika bir akışla başlayın.</string>
     <string name="import_follow_list">Takip Listesini İçe Aktar</string>
@@ -1463,9 +1464,18 @@
     <string name="name_search_npub1_alice_example_com">ara, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">npub, nprofile, NIP-05, hex ve Namecoin (.bit) destekler</string>
     <string name="tip">İpucu</string>
-    <string name="accounts_found">%1$d hesap bulundu</string>
-    <string name="num_selected">%1$d seçildi</string>
-    <string name="follow_accounts">%1$d hesabı takip et</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d hesap bulundu</item>
+        <item quantity="other">%1$d hesap bulundu</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d seçildi</item>
+        <item quantity="other">%1$d seçildi</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">%1$d hesabı takip et</item>
+        <item quantity="other">%1$d hesabı takip et</item>
+    </plurals>
     <string name="skip_for_now">Şimdilik atla</string>
     <string name="fetching_follow_list">Takip listesi alınıyor…</string>
     <string name="no_follows_found">Takip bulunamadı</string>
@@ -1497,16 +1507,30 @@
     <string name="event_sync_relays_progress">Relay'ler: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Yeniden dağıtılan etkinlikler: %2$d gönderilenden ve %3$d alınandan %1$d yeni</string>
     <string name="event_sync_done_title">Senkronizasyon tamamlandı</string>
-    <string name="event_sync_done_sent">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</string>
-    <string name="event_sync_done_accepted">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</string>
-    <string name="event_sync_done_duration">%1$d saniyede tamamlandı.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</item>
+        <item quantity="other">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</item>
+        <item quantity="other">%1$d etkinlik hedef relay'ler tarafından yeni olarak kabul edildi.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">%1$d saniyede tamamlandı.</item>
+        <item quantity="other">%1$d saniyede tamamlandı.</item>
+    </plurals>
     <string name="event_sync_error_title">Senkronizasyon hatası</string>
     <string name="event_sync_sending_to">Gönderiliyor</string>
     <string name="event_sync_outbox_relays">Giden Kutusu</string>
     <string name="event_sync_inbox_relays">Gelen Kutusu</string>
-    <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Şu Anda Kontrol Ediliyor (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Tamamlandı (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Şu Anda Kontrol Ediliyor (%1$d relay)</item>
+        <item quantity="other">Şu Anda Kontrol Ediliyor (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Tamamlandı (%1$d relay)</item>
+        <item quantity="other">Tamamlandı (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">%1$s gönderildi</string>
     <string name="event_sync_log_recv">%1$s alındı</string>
     <string name="event_sync_log_new">%1$s yeni</string>
@@ -1524,7 +1548,6 @@
     <string name="cashu_move_coins_withdraw_ln">Lightning ile çek…</string>
     <string name="cashu_move_coins_export_token">Cashu token olarak dışa aktar…</string>
     <string name="cashu_move_coins_working">Paralar taşınıyor…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Bağlanıyor</string>
     <string name="event_sync_status_downloading">İndiriliyor</string>
     <string name="event_sync_status_error">Hata</string>
@@ -1545,9 +1568,7 @@
     <string name="hls_description_label">Açıklama</string>
     <string name="hls_description_placeholder">Bu video ne hakkında?</string>
     <string name="hls_content_warning_reason_placeholder">Neden (isteğe bağlı)</string>
-    <string name="hls_codec_label">Codec</string>
     <string name="hls_codec_h265">H.265 (daha iyi sıkıştırma)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">Bu cihazda H.265 mevcut değil — H.264'e geçiliyor.</string>
     <string name="hls_renditions_label">Çözünürlükler</string>
     <string name="hls_renditions_source_format">Kaynak çözünürlük: %1$d×%2$d</string>
@@ -1585,8 +1606,6 @@
     <string name="event_sync_date_filter_until">Bitiş</string>
     <string name="event_sync_date_filter_now">Şimdi</string>
     <string name="event_sync_date_filter_all_time">Tüm zamanlar</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Başlık</string>
     <string name="web_bookmark_title_placeholder">Yer imi başlığı</string>
     <string name="web_bookmark_description_label">Açıklama</string>
@@ -1601,15 +1620,12 @@
     <string name="fundraiser_ends">Bitiş: %1$s</string>
     <string name="fundraiser_onchain_donation">Zincir üstü bağış</string>
     <string name="goal_amount_label">Hedef miktarı (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Hedefinizi açıklayın</string>
     <string name="goal_description_placeholder">Ne için bağış topluyorsunuz?</string>
     <string name="goal_summary_label">Kısa özet</string>
     <string name="goal_summary_placeholder">Önizlemelerde gösterilen kısa açıklama</string>
     <string name="goal_image_label">Resim URL'si (isteğe bağlı)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">Web sitesi URL'si (isteğe bağlı)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Son tarih belirle</string>
     <string name="request_to_vanish_description">Relay'lerin seçilen tarihe kadar tüm verilerinizi kalıcı olarak silmesini talep edin. Bu işlem NIP-62'ye dayanmaktadır ve bazı yargı bölgelerinde yasal bağlayıcılığı vardır.</string>
     <string name="vanish_target_relay">Hedef Relay'ler</string>
@@ -1674,7 +1690,10 @@
     <string name="manage">Yönet</string>
     <string name="relay_members">Üyeler</string>
     <string name="relay_members_title">%1$s'in Üyeleri</string>
-    <string name="relay_members_count">%1$d üye</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d üye</item>
+        <item quantity="other">%1$d üye</item>
+    </plurals>
     <string name="relay_members_loading">Üyeler yükleniyor…</string>
     <string name="relay_members_empty">Üye bulunamadı</string>
     <string name="relay_members_request_join">Katılım İste</string>
@@ -1684,9 +1703,15 @@
     <string name="relay_members_you_are_member">Üyesiniz</string>
     <string name="relay_membership_list">Relay üyelik listesi</string>
     <string name="relay_member_added">Relay'e üye eklendi</string>
-    <string name="relay_members_added">Relay'e %1$d üye eklendi</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">Relay'e %1$d üye eklendi</item>
+        <item quantity="other">Relay'e %1$d üye eklendi</item>
+    </plurals>
     <string name="relay_member_removed">Üye relay'den kaldırıldı</string>
-    <string name="relay_members_removed">%1$d üye relay'den kaldırıldı</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d üye relay'den kaldırıldı</item>
+        <item quantity="other">%1$d üye relay'den kaldırıldı</item>
+    </plurals>
     <string name="relay_join_request">Relay katılım isteği</string>
     <string name="relay_leave_request">Relay ayrılma isteği</string>
     <string name="ai_writing_use_this">Bunu Kullan</string>
@@ -1697,7 +1722,6 @@
     <string name="ai_tone_elaborate">Detaylandır</string>
     <string name="ai_tone_friendly">Samimi</string>
     <string name="ai_tone_professional">Profesyonel</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <string name="emoji_packs_title">Emoji Paketleri</string>
     <string name="emoji_pack_management_title">Emoji Listesine Ekle</string>
     <string name="add_to_emoji_list">Emoji listeme ekle</string>
@@ -1712,7 +1736,10 @@
     <string name="emoji_pack_upload_image_cta">Kapak resmi yükle</string>
     <string name="emoji_pack_upload_image_hint">Bu emoji paketini temsil etmek için kare bir resim seçin.</string>
     <string name="no_emoji_packs">Henüz emoji paketiniz yok</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d emoji</item>
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Emoji Listem</string>
     <string name="my_emoji_list_explainer">Seçiminize eklediğiniz emoji paketleri (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Henüz listenize hiç emoji paketi eklemediniz</string>
@@ -1726,7 +1753,6 @@
     <string name="emoji_pack_actions_dialog_title">Emoji paketi işlemleri</string>
     <string name="emoji_private_toggle">Özel</string>
     <string name="emoji_private_badge">Özel emoji</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Topluluk kuralı ihlali</string>
     <string name="community_rules_violation_author_denied">Bu topluluğun engelleme listesindeysiniz. Gönderiler kabul edilmeyecektir.</string>
     <string name="community_rules_violation_kind_not_allowed">Bu topluluk kind %1$d türündeki etkinlikleri kabul etmemektedir.</string>
@@ -1738,7 +1764,6 @@
     <string name="marmot_create_group_footer">Yeni bir MLS grubu oluşturulacaktır. Daha sonra üye ekleyebilirsiniz.</string>
     <string name="marmot_group_default_name">Marmot Grubu</string>
     <string name="marmot_group_fallback_name">Grup %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Bilinen</string>
     <string name="marmot_tab_known_count">Bilinen (%1$d)</string>
     <string name="marmot_tab_new_requests">Yeni İstekler</string>
@@ -1752,6 +1777,9 @@
     <string name="marmot_group_name_placeholder">Grup adı girin</string>
     <string name="marmot_group_description_placeholder">Grup açıklaması girin (isteğe bağlı)</string>
     <string name="marmot_edit_info_footer">Değişiklikler MLS aracılığıyla gruba işlenecek ve tüm üyelere yayılacaktır.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay'leri ayarlanmadı</string>
     <string name="marmot_keypackage_relays_not_set_message">Henüz bir KeyPackage Relay Listeniz yok (MIP-00). Bu liste, başkalarına KeyPackage'ınızın nerede yayımlandığını söyler; böylece sizi grup sohbetlerine davet edebilirler.\n\nBunun için mevcut giden kutusu relay'leriniz kullanılsın mı?</string>
     <string name="marmot_use_outbox_relays">Giden kutusu relay'lerini kullan</string>
@@ -1786,14 +1814,6 @@
     <string name="ots_explorer_api_label">Explorer API taban URL'si</string>
     <string name="dvm_pay_invoice_from_dvm">DVM'den Fatura Öde</string>
     <string name="dvm_pay_amount_to_dvm">DVM'ye %1$s sats öde</string>
-    <string name="use_direct_url">Doğrudan URL kullan</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">İzinler:</string>
-    <string name="nsite_root_site">Kök Site</string>
-    <string name="nsite_source">Kaynak:</string>
-    <string name="nsite_servers">Sunucular:</string>
-    <string name="nsite_open">Aç</string>
     <string name="about_legal">Hakkında &amp; Yasal</string>
     <string name="account_settings">Hesap Ayarları</string>
     <string name="add">Ekle</string>
@@ -1801,7 +1821,6 @@
     <string name="add_a_nip96_server">NIP-96 Sunucusu Ekle</string>
     <string name="add_client_tag_explainer">Etkinleştirildiğinde, Amethyst yayımladığınız etkinliklere bir NIP-89 istemci etiketi ekler.</string>
     <string name="add_client_tag_title">Etkinliklerime istemci etiketi ekle</string>
-    <string name="add_sensitive_content_description">Bu içeriği göstermeden önce hassas içerik uyarısı ekler</string>
     <string name="add_sensitive_content_label">Hassas İçerik</string>
     <string name="add_to_public_bookmarks">Herkese Açık Yer İşaretlerine Ekle</string>
     <string name="ai_writing_setting_description">Metin düzeltmeleri ve ton değişiklikleri önermek için cihaz üzerindeki bir yapay zeka modeli kullanır.</string>
@@ -1880,12 +1899,10 @@
     <string name="broadcast_section_explainer">sendit.nosflare.com gibi notlarınızı diğer tüm relay'lere iletmede uzmanlaşmış relay'ler. Amethyst bu relay'i sizin tarafınızdan yapılan tüm yeni etkinliklere ekleyecektir</string>
     <string name="browser">Tarayıcı</string>
     <string name="browser_favorites">Favoriler</string>
-    <string name="browser_tor_off">Açık web üzerinden yükleniyor. Tor'u kullanmak için dokun.</string>
-    <string name="browser_tor_on">Tor üzerinden yükleniyor. Açık web'i kullanmak için dokun.</string>
     <plurals name="calendar_day_a11y_events">
-    <item quantity="one">%1$s, %2$d etkinlik</item>
-    <item quantity="other">%1$s, %2$d etkinlik</item>
-</plurals>
+        <item quantity="one">%1$s, %2$d etkinlik</item>
+        <item quantity="other">%1$s, %2$d etkinlik</item>
+    </plurals>
     <string name="calendar_event_image_upload_failed">Resim yükleme başarısız</string>
     <string name="calendar_event_image_upload_failed_body">Seçilen resim yüklenemedi. Tekrar deneyin veya bir URL yapıştırın.</string>
     <string name="calendar_export_share_title">Takvim etkinliğini paylaş</string>
@@ -1894,26 +1911,24 @@
     <string name="calendar_relative_ongoing">Şu an devam ediyor</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · %2$s bitiyor</string>
     <plurals name="calendar_reminder_body">
-    <item quantity="one">%1$d dakika içinde başlıyor</item>
-    <item quantity="other">%1$d dakika içinde başlıyor</item>
-</plurals>
+        <item quantity="one">%1$d dakika içinde başlıyor</item>
+        <item quantity="other">%1$d dakika içinde başlıyor</item>
+    </plurals>
     <string name="calendar_reminder_channel_description">Katıldığınız bir etkinlik başlamak üzereyken uyarı alın.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Takvim hatırlatıcıları</string>
     <string name="calendar_reminder_default_title">Takvim etkinliği</string>
     <string name="calendar_reminder_settings_enabled_subtitle">Katıldığınız bir etkinlik başlamak üzereyken bildirim gönderilir.</string>
     <string name="calendar_reminder_settings_enabled_title">Hatırlatıcı gönder</string>
     <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="one">%1$d dak</item>
-    <item quantity="other">%1$d dak</item>
-</plurals>
+        <item quantity="one">%1$d dak</item>
+        <item quantity="other">%1$d dak</item>
+    </plurals>
     <string name="calendar_reminder_settings_title">Takvim hatırlatıcıları</string>
     <string name="calendar_view_day">Gün</string>
     <string name="calendar_view_feed">Akış</string>
     <string name="calendar_view_month">Ay</string>
     <string name="calendar_view_week">Hafta</string>
     <string name="call_accept">Kabul Et</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">Kamera kapalı</string>
     <string name="call_camera_on">Kamera açık</string>
     <string name="call_earpiece">Ahize</string>
@@ -1938,34 +1953,30 @@
     <string name="cashu_history_outgoing">Gönderilen</string>
     <string name="cashu_mint_matches_header">Eşleşen mint'ler</string>
     <plurals name="cashu_mint_plus_others">
-    <item quantity="one">+%1$d daha fazla</item>
-    <item quantity="other">+%1$d daha fazla</item>
-</plurals>
+        <item quantity="one">+%1$d daha fazla</item>
+        <item quantity="other">+%1$d daha fazla</item>
+    </plurals>
     <string name="cashu_mint_popular_header">Popüler mint'ler</string>
     <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="one">%1$d diğer kişi tarafından önerildi</item>
-    <item quantity="other">%1$d diğer kişi tarafından önerildi</item>
-</plurals>
+        <item quantity="one">%1$d diğer kişi tarafından önerildi</item>
+        <item quantity="other">%1$d diğer kişi tarafından önerildi</item>
+    </plurals>
     <string name="cashu_move_coins_done">%1$s sat, %2$s'e taşındı.</string>
     <string name="cashu_no_wallet_found">Sistemde uyumlu Cashu cüzdanı bulunamadı</string>
     <plurals name="cashu_pending_quotes_title">
-    <item quantity="one">%1$d bekleyen fatura</item>
-    <item quantity="other">%1$d bekleyen fatura</item>
-</plurals>
+        <item quantity="one">%1$d bekleyen fatura</item>
+        <item quantity="other">%1$d bekleyen fatura</item>
+    </plurals>
     <string name="cashu_quote_confirm">%1$s sat + %2$s sat'a kadar ücret ödensin mi?</string>
     <string name="cashu_settings_delete_confirm_body">%1$s'nin kind:38000 önerisi için bir silme isteği yayınlayın. NIP-09'u destekleyen relay'ler bunu kaldıracaktır.</string>
     <string name="cashu_settings_restore_result">%2$s kanıt içinde %1$s sats kurtarıldı.</string>
     <string name="cashu_successful_redemption">Cashu Alındı</string>
     <string name="cashu_successful_redemption_explainer">%1$s sat cüzdanınıza gönderildi. (Ücretler: %2$s sat)</string>
     <plurals name="cashu_untrusted_mint_title">
-    <item quantity="one">Kullanmadığınız %1$d mint'te tutulan fonlar</item>
-    <item quantity="other">Kullanmadığınız %1$d mint'te tutulan fonlar</item>
-</plurals>
+        <item quantity="one">Kullanmadığınız %1$d mint'te tutulan fonlar</item>
+        <item quantity="other">Kullanmadığınız %1$d mint'te tutulan fonlar</item>
+    </plurals>
     <string name="cashu_waiting_for_payment">Faturanın ödenmesi bekleniyor…</string>
-    <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="one">%1$d mint</item>
-    <item quantity="other">%1$d mint</item>
-</plurals>
     <string name="cast_stop_casting">Yayını durdur</string>
     <string name="cast_to_device">Cihaza yayınla</string>
     <string name="child_safety_standards">Çocuk Güvenliği Standartları</string>
@@ -1976,7 +1987,6 @@
     <string name="classifieds_category_collectibles">Koleksiyon</string>
     <string name="classifieds_category_crafts">El Sanatları</string>
     <string name="classifieds_category_electronics">Elektronik</string>
-    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_food">Yiyecek</string>
     <string name="classifieds_category_furniture">Mobilya</string>
     <string name="classifieds_category_home">Ev</string>
@@ -1999,7 +2009,10 @@
     <string name="communities">Topluluklar</string>
     <string name="community_rules_violation_kind_size_exceeded">Taslak %1$d bayttır; bu topluluk bu türü en fazla %2$d bayt ile sınırlandırmaktadır.</string>
     <string name="community_rules_violation_max_size_exceeded">Taslak %1$d bayttır; bu topluluk etkinlikleri en fazla %2$d bayt ile sınırlandırmaktadır.</string>
-    <string name="community_rules_violation_quota_exceeded">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</item>
+        <item quantity="other">Bugün bu türden %1$d etkinlik paylaştınız (sınır: %2$d).</item>
+    </plurals>
     <string name="compose_settings">Oluşturma Ayarları</string>
     <string name="connect_through_your_orbot_setup_short">Varsayılan port 9050'dir</string>
     <string name="connected_section">Bağlı Relay'ler</string>
@@ -2008,15 +2021,10 @@
     <string name="connectivity_type_always">Her Zaman</string>
     <string name="connectivity_type_never">Hiçbir Zaman</string>
     <string name="connectivity_type_unmetered_wifi_only">Ölçümsüz WiFi</string>
-    <string name="content_description_add_document">Belge Ekle</string>
-    <string name="content_description_add_image">Resim Ekle</string>
-    <string name="content_description_add_media">Medya Ekle</string>
-    <string name="content_description_add_video">Video Ekle</string>
     <string name="content_warning_hide_all_sensitive_content_option">Gizle</string>
     <string name="content_warning_see_warnings_option">Uyar</string>
     <string name="content_warning_show_all_sensitive_content_option">Göster</string>
     <string name="conversations">Diyaloglar</string>
-    <string name="convert_gif_to_mp4_description">Daha küçük dosya boyutu ve daha iyi oynatma uyumluluğu için animasyonlu GIF'i MP4 videoya dönüştürür.</string>
     <string name="convert_gif_to_mp4_label">GIF'i MP4'e Dönüştür</string>
     <string name="copied_note_id_to_clipboard">Not kimliği (@note1) panoya kopyalandı</string>
     <string name="copied_note_text_to_clipboard">Not metni panoya kopyalandı</string>
@@ -2044,7 +2052,6 @@
     <string name="discover_marketplace">Pazar Yeri</string>
     <string name="discover_reads">Okumalar</string>
     <string name="dm_relays_title">DM Gelen Kutusu Relay'leri</string>
-    <string name="dms">DMs</string>
     <string name="dont_translate_from">Şu dilden çevirme</string>
     <string name="dont_translate_from_description">Burada gösterilen diller çevrilmeyecek. Bir dili kaldırıp tekrar çevrilmesini sağlamak için üzerine dokunun.</string>
     <string name="download_to_phone">Telefona Kaydet</string>
@@ -2058,29 +2065,29 @@
     <string name="drawer_section_system">Sistem</string>
     <string name="drawer_section_you">Siz</string>
     <plurals name="duration_days">
-    <item quantity="one">%1$d gün</item>
-    <item quantity="other">%1$d gün</item>
-</plurals>
+        <item quantity="one">%1$d gün</item>
+        <item quantity="other">%1$d gün</item>
+    </plurals>
     <plurals name="duration_hours">
-    <item quantity="one">%1$d saat</item>
-    <item quantity="other">%1$d saat</item>
-</plurals>
+        <item quantity="one">%1$d saat</item>
+        <item quantity="other">%1$d saat</item>
+    </plurals>
     <plurals name="duration_minutes">
-    <item quantity="one">%1$d dakika</item>
-    <item quantity="other">%1$d dakika</item>
-</plurals>
+        <item quantity="one">%1$d dakika</item>
+        <item quantity="other">%1$d dakika</item>
+    </plurals>
     <plurals name="duration_months">
-    <item quantity="one">%1$d ay</item>
-    <item quantity="other">%1$d ay</item>
-</plurals>
+        <item quantity="one">%1$d ay</item>
+        <item quantity="other">%1$d ay</item>
+    </plurals>
     <plurals name="duration_weeks">
-    <item quantity="one">%1$d hafta</item>
-    <item quantity="other">%1$d hafta</item>
-</plurals>
+        <item quantity="one">%1$d hafta</item>
+        <item quantity="other">%1$d hafta</item>
+    </plurals>
     <plurals name="duration_years">
-    <item quantity="one">%1$d yıl</item>
-    <item quantity="other">%1$d yıl</item>
-</plurals>
+        <item quantity="one">%1$d yıl</item>
+        <item quantity="other">%1$d yıl</item>
+    </plurals>
     <string name="edit_calendar_collection">Takvimi Düzenle</string>
     <string name="edit_calendar_event">Takvim Etkinliğini Düzenle</string>
     <string name="edit_community">Topluluğu Düzenle</string>
@@ -2090,7 +2097,6 @@
     <string name="emoji_private_explainer">Özel emojiler relay'lerde şifrelenmiş olarak saklanır ve yalnızca size görünür. Genel emojiler gibi tepki menünüzde ve ":" otomatik tamamlamada görünürler.</string>
     <string name="emoji_public_explainer">Genel emojiler herkese görünür ve bu paket emoji listenizde olduğunda tepki menünüzde ve ":" otomatik tamamlama seçicisinde görünür.</string>
     <string name="emoji_sets">Emojiler</string>
-    <string name="encrypt_files_description">Gizlilik için dosyaları yüklemeden önce şifreleyin. Bazı sunucular ücretsiz hesaplarda şifrelenmiş dosyaları kabul etmeyebilir.</string>
     <string name="encrypt_files_label">Dosyaları şifrele</string>
     <string name="ephemeral_relay_chat">Kaybolan Sohbet</string>
     <string name="error">Hata</string>
@@ -2110,11 +2116,9 @@
     <string name="event_sync_title">Relay Senkronizasyonu</string>
     <string name="events_from_you">sizden etkinlikler</string>
     <string name="events_to_you">size etkinlikler</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">Devre</string>
     <string name="exercise_cycling">Bisiklet</string>
     <string name="exercise_diet">Diyet</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">Oruç</string>
     <string name="exercise_hiking">Doğa yürüyüşü</string>
     <string name="exercise_meditation">Meditasyon</string>
@@ -2123,7 +2127,6 @@
     <string name="exercise_strength">Kuvvet</string>
     <string name="exercise_swimming">Yüzme</string>
     <string name="exercise_walking">Yürüyüş</string>
-    <string name="exercise_yoga">Yoga</string>
     <string name="expand">Genişlet</string>
     <string name="expiration_date_label">Son Kullanma Tarihi</string>
     <string name="export_relay_settings">Relay ayarlarını dışa aktar</string>
@@ -2138,8 +2141,6 @@
     <string name="failed_to_upload_media_no_details">Medya yüklenemedi</string>
     <string name="failed_to_upload_to_server_with_message">%1$s'e yükleme başarısız oldu: %2$s</string>
     <string name="favorite_app_add">Favorilere ekle</string>
-    <string name="favorite_app_network_open">Açık web üzerinden yüklenir.</string>
-    <string name="favorite_app_network_tor">Tor üzerinden yüklenir.</string>
     <string name="favorite_app_recent">Son kullanılan</string>
     <string name="favorite_app_remove">Favorilerden kaldır</string>
     <string name="favorite_app_still_loading">O uygulama henüz yüklenmedi. Bir süre sonra tekrar dene.</string>
@@ -2167,7 +2168,6 @@
     <string name="follow_list_all_favorite_dvms">Tüm favori akış algoritmaları</string>
     <string name="follow_list_aroundme">Çevremdekiler</string>
     <string name="follow_list_curated">Küratörlü</string>
-    <string name="follow_list_global">Global</string>
     <string name="follow_list_kind3_follows_users_only">Varsayılan Takip Listesi</string>
     <string name="follow_list_kind3follows">Tüm Takipler</string>
     <string name="follow_list_kind3follows_users_only">Tüm Kullanıcı Takipleri</string>
@@ -2183,7 +2183,6 @@
     <string name="gallery_style">Profil Galeri Stili</string>
     <string name="gallery_style_description">Galeri stilini seçin</string>
     <string name="gallery_type_classic">Klasik</string>
-    <string name="gallery_type_modern">Modern</string>
     <string name="geohash_exclusive">Yalnızca Konuma Özel Gönderi</string>
     <string name="geohash_exclusive_explainer">Yalnızca konumu takip edenler görecektir. Genel takipçileriniz görmeyecektir.</string>
     <string name="goal_progress">%2$s sats hedefinin %1$s'i finanse edildi</string>
@@ -2248,7 +2247,6 @@
     <string name="key_is_required">Anahtar gerekiyor</string>
     <string name="keypackage_section">KeyPackage Relay'leri</string>
     <string name="keypackage_section_explainer">MLS KeyPackage'larınızın yayınlandığı relay'ler (MIP-00). Diğer kullanıcılar sizi Marmot grup sohbetlerine davet etmek için bu KeyPackage'ları alır. KeyPackage etkinliklerini sizden kabul eden ve genel okumaya izin veren 1–3 relay ekleyin.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">Kabul Edilen Rozet Seti</string>
     <string name="kind_adventure_prologue">Macera Prologu</string>
     <string name="kind_adventure_reading">Macera Okuması</string>
@@ -2266,7 +2264,6 @@
     <string name="kind_blob_headers">Blob Başlıkları</string>
     <string name="kind_blocked_relays">Engellenen Relay'ler</string>
     <string name="kind_blogs">Bloglar</string>
-    <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_blossom_servers">Blossom Sunucuları</string>
     <string name="kind_bookmark_list">Yer İşareti Listesi</string>
     <string name="kind_broadcast_relays">Yayın Relay'leri</string>
@@ -2314,13 +2311,8 @@
     <string name="kind_follow_packs">Takip Paketleri</string>
     <string name="kind_geohash_follows">Geohash Takipleri</string>
     <string name="kind_gift_wraps">GiftWrap'ler</string>
-    <string name="kind_git_issue">Git Issue</string>
-    <string name="kind_git_patch">Git Patch</string>
-    <string name="kind_git_reply">Git Reply</string>
-    <string name="kind_git_repo">Git Repo</string>
     <string name="kind_hashtag_follows">Hashtag Takipleri</string>
     <string name="kind_highlights">Öne Çıkanlar</string>
-    <string name="kind_http_auth">Http Auth</string>
     <string name="kind_index_relay_list">Dizin Relay Listesi</string>
     <string name="kind_live_chats">Canlı Sohbetler</string>
     <string name="kind_live_streams">Canlı Yayınlar</string>
@@ -2332,17 +2324,12 @@
     <string name="kind_mute_list">Sessizlik Listesi</string>
     <string name="kind_named_bookmarks">Adlandırılmış Yer İşaretleri</string>
     <string name="kind_nests_servers">Nests Sunucuları</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_nns">NNS</string>
     <string name="kind_nostr_connect">Nostr Bağlantısı</string>
     <string name="kind_notes">Notlar</string>
     <string name="kind_nwc_request">NWC İsteği</string>
     <string name="kind_nwc_response">NWC Yanıtı</string>
     <string name="kind_old_bookmark_list">Eski Yer İşareti Listesi</string>
-    <string name="kind_ots">OTS</string>
     <string name="kind_outbox_relays">Giden Kutsu Relay'leri</string>
-    <string name="kind_pay_to">PayTo</string>
     <string name="kind_people_lists">Kişi Listeleri</string>
     <string name="kind_pictures">Resimler</string>
     <string name="kind_pins">Sabitlemeler</string>
@@ -2368,8 +2355,6 @@
     <string name="kind_room_presence">Oda Varlığı</string>
     <string name="kind_seals">Mühürler</string>
     <string name="kind_search_relays">Arama Relay'leri</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     <string name="kind_torrent_comments">Torrent Yorumları</string>
     <string name="kind_torrents">Torrentler</string>
     <string name="kind_trusted_providers">Güvenilen Sağlayıcılar</string>
@@ -2377,18 +2362,13 @@
     <string name="kind_user_delete">Kullanıcı Silme</string>
     <string name="kind_user_settings">Kullanıcı Ayarları</string>
     <string name="kind_user_status">Kullanıcı Durumu</string>
-    <string name="kind_video">Video</string>
-    <string name="kind_video_repl">Video (Repl)</string>
     <string name="kind_voice_msg">Sesli Mesaj</string>
     <string name="kind_voice_reply">Sesli Yanıt</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Web Yer İşareti</string>
-    <string name="kind_wiki">Wiki</string>
     <string name="kind_workouts">Egzersizler</string>
     <string name="kind_zap_goals">Zap Hedefleri</string>
     <string name="kind_zap_poll">Zap Anketi</string>
     <string name="kind_zap_req">Zap İsteği</string>
-    <string name="kind_zaps">Zaps</string>
     <string name="known">Bilinen</string>
     <string name="language_preferences">Dil Görüntüleme Tercihleri</string>
     <string name="language_preferences_description">Her çevrilen dil çifti için önce hangi dilin gösterileceğini seçin.</string>
@@ -2427,14 +2407,10 @@
     <string name="marmot_group">MLS Grubu</string>
     <string name="marmot_group_info_updated">Grup bilgisi güncellendi</string>
     <plurals name="marmot_member_count">
-    <item quantity="one">%1$d üye</item>
-    <item quantity="other">%1$d üye</item>
-</plurals>
+        <item quantity="one">%1$d üye</item>
+        <item quantity="other">%1$d üye</item>
+    </plurals>
     <string name="marmot_member_removed">Üye kaldırıldı</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d mesaj</item>
-    <item quantity="other">%1$d mesaj</item>
-</plurals>
     <string name="marmot_not_a_member">Bu grubun üyesi değilsiniz</string>
     <string name="marmot_unknown_error">bilinmeyen hata</string>
     <string name="media_added">Medya eklendi</string>
@@ -2454,17 +2430,17 @@
     <string name="music_playlist_cover_upload_cta">Kapak görseli yükle</string>
     <string name="music_playlist_cover_upload_hint">Bu çalma listesi için kapak resmi olarak kare bir görsel seçin.</string>
     <plurals name="music_playlist_more_tracks">
-    <item quantity="one">+%1$d daha fazla parça</item>
-    <item quantity="other">+%1$d daha fazla parça</item>
-</plurals>
+        <item quantity="one">+%1$d daha fazla parça</item>
+        <item quantity="other">+%1$d daha fazla parça</item>
+    </plurals>
     <plurals name="music_playlist_track_count">
-    <item quantity="one">%1$d parça</item>
-    <item quantity="other">%1$d parça</item>
-</plurals>
+        <item quantity="one">%1$d parça</item>
+        <item quantity="other">%1$d parça</item>
+    </plurals>
     <plurals name="music_playlist_track_count_short">
-    <item quantity="one">%1$d parça</item>
-    <item quantity="other">%1$d parça</item>
-</plurals>
+        <item quantity="one">%1$d parça</item>
+        <item quantity="other">%1$d parça</item>
+    </plurals>
     <string name="music_playlist_uploading_banner">Kapak yükleniyor ve yayınlanıyor. Ekrandan ayrılsanız bile bu işlem devam edecektir.</string>
     <string name="music_track_audio_upload_cta">Ses dosyası yükle</string>
     <string name="music_track_audio_upload_hint">MP3, WAV veya FLAC seçin. Kaydettiğinizde medya sunucunuza yüklenecektir.</string>
@@ -2475,7 +2451,6 @@
     <string name="muted_button">Sessize alındı. Sesi açmak için tıklayın</string>
     <string name="my_lists">Listelerim</string>
     <string name="name_is_required">Bir isim gereklidir</string>
-    <string name="namecoin_response_time">%1$dms</string>
     <string name="namecoin_settings">Namecoin Ayarları</string>
     <string name="napplet_cap_identity">Kimlik</string>
     <string name="napplet_cap_identity_desc">Ortak anahtarını oku</string>
@@ -2501,9 +2476,9 @@
     <string name="napplet_consent_identity_read">Bu nApplet profilini ve hesap verilerini okumak istiyor.</string>
     <string name="napplet_consent_notify">Bu nApplet sana bildirim göstermek istiyor.</string>
     <plurals name="napplet_consent_pay_amount">
-    <item quantity="one">Bu nApplet %1$d sat için bir Lightning faturası ödemek istiyor.</item>
-    <item quantity="other">Bu nApplet %1$d sat için bir Lightning faturası ödemek istiyor.</item>
-</plurals>
+        <item quantity="one">Bu nApplet %1$d sat için bir Lightning faturası ödemek istiyor.</item>
+        <item quantity="other">Bu nApplet %1$d sat için bir Lightning faturası ödemek istiyor.</item>
+    </plurals>
     <string name="napplet_consent_publish">Bu nApplet senin adına kind %1$d türünde bir etkinlik imzalayıp yayımlamak istiyor.</string>
     <string name="napplet_consent_publish_encrypted">Bu nApplet senin adına şifreli bir etkinlik göndermek istiyor.</string>
     <string name="napplet_consent_publish_preview">Bu nApplet senin adına kind %1$d türünde bir etkinlik imzalayıp yayımlamak istiyor:</string>
@@ -2512,28 +2487,19 @@
     <string name="napplet_consent_sign">Bu site Nostr anahtarınla kind %1$d türünde bir etkinlik imzalamak istiyor.</string>
     <string name="napplet_consent_storage">Bu nApplet kendi özel depolamasını kullanmak istiyor.</string>
     <string name="napplet_consent_upload">Bu nApplet medya sunucuna dosya yüklemek istiyor.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
-    <string name="napplets">nApplets</string>
     <string name="nest_chat_send_failed_title">Mesaj gönderilemedi</string>
     <string name="nest_hush_local">Bu konuşmacıyı sustur</string>
     <string name="nest_hush_local_restore">Bu konuşmacıyı geri yükle</string>
     <string name="nest_leave">Ayrıl</string>
     <string name="nest_leave_host_close_failed">Oda kapalı olarak işaretlenemedi. Yine de ayrılıyorum — oda otomatik kapanacak.</string>
     <plurals name="nest_listener_count">
-    <item quantity="one">%1$d dinleyici</item>
-    <item quantity="other">%1$d dinleyici</item>
-</plurals>
+        <item quantity="one">%1$d dinleyici</item>
+        <item quantity="other">%1$d dinleyici</item>
+    </plurals>
     <string name="nest_lower_hand">Eli indir</string>
     <string name="nest_mic_mute">Mikrofonu kapat</string>
     <string name="nest_mic_unmute">Mikrofonu aç</string>
-    <string name="nest_mute">Sessize al</string>
     <string name="nest_no_server_save_failed">Nest sunucu listeniz kaydedilemedi. Tekrar deneyin.</string>
-    <string name="nest_notification_broadcasting">Nest — Canlı</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Oda açıkken ses çalmayı sürdürür.</string>
-    <string name="nest_notification_listening">Nest bağlandı</string>
-    <string name="nest_notification_stop">Durdur</string>
-    <string name="nest_notification_text">Geri dönmek için dokun.</string>
     <string name="nest_participant_follow">Takip et</string>
     <string name="nest_participant_mute">Sessize al</string>
     <string name="nest_participant_unfollow">Takibi bırak</string>
@@ -2544,8 +2510,6 @@
     <string name="nest_presence_raised_hand">elini kaldırdı</string>
     <string name="nest_presence_speaking">konuşuyor</string>
     <string name="nest_raise_hand">El kaldır</string>
-    <string name="nest_unmute">Sesi aç</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Diğer istemcilerin tercihinizi okuyabilmesi için kind-10112 değiştirilebilir olay olarak kaydedilir.</string>
     <string name="nests_servers_my_section">Sunucularınız</string>
     <string name="nests_servers_recommended_explainer">Tek dokunuşla listenize ekleyebileceğiniz yerleşik öneriler.</string>
@@ -2578,10 +2542,6 @@
     <string name="new_requests">Yeni İstekler</string>
     <string name="new_threads">Yeni Threadler</string>
     <string name="new_workout">Yeni Egzersiz</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d varlık paketlendi</item>
-    <item quantity="other">%1$d varlık paketlendi</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Blossom uygulamaları bulunamadı. Lütfen bu dosyayı görüntülemek için yerel bir Blossom uygulaması yükleyin</string>
     <string name="no_blossom_apps_found_title">Blossom bağlantıları açılamıyor</string>
     <string name="no_camera_app_found">Bu cihazda kamera uygulaması bulunamadı</string>
@@ -2591,62 +2551,49 @@
     <string name="no_reaction_type_setup_long_press_to_change">Bu kullanıcı için önceden seçilmiş tepki türü yok. Değiştirmek için kalp düğmesine uzun basın</string>
     <string name="no_reactions_setup">Tepki kurulumu yok</string>
     <string name="no_wallet_found">Lightning faturası ödemek için cüzdan bulunamadı. Lütfen zap kullanmak için bir Lightning cüzdanı yükleyin</string>
-    <string name="no_wallet_found_with_error">Lightning faturası ödemek için cüzdan bulunamadı (Hata: %1$s). Lütfen zap kullanmak için bir Lightning cüzdanı yükleyin</string>
     <string name="no_zap_amount_setup_long_press_to_change">Zap miktarı belirlenmedi. Değiştirmek için uzun basılı tutun</string>
     <string name="notification_settings">Bildirimler</string>
     <string name="notification_settings_section_categories">Kategoriler</string>
     <string name="notification_settings_section_delivery">Teslim</string>
     <string name="notification_settings_section_display">Uygulama içi görüntüleme</string>
     <string name="now">şimdi</string>
-    <string name="nowhere_link_card_art">Nowhere Art</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_event">Nowhere Event</string>
-    <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Fundraiser</string>
-    <string name="nowhere_link_card_generic">Nowhere site</string>
-    <string name="nowhere_link_card_message">Nowhere Message</string>
-    <string name="nowhere_link_card_petition">Nowhere Petition</string>
-    <string name="nowhere_link_card_store">Nowhere Store</string>
-    <string name="nsites">nSites</string>
     <string name="nudity">Çıplaklık</string>
     <string name="nutzap_failed_no_event">Olay referansı oluşturulamıyor</string>
     <string name="nutzap_failed_no_recipient">Notta alıcı pubkey'i yok</string>
     <string name="nutzap_failed_private_note">Nutzap'lar herkese açıktır ve bu özel notu ifşa eder. Bunun yerine bir Lightning zap kullanın.</string>
     <string name="nutzap_failed_title">Nutzap başarısız oldu</string>
     <plurals name="onchain_send_button_amount_split">
-    <item quantity="one">%1$s sats gönder, %2$d yol</item>
-    <item quantity="other">%1$s sats gönder, %2$d yol</item>
-</plurals>
+        <item quantity="one">%1$s sats gönder, %2$d yol</item>
+        <item quantity="other">%1$s sats gönder, %2$d yol</item>
+    </plurals>
     <string name="onchain_send_error_backend_not_configured">Bitcoin zinciri arka ucu yapılandırılmamış</string>
     <string name="onchain_send_error_broadcast">İşlem yayınlanamadı</string>
     <string name="onchain_send_error_build">İşlem oluşturulamadı</string>
     <string name="onchain_send_error_load_utxos">Bitcoin bakiyeniz yüklenemedi</string>
     <string name="onchain_send_error_publish_receipt">Ödeme gönderildi, ancak zap makbuzu yayımlanamadı</string>
     <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="one">Ödeme gönderildi (%2$d makbuzdan %1$d tanesi yayımlandı), ancak bir sonraki makbuz yayımlanamadı</item>
-    <item quantity="other">Ödeme gönderildi (%2$d makbuzdan %1$d tanesi yayımlandı), ancak bir sonraki makbuz yayımlanamadı</item>
-</plurals>
+        <item quantity="one">Ödeme gönderildi (%2$d makbuzdan %1$d tanesi yayımlandı), ancak bir sonraki makbuz yayımlanamadı</item>
+        <item quantity="other">Ödeme gönderildi (%2$d makbuzdan %1$d tanesi yayımlandı), ancak bir sonraki makbuz yayımlanamadı</item>
+    </plurals>
     <string name="onchain_send_error_recipient_dust">Bir alıcı payı toz sınırının altında</string>
     <string name="onchain_send_error_sign">İşlem imzalanamadı</string>
     <string name="onchain_send_fee_eta_fast">~10 dak</string>
     <string name="onchain_send_fee_eta_normal">~30 dak</string>
     <string name="onchain_send_fee_eta_slow">~1 sa</string>
     <string name="onchain_send_fee_fast">Hızlı</string>
-    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_slow">Yavaş</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
-    <item quantity="one">%1$d alıcıya bölün</item>
-    <item quantity="other">%1$d alıcıya bölün</item>
-</plurals>
+        <item quantity="one">%1$d alıcıya bölün</item>
+        <item quantity="other">%1$d alıcıya bölün</item>
+    </plurals>
     <plurals name="onchain_send_splits_skipped">
-    <item quantity="one">%1$d yalnızca Lightning adresli alıcı atlanıyor — zincir üstü işlem için Nostr pubkey gereklidir.</item>
-    <item quantity="other">%1$d yalnızca Lightning adresli alıcı atlanıyor — zincir üstü işlem için Nostr pubkey gereklidir.</item>
-</plurals>
+        <item quantity="one">%1$d yalnızca Lightning adresli alıcı atlanıyor — zincir üstü işlem için Nostr pubkey gereklidir.</item>
+        <item quantity="other">%1$d yalnızca Lightning adresli alıcı atlanıyor — zincir üstü işlem için Nostr pubkey gereklidir.</item>
+    </plurals>
     <plurals name="onchain_send_use_note_split">
-    <item quantity="one">Bu notun %1$d yollu zap bölünmesini kullan</item>
-    <item quantity="other">Bu notun %1$d yollu zap bölünmesini kullan</item>
-</plurals>
+        <item quantity="one">Bu notun %1$d yollu zap bölünmesini kullan</item>
+        <item quantity="other">Bu notun %1$d yollu zap bölünmesini kullan</item>
+    </plurals>
     <string name="onchain_stage_broadcasting">yayınlanıyor</string>
     <string name="onchain_stage_building">işlem oluşturuluyor</string>
     <string name="onchain_stage_loading_utxos">bakiye yükleniyor</string>
@@ -2674,21 +2621,21 @@
     <string name="pin_to_profile">Profile Sabitle</string>
     <string name="play">Oynat</string>
     <plurals name="podcast_episode_count">
-    <item quantity="one">%1$d bölüm</item>
-    <item quantity="other">%1$d bölüm</item>
-</plurals>
+        <item quantity="one">%1$d bölüm</item>
+        <item quantity="other">%1$d bölüm</item>
+    </plurals>
     <string name="poll_author_no_vote">Anket yazarları kendi anketlerinde oy kullanamaz.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Anket yeni oylar için kapatıldı</string>
     <string name="poll_multiple_choice">Çoklu seçim</string>
     <string name="poll_single_choice">Tek seçim</string>
     <string name="poll_unable_to_vote">Oy kullanılamıyor</string>
     <string name="polls">Anketler</string>
     <string name="post">Gönder</string>
+    <string name="post_noun">Gönderi</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
-    <item quantity="one">Bu gönderide %1$d'den fazla hashtag var</item>
-    <item quantity="other">Bu gönderide %1$d'den fazla hashtag var</item>
-</plurals>
+        <item quantity="one">Bu gönderide %1$d'den fazla hashtag var</item>
+        <item quantity="other">Bu gönderide %1$d'den fazla hashtag var</item>
+    </plurals>
     <string name="preview_card_image_for">%1$s için Önizleme Kartı Görseli</string>
     <string name="privacy_options">Gizlilik Seçenekleri</string>
     <string name="privacy_policy">Gizlilik Politikası</string>
@@ -2758,7 +2705,7 @@
     <string name="remove_from_public_bookmarks">Herkese Açık Yer İşaretlerinden Kaldır</string>
     <string name="reply_here">buraya yanıtlayın…</string>
     <string name="reply_notify">Bildir: </string>
-    <string name="report_dialog_block_hide_user_btn">Kullanıcıyı Engelle ve Gizle</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Kullanıcıyı Engelle ve Gizle]]></string>
     <string name="request_deletion">Silme İste</string>
     <string name="request_to_vanish">Silinme Talebi</string>
     <string name="reset_marmot_failure">Marmot durumu sıfırlanamadı: %1$s</string>
@@ -2789,33 +2736,33 @@
     <string name="scheduled_posts_error_prefix">Hata: %1$s</string>
     <string name="scheduled_posts_event_id_copied">Not kimliği kopyalandı</string>
     <plurals name="scheduled_posts_logout_toast">
-    <item quantity="one">Çıkış yapıldı · %1$d zamanlanmış gönderi silindi</item>
-    <item quantity="other">Çıkış yapıldı · %1$d zamanlanmış gönderi silindi</item>
-</plurals>
+        <item quantity="one">Çıkış yapıldı · %1$d zamanlanmış gönderi silindi</item>
+        <item quantity="other">Çıkış yapıldı · %1$d zamanlanmış gönderi silindi</item>
+    </plurals>
     <string name="scheduled_posts_logout_toast_zero">Çıkış yapıldı</string>
     <plurals name="scheduled_posts_logout_warning">
-    <item quantity="one">Henüz yayımlanmamış %1$d zamanlanmış gönderiniz var. Çıkış yapmak bu gönderiyi kalıcı olarak silecektir.</item>
-    <item quantity="other">Henüz yayımlanmamış %1$d zamanlanmış gönderiniz var. Çıkış yapmak bunları kalıcı olarak silecektir.</item>
-</plurals>
+        <item quantity="one">Henüz yayımlanmamış %1$d zamanlanmış gönderiniz var. Çıkış yapmak bu gönderiyi kalıcı olarak silecektir.</item>
+        <item quantity="other">Henüz yayımlanmamış %1$d zamanlanmış gönderiniz var. Çıkış yapmak bunları kalıcı olarak silecektir.</item>
+    </plurals>
     <string name="scheduled_posts_notification_failed_title">Zamanlanmış gönderi başarısız oldu</string>
     <string name="scheduled_posts_notification_sent_title">Zamanlanmış gönderi yayımlandı</string>
     <plurals name="scheduled_posts_relay_count">
-    <item quantity="one">%1$d relay'e</item>
-    <item quantity="other">%1$d relay'e</item>
-</plurals>
+        <item quantity="one">%1$d relay'e</item>
+        <item quantity="other">%1$d relay'e</item>
+    </plurals>
     <string name="scheduled_posts_status_cancelled">İptal edildi</string>
     <string name="scheduled_posts_status_failed">Başarısız</string>
     <string name="scheduled_posts_status_pending">Zamanlandı</string>
     <string name="scheduled_posts_status_publishing">Gönderiliyor…</string>
     <string name="scheduled_posts_status_sent">Gönderildi</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="one"> · %1$d tanesi 1 saatte</item>
-    <item quantity="other"> · %1$d tanesi 1 saatte</item>
-</plurals>
+        <item quantity="one"> · %1$d tanesi 1 saatte</item>
+        <item quantity="other"> · %1$d tanesi 1 saatte</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="one">%1$d sırada</item>
-    <item quantity="other">%1$d sırada</item>
-</plurals>
+        <item quantity="one">%1$d sırada</item>
+        <item quantity="other">%1$d sırada</item>
+    </plurals>
     <string name="search_relays_not_found_examples">İyi seçenekler:\n%1$s</string>
     <string name="search_relays_title">Arama Relay'leri</string>
     <string name="search_section">Arama Relay'leri</string>
@@ -2868,15 +2815,14 @@
     <string name="theme_description">Koyu, Açık veya Sistem teması</string>
     <string name="this_message_will_disappear_in">Bu mesaj %1$s sonra kaybolacak</string>
     <plurals name="thread_collapsed_reply_count">
-    <item quantity="one">+%1$d\nyanıt</item>
-    <item quantity="other">+%1$d\nyanıt</item>
-</plurals>
+        <item quantity="one">+%1$d\nyanıt</item>
+        <item quantity="other">+%1$d\nyanıt</item>
+    </plurals>
     <string name="today">Bugün</string>
     <string name="tor_custom">Özel</string>
     <string name="tor_custom_explainer">Kendinize özel ayar yapın</string>
     <string name="tor_default">Varsayılan</string>
     <string name="tor_default_explainer">IP adresinizi rastgele relay'lerden gizleyin</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_full_privacy">Tam Gizlilik</string>
     <string name="tor_full_privacy_explainer">IP adresinizi tüm bağlantılarda gizleyin</string>
     <string name="tor_internal">Dahili</string>
@@ -2944,8 +2890,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s kullanıcısının sat almak için tanımlanmış bir lightning adresi yok</string>
     <string name="vanish_history">Silinme Geçmişi</string>
     <string name="vanish_request_sent">Silinme talebi gönderildi</string>
-    <string name="video_codec_h265_description">Daha küçük dosya boyutlarında daha iyi kalite sunar ancak tüm cihazlar H.265 oynatmayı desteklemez.</string>
-    <string name="video_codec_h265_label">H.265/HEVC Codec'i Kullan</string>
     <string name="video_download_has_started_toast">Video indirme başladı…</string>
     <string name="video_player_settings">Video Oynatıcı Düğmeleri</string>
     <string name="video_saved_to_the_gallery">Video telefonun video galerisine kaydedildi</string>
@@ -2957,7 +2901,6 @@
     <string name="voice_reply">Sesli Yanıt</string>
     <string name="wallet">Cüzdan</string>
     <string name="wallet_add_cashu_title">Cashu cüzdanı (NIP-60)</string>
-    <string name="wallet_connect">Wallet Connect</string>
     <string name="wallet_connect_pay_invoice_error_error">Cüzdan bağlantı sağlayıcınız şu hatayı döndürdü: %1$s</string>
     <string name="wallet_edit_cashu_title">Mint'leri düzenle</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Gönderiler veya profiller, takip ettiklerinizden rapor aldığında uyarı mesajı gösterir</string>
@@ -2970,7 +2913,6 @@
     <string name="write_a_message">Bir mesaj yazın…</string>
     <string name="write_to_relay">Relay'e Yaz</string>
     <string name="write_to_relay_description">Filtreler ve etkinlikler dahil bu relay'e gönderilen bayt miktarı</string>
-    <string name="zap_description">Zap</string>
     <string name="zaps">Zapler</string>
     <string name="block_hide_user"><![CDATA[Blokla Ve Engelle]]></string>
     <string name="rename">Yeniden adlandır</string>
@@ -2980,6 +2922,118 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s adresindeki alıcının Lightning hizmeti kullanılamıyor. Bu adres "%2$s" Lightning adresinden hesaplandı. Hata: %3$s. Sunucunun çalışıp çalışmadığını ve Lightning adresinin doğru olup olmadığını kontrol edin.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s adresinden Lightning faturası oluşturulamadı: Sonuçtaki JSON'da pr öğesi bulunamadı.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning faturası oluşturulamadı. %1$s'den gelen mesaj: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="fork">Fork</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="security_unlimited">∞</string>
+    <string name="zapraiser">Zapraiser</string>
+    <string name="not_available_acronym">N/A</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="wallet_sats">sats</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="url_slug">URL Slug</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_label">Codec</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <plurals name="cashu_wallet_subtitle_mints">
+    <item quantity="one">%1$d mint</item>
+    <item quantity="other">%1$d mint</item>
+</plurals>
+    <string name="classifieds_category_fitness">Fitness</string>
+    <string name="dms">DMs</string>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_yoga">Yoga</string>
+    <string name="follow_list_global">Global</string>
+    <string name="gallery_type_modern">Modern</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_blossom_auth">Blossom Auth</string>
+    <string name="kind_git_issue">Git Issue</string>
+    <string name="kind_git_patch">Git Patch</string>
+    <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_repo">Git Repo</string>
+    <string name="kind_http_auth">Http Auth</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_video_repl">Video (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_wiki">Wiki</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="namecoin_response_time">%1$dms</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="napplets">nApplets</string>
+    <string name="nests">Nests</string>
+    <string name="nowhere_link_card_art">Nowhere Art</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_event">Nowhere Event</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Fundraiser</string>
+    <string name="nowhere_link_card_generic">Nowhere site</string>
+    <string name="nowhere_link_card_message">Nowhere Message</string>
+    <string name="nowhere_link_card_petition">Nowhere Petition</string>
+    <string name="nowhere_link_card_store">Nowhere Store</string>
+    <string name="nsites">nSites</string>
+    <string name="onchain_send_fee_normal">Normal</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="tor_external">Orbot</string>
+    <string name="wallet_connect">Wallet Connect</string>
+    <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Ara veya adres gir</string>
     <string name="napplet_untitled">Başlıksız nApplet</string>
 </resources>
