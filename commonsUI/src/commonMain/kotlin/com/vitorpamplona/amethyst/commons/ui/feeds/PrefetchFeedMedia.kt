@@ -487,8 +487,8 @@ private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
         }
 
     val tags = ev.tags.toImmutableListOfLists()
-    // callbackUri = note.toNostrUri(), authorPubKey = null — the values the feed passes.
-    return CachedRichTextParser.parseText(body, tags, toNostrUri(), null)
+    // callbackUri = note.toNostrUri(), authorPubKey = the note's author — the values RenderTextEvent passes.
+    return CachedRichTextParser.parseText(body, tags, toNostrUri(), author?.pubkeyHex)
 }
 
 /** Enqueues an image prefetch that also records its decoded aspect ratio. */

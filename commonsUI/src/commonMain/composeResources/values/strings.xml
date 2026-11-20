@@ -9496,6 +9496,19 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="media_failed_gone_image">Image no longer available</string>
+    <string name="media_failed_gone_gif">GIF no longer available</string>
+    <string name="media_failed_gone_detail">%1$s doesn't have this file anymore</string>
+    <string name="media_failed_unreachable">Couldn't reach %1$s</string>
+    <string name="media_failed_unreachable_detail">The server didn't answer</string>
+    <string name="media_failed_refused">%1$s won't share this file</string>
+    <string name="media_failed_refused_detail">It may be private</string>
+    <string name="media_failed_payment">%1$s asks for payment to show this file</string>
+    <string name="media_failed_not_media_image">This isn't an image the app can show</string>
+    <string name="media_failed_not_media_gif">This isn't a GIF the app can show</string>
+    <string name="media_failed_unknown_image">Couldn't load this image</string>
+    <string name="media_failed_unknown_gif">Couldn't load this GIF</string>
+    <string name="media_failed_open_in_browser">Open in browser</string>
     <!-- Claude Code: drive the user's installed Claude Code CLI from the desktop app -->
     <string name="ai_code_title">AI Code</string>
     <string name="claude_code_new_session">New session</string>
