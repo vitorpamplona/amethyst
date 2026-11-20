@@ -41,11 +41,12 @@ import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 
 /**
- * The feed's "this is a video, tap to play" affordance. With autoplay off (or after a manual
- * pause), a loaded player renders its current frame exactly like a still image, and the transport
- * controls only appear after a tap. This draws the same center play/pause button the controls
- * use, on its own, whenever the video is paused with its controls hidden — so the video
- * advertises itself in the feed and a single tap starts it.
+ * The feed's "this is a video, tap to play" affordance. With autoplay off, a loaded player
+ * renders its current frame exactly like a still image, and the transport controls only
+ * appear after a tap. This draws the same center play/pause button the controls use, on its
+ * own, whenever the video is paused with its controls hidden — so the video advertises itself
+ * in the feed and a single tap starts it. RenderVideoPlayer gates the whole thing behind
+ * showPausedOverlay so feeds that autoplay never see it.
  *
  * [showPlay] is false while a video buffers into an autoplaying start (playWhenReady set),
  * so this never flashes on videos that begin on their own; it shows for paused (including

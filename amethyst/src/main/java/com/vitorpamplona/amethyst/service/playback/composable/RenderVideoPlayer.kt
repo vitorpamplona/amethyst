@@ -104,6 +104,7 @@ fun RenderVideoPlayer(
     controllerState: MediaControllerState,
     thumbData: VideoThumb?,
     showControls: Boolean = true,
+    showPausedOverlay: Boolean = false,
     contentScale: ContentScale,
     borderModifier: Modifier,
     videoModifier: Modifier,
@@ -275,14 +276,18 @@ fun RenderVideoPlayer(
         if (showControls && controllerState.playbackError.value == null) {
             // A loaded-but-paused video (autoplay off, manual pause, scrolled away and back) looks
             // like a still image until tapped. The center play button, shown on its own, says video.
-            PausedPlayOverlay(
-                controllerState = controllerState,
-                controllerVisible = controllerVisible,
-                isFullscreen = isFullscreen,
-                isAudio = isAudioContent,
-                videoUri = mediaItem.src.videoUri,
-                modifier = Modifier.align(Alignment.Center),
-            )
+            // Only where the feed does not autoplay: with autoplay on, paused videos are just
+            // waiting for the viewport and the center one would flash the button while it spins up.
+            if (showPausedOverlay) {
+                PausedPlayOverlay(
+                    controllerState = controllerState,
+                    controllerVisible = controllerVisible,
+                    isFullscreen = isFullscreen,
+                    isAudio = isAudioContent,
+                    videoUri = mediaItem.src.videoUri,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
 
             TopGradientOverlay(
                 controllerVisible = controllerVisible,
