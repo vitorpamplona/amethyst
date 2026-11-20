@@ -119,6 +119,18 @@ class SearchFieldState(
 
     fun clear() = setText("")
 
+    /**
+     * End, on this one-line field: the caret goes past the last character, trailing spaces
+     * included. Compose's own End stops at the line's *visible* end, before trailing whitespace,
+     * and every pick leaves exactly one trailing space, so a token typed after End landed glued
+     * to the chip before it (`from:npub1…kind:pic `). [extend] keeps the anchor, as Shift+End does.
+     */
+    fun moveCaretToEnd(extend: Boolean) {
+        textState.edit {
+            selection = if (extend) TextRange(selection.start, length) else TextRange(length)
+        }
+    }
+
     // ---- picking ---------------------------------------------------------------------------
 
     /** Splice a finished token over the partial the caret is in, and put the caret past it. */
