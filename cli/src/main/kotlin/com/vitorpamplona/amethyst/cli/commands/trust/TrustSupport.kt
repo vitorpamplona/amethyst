@@ -35,8 +35,10 @@ import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import kotlinx.coroutines.CoroutineScope
@@ -108,7 +110,28 @@ internal suspend fun openTrustNetwork(
             minTrustScore = MutableStateFlow(minScore),
             store = TrustNetworkStore(dir.toOkioPath()),
             // A throwaway client, like the apps: a sync receives hundreds of thousands of cards.
-            source = if (withClient) RelayTrustNetworkSource { NostrClient(BasicOkHttpWebSocket.Builder { ctx.okhttp }) } else null,
+            // Like the apps, it answers AUTH as the account whose network it is, and only with a
+            // local key (Context.relayAuth's rule). Another observer's network is never signed
+            // for: a relay that ranks by the signed-in key would serve our view, not theirs.
+            source =
+                if (withClient) {
+                    RelayTrustNetworkSource(
+                        clientBuilder = { NostrClient(BasicOkHttpWebSocket.Builder { ctx.okhttp }) },
+                        authenticate =
+                            if (isSelf) {
+                                { client, authScope ->
+                                    RelayAuthenticator(client, authScope) { _, template, _ ->
+                                        val signer = ctx.signer
+                                        if (signer is NostrSignerInternal) listOf(signer.sign(template)) else emptyList()
+                                    }
+                                }
+                            } else {
+                                null
+                            },
+                    )
+                } else {
+                    null
+                },
             scope = scope,
             autoSync = false,
         )

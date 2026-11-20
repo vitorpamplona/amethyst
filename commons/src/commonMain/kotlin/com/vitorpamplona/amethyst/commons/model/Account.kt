@@ -187,6 +187,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCa
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
+import com.vitorpamplona.amethyst.commons.relayClient.auth.authenticateSideClient
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldersByKey
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
@@ -972,7 +973,9 @@ class Account(
             rankProvider = trustProviderList.resolvedRankProvider,
             minTrustScore = settings.syncedSettings.security.minTrustScore,
             store = trustNetworkDir?.let { TrustNetworkStore(it) },
-            source = trustNetworkClientBuilder?.let { RelayTrustNetworkSource(it) },
+            // Answers the provider relay's AUTH as this account, so a relay that ranks by the
+            // signed-in key (search.brainstorm.world) serves this account's network.
+            source = trustNetworkClientBuilder?.let { RelayTrustNetworkSource(it) { client, authScope -> authenticateSideClient(client, authScope) } },
             scope = scope,
             canDownloadLarge = canDownloadLargeFiles,
         )

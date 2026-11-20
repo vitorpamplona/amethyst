@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.wot.network
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCheckpoint
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
@@ -34,6 +35,11 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrust
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.trustNetworkNews
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Where a sync gets the provider's cards. The apps use [RelayTrustNetworkSource]; tests pass a
@@ -81,16 +87,28 @@ interface TrustNetworkConnection {
 /**
  * Syncs over a dedicated client from [clientBuilder]: an app client files everything it receives
  * into `LocalCache`, which must not receive hundreds of thousands of cards.
+ *
+ * That client is not the shared pool, so `AuthCoordinator` does not answer its AUTH challenges.
+ * [authenticate] attaches the responder that does (the apps sign as the account whose network
+ * this is); it lives as long as the connection. Without it, a relay that requires NIP-42
+ * (search.brainstorm.world) refuses the sync with `auth-required`.
  */
 class RelayTrustNetworkSource(
     private val clientBuilder: () -> INostrClient,
+    private val authenticate: ((INostrClient, CoroutineScope) -> RelayAuthenticator)? = null,
 ) : TrustNetworkSource {
     override suspend fun <T> connect(block: suspend (TrustNetworkConnection) -> T): T {
         val client = clientBuilder()
+        val context = currentCoroutineContext()
+        val authScope = CoroutineScope(context + SupervisorJob(context[Job]))
+        // Registered before connect(), so the first challenge already has an answer.
+        val auth = authenticate?.invoke(client, authScope)
         try {
             client.connect()
             return block(RelayConnection(client))
         } finally {
+            auth?.destroy()
+            authScope.cancel()
             client.close()
         }
     }
