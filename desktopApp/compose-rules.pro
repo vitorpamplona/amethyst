@@ -226,6 +226,16 @@
     native <methods>;
 }
 
+# ============================================================================
+# Desktop-only: ComposeNativeTray — its Win32, macOS and Linux tray libraries
+# call menu and click callbacks back into com.kdroid.composetray.* by name, and
+# its nucleus dependencies live under io.github.kdroidfilter (kept above).
+# ============================================================================
+-keep class com.kdroid.composetray.** { *; }
+-keepclassmembers class com.kdroid.composetray.** {
+    native <methods>;
+}
+
 # Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
 # fails for the whole table when one declaration is missing, and shrink cannot
 # see those callers. Keep every native of every class that is kept anyway; the

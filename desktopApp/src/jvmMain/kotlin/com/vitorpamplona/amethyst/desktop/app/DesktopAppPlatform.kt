@@ -128,7 +128,13 @@ class DesktopAppPlatform(
     override fun openNostrConnect(
         uri: String,
         appId: String?,
-    ): Boolean = uri.startsWith("nostrconnect://") && hasNostrConnectHandler() && DesktopBrowser.open(uri)
+    ): Boolean {
+        if (!uri.startsWith("nostrconnect://") || !hasNostrConnectHandler()) return false
+        // Amethyst takes nostrconnect: links too (an app pairing with its signer): if the OS hands
+        // this code back to us, the deep-link queue knows it for ours and drops it.
+        DesktopDeepLinks.markOwnHandoff(uri)
+        return DesktopBrowser.open(uri)
+    }
 
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
@@ -384,10 +390,12 @@ private class DesktopAppLauncher(
 }
 
 /**
- * False only where the desktop says for certain that no app takes `nostrconnect://`: xdg-open
- * starts (and so reports success) whether or not a handler exists, which left "Open signer"
- * doing nothing on a Linux desktop without one. Anything else, or a failed query, lets the
- * open go ahead as before.
+ * False where the desktop says for certain that no *other* app takes `nostrconnect://`. Amethyst
+ * registers the scheme for apps pairing with its signer, so a handler that is Amethyst itself (its
+ * desktop entry on Linux, its launcher on Windows) counts as none: the code would only come back.
+ * On Linux, xdg-open starts (and so reports success) whether or not a handler exists, which left
+ * "Open signer" doing nothing on a Linux desktop without one. macOS can't be asked; there the
+ * deep-link queue drops our own code if it comes back. A failed query lets the open go ahead.
  */
 private fun hasNostrConnectHandler(): Boolean {
     if (!System
@@ -396,7 +404,7 @@ private fun hasNostrConnectHandler(): Boolean {
             .lowercase()
             .contains("linux")
     ) {
-        return true
+        return !DesktopDeepLinks.windowsHandlesWithThisApp("nostrconnect")
     }
     return try {
         val query =
@@ -407,10 +415,14 @@ private fun hasNostrConnectHandler(): Boolean {
             query.destroy()
             return true
         }
-        query.inputStream
-            .bufferedReader()
-            .readText()
-            .isNotBlank()
+        val handler =
+            query.inputStream
+                .bufferedReader()
+                .readText()
+                .trim()
+        // Every Amethyst package names its desktop entry after the app (amethyst.desktop,
+        // com.vitorpamplona.amethyst.Amethyst.desktop, the deb's amethyst-Amethyst.desktop).
+        handler.isNotBlank() && !handler.contains("amethyst", ignoreCase = true)
     } catch (e: Exception) {
         Log.w("DesktopAppPlatform", "Could not ask xdg-mime for a nostrconnect handler", e)
         true
