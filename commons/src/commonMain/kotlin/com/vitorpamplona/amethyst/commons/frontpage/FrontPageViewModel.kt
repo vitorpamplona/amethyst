@@ -330,24 +330,45 @@ class FrontPageViewModel(
     /** Whether this platform publishes to an Observer site at all. */
     val canPublish: Boolean get() = printer.canPublish
 
+    /**
+     * Publishing on or off for every device of the account (the schedule's `publish` param). Turned
+     * back on, the notice is asked again before the next publish. On the account's scope, so leaving
+     * the screen doesn't lose the write.
+     */
     fun setPublish(on: Boolean) {
-        viewModelScope.launch { printer.setObserverPrefs(observerPrefs.value.copy(publish = on)) }
+        val prefs = if (on) observerPrefs.value.copy(publish = true) else ObserverPrefs(publish = false)
+        account.scope.launch { savePublishing(prefs) }
     }
 
     /**
      * The reader answered the confirm that comes before the first publish. Publish: the site is
-     * public from now on, and what's kept goes out now. Not now: nothing is uploaded, and the
-     * next print asks again.
+     * public from now on, for every device, and what's kept goes out now. Not now: nothing is
+     * uploaded, and the next print asks again.
      */
     fun answerObserverNotice(publish: Boolean) {
         if (!publish) {
             printer.declinePublish()
             return
         }
-        viewModelScope.launch {
-            printer.setObserverPrefs(ObserverPrefs(publish = true, noticeSeen = true))
-            printer.publishPending()
+        val yes = ObserverPrefs(publish = true, noticeSeen = true)
+        account.scope.launch {
+            savePublishing(yes)
+            // The reader said yes just now: this publish goes out even when the write didn't (it says why).
+            printer.publishPending(answered = yes)
         }
+    }
+
+    private suspend fun savePublishing(prefs: ObserverPrefs) {
+        val outcome =
+            try {
+                printer.setObserverPrefs(prefs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("FrontPageViewModel", "Could not save the publishing choice", e)
+                ScheduleEdit.Unreachable
+            }
+        _scheduleProblem.value = outcome.takeIf { it !is ScheduleEdit.Saved && it != ScheduleEdit.Unchanged }
     }
 
     /** Tries the publish again, after a failure the reader may have fixed (a Blossom server added). */

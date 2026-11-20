@@ -217,6 +217,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_dev
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_devices_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by
 import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by_assistant
+import com.vitorpamplona.amethyst.commons.resources.front_page_printed_on
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_confirm
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
@@ -896,6 +897,13 @@ private fun PastEditionRow(
                     Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(stringRes(Res.string.front_page_by_assistant), style = MaterialTheme.typography.labelSmall, color = scheme.primary)
+                }
+            } else if (edition.printedBy != null) {
+                // Printed on another device of the account, shared through the schedule.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(MaterialSymbols.Sync, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringRes(Res.string.front_page_printed_on, edition.printedBy.orEmpty()), style = MaterialTheme.typography.labelSmall, color = scheme.primary)
                 }
             } else if (edition.published) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1684,6 +1692,7 @@ private fun Details(
             Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
             Text(fullDate(edition.day), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (edition.byRunner) Text(stringRes(Res.string.front_page_by_assistant), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            edition.printedBy?.let { Text(stringRes(Res.string.front_page_printed_on, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
         }
         // A print running now (the reader's, or the morning's) can be stopped from here too, confirmed.
         if (printing) CancelPrintButton(onCancelPrint, Modifier.fillMaxWidth())

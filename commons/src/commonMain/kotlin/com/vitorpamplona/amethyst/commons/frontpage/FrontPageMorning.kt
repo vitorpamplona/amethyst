@@ -517,6 +517,9 @@ class FrontPageMorning(
 ) {
     suspend fun installId(account: Account) = installs.id(account.signer.pubKey)
 
+    /** How this install names itself in a claim and in the papers it shares ("Pixel 8"); null where it can't print. */
+    val installName: String? get() = info?.name
+
     /** This install can print with nobody there: it can print at all, and the key is on the device. */
     fun canPrintHere(account: Account): Boolean = info != null && unattendedBlocker(account.signer, supportedBoundary, busy = false) == null
 
@@ -764,6 +767,35 @@ class FrontPageMorning(
             edit(account, now()) { current ->
                 if (current == null && effort == WritingEffort.STANDARD) null else FrontPageParams.withEffort(current ?: observerSettingsOnly(), effort)
             }
+        }
+
+    /**
+     * Publishing to the reader's Observer site, for every device of the account: written into the
+     * schedule as the Observer's `publish` param ([FrontPageParams.withPublishing]). With no
+     * schedule yet, a choice other than the default is kept in a settings-only event; the default
+     * needs nothing written.
+     */
+    suspend fun setPublishing(
+        account: Account,
+        prefs: ObserverPrefs,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current ->
+                if (current == null && prefs == ObserverPrefs()) null else FrontPageParams.withPublishing(current ?: observerSettingsOnly(), prefs)
+            }
+        }
+
+    /**
+     * A paper this install printed, recorded in the schedule's private tags for the account's other
+     * devices ([SharedEditions.withRecord]): they show it, open it, and don't print that morning
+     * again. With no schedule yet, in a settings-only event, which never runs.
+     */
+    suspend fun recordEdition(
+        account: Account,
+        record: EditionRecord,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current -> SharedEditions.withRecord(current ?: observerSettingsOnly(), record) }
         }
 
     /**

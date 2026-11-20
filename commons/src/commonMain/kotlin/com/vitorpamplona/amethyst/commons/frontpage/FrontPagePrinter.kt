@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 import com.vitorpamplona.amethyst.commons.routstr.RoutstrPricing
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.SimpleCron
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -187,10 +189,9 @@ class FrontPagePrinter(
     val boundary: PaperBoundary? = paperBoundary(),
     private val scope: CoroutineScope = account.scope,
     private val now: () -> Long = { TimeUtils.now() },
-    private val observerPrefs: ObserverPrefsStore = ObserverPrefsStore.None,
     /** The synced morning schedule; null runs every scheduled call it gets (tests). */
     val morning: FrontPageMorning? = null,
-    observerIO: ObserverSiteIO? = observerSiteIO(account, http),
+    private val observerIO: ObserverSiteIO? = observerSiteIO(account, http),
     private val press: (AgentKeyTag, AgentModel, WritingEffort, PaperBoundary) -> FrontPagePress = { key, model, effort, boundary ->
         FrontPagePress(account.client, Constants.brainstorm, boundary, { call, onEvent -> http.chatComplete(key, model.id, call.messages, outputLimitFor(model, call), effort, onEvent) })
     },
@@ -263,13 +264,25 @@ class FrontPagePrinter(
             .orEmpty()
 
     /**
+     * The papers the account's devices recorded in its schedule ([EditionRecord]), newest first:
+     * how this device learns of a paper another one printed, published or not.
+     */
+    private val sharedRecords: StateFlow<List<EditionRecord>> =
+        account.observerSchedule.flow
+            .map { SharedEditions.records((it as? SyncedSchedule.Readable)?.task) }
+            .distinctUntilChanged()
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /**
      * The history: editions kept on this device plus the ones on the reader's Observer site this
      * device doesn't have (printed in another app or on another device), plus the ones on their
-     * runner's site (marked [SavedEdition.byRunner]), newest first.
+     * runner's site (marked [SavedEdition.byRunner]), plus the papers the account's other devices
+     * recorded in the schedule that none of those has ([SavedEdition.printedBy]), newest first.
      */
     val editions: StateFlow<List<SavedEdition>> =
-        combine(localEditions, siteView, runnerSiteView) { local, site, runner -> mergeHistory(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()) }
-            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+        combine(localEditions, siteView, runnerSiteView, sharedRecords) { local, site, runner, records ->
+            SharedEditions.mergeRecords(mergeHistory(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()), records)
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     /**
      * What the two sites hold, for the schedule's status line and missed-run warning: the reader's
@@ -278,7 +291,8 @@ class FrontPagePrinter(
     val sites: StateFlow<ObserverSites> =
         combine(localEditions, siteView, runnerSiteView, runnerReadFor, account.observerSchedule.flow) { local, site, runner, readFor, synced ->
             val named = synced.runner()
-            observerSitesOf(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()).copy(runnerRead = named == null || readFor == named)
+            val records = SharedEditions.records((synced as? SyncedSchedule.Readable)?.task)
+            observerSitesOf(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty(), records).copy(runnerRead = named == null || readFor == named)
         }.stateIn(scope, SharingStarted.Eagerly, ObserverSites())
 
     /** The reader's Observer site event, for Open and Share. */
@@ -297,9 +311,14 @@ class FrontPagePrinter(
     /** The last publish to the Observer site. */
     val observer = _observer.asStateFlow()
 
-    fun observerPrefs(): Flow<ObserverPrefs> = observerPrefs.flow(pubKey)
+    /** Publishing to the reader's Observer site, as the account's synced schedule says ([FrontPageParams.publishing]). */
+    fun observerPrefs(): Flow<ObserverPrefs> =
+        account.observerSchedule.flow
+            .map { it.observerPrefs() }
+            .distinctUntilChanged()
 
-    suspend fun setObserverPrefs(prefs: ObserverPrefs) = observerPrefs.set(pubKey, prefs)
+    /** Writes [prefs] into the account's schedule, for every device ([FrontPageMorning.setPublishing]); unchanged without one (tests). */
+    suspend fun setObserverPrefs(prefs: ObserverPrefs): ScheduleEdit = morning?.setPublishing(account, prefs) ?: ScheduleEdit.Unchanged
 
     private val publishing = Mutex()
 
@@ -458,7 +477,7 @@ class FrontPagePrinter(
         store.html(pubKey, day)?.let { return it }
         val own = siteView.value?.let { view -> view.editions.firstOrNull { it.day == day }?.let { Triple(it, view.servers, false) } }
         val byRunner = runnerSiteView.value?.view?.let { view -> view.editions.firstOrNull { it.day == day }?.let { Triple(it, view.servers, true) } }
-        val (edition, servers, fromRunner) = own ?: byRunner ?: return null
+        val (edition, servers, fromRunner) = own ?: byRunner ?: return sharedPage(day)
         val page = publisher?.page(edition, servers) ?: return null
         savedFromSite(edition, fromRunner).let { kept ->
             try {
@@ -471,6 +490,84 @@ class FrontPagePrinter(
             }
         }
         return page
+    }
+
+    /**
+     * [day]'s paper from another device of the account: its encrypted copy on the reader's servers
+     * ([EditionRecord]), downloaded by hash, opened and checked against the page's hash, then kept
+     * here. Null when no record names [day], it has no copy, or no server has the right bytes.
+     */
+    private suspend fun sharedPage(day: String): String? {
+        val record = sharedRecords.value.firstOrNull { it.day == day && it.hasCopy } ?: return null
+        val io = observerIO ?: return null
+        val page =
+            try {
+                io.download(io.servers(), record.blob!!)?.let { SharedEditions.open(record, it) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not fetch the paper another device printed for $day", e)
+                null
+            } ?: return null
+        try {
+            store.save(pubKey, record.asSaved(), page)
+            refresh()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not keep the paper another device printed for $day", e)
+        }
+        return page
+    }
+
+    /**
+     * Records the paper just kept in the account's schedule, for its other devices: an encrypted copy
+     * on the reader's own Blossom servers ([SharedEditions.seal]) and its key, in the schedule's
+     * private tags ([FrontPageMorning.recordEdition]). Without a server list, or when no server takes
+     * the copy, the record still goes: the other devices then know the day is printed.
+     */
+    private suspend fun shareWithDevices(
+        edition: SavedEdition,
+        html: String,
+    ) {
+        val morning = morning ?: return
+        val page = withPaperCsp(html).encodeToByteArray()
+        val copy =
+            try {
+                observerIO?.let { io ->
+                    val servers = io.servers()
+                    if (servers.isEmpty()) {
+                        null
+                    } else {
+                        SharedEditions.seal(page).takeIf { io.upload(servers, it.bytes, it.blob, SHARED_COPY_TYPE) }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not upload the paper's copy for the other devices", e)
+                null
+            }
+        val record =
+            EditionRecord(
+                day = edition.day,
+                printedAt = edition.printedAt,
+                sha256 = ObserverPublisher.sha256Hex(page),
+                code = edition.code,
+                by = morning.installName,
+                blob = copy?.blob,
+                key = copy?.key,
+                nonce = copy?.nonce,
+                headline = edition.headline,
+            )
+        try {
+            val outcome = morning.recordEdition(account, record)
+            if (outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged) Log.w(TAG) { "The paper of ${edition.day} wasn't recorded for the other devices: $outcome" }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not record the paper for the other devices", e)
+        }
     }
 
     /** Whether a print holds the press: one the reader started, or a scheduled run (claiming or printing). */
@@ -658,6 +755,9 @@ class FrontPagePrinter(
             Log.w(TAG, "Could not keep the edition", e)
         }
         if (trigger == PrintTrigger.SCHEDULED || watchers() == 0) notifier.paperReady(pubKey, edition)
+        // Shared before the print ends, like the publish below: the account's other devices see this
+        // paper, published or not, and none of them prints this morning again.
+        shareWithDevices(edition, html)
         // Published before the print ends, so the job (and Android's foreground service, and the
         // platform's scheduled run) lives until it is out, the popup saying so.
         publishPending(trigger, onPublishing = jobs::publishing)
@@ -674,10 +774,14 @@ class FrontPagePrinter(
     suspend fun publishPending(
         trigger: PrintTrigger = PrintTrigger.MANUAL,
         onPublishing: () -> Unit = {},
+        /** The reader's answer just given (the notice's Publish), before the schedule holding it is back; null reads the schedule. */
+        answered: ObserverPrefs? = null,
     ) {
         val publisher = publisher ?: return
         // Read now, not when the print started: turning it off mid-print keeps that paper private.
-        val prefs = observerPrefs.get(pubKey)
+        val prefs =
+            answered ?: account.observerSchedule.flow.value
+                .observerPrefs()
         if (!prefs.publish) return
         if (!prefs.noticeSeen) {
             if (trigger == PrintTrigger.MANUAL) _observer.value = ObserverStatus.AwaitingConsent
@@ -893,6 +997,8 @@ class FrontPagePrinter(
                 emptyList()
             }
         if (kept.any { ObserverSite.printedFor(it.printedAt, null, occurrence, zone) }) return true
+        // Another device of the account printed it (by hand, or a run it claimed): it says so in the schedule.
+        if (scheduleRecords().any { ObserverSite.printedFor(it.printedAt, null, occurrence, zone) }) return true
         val site =
             try {
                 publisher?.read()
@@ -906,6 +1012,20 @@ class FrontPagePrinter(
         // NIP-FB, Runner: the runner's site counts too, and only the runner the schedule names.
         scheduleRunner()?.let { refreshRunnerSite(it) }
         return ObserverSite.alreadyPrinted(site?.editions.orEmpty(), runnerEditions(), occurrence, zone)
+    }
+
+    /** The records in the newest schedule this device holds, decrypted now rather than when the flow catches up. */
+    private suspend fun scheduleRecords(): List<EditionRecord> {
+        val state = account.observerSchedule
+        val event = state.scheduleNote.event as? ScheduledTaskEvent ?: return sharedRecords.value
+        return try {
+            SharedEditions.records(state.taskOf(event))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the papers the other devices recorded", e)
+            sharedRecords.value
+        }
     }
 
     /**
@@ -961,6 +1081,9 @@ class FrontPagePrinter(
     companion object {
         private const val TAG = "FrontPagePrinter"
 
+        /** The type an encrypted copy of a paper is uploaded as: opaque bytes, not a page anyone can open. */
+        const val SHARED_COPY_TYPE = "application/octet-stream"
+
         /** How many of the newest editions are read back for the masthead, motto and sections. */
         const val PAGES_READ_BACK = 7
     }
@@ -1015,10 +1138,12 @@ fun observerSitesOf(
     kept: List<SavedEdition>,
     site: List<ObserverEdition>,
     runnerSite: List<ObserverEdition>,
+    /** The papers the account's devices recorded in the schedule: the reader's own prints. */
+    records: List<EditionRecord> = emptyList(),
 ): ObserverSites {
     val (keptByRunner, keptOwn) = kept.filter { it.printedAt > 0 }.partition { it.byRunner }
     return ObserverSites(
-        reader = site + keptOwn.map { ObserverPublisher.entryFor(it, it.sha256 ?: "") },
+        reader = site + keptOwn.map { ObserverPublisher.entryFor(it, it.sha256 ?: "") } + records.map { ObserverPublisher.entryFor(it.asSaved(), it.sha256) },
         runner = runnerSite + keptByRunner.map { ObserverPublisher.entryFor(it, it.sha256 ?: "") },
     )
 }
@@ -1228,7 +1353,6 @@ class FrontPagePrinters(
     val store: FrontPageEditionStore,
     val schedules: FrontPageScheduleStore,
     private val notifier: FrontPageNotifier,
-    val observerPrefs: ObserverPrefsStore = ObserverPrefsStore.None,
     installs: FrontPageInstallStore,
     /** How this install names itself as a runner; null where it can't print (iOS). */
     installInfo: FrontPageInstallInfo?,
@@ -1310,7 +1434,6 @@ class FrontPagePrinters(
                         memory,
                         store,
                         notifier,
-                        observerPrefs = observerPrefs,
                         morning = morning,
                         host = host,
                         onJob = { track(key, it) },
@@ -1329,7 +1452,7 @@ class FrontPagePrinters(
 
     /**
      * A removed account leaves nothing behind on this install: its print stops, and its kept
-     * papers, local schedule, runner id and Observer choice go. The synced schedule stays: it is
+     * papers, local schedule and runner id go. The synced schedule, with its Observer choices, stays: it is
      * the reader's, on their relays. The platform cancels its own scheduled job ([FrontPageScheduler]).
      */
     suspend fun forget(account: HexKey) {
@@ -1339,7 +1462,6 @@ class FrontPagePrinters(
         _pressHeld.update { it - account }
         store.removeAccount(account)
         morning.forget(account)
-        observerPrefs.set(account, ObserverPrefs())
     }
 
     companion object {
