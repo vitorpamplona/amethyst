@@ -121,6 +121,12 @@ dependencies {
         exclude(group = "org.slf4j", module = "slf4j-simple")
     }
 
+    // System tray icon (the NIP-46 signer keeps running with the window closed) — MIT, same author,
+    // and its nucleus/platformtools dependencies are MIT too. Native trays: Win32 on Windows, an
+    // NSStatusItem on macOS, StatusNotifierItem over D-Bus on Linux (sd-bus, from the system's
+    // LGPL-2.1 libsystemd, loaded at runtime, not bundled).
+    implementation(libs.composenativetray)
+
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
     // wrapper library needed (see VideoThumbnailCache.runFfmpegToImage).
