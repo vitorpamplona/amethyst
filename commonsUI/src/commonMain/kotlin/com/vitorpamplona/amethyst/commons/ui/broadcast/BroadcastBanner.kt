@@ -550,7 +550,7 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(Res.string.broadcasting_number_events, broadcasts.size),
+                    text = pluralStringRes(Res.plurals.broadcasting_number_events, broadcasts.size, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -710,7 +710,7 @@ fun MultipleCompletedBroadcastContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(Res.string.sent_number_events, broadcasts.size),
+                    text = pluralStringRes(Res.plurals.sent_number_events, broadcasts.size, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,

@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.contact_list_containing_labe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GalleryUnloaded
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -69,7 +69,7 @@ fun DisplayContactList(
         verticalArrangement = SpacedBy5dp,
     ) {
         Text(
-            text = stringRes(Res.string.contact_list_containing_label, follows.size),
+            text = pluralStringRes(Res.plurals.contact_list_containing_label, follows.size, follows.size),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

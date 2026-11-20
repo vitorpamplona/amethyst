@@ -11,12 +11,11 @@ a visible backslash: the login screen once read `Don\\'t have a Nostr account?`.
 construct whose namespace is declared on the Android `<resources>` root; Compose
 catalog roots do not declare it, so the prefix is unbound and the XML malformed.
 
-**This recurs on every Crowdin sync.** Crowdin holds the Android-escaped source,
-so each import reintroduces it -- twice in two days, 2,068 escaped apostrophes
-across 40 locales each time, always the apostrophe-heavy regional variants
-(uz-rUZ, fr-rFR, fr-rCA, tr-rTR). Like the orphan-strings desync, it arrives
-through a bot-authored PR with no local session in the path, so CI is the layer
-that has to catch it.
+**It used to recur on every Crowdin sync** (Crowdin held the Android-escaped
+source): twice in two days, 2,068 escaped apostrophes across 40 locales each
+time. Crowdin is retired, but a value copied from an Android res tree brings
+the same escapes, and nothing in the Gradle build fails on them, so CI still
+has to catch it.
 
 Repair with:
 

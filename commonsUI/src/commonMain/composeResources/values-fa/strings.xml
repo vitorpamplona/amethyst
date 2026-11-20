@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">پاسخ به</string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">مجوزها:</string>
+    <string name="nsite_root_site">سایت اصلی</string>
+    <string name="nsite_source">منبع:</string>
+    <string name="nsite_servers">سرورها:</string>
+    <string name="nsite_open">باز کردن</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">باز</string>
     <string name="git_status_merged">ادغام شده</string>
     <string name="git_status_closed">بسته</string>
@@ -26,6 +46,7 @@
     <string name="road_event_speed_camera">دوربین سرعت‌سنج</string>
     <string name="road_event_traffic_jam">ترافیک</string>
     <string name="road_event_unknown">رویداد جاده‌ای</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">باز</string>
     <string name="relay_monitor_rtt_read">خواندن</string>
     <string name="relay_monitor_rtt_write">نوشتن</string>
@@ -33,7 +54,6 @@
     <string name="relay_monitor_relay_type">نوع</string>
     <string name="relay_monitor_requirements">الزامات</string>
     <string name="relay_monitor_supported_nips">NIPهای پشتیبانی شده</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">انواع پذیرفته شده</string>
     <string name="relay_discovery_geohash">موقعیت مکانی</string>
     <string name="calendar_rsvp_going">می‌آیم</string>
@@ -53,7 +73,6 @@
     <string name="post_was_hidden">این پست پنهان شده چون به کلمات یا کاربران پنهان شده شما اشاره دارد</string>
     <string name="post_was_flagged_as_inappropriate_by">این یادداشت توسط این افراد گزارش شده:</string>
     <string name="post_not_found">این یادداشت یافت نشد</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">تصویر کانال</string>
     <string name="referenced_event_not_found">رویداد مورد نظر یافت نشد</string>
     <string name="could_not_decrypt_the_message">پیام رمزگشایی نشد</string>
@@ -88,8 +107,6 @@
     <string name="quote">نقل قول</string>
     <string name="fork">فورک</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
-    <string name="replying_to">پاسخ به</string>
-    <string name="and"> و </string>
     <string name="following">دنبال شونده</string>
     <string name="followers">دنبال کننده</string>
     <string name="number_following">%1$s دنبال‌شده</string>
@@ -120,10 +137,8 @@
     <string name="send_payment_source_external">اپلیکیشن کیف پول دیگر</string>
     <string name="send_payment_source_onchain_wallet">کیف پول آنچین</string>
     <string name="send_payment_source_cashu_wallet">کیف پول Cashu</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">پیشنهاد CLINK</string>
     <string name="send_payment_method_onchain">آنچین</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">مقدار</string>
     <string name="send_payment_fixed_price">قیمت تعیین‌شده توسط پیشنهاد</string>
     <string name="send_payment_receipt_section">رسید zap</string>
@@ -151,13 +166,12 @@
     <string name="thank_you_so_much">!خیلی ممنون</string>
     <string name="amount_in_sats">مبلغ به ساتوشی</string>
     <string name="send_sats">ارسال ساتوشی</string>
-    <string name="secret_emoji_maker">سازنده ایموجی مخفی</string>
-    <string name="secret_emoji_maker_explainer">یک ایموجی با پیام مخفی به پست اضافه کنید</string>
-    <string name="secret_note_to_receiver">یادداشت مخفی برای گیرنده</string>
-    <string name="secret_note_to_receiver_placeholder">پیام مخفی من</string>
-    <string name="secret_visible_text">پیشوند قابل مشاهده</string>
-    <string name="secret_visible_text_placeholder">😎</string>
-    <string name="secret_add_to_text">افزودن به پست</string>
+    <string name="secret_emoji_maker">شکلک ساز مخفی</string>
+    <string name="secret_emoji_maker_explainer">یک شکلک به همراه پیام مخفی به یادداشت اضافه کنید</string>
+    <string name="secret_note_to_receiver">پیام مخفی به گیرنده</string>
+    <string name="secret_note_to_receiver_placeholder">پیام پنهان من</string>
+    <string name="secret_visible_text">پیشوند نمایان</string>
+    <string name="secret_add_to_text">افزودن به یادداشت</string>
     <string name="article">مقاله</string>
     <string name="channel_name">نام کانال</string>
     <string name="my_awesome_group">گروه باحال من</string>
@@ -240,7 +254,6 @@
     <string name="refresh">تازه‌سازی</string>
     <string name="channel_created">کانال ساخته شد</string>
     <string name="channel_information_changed_to">اطلاعات کانال تغییر کرد به</string>
-    <string name="marmot_group_no_messages_yet">هنوز پیامی وجود ندارد</string>
     <string name="paid_relay">relay پولی</string>
     <string name="tor_relay">هنگام اتصال Tor را اجبار می‌کند</string>
     <string name="posts_received">یادداشت های دریافت شده</string>
@@ -385,8 +398,6 @@
     <string name="app_definition_by">توسط</string>
     <string name="app_definition_available_on">در دسترس در</string>
     <string name="platform_web">وب</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">تمرین</string>
     <string name="workout_title">عنوان</string>
     <string name="workout_duration">مدت زمان</string>
@@ -411,8 +422,9 @@
     <string name="workout_suggestion_connect_button">اتصال</string>
     <string name="workout_suggestion_distance_km">%1$s کیلومتر</string>
     <string name="workout_from_health_connect">از Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">هنوز هیچ nSite ای یافت نشد.</string>
-    <string name="browser_reload">بارگذاری مجدد</string>
     <string name="browser_unsupported">مرورگر درون‌برنامه‌ای به Android 11 یا جدیدتر نیاز دارد.</string>
     <string name="embedded_tab_load_failed">بارگذاری این برنامه ممکن نشد.</string>
     <string name="browser_go">باز کردن</string>
@@ -420,10 +432,6 @@
     <string name="browser_recent_options">گزینه‌ها</string>
     <string name="browser_recent_remove">حذف از تاریخچه</string>
     <string name="favorite_apps_empty">هنوز هیچ برنامه موردعلاقه‌ای ندارید. یک کلاینت وب یا nsite را باز کنید و روی ستاره ضربه بزنید تا اینجا پین شود.</string>
-    <string name="favorite_app_open_window">باز کردن در پنجره مستقل</string>
-    <string name="favorite_app_access_title">این برنامه به چه چیزی دسترسی دارد</string>
-    <string name="favorite_app_access_static">در محیط sandbox اجرا می‌شود و دسترسی خاصی به حساب شما ندارد.</string>
-    <string name="favorite_app_access_show">چه چیزی در دسترس دارد</string>
     <string name="favorite_app_unavailable">این برنامه هنوز بارگذاری نشده. آن را از کارت خودش باز کنید، یا لحظه‌ای دیگر دوباره امتحان کنید.</string>
     <string name="napplet_manage_permissions">مدیریت مجوزها</string>
     <string name="napplet_none_found">هنوز هیچ nApplet ای یافت نشد.</string>
@@ -432,7 +440,6 @@
     <string name="napplet_consent_deny_always">هرگز اجازه نده</string>
     <string name="napplet_consent_not_now">نه الان</string>
     <string name="nip82_repository_label">منبع: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">دانلود</string>
     <string name="nip82_section_about">درباره</string>
     <string name="nip82_section_platforms">پلتفرم‌ها</string>
@@ -468,7 +475,10 @@
     <string name="nest_lobby_host_label">میزبان</string>
     <string name="nest_lobby_open_action">باز کردن</string>
     <string name="nest_lobby_no_listeners">در حال حاضر هیچ‌کس در اتاق نیست.</string>
-    <string name="nest_lobby_listeners_count">%1$d نفر در حال گوش دادن</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d نفر در حال گوش دادن</item>
+        <item quantity="other">%1$d نفر در حال گوش دادن</item>
+    </plurals>
     <string name="nest_role_host">میزبان</string>
     <string name="nest_role_moderator">ناظر</string>
     <string name="nest_state_muted">میکروفون بی‌صدا است</string>
@@ -541,8 +551,6 @@
     <string name="nests_servers_add_relay_field">آدرس relay (WebTransport)</string>
     <string name="nests_servers_add_auth_field">آدرس Auth (JWT mint)</string>
     <string name="nests_servers_add_pair_button">افزودن</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_use_defaults">استفاده از پیش‌فرض‌های Amethyst</string>
     <string name="nests_servers_add_recommended">افزودن سرور</string>
     <string name="nests_servers_remove">حذف سرور</string>
@@ -577,7 +585,10 @@
     <string name="hashtag_label_added_by">افزوده شده توسط</string>
     <string name="pinned_notes">یادداشت‌های سنجاق‌شده</string>
     <string name="pinned_notes_explainer">یادداشت‌های سنجاق‌شده شما</string>
-    <string name="deleted_items_banner_title">%1$d مورد در این لیست توسط نویسنده‌شان حذف شده است.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d مورد در این لیست توسط نویسنده‌اش حذف شده است.</item>
+        <item quantity="other">%1$d مورد در این لیست توسط نویسنده‌شان حذف شده است.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">حذف از لیست</string>
     <string name="deleted_items_banner_dismiss">رد کردن</string>
     <string name="bookmark_lists">لیست‌های نشانک</string>
@@ -593,7 +604,10 @@
     <string name="interest_set_name_placeholder">علایق من</string>
     <string name="interest_set_hashtag_add_placeholder">افزودن هشتگ</string>
     <string name="interest_set_hashtag_private_toggle">خصوصی</string>
-    <string name="interest_set_hashtag_count">%1$d هشتگ</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d هشتگ</item>
+        <item quantity="other">%1$d هشتگ</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">اقدامات مجموعه علایق</string>
     <string name="interest_set_clone">کپی</string>
     <string name="interest_set_add_hashtag">افزودن هشتگ</string>
@@ -621,7 +635,6 @@
     <string name="quick_zap_amounts_explainer">هنگام فشردن دکمه zap نمایش داده می‌شود. هر مقدار می‌تواند از طریق هر شبکه‌ای که گیرنده پشتیبانی می‌کند پرداخت شود — Lightning، Cashu، یا آن‌چین (آن‌چین فقط برای مبالغ بالاتر). روی مقدار ضربه بزنید تا حذف شود. اگر خالی بگذارید، هر بار برای وارد کردن مقدار گفتگو باز می‌شود.</string>
     <string name="send_onchain_instead">ارسال آن‌چین</string>
     <string name="reload_mint_title">شارژ mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">مقدار شارژ</string>
     <string name="reload_mint_section_to">mint برای شارژ</string>
     <string name="reload_mint_section_from">منبع وجوه</string>
@@ -647,7 +660,6 @@
     <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
     <string name="poll_zap_value_min">حداقل زپ</string>
     <string name="poll_zap_value_max">حداکثر زپ</string>
-    <string name="poll_consensus_threshold">توافق نظر</string>
     <string name="looking_for_event">جستجوی رویداد %1$s</string>
     <string name="send_zap">ارسال Zap</string>
     <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
@@ -655,11 +667,6 @@
     <string name="custom_zaps_add_a_message_nonzap">افزودن پیام صورتحساب</string>
     <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
     <string name="lightning_create_and_add_invoice">ساختن و افزودن</string>
-    <string name="add_content">افزودن به پیام</string>
-    <string name="add_caption">افزودن عنوان</string>
-    <string name="add_caption_example">دوست عزیز من</string>
-    <string name="content_description">توصیف محتوا</string>
-    <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
     <string name="ai_suggested_alt_text_hint">پیشنهاد هوش مصنوعی، ویرایش کنید</string>
     <string name="ai_suggested_alt_text_dismiss">رد کردن پیشنهاد هوش مصنوعی</string>
     <string name="zap_type">نوع زپ</string>
@@ -731,6 +738,9 @@
     <string name="call_calling">در حال تماس…</string>
     <string name="call_connecting">در حال اتصال…</string>
     <string name="call_ended">تماس پایان یافت</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">بستن</string>
     <string name="call_switch_camera">تعویض دوربین</string>
     <string name="call_voice">تماس صوتی</string>
@@ -768,7 +778,6 @@
     <string name="show_sensitive_content_explainer">یک پیام هشدار نمایش می‌دهد وقتی نویسنده پست آن را به عنوان حساس علامت‌گذاری کرده است</string>
     <string name="max_hashtag_limit_title">حداکثر هشتگ در هر پست</string>
     <string name="max_hashtag_limit_explainer">پست‌هایی با هشتگ بیشتر از این محدودیت را پنهان می‌کند. برای غیرفعال‌کردن ۰ قرار دهید</string>
-    <string name="security_unlimited">∞</string>
     <string name="zapraiser">زپ گیری</string>
     <string name="zapraiser_explainer">یک مبلغ ساتوشی هدف به این یادداشت بیافزایید. کلاینت های سازگار ممکن احتمالا این ویژگی را به شکل نوار پیش رونده نشان می دهند تا مشوق کمک مالی باشد.</string>
     <string name="zapraiser_target_amount_in_sats">مبلغ هدف به ساتوشی</string>
@@ -797,15 +806,20 @@
     <string name="all_languages">همه زبان‌ها</string>
     <string name="posting_policy">سیاست ارسال محتوا</string>
     <string name="terms_and_conditions">شرایط &amp; ضوابط</string>
-    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">خطاها و هشدارهای از این رله</string>
     <string name="relay_monitor_reports">گزارش‌های مانیتور relay</string>
     <string name="relay_active_subscriptions">اشتراک‌های فعال</string>
     <string name="relay_req_subscriptions">اشتراک‌های REQ (%1$d)</string>
     <string name="relay_count_subscriptions">اشتراک‌های COUNT (%1$d)</string>
     <string name="relay_outbox_events">رویدادهای Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d نویسنده</string>
-    <string name="relay_filter_ids">%1$d شناسه</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d نویسنده</item>
+        <item quantity="other">%1$d نویسنده</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d شناسه</item>
+        <item quantity="other">%1$d شناسه</item>
+    </plurals>
     <string name="relay_filter_since">از %1$s</string>
     <string name="relay_filter_until">تا %1$s</string>
     <string name="relay_filter_limit">محدودیت %1$d</string>
@@ -829,10 +843,9 @@
     <string name="max_filters_per_sub">حداکثر فیلتر در هر اشتراک</string>
     <string name="max_limit_events_returning">حداکثر محدودیت (رویدادهای برگشتی)</string>
     <string name="max_subid_length">حداکثر طول SubID</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">بازپرداخت</string>
     <string name="cashu_copy_token">کپی کردن توکن</string>
-    <string name="quick_actions_open_in_another_app">باز کردن در برنامه دیگر</string>
+    <string name="quick_actions_open_in_another_app">در یک اپلیکیشن دیگر باز کن</string>
     <string name="live_stream_live_tag">زنده</string>
     <string name="live_stream_offline_tag">آفلاین</string>
     <string name="live_stream_ended_tag">تمام شد</string>
@@ -976,7 +989,6 @@
     <string name="wallet_send">ارسال</string>
     <string name="wallet_receive">دریافت</string>
     <string name="wallet_transactions">تراکنش‌ها</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">یک فاکتور BOLT-11 بچسبانید</string>
     <string name="wallet_pay">پرداخت</string>
     <string name="wallet_payment_success">پرداخت موفقیت‌آمیز بود</string>
@@ -993,9 +1005,7 @@
     <string name="wallet_outgoing">ارسال‌شده</string>
     <string name="wallet_refresh">بازنشانی</string>
     <string name="wallet_filter_all">همه</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">غیر Zaps</string>
-    <string name="wallet_add">افزودن کیف پول</string>
     <string name="wallet_default">پیش‌فرض</string>
     <string name="wallet_set_default">تنظیم به عنوان پیش‌فرض</string>
     <string name="wallet_remove">حذف</string>
@@ -1016,7 +1026,6 @@
     <string name="cashu_discovering">در جستجوی کیف پول شما…</string>
     <string name="cashu_discovering_description">کیف پول‌های NIP-60 بین کلاینت‌ها همگام‌سازی می‌شوند. اگر با این کلید Nostr در برنامه دیگری یک کیف پول ساخته‌اید، باید ظرف چند ثانیه نمایش داده شود.</string>
     <string name="cashu_balance">موجودی</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">آدرس Mint</string>
     <string name="cashu_remove_mint">حذف mint</string>
     <string name="cashu_add_mint">افزودن mint</string>
@@ -1072,9 +1081,7 @@
     <string name="cashu_getting_quote">در حال درخواست قیمت از mint…</string>
     <string name="cashu_verify">تأیید</string>
     <string name="cashu_mint_reachable">✓ Mint در دسترس است</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">نمی‌توان به mint دسترسی داشت: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">ایجاد توکن</string>
     <string name="cashu_redeem_button">بازخرید</string>
     <string name="cashu_done">انجام شد</string>
@@ -1090,8 +1097,6 @@
     <string name="cashu_redeemed_amount">%1$s sats به کیف پول شما بازخرید شد.</string>
     <string name="wallet_paste_uri">جایگذاری URI nostr+walletconnect://</string>
     <string name="wallet_save">ذخیره</string>
-    <string name="wallet_rename">تغییر نام</string>
-    <string name="wallet_rename_title">تغییر نام کیف پول</string>
     <string name="wallet_onchain_transactions">تراکنش‌های Onchain</string>
     <string name="wallet_onchain_no_address">هیچ آدرس on-chain برای این حساب موجود نیست.</string>
     <string name="wallet_onchain_no_backend">هیچ پشتوانه زنجیره‌ای پیکربندی نشده.</string>
@@ -1109,11 +1114,9 @@
     <string name="onchain_send_recipient_placeholder">نام، NIP-05 یا npub</string>
     <string name="onchain_send_change_recipient">تغییر گیرنده</string>
     <string name="onchain_send_amount">مقدار</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">حداقل zap on-chain %1$s sats است — مقادیر کمتر توسط کارمزد ماینر مصرف می‌شوند. به جای آن از Lightning zap استفاده کنید.</string>
     <string name="onchain_send_comment_label">نظر (اختیاری)</string>
     <string name="onchain_send_priority">اولویت</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">در حال بارگذاری تخمین کارمزدها…</string>
     <string name="onchain_send_button_amount">ارسال %1$s sats</string>
     <string name="onchain_send_dont_split">تقسیم نشود — به جای آن به یک گیرنده پرداخت شود</string>
@@ -1122,7 +1125,6 @@
     <string name="onchain_send_result_transaction">تراکنش</string>
     <string name="onchain_send_result_fee">کارمزد</string>
     <string name="onchain_send_result_change">باقی‌مانده</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">انجام شد</string>
     <string name="onchain_send_failed_at">خطا در: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">پرداخت منتشر شد (tx %1$s) اما رسید منتشر نشد.</string>
@@ -1238,7 +1240,6 @@
     <string name="reactions_settings_boost_description">بازنشر یا نقل‌قول این یادداشت</string>
     <string name="reactions_settings_like">پسندیدن</string>
     <string name="reactions_settings_like_description">با یک ایموجی به این یادداشت واکنش نشان بدهید</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">ارسال پرداخت Lightning به نویسنده</string>
     <string name="reactions_settings_share">اشتراک‌گذاری</string>
     <string name="reactions_settings_share_description">اشتراک‌گذاری این یادداشت به صورت خارجی</string>
@@ -1335,13 +1336,11 @@
     <string name="edit_article">ویرایش مقاله</string>
     <string name="proposal_to_edit">پیشنهاد برای بهبود یک نوشته</string>
     <string name="accept_the_suggestion">پذیرش پیشنهاد</string>
-    <string name="enter_picture_in_picture">شروع ویدیو در پنجره‌ای</string>
+    <string name="enter_picture_in_picture">ویديو را در قاب جدا باز کن</string>
     <string name="accessibility_download_for_offline">بارگيری</string>
     <string name="accessibility_send">ارسال</string>
     <string name="accessibility_play_username">نام کاربری را به شکل صوتی بخوان.</string>
-    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">کد QR را اسکن کنید</string>
-    <string name="accessibility_select_date">انتخاب تاریخ</string>
     <string name="load_from_text">از پیام</string>
     <string name="dvm_looking_for_app">جستجوی اپلیکیشن</string>
     <string name="dvm_waiting_status">درخواست شغل ارسال شد، در انتظار پاسخ</string>
@@ -1412,7 +1411,10 @@
     <string name="remove_user_from_the_list">حذف کاربر از لیست</string>
     <string name="follow_list_item_label">بسته دنبال‌کردن</string>
     <string name="members">اعضا</string>
-    <string name="contact_list_containing_label">لیست دنبال‌کردن شامل %1$d کاربر:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">لیست دنبال‌کردن شامل %1$d کاربر:</item>
+        <item quantity="other">لیست دنبال‌کردن شامل %1$d کاربر:</item>
+    </plurals>
     <string name="contact_list_screen_title">لیست دنبال‌کردن</string>
     <string name="contact_list_screen_title_with_count">لیست دنبال‌کردن (%1$d)</string>
     <string name="follow_pack_creation_name_label">نام بسته</string>
@@ -1433,20 +1435,23 @@
     <string name="timeout">زمان پایان یافت</string>
     <string name="retrying">در حال تلاش مجدد…</string>
     <string name="dismiss">رد کردن</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">در حال انتشار</string>
     <string name="broadcasting_name">در حال انتشار %1$s</string>
-    <string name="broadcasting_number_events">در حال انتشار %1$d رویداد…</string>
-    <string name="sent_number_events">%1$d رویداد ارسال شد</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">در حال انتشار %1$d رویداد…</item>
+        <item quantity="other">در حال انتشار %1$d رویداد…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d رویداد ارسال شد</item>
+        <item quantity="other">%1$d رویداد ارسال شد</item>
+    </plurals>
     <string name="bradcasting_result_partial">برخی رویدادها ناموفق بودند</string>
     <string name="bradcasting_result_success">همه رویدادها موفق بودند</string>
     <string name="bradcasting_result_failure">همه رویدادها ناموفق بودند</string>
     <string name="closing_time">زمان پایان</string>
     <string name="confirm">تأیید</string>
     <string name="next">بعدی</string>
-    <string name="go_back">بازگشت</string>
     <string name="approve">تأیید</string>
-    <string name="connected">متصل</string>
     <string name="social_proof">تأیید اجتماعی</string>
     <string name="poll_submit">ثبت</string>
     <string name="poll_view_results">مشاهده نتایج</string>
@@ -1454,7 +1459,10 @@
     <string name="new_chess_game">بازی شطرنج جدید</string>
     <string name="chess_loading_game">در حال بارگذاری بازی…</string>
     <string name="chess_game_not_found">بازی یافت نشد</string>
-    <string name="badge_and_n_others"> و %1$d نفر دیگر</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> و %1$d نفر دیگر</item>
+        <item quantity="other"> و %1$d نفر دیگر</item>
+    </plurals>
     <string name="remove_language">حذف %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">با دنبال‌کردن همان افرادی که شخص مورد اعتمادتان دنبال می‌کند، یک فید عالی شروع کنید.</string>
     <string name="import_follow_list">وارد کردن فهرست دنبال‌شدگان</string>
@@ -1463,9 +1471,18 @@
     <string name="name_search_npub1_alice_example_com">جستجو، npub1…، alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">پشتیبانی از npub، nprofile، NIP-05، hex و Namecoin ‎(.bit)</string>
     <string name="tip">راهنمایی</string>
-    <string name="accounts_found">%1$d حساب یافت شد</string>
-    <string name="num_selected">%1$d انتخاب‌شده</string>
-    <string name="follow_accounts">دنبال‌کردن %1$d حساب</string>
+    <plurals name="accounts_found">
+        <item quantity="one">%1$d حساب یافت شد</item>
+        <item quantity="other">%1$d حساب یافت شد</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">%1$d انتخاب‌شده</item>
+        <item quantity="other">%1$d انتخاب‌شده</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">دنبال‌کردن %1$d حساب</item>
+        <item quantity="other">دنبال‌کردن %1$d حساب</item>
+    </plurals>
     <string name="skip_for_now">فعلاً رد شو</string>
     <string name="fetching_follow_list">در حال دریافت فهرست دنبال‌شدگان…</string>
     <string name="no_follows_found">هیچ دنبال‌شده‌ای یافت نشد</string>
@@ -1497,16 +1514,29 @@
     <string name="event_sync_relays_progress">relay ها: %1$d / %2$d</string>
     <string name="event_sync_events_sent">رویدادهای توزیع‌مجدد: %1$d جدید از %2$d ارسال‌شده و %3$d دریافت‌شده</string>
     <string name="event_sync_done_title">همگام‌سازی کامل شد</string>
-    <string name="event_sync_done_sent">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</string>
-    <string name="event_sync_done_accepted">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</string>
-    <string name="event_sync_done_duration">در %1$d ثانیه تکمیل شد.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</item>
+        <item quantity="other">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</item>
+        <item quantity="other">%1$d رویداد به عنوان جدید توسط relay های مقصد پذیرفته شد.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">در %1$d ثانیه تکمیل شد.</item>
+        <item quantity="other">در %1$d ثانیه تکمیل شد.</item>
+    </plurals>
     <string name="event_sync_error_title">خطای همگام‌سازی</string>
     <string name="event_sync_sending_to">ارسال به</string>
-    <string name="event_sync_outbox_relays">Outbox</string>
-    <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">پیام‌های خصوصی</string>
-    <string name="event_sync_activity_log">در حال بررسی (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">تمام شد (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">در حال بررسی (%1$d relay)</item>
+        <item quantity="other">در حال بررسی (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">تمام شد (%1$d relay)</item>
+        <item quantity="other">تمام شد (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">ارسال‌شده %1$s</string>
     <string name="event_sync_log_recv">دریافت‌شده %1$s</string>
     <string name="event_sync_log_new">جدید %1$s</string>
@@ -1524,7 +1554,6 @@
     <string name="cashu_move_coins_withdraw_ln">برداشت از طریق Lightning…</string>
     <string name="cashu_move_coins_export_token">صادر کردن به عنوان توکن Cashu…</string>
     <string name="cashu_move_coins_working">در حال انتقال سکه‌ها…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">در حال اتصال</string>
     <string name="event_sync_status_downloading">در حال دانلود</string>
     <string name="event_sync_status_error">خطا</string>
@@ -1547,7 +1576,6 @@
     <string name="hls_content_warning_reason_placeholder">دلیل (اختیاری)</string>
     <string name="hls_codec_label">کدک</string>
     <string name="hls_codec_h265">H.265 (فشرده‌سازی بهتر)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 روی این دستگاه در دسترس نیست — به H.264 بازگشت شد.</string>
     <string name="hls_renditions_label">کیفیت‌ها</string>
     <string name="hls_renditions_source_format">وضوح منبع: %1$d×%2$d</string>
@@ -1585,14 +1613,11 @@
     <string name="event_sync_date_filter_until">تا</string>
     <string name="event_sync_date_filter_now">اکنون</string>
     <string name="event_sync_date_filter_all_time">همه زمان‌ها</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">عنوان</string>
     <string name="web_bookmark_title_placeholder">عنوان نشانک</string>
     <string name="web_bookmark_description_label">توضیحات</string>
     <string name="web_bookmark_description_placeholder">توضیح کوتاه</string>
     <string name="web_bookmark_tags_label">برچسب‌ها (با کاما جدا شوند)</string>
-    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
     <string name="web_bookmark_save">ذخیره</string>
     <string name="web_bookmark_delete">حذف</string>
     <string name="web_bookmark_delete_confirm">این نشانک وب حذف شود؟</string>
@@ -1601,15 +1626,12 @@
     <string name="fundraiser_ends">پایان %1$s</string>
     <string name="fundraiser_onchain_donation">اهدای آن‌چین</string>
     <string name="goal_amount_label">مبلغ هدف (sat)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">هدف خود را توضیح دهید</string>
     <string name="goal_description_placeholder">برای چه چیزی جمع‌آوری کمک می‌کنید؟</string>
     <string name="goal_summary_label">خلاصه کوتاه</string>
     <string name="goal_summary_placeholder">توضیح مختصری که در پیش‌نمایش نشان داده می‌شود</string>
     <string name="goal_image_label">URL تصویر (اختیاری)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL وب‌سایت (اختیاری)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">تعیین مهلت</string>
     <string name="request_to_vanish_description">از relay‌ها درخواست می‌کند تا همه داده‌های شما تا تاریخ انتخاب‌شده را به‌طور دائمی حذف کنند. این اقدام بر اساس NIP-62 است و در برخی حوزه‌های قضایی الزام‌آور است.</string>
     <string name="vanish_target_relay">relay‌های هدف</string>
@@ -1674,7 +1696,10 @@
     <string name="manage">مدیریت</string>
     <string name="relay_members">اعضا</string>
     <string name="relay_members_title">اعضای %1$s</string>
-    <string name="relay_members_count">%1$d عضو</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d عضو</item>
+        <item quantity="other">%1$d عضو</item>
+    </plurals>
     <string name="relay_members_loading">در حال بارگذاری اعضا…</string>
     <string name="relay_members_empty">عضوی یافت نشد</string>
     <string name="relay_members_request_join">درخواست عضویت</string>
@@ -1684,9 +1709,15 @@
     <string name="relay_members_you_are_member">شما عضو هستید</string>
     <string name="relay_membership_list">لیست عضویت relay</string>
     <string name="relay_member_added">عضو به relay اضافه شد</string>
-    <string name="relay_members_added">%1$d عضو به relay اضافه شد</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d عضو به relay اضافه شد</item>
+        <item quantity="other">%1$d عضو به relay اضافه شد</item>
+    </plurals>
     <string name="relay_member_removed">عضو از relay حذف شد</string>
-    <string name="relay_members_removed">%1$d عضو از relay حذف شد</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d عضو از relay حذف شد</item>
+        <item quantity="other">%1$d عضو از relay حذف شد</item>
+    </plurals>
     <string name="relay_join_request">درخواست پیوستن به relay</string>
     <string name="relay_leave_request">درخواست خروج از relay</string>
     <string name="ai_writing_use_this">استفاده از این</string>
@@ -1712,7 +1743,10 @@
     <string name="emoji_pack_upload_image_cta">بارگذاری تصویر جلد</string>
     <string name="emoji_pack_upload_image_hint">یک تصویر مربعی برای نمایش این بسته ایموجی انتخاب کنید.</string>
     <string name="no_emoji_packs">هنوز هیچ بسته ایموجی‌ای ندارید</string>
-    <string name="emoji_pack_count">%1$d ایموجی</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d ایموجی</item>
+        <item quantity="other">%1$d ایموجی</item>
+    </plurals>
     <string name="my_emoji_list_title">فهرست ایموجی من</string>
     <string name="my_emoji_list_explainer">بسته‌های ایموجی که به انتخاب خود افزوده‌اید (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">هنوز هیچ بسته ایموجی‌ای به فهرست خود اضافه نکرده‌اید</string>
@@ -1726,7 +1760,6 @@
     <string name="emoji_pack_actions_dialog_title">اقدامات بسته ایموجی</string>
     <string name="emoji_private_toggle">خصوصی</string>
     <string name="emoji_private_badge">ایموجی خصوصی</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">نقض قوانین انجمن</string>
     <string name="community_rules_violation_author_denied">شما در فهرست رد این انجمن هستید. پست‌ها پذیرفته نخواهند شد.</string>
     <string name="community_rules_violation_kind_not_allowed">این انجمن رویدادهای نوع %1$d را نمی‌پذیرد.</string>
@@ -1738,7 +1771,6 @@
     <string name="marmot_create_group_footer">یک گروه MLS جدید ایجاد خواهد شد. بعداً می‌توانید اعضا اضافه کنید.</string>
     <string name="marmot_group_default_name">گروه Marmot</string>
     <string name="marmot_group_fallback_name">گروه %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">شناخته‌شده</string>
     <string name="marmot_tab_known_count">شناخته‌شده (%1$d)</string>
     <string name="marmot_tab_new_requests">درخواست‌های جدید</string>
@@ -1752,6 +1784,9 @@
     <string name="marmot_group_name_placeholder">نام گروه را وارد کنید</string>
     <string name="marmot_group_description_placeholder">توضیحات گروه را وارد کنید (اختیاری)</string>
     <string name="marmot_edit_info_footer">تغییرات از طریق MLS به گروه اعمال و به همه اعضا منتشر خواهند شد.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">relay‌های KeyPackage تنظیم نشده‌اند</string>
     <string name="marmot_keypackage_relays_not_set_message">هنوز فهرست relay‌های KeyPackage ندارید (MIP-00). این فهرست به دیگران می‌گوید KeyPackage شما در کجا منتشر شده تا بتوانند شما را به گپ‌های گروهی دعوت کنند.\n\nآیا از relay‌های جعبه خروجی فعلی خود استفاده شود؟</string>
     <string name="marmot_use_outbox_relays">استفاده از relay‌های جعبه خروجی</string>
@@ -1786,14 +1821,6 @@
     <string name="ots_explorer_api_label">آدرس پایه API کاوشگر</string>
     <string name="dvm_pay_invoice_from_dvm">پرداخت فاکتور از DVM</string>
     <string name="dvm_pay_amount_to_dvm">پرداخت %1$s sat به DVM</string>
-    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">مجوزها:</string>
-    <string name="nsite_root_site">سایت اصلی</string>
-    <string name="nsite_source">منبع:</string>
-    <string name="nsite_servers">سرورها:</string>
-    <string name="nsite_open">باز کردن</string>
     <string name="about_legal">درباره &amp; قانونی</string>
     <string name="account_settings">تنظیمات حساب</string>
     <string name="add">افزودن</string>
@@ -1801,7 +1828,6 @@
     <string name="add_a_nip96_server">یک سرور NIP-96 بیافزایید</string>
     <string name="add_client_tag_explainer">وقتی فعال باشد، Amethyst یک برچسب کلاینت NIP-89 به رویدادهایی که منتشر می‌کنید اضافه می‌کند.</string>
     <string name="add_client_tag_title">افزودن برچسب کلاینت به رویدادهایم</string>
-    <string name="add_sensitive_content_description">هشدار محتوای حساس پیش از نمایش محتوا اضافه می کند</string>
     <string name="add_sensitive_content_label">محتوای حساس</string>
     <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
     <string name="ai_writing_setting_description">از یک مدل هوش مصنوعی روی دستگاه برای پیشنهاد اصلاحات متن و تغییر لحن استفاده می‌کند.</string>
@@ -1880,12 +1906,10 @@
     <string name="broadcast_section_explainer">relay هایی که در ارسال یادداشت‌های شما به سایر relay ها تخصص دارند، مانند sendit.nosflare.com. Amethyst این relay را به همه رویدادهای جدید ساخته شده توسط شما اضافه می‌کند</string>
     <string name="browser">مرورگر</string>
     <string name="browser_favorites">موردعلاقه‌ها</string>
-    <string name="browser_tor_off">بارگذاری از طریق وب باز. برای استفاده از Tor ضربه بزنید.</string>
-    <string name="browser_tor_on">بارگذاری از طریق Tor. برای استفاده از وب باز ضربه بزنید.</string>
     <plurals name="calendar_day_a11y_events">
-    <item quantity="one">%1$s، %2$d رویداد</item>
-    <item quantity="other">%1$s، %2$d رویداد</item>
-</plurals>
+        <item quantity="one">%1$s، %2$d رویداد</item>
+        <item quantity="other">%1$s، %2$d رویداد</item>
+    </plurals>
     <string name="calendar_event_image_upload_failed">آپلود تصویر ناموفق بود</string>
     <string name="calendar_event_image_upload_failed_body">تصویر انتخاب شده آپلود نشد. دوباره امتحان کنید یا یک آدرس URL وارد کنید.</string>
     <string name="calendar_export_share_title">اشتراک‌گذاری رویداد تقویم</string>
@@ -1894,26 +1918,24 @@
     <string name="calendar_relative_ongoing">در حال وقوع</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · پایان %2$s</string>
     <plurals name="calendar_reminder_body">
-    <item quantity="one">تا %1$d دقیقه دیگر شروع می‌شود</item>
-    <item quantity="other">تا %1$d دقیقه دیگر شروع می‌شود</item>
-</plurals>
+        <item quantity="one">تا %1$d دقیقه دیگر شروع می‌شود</item>
+        <item quantity="other">تا %1$d دقیقه دیگر شروع می‌شود</item>
+    </plurals>
     <string name="calendar_reminder_channel_description">هشدار هنگامی که رویدادی که در آن شرکت می‌کنید در شرف شروع است.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">یادآوری‌های تقویم</string>
     <string name="calendar_reminder_default_title">رویداد تقویم</string>
     <string name="calendar_reminder_settings_enabled_subtitle">یک اعلان هنگامی که رویدادی که در آن شرکت می‌کنید در شرف شروع است ارسال می‌شود.</string>
     <string name="calendar_reminder_settings_enabled_title">ارسال یادآوری‌ها</string>
     <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="one">%1$d دقیقه</item>
-    <item quantity="other">%1$d دقیقه</item>
-</plurals>
+        <item quantity="one">%1$d دقیقه</item>
+        <item quantity="other">%1$d دقیقه</item>
+    </plurals>
     <string name="calendar_reminder_settings_title">یادآوری‌های تقویم</string>
     <string name="calendar_view_day">روز</string>
     <string name="calendar_view_feed">فید</string>
     <string name="calendar_view_month">ماه</string>
     <string name="calendar_view_week">هفته</string>
     <string name="call_accept">پذیرفتن</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">دوربین خاموش</string>
     <string name="call_camera_on">دوربین روشن</string>
     <string name="call_earpiece">گوشی</string>
@@ -1938,34 +1960,30 @@
     <string name="cashu_history_outgoing">ارسال‌شده</string>
     <string name="cashu_mint_matches_header">Mint های مطابق</string>
     <plurals name="cashu_mint_plus_others">
-    <item quantity="one">+%1$d بیشتر</item>
-    <item quantity="other">+%1$d بیشتر</item>
-</plurals>
+        <item quantity="one">+%1$d بیشتر</item>
+        <item quantity="other">+%1$d بیشتر</item>
+    </plurals>
     <string name="cashu_mint_popular_header">Mint های محبوب</string>
     <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="one">توصیه‌شده توسط %1$d نفر دیگر</item>
-    <item quantity="other">توصیه‌شده توسط %1$d نفر دیگر</item>
-</plurals>
+        <item quantity="one">توصیه‌شده توسط %1$d نفر دیگر</item>
+        <item quantity="other">توصیه‌شده توسط %1$d نفر دیگر</item>
+    </plurals>
     <string name="cashu_move_coins_done">%1$s sat به %2$s منتقل شد.</string>
     <string name="cashu_no_wallet_found">هیچ کیف پول Cashu سازگاری در سیستم یافت نشد</string>
     <plurals name="cashu_pending_quotes_title">
-    <item quantity="one">%1$d فاکتور در انتظار</item>
-    <item quantity="other">%1$d فاکتور در انتظار</item>
-</plurals>
+        <item quantity="one">%1$d فاکتور در انتظار</item>
+        <item quantity="other">%1$d فاکتور در انتظار</item>
+    </plurals>
     <string name="cashu_quote_confirm">%1$s sat + تا %2$s sat کارمزد پرداخت شود؟</string>
     <string name="cashu_settings_delete_confirm_body">یک درخواست حذف برای توصیه kind:38000 شما از %1$s منتشر کنید. relay هایی که NIP-09 را رعایت می‌کنند آن را حذف خواهند کرد.</string>
     <string name="cashu_settings_restore_result">%1$s sats در %2$s اثبات بازیابی شد.</string>
     <string name="cashu_successful_redemption">Cashu دریافت شد</string>
     <string name="cashu_successful_redemption_explainer">%1$s ساتوشی به کیف پول شما ارسال شد. (کارمزد: %2$s ساتوشی)</string>
     <plurals name="cashu_untrusted_mint_title">
-    <item quantity="one">وجوه نگهداری‌شده در %1$d mint که استفاده نمی‌کنید</item>
-    <item quantity="other">وجوه نگهداری‌شده در %1$d mint که استفاده نمی‌کنید</item>
-</plurals>
+        <item quantity="one">وجوه نگهداری‌شده در %1$d mint که استفاده نمی‌کنید</item>
+        <item quantity="other">وجوه نگهداری‌شده در %1$d mint که استفاده نمی‌کنید</item>
+    </plurals>
     <string name="cashu_waiting_for_payment">در انتظار پرداخت فاکتور…</string>
-    <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="one">%1$d mint</item>
-    <item quantity="other">%1$d mint</item>
-</plurals>
     <string name="cast_stop_casting">توقف پخش</string>
     <string name="cast_to_device">پخش روی دستگاه</string>
     <string name="child_safety_standards">استانداردهای ایمنی کودکان</string>
@@ -1999,7 +2017,10 @@
     <string name="communities">جوامع</string>
     <string name="community_rules_violation_kind_size_exceeded">پیش‌نویس %1$d بایت است؛ این انجمن این نوع را تا %2$d بایت محدود می‌کند.</string>
     <string name="community_rules_violation_max_size_exceeded">پیش‌نویس %1$d بایت است؛ این انجمن رویدادها را تا %2$d بایت محدود می‌کند.</string>
-    <string name="community_rules_violation_quota_exceeded">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</item>
+        <item quantity="other">امروز %1$d رویداد از این نوع ارسال کرده‌اید (حد مجاز %2$d).</item>
+    </plurals>
     <string name="compose_settings">تنظیمات نوشتن</string>
     <string name="connect_through_your_orbot_setup_short">درگاه پیش فرض 9050 است</string>
     <string name="connected_section">relay های متصل</string>
@@ -2008,15 +2029,10 @@
     <string name="connectivity_type_always">همیشه</string>
     <string name="connectivity_type_never">هرگز</string>
     <string name="connectivity_type_unmetered_wifi_only">وای فای بی اندازه</string>
-    <string name="content_description_add_document">افزودن مدارک</string>
-    <string name="content_description_add_image">افزودن تصویر</string>
-    <string name="content_description_add_media">افزودن رسانه</string>
-    <string name="content_description_add_video">افزودن فیلم</string>
     <string name="content_warning_hide_all_sensitive_content_option">پنهان</string>
     <string name="content_warning_see_warnings_option">هشدار</string>
     <string name="content_warning_show_all_sensitive_content_option">نمایش</string>
     <string name="conversations">گفتگوها</string>
-    <string name="convert_gif_to_mp4_description">GIF متحرک را به ویدیوی MP4 تبدیل می‌کند تا حجم فایل کمتر و سازگاری پخش بهتری داشته باشید.</string>
     <string name="convert_gif_to_mp4_label">تبدیل GIF به MP4</string>
     <string name="copied_note_id_to_clipboard">(@note1)شناسه یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
@@ -2058,29 +2074,29 @@
     <string name="drawer_section_system">سیستم</string>
     <string name="drawer_section_you">شما</string>
     <plurals name="duration_days">
-    <item quantity="one">%1$d روز</item>
-    <item quantity="other">%1$d روز</item>
-</plurals>
+        <item quantity="one">%1$d روز</item>
+        <item quantity="other">%1$d روز</item>
+    </plurals>
     <plurals name="duration_hours">
-    <item quantity="one">%1$d ساعت</item>
-    <item quantity="other">%1$d ساعت</item>
-</plurals>
+        <item quantity="one">%1$d ساعت</item>
+        <item quantity="other">%1$d ساعت</item>
+    </plurals>
     <plurals name="duration_minutes">
-    <item quantity="one">%1$d دقیقه</item>
-    <item quantity="other">%1$d دقیقه</item>
-</plurals>
+        <item quantity="one">%1$d دقیقه</item>
+        <item quantity="other">%1$d دقیقه</item>
+    </plurals>
     <plurals name="duration_months">
-    <item quantity="one">%1$d ماه</item>
-    <item quantity="other">%1$d ماه</item>
-</plurals>
+        <item quantity="one">%1$d ماه</item>
+        <item quantity="other">%1$d ماه</item>
+    </plurals>
     <plurals name="duration_weeks">
-    <item quantity="one">%1$d هفته</item>
-    <item quantity="other">%1$d هفته</item>
-</plurals>
+        <item quantity="one">%1$d هفته</item>
+        <item quantity="other">%1$d هفته</item>
+    </plurals>
     <plurals name="duration_years">
-    <item quantity="one">%1$d سال</item>
-    <item quantity="other">%1$d سال</item>
-</plurals>
+        <item quantity="one">%1$d سال</item>
+        <item quantity="other">%1$d سال</item>
+    </plurals>
     <string name="edit_calendar_collection">ویرایش تقویم</string>
     <string name="edit_calendar_event">ویرایش رویداد تقویمی</string>
     <string name="edit_community">ویرایش جامعه</string>
@@ -2090,7 +2106,6 @@
     <string name="emoji_private_explainer">ایموجی‌های خصوصی به صورت رمزنگاری‌شده روی relay‌ها ذخیره می‌شوند و فقط برای شما قابل مشاهده‌اند. درست مانند ایموجی‌های عمومی در منوی واکنش و تکمیل خودکار «:» نمایش داده می‌شوند.</string>
     <string name="emoji_public_explainer">ایموجی‌های عمومی برای همه قابل مشاهده‌اند و در منوی واکنش و انتخابگر «:» تکمیل خودکار ظاهر می‌شوند، البته اگر این بسته در فهرست ایموجی شما باشد.</string>
     <string name="emoji_sets">ایموجی‌ها</string>
-    <string name="encrypt_files_description">فایل‌ها را قبل از آپلود برای حفظ حریم خصوصی رمزگذاری کنید. برخی سرورها ممکن است فایل‌های رمزگذاری شده را در حساب‌های رایگان قبول نکنند.</string>
     <string name="encrypt_files_label">رمزگذاری فایل‌ها</string>
     <string name="ephemeral_relay_chat">گفتگوی ناپایدار</string>
     <string name="error">خطا</string>
@@ -2110,11 +2125,9 @@
     <string name="event_sync_title">همگام‌سازی relay</string>
     <string name="events_from_you">رویدادهای شما</string>
     <string name="events_to_you">رویدادهای ارسال‌شده به شما</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">سرکیت</string>
     <string name="exercise_cycling">دوچرخه‌سواری</string>
     <string name="exercise_diet">رژیم غذایی</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">روزه‌داری</string>
     <string name="exercise_hiking">کوه‌نوردی</string>
     <string name="exercise_meditation">مدیتیشن</string>
@@ -2138,8 +2151,6 @@
     <string name="failed_to_upload_media_no_details">رسانه بارگذاری نشد</string>
     <string name="failed_to_upload_to_server_with_message">بارگذاری نشد %1$s: %2$s</string>
     <string name="favorite_app_add">افزودن به موردعلاقه‌ها</string>
-    <string name="favorite_app_network_open">از طریق وب باز بارگذاری می‌شود.</string>
-    <string name="favorite_app_network_tor">از طریق Tor بارگذاری می‌شود.</string>
     <string name="favorite_app_recent">اخیر</string>
     <string name="favorite_app_remove">حذف از موردعلاقه‌ها</string>
     <string name="favorite_app_still_loading">آن برنامه هنوز بارگذاری نشده. لحظه‌ای دیگر دوباره امتحان کنید.</string>
@@ -2248,7 +2259,6 @@
     <string name="key_is_required">کلید الزامیست</string>
     <string name="keypackage_section">relay های KeyPackage</string>
     <string name="keypackage_section_explainer">relay هایی که KeyPackage های MLS شما در آن‌ها منتشر می‌شوند (MIP-00). سایر کاربران این KeyPackage ها را برای دعوت شما به گروه‌های چت Marmot واکشی می‌کنند. بین ۱ تا ۳ relay که رویدادهای KeyPackage را از شما قبول می‌کنند و امکان خواندن عمومی را دارند وارد کنید.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">مجموعه نشان‌های پذیرفته شده</string>
     <string name="kind_adventure_prologue">مقدمه ماجرا</string>
     <string name="kind_adventure_reading">مطالعه ماجرا</string>
@@ -2313,7 +2323,6 @@
     <string name="kind_follow_list">فهرست دنبال‌شدگان</string>
     <string name="kind_follow_packs">بسته‌های دنبال‌کردن</string>
     <string name="kind_geohash_follows">دنبال‌کردن‌های Geohash</string>
-    <string name="kind_gift_wraps">GiftWraps</string>
     <string name="kind_git_issue">مشکل Git</string>
     <string name="kind_git_patch">وصله Git</string>
     <string name="kind_git_reply">پاسخ Git</string>
@@ -2332,15 +2341,11 @@
     <string name="kind_mute_list">فهرست بی‌صداشدگان</string>
     <string name="kind_named_bookmarks">نشانک‌های نام‌گذاری‌شده</string>
     <string name="kind_nests_servers">سرورهای Nests</string>
-    <string name="kind_nip">NIP</string>
     <string name="kind_nip04_dms">پیام‌های خصوصی NIP-04</string>
-    <string name="kind_nns">NNS</string>
-    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_notes">یادداشت‌ها</string>
     <string name="kind_nwc_request">درخواست NWC</string>
     <string name="kind_nwc_response">پاسخ NWC</string>
     <string name="kind_old_bookmark_list">لیست نشانک قدیمی</string>
-    <string name="kind_ots">OTS</string>
     <string name="kind_outbox_relays">relay‌های خروجی</string>
     <string name="kind_pay_to">پرداخت به</string>
     <string name="kind_people_lists">فهرست‌های افراد</string>
@@ -2368,8 +2373,6 @@
     <string name="kind_room_presence">حضور در اتاق</string>
     <string name="kind_seals">مهرها</string>
     <string name="kind_search_relays">relay های جستجو</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     <string name="kind_torrent_comments">نظرات تورنت</string>
     <string name="kind_torrents">تورنت‌ها</string>
     <string name="kind_trusted_providers">ارائه‌دهندگان مورد اعتماد</string>
@@ -2381,14 +2384,11 @@
     <string name="kind_video_repl">ویدیو (Repl)</string>
     <string name="kind_voice_msg">پیام صوتی</string>
     <string name="kind_voice_reply">پاسخ صوتی</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">نشانک وب</string>
-    <string name="kind_wiki">Wiki</string>
     <string name="kind_workouts">تمرینات ورزشی</string>
     <string name="kind_zap_goals">اهداف Zap</string>
     <string name="kind_zap_poll">نظرسنجی Zap</string>
     <string name="kind_zap_req">درخواست Zap</string>
-    <string name="kind_zaps">Zaps</string>
     <string name="known">شناس</string>
     <string name="language_preferences">تنظیمات نمایش زبان</string>
     <string name="language_preferences_description">برای هر جفت زبان ترجمه شده، انتخاب کنید کدام زبان اول نمایش داده شود.</string>
@@ -2427,22 +2427,18 @@
     <string name="marmot_group">گروه MLS</string>
     <string name="marmot_group_info_updated">اطلاعات گروه به‌روزرسانی شد</string>
     <plurals name="marmot_member_count">
-    <item quantity="one">%1$d عضو</item>
-    <item quantity="other">%1$d عضو</item>
-</plurals>
+        <item quantity="one">%1$d عضو</item>
+        <item quantity="other">%1$d عضو</item>
+    </plurals>
     <string name="marmot_member_removed">عضو حذف شد</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d پیام</item>
-    <item quantity="other">%1$d پیام</item>
-</plurals>
     <string name="marmot_not_a_member">عضو این گروه نیستید</string>
     <string name="marmot_unknown_error">خطای ناشناخته</string>
     <string name="media_added">رسانه افزوده شد</string>
     <string name="media_added_to_profile_gallery">رسانه به گالری نمایه شما افزوده شد</string>
     <string name="media_download_has_started_toast">بارگیری رسانه آغاز شد…</string>
     <string name="media_servers">سرورهای رسانه</string>
-    <string name="messages_cant_upload_explainer">ابتدا مقصد پیام را وارد کنید</string>
-    <string name="messages_cant_upload_title">آپلود ممکن نیست</string>
+    <string name="messages_cant_upload_explainer">مقصد پیام را وارد کنید</string>
+    <string name="messages_cant_upload_title">نمی توان بارگذاری کرد</string>
     <string name="messages_new_message_subject">موضوع</string>
     <string name="metadata_strip_failed_title">متادیتا حذف نشد</string>
     <string name="metadata_strip_failed_upload_cancelled">حذف متادیتای خصوصی از رسانه ناموفق بود. آپلود لغو شد.</string>
@@ -2454,17 +2450,17 @@
     <string name="music_playlist_cover_upload_cta">آپلود تصویر کاور</string>
     <string name="music_playlist_cover_upload_hint">یک تصویر مربعی برای استفاده به عنوان آرت‌ورک این پلی‌لیست انتخاب کنید.</string>
     <plurals name="music_playlist_more_tracks">
-    <item quantity="one">+%1$d آهنگ دیگر</item>
-    <item quantity="other">+%1$d آهنگ دیگر</item>
-</plurals>
+        <item quantity="one">+%1$d آهنگ دیگر</item>
+        <item quantity="other">+%1$d آهنگ دیگر</item>
+    </plurals>
     <plurals name="music_playlist_track_count">
-    <item quantity="one">%1$d آهنگ</item>
-    <item quantity="other">%1$d آهنگ</item>
-</plurals>
+        <item quantity="one">%1$d آهنگ</item>
+        <item quantity="other">%1$d آهنگ</item>
+    </plurals>
     <plurals name="music_playlist_track_count_short">
-    <item quantity="one">%1$d آهنگ</item>
-    <item quantity="other">%1$d آهنگ</item>
-</plurals>
+        <item quantity="one">%1$d آهنگ</item>
+        <item quantity="other">%1$d آهنگ</item>
+    </plurals>
     <string name="music_playlist_uploading_banner">در حال آپلود کاور و انتشار. این فرآیند حتی اگر صفحه را ترک کنید ادامه خواهد داشت.</string>
     <string name="music_track_audio_upload_cta">آپلود فایل صوتی</string>
     <string name="music_track_audio_upload_hint">یک MP3، WAV، یا FLAC انتخاب کنید. هنگام ذخیره روی سرور رسانه‌ای شما آپلود خواهد شد.</string>
@@ -2475,7 +2471,6 @@
     <string name="muted_button">بیصدا شده. برای لغو کلیک کنید</string>
     <string name="my_lists">لیست‌های من</string>
     <string name="name_is_required">نام الزامی است</string>
-    <string name="namecoin_response_time">%1$dms</string>
     <string name="namecoin_settings">تنظیمات Namecoin</string>
     <string name="napplet_cap_identity">هویت</string>
     <string name="napplet_cap_identity_desc">خواندن کلید عمومی شما</string>
@@ -2501,9 +2496,9 @@
     <string name="napplet_consent_identity_read">این nApplet می‌خواهد پروفایل و داده‌های حساب شما را بخواند.</string>
     <string name="napplet_consent_notify">این nApplet می‌خواهد به شما اعلان نشان دهد.</string>
     <plurals name="napplet_consent_pay_amount">
-    <item quantity="one">این nApplet می‌خواهد یک فاکتور Lightning به مبلغ %1$d sat پرداخت کند.</item>
-    <item quantity="other">این nApplet می‌خواهد یک فاکتور Lightning به مبلغ %1$d sat پرداخت کند.</item>
-</plurals>
+        <item quantity="one">این nApplet می‌خواهد یک فاکتور Lightning به مبلغ %1$d sat پرداخت کند.</item>
+        <item quantity="other">این nApplet می‌خواهد یک فاکتور Lightning به مبلغ %1$d sat پرداخت کند.</item>
+    </plurals>
     <string name="napplet_consent_publish">این nApplet می‌خواهد یک رویداد kind %1$d را به عنوان شما امضا و منتشر کند.</string>
     <string name="napplet_consent_publish_encrypted">این nApplet می‌خواهد یک رویداد رمزگذاری شده را به عنوان شما ارسال کند.</string>
     <string name="napplet_consent_publish_preview">این nApplet می‌خواهد یک رویداد kind %1$d را به عنوان شما امضا و منتشر کند:</string>
@@ -2512,28 +2507,19 @@
     <string name="napplet_consent_sign">این سایت می‌خواهد یک رویداد kind %1$d را با کلید Nostr شما امضا کند.</string>
     <string name="napplet_consent_storage">این nApplet می‌خواهد از ذخیره‌سازی خصوصی خود استفاده کند.</string>
     <string name="napplet_consent_upload">این nApplet می‌خواهد یک فایل به سرور رسانه‌ای شما بارگذاری کند.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
-    <string name="napplets">nApplets</string>
     <string name="nest_chat_send_failed_title">ارسال پیام انجام نشد</string>
     <string name="nest_hush_local">ساکت کردن این سخنران</string>
     <string name="nest_hush_local_restore">بازگرداندن این سخنران</string>
     <string name="nest_leave">ترک کردن</string>
     <string name="nest_leave_host_close_failed">اتاق به عنوان بسته علامت‌گذاری نشد. در حال خروج — اتاق به صورت خودکار بسته خواهد شد.</string>
     <plurals name="nest_listener_count">
-    <item quantity="one">%1$d شنونده</item>
-    <item quantity="other">%1$d شنونده</item>
-</plurals>
+        <item quantity="one">%1$d شنونده</item>
+        <item quantity="other">%1$d شنونده</item>
+    </plurals>
     <string name="nest_lower_hand">پایین آوردن دست</string>
     <string name="nest_mic_mute">قطع میکروفون</string>
     <string name="nest_mic_unmute">باصدا کردن میکروفون</string>
-    <string name="nest_mute">بی‌صدا</string>
     <string name="nest_no_server_save_failed">ذخیره لیست سرور nest انجام نشد. دوباره امتحان کنید.</string>
-    <string name="nest_notification_broadcasting">Nest — زنده</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">پخش صدا را هنگام باز بودن اتاق ادامه می‌دهد.</string>
-    <string name="nest_notification_listening">Nest متصل شد</string>
-    <string name="nest_notification_stop">توقف</string>
-    <string name="nest_notification_text">ضربه بزنید تا بازگردید.</string>
     <string name="nest_participant_follow">دنبال کردن</string>
     <string name="nest_participant_mute">بی‌صدا</string>
     <string name="nest_participant_unfollow">لغو دنبال کردن</string>
@@ -2544,8 +2530,6 @@
     <string name="nest_presence_raised_hand">دست بلند کرد</string>
     <string name="nest_presence_speaking">در حال صحبت است</string>
     <string name="nest_raise_hand">دست بلند کردن</string>
-    <string name="nest_unmute">باصدا</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">به عنوان یک رویداد قابل جایگزینی kind-10112 ذخیره می‌شود تا کلاینت‌های دیگر بتوانند ترجیح شما را بخوانند.</string>
     <string name="nests_servers_my_section">سرورهای شما</string>
     <string name="nests_servers_recommended_explainer">پیشنهادات داخلی که می‌توانید با یک ضربه به لیستتان اضافه کنید.</string>
@@ -2578,10 +2562,6 @@
     <string name="new_requests">در خواست جدید</string>
     <string name="new_threads">رشته جدید</string>
     <string name="new_workout">تمرین جدید</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d فایل پیوست شده</item>
-    <item quantity="other">%1$d فایل پیوست شده</item>
-</plurals>
     <string name="no_blossom_apps_found_description">برنامه‌های Blossom یافت نشدند. لطفاً یک برنامه Blossom محلی نصب کنید تا این فایل را ببینید</string>
     <string name="no_blossom_apps_found_title">باز کردن لینک‌های Blossom ممکن نیست</string>
     <string name="no_camera_app_found">هیچ اپلیکیشن دوربینی در این دستگاه پیدا نشد</string>
@@ -2591,7 +2571,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">هیچ نوع واکنشی انتخاب نشده. نگه دارید تا تغییر دهید</string>
     <string name="no_reactions_setup">هیچ واکنشی تنظیم نشده است</string>
     <string name="no_wallet_found">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد. لطفا یک کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
-    <string name="no_wallet_found_with_error">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد (خطا: %1$s). لطفا کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
     <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
     <string name="notification_settings">اعلان‌ها</string>
     <string name="notification_settings_section_categories">دسته‌بندی‌ها</string>
@@ -2607,25 +2586,24 @@
     <string name="nowhere_link_card_message">پیام Nowhere</string>
     <string name="nowhere_link_card_petition">درخواست‌نامه Nowhere</string>
     <string name="nowhere_link_card_store">فروشگاه Nowhere</string>
-    <string name="nsites">nSites</string>
     <string name="nudity">برهنگی</string>
     <string name="nutzap_failed_no_event">نمی‌توان مرجع رویداد ساخت</string>
     <string name="nutzap_failed_no_recipient">هیچ کلید عمومی گیرنده‌ای در یادداشت وجود ندارد</string>
     <string name="nutzap_failed_private_note">Nutzap ها عمومی هستند و این یادداشت خصوصی را فاش می‌کنند. به جای آن از Lightning zap استفاده کنید.</string>
     <string name="nutzap_failed_title">Nutzap ناموفق بود</string>
     <plurals name="onchain_send_button_amount_split">
-    <item quantity="one">ارسال %1$s sats، %2$d طرفه</item>
-    <item quantity="other">ارسال %1$s sats، %2$d طرفه</item>
-</plurals>
+        <item quantity="one">ارسال %1$s sats، %2$d طرفه</item>
+        <item quantity="other">ارسال %1$s sats، %2$d طرفه</item>
+    </plurals>
     <string name="onchain_send_error_backend_not_configured">پشتوانه زنجیره بیتکوین پیکربندی نشده است</string>
     <string name="onchain_send_error_broadcast">نمی‌توان تراکنش را منتشر کرد</string>
     <string name="onchain_send_error_build">نمی‌توان تراکنش را ساخت</string>
     <string name="onchain_send_error_load_utxos">نمی‌توان موجودی بیتکوین شما را بارگذاری کرد</string>
     <string name="onchain_send_error_publish_receipt">پرداخت ارسال شد، اما رسید zap قابل انتشار نبود</string>
     <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="one">پرداخت ارسال شد (%1$d از %2$d رسید منتشر شد)، اما رسید بعدی قابل انتشار نبود</item>
-    <item quantity="other">پرداخت ارسال شد (%1$d از %2$d رسید منتشر شد)، اما رسید بعدی قابل انتشار نبود</item>
-</plurals>
+        <item quantity="one">پرداخت ارسال شد (%1$d از %2$d رسید منتشر شد)، اما رسید بعدی قابل انتشار نبود</item>
+        <item quantity="other">پرداخت ارسال شد (%1$d از %2$d رسید منتشر شد)، اما رسید بعدی قابل انتشار نبود</item>
+    </plurals>
     <string name="onchain_send_error_recipient_dust">سهم یک گیرنده زیر مقدار dust است</string>
     <string name="onchain_send_error_sign">نمی‌توان تراکنش را امضا کرد</string>
     <string name="onchain_send_fee_eta_fast">~۱۰ دقیقه</string>
@@ -2634,19 +2612,18 @@
     <string name="onchain_send_fee_fast">سریع</string>
     <string name="onchain_send_fee_normal">معمولی</string>
     <string name="onchain_send_fee_slow">آهسته</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
-    <item quantity="one">تقسیم بین %1$d گیرنده</item>
-    <item quantity="other">تقسیم بین %1$d گیرنده</item>
-</plurals>
+        <item quantity="one">تقسیم بین %1$d گیرنده</item>
+        <item quantity="other">تقسیم بین %1$d گیرنده</item>
+    </plurals>
     <plurals name="onchain_send_splits_skipped">
-    <item quantity="one">%1$d گیرنده‌ای که فقط آدرس Lightning دارد نادیده گرفته می‌شود — on-chain به کلید عمومی Nostr برای استخراج آدرس نیاز دارد.</item>
-    <item quantity="other">%1$d گیرنده‌ای که فقط آدرس Lightning دارند نادیده گرفته می‌شوند — on-chain به کلید عمومی Nostr برای استخراج آدرس نیاز دارد.</item>
-</plurals>
+        <item quantity="one">%1$d گیرنده‌ای که فقط آدرس Lightning دارد نادیده گرفته می‌شود — on-chain به کلید عمومی Nostr برای استخراج آدرس نیاز دارد.</item>
+        <item quantity="other">%1$d گیرنده‌ای که فقط آدرس Lightning دارند نادیده گرفته می‌شوند — on-chain به کلید عمومی Nostr برای استخراج آدرس نیاز دارد.</item>
+    </plurals>
     <plurals name="onchain_send_use_note_split">
-    <item quantity="one">از تقسیم‌بندی %1$d طرفه این یادداشت استفاده کن</item>
-    <item quantity="other">از تقسیم‌بندی %1$d طرفه این یادداشت استفاده کن</item>
-</plurals>
+        <item quantity="one">از تقسیم‌بندی %1$d طرفه این یادداشت استفاده کن</item>
+        <item quantity="other">از تقسیم‌بندی %1$d طرفه این یادداشت استفاده کن</item>
+    </plurals>
     <string name="onchain_stage_broadcasting">انتشار</string>
     <string name="onchain_stage_building">ساخت تراکنش</string>
     <string name="onchain_stage_loading_utxos">بارگذاری موجودی</string>
@@ -2674,21 +2651,21 @@
     <string name="pin_to_profile">سنجاق کردن به پروفایل</string>
     <string name="play">پخش</string>
     <plurals name="podcast_episode_count">
-    <item quantity="one">%1$d قسمت</item>
-    <item quantity="other">%1$d قسمت</item>
-</plurals>
+        <item quantity="one">%1$d قسمت</item>
+        <item quantity="other">%1$d قسمت</item>
+    </plurals>
     <string name="poll_author_no_vote">سازندگان نظرسنجی نمی توانند در نظر سنجی خود رای دهند.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">این نظرسنجی برای رای جدید بسته شده است</string>
     <string name="poll_multiple_choice">چندانتخابی</string>
     <string name="poll_single_choice">تک‌انتخابی</string>
     <string name="poll_unable_to_vote">نمی توان رای داد</string>
     <string name="polls">نظرسنجی‌ها</string>
     <string name="post">ارسال</string>
+    <string name="post_noun">پست</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
-    <item quantity="one">این پست بیش از %1$d هشتگ دارد</item>
-    <item quantity="other">این پست بیش از %1$d هشتگ دارد</item>
-</plurals>
+        <item quantity="one">این پست بیش از %1$d هشتگ دارد</item>
+        <item quantity="other">این پست بیش از %1$d هشتگ دارد</item>
+    </plurals>
     <string name="preview_card_image_for">%1$s پیش نمایش تصویر کارت برای</string>
     <string name="privacy_options">گزینه های حریم خصوصی</string>
     <string name="privacy_policy">سیاست حریم خصوصی</string>
@@ -2715,10 +2692,10 @@
     <string name="proxy_section">relay های پراکسی</string>
     <string name="proxy_section_explainer">relay های تجمیع‌کننده که برنامه باید برای دانلود فیدهای شما از آن‌ها استفاده کند، مانند filter.nostr.wine. این جایگزین مدل outbox می‌شود و باعث می‌شود برنامه فقط به relay های موجود در لیست‌هایتان متصل شود.</string>
     <string name="public_chat">گفتگوی عمومی</string>
-    <string name="public_chat_explainer">چت‌های عمومی برای همه در Nostr قابل مشاهده هستند و هر کسی می‌تواند در آن‌ها شرکت کند. آن‌ها برای جوامع باز حول موضوعات خاص عالی هستند. مدیریت می‌تواند با حذف پست‌ها در relay های مربوطه کنترل شود</string>
-    <string name="public_chat_relays_explainer">بین ۱ تا ۳ relay که این گروه را میزبانی می‌کنند وارد کنید. کلاینت‌های Nostr از این تنظیم برای دانلود پیام‌ها و ارسال پیام‌های شما استفاده می‌کنند.</string>
-    <string name="public_chat_relays_title">Relay ها</string>
-    <string name="public_chat_title">متادیتای چت عمومی</string>
+    <string name="public_chat_explainer">گفتگوهای عمومی در ناستر برای همه نمایان هستند می توانند در آن شرکت کنند. آنها برای انجمن های باز درباره موضوعات به‌خصوص عالی هستند. نظارت می تواند توسط حذف پست ها از رله ها انجام گیرد</string>
+    <string name="public_chat_relays_explainer">برای میزبانی این گروه ۱تا ۳ رله وارد کنید. کلاینت های ناستر از این تنظیمات استفاده می کنند تا بدانند پیام ها را از کجا بارگیری کنند و به کجا بفرستند.</string>
+    <string name="public_chat_relays_title">رله ها</string>
+    <string name="public_chat_title">فراداده گفتگوی عمومی</string>
     <string name="public_chats">گفتگوهای عمومی</string>
     <string name="public_home_section">رله های خانه/ صندوق خروجی عمومی</string>
     <string name="public_home_section_explainer">این نوع از رله تمام محتوای شما را ذخریه می کند. امتیست پست های شما را اینجا می فرستد و دیگران از این رله ها برای یافتن محتوای شما استفاده می کنند. بین ۱-۳ رله وارد کنید. این رله ها ممکن است رله های شخصی، پولی، یا عمومی باشند.</string>
@@ -2789,33 +2766,33 @@
     <string name="scheduled_posts_error_prefix">خطا: %1$s</string>
     <string name="scheduled_posts_event_id_copied">شناسه یادداشت کپی شد</string>
     <plurals name="scheduled_posts_logout_toast">
-    <item quantity="one">خروج شد · %1$d پست زمان‌بندی‌شده حذف شد</item>
-    <item quantity="other">خروج شد · %1$d پست زمان‌بندی‌شده حذف شد</item>
-</plurals>
+        <item quantity="one">خروج شد · %1$d پست زمان‌بندی‌شده حذف شد</item>
+        <item quantity="other">خروج شد · %1$d پست زمان‌بندی‌شده حذف شد</item>
+    </plurals>
     <string name="scheduled_posts_logout_toast_zero">خروج شد</string>
     <plurals name="scheduled_posts_logout_warning">
-    <item quantity="one">شما %1$d پست زمان‌بندی‌شده دارید که هنوز منتشر نشده. خروج آن را به طور دائمی حذف خواهد کرد.</item>
-    <item quantity="other">شما %1$d پست زمان‌بندی‌شده دارید که هنوز منتشر نشده‌اند. خروج آن‌ها را به طور دائمی حذف خواهد کرد.</item>
-</plurals>
+        <item quantity="one">شما %1$d پست زمان‌بندی‌شده دارید که هنوز منتشر نشده. خروج آن را به طور دائمی حذف خواهد کرد.</item>
+        <item quantity="other">شما %1$d پست زمان‌بندی‌شده دارید که هنوز منتشر نشده‌اند. خروج آن‌ها را به طور دائمی حذف خواهد کرد.</item>
+    </plurals>
     <string name="scheduled_posts_notification_failed_title">پست زمان‌بندی‌شده ناموفق بود</string>
     <string name="scheduled_posts_notification_sent_title">پست زمان‌بندی‌شده منتشر شد</string>
     <plurals name="scheduled_posts_relay_count">
-    <item quantity="one">به %1$d relay</item>
-    <item quantity="other">به %1$d relay</item>
-</plurals>
+        <item quantity="one">به %1$d relay</item>
+        <item quantity="other">به %1$d relay</item>
+    </plurals>
     <string name="scheduled_posts_status_cancelled">لغو شد</string>
     <string name="scheduled_posts_status_failed">ناموفق</string>
     <string name="scheduled_posts_status_pending">زمان‌بندی‌شده</string>
     <string name="scheduled_posts_status_publishing">در حال ارسال…</string>
     <string name="scheduled_posts_status_sent">ارسال شد</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="one"> · %1$d موعد در ۱ ساعت</item>
-    <item quantity="other"> · %1$d موعد در ۱ ساعت</item>
-</plurals>
+        <item quantity="one"> · %1$d موعد در ۱ ساعت</item>
+        <item quantity="other"> · %1$d موعد در ۱ ساعت</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="one">%1$d در صف</item>
-    <item quantity="other">%1$d در صف</item>
-</plurals>
+        <item quantity="one">%1$d در صف</item>
+        <item quantity="other">%1$d در صف</item>
+    </plurals>
     <string name="search_relays_not_found_examples">انتخاب های مناسب: \n%1$s</string>
     <string name="search_relays_title">رله های جستجو</string>
     <string name="search_section">رله های جستجو</string>
@@ -2868,9 +2845,9 @@
     <string name="theme_description">پوسته مطابق سیستم، روشن، یا تاریک</string>
     <string name="this_message_will_disappear_in">این پیام در %1$s ناپدید می‌شود</string>
     <plurals name="thread_collapsed_reply_count">
-    <item quantity="one">+%1$d\nپاسخ</item>
-    <item quantity="other">+%1$d\nپاسخ</item>
-</plurals>
+        <item quantity="one">+%1$d\nپاسخ</item>
+        <item quantity="other">+%1$d\nپاسخ</item>
+    </plurals>
     <string name="today">امروز</string>
     <string name="tor_custom">سفارشی</string>
     <string name="tor_custom_explainer">خودت را بساز</string>
@@ -2944,8 +2921,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">کاربر %1$s آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
     <string name="vanish_history">تاریخچه ناپدید شدن</string>
     <string name="vanish_request_sent">درخواست ناپدید شدن ارسال شد</string>
-    <string name="video_codec_h265_description">کیفیت بهتر با حجم فایل کمتر، اما همه دستگاه‌ها از پخش H.265 پشتیبانی نمی‌کنند.</string>
-    <string name="video_codec_h265_label">استفاده از کدک H.265/HEVC</string>
     <string name="video_download_has_started_toast">بارگیری ویدئو آغاز شد…</string>
     <string name="video_player_settings">دکمه‌های پخش‌کننده ویدیو</string>
     <string name="video_saved_to_the_gallery">ویدئو در گالری گوشی ذخیره شد</string>
@@ -2967,7 +2942,7 @@
     <string name="web_bookmarks">نشانک‌های وب</string>
     <string name="what_s_on_your_mind">به چی فکر میکنی؟</string>
     <string name="workouts">تمرینات</string>
-    <string name="write_a_message">یک پیام بنویسید…</string>
+    <string name="write_a_message">نوشتن یک پیام…</string>
     <string name="write_to_relay">نوشتن به رله</string>
     <string name="write_to_relay_description">مقدار بایتی که به این رله فرستاده شده، شامل فیلترها و رویدادها</string>
     <string name="zap_description">زَپ</string>
@@ -2980,6 +2955,85 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">خدمات لایتنینگ %1$s گیرنده دردسترس نیست. از آدرس لایتنینگ "%2$s" محاسبه شد. خطا: %3$s. بررسی کنید آیا سرور کار می کند و آیا آدرس لایتنینگ صحیح است.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">نمی توان صورتحساب لایتنینگ از %1$s ساخت. المنت pr در JSON بدست آمده یافت نشد.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">صورت حساب لایتنینگ ساخته نشد. پیغام از %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="security_unlimited">∞</string>
+    <string name="not_available_acronym">N/A</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="cashu_mints">Mints</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="accessibility_pushpin">Pushpin</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <plurals name="cashu_wallet_subtitle_mints">
+    <item quantity="one">%1$d mint</item>
+    <item quantity="other">%1$d mint</item>
+</plurals>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_wiki">Wiki</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="namecoin_response_time">%1$dms</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="napplets">nApplets</string>
+    <string name="nests">Nests</string>
+    <string name="nsites">nSites</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="browser_address_hint">جستجو یا وارد کردن آدرس</string>
     <string name="napplet_untitled">nApplet بی‌عنوان</string>
 </resources>

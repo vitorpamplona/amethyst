@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_unverifiable
 import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -286,7 +287,7 @@ fun RelayMembersScreen(
                 }
             } else {
                 Text(
-                    text = stringRes(Res.string.relay_members_count, members.size),
+                    text = pluralStringRes(Res.plurals.relay_members_count, members.size, members.size),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

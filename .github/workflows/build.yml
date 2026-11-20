@@ -24,6 +24,9 @@ jobs:
       - name: Orphaned translations (no locale string may outlive its default key)
         run: tools/agent-hooks/orphan_strings_check.py
 
+      - name: Locale layout (a regional file holds only its differences from the base language)
+        run: tools/agent-hooks/locale_layout_check.py
+
       - name: Compose catalog escaping (Android escapes render literally there)
         run: tools/agent-hooks/compose_escaping_check.py
 

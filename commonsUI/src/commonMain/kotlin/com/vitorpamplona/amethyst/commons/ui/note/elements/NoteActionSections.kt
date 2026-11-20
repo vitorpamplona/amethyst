@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.highlight_action
 import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
 import com.vitorpamplona.amethyst.commons.resources.marmot_admin_delete_message
 import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
-import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.post_noun
 import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
 import com.vitorpamplona.amethyst.commons.resources.quick_action_mute_thread
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
@@ -435,7 +435,7 @@ fun noteActionSections(
                 }
 
                 else -> {
-                    val noteBookmarkType = if (note.event is LongFormContentEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
+                    val noteBookmarkType = if (note.event is LongFormContentEvent) stringRes(Res.string.article) else stringRes(Res.string.post_noun)
                     add(
                         NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType), group = NoteActionGroup.BOOKMARK) {
                             if (note.event is LongFormContentEvent) {

@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_f
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserLine
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -176,12 +177,12 @@ private fun PreviewList(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringRes(Res.string.accounts_found, contacts.size),
+                pluralStringRes(Res.plurals.accounts_found, contacts.size, contacts.size),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                stringRes(Res.string.num_selected, selected.size),
+                pluralStringRes(Res.plurals.num_selected, selected.size, selected.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -227,7 +228,7 @@ private fun PreviewList(
                     nav.popUpTo(Route.Home, Route.Home::class)
                 },
             ) {
-                Text(stringRes(Res.string.follow_accounts, selected.size))
+                Text(pluralStringRes(Res.plurals.follow_accounts, selected.size, selected.size))
             }
         }
     }

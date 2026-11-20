@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
@@ -90,7 +91,7 @@ fun InterestSetItem(
                 },
                 supportingContent = {
                     Text(
-                        text = stringRes(Res.string.interest_set_hashtag_count, interestSet.allHashtags.size),
+                        text = pluralStringRes(Res.plurals.interest_set_hashtag_count, interestSet.allHashtags.size, interestSet.allHashtags.size),
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                     )
