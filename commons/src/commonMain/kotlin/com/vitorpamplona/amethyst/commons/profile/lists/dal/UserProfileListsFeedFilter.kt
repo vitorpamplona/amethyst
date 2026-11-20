@@ -34,7 +34,9 @@ import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
  * The public people lists (NIP-51 follow sets, kind 30000) and follow packs (kind 39089) the
  * viewed profile published. The profile subscription already loads both kinds, so this only
  * reads the addressable cache. The user's block list, a kind 30000 with a reserved d-tag, is
- * not a list to browse and stays out.
+ * not a list to browse and stays out. So do lists without a single public member: other clients
+ * have stored settings as kind 30000 (e.g. `notifications/lastOpened`), and a list whose members
+ * are all private shows up empty to everyone else anyway.
  *
  * Unlike the feeds, this ignores the top-bar follow-list choice: the lists belong to the profile
  * being viewed, whether or not the account follows its owner.
@@ -43,8 +45,6 @@ class UserProfileListsFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    private val blockListDTag = FollowSetEvent.createBlockAddress(user.pubkeyHex).dTag
-
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + "ProfileLists" + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
@@ -60,12 +60,17 @@ class UserProfileListsFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { acceptableEvent(it) }
 
     private fun acceptableEvent(it: Note): Boolean {
-        val noteEvent = it.event
-        val isOwnList =
-            noteEvent?.pubKey == user.pubkeyHex &&
-                (noteEvent is StarterPackEvent || (noteEvent is FollowSetEvent && noteEvent.dTag() != blockListDTag))
+        val noteEvent = it.event ?: return false
+        if (noteEvent.pubKey != user.pubkeyHex) return false
 
-        return isOwnList && account.isAcceptable(it)
+        val isBrowsableList =
+            when (noteEvent) {
+                is StarterPackEvent -> noteEvent.followIdSet().isNotEmpty()
+                is FollowSetEvent -> noteEvent.dTag() != FollowSetEvent.BLOCK_LIST_D_TAG && noteEvent.publicUsersIdSet().isNotEmpty()
+                else -> false
+            }
+
+        return isBrowsableList && account.isAcceptable(it)
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

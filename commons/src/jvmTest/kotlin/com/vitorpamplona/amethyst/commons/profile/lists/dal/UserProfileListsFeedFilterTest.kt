@@ -37,7 +37,8 @@ import kotlin.test.assertEquals
 
 /**
  * The profile's Lists tab shows the people lists and follow packs the viewed user published:
- * not another user's, not other list kinds, and not the user's block list.
+ * not another user's, not other list kinds, not the user's block list, and not lists with no
+ * public member.
  */
 class UserProfileListsFeedFilterTest {
     private val owner = NostrSignerSync(KeyPair())
@@ -56,11 +57,10 @@ class UserProfileListsFeedFilterTest {
         signer: NostrSignerSync,
         kind: Int,
         dTag: String,
+        members: List<String> = listOf(member),
     ): Event {
-        val event =
-            signer.sign<Event>(
-                EventTemplate(1_700_000_000L, kind, arrayOf(arrayOf("d", dTag), arrayOf("title", dTag), arrayOf("p", member)), ""),
-            )
+        val tags = arrayOf(arrayOf("d", dTag), arrayOf("title", dTag)) + members.map { arrayOf("p", it) }
+        val event = signer.sign<Event>(EventTemplate(1_700_000_000L, kind, tags, ""))
         LocalCache.justConsume(event, null, false)
         return event
     }
@@ -96,5 +96,15 @@ class UserProfileListsFeedFilterTest {
 
         acceptable = false
         assertEquals(emptySet(), feedOf(user))
+    }
+
+    @Test
+    fun listsWithNoPublicMemberAreLeftOut() {
+        val user = NostrSignerSync(KeyPair())
+        consumed(user, FollowSetEvent.KIND, "notifications/lastOpened", members = emptyList())
+        consumed(user, StarterPackEvent.KIND, "empty-pack", members = emptyList())
+        val list = consumed(user, FollowSetEvent.KIND, "friends")
+
+        assertEquals(setOf(list.id), feedOf(user))
     }
 }
