@@ -170,6 +170,7 @@ private fun PickerRow(
             Modifier
                 .fillMaxWidth()
                 .background(if (highlighted) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                .keepsFieldFocus()
                 .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {

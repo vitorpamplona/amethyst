@@ -29,10 +29,11 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-Nothing here publishes to Maven Central. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
-mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
-`create-release.yml`; an Amethyst release only consumes the versions pinned in
-`gradle/libs.versions.toml`, so those must already be on Maven Central when you tag.
+Nothing here publishes a library. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
+mls-kmp, marmot-kmp, cordn-kmp, quic-kmp, kiko-kmp, negentropy-kmp) each release from their own
+repo to Nostr + Blossom; an Amethyst release only consumes the versions pinned in
+`gradle/libs.versions.toml`, which Magpie resolves and `gradle/magpie.lock` pins, so those must
+already be on Nostr when you tag.
 
 ---
 
@@ -48,8 +49,9 @@ mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
    else hardcodes the version. The libraries version themselves in their own repos.
 
    Check that every library version pinned in `gradle/libs.versions.toml`
-   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`)
-   resolves on Maven Central: a pin to an unreleased library fails the build.
+   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`, `kikoKmp`)
+   resolves through Magpie, and that `gradle/magpie.lock` has its entries committed: a pin to an
+   unreleased library fails the build.
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the

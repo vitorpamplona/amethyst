@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,14 +56,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermissionStore
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
@@ -128,8 +127,11 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_own_
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberManifestIconModel
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
@@ -140,13 +142,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.nip4
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.napplet.NappletBrokerService
-import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
@@ -166,8 +167,11 @@ fun ConnectedAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = Amethyst.instance.nappletPermissionLedger
-    val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
+    val services = LocalAppServices.current
+    val platform = LocalAppPlatform.current
+    val capabilityLedger = services.nappletPermissionLedger
+    val signerLedger = remember(services) { NostrSignerPermissionLedger(services.signerPermissionStore) }
+    val sitePermissions = platform.browserSitePermissions
     val untitled = stringRes(Res.string.napplet_untitled)
     // Where this app's signer decisions live: NIP-46 clients under their own coordinate, everything
     // else under the per-account key the broker writes (NappletSignerKey).
@@ -187,7 +191,7 @@ fun ConnectedAppDetailScreen(
     LaunchedEffect(coordinate, reload) {
         state =
             withContext(Dispatchers.IO) {
-                loadDetailState(coordinate, signerKey, capabilityLedger, signerLedger, untitled)
+                loadDetailState(coordinate, signerKey, capabilityLedger, signerLedger, services.browserIcons, untitled)
             }
     }
 
@@ -213,7 +217,7 @@ fun ConnectedAppDetailScreen(
     var nip46Info by remember(coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
     LaunchedEffect(coordinate) {
         if (nip46Client != null) {
-            nip46Info = withContext(Dispatchers.IO) { Amethyst.instance.nip46ClientStore.load(coordinate) }
+            nip46Info = withContext(Dispatchers.IO) { services.nip46ClientStore.load(coordinate) }
         }
     }
     val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
@@ -285,7 +289,7 @@ fun ConnectedAppDetailScreen(
                             // short-circuits the check the new policy would fail. Changing the trust
                             // level is a decision about how this app is treated from now on, so drop
                             // what it is holding and let the new policy actually apply.
-                            NappletBrokerService.revokeSessionGrants(coordinate)
+                            platform.revokeNappletSessionGrants(coordinate)
                         }
                     },
                 )
@@ -310,7 +314,7 @@ fun ConnectedAppDetailScreen(
                                         signerLedger.revokeOpDecision(signerKey, NostrSignerOp.fromKey(opKey) ?: return@mutate)
                                         // The persisted override is gone, but a live "allow for this session"
                                         // grant would keep authorizing this app until the broker dies.
-                                        NappletBrokerService.revokeSessionGrants(coordinate)
+                                        platform.revokeNappletSessionGrants(coordinate)
                                     }
                                 },
                             )
@@ -349,8 +353,8 @@ fun ConnectedAppDetailScreen(
             }
 
             // Camera / microphone / location answers for a website (`browser:<origin>`), editable here.
-            if (coordinate.startsWith(BROWSER_PREFIX)) {
-                SitePermissionsSection(coordinate.removePrefix(BROWSER_PREFIX))
+            if (coordinate.startsWith(BROWSER_PREFIX) && sitePermissions != null) {
+                SitePermissionsSection(coordinate.removePrefix(BROWSER_PREFIX), sitePermissions)
             }
 
             // Recent activity (NIP-46 clients only)
@@ -376,13 +380,13 @@ fun ConnectedAppDetailScreen(
                         // A forgotten website also loses its camera / microphone / location answers.
                         if (coordinate.startsWith(BROWSER_PREFIX)) {
                             val origin = coordinate.removePrefix(BROWSER_PREFIX)
-                            BrowserSitePermission.entries.forEach { WebSitePermissionRegistry.set(origin, it, BrowserSitePermission.Decision.ASK) }
+                            BrowserSitePermission.entries.forEach { sitePermissions?.set(origin, it, BrowserSitePermission.Decision.ASK) }
                         }
                         // Forgetting an app has to stop it signing *now*. The two ledgers above only
                         // drop persisted + capability grants; the broker separately holds the signer's
                         // in-memory "allow for this session" grants, which would otherwise keep the
                         // app authorized for as long as any applet surface stays open.
-                        NappletBrokerService.revokeSessionGrants(coordinate)
+                        platform.revokeNappletSessionGrants(coordinate)
                     }
                     nav.popBack()
                 },
@@ -412,7 +416,7 @@ private fun Nip46RelaysSection(
     onReconnect: () -> Unit,
 ) {
     val reconnectingStr = stringRes(Res.string.nip46_signer_reconnecting)
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val anyOffline =
         remember(relays, inboxRelays, connectedRelays) {
             if (relays.isEmpty()) {
@@ -426,7 +430,7 @@ private fun Nip46RelaysSection(
         if (anyOffline) {
             Nip46ReconnectPill {
                 onReconnect()
-                Toast.makeText(context, reconnectingStr, Toast.LENGTH_SHORT).show()
+                shortNotice.show(reconnectingStr)
             }
         }
     }
@@ -574,12 +578,15 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
 private const val BROWSER_PREFIX = "browser:"
 
 /**
- * The site's camera / microphone / location answers ([WebSitePermissionRegistry]), each switchable between
+ * The site's camera / microphone / location answers ([BrowserSitePermissionStore]), each switchable between
  * Ask, Allow and Block — Chrome's per-site permission list.
  */
 @Composable
-private fun SitePermissionsSection(origin: String) {
-    val all by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
+private fun SitePermissionsSection(
+    origin: String,
+    store: BrowserSitePermissionStore,
+) {
+    val all by store.decisions.collectAsStateWithLifecycle()
     val decisions = all[origin].orEmpty()
     SectionHeader(stringRes(Res.string.browser_permission_section))
     Surface(
@@ -615,7 +622,7 @@ private fun SitePermissionsSection(origin: String) {
                                     text = { Text(stringRes(option.labelRes())) },
                                     onClick = {
                                         menuOpen = false
-                                        WebSitePermissionRegistry.set(origin, permission, option)
+                                        store.set(origin, permission, option)
                                     },
                                 )
                             }
@@ -880,6 +887,7 @@ private suspend fun loadDetailState(
     signerKey: String,
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
+    browserIcons: BrowserIconRegistry,
     untitled: String,
 ): ConnectedAppDetailState {
     val author = coordinate.substringBefore(':')
@@ -899,7 +907,7 @@ private suspend fun loadDetailState(
     val (title, iconUrl) =
         if (author == "browser") {
             val host = OmniboxInput.hostOf(identifier) ?: identifier
-            host to Amethyst.instance.browserIcons.iconModelFor(host)
+            host to browserIcons.iconModelFor(host)
         } else {
             resolveNappletMeta(author, identifier, untitled)
         }

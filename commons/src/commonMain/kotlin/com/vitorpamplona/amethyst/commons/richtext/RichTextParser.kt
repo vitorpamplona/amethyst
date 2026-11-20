@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
+import com.vitorpamplona.amethyst.commons.service.http.BlossomAuthorHints
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
@@ -73,6 +74,12 @@ class RichTextParser {
         // which is why classifyMedia falls back to the extension before giving up.
         val kind = classifyMedia(fullUrl, contentType)
         val declaredSize = (frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()
+
+        // Lets the image loader retry a Blossom blob on the author's other servers when the one
+        // this URL names has lost it.
+        if (authorPubKey != null && (kind == MediaContentKind.IMAGE || kind == MediaContentKind.VIDEO || kind == MediaContentKind.PDF)) {
+            BlossomAuthorHints.add(fullUrl, authorPubKey)
+        }
 
         return if (kind == MediaContentKind.IMAGE) {
             MediaUrlImage(

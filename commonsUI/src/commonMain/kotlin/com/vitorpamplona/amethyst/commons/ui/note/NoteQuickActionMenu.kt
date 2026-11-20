@@ -292,15 +292,18 @@ fun NoteQuickActionMenu(
     val showBlockAlertDialog = remember { mutableStateOf(false) }
     val showReportDialog = remember { mutableStateOf(false) }
 
-    RenderMainPopup(
-        accountViewModel,
-        note,
-        onDismiss,
-        showBlockAlertDialog,
-        showDeleteAlertDialog,
-        showReportDialog,
-        onWantsToEditDraft,
-    )
+    // The report takes over from the popup, which would otherwise sit on top of its dialog.
+    if (!showReportDialog.value) {
+        RenderMainPopup(
+            accountViewModel,
+            note,
+            onDismiss,
+            showBlockAlertDialog,
+            showDeleteAlertDialog,
+            showReportDialog,
+            onWantsToEditDraft,
+        )
+    }
 
     if (showDeleteAlertDialog.value) {
         DeleteAlertDialog(note, accountViewModel) {

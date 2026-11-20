@@ -78,30 +78,21 @@ material3 = "1.12.0-alpha03"
 media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
-# The Nostr protocol library, split out of this repo into vitorpamplona/quartz. Since 2.19.0 it
-# releases on Nostr + Blossom through Magpie (settings.gradle.kts, gradle/magpie.lock), not Maven
-# Central, and so do mls-kmp (1.3.1) and quic-kmp (1.2.1). 2.19.0 holds everything the JitPack pin below used to bring in (vitorpamplona/quartz#114:
-# kinds 13194 and 13534 addressable, INostrClient.disallowedKinds, the NIP-34 work, JVM target 21,
-# secp256k1 from libschnorr256k1-kotlin, the nutzap-redeem fixes, the trust network keyed by the
-# whole pubkey).
+# The Nostr protocol library, split out of this repo into vitorpamplona/quartz. Released on Nostr +
+# Blossom through Magpie since 2.19.0 (settings.gradle.kts), like every library below.
 quartzKmp = "2.20.0"
-# To use a quartz commit built by JitPack in place of the release above, when the app needs quartz
-# work that is not released yet, uncomment this with the commit: the root build swaps every quartz
-# dependency for it, the bindings' included. -PquartzDir=../quartz still wins.
-# quartzJitpack = "<quartz commit>"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
-# and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
-# the version above: 2.9.0 removed no public API they use.
-marmotKmp = "2.2.1"
-cordnKmp = "1.2.1"
+# and cordn (vitorpamplona/cordn-kmp), both built against the quartz and mls-kmp versions here. Released
+# on Nostr + Blossom only since marmot 2.3.0 and cordn 1.3.0.
+marmotKmp = "2.3.0"
+cordnKmp = "1.3.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
-# versions those libraries were built against. crypto-kmp releases through Magpie since 2.1.1 (the
-# same sources as 2.1.0).
+# versions those libraries were built against. crypto-kmp is on Nostr + Blossom (Magpie) since 2.1.1.
 cryptoKmp = "2.1.1"
 # The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp): kiko runs a
 # cart, kiko-player plays it in real time (commons), kiko-compose shows it (commonsUI).
-kikoKmp = "0.2.4"
+kikoKmp = "0.2.5"
 mlsKmp = "1.3.1"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.1"
@@ -117,6 +108,9 @@ osmdroid = "6.1.20"
 runner = "1.7.0"
 # The JNI bindings must match the secp256k1-kmp version quartz is built against (its secp256k1Kmp).
 secp256k1KmpJniAndroid = "0.24.0"
+# The C library's bindings, for the benchmark module's comparison only. The com.vitorpamplona.schnorr256k1
+# group comes through Magpie, where releases start at 1.1.1.
+schnorr256k1Kmp = "1.1.1"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.20"
 sonarqubeGradlePlugin = "7.5.0.8588"
@@ -131,6 +125,8 @@ zelory = "3.0.1"
 pdfbox = "3.0.8"
 zoomable = "2.16.0"
 composemediaplayer = "0.11.4"
+composenativetray = "2.1.7"
+nucleus = "2.5.18"
 jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
 thumbnailator = "0.4.21"
@@ -232,6 +228,11 @@ thumbnailator = { group = "net.coobird", name = "thumbnailator", version.ref = "
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
 composemediaplayer-audio = { group = "io.github.kdroidfilter", name = "composemediaplayer-audio", version.ref = "composemediaplayer" }
+composenativetray = { group = "dev.nucleusframework", name = "composenativetray", version.ref = "composenativetray" }
+nucleus-core-runtime = { group = "dev.nucleusframework", name = "nucleus.core-runtime", version.ref = "nucleus" }
+nucleus-notification-linux = { group = "dev.nucleusframework", name = "nucleus.notification-linux", version.ref = "nucleus" }
+nucleus-notification-macos = { group = "dev.nucleusframework", name = "nucleus.notification-macos", version.ref = "nucleus" }
+nucleus-notification-windows = { group = "dev.nucleusframework", name = "nucleus.notification-windows", version.ref = "nucleus" }
 jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
 jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -301,6 +302,7 @@ ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", v
 fourkoma = { module = "cc.ekblad:4koma", version.ref = "fourkoma" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
+schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
 # Build-time only, gated behind the local.properties sonar opt-in in the root build script (LGPL-3.0).
 sonarqube-gradle-plugin = { group = "org.sonarsource.scanner.gradle", name = "sonarqube-gradle-plugin", version.ref = "sonarqubeGradlePlugin" }
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }

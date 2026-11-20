@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -51,9 +53,14 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_open
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_quit
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_tooltip
 import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
@@ -66,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
@@ -86,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
 import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
+import com.vitorpamplona.amethyst.desktop.platform.TrayIconFiles
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
@@ -107,6 +116,8 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
+import dev.nucleusframework.composenativetray.tray.api.Tray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -119,8 +130,10 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
 import java.awt.Taskbar
 import java.awt.Toolkit
+import java.awt.desktop.AppReopenedListener
 import java.io.File
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -201,11 +214,17 @@ fun main(args: Array<String>) {
     }
     // A copy whose window was closed while a print went on is still running, unseen: launching the
     // app again brings it back, on The Observer, instead of opening a second copy beside it.
-    val keptForPrint = KeptForPrintMarker(filesDir)
+    val keptForPrint = HiddenWindowMarker(filesDir, HiddenWindowMarker.PRINT_FILE)
     if (linked == null && keptForPrint.present) {
-        if (DesktopDeepLinks.forwardToRunningInstance(KeptForPrintMarker.RESTORE_URI, filesDir)) exitProcess(0)
+        if (DesktopDeepLinks.forwardToRunningInstance(HiddenWindowMarker.PRINT_RESTORE_URI, filesDir)) exitProcess(0)
         // Nobody answered: a copy that died hidden left it behind.
         keptForPrint.set(false)
+    }
+    // The same for a copy closed to the tray, its NIP-46 signer still answering apps.
+    val keptInTray = HiddenWindowMarker(filesDir, HiddenWindowMarker.TRAY_FILE)
+    if (linked == null && keptInTray.present) {
+        if (DesktopDeepLinks.forwardToRunningInstance(HiddenWindowMarker.TRAY_RESTORE_URI, filesDir)) exitProcess(0)
+        keptInTray.set(false)
     }
     DesktopDeepLinks.installOsHandlers()
     // One listener per data folder: a later copy taking over the port file sent the links meant for
@@ -329,6 +348,7 @@ fun main(args: Array<String>) {
         val quitScope = rememberCoroutineScope()
         val quit: () -> Unit = {
             keptForPrint.set(false)
+            keptInTray.set(false)
             exitApplication()
         }
         // The question shows in the main window, brought back for it.
@@ -341,6 +361,89 @@ fun main(args: Array<String>) {
                 CloseAction.ASK -> askInMainWindow()
                 else -> quit()
             }
+        }
+
+        // An account's NIP-46 signer keeps answering apps once the window is closed, as Android's runs
+        // from a background service: the app stays up in the tray (and quits where there is no tray),
+        // and the tray's own Quit, the menu's or Cmd+Q end it.
+        val signerRunning by remember { modules.accountsCache.anySignerRunning() }.collectAsState(false)
+        // The tray icon's files while a tray can show; null when there is none (closing then quits).
+        // From files, not a Painter: a Painter is drawn off-screen first, which can fail (no DirectX
+        // 12 on Windows), leaving no icon while the window hides. (1.3.3's Painter path also crashed
+        // on this Compose's Skiko; 2.1.1 fixed that.)
+        var trayIcon by remember { mutableStateOf<TrayIconFiles?>(null) }
+        val trayIconDir = remember { File(filesDir, "tray") }
+        LaunchedEffect(signerRunning, trayIcon == null) {
+            if (!signerRunning || trayIcon != null) return@LaunchedEffect
+            // A Linux tray host can start after the app does (the AppIndicator extension turned on):
+            // ask again now and then while there is none. Windows and macOS don't change their answer.
+            while (true) {
+                trayIcon = withContext(Dispatchers.IO) { if (SystemTrayHost.available()) IconResources.trayIconFiles(trayIconDir) else null }
+                if (trayIcon != null || !PlatformInfo.isLinux) break
+                delay(SystemTrayHost.RECHECK_MS)
+            }
+        }
+        val showFromBackground: () -> Unit =
+            remember(windowState, windows) {
+                {
+                    windowState.isMinimized = false
+                    windows.showMainWindow()
+                    DesktopDeepLinks.requestForeground()
+                }
+            }
+        // Where closing the main window would quit: true when the app keeps running instead. The icon
+        // is checked first (a tray host can go away while the app runs, and the library starts no
+        // icon without a word when it can't), off the UI thread, and the app quits after all when it
+        // isn't up: the window never hides with no icon to return by.
+        val keepRunningInBackground: () -> Boolean = {
+            when (BackgroundCloseRules.onClose(signerRunning, trayIcon != null)) {
+                BackgroundClose.QUIT -> false
+                BackgroundClose.TRAY -> {
+                    quitScope.launch {
+                        if (withContext(Dispatchers.IO) { SystemTrayHost.showing() }) {
+                            windows.hideToTray(root.navigator.stacks?.arrangement)
+                        } else {
+                            trayIcon = null
+                            quit()
+                        }
+                    }
+                    true
+                }
+            }
+        }
+        LaunchedEffect(windows) { snapshotFlow { windows.keptInTray }.collect { keptInTray.set(it) } }
+        val currentRequestQuit by rememberUpdatedState(requestQuit)
+        val icon = trayIcon
+        if (signerRunning && icon != null) {
+            val openLabel = stringRes(Res.string.desktop_tray_open)
+            val quitLabel = stringRes(Res.string.desktop_tray_quit)
+            // Remembered: the tray rebuilds its native menu whenever these lambdas change identity.
+            val trayMenu: TrayMenuBuilder.() -> Unit =
+                remember(openLabel, quitLabel, showFromBackground) {
+                    {
+                        Item(openLabel) { showFromBackground() }
+                        Item(quitLabel) { currentRequestQuit() }
+                    }
+                }
+            @Suppress("DEPRECATION")
+            Tray(
+                iconPath = icon.png,
+                windowsIconPath = icon.ico,
+                tooltip = stringRes(Res.string.desktop_tray_tooltip),
+                primaryAction = showFromBackground,
+                menuContent = trayMenu,
+            )
+        }
+        // macOS: a click on the Dock icon brings back a window closed to the tray.
+        DisposableEffect(Unit) {
+            val reopen = AppReopenedListener { showFromBackground() }
+            val listening =
+                runCatching {
+                    Desktop.isDesktopSupported() &&
+                        Desktop.getDesktop().isSupported(Desktop.Action.APP_EVENT_REOPENED) &&
+                        Desktop.getDesktop().addAppEventListener(reopen).let { true }
+                }.getOrDefault(false)
+            onDispose { if (listening) runCatching { Desktop.getDesktop().removeAppEventListener(reopen) } }
         }
 
         // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
@@ -363,7 +466,8 @@ fun main(args: Array<String>) {
             }.distinctUntilChanged().collectLatest { done ->
                 if (done) {
                     delay(QUIT_AFTER_PRINT_GRACE_MS)
-                    quit()
+                    // The signer still answering apps: back to the tray rather than out.
+                    if (!keepRunningInBackground()) quit()
                 }
             }
         }
@@ -384,7 +488,15 @@ fun main(args: Array<String>) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
                 // The last screen window closed with the main one hidden: a print running asks first.
-                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, quit, printingNow(), ask = askInMainWindow) }
+                .collect {
+                    windows.onAllClosed(
+                        root.navigator.stacks?.arrangement,
+                        quit,
+                        printingNow(),
+                        ask = askInMainWindow,
+                        keepRunning = keepRunningInBackground,
+                    )
+                }
         }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
@@ -402,7 +514,15 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, quit, printingNow(), ask = { askQuit = true }) },
+                    onCloseRequest = {
+                        windows.closeMainWindow(
+                            root.navigator.stacks?.arrangement,
+                            quit,
+                            printingNow(),
+                            ask = { askQuit = true },
+                            keepRunning = keepRunningInBackground,
+                        )
+                    },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,
@@ -410,6 +530,18 @@ fun main(args: Array<String>) {
                     visible = windows.mainWindowVisible,
                 ) {
                     windows.MainWindowEffects(window)
+
+                    // The screens see the window stopped while it is hidden (the tray, a print), as
+                    // Android's do in the background: their feeds let go of the relays after the
+                    // grace period, and only each account's notifications and the signer stay.
+                    val windowLifecycle = LocalLifecycleOwner.current
+                    val screensLifecycle = remember(windowLifecycle) { HiddenWindowLifecycle(windowLifecycle) }
+                    DisposableEffect(screensLifecycle) { onDispose { screensLifecycle.dispose() } }
+                    // Collected, not read in a SideEffect: a hidden window may never recompose, and
+                    // the change has to reach the screens all the same.
+                    LaunchedEffect(screensLifecycle) {
+                        snapshotFlow { windows.mainWindowVisible }.collect { visible -> screensLifecycle.hidden = !visible }
+                    }
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
 
@@ -437,6 +569,7 @@ fun main(args: Array<String>) {
                         NowProvider {
                             CompositionLocalProvider(
                                 LocalViewModelStoreOwner provides windowViewModels,
+                                LocalLifecycleOwner provides screensLifecycle,
                                 LocalAppServices provides services,
                                 LocalAppPlatform provides platform,
                                 LocalNotePlatform provides DesktopNotePlatform,
@@ -497,6 +630,7 @@ fun main(args: Array<String>) {
                                                     PrintQuitDialog(
                                                         onKeepPrinting = {
                                                             askQuit = false
+                                                            MacQuitResponse.declined()
                                                             windows.hideForPrint()
                                                         },
                                                         onQuit = {
@@ -509,7 +643,10 @@ fun main(args: Array<String>) {
                                                                 quit()
                                                             }
                                                         },
-                                                        onDismiss = { askQuit = false },
+                                                        onDismiss = {
+                                                            askQuit = false
+                                                            MacQuitResponse.declined()
+                                                        },
                                                     )
                                                 }
                                             }

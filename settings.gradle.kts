@@ -18,23 +18,26 @@ pluginManagement {
     }
 }
 
-// Quartz (vitorpamplona/quartz, since 2.19.0), crypto-kmp, libschnorr256k1-kotlin, mls-kmp (since
-// 1.3.1), quic-kmp (since 1.2.1) and negentropy-kmp are released on Nostr + Blossom: Magpie serves
-// their groups, and only Magpie (an exclusive repository), trusting only the release key
-// vitorpamplona.com names as `releases`, and gradle/magpie.lock pins that key and every resolved
-// version's files. A lock failure means a key or a release changed: ask before editing the lock.
-// Magpie verifies signatures inside the Gradle daemon, so Gradle runs on Java 21 or newer.
+// Quartz, its bindings (marmot-kmp, cordn-kmp, mls-kmp), quic-kmp, kiko-kmp, crypto-kmp,
+// negentropy-kmp and libschnorr256k1 are released on Nostr + Blossom: the Magpie settings plugin
+// serves their groups, trusting only the release key vitorpamplona.com names as `releases`, and
+// gradle/magpie.lock pins that key and every resolved version's files: commit its changes with the
+// version bump, and ask before editing it by hand, since a lock failure means a key or a release
+// changed. It needs Gradle on Java 21.
 plugins {
-    id("com.vitorpamplona.magpie") version "0.2.2"
+    id("com.vitorpamplona.magpie") version "0.2.3"
 }
 
 magpie {
     group("com.vitorpamplona.quartz")
-    group("com.vitorpamplona.crypto")
-    group("com.vitorpamplona.schnorr256k1")
+    group("com.vitorpamplona.marmot")
+    group("com.vitorpamplona.cordn")
     group("com.vitorpamplona.mls")
     group("com.vitorpamplona.quic")
+    group("com.vitorpamplona.kiko")
+    group("com.vitorpamplona.crypto")
     group("com.vitorpamplona.negentropy")
+    group("com.vitorpamplona.schnorr256k1")
 }
 
 dependencyResolutionManagement {
@@ -53,7 +56,6 @@ dependencyResolutionManagement {
             "com.github.lincollincol",
             "com.github.rikkahub.jlatexmath-android",
             "com.github.vitorpamplona.compose-richtext",
-            "com.github.vitorpamplona.quartz", // a quartz commit, while quartzJitpack is set
         )
     repositories {
         mavenLocal()
@@ -79,8 +81,9 @@ include(":agentCore")
 include(":claudeCodeClient")
 include(":codexClient")
 
-// quartz lives in its own repo (vitorpamplona/quartz) and comes from Magpie (above), like crypto
-// below. To change it alongside the app, point Gradle at a local checkout and it builds
+// quartz lives in its own repo (vitorpamplona/quartz) and comes from Nostr + Blossom through Magpie
+// (above), like every library below. To change it alongside the app, point Gradle at a local
+// checkout and it builds
 // that checkout instead of the published artifact, for every module and for the libraries' own
 // dependency on it:
 //   ./gradlew -PquartzDir=../quartz :commons:jvmTest
@@ -124,7 +127,7 @@ providers.gradleProperty("cryptoKmpDir").orNull?.let { dir ->
     }
 }
 
-// quic lives in its own repo (vitorpamplona/quic-kmp) and comes from Magpie (above). To change
+// quic lives in its own repo (vitorpamplona/quic-kmp) and comes through Magpie. To change
 // it alongside nestsClient or marmot-quic, point Gradle at a local checkout and it builds that
 // checkout instead of the published artifact:
 //   ./gradlew -PquicKmpDir=../quic-kmp :nestsClient:jvmTest
@@ -136,8 +139,8 @@ providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
     }
 }
 
-// The fantasy-console cart runtime lives in its own repo (vitorpamplona/kiko-kmp) and comes from
-// Maven Central. To change it alongside the cart player in commons and commonsUI, build a local checkout:
+// The fantasy-console cart runtime lives in its own repo (vitorpamplona/kiko-kmp) and comes through
+// Magpie. To change it alongside the cart player in commons and commonsUI, build a local checkout:
 //   ./gradlew -PkikoKmpDir=../kiko-kmp :commons:jvmTest
 providers.gradleProperty("kikoKmpDir").orNull?.let { dir ->
     includeBuild(dir) {
@@ -149,7 +152,7 @@ providers.gradleProperty("kikoKmpDir").orNull?.let { dir ->
     }
 }
 
-// The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes from Magpie, like
+// The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes through Magpie, like
 // quic, and reaches this build through marmot and cordn. To change it alongside Marmot or cordn, build a
 // local checkout instead of the artifact:
 //   ./gradlew -PquartzDir=../quartz -PmlsKmpDir=../mls-kmp :commons:jvmTest

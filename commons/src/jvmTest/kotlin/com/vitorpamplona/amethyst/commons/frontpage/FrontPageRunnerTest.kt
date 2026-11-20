@@ -183,7 +183,7 @@ class FrontPageRunnerTest {
             assertEquals("anthropic/claude-sonnet-4.5", named.task(assistant)?.param("model")?.value())
 
             // "Print from my devices instead": no `p`, encrypted to the reader alone again, everything else kept.
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six + 1, null) { withoutRunner(it, six + 1) })
+            assertIs<ScheduleEdit.Saved>(relays.edit(six + 1) { withoutRunner(it, six + 1) })
             val cleared = relays.newestEvent()!!
             assertTrue(cleared.runners().isEmpty())
             assertNull(cleared.task(assistant))
@@ -197,7 +197,7 @@ class FrontPageRunnerTest {
             assertNull(ScheduledTaskClaims.occurrence(asRead, assertNotNull(FrontPageClock.cronZone(ny)), six + 60))
             assertEquals("anthropic/claude-sonnet-4.5", asRead.param("model")?.value())
             // Already the reader's devices: nothing to write.
-            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, six + 2, null) { withoutRunner(it, six + 2) })
+            assertEquals(ScheduleEdit.Unchanged, relays.edit(six + 2) { withoutRunner(it, six + 2) })
             assertEquals(2, relays.events.value.size)
         }
 

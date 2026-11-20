@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
-import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
@@ -543,7 +542,6 @@ class DesktopAppModules(
             store = FrontPageEditionStore(File(filesDir, FrontPageEditionStore.FOLDER).path),
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = DesktopFrontPageNotifier(notifications),
-            observerPrefs = DataStoreObserverPrefsStore(appStores),
             installs = DataStoreFrontPageInstallStore(appStores),
             // How this computer appears in the reader's synced schedule ("Desktop (Linux)").
             installInfo = FrontPageInstallInfo(name = desktopInstallName(), app = "amethyst-desktop"),

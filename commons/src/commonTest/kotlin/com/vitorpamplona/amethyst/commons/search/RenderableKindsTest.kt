@@ -250,6 +250,10 @@ class RenderableKindsTest {
                 3184,
                 30180,
                 30184,
+                // llama.garden model torrents and model requests (Quartz 2.20.0): their names and
+                // descriptions are indexed for model catalogs, but Amethyst has no card for them
+                30099,
+                30103,
             ).sorted(),
             omitted.sorted(),
             "the set of searchable kinds not shown in search changed",

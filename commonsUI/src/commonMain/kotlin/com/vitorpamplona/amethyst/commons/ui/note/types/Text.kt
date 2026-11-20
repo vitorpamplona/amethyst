@@ -247,6 +247,9 @@ fun RenderTextEvent(
                             note.idHex
                         },
                     callbackUri = callbackUri,
+                    // Lets a Blossom image that its server lost be found on the author's others.
+                    // PrefetchFeedMedia.warmRenderCache parses with the same author to share the cache entry.
+                    authorPubKey = note.author?.pubkeyHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

@@ -699,6 +699,12 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVe
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.UnrecognizedKind30103Event
+import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
+import com.vitorpamplona.quartz.llamagarden.seederRequest.SeederRequestEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.UnrecognizedKind30099Event
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -962,6 +968,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -2224,6 +2232,19 @@ internal fun RenderNoteRow(
             is UnrecognizedKind30102Event,
             is UnrecognizedKind30104Event,
             is UnrecognizedKind31985Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+
+            // llama.garden's model torrents, model, seeder and client releases, and Maven releases
+            // and snapshots on Nostr (NIP-FC, Magpie): typed by Quartz 2.20.0, but Amethyst has no
+            // card for them yet, so they keep the unknown-kind card they had before they were typed.
+            is ModelTorrentEvent,
+            is UnrecognizedKind30099Event,
+            is ClientReleaseEvent,
+            is SeederRequestEvent,
+            is ModelRequestEvent,
+            is UnrecognizedKind30103Event,
+            is MavenReleaseEvent,
+            is MavenSnapshotEvent,
             -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {

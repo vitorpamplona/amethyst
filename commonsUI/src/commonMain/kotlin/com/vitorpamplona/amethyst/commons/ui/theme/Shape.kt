@@ -282,8 +282,6 @@ val PinBottomIconSize = Modifier.size(60.dp).padding(5.dp)
 val PlayIconSize = Modifier.size(110.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
-val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = QuoteBorder)
-
 val EditFieldModifier =
     Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
 val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)

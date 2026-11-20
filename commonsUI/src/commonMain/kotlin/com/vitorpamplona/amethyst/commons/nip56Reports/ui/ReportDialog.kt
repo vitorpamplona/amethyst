@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,8 +52,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -77,6 +77,9 @@ import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -118,9 +121,10 @@ fun ReportDialog(
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableIntStateOf(-1) }
 
-    Dialog(
+    // Full screen on a touch screen, a dialog over the note on a wide desktop window, like the composers.
+    ComposerDialog(
+        size = ComposerSize.QUICK,
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Scaffold(
             topBar = {
@@ -136,7 +140,12 @@ fun ReportDialog(
         ) { pad ->
             Column(
                 modifier =
-                    Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
+                    Modifier
+                        .padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding())
+                        // Edge to edge on phones, so the window no longer shrinks for the keyboard:
+                        // pad for it and scroll, or it covers the reason field and Post Report.
+                        .imePaddingSafe()
+                        .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
                 SpacerH16()
