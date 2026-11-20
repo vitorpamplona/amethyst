@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
@@ -97,6 +98,8 @@ class DesktopAppServices(
     override val namecoinSettings: NamecoinSettingsStore get() = modules.namecoinPrefs
 
     override val namecoinClients: NamecoinClients get() = modules.namecoinServices
+
+    override val namecoinLifecycle: NamecoinLifecycleService get() = modules.namecoinLifecycle
 
     override val otsSettings: OtsSettingsStore get() = modules.otsPrefs
 

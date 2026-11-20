@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
+import com.vitorpamplona.amethyst.commons.model.accountLifecycle.ACCOUNT_LIFECYCLE_STORE
+import com.vitorpamplona.amethyst.commons.model.accountLifecycle.DataStoreLifecycleAssociationStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
@@ -622,6 +624,12 @@ class AppModules(
     }
 
     val namecoinResolver get() = namecoinServices.resolver
+
+    val namecoinLifecycle by lazy {
+        namecoinServices.lifecycleService(
+            DataStoreLifecycleAssociationStore(appStores.getDataStore(ACCOUNT_LIFECYCLE_STORE)),
+        )
+    }
 
     val nip05Client by
         lazy {

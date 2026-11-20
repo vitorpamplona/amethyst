@@ -41,6 +41,8 @@ class UserInfo(
     val identities: List<IdentityClaimTag>,
     val createdAt: Long,
     val pubKey: HexKey? = null,
+    /** The latest verified signed kind 0, retained separately from its projected metadata. */
+    val event: MetadataEvent? = null,
 ) {
     /**
      * The owner this profile declares through a valid NIP-OA `auth` tag, making the user an agent
@@ -78,6 +80,7 @@ class UserMetadataCache {
                 identities = metaEvent.identityClaims(),
                 createdAt = metaEvent.createdAt,
                 pubKey = metaEvent.pubKey,
+                event = metaEvent,
             )
         }
     }

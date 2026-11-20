@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -76,6 +77,8 @@ class AndroidAccountViewModelHost(
     override val localBlossomCacheAvailable: Flow<Boolean> get() = modules.localBlossomCacheProbe.available
 
     override val powPublishFailures: Flow<PoWJobFailure> get() = modules.powPublishQueue.failures
+
+    override val namecoinLifecycle: NamecoinLifecycleService get() = modules.namecoinLifecycle
 
     override val relayStats: RelayStats get() = modules.relayStats
 

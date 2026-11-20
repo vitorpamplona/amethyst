@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinLifecycleService
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -58,6 +59,9 @@ interface AccountViewModelHost {
 
     /** Background proof-of-work posts that could not be signed or sent. */
     val powPublishFailures: Flow<PoWJobFailure>
+
+    /** Account-scoped lifecycle lookups; null keeps unsupported hosts and isolated render tests offline. */
+    val namecoinLifecycle: NamecoinLifecycleService? get() = null
 
     /** Per-relay connection statistics, which order the relays a crawl visits. */
     val relayStats: RelayStats
