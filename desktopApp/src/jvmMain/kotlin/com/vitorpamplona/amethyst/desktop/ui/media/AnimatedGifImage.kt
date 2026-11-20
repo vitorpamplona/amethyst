@@ -289,8 +289,12 @@ private suspend fun gifBytes(
 
     val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
     val key = "gif:$url"
-    disk?.openSnapshot(key)?.use { snapshot ->
-        runCatching { disk.fileSystem.read(snapshot.data) { readByteArray() } }.getOrNull()?.let { return it }
+    // Its own copy, else the image loader's: an animated WebP reaches the player after the loader
+    // fetched it ([AnimatedImageProbe]), so the file is already on disk under its URL.
+    for (cached in arrayOf(key, url)) {
+        disk?.openSnapshot(cached)?.use { snapshot ->
+            runCatching { disk.fileSystem.read(snapshot.data) { readByteArray() } }.getOrNull()?.let { return it }
+        }
     }
 
     val request = Request.Builder().url(url).build()
@@ -309,6 +313,19 @@ private suspend fun gifBytes(
         }
     }
     return bytes
+}
+
+/**
+ * Downloads (or reads from the disk cache) and decodes the first frame of [url] into the player's
+ * cache, so an [AnimatedGifImage] that takes over from a still image paints at once instead of
+ * an empty box. True when the file has frames to play; a single frame is left to the image
+ * loader, which downsamples it.
+ */
+internal suspend fun preloadAnimation(url: String): Boolean {
+    GifSourceCache.get(url)?.let { return it.bytes != null }
+    val source = withContext(Dispatchers.IO) { loadGif(url, local = false) } ?: return false
+    if (source.bytes != null) GifSourceCache.put(url, source)
+    return source.bytes != null
 }
 
 private suspend fun loadGif(
