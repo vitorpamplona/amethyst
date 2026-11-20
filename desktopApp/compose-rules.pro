@@ -227,13 +227,13 @@
 }
 
 # ============================================================================
-# Desktop-only: ComposeNativeTray — its Win32, macOS and Linux tray libraries
-# call menu and click callbacks back into dev.nucleusframework.composenativetray.*
-# by name, and its dark-mode detector binds natives of its own.
+# Desktop-only: the Nucleus libraries (dev.nucleusframework) — the tray
+# (ComposeNativeTray), the OS notification bridges, the dark-mode detector,
+# Rodio audio and the runtime that loads their natives. Their Win32, macOS and
+# Linux libraries call back into these classes by name (menu clicks,
+# notification actions and dismissals), so none may be stripped.
 # ============================================================================
--keep class dev.nucleusframework.composenativetray.** { *; }
--keep class dev.nucleusframework.darkmodedetector.** { *; }
--keep class dev.nucleusframework.core.runtime.** { *; }
+-keep class dev.nucleusframework.** { *; }
 -keepclassmembers class dev.nucleusframework.** {
     native <methods>;
 }

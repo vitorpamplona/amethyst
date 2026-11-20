@@ -19,6 +19,9 @@ The distributed binary includes the following third-party components:
 - License text: `licenses/LICENSE-MIT-composenativetray.txt`
 - On Linux its libraries load the system's libsystemd (LGPL-2.1-or-later) and libdbus-1
   (AFL-2.1 or GPL-2.0-or-later) at runtime; we bundle neither.
+- The OS notification bridges come from the same project, MIT:
+  `dev.nucleusframework:nucleus.notification-{linux,macos,windows}` 2.5.18. On Linux they load
+  the system's GLib/GIO (LGPL-2.1-or-later) at runtime; we bundle none.
 
 ## JCodec
 
