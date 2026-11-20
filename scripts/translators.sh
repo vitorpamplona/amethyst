@@ -2,6 +2,10 @@
 #
 # Build the changelog "## Translations" section, or keep its data file seeded.
 #
+# NOTE: translations no longer go through Crowdin, so --seed/--raw have no project
+# to query and sinceLastTag no longer refreshes. RELEASE_OPS.md says how to credit
+# translators from git history instead.
+#
 # Default (no flags): OFFLINE. Generate the ready-to-paste credit block straight
 # from docs/changelog/translators.json — no token, no network. This is the
 # release-time command: it reads the sinceLastTag snapshot (kept fresh by CI,

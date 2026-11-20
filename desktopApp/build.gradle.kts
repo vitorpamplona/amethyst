@@ -121,6 +121,15 @@ dependencies {
         exclude(group = "org.slf4j", module = "slf4j-simple")
     }
 
+    // System tray icon (the NIP-46 signer keeps running with the window closed) — MIT, same author,
+    // now published under dev.nucleusframework (the io.github.kdroidfilter coordinates stopped at
+    // 1.3.3), with its MIT nucleus dependencies. Native trays: Win32 on Windows, an NSStatusItem on
+    // macOS, StatusNotifierItem over D-Bus on Linux (the system's libsystemd, LGPL-2.1, and its
+    // theme detector's libdbus-1, AFL-2.1 or GPL-2.0+, both loaded at runtime, not bundled).
+    implementation(libs.composenativetray)
+    // Its native loader, called directly to check the tray library loads before hiding the window.
+    implementation(libs.nucleus.core.runtime)
+
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
     // wrapper library needed (see VideoThumbnailCache.runFfmpegToImage).
@@ -200,6 +209,13 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.login",
             "amethyst.signup",
             "amethyst.videoTimeline",
+            // ScrollBenchmark: `-Damethyst.scrollBench=<dir>` scrolls the feed, writes frame
+            // timings to <dir> and exits (tools/desktop-run/scroll-bench.sh).
+            "amethyst.scrollBench",
+            "amethyst.scrollBench.waitSeconds",
+            "amethyst.scrollBench.notches",
+            "amethyst.scrollBench.intervalMs",
+            "amethyst.scrollBench.at",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
@@ -399,6 +415,8 @@ compose.desktop {
                                 <array>
                                     <string>nostr</string>
                                     <string>amethyst</string>
+                                    <!-- NIP-46: an app's offer to pair with Amethyst's signer. -->
+                                    <string>nostrconnect</string>
                                 </array>
                             </dict>
                         </array>
@@ -701,12 +719,12 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
             // StartupWMClass so docks match the window (AmethystDesktop.kt); MimeType + %u so
-            // the desktop offers the app for nostr:/amethyst: links and passes the URI to the
+            // the desktop offers the app for nostr:/amethyst:/nostrconnect: links and passes the URI to the
             // launcher (DesktopDeepLinks.extractFromArgs).
             val desktopEntry =
                 desktopTemplate.trimEnd()
                     .replace(Regex("^Exec=(\\S.*)$", RegexOption.MULTILINE)) { "Exec=${it.groupValues[1]} %u" }
-                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;\n")
+                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;x-scheme-handler/nostrconnect;\n")
             File(resources, "${appName.get()}.desktop").writeText(desktopEntry)
 
             // The task's own options, one per line with quoted values, minus the app-image ones.

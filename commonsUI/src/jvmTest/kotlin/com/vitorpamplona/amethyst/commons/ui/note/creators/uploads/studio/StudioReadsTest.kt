@@ -24,11 +24,14 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class StudioReadsTest {
     private val video = SelectedMedia(StringMediaUri("/tmp/reads.mp4"), "video/mp4")
@@ -45,14 +48,14 @@ class StudioReadsTest {
                 gate.await()
                 byteArrayOf(1, 2, 3)
             }
-            val stage = async { reads.frame(key, read) }
-            val still = async { reads.frame(key, read) }
+            val stage = async { reads.frames.get(key, read) }
+            val still = async { reads.frames.get(key, read) }
             testScheduler.runCurrent()
             gate.complete(Unit)
             assertContentEquals(byteArrayOf(1, 2, 3), stage.await())
             assertContentEquals(byteArrayOf(1, 2, 3), still.await())
             assertEquals(1, decodes)
-            assertContentEquals(byteArrayOf(1, 2, 3), reads.frameNow(key), "shown at once next time")
+            assertContentEquals(byteArrayOf(1, 2, 3), reads.frames.now(key), "shown at once next time")
         }
 
     @Test
@@ -60,9 +63,9 @@ class StudioReadsTest {
         runTest {
             val reads = StudioReads(backgroundScope)
             var probes = 0
-            assertNull(reads.duration(video) { probes++.let { null } })
-            assertNull(reads.durationNow(video))
-            assertEquals(6_000L, reads.duration(video) { probes++.let { 6_000L } })
+            assertNull(reads.durations.get(video) { probes++.let { null } })
+            assertNull(reads.durations.now(video))
+            assertEquals(6_000L, reads.durations.get(video) { probes++.let { 6_000L } })
             assertEquals(2, probes)
         }
 
@@ -70,7 +73,47 @@ class StudioReadsTest {
     fun aReadThatThrowsDoesNotStopTheOthers() =
         runTest {
             val reads = StudioReads(backgroundScope)
-            assertNull(reads.duration(video) { error("ffprobe crashed") })
-            assertEquals(6_000L, reads.duration(video) { 6_000L })
+            assertNull(reads.durations.get(video) { error("ffprobe crashed") })
+            assertEquals(6_000L, reads.durations.get(video) { 6_000L })
+        }
+
+    @Test
+    fun aReadNobodyWaitsForAnyMoreIsStopped() =
+        runTest {
+            val reads = StudioReads(backgroundScope)
+            val key = StudioReads.FrameKey(video, 0, 1280)
+            var stopped = false
+            val read: suspend () -> ByteArray? = {
+                try {
+                    awaitCancellation()
+                } finally {
+                    stopped = true
+                }
+            }
+            // The drag moved on before the frame was decoded.
+            val stage = async { reads.frames.get(key, read) }
+            testScheduler.runCurrent()
+            stage.cancel()
+            testScheduler.runCurrent()
+            assertTrue(stopped, "the decode stops with its last caller")
+            assertFalse(reads.frames.has(key), "and is forgotten")
+        }
+
+    @Test
+    fun aReadAnotherPartStillWaitsForKeepsGoing() =
+        runTest {
+            val reads = StudioReads(backgroundScope)
+            val key = StudioReads.FrameKey(video, 0, 1280)
+            val gate = CompletableDeferred<Unit>()
+            val read: suspend () -> ByteArray? = {
+                gate.await()
+                byteArrayOf(7)
+            }
+            val stage = async { reads.frames.get(key, read) }
+            val still = async { reads.frames.get(key, read) }
+            testScheduler.runCurrent()
+            stage.cancel()
+            gate.complete(Unit)
+            assertContentEquals(byteArrayOf(7), still.await())
         }
 }

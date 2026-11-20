@@ -67,6 +67,10 @@ data class SavedEdition(
     val byRunner: Boolean = false,
     /** The Kitchen's recipe this edition ran, as its address ([recipeAddress]): the next editions don't offer it again. */
     val recipe: String? = null,
+    /** Printed by another device of the account, as it names itself, and shared through the schedule ([EditionRecord]); null when printed here or read from a site. */
+    val printedBy: String? = null,
+    /** The forecast fetched when it was printed, for the schedule's place ([ObserverWeather]); never inside the page itself. */
+    val weather: WeatherReport? = null,
 )
 
 /**

@@ -63,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitBranchesState
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalResult
@@ -137,13 +138,18 @@ fun rememberGitProposals(
     accountViewModel: AccountViewModel,
 ): GitProposalViewModel = viewModel(key = key + "GitProposals", factory = GitProposalViewModelFactory(accountViewModel))
 
-/** Once a proposal is published, opens it in place of the screen that made it. */
+/**
+ * Once a proposal is published, opens it in place of the screen that made it. With no [leaveFirst]
+ * that screen is the New pull request composer, and one replace request swaps it for the result: a
+ * back then a push could reach a Tabs composer while it is still open, which sends a link to a
+ * background tab.
+ */
 @Composable
 private fun OpenWhenPublished(
     viewModel: GitProposalViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    leaveFirst: () -> Unit = { nav.popBack() },
+    leaveFirst: (() -> Unit)? = null,
     onFailed: @Composable (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -154,8 +160,15 @@ private fun OpenWhenPublished(
                 is GitProposalResult.Published ->
                     LaunchedEffect(result.event.id) {
                         viewModel.reset()
-                        leaveFirst()
-                        routeFor(LocalCache.getOrCreateNote(result.event.id), accountViewModel.account)?.let { nav.nav(it) }
+                        val route = routeFor(LocalCache.getOrCreateNote(result.event.id), accountViewModel.account)
+                        when {
+                            leaveFirst != null -> {
+                                leaveFirst()
+                                route?.let { nav.nav(it) }
+                            }
+                            route != null -> nav.popUpTo(route, Route.GitRepositoryNewPullRequest::class)
+                            else -> nav.popBack()
+                        }
                     }
                 is GitProposalResult.Failed -> onFailed(result.reason)
             }

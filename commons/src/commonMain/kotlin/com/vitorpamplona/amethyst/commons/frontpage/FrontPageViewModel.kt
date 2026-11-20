@@ -149,6 +149,7 @@ class FrontPageModels(
 @Immutable
 data class ShownEdition(
     val edition: SavedEdition,
+    /** The page as kept: what Download saves. The screen draws [SavedEdition.weather] over it ([ObserverWeather.withStrip]). */
     val html: String?,
 )
 
@@ -330,24 +331,71 @@ class FrontPageViewModel(
     /** Whether this platform publishes to an Observer site at all. */
     val canPublish: Boolean get() = printer.canPublish
 
+    /**
+     * Publishing on or off for every device of the account (the schedule's `publish` param). Turned
+     * back on, the notice is asked again before the next publish. On the account's scope, so leaving
+     * the screen doesn't lose the write.
+     */
     fun setPublish(on: Boolean) {
-        viewModelScope.launch { printer.setObserverPrefs(observerPrefs.value.copy(publish = on)) }
+        val prefs = if (on) observerPrefs.value.copy(publish = true) else ObserverPrefs(publish = false)
+        account.scope.launch { savePublishing(prefs) }
     }
 
     /**
      * The reader answered the confirm that comes before the first publish. Publish: the site is
-     * public from now on, and what's kept goes out now. Not now: nothing is uploaded, and the
-     * next print asks again.
+     * public from now on, for every device, and what's kept goes out now. Not now: nothing is
+     * uploaded, and the next print asks again.
      */
     fun answerObserverNotice(publish: Boolean) {
         if (!publish) {
             printer.declinePublish()
             return
         }
-        viewModelScope.launch {
-            printer.setObserverPrefs(ObserverPrefs(publish = true, noticeSeen = true))
-            printer.publishPending()
+        val yes = ObserverPrefs(publish = true, noticeSeen = true)
+        account.scope.launch {
+            savePublishing(yes)
+            // The reader said yes just now: this publish goes out even when the write didn't (it says why).
+            printer.publishPending(answered = yes)
         }
+    }
+
+    /** Where the paper's weather is for (the schedule's `place` param, for every device); null: no weather. */
+    val place: StateFlow<ObserverPlace?> =
+        account.observerSchedule.flow
+            .map { ObserverWeather.place((it as? SyncedSchedule.Readable)?.task) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Places matching [query] (Open-Meteo's search), for the weather setting. */
+    suspend fun searchPlaces(query: String): List<ObserverPlace> = printer.searchPlaces(query)
+
+    /** The weather's place for every device of the account; null turns the weather off. On the account's scope, so leaving the screen doesn't lose it. */
+    fun setPlace(place: ObserverPlace?) {
+        account.scope.launch {
+            val outcome =
+                try {
+                    morning.setPlace(account, place)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("FrontPageViewModel", "Could not save the weather's place", e)
+                    ScheduleEdit.Unreachable
+                }
+            _scheduleProblem.value = outcome.takeIf { it !is ScheduleEdit.Saved && it != ScheduleEdit.Unchanged }
+        }
+    }
+
+    private suspend fun savePublishing(prefs: ObserverPrefs) {
+        val outcome =
+            try {
+                printer.setObserverPrefs(prefs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("FrontPageViewModel", "Could not save the publishing choice", e)
+                ScheduleEdit.Unreachable
+            }
+        _scheduleProblem.value = outcome.takeIf { it !is ScheduleEdit.Saved && it != ScheduleEdit.Unchanged }
     }
 
     /** Tries the publish again, after a failure the reader may have fixed (a Blossom server added). */

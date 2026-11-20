@@ -200,7 +200,7 @@ class AttachedMediaState(
 
         onUiThread {
             // The empty line left above files added at the start (see attachPicked) goes if nothing was written there.
-            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }.trimStart('\n')) }
+            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }.removePrefix("\n")) }
         }
         releaseAll()
         return true

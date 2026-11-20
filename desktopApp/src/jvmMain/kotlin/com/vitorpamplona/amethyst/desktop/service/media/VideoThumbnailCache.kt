@@ -54,6 +54,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Files
@@ -297,6 +298,8 @@ object VideoThumbnailCache {
     /**
      * The first [MAX_CHUNK_BYTES] of [url] in a temp file, or null. Capped even when the server
      * ignores Range and sends the whole video, and refused when it sends text (an HTML error page).
+     * The bytes also land in [VideoDiskCache] when [url] may be kept there, so pressing play reads
+     * the start of the video from disk instead of downloading it a second time.
      */
     private suspend fun downloadFirstChunk(url: String): File? {
         val request =
@@ -310,12 +313,16 @@ object VideoThumbnailCache {
             val contentType = resp.header("Content-Type")?.lowercase().orEmpty()
             if (contentType.startsWith("text/") || "html" in contentType) return null
             val file = AmethystTempDir.createTempFile("amethyst_thumb_", ".mp4")
+            val cache = if (VideoDiskCache.cacheable(url)) runCatching { VideoDiskCache.writerFor(url, resp) }.getOrNull() else null
             val copied =
                 try {
-                    Files.newOutputStream(file.toPath()).use { out -> copyAtMost(resp.body.byteStream(), out, MAX_CHUNK_BYTES.toLong()) }
+                    Files.newOutputStream(file.toPath()).use { out -> copyAtMost(resp.body.byteStream(), out, MAX_CHUNK_BYTES.toLong(), cache) }
                 } catch (e: Exception) {
                     file.deleteOrWarn(TAG, "partial video chunk")
                     throw e
+                } finally {
+                    // What arrived before a failure is still a valid range of the file.
+                    cache?.close()
                 }
             if (copied == 0L) {
                 file.deleteOrWarn(TAG, "empty video chunk")
@@ -325,18 +332,30 @@ object VideoThumbnailCache {
         }
     }
 
+    // Copies up to [limit] bytes of [src] to [dst], and to [cache] too when given. A cache that fails
+    // to write (a full disk) is dropped; the poster still gets its bytes.
     private fun copyAtMost(
         src: InputStream,
         dst: OutputStream,
         limit: Long,
+        cache: VideoDiskCache.Writer? = null,
     ): Long {
         val buf = ByteArray(64 * 1024)
         var copied = 0L
+        var keep = cache
         while (copied < limit) {
             val toRead = minOf(buf.size.toLong(), limit - copied).toInt()
             val n = src.read(buf, 0, toRead)
             if (n < 0) break
             dst.write(buf, 0, n)
+            if (keep != null) {
+                try {
+                    keep.write(buf, n)
+                } catch (e: IOException) {
+                    Log.w(TAG, "Stopped keeping a video's start on disk", e)
+                    keep = null
+                }
+            }
             copied += n
         }
         return copied

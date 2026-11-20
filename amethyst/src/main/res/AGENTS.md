@@ -14,17 +14,13 @@ orphan as an `[ExtraTranslation]` **error**, and lint errors abort
 default locale.** One `git grep -l 'name="old_key"' amethyst/src/main/res` and a
 delete pass; there is no follow-up commit that makes it right.
 
-**Do not wait for Crowdin.** Crowdin does eventually drop retired keys, but that
-is irrelevant: lint runs against the tree you push, not against Crowdin's next
-export. It is also only *mostly* reliable, which is what makes it a trap — the
-sync may clean most locales and silently leave the rest, so the tree looks
-correct in the files you happen to open.
+Nothing cleans up after you: translations live only in this repo (Crowdin is
+retired), and lint runs against the tree you push.
 
 > 2026-08-31: `d6d5a72e49` renamed `route_video` → `route_media` and
-> `new_short` → `new_media`, with the commit message reasoning "Crowdin drops the
-> retired keys on its next sync". The sync that merged right after cleaned 32 of
-> the 47 locales and left both keys in 15 — 30 `[ExtraTranslation]` errors, red
-> main. Fixed in `1ce583ec92`.
+> `new_short` → `new_media`, counting on the translation sync to drop the old keys.
+> It cleaned 32 of the 47 locales and left both keys in 15 — 30
+> `[ExtraTranslation]` errors, red main. Fixed in `1ce583ec92`.
 
 Renaming rather than editing in place is still correct when the **meaning**
 changes (an in-place edit silently keeps 47 translations of the old meaning).
@@ -41,7 +37,7 @@ tools/agent-hooks/orphan_strings_check.py
 ```
 
 It diffs every locale's resource names against its tree's default `values/` and
-exits non-zero listing any orphan. It covers **both** Crowdin-managed resource
+exits non-zero listing any orphan. It covers **both** resource
 systems — the Android res trees (`amethyst/src/main/res`,
 `commons/src/androidMain/res`) and the Compose-Multiplatform catalog
 (`commonsUI/src/commonMain/composeResources`) — and says which consequence applies:
@@ -53,13 +49,16 @@ merely described:
 
 | Layer | Where | Covers |
 |---|---|---|
-| CI | the fast `lint` job in `.github/workflows/build.yml` | every PR and every push to `main`, **including the Crowdin sync bot's** |
+| CI | the fast `lint` job in `.github/workflows/build.yml` | every PR and every push to `main` |
 | Agent session | `tools/agent-hooks/pre-push-orphan-strings.sh`, wired as a `PreToolUse` hook in `.claude/settings.json` and `.codex/hooks.json` | a `git push` or PR creation from a Claude Code or Codex session |
 
-The CI layer is the one that matters most: the 2026-08-31 desync arrived through
-a bot-authored PR (`.github/workflows/crowdin.yml` → `create-pull-request`), with
-no local session anywhere in the path. It sits in the 15-minute `lint` job rather
-than the 60-minute `test-and-build-android` job that originally caught it.
+The CI layer is the one that matters most: it catches a PR that no local
+session touched. It sits in the 15-minute `lint` job rather than the 60-minute
+`test-and-build-android` job that originally caught the 2026-08-31 desync.
+
+The same hook and CI job also run `tools/agent-hooks/locale_layout_check.py`:
+a regional folder (`values-es-rES`) may only hold what that region says
+differently from its base (`values-es`). See root `AGENTS.md`, "Strings".
 
 ## Plural rules
 
@@ -75,7 +74,7 @@ Always consider Slavic / Baltic / Semitic / Celtic languages when a string conta
    - Latvian: `zero`, `one`, `other`
    - Chinese / Japanese: `other` only
 
-   Latvian's `zero` does **not** mean "no items" — it covers 0, 10, 11–19, 20, 30, … (`n % 10 = 0` or `n % 100 = 11..19`), so it fires on most counts and must read as a normal plural form. Never strip `<item quantity="zero">` from `values-lv-rLV`; among the locales we ship, only Arabic and Latvian have an integer-bearing `zero`.
+   Latvian's `zero` does **not** mean "no items" — it covers 0, 10, 11–19, 20, 30, … (`n % 10 = 0` or `n % 100 = 11..19`), so it fires on most counts and must read as a normal plural form. Never strip `<item quantity="zero">` from `values-lv`; among the locales we ship, only Arabic and Latvian have an integer-bearing `zero`.
 
 ## Plural anti-patterns to flag
 
@@ -111,6 +110,6 @@ Defined in `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/StringResourceC
 ## Workflow for new count strings
 
 1. Add the new `<plurals>` to default `values/strings.xml` with `one` + `other`.
-2. If you're also adding a locale-specific translation (e.g. zh-rCN, pl-rPL), give it that locale's **full CLDR category set** (Polish needs `one`/`few`/`many`/`other`, Chinese only `other`). An `other`-only block in a locale that has more categories fails lint's `MissingQuantity` before Crowdin ever syncs.
+2. If you're also adding a locale-specific translation (e.g. zh, pl), give it that locale's **full CLDR category set** (Polish needs `one`/`few`/`many`/`other`, Chinese only `other`). An `other`-only block in a locale that has more categories fails lint's `MissingQuantity` before Crowdin ever syncs.
 3. If you're **converting** an existing `<string>` to `<plurals>`, you **must** convert it in every locale that already had the `<string>` — otherwise aapt2 will fail with a resource-type mismatch, and an orphaned locale `<string>` trips `ExtraTranslation`. Give each locale its **full CLDR category set** at conversion time. Carrying the old text over as an `other`-only block does **not** work: lint's `MissingQuantity` is an error, so CI fails long before Crowdin gets a chance to backfill. Mind the declension too — the retained text is usually the plural form, so reusing it verbatim for `one` yields "1 odpowiedzi".
 4. Reference: [Android `<plurals>` docs](https://developer.android.com/guide/topics/resources/string-resource#Plurals) and [CLDR plural rules](https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html).

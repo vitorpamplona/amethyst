@@ -15,7 +15,7 @@
             "type": "command",
             "command": "\"$(git rev-parse --show-toplevel)/tools/agent-hooks/pre-push-orphan-strings.sh\"",
             "timeout": 30,
-            "statusMessage": "Checking orphaned translations before push"
+            "statusMessage": "Checking orphaned translations and locale layout before push"
           },
           {
             "type": "command",

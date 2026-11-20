@@ -43,9 +43,9 @@ enum class WritingEffort(
 }
 
 /**
- * The Observer's params beyond Quartz 2.17's [ObserverParams] (`model`, `key`): `effort`.
- * Quartz's [ObserverParams.KNOWN] doesn't list it yet, so [ObserverParams.understands] would call
- * a Deep schedule one this app can't run; these wrap it with `effort` understood.
+ * The Observer's params beyond Quartz 2.17's [ObserverParams] (`model`, `key`): `effort` and
+ * `publish`. Quartz's [ObserverParams.KNOWN] doesn't list them yet, so [ObserverParams.understands]
+ * would call such a schedule one this app can't run; these wrap it with both understood.
  */
 object FrontPageParams {
     const val EFFORT = "effort"
@@ -59,8 +59,46 @@ object FrontPageParams {
         effort: WritingEffort,
     ): ScheduledTask = effort.param?.let { task.withParam(EFFORT, it) } ?: task.withoutParam(EFFORT)
 
+    /**
+     * Publishing to the reader's public Observer site, for every device of the account
+     * (`commons/plans/2026-11-20-observer-synced-settings-and-editions.md`): absent is on and not
+     * yet confirmed, `yes` is on and confirmed, `no` (or any other value) is off.
+     */
+    const val PUBLISH = "publish"
+    const val PUBLISH_YES = "yes"
+    const val PUBLISH_NO = "no"
+
+    /** The schedule's publishing choice; with no readable schedule, the default (on, not confirmed). */
+    fun publishing(task: ScheduledTask?): ObserverPrefs {
+        val value =
+            task
+                ?.param(PUBLISH)
+                ?.value()
+                ?.trim()
+                ?.lowercase() ?: return ObserverPrefs()
+        return if (value == PUBLISH_YES) ObserverPrefs(publish = true, noticeSeen = true) else ObserverPrefs(publish = false, noticeSeen = false)
+    }
+
+    /** [task] publishing as [prefs] says: off writes `no`, confirmed writes `yes`, on but unconfirmed removes the param. */
+    fun withPublishing(
+        task: ScheduledTask,
+        prefs: ObserverPrefs,
+    ): ScheduledTask =
+        when {
+            !prefs.publish -> task.withParam(PUBLISH, PUBLISH_NO)
+            prefs.noticeSeen -> task.withParam(PUBLISH, PUBLISH_YES)
+            else -> task.withoutParam(PUBLISH)
+        }
+
+    /**
+     * Where the paper's weather is for ([ObserverWeather.place]): a name, a latitude and a longitude
+     * (to 0.01°), and `us` (°F) or `metric`. Absent, the paper has no weather. A printer that shows
+     * no weather still prints: it only decorates the copy shown in the reader's apps.
+     */
+    const val PLACE = "place"
+
     /** The params of [task] this app doesn't understand, in order, each once. */
-    fun unknownParams(task: ScheduledTask): List<String> = ObserverParams.unknownParams(task).filter { it != EFFORT }
+    fun unknownParams(task: ScheduledTask): List<String> = ObserverParams.unknownParams(task).filter { it != EFFORT && it != PUBLISH && it != PLACE }
 
     /** Whether this app understands every param of [task] (NIP-FB: a task with one it doesn't is never run). */
     fun understands(task: ScheduledTask): Boolean = unknownParams(task).isEmpty()

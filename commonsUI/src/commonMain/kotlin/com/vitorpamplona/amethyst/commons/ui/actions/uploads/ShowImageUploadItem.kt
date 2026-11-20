@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,10 +34,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadStatus
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
@@ -83,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -180,16 +177,15 @@ fun OrchestratorOverlay(
     orchestrator: UploadOrchestrator,
     onDelete: () -> Unit,
 ) {
-    val progress by orchestrator.progress.collectAsState()
-    val progressState by orchestrator.progressState.collectAsState()
+    val status by orchestrator.status.collectAsState()
 
-    val state = progressState
+    val state = status.state
     if (state is UploadingState.Ready) {
         DeleteButton(onDelete)
     } else if (state is UploadingState.Error) {
-        UploadErrorBadge(progress, state, onDelete)
+        UploadErrorBadge(status, state, onDelete)
     } else {
-        UploadingState(progress, state)
+        UploadProgressOverMedia(status)
     }
 }
 
@@ -200,7 +196,7 @@ fun OrchestratorOverlay(
  */
 @Composable
 private fun UploadErrorBadge(
-    progress: Double,
+    status: UploadStatus,
     state: UploadingState.Error,
     onDelete: () -> Unit,
 ) {
@@ -212,7 +208,7 @@ private fun UploadErrorBadge(
                 .fillMaxSize()
                 .clickable { showDetails = true },
     ) {
-        UploadingState(progress, state)
+        UploadProgressOverMedia(status)
     }
 
     if (showDetails) {
@@ -260,47 +256,13 @@ fun DeleteButton(onDelete: () -> Unit) {
     }
 }
 
-@Composable
-fun UploadingState(
-    progress: Double,
-    progressState: UploadingState,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-            val animatedProgress by animateFloatAsState(
-                targetValue = progress.toFloat(),
-                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-            )
-
-            CircularProgressIndicator(
-                progress = { animatedProgress },
-                modifier =
-                    Size55Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.background),
-                strokeWidth = 5.dp,
-            )
-
-            Text(
-                uploadingStateLabel(progressState),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
 /** What an upload is doing right now, in one word: Compressing, Uploading, Verifying... */
 @Composable
 fun uploadingStateLabel(state: UploadingState): String =
     when (state) {
         is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
         is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
-        is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
+        is UploadingState.Uploading, is UploadingState.Sending -> stringRes(Res.string.uploading_state_uploading)
         is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
         is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
         is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)

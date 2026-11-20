@@ -236,10 +236,21 @@ fun NoteDropDownMenu(
             nav = nav,
         )
 
-    if (anchoredToButton && LocalScreenLayout.current.isLargeScreen) {
-        NoteActionDropdownMenu(sections, onDismiss)
-    } else {
-        NoteActionDialog(sections, onDismiss)
+    // Every follow-up dialog takes over from the menu: a menu left open would sit under it, so two
+    // modals stack and Esc closes only one. Cancelling a confirmation brings the menu back.
+    val followUpShowing =
+        wantsToEditPost.value ||
+            reportDialogShowing ||
+            addLabelDialogShowing ||
+            deleteConfirmationShowing ||
+            concordBanConfirming ||
+            removeForEveryoneConfirming
+    if (!followUpShowing) {
+        if (anchoredToButton && LocalScreenLayout.current.isLargeScreen) {
+            NoteActionDropdownMenu(sections, onDismiss)
+        } else {
+            NoteActionDialog(sections, onDismiss)
+        }
     }
 
     if (reportDialogShowing) {

@@ -151,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -379,7 +380,7 @@ private fun ConnectedBar(
                         buildList {
                             add("${link.pingMillis} ms")
                             if (link.compression) add("deflate")
-                            if (openSubs > 0) add(stringRes(Res.string.devtools_console_open_subs, openSubs))
+                            if (openSubs > 0) add(pluralStringRes(Res.plurals.devtools_console_open_subs, openSubs, openSubs))
                         }
                     Text(
                         details.joinToString(" · "),

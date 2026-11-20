@@ -196,10 +196,11 @@ kotlin {
                 // Native OS notification bridges — Nucleus per-OS JNI shims.
                 // macOS: UNUserNotificationCenter. Windows: WinRT Toasts. Linux: freedesktop D-Bus.
                 // Only the matching-OS module's native lib loads at runtime; the others
-                // stay dormant on the classpath.
-                implementation("io.github.kdroidfilter:nucleus.notification-macos:1.15.7")
-                implementation("io.github.kdroidfilter:nucleus.notification-windows:1.15.7")
-                implementation("io.github.kdroidfilter:nucleus.notification-linux:1.15.7")
+                // stay dormant on the classpath. Published under dev.nucleusframework since the
+                // io.github.kdroidfilter coordinates stopped at 1.15.7.
+                implementation(libs.nucleus.notification.macos)
+                implementation(libs.nucleus.notification.windows)
+                implementation(libs.nucleus.notification.linux)
             }
         }
 

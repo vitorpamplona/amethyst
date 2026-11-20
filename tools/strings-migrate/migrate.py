@@ -11,8 +11,7 @@ and appended (before </resources>) to
   commonsUI/src/commonMain/composeResources/<values*>/strings.xml
 creating the commons locale file when a translation exists that commons
 doesn't carry yet. Elements are moved verbatim (raw XML slice), so
-escaping, CDATA and comments inside values survive byte-for-byte and
-Crowdin sees a pure move.
+escaping, CDATA and comments inside values survive byte-for-byte.
 
 Fails loudly when a key's default-locale value uses non-positional format
 specifiers (bare %s / %d): compose-resources only formats the positional

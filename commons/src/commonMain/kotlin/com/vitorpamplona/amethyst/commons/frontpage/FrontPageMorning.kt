@@ -253,16 +253,6 @@ fun withObserverSettings(
 }
 
 /**
- * The per-install remembered model ([remembered], from [FrontPageModelMemory]) moved into [task]
- * as its `model` param, unless the schedule already names one: the migration this install makes
- * on its first edit of the event.
- */
-fun withMigratedModel(
-    task: ScheduledTask,
-    remembered: String?,
-): ScheduledTask = if (remembered.isNullOrBlank() || ObserverParams.model(task) != null) task else ObserverParams.withModel(task, remembered)
-
-/**
  * [current] turned on with [seed]'s schedule when it has none (a settings-only event): its params,
  * runner and every other tag stay; else as [ScheduledTask.withEnabled].
  */
@@ -277,18 +267,6 @@ fun withScheduleOn(
     val cron = seed?.cronTag ?: return null
     return current.withCron(cron.expression, cron.zone ?: return null, at).withEnabled(true, at)
 }
-
-/**
- * A read-modify-write of the schedule through [state] with [transform], and this install's model
- * migration ([withMigratedModel]) folded into whatever it writes: [remembered] is null once this
- * install has migrated, or when it remembers no model.
- */
-suspend fun editMigrating(
-    state: ScheduleRelays,
-    at: Long,
-    remembered: String?,
-    transform: (ScheduledTask?) -> ScheduledTask?,
-): ScheduleEdit = state.edit(at) { current -> transform(current)?.let { withMigratedModel(it, remembered) } }
 
 /**
  * The schedule this device keeps, or null when there is nothing to decide on yet (no synced
@@ -512,10 +490,11 @@ class FrontPageMorning(
     private val info: FrontPageInstallInfo?,
     private val now: () -> Long = { TimeUtils.now() },
     private val pause: suspend (Long) -> Unit = { delay(it) },
-    /** The model this install remembered per endpoint before settings moved into the schedule: migrated once, on the first edit. */
-    private val memory: FrontPageModelMemory? = null,
 ) {
     suspend fun installId(account: Account) = installs.id(account.signer.pubKey)
+
+    /** How this install names itself in a claim and in the papers it shares ("Pixel 8"); null where it can't print. */
+    val installName: String? get() = info?.name
 
     /** This install can print with nobody there: it can print at all, and the key is on the device. */
     fun canPrintHere(account: Account): Boolean = info != null && unattendedBlocker(account.signer, supportedBoundary, busy = false) == null
@@ -622,51 +601,10 @@ class FrontPageMorning(
     /** One edit at a time, this device's settings read inside it: two quick taps land in order. */
     private val editQueue = Mutex()
 
-    /**
-     * Once per account and install: a device that had its own schedule and finds no synced one
-     * (the relays answered and hold none) publishes it, in this device's zone. Skipped when a
-     * readable synced schedule is already here, or it was done before. A device that can't print
-     * alone loses its old on/off instead: it could never print.
-     */
-    suspend fun migrate(account: Account) {
-        val pubKey = account.signer.pubKey
-        val mine = optIns.get(pubKey)
-        if (!mine.enabled) return
-        if (!canPrintHere(account)) {
-            optIns.set(pubKey, mine.copy(enabled = false))
-            return
-        }
-        if (optIns.isMigrated(pubKey)) return
-        if ((account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.let(::isSettingsOnly) == false) {
-            optIns.setMigrated(pubKey)
-            return
-        }
-        val zone = FrontPageClock.localZone() ?: return
-        val outcome =
-            editQueue.withLock {
-                val at = now()
-                // Set now: the mornings this device missed before it moved aren't anyone's to catch up.
-                val local = ObserverSchedule.new(zone, at).withEnabled(true, at).withCron(mine.cron, zone, at)
-                edit(account, at) { current ->
-                    when {
-                        current == null -> local
-                        isSettingsOnly(current) -> withScheduleOn(current, local, on = true, at)
-                        else -> null
-                    }
-                }
-            }
-        if (outcome is ScheduleEdit.Saved || outcome is ScheduleEdit.Unchanged || outcome is ScheduleEdit.Unreadable) optIns.setMigrated(pubKey)
-    }
-
-    /** A new schedule for this account, on, at the old local time when there was one, set [at]; null when this device can't name its zone. */
-    private suspend fun seed(
-        account: Account,
-        at: Long,
-    ): ScheduledTask? {
+    /** A new schedule for this account, on, at the default time in this device's zone, set [at]; null when this device can't name its zone. */
+    private fun seed(at: Long): ScheduledTask? {
         val zone = FrontPageClock.localZone() ?: return null
-        val mine = optIns.get(account.signer.pubKey)
-        val fresh = ObserverSchedule.new(zone, at).withEnabled(true, at)
-        return if (mine.enabled && mine.simple() != null) fresh.withCron(mine.cron, zone, at) else fresh
+        return ObserverSchedule.new(zone, at).withEnabled(true, at)
     }
 
     /** On or off for every device; turned on with none yet, one is published now. Switched on, this device takes part when it can. */
@@ -676,7 +614,7 @@ class FrontPageMorning(
     ): ScheduleEdit =
         editQueue.withLock {
             val at = now()
-            val seed = if (on) seed(account, at) else null
+            val seed = if (on) seed(at) else null
             val known = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
             if (on && seed == null && (known == null || isSettingsOnly(known))) return@withLock ScheduleEdit.NoZone
             val outcome = edit(account, at) { current -> if (current == null) seed else withScheduleOn(current, seed, on, at) }
@@ -719,7 +657,7 @@ class FrontPageMorning(
             setOptIn(account, on)
             if (!on || account.observerSchedule.flow.value != SyncedSchedule.Unknown) return@withLock null
             val at = now()
-            val seed = seed(account, at) ?: return@withLock ScheduleEdit.NoZone
+            val seed = seed(at) ?: return@withLock ScheduleEdit.NoZone
             edit(account, at) { current -> if (current == null) seed else null }
         }
 
@@ -767,55 +705,55 @@ class FrontPageMorning(
         }
 
     /**
-     * Every edit this install makes of the schedule for the reader: the first one that writes also
-     * moves the model this install remembered for the key's endpoint into the event, unless it
-     * names one already ([withMigratedModel]), once.
+     * Publishing to the reader's Observer site, for every device of the account: written into the
+     * schedule as the Observer's `publish` param ([FrontPageParams.withPublishing]). With no
+     * schedule yet, a choice other than the default is kept in a settings-only event; the default
+     * needs nothing written.
      */
+    suspend fun setPublishing(
+        account: Account,
+        prefs: ObserverPrefs,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current ->
+                if (current == null && prefs == ObserverPrefs()) null else FrontPageParams.withPublishing(current ?: observerSettingsOnly(), prefs)
+            }
+        }
+
+    /**
+     * Where the paper's weather is for, for every device of the account: the schedule's `place`
+     * param ([ObserverWeather.withPlace]); null removes it. With no schedule yet, a place is kept in
+     * a settings-only event; removing one from nothing writes nothing.
+     */
+    suspend fun setPlace(
+        account: Account,
+        place: ObserverPlace?,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current ->
+                if (current == null && place == null) null else ObserverWeather.withPlace(current ?: observerSettingsOnly(), place)
+            }
+        }
+
+    /**
+     * A paper this install printed, recorded in the schedule's private tags for the account's other
+     * devices ([SharedEditions.withRecord]): they show it, open it, and don't print that morning
+     * again. With no schedule yet, in a settings-only event, which never runs.
+     */
+    suspend fun recordEdition(
+        account: Account,
+        record: EditionRecord,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current -> SharedEditions.withRecord(current ?: observerSettingsOnly(), record) }
+        }
+
+    /** Every edit this install makes of the schedule for the reader: a read-modify-write on their write relays. */
     private suspend fun edit(
         account: Account,
         at: Long,
         transform: (ScheduledTask?) -> ScheduledTask?,
-    ): ScheduleEdit {
-        val pubKey = account.signer.pubKey
-        val migrating = memory != null && !memoryMigrated(pubKey)
-        val remembered = if (migrating) rememberedModel(account) else null
-        val outcome = editMigrating(account.observerSchedule, at, remembered, transform)
-        if (migrating && outcome is ScheduleEdit.Saved) {
-            try {
-                memory.setMigrated(pubKey)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not record the model's move into the schedule", e)
-            }
-        }
-        return outcome
-    }
-
-    private suspend fun memoryMigrated(pubKey: HexKey): Boolean =
-        try {
-            memory?.isMigrated(pubKey) ?: true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not read whether the model moved into the schedule", e)
-            true
-        }
-
-    /** The model this install remembers for the endpoint the schedule prints with ([ObserverParams.key]). */
-    private suspend fun rememberedModel(account: Account): String? {
-        val keys = account.agentKeys.flow.value
-        val task = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
-        val url = (task?.let { ObserverParams.key(it, keys) } ?: keys.firstOrNull())?.url ?: return null
-        return try {
-            memory?.get(url)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not read the remembered model", e)
-            null
-        }
-    }
+    ): ScheduleEdit = account.observerSchedule.edit(at, transform = transform)
 
     private suspend fun setOptIn(
         account: Account,
@@ -1059,7 +997,6 @@ class FrontPageMorning(
 
     suspend fun forget(account: HexKey) {
         optIns.set(account, FrontPageSchedule())
-        optIns.forgetMigrated(account)
         installs.forget(account)
     }
 
@@ -1094,8 +1031,8 @@ class FrontPageMorning(
  * Keeps each loaded account's platform job in step with the synced schedule and this device's
  * own choice: scheduled while the schedule is on and this device prints, cancelled otherwise,
  * moved whenever either changes (never stopping a print that is running: that is the
- * platform's to keep apart). At account load it also moves an old local schedule to the synced
- * one, once, and runs a morning missed while the app was closed when the schedule shows it open.
+ * platform's to keep apart). At account load it also runs a morning missed while the app was
+ * closed when the schedule shows it open.
  */
 class FrontPageScheduleWatcher(
     private val morning: FrontPageMorning,
@@ -1121,15 +1058,6 @@ class FrontPageScheduleWatcher(
         pubKey: HexKey,
         account: Account,
     ) = coroutineScope {
-        launch {
-            try {
-                morning.migrate(account)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not move the morning schedule", e)
-            }
-        }
         follow(pubKey, morning.here(account), scheduler) { morning.catchUpWanted(account) }
     }
 

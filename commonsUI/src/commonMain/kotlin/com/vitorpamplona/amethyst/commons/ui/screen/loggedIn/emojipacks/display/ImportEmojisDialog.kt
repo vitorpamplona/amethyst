@@ -683,8 +683,9 @@ private fun LeftoverGroup(
                     Pill(name, container = colors.onSurface.copy(alpha = 0.08f), content = colors.onSurfaceVariant, monospace = monospace, small = true)
                 }
                 if (names.size > MAX_NAMES_PER_GROUP) {
+                    val more = names.size - MAX_NAMES_PER_GROUP
                     Pill(
-                        text = stringRes(Res.string.emoji_import_more, names.size - MAX_NAMES_PER_GROUP),
+                        text = pluralStringRes(Res.plurals.emoji_import_more, more, more),
                         container = Color.Transparent,
                         content = colors.primary,
                         small = true,

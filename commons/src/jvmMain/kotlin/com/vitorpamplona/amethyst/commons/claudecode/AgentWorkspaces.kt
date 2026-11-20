@@ -122,6 +122,11 @@ data class AgentPreferences(
     val autoCleanup: Boolean = true,
     /** Sessions archived by the user, for agents that keep no archive of their own. */
     val archivedSessions: Set<String> = emptySet(),
+    /**
+     * The permission mode each session was last left in ([PermissionMode.wire] by session id), so
+     * it reopens in it after a restart. Sessions in the default mode have no entry.
+     */
+    val sessionModes: Map<String, String> = emptyMap(),
 )
 
 /** How often workspaces cloned a repository, and when last: what the repository picker leads with. */

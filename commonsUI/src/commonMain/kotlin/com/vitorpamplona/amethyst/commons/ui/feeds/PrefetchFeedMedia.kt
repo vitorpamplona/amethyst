@@ -28,12 +28,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.size.Scale
 import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -158,12 +161,20 @@ private fun PrefetchVisibleMedia(
         // The withdrawals live in this finally, not in a DisposableEffect: the block below runs on
         // IO and does not stop at cancellation, so its last call could land after an onDispose and
         // register this feed again for good. Here they run after that block has returned.
+        // The size the warmed notes' images were prefetched for: once the list grows well past it (a
+        // maximized window), they are warmed again, or their cards would find their copies too small.
+        var warmedFor = IntSize.Zero
         try {
             visibleEnds.collectLatest { ends ->
                 withContext(Dispatchers.IO) {
+                    val size = ends.cell ?: ends.viewport
+                    if (size.width > warmedFor.width * REWARM_GROWTH || size.height > warmedFor.height * REWARM_GROWTH) {
+                        if (warmedFor != IntSize.Zero) warmed.clear()
+                        warmedFor = size
+                    }
                     currentNotes.notesAround(ends, radius).forEach { note ->
                         if (note.idHex !in warmed) {
-                            note.warm(context, platform, accountViewModel)?.let { videosByNote[note.idHex] = it.feedVideos() }
+                            note.warm(context, platform, accountViewModel, ends)?.let { videosByNote[note.idHex] = it.feedVideos() }
                             warmed.add(note.idHex)
                         }
                     }
@@ -235,25 +246,49 @@ private data class FeedVideo(
     val mimeType: String?,
 )
 
-/** The keys (note `idHex`) of the first and last visible feed items. */
+/**
+ * The keys (note `idHex`) of the first and last visible feed items, the size of the list's
+ * viewport, which bounds every image a card in it draws, and for a grid the size of its cells.
+ */
 private data class VisibleEnds(
     val firstKey: String?,
     val lastKey: String?,
-)
+    val viewport: IntSize,
+    val cell: IntSize? = null,
+) {
+    /**
+     * What a note's images are decoded to. A grid cell crops its image, so it is covered. A note
+     * with several images draws them as an `ImageGallery` of cropped cells, each at most as wide
+     * as the list, so they cover a square that wide. A single image is drawn across the card's
+     * width, never larger than the list, so it fits the viewport.
+     */
+    fun boxFor(imageCount: Int): PrefetchBox =
+        when {
+            cell != null -> PrefetchBox(cell.width, cell.height, fill = true)
+            imageCount > 1 -> PrefetchBox(viewport.width, viewport.width, fill = true)
+            else -> PrefetchBox(viewport.width, viewport.height, fill = false)
+        }
+}
+
+/** A new visible range: only the keys count, so resizing the window doesn't warm again on every frame. */
+private fun sameRange(
+    old: VisibleEnds,
+    new: VisibleEnds,
+) = old.firstKey == new.firstKey && old.lastKey == new.lastKey
 
 /** Emits the visible range ends, once per change. */
 private fun LazyListState.visibleEnds(): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String)
-    }.distinctUntilChanged()
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize)
+    }.distinctUntilChanged(::sameRange)
 
 /** Grid equivalent of [visibleEnds]. */
 private fun LazyGridState.visibleEnds(): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String)
-    }.distinctUntilChanged()
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize, visible.firstOrNull()?.size)
+    }.distinctUntilChanged(::sameRange)
 
 /** Up to [radius] notes immediately before the first visible and after the last visible. */
 private fun List<Note>.notesAround(
@@ -295,11 +330,13 @@ private fun Note.warm(
     context: PlatformContext,
     platform: NotePlatform,
     accountViewModel: AccountViewModel,
+    ends: VisibleEnds,
 ): WarmTargets? {
     val targets = collectWarmTargets() ?: return null
 
     if (accountViewModel.settings.showImages()) {
-        targets.forEachImage { url, videoUrlForDims -> context.prefetchImage(url, videoUrlForDims) }
+        val box = ends.boxFor(targets.imageCount)
+        targets.forEachImage { url, videoUrlForDims -> context.prefetchImage(url, videoUrlForDims, box) }
     }
     if (accountViewModel.settings.showUrlPreview()) {
         targets.links.forEach { url ->
@@ -315,6 +352,8 @@ private class WarmTargets {
     // image's (poster's) decoded aspect ratio, or null for a plain image.
     private val images = LinkedHashMap<String, String?>()
     val links = LinkedHashSet<String>()
+
+    val imageCount: Int get() = images.size
 
     // The videos themselves, each with its mime type when the note gives one, for a platform that
     // opens or downloads them ahead (see NotePlatform.warmVideos and prefetchVideos).
@@ -487,23 +526,85 @@ private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
         }
 
     val tags = ev.tags.toImmutableListOfLists()
-    // callbackUri = note.toNostrUri(), authorPubKey = null — the values the feed passes.
-    return CachedRichTextParser.parseText(body, tags, toNostrUri(), null)
+    // callbackUri = note.toNostrUri(), authorPubKey = the note's author — the values RenderTextEvent passes.
+    return CachedRichTextParser.parseText(body, tags, toNostrUri(), author?.pubkeyHex)
 }
 
-/** Enqueues an image prefetch that also records its decoded aspect ratio. */
+/**
+ * Enqueues an image prefetch that also records its decoded aspect ratio.
+ *
+ * Decoded to [box] (see [VisibleEnds.boxFor]): at least what the card will draw, so the prefetched
+ * copy is the card's memory-cache hit, and not more. A request without a size decodes the original
+ * on the desktop (Coil's default there; Android's is the screen size), and there one 12 MP photo took
+ * ~48 MB of the memory cache, for a card that draws it ~511 px wide: in a scroll benchmark the
+ * prefetch held 171 MiB of the cache against the cards' 12 MiB.
+ *
+ * Skipped when the memory cache already holds a copy as big as the box (a card drew it), so the
+ * prefetch doesn't decode a second one over it. A smaller copy, drawn smaller elsewhere (a side
+ * panel, a thumbnail), doesn't count: the card would have to decode on screen.
+ */
 private fun PlatformContext.prefetchImage(
     url: String,
     videoUrlForDims: String?,
+    box: PrefetchBox,
 ) {
+    // Not laid out yet: nothing to size it to, and the next visible range warms it.
+    if (box.isEmpty) return
     runCatching {
-        SingletonImageLoader.get(this).enqueue(
+        val loader = SingletonImageLoader.get(this)
+        loader.memoryCache?.get(MemoryCache.Key(url))?.let { cached ->
+            val sampled = cached.extras[IS_SAMPLED_EXTRA] as? Boolean ?: true
+            if (box.isCoveredBy(cached.image.width, cached.image.height, sampled)) {
+                CaptureAspectRatio(url, videoUrlForDims).record(cached.image.width, cached.image.height)
+                return
+            }
+        }
+        loader.enqueue(
             ImageRequest
                 .Builder(this)
                 .data(url)
+                .size(box.width, box.height)
+                .scale(if (box.fill) Scale.FILL else Scale.FIT)
                 .listener(CaptureAspectRatio(url, videoUrlForDims))
                 .build(),
         )
+    }
+}
+
+/** Coil's flag on a memory-cache value that was decoded smaller than the original (its constant is internal). */
+private const val IS_SAMPLED_EXTRA = "coil#is_sampled"
+
+/** Re-warm the warmed notes once the list grows past this factor of the size they were warmed for. */
+private const val REWARM_GROWTH = 1.25
+
+/**
+ * The size a prefetched image is decoded to: fitted inside [width] x [height], or covering it when
+ * [fill] (a card that crops).
+ */
+internal data class PrefetchBox(
+    val width: Int,
+    val height: Int,
+    val fill: Boolean,
+) {
+    val isEmpty: Boolean get() = width <= 0 || height <= 0
+
+    /**
+     * Whether a cached copy [cachedWidth] x [cachedHeight] is at least as big as decoding into this
+     * box would make it. The original ([sampled] false) always is. Its aspect ratio is the
+     * original's, which is all the box needs to know.
+     */
+    fun isCoveredBy(
+        cachedWidth: Int,
+        cachedHeight: Int,
+        sampled: Boolean,
+    ): Boolean {
+        if (!sampled) return true
+        if (cachedWidth <= 0 || cachedHeight <= 0 || isEmpty) return false
+        val aspect = cachedWidth.toDouble() / cachedHeight
+        val neededWidth = if (fill) maxOf(width.toDouble(), height * aspect) else minOf(width.toDouble(), height * aspect)
+        val neededHeight = neededWidth / aspect
+        // A pixel of slack: the decoder rounds.
+        return cachedWidth >= neededWidth - 1 && cachedHeight >= neededHeight - 1
     }
 }
 
@@ -525,9 +626,12 @@ private class CaptureAspectRatio(
     override fun onSuccess(
         request: ImageRequest,
         result: SuccessResult,
+    ) = record(result.image.width, result.image.height)
+
+    fun record(
+        w: Int,
+        h: Int,
     ) {
-        val w = result.image.width
-        val h = result.image.height
         MediaAspectRatioCache.add(imageUrl, w, h)
         if (videoUrlForDims != null && MediaAspectRatioCache.get(videoUrlForDims) == null) {
             MediaAspectRatioCache.add(videoUrlForDims, w, h)
