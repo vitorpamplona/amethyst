@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.profile.follows.dal.UserProfileFollows
 import com.vitorpamplona.amethyst.commons.profile.gallery.dal.UserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.gitrepos.dal.UserProfileGitReposFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.header.apps.UserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.commons.profile.lists.dal.UserProfileListsFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
@@ -87,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.gallery
 import com.vitorpamplona.amethyst.commons.resources.mutual
 import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
+import com.vitorpamplona.amethyst.commons.resources.profile_tab_lists
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_repos
 import com.vitorpamplona.amethyst.commons.resources.replies
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -111,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.hashtags.Fo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.ProfileHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.ProfileTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.lists.TabLists
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.mutual.TabMutualConversations
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.relays.TabRelays
@@ -288,6 +291,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val listsFeedViewModel: UserProfileListsFeedViewModel =
+        rememberViewModel(
+            key = baseUser.pubkeyHex + "UserProfileListsFeedViewModel",
+            factory =
+                UserProfileListsFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     ProfileScreen(
         baseUser = baseUser,
         threadsViewModel,
@@ -304,6 +317,7 @@ fun PrepareViewModels(
         gitReposFeedViewModel,
         reportsFeedViewModel,
         appsFeedViewModel,
+        listsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -326,6 +340,7 @@ fun ProfileScreen(
     gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -345,6 +360,7 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
     WatchLifecycleAndUpdateModel(gitReposFeedViewModel)
     WatchLifecycleAndUpdateModel(appsFeedViewModel)
+    WatchLifecycleAndUpdateModel(listsFeedViewModel)
 
     UserProfileFilterAssemblerSubscription(
         user = baseUser,
@@ -412,6 +428,7 @@ fun ProfileScreen(
                         gitReposFeedViewModel,
                         reportsFeedViewModel,
                         appsFeedViewModel,
+                        listsFeedViewModel,
                         accountViewModel,
                         nav,
                     )
@@ -514,6 +531,7 @@ private fun RenderScreen(
     gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -526,8 +544,13 @@ private fun RenderScreen(
     val loadedGitRepos = (gitReposFeedState as? FeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
     val showGitReposTab = !loadedGitRepos?.list.isNullOrEmpty()
 
+    // Same for people lists and follow packs: most profiles publish none.
+    val listsFeedState by listsFeedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
+    val loadedLists = (listsFeedState as? FeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
+    val showListsTab = !loadedLists?.list.isNullOrEmpty()
+
     val visibleTabs =
-        remember(showFollowersTab, showZapsTab, showGitReposTab) {
+        remember(showFollowersTab, showZapsTab, showGitReposTab, showListsTab) {
             buildList {
                 add(ProfileTab.Notes)
                 add(ProfileTab.Replies)
@@ -539,6 +562,7 @@ private fun RenderScreen(
                 if (showFollowersTab) add(ProfileTab.Followers)
                 if (showZapsTab) add(ProfileTab.Zaps)
                 add(ProfileTab.Bookmarks)
+                if (showListsTab) add(ProfileTab.Lists)
                 add(ProfileTab.FollowedTags)
                 add(ProfileTab.Reports)
                 add(ProfileTab.Relays)
@@ -597,6 +621,7 @@ private fun RenderScreen(
                 gitReposFeedViewModel,
                 reportsFeedViewModel,
                 appsFeedViewModel,
+                listsFeedViewModel,
                 accountViewModel,
                 nav,
             )
@@ -615,6 +640,7 @@ private enum class ProfileTab {
     Followers,
     Zaps,
     Bookmarks,
+    Lists,
     FollowedTags,
     Reports,
     Relays,
@@ -636,6 +662,7 @@ private fun CreateAndRenderPages(
     gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -669,6 +696,7 @@ private fun CreateAndRenderPages(
         ProfileTab.Followers -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         ProfileTab.Zaps -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
         ProfileTab.Bookmarks -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+        ProfileTab.Lists -> TabLists(listsFeedViewModel, accountViewModel, nav)
         ProfileTab.FollowedTags -> TabFollowedTags(baseUser, accountViewModel, nav)
         ProfileTab.Reports -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
         ProfileTab.Relays -> TabRelays(baseUser, accountViewModel, nav)
@@ -724,6 +752,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
                     ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)
                     ProfileTab.Bookmarks -> BookmarkTabHeader(baseUser, accountViewModel)
+                    ProfileTab.Lists -> Text(text = stringRes(Res.string.profile_tab_lists))
                     ProfileTab.FollowedTags -> FollowedTagsTabHeader(baseUser, accountViewModel)
                     ProfileTab.Reports -> ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel)
                     ProfileTab.Relays -> RelaysTabHeader()
