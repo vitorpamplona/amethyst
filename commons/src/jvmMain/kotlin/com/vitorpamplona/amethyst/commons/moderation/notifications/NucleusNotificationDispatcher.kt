@@ -20,26 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
-import io.github.kdroidfilter.nucleus.notification.AuthorizationOption
-import io.github.kdroidfilter.nucleus.notification.AuthorizationStatus
-import io.github.kdroidfilter.nucleus.notification.DeliveredNotification
-import io.github.kdroidfilter.nucleus.notification.NotificationCenter
-import io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate
-import io.github.kdroidfilter.nucleus.notification.NotificationContent
-import io.github.kdroidfilter.nucleus.notification.NotificationRequest
-import io.github.kdroidfilter.nucleus.notification.NotificationResponse
-import io.github.kdroidfilter.nucleus.notification.NotificationSound
-import io.github.kdroidfilter.nucleus.notification.PresentationOption
-import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
-import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener
-import io.github.kdroidfilter.nucleus.notification.windows.ActivationType
-import io.github.kdroidfilter.nucleus.notification.windows.AdaptiveText
-import io.github.kdroidfilter.nucleus.notification.windows.DismissalReason
-import io.github.kdroidfilter.nucleus.notification.windows.ToastBindingGeneric
-import io.github.kdroidfilter.nucleus.notification.windows.ToastContent
-import io.github.kdroidfilter.nucleus.notification.windows.ToastNotificationListener
-import io.github.kdroidfilter.nucleus.notification.windows.ToastVisual
-import io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
+import dev.nucleusframework.notification.AuthorizationOption
+import dev.nucleusframework.notification.AuthorizationStatus
+import dev.nucleusframework.notification.DeliveredNotification
+import dev.nucleusframework.notification.NotificationCenter
+import dev.nucleusframework.notification.NotificationCenterDelegate
+import dev.nucleusframework.notification.NotificationContent
+import dev.nucleusframework.notification.NotificationRequest
+import dev.nucleusframework.notification.NotificationResponse
+import dev.nucleusframework.notification.NotificationSound
+import dev.nucleusframework.notification.PresentationOption
+import dev.nucleusframework.notification.linux.LinuxNotificationCenter
+import dev.nucleusframework.notification.linux.LinuxNotificationListener
+import dev.nucleusframework.notification.windows.ActivationType
+import dev.nucleusframework.notification.windows.AdaptiveText
+import dev.nucleusframework.notification.windows.DismissalReason
+import dev.nucleusframework.notification.windows.ToastBindingGeneric
+import dev.nucleusframework.notification.windows.ToastContent
+import dev.nucleusframework.notification.windows.ToastNotificationListener
+import dev.nucleusframework.notification.windows.ToastVisual
+import dev.nucleusframework.notification.windows.WindowsNotificationCenter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +53,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
-import io.github.kdroidfilter.nucleus.notification.linux.Notification as LinuxNotification
-import io.github.kdroidfilter.nucleus.notification.linux.NotificationAction as LinuxNotificationAction
+import dev.nucleusframework.notification.linux.Notification as LinuxNotification
+import dev.nucleusframework.notification.linux.NotificationAction as LinuxNotificationAction
 
 /**
  * Native-backed [NotificationDispatcher] using Nucleus (kdroidfilter/Nucleus).
