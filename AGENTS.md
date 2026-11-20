@@ -6,7 +6,7 @@ Amethyst is a Nostr Client for Android that was made for Android-only and has be
 over to a Kotlin Multiplatform project. The main modules are: `commons`, `commonsUI`, `amethyst`,
 `desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. The protocol code is **not** in this
 repo: Nostr, MLS, the two MLS bindings, QUIC and the crypto primitives are libraries in their own
-repos, consumed from Maven Central (see [Libraries](#libraries-their-own-repos)). Commons stores
+repos, consumed via Magpie (see [Libraries](#libraries-their-own-repos)). Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
@@ -31,7 +31,7 @@ implementation for any future IETF target; see
 
 ## Libraries (their own repos)
 
-On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
+Via Magpie (`gradle/magpie.lock`); `-P<name>Dir=../<repo>` builds a local checkout instead.
 
 | Repo (`libs.*`) | Holds | `-P…Dir` |
 |---|---|---|
