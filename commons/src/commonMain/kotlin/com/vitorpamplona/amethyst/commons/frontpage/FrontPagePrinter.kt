@@ -1360,7 +1360,7 @@ class FrontPagePrinters(
     private val host: FrontPagePrintHost = FrontPagePrintHost.None,
 ) {
     /** The synced morning schedule of every account, and this install's place in it. */
-    val morning = FrontPageMorning(schedules, installs, installInfo, memory = memory)
+    val morning = FrontPageMorning(schedules, installs, installInfo)
 
     private val printers = MutableStateFlow<Map<HexKey, FrontPagePrinter>>(emptyMap())
 
