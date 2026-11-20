@@ -236,8 +236,8 @@ fun NoteDropDownMenu(
             nav = nav,
         )
 
-    // The editor takes over from the menu: a menu left open would sit on top of its dialog.
-    if (!wantsToEditPost.value) {
+    // The editor and the report take over from the menu: a menu left open would sit on top of their dialog.
+    if (!wantsToEditPost.value && !reportDialogShowing) {
         if (anchoredToButton && LocalScreenLayout.current.isLargeScreen) {
             NoteActionDropdownMenu(sections, onDismiss)
         } else {

@@ -334,7 +334,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.DrssSaveTo> { DrssSaveToScreen(it.articleAddress, accountViewModel, nav) }
     composableFromEndArgs<Route.DrssCollectTo> { DrssCollectToScreen(it.eventId, accountViewModel, nav) }
     composableFromEndArgs<Route.DrssRecordProvenance> { DrssRecordProvenanceScreen(it.articleAddress, accountViewModel, nav) }
-    composableFromEndArgs<Route.DrssShowEdit> { DrssShowEditScreen(it.showAddress, accountViewModel, nav) }
+    composerArgs<Route.DrssShowEdit>(ComposerSize.FORM, NavFamily.END) { DrssShowEditScreen(it.showAddress, accountViewModel, nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
@@ -390,12 +390,12 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.BuzzDmList>(capWidth = false) { route ->
         ChatListDetailScreen(::isRelayGroupDetailRoute, accountViewModel, nav) { BuzzDmListScreen(route.relayUrl, accountViewModel, it) }
     }
-    composableFromEndArgs<Route.BuzzNewDm> { BuzzNewDmScreen(it.relayUrl, accountViewModel, nav) }
+    composerArgs<Route.BuzzNewDm>(ComposerSize.QUICK, NavFamily.END) { BuzzNewDmScreen(it.relayUrl, accountViewModel, nav) }
     composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
     composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.AgentConsole> { AgentConsoleScreen(it.relayUrl, accountViewModel, nav) }
     composableFromEnd<Route.AgentAttestation> { AgentAttestationScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.AgentPersonaEdit> { AgentPersonaEditScreen(it.slug, accountViewModel, nav) }
+    composerArgs<Route.AgentPersonaEdit>(ComposerSize.FORM, NavFamily.END) { AgentPersonaEditScreen(it.slug, accountViewModel, nav) }
     composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
     composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
@@ -457,7 +457,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
     composableFromEnd<Route.PrivacyLockSettings> { PrivacyLockSettingsScreen(nav) }
     composableFromEnd<Route.CustomFeeds> { CustomFeedsScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.EditCustomFeed> { EditCustomFeedScreen(it.id, accountViewModel, nav) }
+    composerArgs<Route.EditCustomFeed>(ComposerSize.FORM, NavFamily.END) { EditCustomFeedScreen(it.id, accountViewModel, nav) }
     composableFromEnd<Route.WebOfTrust> { WebOfTrustScreen(accountViewModel, nav) }
     composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
     composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }
@@ -668,7 +668,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromEndArgs<Route.ConcordEdit> {
+    composerArgs<Route.ConcordEdit>(ComposerSize.FORM, NavFamily.END) {
         ConcordEditScreen(
             communityId = it.communityId,
             accountViewModel = accountViewModel,
@@ -707,7 +707,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.BuzzAgentWork> { AgentWorkBoardScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
     composerArgs<Route.BuzzForumPost>(ComposerSize.QUICK) { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
     composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
-    composableFromEndArgs<Route.RelayGroupCreate> {
+    composerArgs<Route.RelayGroupCreate>(ComposerSize.FORM, NavFamily.END) {
         RelayGroupCreateScreen(
             relayUrl = it.relayUrl,
             isForum = it.isForum,
@@ -715,7 +715,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             nav = nav,
         )
     }
-    composableFromEndArgs<Route.RelayGroupEdit> {
+    composerArgs<Route.RelayGroupEdit>(ComposerSize.FORM, NavFamily.END) {
         RelayGroupEditScreen(
             id = it.id,
             relayUrl = it.relayUrl,

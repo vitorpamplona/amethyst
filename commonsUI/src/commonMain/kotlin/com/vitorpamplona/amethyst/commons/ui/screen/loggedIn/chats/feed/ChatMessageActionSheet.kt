@@ -219,6 +219,8 @@ fun ChatMessageActionSheet(
             reportDialogShowing = false
             onDismiss()
         }
+        // The report takes over from the sheet, as the other follow-ups do.
+        return
     }
 
     if (addLabelDialogShowing) {

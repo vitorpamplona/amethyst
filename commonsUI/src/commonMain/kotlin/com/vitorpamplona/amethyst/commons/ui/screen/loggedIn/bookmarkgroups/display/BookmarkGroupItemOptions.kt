@@ -168,6 +168,15 @@ fun BookmarkGroupItemOptionsMenu(
         return
     }
 
+    if (reportDialogShowing) {
+        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
+            reportDialogShowing = false
+            onDismiss()
+        }
+        // The report takes over from the options dialog, which would otherwise sit behind it.
+        return
+    }
+
     M3ActionDialog(
         title = stringRes(Res.string.bookmark_item_actions_dialog_title),
         onDismiss = onDismiss,
@@ -301,13 +310,6 @@ fun BookmarkGroupItemOptionsMenu(
                     reportDialogShowing = true
                 }
             }
-        }
-    }
-
-    if (reportDialogShowing) {
-        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
-            reportDialogShowing = false
-            onDismiss()
         }
     }
 }

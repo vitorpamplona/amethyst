@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -223,7 +224,8 @@ fun ZapCustomDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(horizontal = 16.dp),
+            // A dialog's width on a phone; on a desktop window it would otherwise stretch edge to edge.
+            modifier = Modifier.padding(horizontal = 16.dp).widthIn(max = 480.dp),
         ) {
             Column(
                 modifier =

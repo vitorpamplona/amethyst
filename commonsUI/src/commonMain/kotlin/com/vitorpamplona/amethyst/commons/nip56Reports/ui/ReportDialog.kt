@@ -50,8 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -77,6 +75,8 @@ import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialog
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerSize
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -118,9 +118,10 @@ fun ReportDialog(
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableIntStateOf(-1) }
 
-    Dialog(
+    // Full screen on a touch screen, a dialog over the note on a wide desktop window, like the composers.
+    ComposerDialog(
+        size = ComposerSize.QUICK,
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Scaffold(
             topBar = {
