@@ -170,9 +170,17 @@ Status against Flathub's
    Flathub's builder (`org.flatpak.Builder`) could not run nested in Docker, so
    that was not checked end to end.
 
+   The Magpie half was checked on `main` after the move to Magpie (x86_64, no
+   flatpak-builder): the generator listed 3,660 Maven and 120 Magpie files with
+   none left unserved, every Magpie file downloaded from its Blossom URL with a
+   matching sha256, and the manifest's `--offline` build, laid out from that list
+   into a fresh Gradle home and run with no network at all, built the release
+   tree with quartz and the other Magpie libraries from the mirror.
+
    Every release: `flathub/tools/regenerate-gradle-sources.sh vX.Y.Z` (about
    35 minutes, both arches in Docker) rewrites `gradle-sources.json` from a real
-   online build and prints the tarball's sha256 for the manifest. Flathub's
+   online build and prints the tarball's sha256 for the manifest. When Maven
+   Central throttles the capture (HTTP 429), it runs the same build again. Flathub's
    update bot can't regenerate that list, so each release is a manual PR to the
    Flathub app repo.
 

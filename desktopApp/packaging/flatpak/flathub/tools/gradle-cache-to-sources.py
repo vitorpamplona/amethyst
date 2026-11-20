@@ -21,7 +21,9 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import random
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -38,17 +40,22 @@ def repos_for(group):
 
 
 def exists(url):
+    """HEAD the url. A 404 is an answer; a throttled (429) or failing server is
+    asked again with backoff, so a busy Maven Central doesn't read as "missing"."""
     req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "flatpak-sources-generator"})
-    for _ in range(3):
+    for attempt in range(8):
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 return r.status == 200
         except urllib.error.HTTPError as e:
             if e.code in (404, 403, 410):
                 return False
+            retry_after = e.headers.get("Retry-After", "")
+            wait = int(retry_after) if retry_after.isdigit() else 2**attempt
         except Exception:
-            pass
-    return False
+            wait = 2**attempt
+        time.sleep(min(wait, 60) + random.random())
+    sys.exit(f"no answer from {url}; run again later")
 
 
 def sha256(path):
@@ -75,19 +82,36 @@ def module_urls(vdir):
     return urls
 
 
-def release_servers(magpie, pub, group, module, version):
-    """The Blossom servers the release events Magpie cached for this version name
-    (`server` tags), then the publisher's server list (kind 10063), in order."""
-    servers = []
-    for path in (os.path.join(magpie, "events", pub, group, module, f"{version}.json"), os.path.join(magpie, "servers", f"{pub}.json")):
-        if not os.path.isfile(path):
-            continue
+def tag_values(event, name):
+    return [t[1] for t in event.get("tags", []) if len(t) > 1 and t[0] == name]
+
+
+def release_servers(magpie, pub):
+    """(group, module, version) -> the Blossom servers its release names (`server` tags),
+    then the publisher's server list (kind 10063). One release event covers every
+    module in its `j` tags, so all the events Magpie cached are read."""
+    listed = []
+    path = os.path.join(magpie, "servers", f"{pub}.json")
+    if os.path.isfile(path):
         with open(path) as f:
-            events = json.load(f)
-        for event in events if isinstance(events, list) else [events]:
-            for tag in event.get("tags", []):
-                if len(tag) > 1 and tag[0] == "server" and tag[1].rstrip("/") not in servers:
-                    servers.append(tag[1].rstrip("/"))
+            for event in (lambda e: e if isinstance(e, list) else [e])(json.load(f)):
+                listed += [s.rstrip("/") for s in tag_values(event, "server")]
+    servers = {}
+    for dirpath, _, files in os.walk(os.path.join(magpie, "events", pub)):
+        for name in files:
+            if not name.endswith(".json") or name.startswith("_"):
+                continue
+            with open(os.path.join(dirpath, name)) as f:
+                events = json.load(f)
+            for event in events if isinstance(events, list) else [events]:
+                hinted = [s.rstrip("/") for s in tag_values(event, "server")]
+                for version in tag_values(event, "v"):
+                    for coordinate in tag_values(event, "j"):
+                        group, _, module = coordinate.partition(":")
+                        known = servers.setdefault((group, module, version), [])
+                        known += [s for s in hinted if s not in known]
+    for known in servers.values():
+        known += [s for s in listed if s not in known]
     return servers
 
 
@@ -98,6 +122,7 @@ def collect_magpie(home, found):
     if not os.path.isdir(mirror):
         return
     for pub in os.listdir(mirror):
+        known = release_servers(magpie, pub)
         for dirpath, _, files in os.walk(os.path.join(mirror, pub)):
             parts = os.path.relpath(dirpath, os.path.join(mirror, pub)).split(os.sep)
             if not files:
@@ -105,7 +130,7 @@ def collect_magpie(home, found):
             if len(parts) < 3:
                 sys.exit(f"unexpected file in Magpie's mirror: {dirpath}")
             group, module, version = ".".join(parts[:-2]), parts[-2], parts[-1]
-            servers = release_servers(magpie, pub, group, module, version)
+            servers = known.get((group, module, version), [])
             for name in files:
                 digest = sha256(os.path.join(dirpath, name))
                 if not os.path.isfile(os.path.join(magpie, "blobs", digest[:2], digest)):
@@ -189,7 +214,7 @@ def main():
     for home in homes:
         collect(home, found, served_by_magpie)
     print(f"{len(found)} Maven files, {len(magpie)} Magpie files", file=sys.stderr)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(resolve, sorted(found.items())))
         results += list(pool.map(resolve_magpie, sorted(magpie.items())))
     missing = [r["missing"] for r in results if "missing" in r]
