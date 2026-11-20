@@ -27,6 +27,10 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrintJob
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_explain_keep
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_explain_text
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_explain_title
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_quit
 import com.vitorpamplona.amethyst.commons.resources.front_page_keep_printing
 import com.vitorpamplona.amethyst.commons.resources.front_page_quit_and_cancel
 import com.vitorpamplona.amethyst.commons.resources.front_page_quit_text
@@ -147,5 +151,50 @@ fun PrintQuitDialog(
         text = { Text(stringRes(Res.string.front_page_quit_text)) },
         confirmButton = { TextButton(onClick = onKeepPrinting) { Text(stringRes(Res.string.front_page_keep_printing)) } },
         dismissButton = { TextButton(onClick = onQuit) { Text(stringRes(Res.string.front_page_quit_and_cancel)) } },
+    )
+}
+
+/**
+ * The file that says the user was told, once, that closing the window keeps Amethyst running in the
+ * tray while a NIP-46 signer runs ([TrayExplainDialog]). Missing until they answer it.
+ */
+class TrayExplainedMarker(
+    dataDir: File,
+) {
+    private val file = File(dataDir, FILE)
+
+    val present: Boolean get() = file.exists()
+
+    fun set() {
+        try {
+            file.writeText("1")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not remember the tray was explained", e)
+        }
+    }
+
+    private companion object {
+        const val TAG = "TrayExplainedMarker"
+        const val FILE = "tray-explained"
+    }
+}
+
+/**
+ * Shown the first time closing the window would send Amethyst to the tray: where it went, why, and a
+ * way to quit instead. Only Back, the buttons or a click outside decide; dismissing it keeps the
+ * window open.
+ */
+@Composable
+fun TrayExplainDialog(
+    onKeepRunning: () -> Unit,
+    onQuit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.desktop_tray_explain_title)) },
+        text = { Text(stringRes(Res.string.desktop_tray_explain_text)) },
+        confirmButton = { TextButton(onClick = onKeepRunning) { Text(stringRes(Res.string.desktop_tray_explain_keep)) } },
+        dismissButton = { TextButton(onClick = onQuit) { Text(stringRes(Res.string.desktop_tray_quit)) } },
     )
 }

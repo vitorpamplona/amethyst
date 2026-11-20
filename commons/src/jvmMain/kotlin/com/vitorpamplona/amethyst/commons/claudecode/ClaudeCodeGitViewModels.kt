@@ -547,8 +547,11 @@ class ClaudeCodeProposeViewModel(
     fun cancelGate() {
         val process = gateProcess ?: return
         _gate.value = GateState.Cancelled((gate.value as? GateState.Running)?.tail.orEmpty())
-        process.descendants().forEach { it.destroy() }
+        // The script first, listing its children while they are still its own: stopped after them,
+        // it would see its Gradle end and go on to its next step.
+        val children = process.descendants().toList()
         process.destroy()
+        children.forEach { it.destroy() }
     }
 
     override fun onCleared() {

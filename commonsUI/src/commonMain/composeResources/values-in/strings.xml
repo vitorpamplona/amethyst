@@ -1,9 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">balas ke </string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Izin:</string>
+    <string name="nsite_root_site">Situs Root</string>
+    <string name="nsite_source">Sumber:</string>
+    <string name="nsite_servers">Server:</string>
+    <string name="nsite_open">Buka</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Gunakan URL langsung</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Terbuka</string>
     <string name="git_status_merged">Digabungkan</string>
     <string name="git_status_closed">Ditutup</string>
-    <string name="git_status_draft">Draft</string>
     <plurals name="birdex_species_count">
         <item quantity="other">Birdex · %1$d spesies</item>
     </plurals>
@@ -25,6 +44,7 @@
     <string name="road_event_speed_camera">Kamera kecepatan</string>
     <string name="road_event_traffic_jam">Kemacetan</string>
     <string name="road_event_unknown">Kejadian jalan</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Buka</string>
     <string name="relay_monitor_rtt_read">Baca</string>
     <string name="relay_monitor_rtt_write">Tulis</string>
@@ -32,7 +52,6 @@
     <string name="relay_monitor_relay_type">Tipe</string>
     <string name="relay_monitor_requirements">Persyaratan</string>
     <string name="relay_monitor_supported_nips">NIP yang Didukung</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Jenis yang Diterima</string>
     <string name="relay_discovery_geohash">Lokasi</string>
     <string name="calendar_rsvp_going">Hadir</string>
@@ -41,20 +60,19 @@
     <plurals name="calendar_collection_count">
         <item quantity="other">%1$d acara</item>
     </plurals>
-    <string name="profile_banner">Spanduk Profil</string>
+    <string name="profile_banner">Banner Profil</string>
     <string name="point_to_the_qr_code">Arahkan ke Kode QR</string>
     <string name="show_qr">Tampilkan QR</string>
-    <string name="profile_image">Foto Profil</string>
+    <string name="profile_image">Gambar profil</string>
     <string name="your_profile_image">Foto Profil Anda</string>
-    <string name="scan_qr">Pindai QR</string>
-    <string name="show_anyway">Tampilkan Saja</string>
+    <string name="scan_qr">Memindai QR</string>
+    <string name="show_anyway">Tetap tampilkan</string>
     <string name="post_was_hidden">Postingan ini disembunyikan karena menyebut pengguna atau kata yang Anda sembunyikan</string>
     <string name="post_was_flagged_as_inappropriate_by">Postingan dilaporkan oleh</string>
-    <string name="post_not_found">Data sedang dimuat atau tidak dapat ditemukan di daftar relai Anda</string>
-    <string name="post_not_found_short">👀</string>
+    <string name="post_not_found">Event sedang dimuat atau tidak dapat ditemukan dalam daftar relay Anda</string>
     <string name="channel_image">Gambar Kanal</string>
-    <string name="referenced_event_not_found">Data yang direferensikan tidak ditemukan</string>
-    <string name="could_not_decrypt_the_message">Tidak dapat mendeskripsikan pesan</string>
+    <string name="referenced_event_not_found">Referensi event tidak dapat ditemukan</string>
+    <string name="could_not_decrypt_the_message">Tidak dapat mendekripsi pesan</string>
     <string name="group_picture">Gambar Grup</string>
     <string name="explicit_content">Konten Eksplisit</string>
     <string name="relay_notice">Pemberitahuan relay</string>
@@ -64,8 +82,8 @@
     <string name="violence">Kekerasan</string>
     <string name="unknown_author">Penulis Tidak Dikenal</string>
     <string name="copy_text">Salin Teks</string>
-    <string name="copy_user_pubkey">Salin ID Penulis (Author ID)</string>
-    <string name="copy_note_id">Salin ID Tulisan (Note ID)</string>
+    <string name="copy_user_pubkey">Salin ID Penulis</string>
+    <string name="copy_note_id">Salin ID Note</string>
     <string name="copy_raw_json">Salin JSON mentah</string>
     <string name="broadcast">Siarkan</string>
     <string name="timestamp_it">Beri cap waktu</string>
@@ -73,28 +91,24 @@
     <string name="timestamp_pending_short">OTS: Menunggu</string>
     <string name="block_report">Blokir / Laporkan</string>
     <string name="report_spam_scam">Laporkan Spam / Penipuan</string>
-    <string name="report_impersonation">Laporkan Peniruan</string>
+    <string name="report_impersonation">Laporkan Pemalsuan Identitas</string>
     <string name="report_illegal_behaviour">Laporkan Perilaku Ilegal</string>
     <string name="report_malware">Laporkan Malware</string>
-    <string name="malware">Malware</string>
     <string name="chat_zap_amount_suffix">meng-zap %1$s sats</string>
     <string name="chat_zap_anonymous">Anonim</string>
     <string name="chat_raid_is_raiding">sedang melakukan raid</string>
     <string name="chat_clip_created_a_clip">membuat klip</string>
     <string name="edited">diedit</string>
     <string name="original">asli</string>
-    <string name="quote">Kutipan</string>
-    <string name="fork">Fork</string>
-    <string name="new_amount_in_sats">Jumlah Baru dalam Sats</string>
-    <string name="replying_to">membalas kepada </string>
-    <string name="and"> dan </string>
+    <string name="quote">Kutip</string>
+    <string name="new_amount_in_sats">Jumlah baru dalam sat</string>
     <string name="following"> Mengikuti</string>
     <string name="followers"> Pengikut</string>
     <string name="number_following">%1$s Mengikuti</string>
     <string name="number_followers">%1$s Pengikut</string>
     <string name="log_out">Keluar</string>
     <string name="show_more">Tampilkan lagi</string>
-    <string name="lightning_invoice">Faktur Tagihan Lightning</string>
+    <string name="lightning_invoice">Invoice Lightning</string>
     <string name="invoice_expired">Kedaluwarsa</string>
     <string name="clink_lightning_offer">Penawaran CLINK</string>
     <string name="clink_offer_pay_to">Kepada</string>
@@ -118,10 +132,7 @@
     <string name="send_payment_source_external">Aplikasi dompet lain</string>
     <string name="send_payment_source_onchain_wallet">Dompet on-chain</string>
     <string name="send_payment_source_cashu_wallet">Dompet Cashu</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Penawaran CLINK</string>
-    <string name="send_payment_method_onchain">On-chain</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Jumlah</string>
     <string name="send_payment_fixed_price">Harga ditetapkan oleh penawaran</string>
     <string name="send_payment_receipt_section">Tanda terima zap</string>
@@ -144,41 +155,39 @@
     <string name="send_payment_min_onchain">Zap on-chain memerlukan minimal %1$s sats</string>
     <string name="send_payment_cashu_insufficient">Saldo tidak cukup di mint yang diterima penerima ini. Isi ulang dompet Cashu Anda terlebih dahulu.</string>
     <string name="send_payment_onchain_fee">Biaya jaringan</string>
-    <string name="lightning_tips">Lightning Tip</string>
-    <string name="note_to_receiver">Catatan ke Penerima</string>
+    <string name="lightning_tips">Lightning tip</string>
+    <string name="note_to_receiver">Catatan untuk penerima</string>
     <string name="thank_you_so_much">Terima kasih banyak!</string>
-    <string name="amount_in_sats">Jumlah dalam Sats</string>
-    <string name="send_sats">Kirim Sats</string>
+    <string name="amount_in_sats">Jumlah (sat)</string>
+    <string name="send_sats">Kirim sat</string>
     <string name="secret_emoji_maker">Pembuat Emoji Rahasia</string>
     <string name="secret_emoji_maker_explainer">Tambahkan emoji dengan pesan tersembunyi ke postingan</string>
     <string name="secret_note_to_receiver">Catatan Rahasia untuk Penerima</string>
     <string name="secret_note_to_receiver_placeholder">Pesan tersembunyi saya</string>
     <string name="secret_visible_text">Awalan yang Terlihat</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Tambahkan ke Postingan</string>
     <string name="article">Artikel</string>
-    <string name="channel_name">Nama Kanal</string>
-    <string name="my_awesome_group">Grupku yang Hebat</string>
-    <string name="picture_url">Alamat Url Gambar</string>
+    <string name="channel_name">Nama kanal</string>
+    <string name="my_awesome_group">Groupku Luar Biasa</string>
+    <string name="picture_url">Url gambar</string>
     <string name="optional_picture_url">URL Gambar (Opsional)</string>
     <string name="about_us">Tentang kami…</string>
     <string name="search_and_add_a_user">Cari dan tambahkan pengguna</string>
-    <string name="add_a_relay">Tambah Relai</string>
+    <string name="add_a_relay">Tambah Relay</string>
     <string name="my_name">Nama @tag saya</string>
-    <string name="display_name">Nama ditampilkan</string>
-    <string name="my_display_name">Namaku yg ditampilkan</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="display_name">Nama Tampilan</string>
+    <string name="my_display_name">Nama tampilan saya</string>
     <string name="welcome">Selamat datang, Ostrich!</string>
     <string name="username">Nama pengguna</string>
     <string name="about_me">Tentang saya</string>
-    <string name="avatar_url">URL Avatar</string>
-    <string name="banner_url">URL Spanduk/Banner</string>
-    <string name="website_url">URL Situs Web</string>
+    <string name="avatar_url">URL avatar</string>
+    <string name="banner_url">URL banner</string>
+    <string name="website_url">URL situs web</string>
     <string name="pronouns">Kata ganti</string>
     <string name="stale_relay_hint_label">relay sumber mungkin sudah usang</string>
     <string name="stale_relay_hint_icon_description">Peringatan relay usang</string>
     <string name="pinned_to_top">Disematkan ke atas</string>
-    <string name="upload_image">Unggah Gambar</string>
+    <string name="upload_image">Unggah gambar</string>
     <string name="upload_file">Unggah File</string>
     <string name="take_a_picture">Ambil foto</string>
     <string name="record_a_video">Rekam video</string>
@@ -189,41 +198,40 @@
     <string name="voice_anonymize_title">Anonimkan</string>
     <string name="voice_anonymize_description">Mengubah nada suara Anda. Catatan: perubahan nada dasar berpotensi dikembalikan oleh pendengar yang bertekad.</string>
     <string name="user_suggestion_in_this_chat">Di obrolan ini</string>
-    <string name="edits_the_channel_metadata">Ubah Metadata Kanal</string>
+    <string name="edits_the_channel_metadata">Ubah metadata kanal</string>
     <string name="join">Gabung</string>
-    <string name="feed">Feed</string>
     <string name="mod_queue">Antrian Moderasi</string>
-    <string name="notes">Catatan</string>
+    <string name="notes">Note</string>
     <string name="replies">Balasan</string>
     <string name="mutual">Milik Anda</string>
     <string name="gallery">Galeri</string>
     <string name="reports">Laporan</string>
     <string name="number_reports">%1$s Laporan</string>
     <string name="relays"> Relai</string>
-    <string name="website">Situs Web</string>
+    <string name="website">Situs web</string>
     <string name="lightning_address">Alamat Lightning</string>
     <string name="send_a_direct_message">Kirim Pesan Langsung</string>
-    <string name="edits_the_user_s_metadata">Ubah Metadata Pengguna</string>
-    <string name="unblock">Batalkan blokir</string>
-    <string name="copy_user_id">Salin ID Pengguna</string>
-    <string name="unblock_user">Batalkan blokir pengguna</string>
+    <string name="edits_the_user_s_metadata">Ubah metadata pengguna</string>
+    <string name="unblock">Buka blokir</string>
+    <string name="copy_user_id">Salin ID pengguna</string>
+    <string name="unblock_user">Buka blokir pengguna</string>
     <string name="user_is_blocked_hidden">Pengguna ini diblokir/dibisukan. Postingan mereka disembunyikan.</string>
-    <string name="npub_hex_username">npub, nama pengguna, teks</string>
-    <string name="clear">Bersihkan</string>
+    <string name="npub_hex_username">npub, username, teks</string>
+    <string name="clear">Kosongkan</string>
     <string name="app_logo">Logo Aplikasi</string>
-    <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
+    <string name="nsec_npub_hex_private_key">nsec.. atau npub..</string>
     <string name="ncryptsec_password">kata sandi untuk membuka kunci</string>
-    <string name="show_password">Tampilkan Kata Sandi</string>
-    <string name="i_accept_the">Saya menerima</string>
-    <string name="terms_of_use">syarat penggunaan</string>
-    <string name="acceptance_of_terms_is_required">Penerimaan persyaratan diperlukan</string>
+    <string name="show_password">Tampilkan kata sandi</string>
+    <string name="i_accept_the">Saya menerima </string>
+    <string name="terms_of_use">ketentuan penggunaan</string>
+    <string name="acceptance_of_terms_is_required">Persetujuan aturan penggunaan diperlukan</string>
     <string name="login">Masuk</string>
     <string name="sign_up">Daftar</string>
     <string name="create_account">Buat Akun</string>
     <string name="how_should_we_call_you">Apa yang harus kami panggil Anda?</string>
     <string name="don_t_have_an_account">Belum punya akun Nostr?</string>
     <string name="already_have_an_account">Sudah punya akun Nostr?</string>
-    <string name="loading_feed">Memuat data umpan</string>
+    <string name="loading_feed">Memuat umpan</string>
     <string name="loading_account">Memuat akun</string>
     <string name="chats_history_proto_nip17">terenkripsi</string>
     <string name="chats_history_proto_nip04">lama</string>
@@ -234,47 +242,46 @@
     <string name="try_again">Coba lagi</string>
     <string name="notification_feed_is_empty">Belum ada notifikasi.</string>
     <string name="open_poll">Buka Polling</string>
-    <string name="feed_is_empty">Data umpan kosong.</string>
-    <string name="refresh">Perbarui</string>
+    <string name="feed_is_empty">Umpan kosong.</string>
+    <string name="refresh">Muat ulang</string>
     <string name="channel_created">Kanal dibuat</string>
-    <string name="channel_information_changed_to">Informasi kanal diubah menjadi</string>
-    <string name="marmot_group_no_messages_yet">Belum ada pesan</string>
+    <string name="channel_information_changed_to">Informasi kanal berubah ke</string>
     <string name="paid_relay">relay berbayar</string>
     <string name="tor_relay">Memaksa Tor saat terhubung</string>
-    <string name="posts_received">kiriman diterima</string>
+    <string name="posts_received">postingan diterima</string>
     <string name="translations_auto">Otomatis</string>
     <string name="translations_translated_from">diterjemahkan dari</string>
     <string name="translations_to">ke</string>
-    <string name="translations_show_in_lang_first">Tampilkan dalam %1$s (prioritas)</string>
+    <string name="translations_show_in_lang_first">Tampilkan dalam %1$s terlebih dahulu</string>
     <string name="chat_about_topic">Obrolan publik tentang %1$s</string>
     <string name="community_about_topic">Komunitas publik tentang %1$s</string>
     <string name="translations_always_translate_to_lang">Selalu terjemahkan ke %1$s</string>
-    <string name="translations_never_translate_from_lang">Jangan terjemahkan dari %1$s</string>
+    <string name="translations_never_translate_from_lang">Jangan pernah terjemahkan dari %1$s</string>
     <string name="nip_05">Alamat Nostr</string>
-    <string name="report_hateful_speech">Laporkan ujaran kebencian</string>
-    <string name="report_nudity_porn">Laporkan Ketelanjangan / Pornografi</string>
-    <string name="mark_all_known_as_read">Tandai semua yg dikenal telah dibaca</string>
-    <string name="mark_all_new_as_read">Tandai pesan baru telah dibaca</string>
-    <string name="mark_all_as_read">Tandai semua telah dibaca</string>
+    <string name="report_hateful_speech">Lapor ujaran kebencian</string>
+    <string name="report_nudity_porn">Lapor ketelanjangan / pornografi</string>
+    <string name="mark_all_known_as_read">Tandai semua yang dikenal sebagai telah dibaca</string>
+    <string name="mark_all_new_as_read">Tandai semua yang baru sebagai telah dibaca</string>
+    <string name="mark_all_as_read">Tandai semua sebagai telah dibaca</string>
     <string name="badge_award_image_for">Gambar penghargaan lencana untuk %1$s</string>
     <string name="badge_award_image">"Gambar penghargaan lencana</string>
-    <string name="new_badge_award_notif">Anda Menerima Penghargaan Lencana baru</string>
+    <string name="new_badge_award_notif">Anda menerima penghargaan lencana baru</string>
     <string name="award_granted_to">Penghargaan lencana diberikan kepada</string>
-    <string name="account_switch_add_account_dialog_title">Tambah Akun Baru</string>
-    <string name="account_switch_select_account">Pilih Akun</string>
-    <string name="account_switch_add_account_btn">Tambah Akun Baru</string>
+    <string name="account_switch_add_account_dialog_title">Tambahkan Akun Baru</string>
+    <string name="account_switch_select_account">Pilih akun</string>
+    <string name="account_switch_add_account_btn">Tambahkan Akun Baru</string>
     <string name="account_switch_active_account">Akun Aktif</string>
     <string name="quick_action_select">Pilih</string>
     <string name="share_as_image_generating">Membuat pratinjau…</string>
     <string name="share_as_image_watermark">Dibagikan melalui Amethyst</string>
-    <string name="quick_action_copy_user_id">ID Penulis</string>
+    <string name="quick_action_copy_user_id">ID pemilik</string>
     <string name="quick_action_copy_text">Salin Teks</string>
     <string name="quick_action_unfollow">Berhenti mengikuti</string>
     <string name="quick_action_follow">Ikuti</string>
     <string name="quick_action_request_deletion_gallery_title">Hapus dari Galeri</string>
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Hapus media ini dari Galeri Anda.</string>
-    <string name="quick_action_request_deletion_alert_title">Meminta Penghapusan</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst akan meminta agar catatan Anda dihapus dari relai yang saat ini Anda sambungkan. Tidak ada jaminan bahwa catatan Anda akan dihapus secara permanen dari relai tersebut, atau dari relai lain tempat catatan itu disimpan.</string>
+    <string name="quick_action_request_deletion_alert_title">Minta Penghapusan</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst akan meminta note anda untuk dihapus dari relay anda yang saat ini terhubung. Tidak ada jaminan note anda dihapus secara permanen dari relay-relay ini, atau dari relay lain yang mungkin disimpan.</string>
     <string name="quick_action_block_dialog_btn">Blokir</string>
     <string name="quick_action_delete_dialog_btn">Hapus</string>
     <string name="quick_action_block">Blokir</string>
@@ -283,16 +290,16 @@
     <string name="report_dialog_spam">Spam atau penipuan</string>
     <string name="report_dialog_profanity">Perilaku tidak senonoh atau penuh kebencian</string>
     <string name="report_dialog_impersonation">Peniruan identitas yang berbahaya</string>
-    <string name="report_dialog_nudity">Konten ketelanjangan atau grafis</string>
+    <string name="report_dialog_nudity">Ketelanjangan atau grafik</string>
     <string name="report_dialog_illegal">Perilaku Ilegal</string>
-    <string name="report_dialog_blocking_a_user">Memblokir pengguna akan menyembunyikan konten mereka di aplikasi Anda. Catatan Anda masih dapat dilihat oleh publik, termasuk oleh orang yang Anda blokir. Pengguna yang diblokir terdaftar di layar Filter Keamanan.</string>
-    <string name="report_dialog_report_btn">Laporkan Penyalahgunaan</string>
-    <string name="report_dialog_reminder_public">Semua laporan yang diposting akan terlihat oleh publik.</string>
+    <string name="report_dialog_blocking_a_user">Memblokir pengguna akan menyembunyikan konten mereka di aplikasi anda. Notes Anda masih tersedia secara publik, termasuk orang yang anda blokir. Daftar pengguna yang diblokir ada di layar Filter Keamanan.</string>
+    <string name="report_dialog_report_btn">Laporkan penyalahgunaan</string>
+    <string name="report_dialog_reminder_public">Semua laporan akan tersedia secara publik.</string>
     <string name="report_dialog_additional_reason_placeholder">Secara opsional, berikan konteks tambahan tentang laporan Anda…</string>
-    <string name="report_dialog_additional_reason_label">Konteks Tambahan</string>
+    <string name="report_dialog_additional_reason_label">Konteks tambahan</string>
     <string name="report_dialog_select_reason_label">Alasan</string>
-    <string name="report_dialog_select_reason_placeholder">Pilih alasan…</string>
-    <string name="report_dialog_post_report_btn">Kirim Laporan</string>
+    <string name="report_dialog_select_reason_placeholder">Pilih Alasan…</string>
+    <string name="report_dialog_post_report_btn">Laporan Post</string>
     <string name="report_dialog_title">Blokir dan Laporkan</string>
     <string name="manual_zaps">Pembagian Zap Manual</string>
     <string name="bookmarks_title">Markah</string>
@@ -382,9 +389,6 @@
     <string name="app_definition_handles">Menangani</string>
     <string name="app_definition_by">oleh</string>
     <string name="app_definition_available_on">Tersedia di</string>
-    <string name="platform_web">Web</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Latihan</string>
     <string name="workout_title">Judul</string>
     <string name="workout_duration">Durasi</string>
@@ -401,16 +405,15 @@
     <string name="workout_reps">Repetisi</string>
     <string name="workout_weight">Berat</string>
     <string name="workout_exercises">Latihan fisik</string>
-    <string name="workout_volume">Volume</string>
     <string name="workout_notes">Catatan</string>
     <string name="workout_hours">Jam</string>
     <string name="workout_minutes">Menit</string>
     <string name="workout_seconds">Detik</string>
     <string name="workout_suggestion_connect_button">Hubungkan</string>
-    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Dari Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Belum ada nSites ditemukan.</string>
-    <string name="browser_reload">Muat ulang</string>
     <string name="browser_unsupported">Browser dalam aplikasi memerlukan Android 11 atau lebih baru.</string>
     <string name="embedded_tab_load_failed">Tidak dapat memuat aplikasi ini.</string>
     <string name="browser_go">Buka</string>
@@ -418,10 +421,6 @@
     <string name="browser_recent_options">Opsi</string>
     <string name="browser_recent_remove">Hapus dari riwayat</string>
     <string name="favorite_apps_empty">Belum ada aplikasi favorit. Buka klien web atau nsite dan ketuk bintang untuk menyematkannya di sini.</string>
-    <string name="favorite_app_open_window">Buka di jendelanya sendiri</string>
-    <string name="favorite_app_access_title">Apa yang dapat diakses aplikasi ini</string>
-    <string name="favorite_app_access_static">Berjalan dalam sandbox tanpa akses khusus ke akun Anda.</string>
-    <string name="favorite_app_access_show">Apa yang dapat diaksesnya</string>
     <string name="favorite_app_unavailable">Aplikasi ini belum dimuat. Buka dari kartunya, atau coba lagi sebentar lagi.</string>
     <string name="napplet_manage_permissions">Kelola izin</string>
     <string name="napplet_none_found">Belum ada nApplet ditemukan.</string>
@@ -430,7 +429,6 @@
     <string name="napplet_consent_deny_always">Jangan pernah izinkan</string>
     <string name="napplet_consent_not_now">Tidak sekarang</string>
     <string name="nip82_repository_label">Sumber: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Unduh</string>
     <string name="nip82_section_about">Tentang</string>
     <string name="nip82_section_platforms">Platform</string>
@@ -463,12 +461,11 @@
     <string name="nest_mute_failed">Gagal membisukan: %1$s</string>
     <string name="nest_open_settings">Tidak ada izin</string>
     <string name="nest_join">Bergabung ke nest</string>
-    <string name="nest_lobby_host_label">Host</string>
     <string name="nest_lobby_open_action">Buka</string>
     <string name="nest_lobby_no_listeners">Tidak ada yang berada di ruang saat ini.</string>
-    <string name="nest_lobby_listeners_count">%1$d mendengarkan</string>
-    <string name="nest_role_host">Host</string>
-    <string name="nest_role_moderator">Moderator</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d mendengarkan</item>
+    </plurals>
     <string name="nest_state_muted">Mikrofon dibisukan</string>
     <string name="nest_state_speaking">Sedang berbicara</string>
     <string name="nest_state_mic_open">Mikrofon terbuka</string>
@@ -476,7 +473,6 @@
     <string name="nest_leave_host_body">Anda adalah host. Menutup ruang akan memutuskan semua orang. Pilih "Tinggalkan saja" jika ingin kembali nanti — ruang akan ditutup otomatis setelah 8 jam tidak aktif.</string>
     <string name="nest_leave_host_close">Tutup ruang</string>
     <string name="nest_leave_host_just_leave">Tinggalkan saja</string>
-    <string name="nest_live_chip">LIVE</string>
     <string name="nest_tab_chat">Obrolan</string>
     <string name="nest_tab_audience">Penonton</string>
     <string name="nest_tab_hands">Tangan</string>
@@ -539,8 +535,6 @@
     <string name="nests_servers_add_relay_field">URL relay (WebTransport)</string>
     <string name="nests_servers_add_auth_field">URL auth (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Tambah</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_use_defaults">Gunakan default Amethyst</string>
     <string name="nests_servers_add_recommended">Tambah server</string>
     <string name="nests_servers_remove">Hapus server</string>
@@ -563,19 +557,20 @@
     <string name="music_playlist_new_title_placeholder">Nama playlist</string>
     <string name="music_playlist_create_action">Buat</string>
     <string name="music_playlist_untitled">(playlist tanpa judul)</string>
-    <string name="private_bookmarks">Penanda Pribadi</string>
-    <string name="public_bookmarks">Penanda Publik</string>
-    <string name="add_to_private_bookmarks">Tambahkan Penanda Pribadi</string>
-    <string name="remove_from_private_bookmarks">Hapus dari Penanda Pribadi</string>
+    <string name="private_bookmarks">Markah Privat</string>
+    <string name="public_bookmarks">Markah Publik</string>
+    <string name="add_to_private_bookmarks">Tambahkan ke Markah Privat</string>
+    <string name="remove_from_private_bookmarks">Hapus dari Markah Privat</string>
     <string name="add_hashtag_label">Tambah hashtag</string>
     <string name="add_hashtag_label_title">Tambahkan hashtag</string>
     <string name="add_hashtag_label_explainer">Tandai postingan ini secara publik dengan hashtag (label NIP-32). Orang yang mengikuti Anda akan melihatnya di feed hashtag tersebut.</string>
-    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Tambah</string>
     <string name="hashtag_label_added_by">ditambahkan oleh</string>
     <string name="pinned_notes">Catatan yang Disematkan</string>
     <string name="pinned_notes_explainer">Catatan yang Anda sematkan</string>
-    <string name="deleted_items_banner_title">%1$d item dalam daftar ini telah dihapus oleh penulisnya.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">%1$d item dalam daftar ini telah dihapus oleh penulisnya.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Hapus dari daftar</string>
     <string name="deleted_items_banner_dismiss">Tutup</string>
     <string name="bookmark_lists">Daftar Bookmark</string>
@@ -591,7 +586,9 @@
     <string name="interest_set_name_placeholder">Minat saya</string>
     <string name="interest_set_hashtag_add_placeholder">Tambah hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Pribadi</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d hashtag</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Tindakan Kumpulan Minat</string>
     <string name="interest_set_clone">Salin</string>
     <string name="interest_set_add_hashtag">Tambah hashtag</string>
@@ -619,7 +616,6 @@
     <string name="quick_zap_amounts_explainer">Ditampilkan saat menekan tombol zap. Setiap jumlah dapat dibayar melalui jalur apa pun yang didukung penerima — Lightning, Cashu, atau on-chain (on-chain hanya untuk jumlah besar). Ketuk jumlah untuk menghapusnya. Jika dikosongkan, dialog untuk memasukkan jumlah akan terbuka setiap kali.</string>
     <string name="send_onchain_instead">Kirim via on-chain</string>
     <string name="reload_mint_title">Isi ulang mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Jumlah isi ulang</string>
     <string name="reload_mint_section_to">Mint yang diisi ulang</string>
     <string name="reload_mint_section_from">Dana dari</string>
@@ -642,34 +638,27 @@
     <string name="zap_type_section_explainer">Mengontrol bagaimana identitas Anda ditampilkan saat mengirim zap.</string>
     <string name="wallet_connect_connect_app">Hubungkan Dompet</string>
     <string name="see_relay_feed">Lihat Feed Relay</string>
-    <string name="pledge_amount_in_sats">Jumlah Dijanjikan dalam Sats</string>
-    <string name="poll_zap_value_min">Zap terendah</string>
-    <string name="poll_zap_value_max">Zap tertinggi</string>
-    <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="looking_for_event">Mencari data event %1$s</string>
+    <string name="pledge_amount_in_sats">Jumlah Ikrar dalam Sat</string>
+    <string name="poll_zap_value_min">Minimum Zap</string>
+    <string name="poll_zap_value_max">Maximum Zap</string>
+    <string name="looking_for_event">Mencari Event %1$s</string>
     <string name="send_zap">Kirim Zap</string>
-    <string name="custom_zaps_add_a_message">Tambah pesan publik</string>
-    <string name="custom_zaps_add_a_message_private">Tambah pesan pribadi</string>
-    <string name="custom_zaps_add_a_message_nonzap">Tambah pesan faktur tagihan</string>
-    <string name="custom_zaps_add_a_message_example">Terima kasih atas semua pekerjaan Anda!</string>
-    <string name="lightning_create_and_add_invoice">Buat dan Tambah</string>
-    <string name="add_content">Tambahkan ke Pesan</string>
-    <string name="add_caption">Tambah Keterangan</string>
-    <string name="add_caption_example">Teman saya yang menyenangkan</string>
-    <string name="content_description">Deskripsi Konten</string>
-    <string name="content_description_example">Perahu berwarna biru di pantai berpasir putih saat matahari terbenam</string>
+    <string name="custom_zaps_add_a_message">Tambahkan pesan publik</string>
+    <string name="custom_zaps_add_a_message_private">Tambahkan pesan pribadi</string>
+    <string name="custom_zaps_add_a_message_nonzap">Tambahkan pesan faktur</string>
+    <string name="custom_zaps_add_a_message_example">Terima kasih atas semua usahamu!</string>
+    <string name="lightning_create_and_add_invoice">Buat dan tambah</string>
     <string name="ai_suggested_alt_text_hint">Disarankan AI, edit saya</string>
     <string name="ai_suggested_alt_text_dismiss">Abaikan saran AI</string>
     <string name="zap_type">Tipe Zap</string>
-    <string name="zap_type_explainer">Tipe Zap untuk semua pilihan</string>
+    <string name="zap_type_explainer">Tipe Zap untuk semua opsi</string>
     <string name="zap_type_public">Publik</string>
-    <string name="zap_type_public_explainer">Semua orang dapat melihat transaksi dan pesannya</string>
-    <string name="zap_type_private">Pribadi</string>
-    <string name="zap_type_private_explainer">Pengirim dan Penerima dapat saling melihat dan membaca pesan</string>
+    <string name="zap_type_public_explainer">Semua orang bisa melihat transaksi dan pesan</string>
+    <string name="zap_type_private">Privat</string>
+    <string name="zap_type_private_explainer">Pengirim dan Penerima bisa melihat satu sama lain dan membaca pesannya</string>
     <string name="zap_type_anonymous">Anonim</string>
-    <string name="zap_type_anonymous_explainer">Penerima dan semua orang tidak dapat mengetahui siapa pengirim pembayaran</string>
-    <string name="zap_type_nonzap">Bukan Zap</string>
-    <string name="zap_type_nonzap_explainer">Tidak ada jejak di Nostr, hanya di Lightning Network</string>
+    <string name="zap_type_anonymous_explainer">Publik dan Penerima tidak mengetahui siapa yang mengirim pembayaran</string>
+    <string name="zap_type_nonzap_explainer">Tidak ada jejak di Nostr, hanya di Lightning</string>
     <string name="post_anonymously">Anonim</string>
     <string name="use_local_blossom_cache">Gunakan cache Blossom lokal</string>
     <string name="use_local_blossom_cache_caption">Saat cache Blossom berjalan di perangkat ini (port 24242), arahkan unduhan gambar dan video melaluinya.</string>
@@ -691,7 +680,6 @@
     <string name="uploading_state_uploading">Mengunggah</string>
     <string name="uploading_state_server_processing">Memproses</string>
     <string name="uploading_state_downloading">Mengunduh</string>
-    <string name="uploading_state_hashing">Hashing</string>
     <string name="uploading_state_finished">Selesai</string>
     <string name="uploading_state_error">Galat</string>
     <string name="connect_via_tor2">Pengaturan Tor</string>
@@ -725,10 +713,13 @@
     <string name="follow_set_desc_modify_btn_label">Ubah</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Anda mengganti nama dari </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> menjadi..</string>
-    <string name="invalid_port_number">Nomor port tidak sah</string>
+    <string name="invalid_port_number">Nomor port tidak valid</string>
     <string name="call_calling">Memanggil…</string>
     <string name="call_connecting">Menghubungkan…</string>
     <string name="call_ended">Panggilan berakhir</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Abaikan</string>
     <string name="call_switch_camera">Ganti kamera</string>
     <string name="call_voice">Panggilan suara</string>
@@ -757,20 +748,19 @@
     <string name="battery_optimization_title">Optimasi baterai aktif</string>
     <string name="battery_optimization_description">Android dapat membatasi koneksi relay di latar belakang. Nonaktifkan optimasi baterai untuk Amethyst guna memastikan notifikasi yang andal.</string>
     <string name="battery_optimization_fix_now">Perbaiki sekarang</string>
-    <string name="content_warning">Peringatan konten</string>
+    <string name="content_warning">Peringatan Konten</string>
     <string name="content_warning_with_reason">Peringatan: %1$s</string>
-    <string name="content_warning_explanation">Postingan ini berisi konten sensitif yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
+    <string name="content_warning_explanation">Post ini mengandung konten sensitif yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
     <string name="report_warning_threshold_title">Ambang batas peringatan laporan</string>
     <string name="report_warning_threshold_explainer">Memperingatkan saat postingan atau profil mencapai jumlah laporan ini dari orang yang Anda ikuti</string>
     <string name="show_sensitive_content_title">Tampilkan konten sensitif</string>
     <string name="show_sensitive_content_explainer">Menampilkan pesan peringatan saat penulis postingan menandainya sebagai sensitif</string>
     <string name="max_hashtag_limit_title">Jumlah tagar maksimum per postingan</string>
     <string name="max_hashtag_limit_explainer">Menyembunyikan postingan dengan lebih banyak tagar dari batas ini. Setel ke 0 untuk menonaktifkan</string>
-    <string name="security_unlimited">∞</string>
-    <string name="zapraiser">Galang Dana Zap</string>
-    <string name="zapraiser_explainer">Menambahkan jumlah target sats yang ingin dikumpulkan untuk kiriman ini. Klien yang mendukung mungkin menunjukkan hal ini sebagai indikator kemajuan dalam memberi insentif pada donasi</string>
-    <string name="zapraiser_target_amount_in_sats">Jumlah Target dalam Sats</string>
-    <string name="sats_to_complete">Galang Dana Zap mencapai %1$s. %2$s sats untuk memenuhi target</string>
+    <string name="zapraiser">Penggalan dana Zap</string>
+    <string name="zapraiser_explainer">Menambahkan jumlah target sats yang ingin dikumpulkan untuk postingan ini. Klien yang mendukung mungkin menunjukkan hal ini sebagai indikator kemajuan dalam memberi insentif pada donasi</string>
+    <string name="zapraiser_target_amount_in_sats">Target Jumlah dalam Sat</string>
+    <string name="sats_to_complete">Penggalan Dana di %1$s. Sasaran %2$s sat</string>
     <string name="relay_event_count">Acara tersimpan</string>
     <string name="owner">Pemilik</string>
     <string name="used_by">Digunakan Oleh</string>
@@ -778,22 +768,22 @@
     <string name="version">Versi</string>
     <string name="software">Perangkat Lunak</string>
     <string name="contact">Kontak</string>
-    <string name="supports">NIP yg didukung</string>
+    <string name="supports">NIP yang didukung</string>
     <string name="supported_grasps">Grasp yang Didukung</string>
     <string name="admission">Penerimaan</string>
     <string name="subscription">Langganan</string>
     <string name="publication">Publikasi</string>
-    <string name="payments_url">Alamat Pembayaran</string>
+    <string name="payments_url">URL Pembayaran</string>
     <string name="target_audience">Target Audiens</string>
     <string name="policies_and_links">Kebijakan &amp; Tautan</string>
     <string name="fees_and_payments">Biaya &amp; Pembayaran</string>
-    <string name="limitations">Batasan</string>
+    <string name="limitations">Pembatasan</string>
     <string name="countries">Negara</string>
     <string name="languages">Bahasa</string>
     <string name="topics">Topik</string>
     <string name="all_countries">Semua Negara</string>
     <string name="all_languages">Semua Bahasa</string>
-    <string name="posting_policy">Kebijakan kiriman</string>
+    <string name="posting_policy">Kebijakan posting</string>
     <string name="terms_and_conditions">Syarat &amp; Ketentuan</string>
     <string name="not_available_acronym">T/A</string>
     <string name="relay_error_messages">Kesalahan dan Pemberitahuan dari Relay Ini</string>
@@ -802,13 +792,17 @@
     <string name="relay_req_subscriptions">Langganan REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Langganan COUNT (%1$d)</string>
     <string name="relay_outbox_events">Acara Outbox (%1$d)</string>
-    <string name="relay_filter_authors">%1$d penulis</string>
-    <string name="relay_filter_ids">%1$d id</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d penulis</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d id</item>
+    </plurals>
     <string name="relay_filter_since">sejak %1$s</string>
     <string name="relay_filter_until">sampai %1$s</string>
     <string name="relay_filter_limit">batas %1$d</string>
     <string name="minimum_prefix">Awalan minimal</string>
-    <string name="maximum_event_tags">Jumlah Tags  maksimum</string>
+    <string name="maximum_event_tags">Tag Event Maksimum</string>
     <string name="max_content_length">Panjang Konten Maksimum</string>
     <string name="discards_older_than">Membuang yang lebih lama dari</string>
     <string name="accepts_up_to">Menerima hingga</string>
@@ -819,7 +813,7 @@
     <string name="content_size">Ukuran Konten</string>
     <string name="connectivity">Konektivitas</string>
     <string name="access_control">Kontrol Akses</string>
-    <string name="minimum_pow">PoW terendah</string>
+    <string name="minimum_pow">PoW Minimum</string>
     <string name="auth_required">Auth Diperlukan</string>
     <string name="payment_required">Pembayaran Diperlukan</string>
     <string name="max_message_length">Panjang Pesan Maksimum</string>
@@ -827,45 +821,41 @@
     <string name="max_filters_per_sub">Filter Maksimum per Sub</string>
     <string name="max_limit_events_returning">Batas Maksimum (Event yang Dikembalikan)</string>
     <string name="max_subid_length">Panjang SubID Maksimum</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
-    <string name="cashu_redeem">Tukarkan</string>
+    <string name="cashu_redeem">Tukar</string>
     <string name="cashu_copy_token">Salin Token</string>
     <string name="quick_actions_open_in_another_app">Buka di Aplikasi Lain</string>
-    <string name="live_stream_live_tag">DARING (ON)</string>
-    <string name="live_stream_offline_tag">LURING (OFF)</string>
+    <string name="live_stream_live_tag">LANGSUNG</string>
     <string name="live_stream_ended_tag">BERAKHIR</string>
     <string name="live_stream_planned_tag">DIJADWALKAN</string>
-    <string name="live_stream_private_tag">PRIVATE</string>
-    <string name="live_stream_is_offline">Siaran langsung sedang luring</string>
-    <string name="live_stream_has_ended">Siaran langsung berakhir</string>
+    <string name="live_stream_is_offline">Livestream Offline</string>
+    <string name="live_stream_has_ended">Livestream Berakhir</string>
     <string name="meeting_space_open_tag">TERBUKA</string>
     <string name="meeting_space_private_tag">PRIVAT</string>
     <string name="meeting_space_closed_tag">DITUTUP</string>
     <string name="meeting_space_planned_tag">TERJADWAL</string>
     <string name="meeting_space_planned_starts_at">Mulai %1$s</string>
-    <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi lokal Anda. Pastikan kunci pribadi Anda dicadangkan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
-    <string name="followed_tags">Tags yg diikuti</string>
+    <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi yang disimpan secara lokal. Pastikan kunci pribadi Anda telah simpan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
+    <string name="followed_tags">Tags yang Diikuti</string>
     <string name="discover_follows_explainer">Ini adalah daftar pengguna yang Anda rekomendasikan kepada orang lain. Hanya pengguna publik yang diizinkan.</string>
-    <string name="community_approved_posts">Kiriman yg disetujui</string>
-    <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau aturan. Bicaralah dengan pemiliknya untuk menambahkannya</string>
-    <string name="community_no_descriptor">Komunitas ini tidak memiliki deskripsi. Bicaralah dengan pemiliknya untuk menambahkannya</string>
+    <string name="community_approved_posts">Post yang disetujui</string>
+    <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau peraturan. Beri tahu kepada pemilik untuk menambahnya</string>
+    <string name="community_no_descriptor">Komunitas ini tidak memiliki deskripsi. Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="user_preferences">Preferensi Pengguna</string>
     <string name="settings_search_placeholder">Cari pengaturan</string>
     <string name="settings_search_no_results">Tidak ada pengaturan ditemukan untuk "%1$s"</string>
     <string name="reset_marmot_confirm_title">Setel Ulang Status Marmot?</string>
     <string name="reset_marmot_confirm_body">Ini akan menghapus secara permanen semua obrolan grup Marmot, riwayat pesan, dan kunci MLS di perangkat ini untuk akun saat ini. Rekan tidak akan diberi tahu dan mungkin masih melihat Anda dalam grup hingga commit berikutnya. Tindakan ini tidak dapat dibatalkan. KeyPackage baru akan diterbitkan saat berikutnya aplikasi melakukan sinkronisasi.</string>
     <string name="reset_marmot_confirm_action">Setel Ulang</string>
-    <string name="application_preferences">Pengaturan Aplikasi</string>
+    <string name="application_preferences">Preferensi Aplikasi</string>
     <string name="language">Bahasa</string>
     <string name="action_unmute">Suarakan</string>
     <string name="picture_in_picture">Gambar-dalam-Gambar</string>
-    <string name="search_button">Cari catatan lokal dan jarak jauh</string>
-    <string name="nip05_verified">Alamat Nostr diverifikasi</string>
-    <string name="nip05_failed">Alamat Nostr gagal diverifikasi</string>
-    <string name="nip05_checking">Memeriksa Alamat Nostr</string>
-    <string name="default_relays">Bawaan</string>
+    <string name="search_button">Cari lokal dan jarak jauh</string>
+    <string name="nip05_verified">Alamat nostr telah diverifikasi</string>
+    <string name="nip05_failed">Verifikasi alamat Nostr gagal</string>
+    <string name="nip05_checking">Memeriksa alamat Nostr</string>
     <string name="default_relays_longer">Setel Ulang ke Default</string>
-    <string name="geohash_title">Paparkan Lokasi sebagai</string>
+    <string name="geohash_title">Paparkan Lokasi sebagai </string>
     <string name="geohash_explainer">Menambahkan Geohash lokasi Anda ke postingan. Publik akan mengetahui bahwa Anda berada dalam jarak 5 km (3 mil) dari lokasi saat ini</string>
     <string name="hashtag_exclusive">Postingan Eksklusif Tagar</string>
     <string name="external_url_scope">Komentar di sebuah situs web</string>
@@ -876,7 +866,6 @@
     <string name="music_playlist_unknown_track">Lagu tidak diketahui</string>
     <string name="music_playlist_loading_track">Memuat lagu…</string>
     <string name="music_track_audio_picked">File audio siap diunggah</string>
-    <string name="music_playlist_edit_action">Edit playlist</string>
     <string name="music_playlist_title_label">Judul</string>
     <string name="music_playlist_description_label">Deskripsi (opsional)</string>
     <string name="music_playlist_notes_label">Catatan (opsional)</string>
@@ -890,41 +879,40 @@
     <string name="music_playlist_remove_track">Hapus lagu dari playlist</string>
     <string name="loading_location">Memuat lokasi</string>
     <string name="lack_location_permissions">Tidak Ada Izin Lokasi</string>
-    <string name="add_sensitive_content_explainer">Menambahkan peringatan konten sensitif sebelum menampilkan konten Anda. Ini ideal untuk konten NSFW apa pun atau konten yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
+    <string name="add_sensitive_content_explainer">Menambahkan peringatan konten sensitif sebelum menampilkan konten Anda. Ini berguna untuk konten NSFW apa pun atau konten yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
     <string name="add_sensitive_content_description_placeholder">Alasan (opsional)</string>
     <string name="messages_create_public_private_chat_description">Grup Publik atau Privat Baru</string>
     <string name="messages_new_message_to">Ke</string>
-    <string name="messages_new_message_subject_caption">Topik percakapan</string>
+    <string name="messages_new_message_subject_caption">Topik Konservasi</string>
     <string name="messages_new_message_to_caption">@Pengguna1, @Pengguna2, @Pengguna3</string>
     <string name="messages_group_descriptor">Anggota grup ini</string>
     <string name="messages_new_subject_message">Penjelasan kepada anggota</string>
     <string name="messages_new_subject_message_placeholder">Mengubah nama untuk tujuan baru.</string>
     <string name="paste_from_clipboard">Tempel dari papan klip</string>
-    <string name="language_description">Untuk Antarmuka Aplikasi</string>
+    <string name="language_description">Untuk antarmuka Aplikasi</string>
     <string name="copy_stack_to_clipboard">Salin Stack</string>
     <string name="copy_nprofile_to_clipboard">Salin nprofile ke clipboard</string>
     <string name="copy_npub_to_clipboard">Salin npub ke clipboard</string>
     <string name="share_to_dm_title">Kirim ke…</string>
     <string name="share_to_dm_start_new">Pesan baru</string>
     <string name="copy_url_to_clipboard">Salin URL ke papan klip</string>
-    <string name="copy_the_note_id_to_the_clipboard">Salin ID Catatan ke papan klip</string>
+    <string name="copy_the_note_id_to_the_clipboard">Salin ID Note ke papan klip</string>
     <string name="add_media_to_gallery">Tambahkan Media ke Galeri</string>
-    <string name="created_at">Dibuat pada</string>
+    <string name="created_at">Dibuat di</string>
     <string name="guidelines">Panduan</string>
     <string name="moderators">Moderator</string>
-    <string name="status_update">Perbaharui statusmu</string>
-    <string name="error_dialog_talk_to_user">Kirim Pesan ke Pengguna</string>
+    <string name="status_update">Perbarui status anda</string>
+    <string name="error_dialog_talk_to_user">Kirim pesan ke Pengguna</string>
     <string name="error_dialog_talk_to_user_name">Pesan %1$s</string>
-    <string name="error_dialog_button_ok">Ok</string>
-    <string name="zap_split_title">Bagi dan Teruskan Zaps</string>
-    <string name="zap_split_explainer">Klien pendukung akan membagi dan meneruskan zaps ke pengguna yang ditambahkan di sini, bukan kepada Anda</string>
-    <string name="zap_split_search_and_add_user">Cari dan Tambah Pengguna</string>
-    <string name="zap_split_search_and_add_user_placeholder">Nama pengguna atau nama ditampilkan</string>
+    <string name="zap_split_title">Pisah dan alihkan Zap</string>
+    <string name="zap_split_explainer">Klien yang didukung akan memisah dan mengalihkan zap kepada user yang ditambahkan disini</string>
+    <string name="zap_split_search_and_add_user">Cari dan Tambahkan Pengguna</string>
+    <string name="zap_split_search_and_add_user_placeholder">Username atau tampilan nama</string>
     <string name="paid">Dibayar</string>
-    <string name="wallet_number">Dompet %1$s</string>
-    <string name="hide_new_word_label">Sembunyikan kata atau kalimat</string>
+    <string name="wallet_number">Dompet: %1$s</string>
+    <string name="hide_new_word_label">Sembunyikan Kata atau Kalimat baru</string>
     <string name="settings_muted_threads_unknown">Utas tidak diketahui · %1$s</string>
-    <string name="select_an_option">Pilih sebuah pilihan</string>
+    <string name="select_an_option">Pilih sebuah Opsi</string>
     <string name="tor_connection_failed_title">Tor tidak terhubung</string>
     <string name="tor_connection_failed_body">Amethyst tidak dapat menyelesaikan bootstrapping Tor. Gunakan koneksi biasa (non-Tor) agar feed dapat dimuat? Kami akan mengingat pilihan ini selama satu jam berikutnya dan mencoba ulang Tor setelah itu.</string>
     <string name="tor_continue_without_for_session">Gunakan koneksi biasa</string>
@@ -933,19 +921,18 @@
     <string name="notification_channel_status_on">Aktif</string>
     <string name="notification_channel_status_silent">Senyap</string>
     <string name="notification_channel_status_off">Nonaktif</string>
-    <string name="select_push_server">Pilih Aplikasi UnifiedPush</string>
-    <string name="push_server_title">Penyedia push</string>
-    <string name="push_server_explainer">Pilih aplikasi UnifiedPush untuk mengirim notifikasi saat Amethyst ditutup.</string>
-    <string name="push_server_none">Tidak Ada</string>
-    <string name="push_server_none_explainer">Menonaktifkan Notifikasi Push</string>
-    <string name="push_server_uses_app_explainer">Menggunakan aplikasi %1$s</string>
-    <string name="push_server_install_app">Pengaturan Notifikasi Push</string>
-    <string name="push_server_install_app_description">Untuk menerima notifikasi push, instal aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Ntfy](https://ntfy.sh/). Setelah menginstal, pilih aplikasi yang ingin Anda gunakan di Pengaturan.</string>
+    <string name="select_push_server">Pilih aplikasi UnifiedPush</string>
+    <string name="push_server_title">Pemberitahuan Push</string>
+    <string name="push_server_explainer">Dari aplikasi UnifiedPush yang terinstall</string>
+    <string name="push_server_none">Tidak ada</string>
+    <string name="push_server_none_explainer">Matikan Pemberitahuan Push</string>
+    <string name="push_server_uses_app_explainer">Memakai aplikasi %1$s</string>
+    <string name="push_server_install_app">Pengaturan Pemberitahuan Push</string>
+    <string name="push_server_install_app_description">Untuk menerima Pemberitahuan Push, Install aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Ntfy](https://ntfy.sh/). Setelah diinstall, Pilih aplikasi yang ingin digunakan di pengaturan.</string>
     <string name="thread_title">Utas</string>
     <string name="send_the_seller_a_message">Kirim pesan ke penjual</string>
     <string name="hi_there_is_this_still_available">Halo, apakah ini masih tersedia?</string>
     <string name="classifieds_title">Judul</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Kondisi</string>
     <string name="classifieds_category">Kategori</string>
     <string name="classifieds_price">Harga (dalam Sats)</string>
@@ -974,7 +961,6 @@
     <string name="wallet_send">Kirim</string>
     <string name="wallet_receive">Terima</string>
     <string name="wallet_transactions">Transaksi</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Tempel invoice BOLT-11</string>
     <string name="wallet_pay">Bayar</string>
     <string name="wallet_payment_success">Pembayaran berhasil</string>
@@ -991,10 +977,7 @@
     <string name="wallet_outgoing">Terkirim</string>
     <string name="wallet_refresh">Segarkan</string>
     <string name="wallet_filter_all">Semua</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Bukan Zaps</string>
-    <string name="wallet_add">Tambah Dompet</string>
-    <string name="wallet_default">Default</string>
     <string name="wallet_set_default">Jadikan Default</string>
     <string name="wallet_remove">Hapus</string>
     <string name="wallet_remove_confirm">Hapus dompet ini?</string>
@@ -1014,7 +997,6 @@
     <string name="cashu_discovering">Mencari dompet Anda…</string>
     <string name="cashu_discovering_description">Dompet NIP-60 disinkronkan antar klien. Jika Anda membuatnya di aplikasi lain menggunakan kunci Nostr ini, dompet tersebut akan muncul dalam beberapa detik.</string>
     <string name="cashu_balance">Saldo</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL Mint</string>
     <string name="cashu_remove_mint">Hapus mint</string>
     <string name="cashu_add_mint">Tambah mint</string>
@@ -1070,9 +1052,7 @@
     <string name="cashu_getting_quote">Meminta penawaran dari mint…</string>
     <string name="cashu_verify">Verifikasi</string>
     <string name="cashu_mint_reachable">✓ Mint dapat dijangkau</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Tidak dapat menjangkau mint: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Buat token</string>
     <string name="cashu_redeem_button">Tukarkan</string>
     <string name="cashu_done">Selesai</string>
@@ -1088,8 +1068,6 @@
     <string name="cashu_redeemed_amount">%1$s sats berhasil ditukarkan ke dompet Anda.</string>
     <string name="wallet_paste_uri">Tempel URI nostr+walletconnect://</string>
     <string name="wallet_save">Simpan</string>
-    <string name="wallet_rename">Ubah nama</string>
-    <string name="wallet_rename_title">Ubah Nama Dompet</string>
     <string name="wallet_onchain_transactions">Transaksi Onchain</string>
     <string name="wallet_onchain_no_address">Tidak ada alamat on-chain yang tersedia untuk akun ini.</string>
     <string name="wallet_onchain_no_backend">Tidak ada backend chain yang dikonfigurasi.</string>
@@ -1107,11 +1085,9 @@
     <string name="onchain_send_recipient_placeholder">nama, NIP-05 atau npub</string>
     <string name="onchain_send_change_recipient">Ganti penerima</string>
     <string name="onchain_send_amount">Jumlah</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Zap on-chain minimal adalah %1$s sats — jumlah yang lebih kecil akan habis oleh biaya penambang. Gunakan zap Lightning sebagai gantinya.</string>
     <string name="onchain_send_comment_label">Komentar (opsional)</string>
     <string name="onchain_send_priority">Prioritas</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Memuat estimasi biaya…</string>
     <string name="onchain_send_button_amount">Kirim %1$s sats</string>
     <string name="onchain_send_dont_split">Jangan dibagi — bayar satu penerima saja</string>
@@ -1120,7 +1096,6 @@
     <string name="onchain_send_result_transaction">Transaksi</string>
     <string name="onchain_send_result_fee">Biaya</string>
     <string name="onchain_send_result_change">Kembalian</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Selesai</string>
     <string name="onchain_send_failed_at">Gagal pada: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Pembayaran telah disiarkan (tx %1$s) tetapi tanda terima tidak dipublikasikan.</string>
@@ -1207,7 +1182,6 @@
     <string name="new_long_video">Video Panjang Baru</string>
     <string name="article_summary">Ringkasan (opsional)</string>
     <string name="markdown_preview">Pratinjau</string>
-    <string name="markdown_edit">Edit</string>
     <string name="add_header_image">Tambahkan gambar tajuk</string>
     <string name="your_article_title">Judul artikel Anda…</string>
     <string name="article_description_placeholder">Deskripsi singkat artikel Anda…</string>
@@ -1232,11 +1206,9 @@
     <string name="reactions_settings_reorder">Urutkan Ulang</string>
     <string name="reactions_settings_reply">Balas</string>
     <string name="reactions_settings_reply_description">Balas catatan ini</string>
-    <string name="reactions_settings_boost">Boost</string>
     <string name="reactions_settings_boost_description">Repost atau kutip catatan ini</string>
     <string name="reactions_settings_like">Suka</string>
     <string name="reactions_settings_like_description">Bereaksi pada catatan ini dengan emoji</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Kirim pembayaran Lightning ke penulis</string>
     <string name="reactions_settings_share">Bagikan</string>
     <string name="reactions_settings_share_description">Bagikan catatan ini ke luar</string>
@@ -1269,14 +1241,12 @@
     <string name="audio_visualizer_classic">Bentuk Gelombang Klasik</string>
     <string name="audio_visualizer_static">Gambar Statis</string>
     <string name="profile_image_of_user">Foto Profil %1$s</string>
-    <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Perluas daftar relay</string>
     <string name="note_options">Opsi catatan</string>
     <string name="poll">Polling</string>
     <string name="disable_poll">Nonaktifkan Polling</string>
     <string name="add_bitcoin_invoice">Faktur Bitcoin</string>
     <string name="cancel_bitcoin_invoice">Batalkan Faktur Bitcoin</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Batalkan Zapraiser</string>
     <string name="add_location">Lokasi</string>
     <string name="remove_location">Hapus Lokasi</string>
@@ -1325,7 +1295,6 @@
     <string name="thank_you">Terima kasih!</string>
     <string name="restricted_writes">Penulisan Terbatas</string>
     <string name="forked_from">Diturunkan dari</string>
-    <string name="git_clone_address">Clone:</string>
     <string name="git_repo_tab_issues">Isu</string>
     <string name="git_repo_tab_patches">Patch &amp; PR</string>
     <string name="git_repo_personal_fork">Fork pribadi</string>
@@ -1339,7 +1308,6 @@
     <string name="accessibility_play_username">Putar nama pengguna sebagai audio</string>
     <string name="accessibility_pushpin">Sematkan</string>
     <string name="accessibility_scan_qr_code">Pindai kode QR</string>
-    <string name="accessibility_select_date">Pilih tanggal</string>
     <string name="load_from_text">Dari Pesan</string>
     <string name="dvm_looking_for_app">Mencari Aplikasi</string>
     <string name="dvm_waiting_status">Pekerjaan Diminta, menunggu balasan</string>
@@ -1384,7 +1352,6 @@
     <string name="search_filters_section_source">Sumber</string>
     <string name="search_filters_section_sort">Urutkan berdasarkan</string>
     <string name="search_filters_open">Filter</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Cari bahasa</string>
     <string name="add_language">Tambah bahasa</string>
     <string name="add_language_pair">Tambah pasangan bahasa</string>
@@ -1408,9 +1375,10 @@
     <string name="public_members_count">Anggota Publik (%1$s)</string>
     <string name="add_user_to_the_list">Tambah pengguna ke daftar</string>
     <string name="remove_user_from_the_list">Hapus pengguna dari daftar</string>
-    <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Anggota</string>
-    <string name="contact_list_containing_label">Daftar ikutan berisi %1$d pengguna:</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">Daftar ikutan berisi %1$d pengguna:</item>
+    </plurals>
     <string name="contact_list_screen_title">Daftar ikutan</string>
     <string name="contact_list_screen_title_with_count">Daftar ikutan (%1$d)</string>
     <string name="follow_pack_creation_name_label">Nama pack</string>
@@ -1431,20 +1399,21 @@
     <string name="timeout">Waktu habis</string>
     <string name="retrying">Mencoba ulang…</string>
     <string name="dismiss">Tutup</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Menyiarkan</string>
     <string name="broadcasting_name">Menyiarkan %1$s</string>
-    <string name="broadcasting_number_events">Menyiarkan %1$d event…</string>
-    <string name="sent_number_events">%1$d event terkirim</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">Menyiarkan %1$d event…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">%1$d event terkirim</item>
+    </plurals>
     <string name="bradcasting_result_partial">Beberapa event gagal</string>
     <string name="bradcasting_result_success">Semua event berhasil</string>
     <string name="bradcasting_result_failure">Semua event gagal</string>
     <string name="closing_time">Waktu Penutupan</string>
     <string name="confirm">Konfirmasi</string>
     <string name="next">Berikutnya</string>
-    <string name="go_back">Kembali</string>
     <string name="approve">Setujui</string>
-    <string name="connected">Terhubung</string>
     <string name="social_proof">Bukti sosial</string>
     <string name="poll_submit">Kirim</string>
     <string name="poll_view_results">Lihat hasil</string>
@@ -1452,7 +1421,9 @@
     <string name="new_chess_game">Permainan Catur Baru</string>
     <string name="chess_loading_game">Memuat permainan…</string>
     <string name="chess_game_not_found">Permainan Tidak Ditemukan</string>
-    <string name="badge_and_n_others"> dan %1$d lainnya</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> dan %1$d lainnya</item>
+    </plurals>
     <string name="remove_language">Hapus %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Mulai dengan feed yang bagus dengan mengikuti orang-orang yang sama seperti seseorang yang Anda percaya.</string>
     <string name="import_follow_list">Impor Daftar Ikut</string>
@@ -1460,10 +1431,15 @@
     <string name="profile_to_import_from">Profil untuk diimpor</string>
     <string name="name_search_npub1_alice_example_com">cari, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Mendukung npub, nprofile, NIP-05, hex, dan Namecoin (.bit)</string>
-    <string name="tip">Tip</string>
-    <string name="accounts_found">%1$d akun ditemukan</string>
-    <string name="num_selected">%1$d dipilih</string>
-    <string name="follow_accounts">Ikuti %1$d akun</string>
+    <plurals name="accounts_found">
+        <item quantity="other">%1$d akun ditemukan</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">%1$d dipilih</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">Ikuti %1$d akun</item>
+    </plurals>
     <string name="skip_for_now">Lewati untuk sekarang</string>
     <string name="fetching_follow_list">Mengambil daftar ikut…</string>
     <string name="no_follows_found">Tidak ada ikutan yang ditemukan</string>
@@ -1495,16 +1471,23 @@
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Acara didistribusikan ulang: %1$d baru dari %2$d dikirim dan %3$d diterima</string>
     <string name="event_sync_done_title">Sinkronisasi selesai</string>
-    <string name="event_sync_done_sent">Diteruskan %1$d acara ke relay tujuan dari %2$d yang diterima.</string>
-    <string name="event_sync_done_accepted">%1$d acara diterima sebagai baru oleh relay tujuan.</string>
-    <string name="event_sync_done_duration">Selesai dalam %1$d detik.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">Diteruskan %1$d acara ke relay tujuan dari %2$d yang diterima.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d acara diterima sebagai baru oleh relay tujuan.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">Selesai dalam %1$d detik.</item>
+    </plurals>
     <string name="event_sync_error_title">Kesalahan sinkronisasi</string>
     <string name="event_sync_sending_to">Mengirim Ke</string>
-    <string name="event_sync_outbox_relays">Outbox</string>
-    <string name="event_sync_inbox_relays">Inbox</string>
-    <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Sedang Diperiksa (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Selesai (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">Sedang Diperiksa (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">Selesai (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">terkirim %1$s</string>
     <string name="event_sync_log_recv">diterima %1$s</string>
     <string name="event_sync_log_new">baru %1$s</string>
@@ -1522,7 +1505,6 @@
     <string name="cashu_move_coins_withdraw_ln">Tarik via Lightning…</string>
     <string name="cashu_move_coins_export_token">Ekspor sebagai token Cashu…</string>
     <string name="cashu_move_coins_working">Memindahkan koin…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Menghubungkan</string>
     <string name="event_sync_status_downloading">Mengunduh</string>
     <string name="event_sync_status_error">Kesalahan</string>
@@ -1543,9 +1525,7 @@
     <string name="hls_description_label">Deskripsi</string>
     <string name="hls_description_placeholder">Video ini tentang apa?</string>
     <string name="hls_content_warning_reason_placeholder">Alasan (opsional)</string>
-    <string name="hls_codec_label">Codec</string>
     <string name="hls_codec_h265">H.265 (kompresi lebih baik)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 tidak tersedia di perangkat ini — beralih ke H.264.</string>
     <string name="hls_renditions_label">Rendisi</string>
     <string name="hls_renditions_source_format">Resolusi sumber: %1$d×%2$d</string>
@@ -1570,7 +1550,6 @@
     <string name="list_management_dialog_title">Manajemen Daftar</string>
     <string name="link_actions_dialog_title">Tindakan Tautan</string>
     <string name="export_actions_dialog_title">Ekspor</string>
-    <string name="attestation_valid">Valid</string>
     <string name="attestation_invalid">Tidak Valid</string>
     <string name="attestation_status_verifying">Memverifikasi</string>
     <string name="attestation_status_revoked">Dicabut</string>
@@ -1583,14 +1562,11 @@
     <string name="event_sync_date_filter_until">Hingga</string>
     <string name="event_sync_date_filter_now">Sekarang</string>
     <string name="event_sync_date_filter_all_time">Sepanjang waktu</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Judul</string>
     <string name="web_bookmark_title_placeholder">Judul bookmark</string>
     <string name="web_bookmark_description_label">Deskripsi</string>
     <string name="web_bookmark_description_placeholder">Deskripsi singkat</string>
     <string name="web_bookmark_tags_label">Tag (dipisahkan koma)</string>
-    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
     <string name="web_bookmark_save">Simpan</string>
     <string name="web_bookmark_delete">Hapus</string>
     <string name="web_bookmark_delete_confirm">Hapus bookmark web ini?</string>
@@ -1599,15 +1575,12 @@
     <string name="fundraiser_ends">Berakhir %1$s</string>
     <string name="fundraiser_onchain_donation">Donasi on-chain</string>
     <string name="goal_amount_label">Jumlah target (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Deskripsikan tujuan Anda</string>
     <string name="goal_description_placeholder">Apa yang Anda galang dananya?</string>
     <string name="goal_summary_label">Ringkasan singkat</string>
     <string name="goal_summary_placeholder">Deskripsi singkat yang ditampilkan dalam pratinjau</string>
     <string name="goal_image_label">URL gambar (opsional)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL situs web (opsional)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Tetapkan tenggat waktu</string>
     <string name="request_to_vanish_description">Minta relay untuk menghapus secara permanen semua data Anda hingga tanggal yang dipilih. Tindakan ini didasarkan pada NIP-62 dan mengikat secara hukum di beberapa yurisdiksi.</string>
     <string name="vanish_target_relay">Target Relay</string>
@@ -1672,7 +1645,9 @@
     <string name="manage">Kelola</string>
     <string name="relay_members">Anggota</string>
     <string name="relay_members_title">Anggota dari %1$s</string>
-    <string name="relay_members_count">%1$d anggota</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d anggota</item>
+    </plurals>
     <string name="relay_members_loading">Memuat anggota…</string>
     <string name="relay_members_empty">Tidak ada anggota yang ditemukan</string>
     <string name="relay_members_request_join">Minta untuk Bergabung</string>
@@ -1682,9 +1657,13 @@
     <string name="relay_members_you_are_member">Anda adalah anggota</string>
     <string name="relay_membership_list">Daftar keanggotaan relay</string>
     <string name="relay_member_added">Anggota ditambahkan ke relay</string>
-    <string name="relay_members_added">%1$d anggota ditambahkan ke relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">%1$d anggota ditambahkan ke relay</item>
+    </plurals>
     <string name="relay_member_removed">Anggota dihapus dari relay</string>
-    <string name="relay_members_removed">%1$d anggota dihapus dari relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">%1$d anggota dihapus dari relay</item>
+    </plurals>
     <string name="relay_join_request">Permintaan bergabung relay</string>
     <string name="relay_leave_request">Permintaan keluar relay</string>
     <string name="ai_writing_use_this">Gunakan Ini</string>
@@ -1695,7 +1674,6 @@
     <string name="ai_tone_elaborate">Elaborasi</string>
     <string name="ai_tone_friendly">Ramah</string>
     <string name="ai_tone_professional">Profesional</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <string name="emoji_packs_title">Paket Emoji</string>
     <string name="emoji_pack_management_title">Tambah ke Daftar Emoji</string>
     <string name="add_to_emoji_list">Tambah ke daftar emoji saya</string>
@@ -1710,7 +1688,9 @@
     <string name="emoji_pack_upload_image_cta">Unggah gambar sampul</string>
     <string name="emoji_pack_upload_image_hint">Pilih gambar persegi untuk mewakili paket emoji ini.</string>
     <string name="no_emoji_packs">Anda belum memiliki paket emoji</string>
-    <string name="emoji_pack_count">%1$d emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">Daftar Emoji Saya</string>
     <string name="my_emoji_list_explainer">Paket emoji yang telah Anda tambahkan ke pilihan Anda (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Anda belum menambahkan paket emoji apa pun ke daftar Anda</string>
@@ -1724,7 +1704,6 @@
     <string name="emoji_pack_actions_dialog_title">Tindakan paket emoji</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Emoji privat</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Pelanggaran aturan komunitas</string>
     <string name="community_rules_violation_author_denied">Anda ada di daftar tolak komunitas ini. Postingan tidak akan diterima.</string>
     <string name="community_rules_violation_kind_not_allowed">Komunitas ini tidak menerima acara jenis kind %1$d.</string>
@@ -1736,7 +1715,6 @@
     <string name="marmot_create_group_footer">Grup MLS baru akan dibuat. Anda dapat menambahkan anggota setelahnya.</string>
     <string name="marmot_group_default_name">Grup Marmot</string>
     <string name="marmot_group_fallback_name">Grup %1$s…</string>
-    <string name="marmot_user_fallback_name">'%1$s…'</string>
     <string name="marmot_tab_known">Dikenal</string>
     <string name="marmot_tab_known_count">Dikenal (%1$d)</string>
     <string name="marmot_tab_new_requests">Permintaan Baru</string>
@@ -1750,6 +1728,9 @@
     <string name="marmot_group_name_placeholder">Masukkan nama grup</string>
     <string name="marmot_group_description_placeholder">Masukkan deskripsi grup (opsional)</string>
     <string name="marmot_edit_info_footer">Perubahan akan dikonfirmasi ke grup melalui MLS dan disebarkan ke semua anggota.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay belum diatur</string>
     <string name="marmot_keypackage_relays_not_set_message">Anda belum memiliki Daftar KeyPackage Relay (MIP-00). Daftar ini memberi tahu orang lain di mana KeyPackage Anda diterbitkan sehingga mereka dapat mengundang Anda ke obrolan grup.\n\nGunakan relay outbox Anda saat ini untuk ini?</string>
     <string name="marmot_use_outbox_relays">Gunakan relay outbox</string>
@@ -1765,7 +1746,6 @@
     <string name="marmot_add_member_action">Tambahkan Anggota</string>
     <string name="marmot_add_member_placeholder">Nama, npub, atau NIP-05</string>
     <string name="marmot_member_suffix_you"> (Anda)</string>
-    <string name="marmot_member_suffix_admin"> - admin</string>
     <string name="marmot_remove_member">Hapus Anggota</string>
     <string name="marmot_remove_member_confirm">Apakah Anda yakin ingin menghapus "%1$s" dari grup ini?</string>
     <string name="marmot_grant">Berikan</string>
@@ -1784,14 +1764,6 @@
     <string name="ots_explorer_api_label">URL dasar Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Bayar Tagihan dari DVM</string>
     <string name="dvm_pay_amount_to_dvm">Bayar %1$s sats ke DVM</string>
-    <string name="use_direct_url">Gunakan URL langsung</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Izin:</string>
-    <string name="nsite_root_site">Situs Root</string>
-    <string name="nsite_source">Sumber:</string>
-    <string name="nsite_servers">Server:</string>
-    <string name="nsite_open">Buka</string>
     <string name="about_legal">Tentang &amp; Hukum</string>
     <string name="account_settings">Pengaturan Akun</string>
     <string name="add">Tambah</string>
@@ -1799,9 +1771,8 @@
     <string name="add_a_nip96_server">Tambah Server NIP-96</string>
     <string name="add_client_tag_explainer">Saat diaktifkan, Amethyst menambahkan tag klien NIP-89 ke acara yang Anda publikasikan.</string>
     <string name="add_client_tag_title">Tambahkan tag klien ke acara saya</string>
-    <string name="add_sensitive_content_description">Menambahkan peringatan konten sensitif sebelum menampilkan konten ini</string>
     <string name="add_sensitive_content_label">Konten Sensitif</string>
-    <string name="add_to_public_bookmarks">Tambahkan Penanda Publik</string>
+    <string name="add_to_public_bookmarks">Tambahkan ke Markah Publik</string>
     <string name="ai_writing_setting_description">Menggunakan model AI di perangkat untuk mengusulkan koreksi teks dan perubahan nada.</string>
     <string name="ai_writing_setting_title">Usulkan perbaikan teks</string>
     <string name="app_notification_calls_channel_description">Notifikasi untuk panggilan suara dan video masuk</string>
@@ -1830,11 +1801,10 @@
     <string name="app_notification_reply_label">Balas</string>
     <string name="app_notification_scheduled_posts_channel_description">Notifikasi saat postingan terjadwal diterbitkan atau gagal diterbitkan.</string>
     <string name="app_notification_scheduled_posts_channel_name">Postingan terjadwal</string>
-    <string name="app_notification_zaps_channel_description">Memberi tahu Anda ketika seseorang mengirimkan anda zap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="app_notification_zaps_channel_description">Memberi Tahu anda saat seseorang memberi zap</string>
     <string name="app_notification_zaps_channel_message_for">untuk %1$s</string>
     <string name="app_notification_zaps_channel_message_from">Dari %1$s</string>
-    <string name="app_notification_zaps_channel_name">Zaps diterima</string>
+    <string name="app_notification_zaps_channel_name">Zap Diterima</string>
     <string name="app_notification_zaps_summary">Zap baru</string>
     <string name="app_settings">Pengaturan Aplikasi</string>
     <string name="attestation">Atestasi</string>
@@ -1845,44 +1815,41 @@
     <string name="auto_create_drafts_setting_description">Menyimpan acara draf secara otomatis saat Anda mengetik atau meninggalkan composer dengan teks yang belum dikirim dan mengirimnya ke relay outbox privat Anda.</string>
     <string name="auto_create_drafts_setting_title">Buat draf secara otomatis</string>
     <string name="automatically_hide_nav_bars">Pengguliran Mendalam</string>
-    <string name="automatically_hide_nav_bars_description">Sembunyikan Navbar saat Menggulir</string>
+    <string name="automatically_hide_nav_bars_description">Sembunyikan Nav Bar saat menggulir</string>
     <string name="automatically_load_images_gifs">Pratinjau Gambar</string>
-    <string name="automatically_load_images_gifs_description">Memuat gambar dan GIF secara otomatis</string>
+    <string name="automatically_load_images_gifs_description">Muat gambar dan GIF secara otomatis</string>
     <string name="automatically_play_videos">Pemutaran Video</string>
-    <string name="automatically_play_videos_description">Memutar video dan GIF secara otomatis</string>
-    <string name="automatically_show_profile_picture">Gambar Profil</string>
-    <string name="automatically_show_profile_picture_description">Tampilkan Gambar Profil</string>
+    <string name="automatically_play_videos_description">Putar video dan GIF secara otomatis</string>
+    <string name="automatically_show_profile_picture">Foto Profil</string>
+    <string name="automatically_show_profile_picture_description">Tampilkan Foto Profil</string>
     <string name="automatically_show_url_preview">Pratinjau URL</string>
-    <string name="automatically_show_url_preview_description">Tampilkan pratinjau URL</string>
+    <string name="automatically_show_url_preview_description">Tampilkan Pratinjau URL</string>
     <string name="autoplay_videos">Putar Otomatis Video</string>
     <string name="autoplay_videos_description">Putar video secara otomatis saat terlihat di layar</string>
     <string name="avif_metadata_strip_failed">Tidak dapat menghapus metadata dari AVIF: %1$s</string>
     <string name="award_badge">Berikan Lencana</string>
     <string name="back">Kembali</string>
-    <string name="backup_keys">Cadangkan Kunci</string>
+    <string name="backup_keys">Kunci Cadangan</string>
     <string name="badges">Lencana</string>
     <string name="biometric_authentication_failed">Autentikasi gagal</string>
-    <string name="biometric_authentication_failed_explainer">Biometrik gagal mengautentikasi pemilik ponsel ini</string>
-    <string name="biometric_authentication_failed_explainer_with_error">Biometrik gagal mengautentikasi pemilik ponsel ini. Kesalahan: %1$s</string>
+    <string name="biometric_authentication_failed_explainer">Gagal mengautentikasi biometrik pemilik ponsel ini</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Gagal mengautentikasi biometrik pemilik ponsel ini. Error: %1$s</string>
     <string name="block_only">Blokir</string>
     <string name="blocked_section">Relay Diblokir</string>
     <string name="blocked_section_explainer">Amethyst tidak akan pernah terhubung ke relay ini</string>
-    <string name="blocked_users">Pengguna diblokir</string>
+    <string name="blocked_users">Pengguna yang diblokir</string>
     <string name="bookmark_list_creation_screen_title">Daftar Bookmark Baru</string>
     <string name="bookmark_list_edit_sub_title">Metadata Daftar Bookmark</string>
     <string name="bookmark_list_explainer">Metadata daftar bookmark dapat dilihat oleh siapa saja di Nostr. Hanya anggota pribadi Anda yang dienkripsi.</string>
-    <string name="bookmarks">Penanda</string>
-    <string name="boost">Promosi</string>
+    <string name="bookmarks">Markah</string>
+    <string name="boost">Sebarkan</string>
     <string name="bottom_bar_settings">Bilah Navigasi Bawah</string>
     <string name="broadcast_section">Relay Siaran</string>
     <string name="broadcast_section_explainer">Relay yang berspesialisasi dalam mendorong catatan Anda ke semua relay lainnya, seperti sendit.nosflare.com. Amethyst akan menambahkan relay ini ke semua event baru yang Anda buat</string>
-    <string name="browser">Browser</string>
     <string name="browser_favorites">Favorit</string>
-    <string name="browser_tor_off">Memuat melalui web terbuka. Ketuk untuk menggunakan Tor.</string>
-    <string name="browser_tor_on">Memuat melalui Tor. Ketuk untuk menggunakan web terbuka.</string>
     <plurals name="calendar_day_a11y_events">
-    <item quantity="other">%1$s, %2$d acara</item>
-</plurals>
+        <item quantity="other">%1$s, %2$d acara</item>
+    </plurals>
     <string name="calendar_event_image_upload_failed">Unggahan gambar gagal</string>
     <string name="calendar_event_image_upload_failed_body">Gambar yang dipilih tidak dapat diunggah. Coba lagi atau tempel URL.</string>
     <string name="calendar_export_share_title">Bagikan acara kalender</string>
@@ -1891,27 +1858,24 @@
     <string name="calendar_relative_ongoing">Sedang berlangsung</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · selesai %2$s</string>
     <plurals name="calendar_reminder_body">
-    <item quantity="other">Mulai dalam %1$d menit</item>
-</plurals>
+        <item quantity="other">Mulai dalam %1$d menit</item>
+    </plurals>
     <string name="calendar_reminder_channel_description">Pemberitahuan saat acara yang Anda hadiri akan segera dimulai.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Pengingat kalender</string>
     <string name="calendar_reminder_default_title">Acara kalender</string>
     <string name="calendar_reminder_settings_enabled_subtitle">Pemberitahuan akan muncul saat acara yang Anda hadiri akan segera dimulai.</string>
     <string name="calendar_reminder_settings_enabled_title">Kirim pengingat</string>
     <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="other">%1$d mnt</item>
-</plurals>
+        <item quantity="other">%1$d mnt</item>
+    </plurals>
     <string name="calendar_reminder_settings_title">Pengingat kalender</string>
     <string name="calendar_view_day">Hari</string>
     <string name="calendar_view_feed">Umpan</string>
     <string name="calendar_view_month">Bulan</string>
     <string name="calendar_view_week">Minggu</string>
     <string name="call_accept">Terima</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">Kamera mati</string>
     <string name="call_camera_on">Kamera aktif</string>
-    <string name="call_earpiece">Earpiece</string>
     <string name="call_hangup">Tutup telepon</string>
     <string name="call_incoming">Panggilan masuk</string>
     <string name="call_incoming_video">Panggilan video masuk…</string>
@@ -1927,35 +1891,35 @@
     <string name="cancel">Batal</string>
     <string name="cashu">Token Cashu</string>
     <string name="cashu_checking_mint">Memeriksa mint…</string>
-    <string name="cashu_failed_redemption">Tidak dapat menukarkan Cashu</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">Mint memberikan pesan kesalahan berikut: %1$s</string>
+    <string name="cashu_failed_redemption">Tidak dapat meredeem Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint memberikan error: %1$s</string>
     <string name="cashu_history_incoming">Diterima</string>
     <string name="cashu_history_outgoing">Terkirim</string>
     <string name="cashu_mint_matches_header">Mint yang cocok</string>
     <plurals name="cashu_mint_plus_others">
-    <item quantity="other">+%1$d lainnya</item>
-</plurals>
+        <item quantity="other">+%1$d lainnya</item>
+    </plurals>
     <string name="cashu_mint_popular_header">Mint populer</string>
     <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="other">Direkomendasikan oleh %1$d orang lain</item>
-</plurals>
+        <item quantity="other">Direkomendasikan oleh %1$d orang lain</item>
+    </plurals>
     <string name="cashu_move_coins_done">Dipindahkan %1$s sat ke %2$s.</string>
     <string name="cashu_no_wallet_found">Tidak ada dompet Cashu yang kompatibel ditemukan di sistem</string>
     <plurals name="cashu_pending_quotes_title">
-    <item quantity="other">%1$d tagihan tertunda</item>
-</plurals>
+        <item quantity="other">%1$d tagihan tertunda</item>
+    </plurals>
     <string name="cashu_quote_confirm">Bayar %1$s sat + hingga %2$s sat biaya?</string>
     <string name="cashu_settings_delete_confirm_body">Publikasikan permintaan hapus untuk rekomendasi kind:38000 Anda atas %1$s. Relay yang menghormati NIP-09 akan menghapusnya.</string>
     <string name="cashu_settings_restore_result">Berhasil memulihkan %1$s sats dari %2$s bukti.</string>
-    <string name="cashu_successful_redemption">Cashu diterima</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sat telah dikirim ke dompet Anda. (Biaya: %2$s sat)</string>
+    <string name="cashu_successful_redemption">Cashu Diterima</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sat telah dikirim ke dompetmu. (Biaya: %2$s sat)</string>
     <plurals name="cashu_untrusted_mint_title">
-    <item quantity="other">Dana disimpan di %1$d mint yang tidak Anda gunakan</item>
-</plurals>
+        <item quantity="other">Dana disimpan di %1$d mint yang tidak Anda gunakan</item>
+    </plurals>
     <string name="cashu_waiting_for_payment">Menunggu invoice dibayar…</string>
     <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="other">%1$d mint</item>
-</plurals>
+        <item quantity="other">%1$d mint</item>
+    </plurals>
     <string name="cast_stop_casting">Hentikan penayangan</string>
     <string name="cast_to_device">Tampilkan ke perangkat</string>
     <string name="child_safety_standards">Standar Keamanan Anak</string>
@@ -1989,29 +1953,26 @@
     <string name="communities">Komunitas</string>
     <string name="community_rules_violation_kind_size_exceeded">Draf berukuran %1$d byte; komunitas ini membatasi kind ini sebesar %2$d byte.</string>
     <string name="community_rules_violation_max_size_exceeded">Draf berukuran %1$d byte; komunitas ini membatasi acara sebesar %2$d byte.</string>
-    <string name="community_rules_violation_quota_exceeded">Anda telah memposting %1$d acara jenis ini hari ini (batas %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">Anda telah memposting %1$d acara jenis ini hari ini (batas %2$d).</item>
+    </plurals>
     <string name="compose_settings">Pengaturan Compose</string>
     <string name="connect_through_your_orbot_setup_short">Port default adalah 9050</string>
     <string name="connected_section">Relay Terhubung</string>
     <string name="connected_section_description">Daftar relay yang sedang digunakan</string>
     <string name="connection_success_rate_description">Persentase koneksi yang berhasil ke relay</string>
     <string name="connectivity_type_always">Selalu</string>
-    <string name="connectivity_type_never">Tidak Pernah</string>
+    <string name="connectivity_type_never">Jangan pernah</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi Tanpa Kuota</string>
-    <string name="content_description_add_document">Tambah Dokumen</string>
-    <string name="content_description_add_image">Tambah Gambar</string>
-    <string name="content_description_add_media">Tambah Media</string>
-    <string name="content_description_add_video">Tambah Video</string>
     <string name="content_warning_hide_all_sensitive_content_option">Sembunyikan</string>
     <string name="content_warning_see_warnings_option">Peringatkan</string>
     <string name="content_warning_show_all_sensitive_content_option">Tampilkan</string>
     <string name="conversations">Percakapan</string>
-    <string name="convert_gif_to_mp4_description">Mengonversi GIF animasi ke video MP4 untuk ukuran file lebih kecil dan kompatibilitas pemutaran yang lebih baik.</string>
     <string name="convert_gif_to_mp4_label">Konversi GIF ke MP4</string>
-    <string name="copied_note_id_to_clipboard">Note ID (@note1) disalin ke papan klip</string>
-    <string name="copied_note_text_to_clipboard">Teks catatan disalin ke papan klip</string>
+    <string name="copied_note_id_to_clipboard">ID note (@note1) telah disalin ke papan klip</string>
+    <string name="copied_note_text_to_clipboard">Teks disalin ke papan klip</string>
     <string name="copied_to_clipboard">Disalin ke clipboard</string>
-    <string name="copied_user_id_to_clipboard">@npub Penulis  disalin ke papan klip</string>
+    <string name="copied_user_id_to_clipboard">@npub pemilik telah disalin ke papan klip</string>
     <string name="copy_to_clipboard">Salin ke clipboard</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Tidak dapat merakit LNUrl dari Alamat Lightning "%1$s". Periksa pengaturan pengguna</string>
     <string name="could_not_check_downloaded_file">Tidak dapat memeriksa file yang diunduh setelah diunggah: %1$s</string>
@@ -2021,20 +1982,18 @@
     <string name="couldnt_find_nwc_wallets">Dompet tidak ditemukan</string>
     <string name="couldnt_find_nwc_wallets_description">Amethyst tidak dapat menemukan aplikasi dompet apa pun yang mendukung Nostr Wallet Connect (NWC). \n\nYang dapat Anda lakukan: \n\t1. Verifikasi Dukungan NWC: Pastikan aplikasi dompet pilihan Anda kompatibel dengan Nostr Wallet Connect. \n\t2. Buat Koneksi: Buka aplikasi dompet Anda dan buat koneksi NWC baru. \n\t3. Hubungkan ke Amethyst: Dompet Anda biasanya akan memberikan tiga pilihan: \n\t\t3.1 Tautan Otomatis: Tombol untuk secara otomatis membuka dan terhubung ke Amethyst. Jika ada, klik tombol tersebut, buka Amethyst dan tekan simpan di layar baru. \n\t\t3.2 Tautan Manual: URI Koneksi yang dapat Anda salin dan klik ikon tempel di layar ini untuk memasukkannya secara langsung. \n\t\t3.3 Kode QR: Dompet membuat kode QR yang dapat Anda baca dari tombol kode QR di layar ini.</string>
     <string name="create">Buat</string>
-    <string name="d">hari</string>
+    <string name="d">h</string>
     <string name="danger_zone">Zona Berbahaya</string>
     <string name="dark">Gelap</string>
     <string name="description">Deskripsi</string>
     <string name="disable_private_note">Jadikan publik</string>
-    <string name="discover_chat">Percakapan</string>
+    <string name="discover_chat">Obrolan</string>
     <string name="discover_community_v2">Komunitas</string>
     <string name="discover_content_v2">Algoritma Feed</string>
     <string name="discover_follows">Paket Ikuti</string>
     <string name="discover_live_v2">Siaran Langsung</string>
-    <string name="discover_marketplace">Marketplace</string>
     <string name="discover_reads">Bacaan</string>
     <string name="dm_relays_title">Relay Kotak Masuk DM</string>
-    <string name="dms">DMs</string>
     <string name="dont_translate_from">Jangan Terjemahkan Dari</string>
     <string name="dont_translate_from_description">Bahasa yang ditampilkan di sini tidak akan diterjemahkan. Pilih bahasa untuk menghapusnya dan terjemahkan kembali.</string>
     <string name="download_to_phone">Simpan ke Ponsel</string>
@@ -2048,57 +2007,52 @@
     <string name="drawer_section_system">Sistem</string>
     <string name="drawer_section_you">Anda</string>
     <plurals name="duration_days">
-    <item quantity="other">%1$d hari</item>
-</plurals>
+        <item quantity="other">%1$d hari</item>
+    </plurals>
     <plurals name="duration_hours">
-    <item quantity="other">%1$d jam</item>
-</plurals>
+        <item quantity="other">%1$d jam</item>
+    </plurals>
     <plurals name="duration_minutes">
-    <item quantity="other">%1$d menit</item>
-</plurals>
+        <item quantity="other">%1$d menit</item>
+    </plurals>
     <plurals name="duration_months">
-    <item quantity="other">%1$d bulan</item>
-</plurals>
+        <item quantity="other">%1$d bulan</item>
+    </plurals>
     <plurals name="duration_weeks">
-    <item quantity="other">%1$d minggu</item>
-</plurals>
+        <item quantity="other">%1$d minggu</item>
+    </plurals>
     <plurals name="duration_years">
-    <item quantity="other">%1$d tahun</item>
-</plurals>
+        <item quantity="other">%1$d tahun</item>
+    </plurals>
     <string name="edit_calendar_collection">Edit Kalender</string>
     <string name="edit_calendar_event">Edit Acara Kalender</string>
     <string name="edit_community">Edit Komunitas</string>
     <string name="edit_emoji_pack">Edit paket emoji</string>
-    <string name="edit_music_playlist">Edit playlist</string>
     <string name="edit_post">Edit Postingan</string>
     <string name="emoji_private_explainer">Emoji privat disimpan terenkripsi di relay dan hanya terlihat oleh Anda. Mereka muncul di menu reaksi Anda dan pelengkap otomatis ":" seperti emoji publik.</string>
     <string name="emoji_public_explainer">Emoji publik terlihat oleh semua orang dan muncul di menu reaksi Anda dan pemilih pelengkap otomatis ":" saat paket ini ada di daftar emoji Anda.</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">Enkripsi file sebelum diunggah untuk privasi. Beberapa server mungkin tidak menerima file terenkripsi pada akun gratis.</string>
     <string name="encrypt_files_label">Enkripsi file</string>
     <string name="ephemeral_relay_chat">Obrolan Menghilang</string>
     <string name="error">Kesalahan</string>
-    <string name="error_dialog_pay_invoice_error">Tidak dapat membayar tagihan</string>
-    <string name="error_dialog_pay_withdraw_error">Tidak dapat mengambil dana</string>
+    <string name="error_dialog_pay_invoice_error">Tidak dapat membayar faktur</string>
+    <string name="error_dialog_pay_withdraw_error">Tidak dapat menarik</string>
     <string name="error_dialog_payment_error">Tidak dapat membuka pembayaran</string>
     <string name="error_dialog_zap_error">Tidak dapat mengirim zap</string>
-    <string name="error_opening_external_signer">Kesalahan membuka aplikasi pengesahan</string>
+    <string name="error_opening_external_signer">Terjadi kesalahan saat membuka aplikasi penanda tangan</string>
     <string name="error_opening_external_signer_description">Aplikasi penandatangan tidak ditemukan. Periksa apakah aplikasi belum dihapus</string>
-    <string name="error_parsing_error_message">Gagal menguraikan pesan kesalahan</string>
+    <string name="error_parsing_error_message">Salah memilah pesan error</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Kesalahan Parsing JSON dari %1$s. Periksa pengaturan Lightning pengguna</string>
-    <string name="error_unable_to_fetch_invoice">Tidak dapat mengambil faktur dari server penerima</string>
+    <string name="error_unable_to_fetch_invoice">Tidak dapat menghubung server faktur penerima</string>
     <string name="error_video_open_in_browser">Buka di browser</string>
     <string name="error_video_playback_failed">Tidak dapat memutar video ini</string>
     <string name="error_video_playback_failed_description">Codec atau format tidak didukung di perangkat ini (%1$s). Coba buka di browser Anda.</string>
-    <string name="errors">Errors</string>
+    <string name="errors">Kesalahan</string>
     <string name="event_sync_title">Sinkronisasi Relay</string>
     <string name="events_from_you">acara dari Anda</string>
     <string name="events_to_you">acara kepada Anda</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">Sirkuit</string>
     <string name="exercise_cycling">Bersepeda</string>
-    <string name="exercise_diet">Diet</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">Puasa</string>
     <string name="exercise_hiking">Mendaki</string>
     <string name="exercise_meditation">Meditasi</string>
@@ -2107,7 +2061,6 @@
     <string name="exercise_strength">Kekuatan</string>
     <string name="exercise_swimming">Berenang</string>
     <string name="exercise_walking">Berjalan</string>
-    <string name="exercise_yoga">Yoga</string>
     <string name="expand">Perluas</string>
     <string name="expiration_date_label">Tanggal Kedaluwarsa</string>
     <string name="export_relay_settings">Ekspor pengaturan relay</string>
@@ -2122,8 +2075,6 @@
     <string name="failed_to_upload_media_no_details">Gagal mengunggah media</string>
     <string name="failed_to_upload_to_server_with_message">Gagal mengunggah ke %1$s: %2$s</string>
     <string name="favorite_app_add">Tambahkan ke favorit</string>
-    <string name="favorite_app_network_open">Memuat melalui web terbuka.</string>
-    <string name="favorite_app_network_tor">Memuat melalui Tor.</string>
     <string name="favorite_app_recent">Terbaru</string>
     <string name="favorite_app_remove">Hapus dari favorit</string>
     <string name="favorite_app_still_loading">Aplikasi itu belum dimuat. Coba lagi sebentar lagi.</string>
@@ -2142,44 +2093,39 @@
     <string name="feed_group_lists">Daftar</string>
     <string name="feed_group_locations">Lokasi</string>
     <string name="feed_group_relays">Relay</string>
-    <string name="file_server">Server Berkas</string>
+    <string name="file_server">Server File</string>
     <string name="file_server_description">Pilih server untuk mengunggah file ini</string>
     <string name="filter_spam_from_strangers_explainer">Menyembunyikan postingan dari orang asing yang persis sama sebanyak 5 kali atau lebih</string>
-    <string name="filter_spam_from_strangers_title">Filter spam</string>
     <string name="follow">Ikuti</string>
-    <string name="follow_back">Ikuti balik</string>
+    <string name="follow_back">Ikuti kembali</string>
     <string name="follow_list_all_favorite_dvms">Semua algoritma feed favorit</string>
     <string name="follow_list_aroundme">Di Sekitar Saya</string>
     <string name="follow_list_curated">Terkurasi</string>
-    <string name="follow_list_global">Global</string>
     <string name="follow_list_kind3_follows_users_only">Daftar Ikut Default</string>
-    <string name="follow_list_kind3follows">Semua yang diikuti</string>
+    <string name="follow_list_kind3follows">Semua Pengikut</string>
     <string name="follow_list_kind3follows_users_only">Semua Pengikut Pengguna</string>
     <string name="follow_list_mine">Milik Saya</string>
     <string name="follow_list_mute_list">Daftar Bisukan</string>
     <string name="follow_pack_creation_dialog_title">Pack Ikut Baru</string>
-    <string name="follow_pack_edit_list_metadata">Edit Follow Pack</string>
     <string name="follow_pack_explainer">Metadata follow pack dapat dilihat oleh siapa saja di Nostr dan sering diterbitkan di banyak situs web sebagai kit awal bagi pengguna baru.</string>
     <string name="follow_pack_title">Metadata Follow Pack</string>
-    <string name="follow_packs">Follow Packs</string>
     <string name="follow_set_creation_dialog_title">Daftar Ikut Baru</string>
     <string name="follow_set_edit_list_metadata">Edit Daftar</string>
     <string name="gallery_style">Gaya Galeri Profil</string>
     <string name="gallery_style_description">Pilih gaya galeri</string>
     <string name="gallery_type_classic">Klasik</string>
-    <string name="gallery_type_modern">Modern</string>
     <string name="geohash_exclusive">Postingan Eksklusif Lokasi</string>
     <string name="geohash_exclusive_explainer">Hanya pengikut lokasi yang akan melihatnya. Pengikut umum Anda tidak akan melihatnya.</string>
     <string name="goal_progress">%1$s didanai dari target %2$s sats</string>
-    <string name="h">jam</string>
-    <string name="hash_verification_failed">Konten ini telah berubah. Penulis mungkin tidak melihat atau menyetujui perubahan tersebut</string>
-    <string name="hash_verification_info_title">Apa artinya ini?</string>
-    <string name="hash_verification_passed">Konten ini sama sejak kiriman tersebut dibuat</string>
+    <string name="h">j</string>
+    <string name="hash_verification_failed">Konten ini telah diubah. Pemilik mungkin tidak melihat atau menyetujui perubahan tersebut</string>
+    <string name="hash_verification_info_title">Apa artinya?</string>
+    <string name="hash_verification_passed">Konten ini sama sejak postingan tersebut</string>
     <string name="hi_seller_is_this_still_available">Halo %1$s, apakah ini masih tersedia?</string>
-    <string name="hidden_words">Kata yg disembunyikan</string>
+    <string name="hidden_words">Kata-kata tersembunyi</string>
     <string name="hide_community_rules_violations_explainer">Menghapus postingan dari umpan komunitas saat komunitas menerbitkan dokumen aturan NIP-9B dan sebuah acara tidak memenuhinya. Tidak berpengaruh saat komunitas tidak memiliki aturan terstruktur.</string>
     <string name="hide_community_rules_violations_title">Sembunyikan postingan yang melanggar aturan komunitas</string>
-    <string name="hide_password">Sembunyikan Kata Sandi</string>
+    <string name="hide_password">Sembunyikan kata sandi</string>
     <string name="hls_state_uploading_with_label_format">Mengunggah %1$s (%2$d dari %3$d)</string>
     <string name="home_tab_everything">Semua</string>
     <string name="http_status_400">Bad Request - Server tidak dapat atau tidak mau memproses permintaan.</string>
@@ -2213,15 +2159,15 @@
     <string name="http_status_511">Network Authentication Required - Klien harus diautentikasi untuk mengakses jaringan</string>
     <string name="illegal_behavior">Perilaku Ilegal</string>
     <string name="image_saved_to_the_gallery">Gambar disimpan ke galeri</string>
-    <string name="impersonation">Peniruan/penipuan</string>
+    <string name="impersonation">Identitas palsu</string>
     <string name="inbox_relays_title">Relay Kotak Masuk</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sats) dari %2$s. Seharusnya %3$s</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sat) dari %2$s. Seharusnya %3$s</string>
     <string name="indexer_section">Relay Indeks</string>
     <string name="indexer_section_explainer">Relay yang berspesialisasi dalam menyimpan metadata dan daftar relay semua orang, seperti purplepag.es. Amethyst akan menggunakan relay ini untuk menemukan pengguna yang tidak ada dalam daftar Anda.</string>
     <string name="interest_set_creation_screen_title">Kumpulan Minat Baru</string>
     <string name="interest_set_rename">Ganti nama</string>
     <string name="interest_sets_title">Kumpulan Hashtag</string>
-    <string name="invalid_key">Kunci tidak sah</string>
+    <string name="invalid_key">Kunci tidak valid</string>
     <string name="invalid_key_with_message">Kunci tidak valid: %1$s</string>
     <string name="invalid_nip19_uri">Alamat tidak valid</string>
     <string name="invalid_nip19_uri_description">Amethyst menerima URI untuk dibuka tetapi URI tersebut tidak valid: %1$s</string>
@@ -2232,7 +2178,6 @@
     <string name="key_is_required">Kunci diperlukan</string>
     <string name="keypackage_section">Relay KeyPackage</string>
     <string name="keypackage_section_explainer">Relay tempat KeyPackage MLS Anda dipublikasikan (MIP-00). Pengguna lain mengambil KeyPackage ini untuk mengundang Anda ke obrolan grup Marmot. Masukkan 1–3 relay yang menerima event KeyPackage dari Anda dan mengizinkan pembacaan publik.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">Kumpulan Lencana yang Diterima</string>
     <string name="kind_adventure_prologue">Prolog Petualangan</string>
     <string name="kind_adventure_reading">Bacaan Petualangan</string>
@@ -2250,7 +2195,6 @@
     <string name="kind_blob_headers">Header Blob</string>
     <string name="kind_blocked_relays">Relay yang Diblokir</string>
     <string name="kind_blogs">Blog</string>
-    <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_blossom_servers">Server Blossom</string>
     <string name="kind_bookmark_list">Daftar Bookmark</string>
     <string name="kind_broadcast_relays">Relay Siaran</string>
@@ -2261,7 +2205,6 @@
     <string name="kind_channel_message">Pesan Saluran</string>
     <string name="kind_channel_metadata">Metadata Saluran</string>
     <string name="kind_channel_mute_user">Bisukan Pengguna Saluran</string>
-    <string name="kind_chess_auth">Chess Auth</string>
     <string name="kind_chess_challenges">Tantangan Catur</string>
     <string name="kind_chess_draw_offer">Tawaran Seri Catur</string>
     <string name="kind_chess_game_accept">Penerimaan Permainan Catur</string>
@@ -2283,8 +2226,6 @@
     <string name="kind_dvm_content_req">Permintaan Konten DVM</string>
     <string name="kind_dvm_content_resp">Respons Konten DVM</string>
     <string name="kind_dvm_status">Status DVM</string>
-    <string name="kind_dvm_user_req">DVM User Req</string>
-    <string name="kind_dvm_user_resp">DVM User Resp</string>
     <string name="kind_edits">Suntingan</string>
     <string name="kind_emoji_pack_list">Daftar Paket Emoji</string>
     <string name="kind_emoji_packs">Paket Emoji</string>
@@ -2298,13 +2239,8 @@
     <string name="kind_follow_packs">Follow Pack</string>
     <string name="kind_geohash_follows">Ikutan Geohash</string>
     <string name="kind_gift_wraps">GiftWrap</string>
-    <string name="kind_git_issue">Git Issue</string>
-    <string name="kind_git_patch">Git Patch</string>
-    <string name="kind_git_reply">Git Reply</string>
-    <string name="kind_git_repo">Git Repo</string>
     <string name="kind_hashtag_follows">Ikutan Tagar</string>
     <string name="kind_highlights">Sorotan</string>
-    <string name="kind_http_auth">Http Auth</string>
     <string name="kind_index_relay_list">Daftar Relay Indeks</string>
     <string name="kind_live_chats">Obrolan Langsung</string>
     <string name="kind_live_streams">Siaran Langsung</string>
@@ -2316,23 +2252,16 @@
     <string name="kind_mute_list">Daftar Bisukan</string>
     <string name="kind_named_bookmarks">Bookmark Bernama</string>
     <string name="kind_nests_servers">Server Nests</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_nns">NNS</string>
-    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_notes">Catatan</string>
     <string name="kind_nwc_request">Permintaan NWC</string>
     <string name="kind_nwc_response">Respons NWC</string>
     <string name="kind_old_bookmark_list">Daftar Bookmark Lama</string>
-    <string name="kind_ots">OTS</string>
     <string name="kind_outbox_relays">Outbox Relay</string>
-    <string name="kind_pay_to">PayTo</string>
     <string name="kind_people_lists">Daftar Orang</string>
     <string name="kind_pictures">Gambar</string>
     <string name="kind_pins">Pin</string>
     <string name="kind_podcast_episode">Episode Podcast</string>
     <string name="kind_podcast_metadata">Acara Podcast</string>
-    <string name="kind_poll">Poll</string>
     <string name="kind_poll_response">Respons Poll</string>
     <string name="kind_private_relays">Relay Privat</string>
     <string name="kind_private_zaps">Zap Privat</string>
@@ -2342,8 +2271,6 @@
     <string name="kind_proxy_relays">Relay Proksi</string>
     <string name="kind_public_message">Pesan Publik</string>
     <string name="kind_reactions">Reaksi</string>
-    <string name="kind_relay_auth">Relay Auth</string>
-    <string name="kind_relay_discovery">Relay Discovery</string>
     <string name="kind_relay_monitor">Pengumuman Monitor Relay</string>
     <string name="kind_relay_set">Set Relay</string>
     <string name="kind_reports">Laporan</string>
@@ -2352,8 +2279,6 @@
     <string name="kind_room_presence">Kehadiran di Ruangan</string>
     <string name="kind_seals">Segel</string>
     <string name="kind_search_relays">Relay Pencarian</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     <string name="kind_torrent_comments">Komentar Torrent</string>
     <string name="kind_torrents">Torrent</string>
     <string name="kind_trusted_providers">Penyedia Tepercaya</string>
@@ -2361,42 +2286,35 @@
     <string name="kind_user_delete">Hapus Pengguna</string>
     <string name="kind_user_settings">Pengaturan Pengguna</string>
     <string name="kind_user_status">Status Pengguna</string>
-    <string name="kind_video">Video</string>
-    <string name="kind_video_repl">Video (Repl)</string>
     <string name="kind_voice_msg">Pesan Suara</string>
     <string name="kind_voice_reply">Balasan Suara</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Bookmark Web</string>
-    <string name="kind_wiki">Wiki</string>
     <string name="kind_workouts">Olahraga</string>
     <string name="kind_zap_goals">Tujuan Zap</string>
-    <string name="kind_zap_poll">Zap Poll</string>
     <string name="kind_zap_req">Permintaan Zap</string>
     <string name="kind_zaps">Zap</string>
-    <string name="known">Dikenali</string>
+    <string name="known">Dikenal</string>
     <string name="language_preferences">Preferensi Tampilan Bahasa</string>
     <string name="language_preferences_description">Untuk setiap pasangan bahasa yang diterjemahkan, pilih bahasa mana yang ditampilkan terlebih dahulu.</string>
     <string name="last_seen">Terakhir terlihat %1$s yang lalu</string>
     <string name="last_seen_just_now">Terakhir terlihat baru saja</string>
     <string name="last_seen_never">Tidak pernah terlihat</string>
     <string name="last_seen_on_date">Terakhir terlihat pada %1$s (%2$s yang lalu)</string>
-    <string name="leave">Tinggalkan</string>
+    <string name="leave">Keluar</string>
     <string name="light">Terang</string>
-    <string name="live_streams">Live Streams</string>
     <string name="local_section">Relay Lokal</string>
     <string name="local_section_explainer">Daftar relay yang berjalan di perangkat ini.</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Masuk dengan Kunci pribadi (nsec) untuk dapat mempromosikan tulisan</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">Masuk dengan Kunci pribadi (nsec) untuk dapat mengikuti</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">Anda menggunakan kunci publik dan kunci publik bersifat hanya baca. Login dengan kunci pribadi untuk dapat menyembunyikan sebuah kata atau kalimat</string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">Masuk dengan Kunci pribadi (nsec) untuk dapat membalas tulisan</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Masuk dengan Kunci pribadi (nsec) untuk dapat mengirim Zaps</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">Anda menggunakan kunci publik dan kunci publik bersifat hanya baca. Login dengan kunci pribadi untuk dapat menampilkan sebuah kata atau kalimat</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat mengirim postingan</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat mengikuti</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat menyembunyikan kata atau kalimat</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat membalas</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat mengirimkan zap</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat menampilkan kata atau kalimat</string>
     <string name="login_with_a_private_key_to_be_able_to_sign_events">Anda menggunakan kunci publik dan kunci publik bersifat hanya-baca. Masuk dengan kunci privat untuk dapat menandatangani event</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">Masuk dengan Kunci pribadi (nsec) untuk berhenti mengikuti</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat tidak mengikuti</string>
     <string name="login_with_a_private_key_to_be_able_to_upload">Anda menggunakan kunci publik dan kunci publik bersifat hanya-baca. Masuk dengan kunci privat untuk dapat mengunggah</string>
-    <string name="login_with_a_private_key_to_like_posts">Masuk dengan Kunci pribadi (nsec) untuk dapat menyukai tulisan</string>
+    <string name="login_with_a_private_key_to_like_posts">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat untuk menyukai postingan</string>
     <string name="longs">Video</string>
-    <string name="m">menit</string>
     <string name="manage_emoji_packs">Paket Emoji Saya</string>
     <string name="marmot_adding_user">Menambahkan %1$s…</string>
     <string name="marmot_admin_granted">Hak admin diberikan</string>
@@ -2411,12 +2329,9 @@
     <string name="marmot_group">Grup MLS</string>
     <string name="marmot_group_info_updated">Info grup diperbarui</string>
     <plurals name="marmot_member_count">
-    <item quantity="other">%1$d anggota</item>
-</plurals>
+        <item quantity="other">%1$d anggota</item>
+    </plurals>
     <string name="marmot_member_removed">Anggota dihapus</string>
-    <plurals name="marmot_message_count">
-    <item quantity="other">%1$d pesan</item>
-</plurals>
     <string name="marmot_not_a_member">Bukan anggota grup ini</string>
     <string name="marmot_unknown_error">kesalahan tidak diketahui</string>
     <string name="media_added">Media ditambahkan</string>
@@ -2429,32 +2344,31 @@
     <string name="metadata_strip_failed_title">Metadata tidak dapat dihapus</string>
     <string name="metadata_strip_failed_upload_cancelled">Gagal menghapus metadata pribadi dari media. Unggahan dibatalkan.</string>
     <string name="migrate_bookmarks_success">Markah berhasil dipindahkan</string>
-    <string name="missing_lud16">Tidak ada pengaturan lightning</string>
-    <string name="more_options">Lebih banyak pilihan</string>
+    <string name="missing_lud16">Lightning tidak tersedia</string>
+    <string name="more_options">Opsi Lainnya</string>
     <string name="move_bookmark_to_private_label">Pindah ke Pribadi</string>
     <string name="move_bookmark_to_public_label">Pindah ke Publik</string>
     <string name="music_playlist_cover_upload_cta">Unggah gambar sampul</string>
     <string name="music_playlist_cover_upload_hint">Pilih gambar persegi sebagai karya seni untuk playlist ini.</string>
     <plurals name="music_playlist_more_tracks">
-    <item quantity="other">+%1$d lagu lainnya</item>
-</plurals>
+        <item quantity="other">+%1$d lagu lainnya</item>
+    </plurals>
     <plurals name="music_playlist_track_count">
-    <item quantity="other">%1$d lagu</item>
-</plurals>
+        <item quantity="other">%1$d lagu</item>
+    </plurals>
     <plurals name="music_playlist_track_count_short">
-    <item quantity="other">%1$d trek</item>
-</plurals>
+        <item quantity="other">%1$d trek</item>
+    </plurals>
     <string name="music_playlist_uploading_banner">Mengunggah sampul dan menerbitkan. Proses ini akan terus berjalan meskipun Anda meninggalkan layar.</string>
     <string name="music_track_audio_upload_cta">Unggah file audio</string>
     <string name="music_track_audio_upload_hint">Pilih MP3, WAV, atau FLAC. File akan diunggah ke server media Anda saat Simpan.</string>
     <string name="music_track_cover_upload_cta">Unggah gambar sampul</string>
     <string name="music_track_cover_upload_hint">Pilih gambar persegi sebagai karya seni untuk lagu ini.</string>
     <string name="music_track_uploading_banner">Mengunggah sampul + audio dan menerbitkan. Proses ini akan terus berjalan meskipun Anda meninggalkan layar.</string>
-    <string name="mute_button">Bersuara. Kilik untuk meredam</string>
-    <string name="muted_button">Diredam. Klik untuk bersuara</string>
+    <string name="mute_button">Suara aktif. Ketuk untuk bisukan</string>
+    <string name="muted_button">Dibisukan. Ketuk untuk membunyikan</string>
     <string name="my_lists">Daftar Saya</string>
     <string name="name_is_required">Nama diperlukan</string>
-    <string name="namecoin_response_time">%1$dms</string>
     <string name="namecoin_settings">Pengaturan Namecoin</string>
     <string name="napplet_cap_identity">Identitas</string>
     <string name="napplet_cap_identity_desc">Baca kunci publik Anda</string>
@@ -2480,8 +2394,8 @@
     <string name="napplet_consent_identity_read">nApplet ini ingin membaca profil dan data akun Anda.</string>
     <string name="napplet_consent_notify">nApplet ini ingin menampilkan notifikasi kepada Anda.</string>
     <plurals name="napplet_consent_pay_amount">
-    <item quantity="other">nApplet ini ingin membayar invoice Lightning sebesar %1$d sat.</item>
-</plurals>
+        <item quantity="other">nApplet ini ingin membayar invoice Lightning sebesar %1$d sat.</item>
+    </plurals>
     <string name="napplet_consent_publish">nApplet ini ingin menandatangani dan menerbitkan event kind %1$d sebagai Anda.</string>
     <string name="napplet_consent_publish_encrypted">nApplet ini ingin mengirim event terenkripsi sebagai Anda.</string>
     <string name="napplet_consent_publish_preview">nApplet ini ingin menandatangani dan menerbitkan event kind %1$d sebagai Anda:</string>
@@ -2490,27 +2404,18 @@
     <string name="napplet_consent_sign">Situs ini ingin menandatangani event kind %1$d dengan kunci Nostr Anda.</string>
     <string name="napplet_consent_storage">nApplet ini ingin menggunakan penyimpanan pribadinya.</string>
     <string name="napplet_consent_upload">nApplet ini ingin mengunggah file ke server media Anda.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
-    <string name="napplets">nApplets</string>
     <string name="nest_chat_send_failed_title">Gagal mengirim pesan</string>
     <string name="nest_hush_local">Senyapkan pembicara ini</string>
     <string name="nest_hush_local_restore">Pulihkan pembicara ini</string>
     <string name="nest_leave">Tinggalkan</string>
     <string name="nest_leave_host_close_failed">Gagal menandai ruang sebagai ditutup. Meninggalkan tetap — ruang akan ditutup otomatis.</string>
     <plurals name="nest_listener_count">
-    <item quantity="other">%1$d pendengar</item>
-</plurals>
+        <item quantity="other">%1$d pendengar</item>
+    </plurals>
     <string name="nest_lower_hand">Turunkan tangan</string>
     <string name="nest_mic_mute">Bisukan mikrofon</string>
     <string name="nest_mic_unmute">Aktifkan mikrofon</string>
-    <string name="nest_mute">Bisukan</string>
     <string name="nest_no_server_save_failed">Gagal menyimpan daftar server nest Anda. Coba lagi.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Menjaga audio tetap berjalan saat ruang terbuka.</string>
-    <string name="nest_notification_listening">Nest terhubung</string>
-    <string name="nest_notification_stop">Berhenti</string>
-    <string name="nest_notification_text">Ketuk untuk kembali.</string>
     <string name="nest_participant_follow">Ikuti</string>
     <string name="nest_participant_mute">Bisukan</string>
     <string name="nest_participant_unfollow">Berhenti mengikuti</string>
@@ -2521,14 +2426,12 @@
     <string name="nest_presence_raised_hand">mengangkat tangan</string>
     <string name="nest_presence_speaking">sedang berbicara</string>
     <string name="nest_raise_hand">Angkat tangan</string>
-    <string name="nest_unmute">Aktifkan suara</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Disimpan sebagai event yang dapat diganti kind-10112 agar klien lain dapat membaca preferensi Anda.</string>
     <string name="nests_servers_my_section">Server Anda</string>
     <string name="nests_servers_recommended_explainer">Saran bawaan yang dapat Anda tambahkan ke daftar dengan satu ketukan.</string>
     <string name="nests_servers_recommended_section">Server yang Direkomendasikan</string>
     <string name="nests_servers_title">Server nest</string>
-    <string name="never">tidak pernah</string>
+    <string name="never">jangan pernah</string>
     <string name="new_badge">Lencana Baru</string>
     <string name="new_calendar_collection">Kalender Baru</string>
     <string name="new_calendar_event">Acara Kalender Baru</string>
@@ -2553,22 +2456,18 @@
     <string name="new_music_track">Trek musik baru</string>
     <string name="new_product">Produk Baru</string>
     <string name="new_requests">Permintaan Baru</string>
-    <string name="new_threads">Utas Baru</string>
+    <string name="new_threads">Utas baru</string>
     <string name="new_workout">Latihan Baru</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="other">%1$d aset dibundel</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Aplikasi Blossom tidak ditemukan. Silakan instal aplikasi Blossom lokal untuk melihat file ini</string>
     <string name="no_blossom_apps_found_title">Tidak dapat membuka tautan Blossom</string>
     <string name="no_camera_app_found">Tidak ada aplikasi kamera yang ditemukan di perangkat ini</string>
-    <string name="no_lightning_address_set">Tidak ada alamat Lightning yang diatur</string>
+    <string name="no_lightning_address_set">Tidak ada Alamat Lightning yang ditetapkan</string>
     <string name="no_payment_app_found">Tidak ada aplikasi yang ditemukan untuk menangani pembayaran ini. Silakan instal dompet yang kompatibel.</string>
     <string name="no_payment_app_found_for_type">Tidak ada aplikasi yang terinstal untuk menangani pembayaran %1$s. Silakan instal dompet yang kompatibel.</string>
-    <string name="no_reaction_type_setup_long_press_to_change">Tidak ada jenis reaksi yang dipilih. Tekan dan tahan untuk mengubah</string>
-    <string name="no_reactions_setup">Tidak ada pengaturan reaksi</string>
-    <string name="no_wallet_found">Tidak ditemukan Dompet untuk membayar faktur lightning. Silakan instal dompet Lightning untuk menggunakan zaps</string>
-    <string name="no_wallet_found_with_error">Tidak ditemukan Dompet untuk membayar faktur lightning (Kesalahan: %1$s). Silakan instal dompet Lightning untuk menggunakan zaps</string>
-    <string name="no_zap_amount_setup_long_press_to_change">Tidak Ada Pengaturan Jumlah Zap. Tekan dan tahan tombol untuk mengubah</string>
+    <string name="no_reaction_type_setup_long_press_to_change">Tidak ada jenis reaksi yang dipilih sebelumnya untuk pengguna ini. Tekan lama tombol hati untuk mengubahnya</string>
+    <string name="no_reactions_setup">Tidak mengatur reaksi</string>
+    <string name="no_wallet_found">Tidak ada Dompet yang ditemukan untuk membayar faktur Lightning. Silakan instal dompet Lightning untuk menggunakan zap</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Jumlah Zap belum diatur. Tekan lama untuk mengubah</string>
     <string name="notification_settings">Notifikasi</string>
     <string name="notification_settings_section_categories">Kategori</string>
     <string name="notification_settings_section_delivery">Pengiriman</string>
@@ -2583,50 +2482,47 @@
     <string name="nowhere_link_card_message">Pesan Nowhere</string>
     <string name="nowhere_link_card_petition">Petisi Nowhere</string>
     <string name="nowhere_link_card_store">Toko Nowhere</string>
-    <string name="nsites">nSites</string>
     <string name="nudity">Ketelanjangan</string>
     <string name="nutzap_failed_no_event">Tidak dapat membuat referensi event</string>
     <string name="nutzap_failed_no_recipient">Tidak ada pubkey penerima pada catatan</string>
     <string name="nutzap_failed_private_note">Nutzap bersifat publik dan akan mengungkap catatan privat ini. Gunakan zap Lightning sebagai gantinya.</string>
     <string name="nutzap_failed_title">Nutzap gagal</string>
     <plurals name="onchain_send_button_amount_split">
-    <item quantity="other">Kirim %1$s sats, %2$d cara</item>
-</plurals>
+        <item quantity="other">Kirim %1$s sats, %2$d cara</item>
+    </plurals>
     <string name="onchain_send_error_backend_not_configured">Backend chain Bitcoin belum dikonfigurasi</string>
     <string name="onchain_send_error_broadcast">Tidak dapat menyiarkan transaksi</string>
     <string name="onchain_send_error_build">Tidak dapat membangun transaksi</string>
     <string name="onchain_send_error_load_utxos">Tidak dapat memuat saldo Bitcoin Anda</string>
     <string name="onchain_send_error_publish_receipt">Pembayaran terkirim, tetapi tanda terima zap tidak dapat dipublikasikan</string>
     <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="other">Pembayaran terkirim (%1$d dari %2$d tanda terima dipublikasikan), tetapi tanda terima berikutnya tidak dapat dipublikasikan</item>
-</plurals>
+        <item quantity="other">Pembayaran terkirim (%1$d dari %2$d tanda terima dipublikasikan), tetapi tanda terima berikutnya tidak dapat dipublikasikan</item>
+    </plurals>
     <string name="onchain_send_error_recipient_dust">Bagian penerima di bawah batas debu</string>
     <string name="onchain_send_error_sign">Tidak dapat menandatangani transaksi</string>
     <string name="onchain_send_fee_eta_fast">~10 menit</string>
     <string name="onchain_send_fee_eta_normal">~30 menit</string>
     <string name="onchain_send_fee_eta_slow">~1 jam</string>
     <string name="onchain_send_fee_fast">Cepat</string>
-    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_slow">Lambat</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
-    <item quantity="other">Dibagi di antara %1$d penerima</item>
-</plurals>
+        <item quantity="other">Dibagi di antara %1$d penerima</item>
+    </plurals>
     <plurals name="onchain_send_splits_skipped">
-    <item quantity="other">Melewati %1$d penerima yang hanya memiliki alamat Lightning — on-chain memerlukan pubkey Nostr untuk menurunkan alamat.</item>
-</plurals>
+        <item quantity="other">Melewati %1$d penerima yang hanya memiliki alamat Lightning — on-chain memerlukan pubkey Nostr untuk menurunkan alamat.</item>
+    </plurals>
     <plurals name="onchain_send_use_note_split">
-    <item quantity="other">Gunakan pembagian zap %1$d-cara dari catatan ini</item>
-</plurals>
+        <item quantity="other">Gunakan pembagian zap %1$d-cara dari catatan ini</item>
+    </plurals>
     <string name="onchain_stage_broadcasting">menyiarkan</string>
     <string name="onchain_stage_building">membangun transaksi</string>
     <string name="onchain_stage_loading_utxos">memuat saldo</string>
     <string name="onchain_stage_publishing">mempublikasikan tanda terima</string>
     <string name="onchain_stage_signing">menandatangani</string>
-    <string name="one_vote_per_user_on_atomic_votes">Hanya satu suara per pengguna yang diperbolehkan pada jenis pemungutan suara ini</string>
+    <string name="one_vote_per_user_on_atomic_votes">Hanya satu suara per pengguna yang diperbolehkan pada jenis poll ini</string>
     <string name="open_all_reactions_to_this_post">Buka semua reaksi pada postingan ini</string>
     <string name="open_polls">Terbuka</string>
-    <string name="orbot_socks_port">Port Orbot Socks</string>
+    <string name="orbot_socks_port">Port Socks Orbot</string>
     <string name="ots_explorer_settings">Penjelajah Bitcoin (OTS)</string>
     <string name="ots_info_description">Ada bukti bahwa postingan ini ditandatangani sebelum %1$s. Bukti ini dicap dalam blockchain Bitcoin pada tanggal dan waktu tersebut.</string>
     <string name="ots_info_title">Bukti Stempel Waktu</string>
@@ -2645,23 +2541,23 @@
     <string name="pin_to_profile">Sematkan ke Profil</string>
     <string name="play">Putar</string>
     <plurals name="podcast_episode_count">
-    <item quantity="other">%1$d episode</item>
-</plurals>
-    <string name="poll_author_no_vote">Pembuat Pemungutan Suara tidak dapat memberikan suara dalam pemungutan suara sendiri.</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
-    <string name="poll_is_closed_explainer">Jajak pendapat ditutup untuk suara baru</string>
+        <item quantity="other">%1$d episode</item>
+    </plurals>
+    <string name="poll_author_no_vote">Pemilik Poll tidak bisa memilih di poll mereka sendiri.</string>
+    <string name="poll_is_closed_explainer">Poll ditutup</string>
     <string name="poll_multiple_choice">Pilihan ganda</string>
     <string name="poll_single_choice">Pilihan tunggal</string>
-    <string name="poll_unable_to_vote">Tidak dapat mengajukan pilihan</string>
+    <string name="poll_unable_to_vote">Tidak dapat memilih</string>
     <string name="polls">Polling</string>
-    <string name="post">Kirim</string>
+    <string name="post">Posting</string>
+    <string name="post_noun">Postingan</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
-    <item quantity="other">Postingan ini memiliki lebih dari %1$d hashtag</item>
-</plurals>
-    <string name="preview_card_image_for">Pratinjau Gambar Kartu untuk %1$s</string>
+        <item quantity="other">Postingan ini memiliki lebih dari %1$d hashtag</item>
+    </plurals>
+    <string name="preview_card_image_for">Preview gambar untuk %1$s</string>
     <string name="privacy_options">Opsi Privasi</string>
     <string name="privacy_policy">Kebijakan Privasi</string>
-    <string name="private_conversation_notification">&lt;Gagal mendeskripsikan pesan pribadi&gt;\n\nAnda dikutip dalam percakapan pribadi/terenkripsi antara %1$s dan %2$s.</string>
+    <string name="private_conversation_notification">&lt;Gagal mendekripsi pesan rahasia&gt;\n\n Anda dikutip dalam percakapan pribadi/terenkripsi antara %1$s dan %2$s.</string>
     <string name="private_inbox_section">Relay Kotak Masuk DM</string>
     <string name="private_inbox_section_explainer">Masukkan 1–3 relay sebagai kotak masuk pribadi Anda. Orang lain akan menggunakan relay ini untuk mengirim DM kepada Anda. Relay Kotak Masuk DM harus menerima pesan dari siapa saja, tetapi hanya mengizinkan Anda untuk mengunduhnya. Pilihan yang baik:\n - inbox.nostr.wine (berbayar)\n - auth.nostr1.com (gratis)\n - you.nostr1.com (relay pribadi - berbayar)</string>
     <string name="private_inbox_section_explainer_profile">Pengguna menerima DM di relay ini</string>
@@ -2671,7 +2567,7 @@
     <string name="private_note_visible_to">Terlihat oleh</string>
     <string name="private_outbox_section">Relay Beranda Pribadi</string>
     <string name="private_outbox_section_explainer">Masukkan 1–3 relay untuk menyimpan event yang tidak dapat dilihat orang lain, seperti Draft dan/atau pengaturan aplikasi Anda. Idealnya, relay ini bersifat lokal atau memerlukan autentikasi sebelum mengunduh konten setiap pengguna.</string>
-    <string name="profanity_hateful_speech">Ujaran kotor/kebencian</string>
+    <string name="profanity_hateful_speech">Kata-kata kotor / Ujaran kebencian</string>
     <string name="profile">Profil</string>
     <string name="profile_badges_title">Lencana profil</string>
     <string name="profile_ui_setting_app_recommendations">Rekomendasi Aplikasi</string>
@@ -2683,7 +2579,7 @@
     <string name="propose_an_edit">Usulkan Suntingan</string>
     <string name="proxy_section">Relay Proxy</string>
     <string name="proxy_section_explainer">Relay agregator yang harus digunakan aplikasi untuk mengunduh feed Anda, seperti filter.nostr.wine. Ini menggantikan model outbox dan akan membuat aplikasi hanya terhubung ke relay dalam daftar Anda.</string>
-    <string name="public_chat">Percakapan Publik</string>
+    <string name="public_chat">Obrolan Publik</string>
     <string name="public_chat_explainer">Obrolan publik terlihat oleh semua orang di Nostr dan siapa pun dapat berpartisipasi. Sangat cocok untuk komunitas terbuka seputar topik tertentu. Moderasi dapat dilakukan dengan menghapus postingan di relay-nya</string>
     <string name="public_chat_relays_explainer">Masukkan antara 1–3 relay yang menjadi host grup ini. Klien Nostr menggunakan pengaturan ini untuk mengetahui tempat mengunduh dan mengirim pesan Anda.</string>
     <string name="public_chat_relays_title">relay</string>
@@ -2696,16 +2592,16 @@
     <string name="public_notif_section">Relay Kotak Masuk Publik</string>
     <string name="public_notif_section_explainer">Jenis relay ini menerima semua balasan, komentar, suka, dan zap ke postingan Anda. Bisa berupa relay berbayar atau gratis. Batasan yang ditetapkan oleh operator relay dapat membatasi notifikasi yang Anda terima, baik positif maupun negatif. Misalnya, jika Anda diserang spam komentar, relay berbayar dapat menyaring spam tersebut. Masukkan 1–3 relay.</string>
     <string name="public_notif_section_explainer_profile">Pengguna menerima notifikasi di relay ini</string>
-    <string name="quick_action_copy_note_id">ID Catatan</string>
+    <string name="quick_action_copy_note_id">ID Note</string>
     <string name="quick_action_delete">Hapus</string>
     <string name="quick_action_mute_thread">Bisukan utas</string>
     <string name="quick_action_share">Bagikan</string>
-    <string name="quick_action_share_browser_link">Bagikan Tauatan ke Peramban</string>
+    <string name="quick_action_share_browser_link">Bagikan Link Browser</string>
     <string name="quick_action_unmute_thread">Batalkan bisukan utas</string>
     <string name="reaction">Reaksi</string>
     <string name="reactions">Reaksi</string>
     <string name="reactions_settings">Baris Reaksi</string>
-    <string name="read_from_relay">Baca dari Relai</string>
+    <string name="read_from_relay">Baca dari Relay</string>
     <string name="read_from_relay_description">Jumlah dalam byte yang diterima dari relay ini, termasuk filter dan acara</string>
     <string name="read_only_user">Pengguna hanya-baca</string>
     <string name="record_a_message_description">Tekan dan tahan untuk merekam pesan</string>
@@ -2719,15 +2615,15 @@
     <string name="relay_management_tab_settings">Pengaturan</string>
     <string name="relay_settings">Pengaturan Relay</string>
     <string name="relay_settings_lower2">daftar outbox</string>
-    <string name="relay_setup">Relai</string>
+    <string name="relay_setup">Relay</string>
     <string name="reload_mint_confirm">Isi ulang &amp; kirim zap</string>
     <string name="reload_mint_send_confirm">Kirim zap</string>
     <string name="reload_mint_summary">Isi ulang %1$s sats ke %2$s dan zap %3$s %4$s sats · biaya ≈ %5$s sats</string>
     <string name="remove">Hapus</string>
-    <string name="remove_from_public_bookmarks">Hapus dari Penanda Publik</string>
-    <string name="reply_here">balas di sini.. </string>
-    <string name="reply_notify">Beritahu: </string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokir & Sembuniykan Pengguna]]></string>
+    <string name="remove_from_public_bookmarks">Hapus dari Markah Publik</string>
+    <string name="reply_here">balas disini.. </string>
+    <string name="reply_notify">Memberitahu: </string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Blok & Sembunyikan Pengguna]]></string>
     <string name="request_deletion">Minta Penghapusan</string>
     <string name="request_to_vanish">Permintaan untuk Menghapus</string>
     <string name="reset_marmot_failure">Gagal menyetel ulang status Marmot: %1$s</string>
@@ -2758,36 +2654,36 @@
     <string name="scheduled_posts_error_prefix">Kesalahan: %1$s</string>
     <string name="scheduled_posts_event_id_copied">ID catatan disalin</string>
     <plurals name="scheduled_posts_logout_toast">
-    <item quantity="other">Keluar · %1$d postingan terjadwal dihapus</item>
-</plurals>
+        <item quantity="other">Keluar · %1$d postingan terjadwal dihapus</item>
+    </plurals>
     <string name="scheduled_posts_logout_toast_zero">Keluar</string>
     <plurals name="scheduled_posts_logout_warning">
-    <item quantity="other">Anda memiliki %1$d postingan terjadwal yang belum diterbitkan. Keluar akan menghapusnya secara permanen.</item>
-</plurals>
+        <item quantity="other">Anda memiliki %1$d postingan terjadwal yang belum diterbitkan. Keluar akan menghapusnya secara permanen.</item>
+    </plurals>
     <string name="scheduled_posts_notification_failed_title">Postingan terjadwal gagal</string>
     <string name="scheduled_posts_notification_sent_title">Postingan terjadwal diterbitkan</string>
     <plurals name="scheduled_posts_relay_count">
-    <item quantity="other">ke %1$d relay</item>
-</plurals>
+        <item quantity="other">ke %1$d relay</item>
+    </plurals>
     <string name="scheduled_posts_status_cancelled">Dibatalkan</string>
     <string name="scheduled_posts_status_failed">Gagal</string>
     <string name="scheduled_posts_status_pending">Terjadwal</string>
     <string name="scheduled_posts_status_publishing">Mengirim…</string>
     <string name="scheduled_posts_status_sent">Terkirim</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="other"> · %1$d jatuh tempo dalam 1 jam</item>
-</plurals>
+        <item quantity="other"> · %1$d jatuh tempo dalam 1 jam</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="other">%1$d dalam antrean</item>
-</plurals>
+        <item quantity="other">%1$d dalam antrean</item>
+    </plurals>
     <string name="search_relays_not_found_examples">Pilihan yang baik:\n%1$s</string>
     <string name="search_relays_title">Relay Pencarian</string>
     <string name="search_section">Relay Pencarian</string>
     <string name="search_section_explainer">Daftar relay yang digunakan saat mencari konten atau pengguna. Penandaan dan pencarian tidak akan berfungsi jika tidak ada pilihan yang tersedia. Pastikan mereka mengimplementasikan NIP-50.</string>
     <string name="searchable_events">acara yang dapat dicari</string>
-    <string name="secret_key_copied_to_clipboard">Kunci rahasia (nsec) disalin ke clipboard</string>
+    <string name="secret_key_copied_to_clipboard">Kunci rahasia (nsec) telah disalin ke papan klip</string>
     <string name="security_blocked_users_empty">Anda belum memblokir pengguna mana pun.</string>
-    <string name="security_filters">Filter Keamanan</string>
+    <string name="security_filters">Filter keamanan</string>
     <string name="security_hidden_words_empty">Tidak ada kata tersembunyi. Tambahkan kata di bawah untuk menyembunyikan postingan yang mengandungnya.</string>
     <string name="security_section_blocked_content">Konten diblokir</string>
     <string name="security_section_filtering_preferences">Preferensi filter</string>
@@ -2807,7 +2703,6 @@
     <string name="share_as_image_url">Bagikan sebagai URL Gambar</string>
     <string name="share_hls_video">Unggah HLS</string>
     <string name="share_or_save">Bagikan atau Simpan</string>
-    <string name="shorts">Shorts</string>
     <string name="show_messages_in_notifications_setting_description">Sertakan pesan langsung dan grup pada tab Notifikasi. Matikan untuk menyimpan pesan hanya di tab Pesan.</string>
     <string name="show_messages_in_notifications_setting_title">Tampilkan Pesan</string>
     <string name="sign_request_rejected2">Permintaan tanda tangan ditolak</string>
@@ -2818,9 +2713,8 @@
     <string name="skip_back">Mundur %1$d detik</string>
     <string name="skip_forward">Maju %1$d detik</string>
     <string name="software_apps">Aplikasi</string>
-    <string name="spam">Spam</string>
     <string name="spam_description">Jumlah event spam yang berasal dari relay ini</string>
-    <string name="spamming_users">Pengirim Spam</string>
+    <string name="spamming_users">Spammer</string>
     <string name="split_notifications_setting_description">Tampilkan dua tab notifikasi — Mengikuti (orang yang Anda ikuti) dan Semua Orang. Indikator belum dibaca hanya menyala untuk aktivitas dari orang yang Anda ikuti.</string>
     <string name="split_notifications_setting_title">Pisahkan notifikasi berdasarkan Mengikuti</string>
     <string name="strip_metadata_description">Berusaha menghapus metadata pribadi dari file media yang didukung sebelum diunggah</string>
@@ -2829,20 +2723,17 @@
     <string name="suggest_workouts_setting_title">Sarankan latihan untuk dibagikan</string>
     <string name="system">Sistem</string>
     <string name="theme">Tema</string>
-    <string name="theme_description">Tema Gelap, Terang, atau Sistem</string>
+    <string name="theme_description">Gelap, Terang, atau Tema Sistem</string>
     <string name="this_message_will_disappear_in">Pesan ini akan hilang dalam %1$s</string>
     <plurals name="thread_collapsed_reply_count">
-    <item quantity="other">+%1$d\nbalasan</item>
-</plurals>
+        <item quantity="other">+%1$d\nbalasan</item>
+    </plurals>
     <string name="today">Hari ini</string>
     <string name="tor_custom">Kustom</string>
     <string name="tor_custom_explainer">Buat sendiri</string>
-    <string name="tor_default">Default</string>
     <string name="tor_default_explainer">Sembunyikan IP Anda dari relay acak</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_full_privacy">Privasi Penuh</string>
     <string name="tor_full_privacy_explainer">Sembunyikan IP Anda di semua koneksi</string>
-    <string name="tor_internal">Internal</string>
     <string name="tor_off">Mati</string>
     <string name="tor_preset">Prasetel Tor/Privasi</string>
     <string name="tor_preset_explainer">Ubah semua pengaturan di bawah dengan cepat</string>
@@ -2888,7 +2779,7 @@
     <string name="ui_preferences">Preferensi UI</string>
     <string name="ui_style">Mode UI</string>
     <string name="ui_style_description">Pilih gaya postingan</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Tidak dapat membuat faktur lightning sebelum mengirim zap. Dompet Lightning penerima mengirimkan kesalahan berikut: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Tidak dapat membuat faktur Lightning sebelum mengirim zap. Dompet Lightning penerima mengirimkan kesalahan berikut: %1$s</string>
     <string name="unable_to_share_image">Tidak dapat berbagi gambar, coba lagi nanti…</string>
     <string name="unable_to_share_video">Tidak dapat berbagi video, coba lagi nanti…</string>
     <string name="unauthorized_exception">Dekripsi Tidak Diizinkan</string>
@@ -2900,15 +2791,12 @@
     <string name="upload_error_title">Kesalahan Unggahan</string>
     <string name="upload_error_voice_message_exception">Unggahan suara gagal: %1$s</string>
     <string name="upload_error_voice_message_failed">Gagal mengunggah pesan suara</string>
-    <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Mesin Tor Aktif</string>
     <string name="use_internal_tor_explainer">Gunakan versi internal atau Orbot</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna tidak memiliki alamat lightning (LN) yang diatur untuk menerima sats</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna %1$s tidak memiliki alamat lightning yang diatur untuk menerima sats</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna belum mengatur alamat lightning untuk menerima sat</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s belum mengatur alamat lightning untuk menerima sat</string>
     <string name="vanish_history">Riwayat Penghapusan</string>
     <string name="vanish_request_sent">Permintaan penghapusan terkirim</string>
-    <string name="video_codec_h265_description">Kualitas lebih baik dengan ukuran file lebih kecil tetapi tidak semua perangkat mendukung pemutaran H.265.</string>
-    <string name="video_codec_h265_label">Gunakan Codec H.265/HEVC</string>
     <string name="video_download_has_started_toast">Unduhan video telah dimulai…</string>
     <string name="video_player_settings">Tombol Pemutar Video</string>
     <string name="video_saved_to_the_gallery">Video disimpan ke galeri video ponsel</string>
@@ -2920,29 +2808,175 @@
     <string name="voice_reply">Balasan Suara</string>
     <string name="wallet">Dompet</string>
     <string name="wallet_add_cashu_title">Dompet Cashu (NIP-60)</string>
-    <string name="wallet_connect">Wallet Connect</string>
-    <string name="wallet_connect_pay_invoice_error_error">Penyedia koneksi dompet Anda menampilkan kesalahan berikut: %1$s</string>
-    <string name="wallet_edit_cashu_title">Edit mints</string>
+    <string name="wallet_connect_pay_invoice_error_error">Penyedia Wallet Connect anda memberi error: %1$s</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Menampilkan pesan peringatan saat postingan atau profil mendapat laporan dari orang yang Anda ikuti</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Peringatkan pada laporan</string>
     <string name="web_bookmark_add_title">Tambah Bookmark Web</string>
     <string name="web_bookmark_edit_title">Edit Bookmark Web</string>
     <string name="web_bookmarks">Bookmark Web</string>
-    <string name="what_s_on_your_mind">Apa yang anda pikirkan?</string>
+    <string name="what_s_on_your_mind">Apa yang ada dalam pikiranmu?</string>
     <string name="workouts">Latihan</string>
     <string name="write_a_message">Tulis pesan…</string>
-    <string name="write_to_relay">Tulis ke Relai</string>
+    <string name="write_to_relay">Tulis ke Relay</string>
     <string name="write_to_relay_description">Jumlah dalam byte yang dikirim ke relay ini, termasuk filter dan acara</string>
-    <string name="zap_description">Zap</string>
-    <string name="zaps">Zaps</string>
-    <string name="block_hide_user"><![CDATA[Blokir & Sembunyikan Pengguna]]></string>
+    <string name="zaps">Zap</string>
+    <string name="block_hide_user"><![CDATA[Blok & Sembunyikan Pengguna]]></string>
     <string name="rename">Ganti nama</string>
     <string name="save">Simpan</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Tidak dapat menyelesaikan %1$s. Periksa apakah Anda terhubung, apakah server aktif, dan apakah alamat Lightning %2$s sudah benar.\n\nPengecualian: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Kesalahan penguraian JSON dari pengambilan tagihan %1$s. Periksa pengaturan Lightning pengguna</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Layanan lightning penerima pada %1$s tidak tersedia. Itu dihitung dari alamat petir "%2$s". Kesalahan: %3$s. Periksa apakah server aktif dan apakah alamat lightning sudah benar</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Layanan Lightning penerima di %1$s tidak tersedia. Itu dihitung dari alamat Lightning "%2$s". Kesalahan: %3$s. Periksa apakah server aktif dan apakah alamat petir sudah benar</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Tidak dapat membuat tagihan Lightning dari %1$s: Elemen pr tidak ditemukan dalam JSON yang dihasilkan.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Tidak dapat membuat tagihan Lightning. Pesan dari %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="git_status_draft">Draft</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="malware">Malware</string>
+    <string name="fork">Fork</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="feed">Feed</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="workout_volume">Volume</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nest_lobby_host_label">Host</string>
+    <string name="nest_role_host">Host</string>
+    <string name="nest_role_moderator">Moderator</string>
+    <string name="nest_live_chip">LIVE</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="zap_type_nonzap">Bukan Zap</string>
+    <string name="uploading_state_hashing">Hashing</string>
+    <string name="security_unlimited">∞</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="live_stream_offline_tag">LURING (OFF)</string>
+    <string name="live_stream_private_tag">PRIVATE</string>
+    <string name="default_relays">Bawaan</string>
+    <string name="music_playlist_edit_action">Edit playlist</string>
+    <string name="error_dialog_button_ok">Ok</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_default">Default</string>
+    <string name="cashu_mints">Mints</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="markdown_edit">Edit</string>
+    <string name="reactions_settings_boost">Boost</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="git_clone_address">Clone:</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="follow_list_item_label">Follow Pack</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="tip">Tip</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_label">Codec</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="attestation_valid">Valid</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">'%1$s…'</string>
+    <string name="marmot_member_suffix_admin"> - admin</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="browser">Browser</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="call_earpiece">Earpiece</string>
+    <string name="discover_marketplace">Marketplace</string>
+    <string name="dms">DMs</string>
+    <string name="edit_music_playlist">Edit playlist</string>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_diet">Diet</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_yoga">Yoga</string>
+    <string name="filter_spam_from_strangers_title">Filter spam</string>
+    <string name="follow_list_global">Global</string>
+    <string name="follow_pack_edit_list_metadata">Edit Follow Pack</string>
+    <string name="follow_packs">Follow Packs</string>
+    <string name="gallery_type_modern">Modern</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_blossom_auth">Blossom Auth</string>
+    <string name="kind_chess_auth">Chess Auth</string>
+    <string name="kind_dvm_user_req">DVM User Req</string>
+    <string name="kind_dvm_user_resp">DVM User Resp</string>
+    <string name="kind_git_issue">Git Issue</string>
+    <string name="kind_git_patch">Git Patch</string>
+    <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_repo">Git Repo</string>
+    <string name="kind_http_auth">Http Auth</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_poll">Poll</string>
+    <string name="kind_relay_auth">Relay Auth</string>
+    <string name="kind_relay_discovery">Relay Discovery</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_video_repl">Video (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_wiki">Wiki</string>
+    <string name="kind_zap_poll">Zap Poll</string>
+    <string name="live_streams">Live Streams</string>
+    <string name="m">menit</string>
+    <string name="namecoin_response_time">%1$dms</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="napplets">nApplets</string>
+    <string name="nests">Nests</string>
+    <string name="nsites">nSites</string>
+    <string name="onchain_send_fee_normal">Normal</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="shorts">Shorts</string>
+    <string name="spam">Spam</string>
+    <string name="tor_default">Default</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_internal">Internal</string>
+    <string name="uptime">%1$d% uptime</string>
+    <string name="wallet_connect">Wallet Connect</string>
+    <string name="wallet_edit_cashu_title">Edit mints</string>
+    <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Cari atau masukkan alamat</string>
     <string name="napplet_untitled">nApplet Tanpa Judul</string>
 </resources>

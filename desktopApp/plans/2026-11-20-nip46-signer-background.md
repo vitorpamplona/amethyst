@@ -25,8 +25,13 @@ any loaded account has its signer on (`AccountCacheState.anySignerRunning`).
   coordinates stopped at 1.3.3): Win32, an NSStatusItem, or a StatusNotifierItem over
   D-Bus on Linux. Shown only while a signer runs. Menu: Open Amethyst, Quit Amethyst; a left
   click opens.
-- The icon comes from files (`IconResources.trayIconFiles`: `.ico` on Windows, PNG elsewhere),
-  written to the data folder's `tray/` only when the tray is about to show.
+- Windows and Linux draw the icon from files (`IconResources.trayIconFiles`: `.ico` on Windows,
+  PNG on Linux), written to the data folder's `tray/` only when the tray is about to show. macOS
+  draws `TrayGlyph`, the one-colour gem of Android's themed icon cropped to its bounds, which the
+  library renders black or white to match the menu bar's appearance.
+- The first close that would go to the tray, with the window still on screen, asks once
+  (`TrayExplainDialog`): where Amethyst went and why, Keep running or Quit. The answer is kept in
+  the data folder's `tray-explained`; dismissing it keeps the window and asks again next time.
   A Painter is drawn off-screen first and that can fail (no DirectX 12 on Windows), leaving no
   icon while the window hides. 1.3.3's Painter path also crashed on Compose 1.12's Skiko
   (`Image.encodeToData`); 2.1.1 fixed that.
@@ -76,7 +81,8 @@ its name (a bus that refuses it, as Flatpak's would), makes closing quit instead
 
 - Real trays on Windows, macOS, KDE and GNOME+AppIndicator were not tried, only the D-Bus
   protocol on Linux. Nor a real Flatpak sandbox: the item's pid 2 there is reasoned, not seen.
-- `flathub/gradle-sources.json` must be regenerated for the new dependency at the next release
-  (`flathub/tools/regenerate-gradle-sources.sh <tag>`).
+- `flathub/gradle-sources.json` must be regenerated at the next release
+  (`flathub/tools/regenerate-gradle-sources.sh <tag>`), which also captures the Magpie libraries
+  (see `desktopApp/packaging/flatpak/README.md` § Flathub).
 - The release build's ProGuard keep rules for `dev.nucleusframework.**` were not tried in a
   packaged build.

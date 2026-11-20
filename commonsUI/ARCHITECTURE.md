@@ -78,7 +78,7 @@ is specific to the UI module.
 - Icon fonts: `tools/material-symbols-subset/subset.sh` and
   `tools/icon-font/build_icon_font.py` read `icons/` and write
   `composeResources/font/` in this module (see root `AGENTS.md`, "Icons").
-- Translations: `crowdin.yml` and `tools/strings-migrate/` target
+- Translations: `tools/strings-translate/` and `tools/strings-migrate/` target
   `commonsUI/src/commonMain/composeResources/`. This is where **every new
   user-visible string** goes, Android-only screens included; the app's own
   `res/values/strings.xml` holds only the synchronous-platform tier (see root

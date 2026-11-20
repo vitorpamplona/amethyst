@@ -372,8 +372,10 @@ synchronous-platform tier"). If you think a new string belongs in that tier,
 say why in the PR.
 
 To move keys that already landed in Android `res/`, use
-`tools/strings-migrate/migrate.py <keys…>`. It moves every locale byte-for-byte,
-so Crowdin sees a pure move. Then repoint `R.string.x` → `Res.string.x`.
+`tools/strings-migrate/migrate.py <keys…>` (moves every locale byte-for-byte),
+then repoint `R.string.x` → `Res.string.x`.
+
+Translate in `values-es`; `values-es-rES` holds only its differences.
 
 ## Icons
 
@@ -474,9 +476,8 @@ Do this before considering the task complete.
   character is *intentional* (sanitizer strip-lists, adversarial test
   payloads) — that's data, and escapes express it just as well. Exceptions:
   U+200D as part of a real emoji ZWJ sequence in test data (👩‍👧 — functional,
-  not a bidi control), and LRM/RLM inside Crowdin-managed `strings.xml`
-  translations (legitimate RTL typography; don't touch those files by hand
-  anyway). Note the tooling trap: the Edit tool may normalise a typed
+  not a bidi control), and LRM/RLM inside translated `strings.xml` values
+  (legitimate RTL typography). Note the tooling trap: the Edit tool may normalise a typed
   `\uXXXX` back into the raw character — if that happens, do the replacement
   at byte level (`perl -CSD -pe 's/\x{202E}/\\u202E/g'`).
 

@@ -439,18 +439,28 @@ object GitWorkspace {
                 process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
             } catch (e: InterruptedException) {
                 // The caller gave up (a cancelled, interruptible coroutine): the command goes too.
-                process.descendants().forEach { it.destroyForcibly() }
-                process.destroyForcibly()
+                stopWithChildren(process)
                 throw e
             }
         if (!finished) {
-            process.descendants().forEach { it.destroyForcibly() }
-            process.destroyForcibly()
+            stopWithChildren(process)
             reader.join(1_000)
             return Result(-1, "${command.first()} timed out after ${timeoutSeconds}s")
         }
         reader.join(5_000)
         return Result(process.exitValue(), synchronized(output) { output.toString() })
+    }
+
+    /**
+     * Stops [process] and everything it started. The parent goes first: a shell or a git that sees
+     * its running child die moves on to its next step, so stopping the children first let a
+     * cancelled `sleep 3; touch …` touch anyway. Its children are listed before it is stopped,
+     * while they are still its own.
+     */
+    private fun stopWithChildren(process: Process) {
+        val children = process.descendants().toList()
+        process.destroyForcibly()
+        children.forEach { it.destroyForcibly() }
     }
 
     /**

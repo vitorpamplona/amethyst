@@ -110,8 +110,11 @@ class ProcessTransport(
     }
 
     override fun kill() {
-        process.descendants().forEach { it.destroy() }
+        // The CLI first, listing its children while they are still its own: stopped after them, it
+        // would see a tool it ran end and could start the next one.
+        val children = process.descendants().toList()
         process.destroy()
+        children.forEach { it.destroy() }
         if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly()
     }
 

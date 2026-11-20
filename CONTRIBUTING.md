@@ -33,8 +33,7 @@ license header with the original author(s) and source.
   issue templates).
 - Improve documentation in `README.md`, `BUILDING.md`, `SECURITY.md`, the
   per-module `plans/` folders, and the `.claude/` skill docs.
-- Add or improve translations on
-  [Crowdin](https://crowdin.com/project/amethyst-social).
+- Add or improve translations (see [Translations](#translations)).
 - Report bugs, suggest features, or open issues at
   [github.com/vitorpamplona/amethyst/issues](https://github.com/vitorpamplona/amethyst/issues)
   or the Nostr mirror at
@@ -55,8 +54,8 @@ under the same rules:
 - **No hallucinated APIs or imports.** Don't submit code that calls
   functions, classes, or libraries that don't exist in this repo or its
   declared dependencies. Build and run it before you push.
-- **No machine-translated locale files.** Translations go through Crowdin so
-  native speakers can review them.
+- **No machine-translated locale files.** A translation PR needs a native
+  speaker who has read it.
 - **Disclose substantial AI involvement** with a one-line note in the PR
   description. Courtesy, not a gate.
 
@@ -313,10 +312,14 @@ window.
 
 ## Translations
 
-- Submit translations via
-  [Crowdin](https://crowdin.com/project/amethyst-social), not as direct PRs
-  to `strings.xml`. Crowdin pushes are integrated through the `crowdin.yml`
-  workflow.
+- Submit translations as pull requests to
+  `commonsUI/src/commonMain/composeResources/values-<language>/strings.xml`
+  (nearly every string) or `amethyst/src/main/res/values-<language>/strings.xml`
+  (the few Android-only ones).
+- Translate the language's base folder (`values-es`, `values-pt`). A regional
+  folder (`values-es-rES`) holds only what that region says differently;
+  anything it lacks falls back to the base translation. The pre-push hook and
+  CI reject a regional value that repeats the base one.
 - The `/find-missing-translations` skill can help reviewers spot
   untranslated keys for a target locale.
 
