@@ -56,6 +56,17 @@ class AnimatedWebpTest {
     }
 
     @Test
+    fun stillExtensionsSkipTheProbe() {
+        assertTrue(hasStillExtension("https://example.com/a.JPG"))
+        assertTrue(hasStillExtension("https://example.com/a.jpeg?w=200#x"))
+        assertTrue(hasStillExtension("https://example.com/a.png#frag"))
+        assertFalse(hasStillExtension("https://example.com/a.webp"))
+        assertFalse(hasStillExtension("https://blossom.example/0123abcd"))
+        // The query is not the path: an extension there names nothing.
+        assertFalse(hasStillExtension("https://example.com/image?name=a.png"))
+    }
+
+    @Test
     fun playerPlaysEveryFrameOfAnAnimatedWebp() {
         GifPlayer(animatedWebp).use { player ->
             assertEquals(3, player.frameCount)

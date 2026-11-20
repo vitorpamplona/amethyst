@@ -373,8 +373,10 @@ object DesktopNotePlatform : NotePlatform {
                             is AsyncImagePainter.State.Success -> {
                                 val image = state.result.image
                                 MediaAspectRatioCache.add(url, image.width, image.height)
-                                val diskCacheKey = state.result.diskCacheKey
-                                scope.launch { if (AnimatedImageProbe.probe(url, diskCacheKey)) animated = true }
+                                if (AnimatedImageProbe.needsProbe(url)) {
+                                    val diskCacheKey = state.result.diskCacheKey
+                                    scope.launch { if (AnimatedImageProbe.probe(url, diskCacheKey)) animated = true }
+                                }
                             }
                             is AsyncImagePainter.State.Error -> failure = mediaLoadFailureOf(state.result.throwable)
                             else -> {}

@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
@@ -217,8 +218,12 @@ fun SecretMessageContent(
         LocalRichTextSegmentRenderer provides renderer,
         LocalRichTextInteractions provides interactions,
     ) {
-        Column(if (content.paragraphs.size > 1) SecretMessageInset else Modifier) {
-            RichTextViewer(state = content, canPreview = true, quotesLeft = quotesLeft)
+        // Embedded, like a quote: its media stays inside it, never running past the column the way
+        // a note's own media may (a reaction's reveal sits outside the note body's bleed reset).
+        ProvideMediaBleed(0.dp) {
+            Column(if (content.paragraphs.size > 1) SecretMessageInset else Modifier) {
+                RichTextViewer(state = content, canPreview = true, quotesLeft = quotesLeft)
+            }
         }
     }
 }

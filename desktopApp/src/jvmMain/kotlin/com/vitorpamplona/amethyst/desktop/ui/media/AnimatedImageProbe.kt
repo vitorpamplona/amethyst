@@ -49,9 +49,18 @@ object AnimatedImageProbe {
     fun isAnimated(url: String): Boolean = isAnimatedGifUrl(url) || synchronized(probed) { probed[url] } == true
 
     /**
+     * Whether a load of [url] is worth a [probe]: not yet probed, and not named as a format Skia
+     * can't animate (JPEG, PNG, whose APNG frames it doesn't play, SVG, BMP). Checked before
+     * launching anything, since every memory-cache hit of a scrolled feed reports a load.
+     */
+    fun needsProbe(url: String): Boolean = !isAnimatedGifUrl(url) && !hasStillExtension(url) && synchronized(probed) { url !in probed }
+
+    /**
      * Reads the header of [url]'s file from the image loader's disk cache (under [diskCacheKey],
-     * the key its load reported, else the URL) and remembers whether it animates. False when the
-     * file isn't cached there, as for media fetched over Tor or encrypted, which stays still.
+     * the key its load reported, else the URL) and, when it may animate, loads its frames for the
+     * player ([preloadAnimation]), so the card switches without a blank frame and only when there
+     * is more than one frame. Remembers the answer. False when the file isn't cached there, as for
+     * media fetched over Tor or encrypted, which stays still.
      */
     suspend fun probe(
         url: String,
@@ -72,9 +81,18 @@ object AnimatedImageProbe {
                     } ?: return@withContext null
                 isAnimatedImageHeader(header)
             } ?: return false
-        synchronized(probed) { probed[url] = animated }
-        return animated
+        val playable = animated && preloadAnimation(url)
+        synchronized(probed) { probed[url] = playable }
+        return playable
     }
+}
+
+private val STILL_EXTENSIONS = listOf(".jpg", ".jpeg", ".png", ".svg", ".bmp")
+
+/** True when [url]'s path ends in an extension of a format that never animates here. */
+internal fun hasStillExtension(url: String): Boolean {
+    val path = url.substringBefore('#').substringBefore('?')
+    return STILL_EXTENSIONS.any { path.endsWith(it, ignoreCase = true) }
 }
 
 /**
