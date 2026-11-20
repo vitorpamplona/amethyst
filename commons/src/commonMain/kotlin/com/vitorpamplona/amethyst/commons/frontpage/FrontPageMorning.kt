@@ -721,6 +721,21 @@ class FrontPageMorning(
         }
 
     /**
+     * Where the paper's weather is for, for every device of the account: the schedule's `place`
+     * param ([ObserverWeather.withPlace]); null removes it. With no schedule yet, a place is kept in
+     * a settings-only event; removing one from nothing writes nothing.
+     */
+    suspend fun setPlace(
+        account: Account,
+        place: ObserverPlace?,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current ->
+                if (current == null && place == null) null else ObserverWeather.withPlace(current ?: observerSettingsOnly(), place)
+            }
+        }
+
+    /**
      * A paper this install printed, recorded in the schedule's private tags for the account's other
      * devices ([SharedEditions.withRecord]): they show it, open it, and don't print that morning
      * again. With no schedule yet, in a settings-only event, which never runs.

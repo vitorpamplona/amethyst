@@ -32,11 +32,12 @@ import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
  * the account's other devices show it, open it, and don't print that morning again
  * (`commons/plans/2026-11-20-observer-synced-settings-and-editions.md`):
  *
- * `["edition", day, printedAt, sha256, code, by, blob, key, nonce, headline]`
+ * `["edition", day, printedAt, sha256, code, by, blob, key, nonce, headline, weather]`
  *
  * [sha256] is the page's hash as kept (the one a public site would name). [blob] is the hash of its
  * AES-256-GCM ciphertext on the reader's own Blossom servers, opened with [key] and [nonce]; the
- * three are empty when no copy went up, and the record still says the day is printed.
+ * three are empty when no copy went up, and the record still says the day is printed. [weather] is
+ * the forecast kept beside the paper ([WeatherReport], as JSON), which the page itself never holds.
  */
 @Immutable
 data class EditionRecord(
@@ -51,6 +52,7 @@ data class EditionRecord(
     val key: HexKey? = null,
     val nonce: HexKey? = null,
     val headline: String? = null,
+    val weather: WeatherReport? = null,
 ) {
     /** Whether an encrypted copy is on the reader's servers to open. */
     val hasCopy: Boolean get() = blob != null && key != null && nonce != null
@@ -67,6 +69,7 @@ data class EditionRecord(
             key.orEmpty(),
             nonce.orEmpty(),
             headline?.take(HEADLINE_MAX).orEmpty(),
+            ObserverWeather.encode(weather).orEmpty(),
         )
 
     /** The record as a kept edition, for the history: printed on another device, not published. */
@@ -79,6 +82,7 @@ data class EditionRecord(
             headline = headline,
             sha256 = sha256,
             printedBy = by,
+            weather = weather,
         )
 
     companion object {
@@ -115,6 +119,7 @@ data class EditionRecord(
                 key = key.takeIf { copy },
                 nonce = nonce.takeIf { copy },
                 headline = at(9)?.take(HEADLINE_MAX),
+                weather = ObserverWeather.decode(at(10)),
             )
         }
 

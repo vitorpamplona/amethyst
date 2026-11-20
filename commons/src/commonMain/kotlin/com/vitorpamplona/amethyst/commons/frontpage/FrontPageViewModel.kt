@@ -149,7 +149,10 @@ class FrontPageModels(
 @Immutable
 data class ShownEdition(
     val edition: SavedEdition,
+    /** The page as kept: what Download saves. */
     val html: String?,
+    /** The page as the screen shows it: with the weather kept beside it drawn in ([ObserverWeather.withStrip]). */
+    val display: String? = html,
 )
 
 /**
@@ -286,7 +289,10 @@ class FrontPageViewModel(
                 if (edition == null) {
                     flowOf<ShownEdition?>(null)
                 } else {
-                    flow<ShownEdition?> { emit(ShownEdition(edition, printer.html(edition.day))) }
+                    flow<ShownEdition?> {
+                        val html = printer.html(edition.day)
+                        emit(ShownEdition(edition, html, html?.let { page -> edition.weather?.let { ObserverWeather.withStrip(page, it) } ?: page }))
+                    }
                 }
             }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -355,6 +361,32 @@ class FrontPageViewModel(
             savePublishing(yes)
             // The reader said yes just now: this publish goes out even when the write didn't (it says why).
             printer.publishPending(answered = yes)
+        }
+    }
+
+    /** Where the paper's weather is for (the schedule's `place` param, for every device); null: no weather. */
+    val place: StateFlow<ObserverPlace?> =
+        account.observerSchedule.flow
+            .map { ObserverWeather.place((it as? SyncedSchedule.Readable)?.task) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Places matching [query] (Open-Meteo's search), for the weather setting. */
+    suspend fun searchPlaces(query: String): List<ObserverPlace> = printer.searchPlaces(query)
+
+    /** The weather's place for every device of the account; null turns the weather off. On the account's scope, so leaving the screen doesn't lose it. */
+    fun setPlace(place: ObserverPlace?) {
+        account.scope.launch {
+            val outcome =
+                try {
+                    morning.setPlace(account, place)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("FrontPageViewModel", "Could not save the weather's place", e)
+                    ScheduleEdit.Unreachable
+                }
+            _scheduleProblem.value = outcome.takeIf { it !is ScheduleEdit.Saved && it != ScheduleEdit.Unchanged }
         }
     }
 

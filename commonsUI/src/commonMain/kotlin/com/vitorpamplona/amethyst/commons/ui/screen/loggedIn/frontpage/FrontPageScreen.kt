@@ -443,6 +443,8 @@ fun FrontPageScreen(
             ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere, viewModel::retryScheduleDecrypt, viewModel::printFromMyDevices) { nav.nav(Route.EditRelays) }
         }
     val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
+    val weatherPlace by viewModel.place.collectAsStateWithLifecycle()
+    val weather = remember(viewModel, weatherPlace) { WeatherSetting(weatherPlace, viewModel::setPlace, viewModel::searchPlaces) }
     val observer by viewModel.observer.collectAsStateWithLifecycle()
 
     val pastDay by viewModel.pastDay.collectAsStateWithLifecycle()
@@ -615,6 +617,7 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            weather = weather,
                             routstrNote = routstrNote,
                             editionSats = viewModel::editionSats,
                         )
@@ -664,6 +667,7 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            weather = weather,
                             routstrNote = routstrNote,
                             editionSats = viewModel::editionSats,
                         )
@@ -1009,6 +1013,7 @@ private fun PrintControls(
     onCancel: () -> Unit,
     publish: ObserverPrefs?,
     onPublish: (Boolean) -> Unit,
+    weather: WeatherSetting? = null,
     routstrNote: RoutstrPrintNote? = null,
     editionSats: ((AgentModel?) -> Long?)? = null,
 ) {
@@ -1053,6 +1058,7 @@ private fun PrintControls(
         if (routstrNote?.lowBalance == true) RoutstrLowBalance(stringRes(Res.string.routstr_balance_low), routstrNote.onTopUp, ink)
         ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, printedBy, ink, lowBalance = routstrNote?.lowBalance == true)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
+        weather?.let { WeatherRow(it, ink) }
     }
 }
 
@@ -1769,7 +1775,7 @@ private fun PaperPane(
     modifier: Modifier,
 ) {
     Box(modifier.background(Newsprint)) {
-        val html = shown?.html
+        val html = shown?.display
         when {
             html != null -> Paper(edition, html, Modifier.fillMaxSize())
             loading -> CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))

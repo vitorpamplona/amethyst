@@ -9972,6 +9972,16 @@
     <string name="front_page_assistant_not_printed">Your Assistant hasn't printed a morning yet</string>
     <string name="front_page_by_assistant">By your Assistant</string>
     <string name="front_page_printed_on">Printed on %1$s</string>
+    <string name="front_page_weather">Weather</string>
+    <string name="front_page_weather_off">Off</string>
+    <string name="front_page_weather_title">Weather for your paper</string>
+    <string name="front_page_weather_search_hint">City or town</string>
+    <string name="front_page_weather_search">Search</string>
+    <string name="front_page_weather_none_found">No place by that name.</string>
+    <string name="front_page_weather_celsius">°C</string>
+    <string name="front_page_weather_fahrenheit">°F</string>
+    <string name="front_page_weather_turn_off">Turn off</string>
+    <string name="front_page_weather_private">Shown only in your own apps, never on your public Observer. Every device of this account uses the same place. Forecast by Open-Meteo.com.</string>
     <string name="front_page_unknown_params">This schedule has settings this app doesn't know (%1$s), so it won't print on schedule here.</string>
     <string name="front_page_schedule_unreadable">Your schedule was saved by an app this version can't read</string>
     <string name="front_page_schedule_unreachable">Couldn't reach your relays. Nothing was changed.</string>

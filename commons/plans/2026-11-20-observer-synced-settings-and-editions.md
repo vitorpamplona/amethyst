@@ -1,8 +1,8 @@
 # The Observer: one account's settings and papers on every device
 
 **Date:** 2026-11-20
-**Status:** steps 1–3 built and unit-tested; not yet run between two real devices. Interop
-(Quartz's `KNOWN`, the Assistant's worker) still to do.
+**Status:** built and unit-tested, the weather included; not yet run between two real devices.
+The worker understands both params; Quartz's `KNOWN` still to do.
 **Owning modules:** `commons` (`frontpage/`), `commonsUI` (the Observer screen), the two app
 shims (wiring only)
 **Builds on:** Quartz `quartz/plans/2026-11-11-observer-site.md` ("The morning schedule, synced"
@@ -84,6 +84,26 @@ Every other device of the account, as the schedule arrives:
 
 The paper never leaves the reader's servers unencrypted unless publishing is on.
 
+### Weather: a `place` param, a forecast kept beside the paper
+
+`["param", "place", <name>, <latitude>, <longitude>, "us" | "metric"]`, coordinates to 0.01°
+(about a kilometre), private like every tag Amethyst writes. Set once per account from the
+Observer screen (Open-Meteo's place search), so every device prints the same city.
+
+- When a paper is kept, the printing device fetches Open-Meteo's forecast for the place (now,
+  today's high, low, rain and sun, three more days; 10 s at most, through the client the reader's
+  network settings pick for public pages) and keeps it **beside** the paper
+  (`SavedEdition.weather`), never in its HTML. The edition record carries it too, so the other
+  devices show the same forecast.
+- The app draws it as a strip under the dateline (`ObserverWeather.withStrip`) only on the copy
+  it shows. What is kept, shared, downloaded and published is the page without it, so the public
+  site never names the reader's city. The strip is code: every value escaped, nothing that
+  fetches, Open-Meteo credited (CC BY 4.0).
+- No place, or no answer in time: the paper is kept without weather. A printer that shows no
+  weather (the Assistant) understands the param and prints as before.
+- The writer's brief is pinned to Brainstorm's copy, so the model is never asked to place a
+  weather box; the app places it.
+
 ### Many accounts
 
 Nothing here is per device and account any more except what has to be: this install's id for
@@ -93,12 +113,11 @@ through that account's own signer and relays, so two accounts on one device neve
 
 ## Interop
 
-- **Quartz** `ObserverParams.KNOWN` must add `publish`, as `effort` was. Until then, Amethyst
-  understands it in `FrontPageParams` (as it did `effort`).
-- **The Assistant's worker** (`the-nostr-observer` `service/`) checks Quartz's
-  `ObserverParams.understands` and refuses a schedule with `publish` (`UNKNOWN_PARAMS`). It must
-  learn the param. Its whole output is the Assistant's public site, so with `no` it should not
-  print.
+- **Quartz** `ObserverParams.KNOWN` must add `publish` and `place`, as `effort` was. Until then,
+  Amethyst understands them in `FrontPageParams` (as it did `effort`).
+- **The Assistant's worker** (`the-nostr-observer` `service/`) now checks the engine's
+  `FrontPageParams.understands`: with `publish` = `no` it doesn't print (`PUBLISH_OFF`), since its
+  whole output is the Assistant's public site; `place` it understands and prints without.
 - **Brainstorm** keeps the param and the `edition` tags as it keeps every tag it doesn't know.
 
 ## Steps

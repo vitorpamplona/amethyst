@@ -559,6 +559,7 @@ class FrontPagePrinter(
                 key = copy?.key,
                 nonce = copy?.nonce,
                 headline = edition.headline,
+                weather = edition.weather,
             )
         try {
             val outcome = morning.recordEdition(account, record)
@@ -568,6 +569,29 @@ class FrontPagePrinter(
         } catch (e: Exception) {
             Log.w(TAG, "Could not record the paper for the other devices", e)
         }
+    }
+
+    /**
+     * The forecast for the schedule's place ([ObserverWeather.place]), kept beside the paper just
+     * printed; null with no place, or when Open-Meteo doesn't answer in time: the paper is kept anyway.
+     */
+    private suspend fun forecast(): WeatherReport? {
+        val place = ObserverWeather.place(scheduledTask()) ?: return null
+        return try {
+            withTimeoutOrNull(ObserverWeather.FETCH_TIMEOUT_MS) { http.fetchWeatherText(ObserverWeather.forecastUrl(place)) }
+                ?.let { ObserverWeather.parseForecast(it, place) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the weather", e)
+            null
+        }
+    }
+
+    /** Places matching what the reader typed, for the weather setting; empty when none, or the search can't be reached. */
+    suspend fun searchPlaces(query: String): List<ObserverPlace> {
+        if (query.isBlank()) return emptyList()
+        return http.fetchWeatherText(ObserverWeather.searchUrl(query))?.let(ObserverWeather::parsePlaces).orEmpty()
     }
 
     /** Whether a print holds the press: one the reader started, or a scheduled run (claiming or printing). */
@@ -745,6 +769,7 @@ class FrontPagePrinter(
                 rounds = printed.rounds,
                 sha256 = publishedSha256(html),
                 recipe = printed.recipe,
+                weather = forecast(),
             )
         try {
             store.save(pubKey, edition, html)

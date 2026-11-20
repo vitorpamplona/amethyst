@@ -90,8 +90,15 @@ object FrontPageParams {
             else -> task.withoutParam(PUBLISH)
         }
 
+    /**
+     * Where the paper's weather is for ([ObserverWeather.place]): a name, a latitude and a longitude
+     * (to 0.01°), and `us` (°F) or `metric`. Absent, the paper has no weather. A printer that shows
+     * no weather still prints: it only decorates the copy shown in the reader's apps.
+     */
+    const val PLACE = "place"
+
     /** The params of [task] this app doesn't understand, in order, each once. */
-    fun unknownParams(task: ScheduledTask): List<String> = ObserverParams.unknownParams(task).filter { it != EFFORT && it != PUBLISH }
+    fun unknownParams(task: ScheduledTask): List<String> = ObserverParams.unknownParams(task).filter { it != EFFORT && it != PUBLISH && it != PLACE }
 
     /** Whether this app understands every param of [task] (NIP-FB: a task with one it doesn't is never run). */
     fun understands(task: ScheduledTask): Boolean = unknownParams(task).isEmpty()
