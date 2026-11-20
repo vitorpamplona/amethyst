@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.platform.titleBarWindowDrag
 import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
+import com.vitorpamplona.amethyst.desktop.service.bench.ScrollBenchmark
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
@@ -530,6 +531,8 @@ fun main(args: Array<String>) {
                     visible = windows.mainWindowVisible,
                 ) {
                     windows.MainWindowEffects(window)
+                    // `-Damethyst.scrollBench=<dir>`: scrolls the feed, writes frame timings, exits.
+                    ScrollBenchmark.Run(window)
 
                     // The screens see the window stopped while it is hidden (the tray, a print), as
                     // Android's do in the background: their feeds let go of the relays after the
