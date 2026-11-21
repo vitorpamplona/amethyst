@@ -45,6 +45,9 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +65,14 @@ import kotlinx.coroutines.flow.update
 class MarmotGroupChatroom(
     val nostrGroupId: HexKey,
 ) : MessageRoom {
-    var messages: Set<Note> = setOf()
+    /**
+     * The group's messages, an immutable snapshot that readers (feeds, Compose) iterate without the
+     * lock. A persistent set, so adding one message shares the rest instead of copying the whole set:
+     * restoring a group re-adds its history one message at a time, and a copy per add made that
+     * quadratic in the history (10k messages, ~50M copied references).
+     */
+    var messages: PersistentSet<Note> = persistentSetOf()
+        private set
     var displayName = MutableStateFlow<String?>(null)
     var description = MutableStateFlow<String?>(null)
 
@@ -291,7 +301,7 @@ class MarmotGroupChatroom(
     fun addMessageSync(msg: Note): Boolean =
         syncLock.withLock {
             if (msg !in messages) {
-                messages = messages + msg
+                messages = messages.add(msg)
                 msg.addGatherer(this)
                 // The group counts its polls' votes by its own rules, whatever the cache derived.
                 (msg.event as? PollEvent)?.let { msg.pollState().updatePolicy(pollTallyPolicy(it)) }
@@ -310,7 +320,7 @@ class MarmotGroupChatroom(
     fun removeMessageSync(msg: Note): Boolean =
         syncLock.withLock {
             if (msg in messages) {
-                messages = messages - msg
+                messages = messages.remove(msg)
                 msg.removeGatherer(this)
 
                 if (msg == newestMessage) {
@@ -340,7 +350,7 @@ class MarmotGroupChatroom(
                 sorted.filter { it.flowSet?.isInUse() ?: false }
 
         val toRemove = messages.minus(toKeep)
-        messages = toKeep
+        messages = toKeep.toPersistentSet()
 
         changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
         return toRemove
@@ -356,7 +366,7 @@ class MarmotGroupChatroom(
         syncLock.withLock {
             val toRemove = messages
             if (toRemove.isEmpty()) return@withLock toRemove
-            messages = emptySet()
+            messages = persistentSetOf()
             newestMessage = null
             changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
             toRemove

@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -110,6 +112,7 @@ class EncryptedMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             logMutex.withLock {
+                expiries.remove(nostrGroupId)
                 for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId), mediaSecretsFile(nostrGroupId), epochAdminsFile(nostrGroupId), verdictsFile(nostrGroupId))) {
                     log.forget(file.toOkioPath())
                     if (file.exists() && !file.delete()) {
@@ -180,6 +183,9 @@ class EncryptedMarmotMessageStore(
      * own source epoch, so re-persisting the same message after a restart —
      * which happens, because the ratchet rewinds and relays replay — must not
      * re-time it under whatever the setting has since become.
+     *
+     * An append, not a rewrite: this runs for every message a disappearing group persists, and
+     * rewriting re-encrypted the whole log each time. The bytes are the same log format either way.
      */
     override suspend fun recordExpiry(
         nostrGroupId: String,
@@ -188,27 +194,25 @@ class EncryptedMarmotMessageStore(
     ) = withContext(Dispatchers.IO) {
         logMutex.withLock {
             try {
-                val existing = readAllFrom(expiriesFile(nostrGroupId)).toMutableList()
-                if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
-                existing.add("$innerEventId $expiresAtSecs")
-                writeAllTo(expiriesFile(nostrGroupId), existing)
+                val current = expiriesFor(nostrGroupId)
+                if (current.containsKey(innerEventId)) return@withLock
+                log.append(expiriesFile(nostrGroupId).toOkioPath(), "$innerEventId $expiresAtSecs")
+                expiries[nostrGroupId] = current.put(innerEventId, expiresAtSecs)
             } catch (e: Exception) {
                 Log.e(TAG, "recordExpiry($nostrGroupId) FAILED: ${e.message}", e)
             }
         }
     }
 
+    /**
+     * The group's expiries, as an immutable snapshot of the in-memory copy: the expiry prune runs
+     * on every message received, and re-parsing the whole log for each one made a catch-up
+     * quadratic.
+     */
     override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
         withContext(Dispatchers.IO) {
             try {
-                logMutex
-                    .withLock { readAllFrom(expiriesFile(nostrGroupId)) }
-                    .mapNotNull { line ->
-                        val parts = line.trim().split(' ')
-                        if (parts.size != 2) return@mapNotNull null
-                        val at = parts[1].toLongOrNull() ?: return@mapNotNull null
-                        parts[0] to at
-                    }.toMap()
+                logMutex.withLock { expiriesFor(nostrGroupId) }
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadExpiries($nostrGroupId) FAILED: ${e.message}", e)
@@ -240,6 +244,7 @@ class EncryptedMarmotMessageStore(
                 val keptExpiries =
                     readAllFrom(expiriesFile(nostrGroupId)).filter { it.substringBefore(' ') !in innerEventIds }
                 writeAllTo(expiriesFile(nostrGroupId), keptExpiries)
+                expiries[nostrGroupId] = parseExpiries(keptExpiries)
             } catch (e: Exception) {
                 Log.e(TAG, "removeMessages($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -476,6 +481,24 @@ class EncryptedMarmotMessageStore(
                 }
             },
         )
+
+    // Guarded by [logMutex]: each group's expiries, parsed once from its log and kept in step with
+    // every write to it ([recordExpiry], [removeMessages], [delete]).
+    private val expiries = mutableMapOf<String, PersistentMap<String, Long>>()
+
+    private fun expiriesFor(nostrGroupId: String): PersistentMap<String, Long> = expiries.getOrPut(nostrGroupId) { parseExpiries(readAllFrom(expiriesFile(nostrGroupId))) }
+
+    /** `<inner event id> <expires at>` lines; a malformed one is skipped, and a repeated id keeps its last value. */
+    private fun parseExpiries(lines: List<String>): PersistentMap<String, Long> {
+        val builder = persistentMapOf<String, Long>().builder()
+        for (line in lines) {
+            val parts = line.trim().split(' ')
+            if (parts.size != 2) continue
+            val at = parts[1].toLongOrNull() ?: continue
+            builder[parts[0]] = at
+        }
+        return builder.build()
+    }
 
     private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
 

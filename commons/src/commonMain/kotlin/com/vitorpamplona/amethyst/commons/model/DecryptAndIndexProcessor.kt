@@ -932,10 +932,11 @@ class GroupEventHandler(
         account.marmotGroupList.addMessage(result.groupId, innerNote)
         account.marmot.applyMarmotModeration(result.groupId, innerEvent)
 
-        // Traffic is the natural clock for disappearing messages: a
-        // group being read is a group whose expired messages should
-        // already be gone.
-        manager.pruneExpiredMessages(result.groupId)
+        // No expiry prune here: the ingest that produced this result
+        // (MarmotIngest's application-message branch) already ran
+        // `pruneExpiredMessages` for the group, right after persisting the
+        // message. A second one per message re-read the group's whole expiry
+        // list again for nothing, quadratic over a catch-up.
 
         // Notify only on first-time indexing, so a relay re-broadcast or a
         // persist-replay doesn't double-notify. Our OWN messages are never
