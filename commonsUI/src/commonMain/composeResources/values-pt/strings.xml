@@ -10304,4 +10304,5 @@
     <string name="llama_garden_model_kind_help">O que o modelo é por baixo, no caso de um quant.</string>
     <string name="llama_garden_matches_hf_label">Corresponde ao repositório do HuggingFace</string>
     <string name="llama_garden_all_models">Todos os torrents de modelos</string>
+    <string name="language_system_default">Padrão do sistema</string>
 </resources>

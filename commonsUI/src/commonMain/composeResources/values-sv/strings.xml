@@ -10303,4 +10303,6 @@
     <string name="llama_garden_model_kind_help">Vad modellen är i grunden, för en kvantisering.</string>
     <string name="llama_garden_matches_hf_label">Matchar HuggingFace-repositoryn</string>
     <string name="llama_garden_all_models">Alla modelltorrenter</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="profile_tab_lists">Listor</string>
 </resources>

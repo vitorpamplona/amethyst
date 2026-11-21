@@ -11061,4 +11061,6 @@
     <string name="llama_garden_model_kind_help">Jaký model je pod kvantizací.</string>
     <string name="llama_garden_matches_hf_label">Odpovídá repozitáři na HuggingFace</string>
     <string name="llama_garden_all_models">Všechny torrenty modelů</string>
+    <string name="language_system_default">Podle systému</string>
+    <string name="profile_tab_lists">Seznamy</string>
 </resources>

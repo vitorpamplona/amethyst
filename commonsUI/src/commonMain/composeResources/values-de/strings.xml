@@ -10342,4 +10342,6 @@
     <string name="llama_garden_model_kind_help">Welches Modell einem Quant zugrunde liegt.</string>
     <string name="llama_garden_matches_hf_label">Entspricht dem HuggingFace-Repository</string>
     <string name="llama_garden_all_models">Alle Modell-Torrents</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="profile_tab_lists">Listen</string>
 </resources>
