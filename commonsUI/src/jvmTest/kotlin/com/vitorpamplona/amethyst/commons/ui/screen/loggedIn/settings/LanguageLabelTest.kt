@@ -59,6 +59,11 @@ class LanguageLabelTest {
     }
 
     @Test
+    fun aLocaleListIsNamedByItsFirstLocale() {
+        assertEquals("Deutsch", languageLabel(entries, "de-AT,en"))
+    }
+
+    @Test
     fun unknownTagIsShownAsIs() {
         assertEquals("xx-YY", languageLabel(entries, "xx-YY"))
     }

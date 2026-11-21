@@ -573,7 +573,8 @@ private fun LanguageTile(
 
 /**
  * The display name for the stored [language] tag, or null when the app follows the system.
- * Exact tag first, then its language subtag ("de-AT" → "Deutsch"), else the tag itself.
+ * Exact tag first, then its language subtag ("de-AT" → "Deutsch"), else the tag itself. A
+ * per-app list of several locales ("fr,de", only settable through adb) is named by its first.
  *
  * [entries] maps display name to tag, as [com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform.rememberAppLanguages]
  * returns it. The system locale is deliberately not consulted: with no stored tag the row says
@@ -584,7 +585,8 @@ fun languageLabel(
     language: String?,
 ): String? {
     if (language == null) return null
-    val subtag = language.substringBefore('-')
-    val match = entries.entries.firstOrNull { it.value == language } ?: entries.entries.firstOrNull { it.value == subtag }
+    val first = language.substringBefore(',')
+    val subtag = first.substringBefore('-')
+    val match = entries.entries.firstOrNull { it.value == first } ?: entries.entries.firstOrNull { it.value == subtag }
     return match?.key ?: language
 }
