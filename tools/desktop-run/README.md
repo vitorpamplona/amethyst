@@ -188,6 +188,11 @@ cache. Each report's `startup_cache` line names the archive or cache the JVM sta
 (no timing event queue, image listener, frame recorder or screenshots) and writes only `done.txt`.
 The release's AOT training scrolls this way, so the shipped cache profiles the app as users run it.
 
+`-Damethyst.scrollBench.screen=<NavBarItem>` (e.g. `PICTURES`, `DISCOVER`, `NOTIFICATIONS`) opens
+that drawer entry first, the way its drawer row does, then waits and scrolls it instead of the home
+feed; each report's `screen` line names it. A screen with nothing to scroll for the login (an
+`npub` has no DMs or drafts) still reports frames: check the `after-*.png` screenshots moved.
+
 Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, every image load in
 `images.tsv` (pass, source, decoded size, bytes, cache key, requested size, requester), the memory
 cache's fill after each pass in `memory-cache.tsv`, and `after-<pass>.png`: look at

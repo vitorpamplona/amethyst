@@ -269,6 +269,41 @@ pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
 | up: fps | 53.5 | 55.1 |
 | down-again: fps (boots), frames over 25 ms | 56.0 (52.3-58.3), 10.3% | **58.6 (58.6-59.3), 4.9%** |
 
+## Every feed screen in the drawer
+
+`-Damethyst.scrollBench.screen=<NavBarItem>` opens a drawer entry before the passes. One boot per
+screen (37 of the drawer's feed screens), JFR's CPU-time sampler recording the warm passes, then 2
+clean boots for the slow ones. Eleven screens had nothing to scroll for a read-only `npub` (Messages,
+My Lists, Interest Sets, Favorite Algo Feeds, Front Page, Badges, Products, Relay Groups, Nests,
+Geocaches, Web Bookmarks).
+
+- Everywhere, Skia rasterizing in software is still most of the UI thread (45-88%); no app function
+  takes more than ~3%. The image fixes reach every screen: every Coil image decodes to a
+  `PixelExactImage`, and Pictures (62-63 fps), Video, Shorts, Longs, Podcasts and Articles scroll
+  near 60.
+- Single boots swing ±5 fps with the live feed. Confirmed slow with clean boots: **Discover** (49.2
+  fps, 18 ms of UI work a frame), **Profile** (51.4, 13 ms) and **Polls** (54.0, 13 ms); Home ran
+  53.7 the same hour.
+- **Discover's follow-pack banners** are animated GIFs (the author's banner through `MyAsyncImage`,
+  then `AnimatedGifImage`). Drawn as nothing, the screen does 10.9 ms a frame against 16.2 (49 ->
+  58 fps); as still first frames, 14.9. A GIF's first frame (`data.firstFrame`, and a still GIF)
+  draws through `Image(bitmap)`, resampled every frame; the playing frames, scaled on the player's
+  thread, did not come out cheaper either in this `Crop` case. Switching the banner's rounded clip
+  to `mediaClip` saved ~1 ms of the 18.
+- Large covers still clip with an antialiased rounded clip (~1.3 ms a cover in software): live
+  stream covers, community covers, public-chat channel thumbs, follow-pack banners, profile gallery
+  cells, music playlist covers, the podcast player.
+- An idle screen still costs 6-9 ms a frame whenever a frame happens: Skia repaints the whole
+  window. Anything animating on screen (a GIF, a spinner, a playing video's progress) keeps that up
+  at its frame rate even when nothing scrolls.
+- In this container every video falls back to Chromium (the native engine can't open them here), so
+  its teardown and message loop show on the UI thread (up to ~4% on Profile); and a video Chromium
+  failed on was tried again each time its card scrolled back (9 times in one run).
+- Smaller and spread out: `NoteComposeLayout`'s measure (2-3%), `PixelExactImage.scaledCopy` in
+  Shorts and Music Playlists (2-3%: copies made again in the warm passes, likely full-width portrait
+  posters and their full-size blurhash copies outgrowing the 64 MB budget), `stringRes` (up to 1%),
+  `RichTextViewer.measureSpaceWidth` (up to 0.7%), `croppedImageSize` on Software Apps (1.7%).
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
