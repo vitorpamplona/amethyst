@@ -333,6 +333,59 @@ class CordnGroupChatroomTest {
         assertEquals(1, room.unreadCount.value, "only the message past the saved cursor")
     }
 
+    @Test
+    fun `a room reads its group once per epoch`() {
+        // An application message changes no group state, so the sync path skips the ratchet-tree
+        // read for it unless the room is behind; a room that never read its group always is.
+        val room = room()
+        val group = groupOf(alice, CordnGroupMetadata(name = "Stage B"))
+
+        assertTrue(room.isStale(group), "never read")
+        room.refreshFrom(group)
+        assertFalse(room.isStale(group), "read at this epoch")
+    }
+
+    @Test
+    fun `filing a history in batches ends where filing it one by one does`() {
+        // A catch-up is filed a batch at a time (CordnDeliveryBatcher); the room it leaves must be
+        // the room one add per delivery leaves: rows, folded annotations, preview and unread.
+        val history =
+            (1..250).flatMap { i ->
+                // Zero-padded: `message` pads ids to 64 chars, so "m1" and "m10" would collide.
+                val id = "m" + i.toString().padStart(4, '0')
+                val text = message(id, at = 1_000L - i, cursor = i * 2L, author = if (i % 3 == 0) alice else bob)
+                if (i % 10 == 0) {
+                    val reaction =
+                        message(
+                            "r" + i.toString().padStart(4, '0'),
+                            at = 2_000L + i,
+                            cursor = i * 2L + 1,
+                            author = alice,
+                            kind = CordnMessageKinds.REACTION,
+                            content = "+",
+                            tags = CordnMessageReferences.reactionTags(target(id, text.envelope.pubKey)),
+                        )
+                    listOf(text, reaction)
+                } else {
+                    listOf(text)
+                }
+            }
+        // Arrival order is not cursor order, as after a re-sync.
+        val arrival = history.reversed()
+
+        val oneByOne = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        arrival.forEach { oneByOne.add(it) }
+
+        val batched = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        arrival.chunked(100).forEach { batched.addAll(it) }
+
+        assertEquals(oneByOne.messages.value, batched.messages.value)
+        assertEquals(oneByOne.newest.value, batched.newest.value)
+        assertEquals(oneByOne.unreadCount.value, batched.unreadCount.value)
+        assertEquals(oneByOne.annotations.value.reactions, batched.annotations.value.reactions)
+        assertEquals(250, batched.messages.value.size)
+    }
+
     /** A real cordn group, created the way [CordnGroupManager.createGroup] does. */
     private fun groupOf(
         creator: HexKey,

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.cordnGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.cordn.groups.CordnCredential
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
@@ -95,6 +97,13 @@ class CordnGroupChatroom(
      */
     private val onNewestChanged: () -> Unit = {},
 ) : NotesGatherer {
+    /**
+     * Guards [byId] and every derived flow it feeds. A catch-up files its messages in batches
+     * ([com.vitorpamplona.amethyst.commons.model.cordn.CordnDeliveryBatcher]) and the last batch
+     * lands after the group's lock in cordn-kmp is released, so the room cannot lean on the caller
+     * to serialize its writes.
+     */
+    private val lock = KmpLock()
     private val byId = LinkedHashMap<HexKey, CordnDeliveredMessage>()
 
     private val _messages = MutableStateFlow<List<CordnDeliveredMessage>>(emptyList())
@@ -139,6 +148,7 @@ class CordnGroupChatroom(
      * is the cordn-aware reader.
      */
     fun refreshFrom(group: MlsGroup) {
+        refreshed = true
         val metadata = CordnGroupMetadata.fromExtensions(group.extensions)
         _name.value = metadata?.name
         _description.value = metadata?.description
@@ -148,6 +158,16 @@ class CordnGroupChatroom(
         _members.value = CordnCredential.memberIdentities(group).toList()
         _epoch.value = group.epoch
     }
+
+    private var refreshed = false
+
+    /**
+     * Whether [refreshFrom] would read anything new off [group]: it never ran, or [group] moved
+     * epochs since. Everything it reads (the metadata extension, the ratchet tree) changes only in a
+     * Commit, and every Commit advances the epoch, so an application message at the same epoch
+     * needs no re-read.
+     */
+    fun isStale(group: MlsGroup): Boolean = !refreshed || group.epoch != _epoch.value
 
     /**
      * The newest message, for an inbox row.
@@ -182,10 +202,11 @@ class CordnGroupChatroom(
     val unreadCount: StateFlow<Int> = _unreadCount.asStateFlow()
 
     /** Marks everything currently in the room as read. */
-    fun markRead() {
-        _lastReadCursor.value = maxOf(_lastReadCursor.value, byId.values.maxOfOrNull { it.cursor } ?: 0L)
-        recountUnread()
-    }
+    fun markRead() =
+        lock.withLock {
+            _lastReadCursor.value = maxOf(_lastReadCursor.value, byId.values.maxOfOrNull { it.cursor } ?: 0L)
+            recountUnread()
+        }
 
     /**
      * Seeds the inbox's preview line without loading the conversation.
@@ -198,17 +219,18 @@ class CordnGroupChatroom(
      * Ignored once the room holds anything, so a summary read cannot overwrite
      * a newer message that live delivery already put here.
      */
-    fun restorePreview(newest: CordnDeliveredMessage) {
-        // The summary is the newest entry the store appended, which can be a
-        // reaction or a poll vote: never a row, so never the preview either.
-        if (byId.isEmpty() && !CordnMessageKinds.isStreamHidden(newest.envelope.kind)) setNewest(newest)
-    }
+    fun restorePreview(newest: CordnDeliveredMessage) =
+        lock.withLock {
+            // The summary is the newest entry the store appended, which can be a
+            // reaction or a poll vote: never a row, so never the preview either.
+            if (byId.isEmpty() && !CordnMessageKinds.isStreamHidden(newest.envelope.kind)) setNewest(newest)
+        }
 
     /** Restores what the store remembered for this room. */
     fun restoreState(
         draft: String,
         lastReadCursor: Long,
-    ) {
+    ) = lock.withLock {
         this.draft.value = draft
         _lastReadCursor.value = lastReadCursor
         recountUnread()
@@ -231,23 +253,31 @@ class CordnGroupChatroom(
      * walks the stream from a persisted cursor and hands back messages the
      * room may already hold.
      */
-    fun add(delivered: CordnDeliveredMessage): Boolean {
-        if (byId.containsKey(delivered.envelope.id)) return false
-        byId[delivered.envelope.id] = delivered
-        recompute()
-        return true
-    }
+    fun add(delivered: CordnDeliveredMessage): Boolean =
+        lock.withLock {
+            if (byId.containsKey(delivered.envelope.id)) return@withLock false
+            byId[delivered.envelope.id] = delivered
+            recompute()
+            true
+        }
 
-    /** Adds several, recomputing once. Returns how many were new. */
-    fun addAll(delivered: Collection<CordnDeliveredMessage>): Int {
-        val added = delivered.count { byId.putIfAbsentCompat(it.envelope.id, it) }
-        if (added > 0) recompute()
-        return added
-    }
+    /**
+     * Adds several, recomputing once. Returns how many were new.
+     *
+     * The way to file more than one: [recompute] rebuilds the annotation index and re-sorts the
+     * whole room, so filing a catch-up one [add] at a time cost O(N^2 log N).
+     */
+    fun addAll(delivered: Collection<CordnDeliveredMessage>): Int =
+        lock.withLock {
+            val added = delivered.count { byId.putIfAbsentCompat(it.envelope.id, it) }
+            if (added > 0) recompute()
+            added
+        }
 
     /** Every message this room holds, annotations included. For the fold. */
-    fun all(): List<CordnDeliveredMessage> = byId.values.toList()
+    fun all(): List<CordnDeliveredMessage> = lock.withLock { byId.values.toList() }
 
+    /** Rebuilds every derived flow from [byId]. Under [lock]. */
     private fun recompute() {
         recountUnread()
 

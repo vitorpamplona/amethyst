@@ -61,6 +61,7 @@ import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.cordn.spec00Coordinator.CordnCoordinatorDiscovery
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -212,9 +213,11 @@ class CordnRuntime(
                 // echo (CordnGroupManager.deliveryListener), or the messages it
                 // passes are stored but not shown until the room reloads.
                 session.manager.deliveryListener = { file(config.pubKey, it) }
+                // A catch-up's messages are filed in batches: one at a time, each
+                // re-sorted and re-folded the whole room, quadratic over a history.
                 val loop =
                     CordnSyncLoop(
-                        source = session.manager,
+                        source = BatchingCordnSyncSource(session.manager, fileMessages = { gid, messages -> fileMessages(config.pubKey, gid, messages) }),
                         onDelivery = { file(config.pubKey, it) },
                     )
                 loop.start(scope)
@@ -931,11 +934,25 @@ class CordnRuntime(
             }
         }
 
-        // After every delivery, not only after an EpochAdvanced: a Commit that
-        // renames the group or changes its membership arrives as an ordinary
-        // ingestion, and the room's name and member list are read off MLS
-        // state rather than stored, so they are only correct if re-read.
-        sessionOrNull(coordinatorPubKey)?.let { refresh(it, delivery.gid) }
+        // The room's name and member list are read off MLS state rather than
+        // stored, so they are only correct if re-read after a change. Every
+        // delivery but an application message re-reads; an application message
+        // changes no group state, so it re-reads only when the room is behind
+        // the group's epoch (or has never read it): reading the ratchet tree
+        // per message of a catch-up was the other half of its cost.
+        sessionOrNull(coordinatorPubKey)?.let {
+            if (delivery is CordnGroupManager.Delivery.Message) refreshIfStale(it, delivery.gid) else refresh(it, delivery.gid)
+        }
+    }
+
+    /** Files a batch of one group's application messages: [file] for many at once. */
+    private fun fileMessages(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        messages: List<CordnDeliveredMessage>,
+    ) {
+        groups.getOrCreate(coordinatorPubKey, gid).addAll(messages)
+        sessionOrNull(coordinatorPubKey)?.let { refreshIfStale(it, gid) }
     }
 
     /** One coordinator's encrypted stores on disk, for [CordnLocalState]. */
@@ -951,6 +968,15 @@ class CordnRuntime(
     ) {
         val room = groups.getOrCreate(session.coordinatorPubKey, gid)
         session.manager.group(gid)?.let { room.refreshFrom(it) }
+    }
+
+    /** [refresh], skipped when the room already reflects the group's current epoch. */
+    private fun refreshIfStale(
+        session: CordnSession,
+        gid: String,
+    ) {
+        val room = groups.getOrCreate(session.coordinatorPubKey, gid)
+        session.manager.group(gid)?.let { if (room.isStale(it)) room.refreshFrom(it) }
     }
 
     /**
