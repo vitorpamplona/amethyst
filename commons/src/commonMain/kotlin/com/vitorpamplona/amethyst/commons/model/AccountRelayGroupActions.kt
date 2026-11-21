@@ -57,15 +57,10 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -95,11 +90,8 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -219,7 +211,7 @@ class AccountRelayGroupActions(
     ): Map<NormalizedRelayUrl, PublishResult> {
         // Same delivery tracking as every other group command, so the chat shows it as sent.
         account.chatDeliveryTracker.trackPublic(signed.id, setOf(relay))
-        return account.client.publishAwaitingOkThroughAuth(signed, relay, timeoutSecs) {
+        return account.client.publishAwaitingOkThroughAuth(signed, setOf(relay), timeoutSecs) {
             account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
                 filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
                 idleTimeoutMs = AUTH_WARM_UP_MS,
@@ -924,66 +916,8 @@ const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's h
  */
 fun buzzDmAddRefusedHistoryTag(results: Map<NormalizedRelayUrl, PublishResult>): Boolean = results.values.none { it.accepted } && results.values.any { it.message == ONLY_PEOPLE_SHARE_HISTORY }
 
-/**
- * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK.
- *
- * NIP-42 write race: on a cold connection the relay answers the first publish `auth-required:`.
- * The pool keeps the event, and once our AUTH lands it re-sends it by itself: that re-send's OK is
- * the relay's real answer (a Buzz DM command's carries the DM it made). So one OK listener stays
- * open from before the first send until we return. After an `auth-required:` this runs [warmUp]
- * (a read that makes the auth coordinator finish the handshake), stopping early once the re-send's
- * OK is in; if no accepted OK came, it publishes once more on the now-authed socket. A relay that
- * already processed the re-send answers that retry `duplicate:` (Buzz `command_executor.rs`), so an
- * earlier accepted OK we saw wins over a later duplicate.
- */
-internal suspend fun INostrClient.publishAwaitingOkThroughAuth(
-    signed: Event,
-    relay: NormalizedRelayUrl,
-    timeoutSecs: Long,
-    warmUp: suspend () -> Unit,
-): Map<NormalizedRelayUrl, PublishResult> {
-    val target = relay
-    // The first accepted OK for [signed] from [relay] that is not a duplicate notice.
-    val accepted = MutableStateFlow<PublishResult?>(null)
-    val watcher =
-        object : RelayConnectionListener {
-            override suspend fun onIncomingMessage(
-                relay: IRelayClient,
-                msgStr: String,
-                msg: Message,
-            ) {
-                if (msg is OkMessage && msg.success && msg.eventId == signed.id && relay.url == target && !msg.message.startsWith(DUPLICATE_PREFIX)) {
-                    accepted.compareAndSet(null, PublishResult(true, msg.message))
-                }
-            }
-        }
-    addConnectionListener(watcher)
-    try {
-        val first = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
-        if (first.values.any { it.accepted } || first.values.none { it.message.startsWith(AUTH_REQUIRED_PREFIX) }) return first
-
-        coroutineScope {
-            val warming = launch { warmUp() }
-            val answered =
-                launch {
-                    accepted.first { it != null }
-                    warming.cancel()
-                }
-            warming.join()
-            answered.cancel()
-        }
-        accepted.value?.let { return mapOf(relay to it) }
-
-        val retry = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
-        return accepted.value?.let { mapOf(relay to it) } ?: retry
-    } finally {
-        removeConnectionListener(watcher)
-    }
-}
-
 private const val AUTH_REQUIRED_PREFIX = "auth-required:"
 private const val RATE_LIMITED_PREFIX = "rate-limited:"
-private const val DUPLICATE_PREFIX = "duplicate:"
 
 /** How long a group command waits for its OK; the AUTH warm-up can double it. */
 private const val OK_TIMEOUT_SECS = 15L

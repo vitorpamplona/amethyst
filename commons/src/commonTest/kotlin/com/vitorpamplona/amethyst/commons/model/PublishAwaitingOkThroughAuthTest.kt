@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -90,7 +91,7 @@ class PublishAwaitingOkThroughAuthTest {
             url: NormalizedRelayUrl,
             message: String,
         ) {
-            val ok = OkMessage(id, success = !message.startsWith("auth-required:"), message = message)
+            val ok = OkMessage(id, success = !message.startsWith("auth-required:") && !message.startsWith("invalid:"), message = message)
             scope.launch { listeners.toList().forEach { it.onIncomingMessage(FakeRelay(url), "", ok) } }
         }
     }
@@ -119,7 +120,7 @@ class PublishAwaitingOkThroughAuthTest {
             // A retry, if one went out, would draw the duplicate.
             val client = ScriptedClient(this, listOf(listOf(authRequired), listOf(duplicate)))
             val results =
-                client.publishAwaitingOkThroughAuth(event, relay, timeoutSecs = 5) {
+                client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) {
                     // AUTH lands mid warm-up; the pool re-sends and the relay makes the DM.
                     client.deliver(event.id, relay, madeOk)
                     // The read itself would idle on for its full timeout.
@@ -137,7 +138,7 @@ class PublishAwaitingOkThroughAuthTest {
             // retry's own answer is the duplicate.
             val client = ScriptedClient(this, listOf(listOf(authRequired), listOf(duplicate)))
             val results =
-                client.publishAwaitingOkThroughAuth(event, relay, timeoutSecs = 5) {
+                client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) {
                     client.deliver(event.id, relay, madeOk)
                 }
             assertEquals(BuzzDmAddResult.Added(GroupId(made, relay), moved = true), buzzDmAddResult(results, relay, from))
@@ -148,7 +149,7 @@ class PublishAwaitingOkThroughAuthTest {
         runTest {
             // No accepted OK was ever seen: the duplicate names no DM.
             val client = ScriptedClient(this, listOf(listOf(authRequired), listOf(duplicate)))
-            val results = client.publishAwaitingOkThroughAuth(event, relay, timeoutSecs = 5) {}
+            val results = client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) {}
             assertEquals(2, client.publishes)
             assertEquals(BuzzDmAddResult.NoAnswer, buzzDmAddResult(results, relay, from))
         }
@@ -158,9 +159,47 @@ class PublishAwaitingOkThroughAuthTest {
         runTest {
             val client = ScriptedClient(this, listOf(listOf(madeOk)))
             var warmed = false
-            val results = client.publishAwaitingOkThroughAuth(event, relay, timeoutSecs = 5) { warmed = true }
+            val results = client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) { warmed = true }
             assertEquals(BuzzDmAddResult.Added(GroupId(made, relay), moved = true), buzzDmAddResult(results, relay, from))
             assertEquals(1, client.publishes)
             assertEquals(false, warmed)
+        }
+
+    /**
+     * Live Buzz run, 52cbc6113: the pool re-sent the DM open twice after AUTH. The relay answered one
+     * `duplicate: already processed` at once and the other, the one that made the DM, ~36 ms later;
+     * the retry took the duplicate and amy hung up before the real OK came.
+     */
+    @Test
+    fun aDuplicateWhileTheRealOkIsInFlightWaitsForIt() =
+        runTest {
+            val client = ScriptedClient(this, listOf(listOf(authRequired), listOf(duplicate)))
+            val results =
+                client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) {
+                    client.scope.launch {
+                        delay(300)
+                        client.deliver(event.id, relay, madeOk)
+                    }
+                }
+            assertEquals(BuzzDmAddResult.Added(GroupId(made, relay), moved = true), buzzDmAddResult(results, relay, from))
+        }
+
+    /**
+     * Live Buzz run, 52cbc6113: two post-AUTH copies of a 9005 delete raced. The relay refused one
+     * `invalid: deletion target not found` (the other copy was deleting it) a millisecond before it
+     * accepted the other. The acceptance is the answer.
+     */
+    @Test
+    fun aRefusalCausedByTheCopyBeingAppliedLosesToItsAcceptance() =
+        runTest {
+            val client = ScriptedClient(this, listOf(listOf(authRequired), listOf("invalid: deletion target not found or not deletable by you")))
+            val results =
+                client.publishAwaitingOkThroughAuth(event, setOf(relay), timeoutInSeconds = 5) {
+                    client.scope.launch {
+                        delay(50)
+                        client.deliver(event.id, relay, "")
+                    }
+                }
+            assertEquals(true, results.getValue(relay).accepted)
         }
 }
