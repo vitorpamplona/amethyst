@@ -327,7 +327,7 @@ class NotificationDispatcher(
      * once the MLS-decrypted inner event has been parsed and indexed.
      */
     override suspend fun notifyGroupMessage(
-        innerEvent: ChatEvent,
+        innerEvent: Event,
         nostrGroupId: String,
         account: Account,
     ) {

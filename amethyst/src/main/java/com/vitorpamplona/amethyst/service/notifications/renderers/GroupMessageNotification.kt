@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -51,7 +51,7 @@ object GroupMessageNotification {
     suspend fun notifyGroupMessage(
         context: Context,
         account: Account,
-        innerEvent: ChatEvent,
+        innerEvent: Event,
         nostrGroupId: String,
     ) {
         if (!context.notificationManager().areNotificationsEnabled()) return

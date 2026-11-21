@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -58,7 +59,6 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -947,11 +947,12 @@ class GroupEventHandler(
             // notification path can't route them. Fire the popup
             // directly here — only on first-time decryption, so
             // a relay re-broadcast or persist-replay doesn't
-            // double-notify. Restrict to ChatEvent (kind:9) so
-            // reactions, deletions, and control messages stay
+            // double-notify. Only chat notifies (kind:9 and NIP-22
+            // kind:1111 thread messages, MarmotGroupNotifier.notifies),
+            // so reactions, deletions, and control messages stay
             // silent. A message an admin removed before it
             // landed is never shown, so it never notifies either.
-            if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
+            if (MarmotGroupNotifier.notifies(innerEvent) && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
                 account.marmotNotifier().notifyGroupMessage(
                     innerEvent,
                     result.groupId,

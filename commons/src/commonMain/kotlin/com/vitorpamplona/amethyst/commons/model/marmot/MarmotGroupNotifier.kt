@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.marmot
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**
@@ -37,12 +39,26 @@ interface MarmotGroupNotifier {
         account: Account,
     )
 
-    /** A new chat message, [innerEvent], arrived in the Marmot group [nostrGroupId] for [account]. */
+    /**
+     * A new chat message, [innerEvent], arrived in the Marmot group [nostrGroupId] for [account].
+     * Only called for an event [notifies] accepts.
+     */
     suspend fun notifyGroupMessage(
-        innerEvent: ChatEvent,
+        innerEvent: Event,
         nostrGroupId: String,
         account: Account,
     )
+
+    companion object {
+        /**
+         * True when [innerEvent] is chat a member should hear about: a kind 9 message or a
+         * NIP-22 kind 1111 thread message. MDK's reply contract
+         * (docs/marmot-architecture/overview/thread-messages.md, mdk#3581) has a thread message
+         * notify and mention like kind 9, and White Noise sends them. Reactions, deletions, edits
+         * and control messages stay silent.
+         */
+        fun notifies(innerEvent: Event): Boolean = innerEvent is ChatEvent || innerEvent is CommentEvent
+    }
 
     /** Notifies nothing (previews, tests). */
     object None : MarmotGroupNotifier {
@@ -52,7 +68,7 @@ interface MarmotGroupNotifier {
         ) = Unit
 
         override suspend fun notifyGroupMessage(
-            innerEvent: ChatEvent,
+            innerEvent: Event,
             nostrGroupId: String,
             account: Account,
         ) = Unit
