@@ -1500,7 +1500,6 @@
     <string name="event_sync_start_anyway">Iniciar de todas formas (datos móviles)</string>
     <string name="event_sync_cancel">Cancelar</string>
     <string name="event_sync_relays_progress">Relés: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Eventos redistribuidos: %1$d nuevos de %2$d enviados y %3$d recibidos</string>
     <string name="event_sync_done_title">Sincronización completa</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%1$d evento reenviado a los relés de destino de %2$d recibidos.</item>
@@ -3863,7 +3862,6 @@
     <string name="audience_sheet_title">Agregar personas</string>
     <string name="audience_sheet_search">Buscar personas y listas</string>
     <string name="audience_sheet_no_lists">Aún no tienes listas de personas ni paquetes de seguidos. Busca arriba para agregar a alguien directamente.</string>
-    <string name="audience_count_with_private">%1$d · %2$d privados</string>
     <string name="audience_over_limit">Supera el límite</string>
     <string name="audience_recipients_are_visible">Todos en esta nota pueden ver la lista completa de destinatarios.</string>
     <string name="looking_for_event_title">Cargando</string>
@@ -5882,8 +5880,6 @@
         <item quantity="one">%1$d votante</item>
         <item quantity="other">%1$d votantes</item>
     </plurals>
-    <string name="poll_results_partial">%1$d de %2$d respuestas cargadas desde %3$d relés.</string>
-    <string name="poll_results_partial_approx">%1$d de unas %2$d respuestas cargadas desde %3$d relés.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d selección</item>
         <item quantity="other">· %1$d selecciones</item>
@@ -6418,7 +6414,6 @@
     <string name="cordn_migrate_exposure_title">Qué sale de este dispositivo</string>
     <string name="cordn_migrate_exposure_body">El estado de tus grupos se cifra y se sube a tu servidor multimedia para que el otro teléfono pueda obtenerlo. Ese servidor no puede leerlo: solo ve un tamaño y una hora. Borra los blobs después si no quieres dejar nada atrás.</string>
     <string name="sno_object_title">Objeto 3D</string>
-    <string name="sno_object_details">%1$d vértices · %2$d caras</string>
     <string name="sno_object_unreadable">No se pudo leer este objeto 3D (regla %1$s)</string>
     <string name="sno_avatar_title">Avatar del ciberespacio</string>
     <string name="sno_avatar_unpaid">Este avatar no ha pagado por su tamaño, así que no se dibuja</string>
@@ -10303,4 +10298,29 @@
     <string name="llama_garden_model_kind_help">Qué modelo hay debajo, en el caso de un cuantizado.</string>
     <string name="llama_garden_matches_hf_label">Coincide con el repositorio de HuggingFace</string>
     <string name="llama_garden_all_models">Todos los torrents de modelos</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d privado</item>
+        <item quantity="other">%1$d · %2$d privados</item>
+    </plurals>
+    <string name="event_sync_events_sent">Eventos redistribuidos · Nuevos: %1$d · Enviados: %2$d · Recibidos: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%1$d de %2$d respuesta cargada.</item>
+        <item quantity="other">%1$d de %2$d respuestas cargadas.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">%1$d de aproximadamente %2$d respuesta cargada.</item>
+        <item quantity="other">%1$d de unas %2$d respuestas cargadas.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Desde %1$d relé.</item>
+        <item quantity="other">Desde %1$d relés.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d vértice</item>
+        <item quantity="other">%1$d vértices</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d cara</item>
+        <item quantity="other">%1$d caras</item>
+    </plurals>
 </resources>

@@ -1425,7 +1425,6 @@
     <string name="audience_sheet_title">Lägg till personer</string>
     <string name="audience_sheet_search">Sök personer och listor</string>
     <string name="audience_sheet_no_lists">Du har inga personlistor eller följpaket än. Sök ovan för att lägga till någon direkt.</string>
-    <string name="audience_count_with_private">%1$d · %2$d privata</string>
     <string name="audience_over_limit">Över gränsen</string>
     <string name="audience_recipients_are_visible">Alla i den här anteckningen kan se hela mottagarlistan.</string>
     <string name="bookmark_absence_indicator">är inte ett bokmärke här</string>
@@ -2890,7 +2889,6 @@
     <string name="event_sync_start_anyway">Starta ändå (mobildata)</string>
     <string name="event_sync_cancel">Avbryt</string>
     <string name="event_sync_relays_progress">Reläer: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Omfördelade händelser: %1$d nya av %2$d skickade och %3$d mottagna</string>
     <string name="event_sync_done_title">Synkronisering klar</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Vidarebefordrade %1$d händelse till destinationsreläer av %2$d mottagna.</item>
@@ -5187,8 +5185,6 @@
         <item quantity="one">%1$d röstande</item>
         <item quantity="other">%1$d röstande</item>
     </plurals>
-    <string name="poll_results_partial">%1$d av %2$d svar inlästa från %3$d reläer.</string>
-    <string name="poll_results_partial_approx">%1$d av ungefär %2$d svar inlästa från %3$d reläer.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d val</item>
         <item quantity="other">· %1$d val</item>
@@ -5993,7 +5989,6 @@
     <string name="cordn_migrate_exposure_title">Vad som lämnar den här enheten</string>
     <string name="cordn_migrate_exposure_body">Ditt grupptillstånd krypteras och laddas upp till din mediaserver så att den andra telefonen kan hämta det. Det är oläsligt för servern, som bara ser en storlek och en tidpunkt. Radera blobbarna efteråt om du inte vill lämna något kvar.</string>
     <string name="sno_object_title">3D-objekt</string>
-    <string name="sno_object_details">%1$d hörn · %2$d ytor</string>
     <string name="sno_object_unreadable">Det här 3D-objektet kunde inte läsas (regel %1$s)</string>
     <string name="sno_avatar_title">Cyberspace-avatar</string>
     <string name="sno_avatar_unpaid">Den här avataren har inte betalat för sin storlek, så den ritas inte</string>
@@ -10303,4 +10298,31 @@
     <string name="llama_garden_model_kind_help">Vad modellen är i grunden, för en kvantisering.</string>
     <string name="llama_garden_matches_hf_label">Matchar HuggingFace-repositoryn</string>
     <string name="llama_garden_all_models">Alla modelltorrenter</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="profile_tab_lists">Listor</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d privat</item>
+        <item quantity="other">%1$d · %2$d privata</item>
+    </plurals>
+    <string name="event_sync_events_sent">Omfördelade händelser · Nya: %1$d · Skickade: %2$d · Mottagna: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%1$d av %2$d svar inläst.</item>
+        <item quantity="other">%1$d av %2$d svar inlästa.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">%1$d av ungefär %2$d svar inläst.</item>
+        <item quantity="other">%1$d av ungefär %2$d svar inlästa.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Från %1$d relä.</item>
+        <item quantity="other">Från %1$d reläer.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d hörn</item>
+        <item quantity="other">%1$d hörn</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d yta</item>
+        <item quantity="other">%1$d ytor</item>
+    </plurals>
 </resources>

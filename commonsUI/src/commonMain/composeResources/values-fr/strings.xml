@@ -1619,7 +1619,6 @@
     <string name="event_sync_start_anyway">Démarrer quand même (données mobiles)</string>
     <string name="event_sync_cancel">Annuler</string>
     <string name="event_sync_relays_progress">Relais : %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Événements redistribués : %1$d nouveaux sur %2$d envoyés et %3$d reçus</string>
     <string name="event_sync_done_title">Synchronisation terminée</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%1$d événement transmis vers les relais de destination sur %2$d reçus.</item>
@@ -3992,7 +3991,6 @@
     <string name="audience_sheet_title">Ajouter des personnes</string>
     <string name="audience_sheet_search">Rechercher des personnes et des listes</string>
     <string name="audience_sheet_no_lists">Vous n'avez encore aucune liste de personnes ni pack de suivi. Recherchez ci-dessus pour ajouter quelqu'un directement.</string>
-    <string name="audience_count_with_private">%1$d · %2$d privés</string>
     <string name="audience_over_limit">Limite dépassée</string>
     <string name="audience_recipients_are_visible">Toutes les personnes de cette note voient la liste complète des destinataires.</string>
     <string name="looking_for_event_title">Chargement</string>
@@ -5894,8 +5892,6 @@
         <item quantity="one">%1$d votant</item>
         <item quantity="other">%1$d votants</item>
     </plurals>
-    <string name="poll_results_partial">%1$d réponses sur %2$d chargées depuis %3$d relais.</string>
-    <string name="poll_results_partial_approx">%1$d réponses sur environ %2$d chargées depuis %3$d relais.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d sélection</item>
         <item quantity="other">· %1$d sélections</item>
@@ -6418,7 +6414,6 @@
     <string name="cordn_migrate_exposure_title">Ce qui quitte cet appareil</string>
     <string name="cordn_migrate_exposure_body">L'état de vos groupes est chiffré et téléversé sur votre serveur média pour que l'autre téléphone le récupère. Il est illisible pour ce serveur, qui ne voit qu'une taille et une heure. Supprimez les blobs ensuite si vous ne voulez rien laisser derrière vous.</string>
     <string name="sno_object_title">Objet 3D</string>
-    <string name="sno_object_details">%1$d sommets · %2$d faces</string>
     <string name="sno_object_unreadable">Cet objet 3D n'a pas pu être lu (règle %1$s)</string>
     <string name="sno_avatar_title">Avatar du cyberespace</string>
     <string name="sno_avatar_unpaid">Cet avatar n'a pas payé pour sa taille, il n'est donc pas dessiné</string>
@@ -10303,4 +10298,29 @@
     <string name="llama_garden_model_kind_help">Ce qu'est le modèle sous-jacent, pour une quantification.</string>
     <string name="llama_garden_matches_hf_label">Conforme au dépôt HuggingFace</string>
     <string name="llama_garden_all_models">Tous les torrents de modèles</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d privé</item>
+        <item quantity="other">%1$d · %2$d privés</item>
+    </plurals>
+    <string name="event_sync_events_sent">Événements redistribués · Nouveaux : %1$d · Envoyés : %2$d · Reçus : %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%1$d sur %2$d réponse chargée.</item>
+        <item quantity="other">%1$d sur %2$d réponses chargées.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">%1$d sur environ %2$d réponse chargée.</item>
+        <item quantity="other">%1$d sur environ %2$d réponses chargées.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Depuis %1$d relais.</item>
+        <item quantity="other">Depuis %1$d relais.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d sommet</item>
+        <item quantity="other">%1$d sommets</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d face</item>
+        <item quantity="other">%1$d faces</item>
+    </plurals>
 </resources>

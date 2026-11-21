@@ -1497,7 +1497,6 @@
     <string name="event_sync_start">ஒத்திசைவை தொடங்கு</string>
     <string name="event_sync_start_anyway">எப்படியும் தொடங்கு (மொபைல் தரவு)</string>
     <string name="event_sync_cancel">ரத்துசெய்</string>
-    <string name="event_sync_events_sent">நிகழ்வுகள் மறுவிநியோகிக்கப்பட்டன: %2$d அனுப்பப்பட்ட மற்றும் %3$d பெறப்பட்டதில் %1$d புதியது</string>
     <string name="event_sync_done_title">ஒத்திசைவு முடிந்தது</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%2$d பெறப்பட்டதில் %1$d நிகழ்வு இலக்கு relays-க்கு அனுப்பப்பட்டது.</item>
@@ -3036,4 +3035,5 @@
     <string name="zap_description">Zap</string>
     <string name="browser_address_hint">தேடவும் அல்லது முகவரியை உள்ளிடவும்</string>
     <string name="napplet_untitled">தலைப்பற்ற nApplet</string>
+    <string name="event_sync_events_sent">நிகழ்வுகள் மறுவிநியோகிக்கப்பட்டன · புதியவை: %1$d · அனுப்பப்பட்டவை: %2$d · பெறப்பட்டவை: %3$d</string>
 </resources>

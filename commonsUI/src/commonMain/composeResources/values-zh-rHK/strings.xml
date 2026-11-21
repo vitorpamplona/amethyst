@@ -1471,7 +1471,6 @@
     <string name="event_sync_start_anyway">仍要開始（使用行動數據）</string>
     <string name="event_sync_cancel">取消</string>
     <string name="event_sync_relays_progress">Relay：%1$d / %2$d</string>
-    <string name="event_sync_events_sent">已重新分配的事件：%2$d 筆已傳送、%3$d 筆已接收中有 %1$d 筆為新事件</string>
     <string name="event_sync_done_title">同步完成</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</item>
@@ -2867,4 +2866,5 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收方閃電服務不可用。它是根據閃電地址“%2$s”計算的。錯誤：%3$s。請檢查伺服器是否已上線，閃電地址是否正確</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">無法從 %1$s 創建閃電發票：在生成的 JSON 中找不到付款要求元素。</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">無法創建閃電發票。來自 %1$s 的消息：%2$s</string>
+    <string name="event_sync_events_sent">已重新分配的事件 · 新事件：%1$d · 已傳送：%2$d · 已接收：%3$d</string>
 </resources>

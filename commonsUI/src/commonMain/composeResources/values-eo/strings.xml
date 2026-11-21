@@ -1510,7 +1510,6 @@
     <string name="event_sync_start_anyway">Komenci Tamen (mobilaj datumoj)</string>
     <string name="event_sync_cancel">Nuligi</string>
     <string name="event_sync_relays_progress">relay-oj: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Eventoj redistribuitaj: %1$d novaj el %2$d senditaj kaj %3$d ricevitaj</string>
     <string name="event_sync_done_title">Sinkronigo kompleta</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Plusendita %1$d evento al celaj relay-oj el %2$d ricevitaj.</item>
@@ -3036,4 +3035,5 @@
     <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Serĉi aŭ enigi adreson</string>
     <string name="napplet_untitled">Sennoma nApplet</string>
+    <string name="event_sync_events_sent">Eventoj redistribuitaj · Novaj: %1$d · Senditaj: %2$d · Ricevitaj: %3$d</string>
 </resources>

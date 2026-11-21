@@ -1465,7 +1465,6 @@
     <string name="audience_sheet_title">Dodaj osoby</string>
     <string name="audience_sheet_search">Wyszukaj osoby i listy</string>
     <string name="audience_sheet_no_lists">Nie masz jeszcze żadnych list użytkowników ani grup obserwowanych. Wyszukaj powyżej, aby dodać kogoś bezpośrednio.</string>
-    <string name="audience_count_with_private">%1$d \u00b7 %2$d prywatne</string>
     <string name="audience_over_limit">Powyżej limitu</string>
     <string name="audience_recipients_are_visible">Każdy wymieniony w tej notatce może zapoznać się z pełną listą odbiorców.</string>
     <string name="bookmark_absence_indicator">nie ma tu zakładki</string>
@@ -2954,7 +2953,6 @@
     <string name="event_sync_start_anyway">Uruchom mimo to (transmisja danych komórkowych)</string>
     <string name="event_sync_cancel">Anuluj</string>
     <string name="event_sync_relays_progress">Transmitery: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Wydarzenia rozdystrybuowane: %1$d nowych z %2$d wysłanych i %3$d otrzymanych</string>
     <string name="event_sync_done_title">Synchronizacja zakończona</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Przesłano %1$d zdarzenie do transmiterów docelowych spośród %2$d otrzymanych.</item>
@@ -5443,8 +5441,6 @@
         <item quantity="many">%1$d głosujących</item>
         <item quantity="other">%1$d głosujący</item>
     </plurals>
-    <string name="poll_results_partial">%1$d z %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
-    <string name="poll_results_partial_approx">%1$d z około %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d odpowiedź</item>
         <item quantity="few">· %1$d odpowiedzi</item>
@@ -6317,7 +6313,6 @@
     <string name="cordn_migrate_exposure_title">Co opuszcza to urządzenie</string>
     <string name="cordn_migrate_exposure_body">Stan Twojej grupy jest szyfrowany i przesyłany na serwer multimediów, aby drugi telefon mógł go pobrać. Serwer ten nie jest w stanie odczytać tych danych – widzi jedynie rozmiar i czas. Jeśli chcesz, aby nic nie pozostało, usuń te pliki po zakończeniu.</string>
     <string name="sno_object_title">Obiekt 3D</string>
-    <string name="sno_object_details">%1$d wierzchołków · %2$d ścian</string>
     <string name="sno_object_unreadable">Nie udało się odczytać tego obiektu 3D (reguła %1$s)</string>
     <string name="sno_avatar_title">Awatar cyberprzestrzeni</string>
     <string name="sno_avatar_unpaid">Ten awatar nie został opłacony w odniesieniu do swojego rozmiaru, więc nie został narysowany</string>
@@ -11061,4 +11056,41 @@
     <string name="llama_garden_model_kind_help">Czym jest model bazowy, w przypadku kwantyzacji.</string>
     <string name="llama_garden_matches_hf_label">Zgodny z repozytorium HuggingFace</string>
     <string name="llama_garden_all_models">Wszystkie torrenty modeli</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d prywatny</item>
+        <item quantity="few">%1$d · %2$d prywatne</item>
+        <item quantity="many">%1$d · %2$d prywatnych</item>
+        <item quantity="other">%1$d · %2$d prywatnego</item>
+    </plurals>
+    <string name="event_sync_events_sent">Wydarzenia rozdystrybuowane · Nowe: %1$d · Wysłane: %2$d · Otrzymane: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">Załadowano %1$d z %2$d odpowiedzi.</item>
+        <item quantity="few">Załadowano %1$d z %2$d odpowiedzi.</item>
+        <item quantity="many">Załadowano %1$d z %2$d odpowiedzi.</item>
+        <item quantity="other">Załadowano %1$d z %2$d odpowiedzi.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Załadowano %1$d z około %2$d odpowiedzi.</item>
+        <item quantity="few">Załadowano %1$d z około %2$d odpowiedzi.</item>
+        <item quantity="many">Załadowano %1$d z około %2$d odpowiedzi.</item>
+        <item quantity="other">Załadowano %1$d z około %2$d odpowiedzi.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Z %1$d transmitera.</item>
+        <item quantity="few">Z %1$d transmiterów.</item>
+        <item quantity="many">Z %1$d transmiterów.</item>
+        <item quantity="other">Z %1$d transmitera.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d wierzchołek</item>
+        <item quantity="few">%1$d wierzchołki</item>
+        <item quantity="many">%1$d wierzchołków</item>
+        <item quantity="other">%1$d wierzchołka</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d ściana</item>
+        <item quantity="few">%1$d ściany</item>
+        <item quantity="many">%1$d ścian</item>
+        <item quantity="other">%1$d ściany</item>
+    </plurals>
 </resources>

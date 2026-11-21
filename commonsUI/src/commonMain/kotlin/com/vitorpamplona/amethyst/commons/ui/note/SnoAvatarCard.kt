@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.resources.sno_avatar_default
 import com.vitorpamplona.amethyst.commons.resources.sno_avatar_default_details
 import com.vitorpamplona.amethyst.commons.resources.sno_avatar_title
 import com.vitorpamplona.amethyst.commons.resources.sno_avatar_unpaid
-import com.vitorpamplona.amethyst.commons.resources.sno_object_details
 import com.vitorpamplona.amethyst.commons.resources.sno_object_scale
 import com.vitorpamplona.amethyst.commons.sno.SnoDefaultAvatar
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoThumbnail
@@ -84,7 +83,7 @@ fun SnoAvatarCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(Res.string.sno_object_details, payload.vertexCount, payload.faceCount),
+                text = snoGeometrySummary(payload),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,

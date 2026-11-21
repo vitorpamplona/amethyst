@@ -1507,7 +1507,6 @@
     <string name="event_sync_start_anyway">Svejedno pokreni (mobilni podaci)</string>
     <string name="event_sync_cancel">Otkaži</string>
     <string name="event_sync_relays_progress">Relay-i: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Redistribuirani događaji: %1$d novi od %2$d poslatih i %3$d primljenih</string>
     <string name="event_sync_done_title">Sinhronizacija završena</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Prosleđen %1$d događaj na odredišne relay-e od %2$d primljenih.</item>
@@ -2988,4 +2987,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">Redistribuirani događaji · Novi: %1$d · Poslato: %2$d · Primljeno: %3$d</string>
 </resources>

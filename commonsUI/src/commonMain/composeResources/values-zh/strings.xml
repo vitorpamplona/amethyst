@@ -1966,7 +1966,6 @@
     <string name="event_sync_start_anyway">仍要启动（移动数据）</string>
     <string name="event_sync_cancel">取消</string>
     <string name="event_sync_relays_progress">中继： %1$d / %2$d</string>
-    <string name="event_sync_events_sent">已重新分发事件：%1$d 个新事件，共 %2$d 个已发送事件和 %3$d 个已接收事件</string>
     <string name="event_sync_done_title">同步完成</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">转发了 %1$d 个事件到目标中继，共接收到 %2$d 个事件。</item>
@@ -4488,7 +4487,6 @@
     <string name="audience_sheet_title">添加用户</string>
     <string name="audience_sheet_search">搜索用户和列表</string>
     <string name="audience_sheet_no_lists">您还没有用户列表或关注包。请在上方搜索以直接添加某人。</string>
-    <string name="audience_count_with_private">%1$d · %2$d 位私密</string>
     <string name="audience_over_limit">超出限制</string>
     <string name="audience_recipients_are_visible">此笔记中的每个人都能看到完整的收件人列表。</string>
     <string name="looking_for_event_title">正在加载</string>
@@ -5922,8 +5920,6 @@
     <plurals name="poll_results_option_count">
         <item quantity="other">%1$d 位投票者</item>
     </plurals>
-    <string name="poll_results_partial">已从 %3$d 个中继加载 %1$d / %2$d 份回复。</string>
-    <string name="poll_results_partial_approx">已从 %3$d 个中继加载 %1$d / 约 %2$d 份回复。</string>
     <plurals name="poll_results_selections">
         <item quantity="other">· %1$d 个选择</item>
     </plurals>
@@ -6272,7 +6268,6 @@
     <string name="cordn_migrate_exposure_title">什么会离开此设备</string>
     <string name="cordn_migrate_exposure_body">您的群组状态会被加密并上传到您的媒体服务器，以便另一部手机获取。该服务器无法读取，只能看到大小和时间。如果您希望不留下任何内容，请在之后删除这些 blob。</string>
     <string name="sno_object_title">3D 对象</string>
-    <string name="sno_object_details">%1$d 个顶点 · %2$d 个面</string>
     <string name="sno_object_unreadable">无法读取此 3D 对象（规则 %1$s）</string>
     <string name="sno_avatar_title">赛博空间头像</string>
     <string name="sno_avatar_unpaid">此头像未为其尺寸付费，因此不会绘制</string>
@@ -9961,4 +9956,24 @@
     <string name="llama_garden_model_kind_help">对于量化版本，其底层是什么模型。</string>
     <string name="llama_garden_matches_hf_label">与 HuggingFace 仓库一致</string>
     <string name="llama_garden_all_models">所有模型种子</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="other">%1$d · %2$d 位私密</item>
+    </plurals>
+    <string name="event_sync_events_sent">已重新分发事件 · 新事件：%1$d · 已发送：%2$d · 已接收：%3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="other">已加载 %1$d / %2$d 份回复。</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="other">已加载 %1$d / 约 %2$d 份回复。</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="other">来自 %1$d 个中继。</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="other">%1$d 个顶点</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="other">%1$d 个面</item>
+    </plurals>
+    <string name="poll_results_loaded_line">%1$s%2$s</string>
 </resources>

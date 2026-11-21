@@ -1468,7 +1468,6 @@
     <string name="audience_sheet_title">Dodaj ljudi</string>
     <string name="audience_sheet_search">Išči ljudi in sezname</string>
     <string name="audience_sheet_no_lists">Nimate še seznamov oseb ali paketov sledenja. Za neposredno dodajanje nekoga uporabite zgornje iskanje.</string>
-    <string name="audience_count_with_private">%1$d \u00b7 %2$d zasebno</string>
     <string name="audience_over_limit">Preko limita</string>
     <string name="audience_recipients_are_visible">Vsi, ki so navedeni v tem zapisku, lahko vidijo celoten seznam prejemnikov.</string>
     <string name="bookmark_absence_indicator">Ni v tem zaznamku</string>
@@ -2963,7 +2962,6 @@
     <string name="event_sync_start_anyway">Vseeno začni (mobilni podatki)</string>
     <string name="event_sync_cancel">Prekini</string>
     <string name="event_sync_relays_progress">Releji: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Prerazporejeni dogodki: %1$d novih od %2$d poslanih in %3$d prejetih</string>
     <string name="event_sync_done_title">Sinhronizacija zaključena</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Ciljnim relejem posredovan %1$d dogodek od %2$d prejetih.</item>
@@ -5488,8 +5486,6 @@
         <item quantity="few">%1$d volivci</item>
         <item quantity="other">%1$d volivcev</item>
     </plurals>
-    <string name="poll_results_partial">Naloženih %1$d od %2$d odzivov iz %3$d relejev.</string>
-    <string name="poll_results_partial_approx">%1$d od približno %2$d odzivov iz %3$d relejev.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">%1$d izbira</item>
         <item quantity="two">%1$d izbiri</item>
@@ -6362,7 +6358,6 @@
     <string name="cordn_migrate_exposure_title">Kaj zapusti to napravo</string>
     <string name="cordn_migrate_exposure_body">Stanje tvojih skupin je šifrirano in naloženo na tvoj strežnik za medije, da ga drugi telefon lahko prenese. Za ta strežnik je neberljivo: vidi le velikost in čas. Če ne želiš, da karkoli ostane, pozneje izbriši te bloke.</string>
     <string name="sno_object_title">3D predmet</string>
-    <string name="sno_object_details">%1$d oglišč · %2$d ploskev</string>
     <string name="sno_object_unreadable">Tega 3D predmeta ni bilo mogoče prebrati (pravilo %1$s)</string>
     <string name="sno_avatar_title">Avatar v kiberprostoru</string>
     <string name="sno_avatar_unpaid">Ta avatar ni plačal za svojo velikost, zato ni izrisan</string>
@@ -11061,4 +11056,41 @@
     <string name="llama_garden_model_kind_help">Kakšen je model v osnovi, če gre za kvantizacijo.</string>
     <string name="llama_garden_matches_hf_label">Ujema se z repozitorijem HuggingFace</string>
     <string name="llama_garden_all_models">Vsi torrenti modelov</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d zaseben</item>
+        <item quantity="two">%1$d · %2$d zasebna</item>
+        <item quantity="few">%1$d · %2$d zasebni</item>
+        <item quantity="other">%1$d · %2$d zasebnih</item>
+    </plurals>
+    <string name="event_sync_events_sent">Prerazporejeni dogodki · Novi: %1$d · Poslani: %2$d · Prejeti: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">Naloženo %1$d od %2$d odziva.</item>
+        <item quantity="two">Naloženo %1$d od %2$d odzivov.</item>
+        <item quantity="few">Naloženo %1$d od %2$d odzivov.</item>
+        <item quantity="other">Naloženo %1$d od %2$d odzivov.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Naloženo %1$d od približno %2$d odziva.</item>
+        <item quantity="two">Naloženo %1$d od približno %2$d odzivov.</item>
+        <item quantity="few">Naloženo %1$d od približno %2$d odzivov.</item>
+        <item quantity="other">Naloženo %1$d od približno %2$d odzivov.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Iz %1$d releja.</item>
+        <item quantity="two">Iz %1$d relejev.</item>
+        <item quantity="few">Iz %1$d relejev.</item>
+        <item quantity="other">Iz %1$d relejev.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d oglišče</item>
+        <item quantity="two">%1$d oglišči</item>
+        <item quantity="few">%1$d oglišča</item>
+        <item quantity="other">%1$d oglišč</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d ploskev</item>
+        <item quantity="two">%1$d ploskvi</item>
+        <item quantity="few">%1$d ploskve</item>
+        <item quantity="other">%1$d ploskev</item>
+    </plurals>
 </resources>

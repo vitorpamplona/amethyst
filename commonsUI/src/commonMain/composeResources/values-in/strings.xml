@@ -1469,7 +1469,6 @@
     <string name="event_sync_start_anyway">Mulai Tetap Saja (data seluler)</string>
     <string name="event_sync_cancel">Batal</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Acara didistribusikan ulang: %1$d baru dari %2$d dikirim dan %3$d diterima</string>
     <string name="event_sync_done_title">Sinkronisasi selesai</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">Diteruskan %1$d acara ke relay tujuan dari %2$d yang diterima.</item>
@@ -2979,4 +2978,5 @@
     <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Cari atau masukkan alamat</string>
     <string name="napplet_untitled">nApplet Tanpa Judul</string>
+    <string name="event_sync_events_sent">Acara didistribusikan ulang · Baru: %1$d · Dikirim: %2$d · Diterima: %3$d</string>
 </resources>

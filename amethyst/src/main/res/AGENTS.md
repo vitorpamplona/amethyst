@@ -83,6 +83,7 @@ When adding or reviewing strings, flag these:
 - `<string name="…">%1$d items</string>` where the noun is countable → should be `<plurals>`.
 - `<item quantity="one">1 reply</item>` → hardcoded `1`, should be `%1$d reply`.
 - A locale `strings.xml` providing only `one`/`other` for Polish / Czech / Russian → missing `few`/`many`, will silently fall through to `other` for counts 2–4, 22–24, etc.
+- Two counted nouns in one string (`"%1$d vertices · %2$d faces"`, `"… %2$d responses from %3$d relays"`) → a `<plurals>` picks one form for one count, so split it: one plural per noun, joined in code when the pieces are independent list items (`" · "`), or through a `"%1$s %2$s"` join string when they are sentences a language may punctuate differently. A stats line can be label: value instead (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a number.
 
 ## Plural call-site patterns
 

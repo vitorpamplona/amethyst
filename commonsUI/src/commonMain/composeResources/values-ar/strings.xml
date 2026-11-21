@@ -1559,7 +1559,6 @@
     <string name="event_sync_start_anyway">البدء على أي حال (بيانات الجوال)</string>
     <string name="event_sync_cancel">إلغاء</string>
     <string name="event_sync_relays_progress">المرحّلات: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">الأحداث المعاد توزيعها: %1$d جديد من أصل %2$d مُرسَل و%3$d مُستَقبَل</string>
     <string name="event_sync_done_title">اكتملت المزامنة</string>
     <plurals name="event_sync_done_sent">
         <item quantity="zero">تمت إعادة توجيه %1$d حدث إلى المرحّلات الوجهة من أصل %2$d مُستَلَم.</item>
@@ -3164,4 +3163,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">الأحداث المعاد توزيعها · جديد: %1$d · مُرسَل: %2$d · مُستَقبَل: %3$d</string>
 </resources>

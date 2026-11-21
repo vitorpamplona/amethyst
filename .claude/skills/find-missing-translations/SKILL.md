@@ -96,6 +96,9 @@ Stop and ask the user about any missing English string that looks plural-shaped.
 `<plurals>` first: a key's type is fixed by the source, so a translator cannot make a `<string>` plural in
 one locale, and translating the wrong shape means fixing it in every locale.
 
+**Fixing plurals is part of this pass**, existing strings included: run the catalog scan below, review
+every hit, and fix the real ones ("Fixing existing plurals", step 3).
+
 **Judge by meaning, not by the English wording.** English barely inflects, so a count can look harmless
 and still need a plural. Any `%d` that counts things is a candidate:
 
@@ -109,7 +112,9 @@ and still need a plural. Any `%d` that counts things is a candidate:
   the range).
 
 Not candidates: identifiers (`"kind %1$d"`, `"line %1$d"`), percentages, unit abbreviations
-(`"5 min"`, `"10 MB"`), and a count that is always the same constant. **Check the call site first**: a
+(`"5 min"`, `"10 MB"`), a count that is always the same constant, a ratio against a constant
+(`"%1$d of %2$d pins"` with `MAX_ENTRIES`), and phrasing that agrees with nothing (cs
+`"Nalezeno %1$d z %2$d"`). **Check the call site first**: a
 `"%1$d days"` fed `UNUSED_MIRROR_DAYS = 60` has one correct form in every locale and stays a `<string>`.
 Amounts pre-formatted into `%s` (sats) can't be plurals at all; they read as units.
 
@@ -210,6 +215,23 @@ Recent CLDR also gives pt, fr, es and it a `many` that only whole millions reach
 falls back to `other` and lint doesn't ask for it, so leave it out; the snippet above doesn't list it.
 
 Call-site patterns for plurals: `amethyst/src/main/res/AGENTS.md` "Plural call-site patterns".
+
+### Fixing existing plurals
+
+**Two commits:** the missing translations first, then the plural fixes. A plural fix touches the English
+source, the call sites and every locale that has the key, so it reviews and reverts on its own.
+
+- **One counted noun:** convert it as above. The quantity can be any argument
+  (`audience_count_with_private` is chosen by `%2$d`).
+- **Several counted nouns in one string** (`"%1$d vertices · %2$d faces"`): split it into one plural per
+  noun, or turn a stats line into label: value (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a
+  number. The English changes shape, so ask the user which one. Join independent list items in code
+  (`" · "`); join sentences through a `"%1$s %2$s"` string, since Japanese and Chinese put no space
+  after `。`.
+- **Re-translate, don't patch:** save each locale's old wording, delete the old entries from every locale,
+  then write `<locale>.en.xml` by hand with only the changed keys (`extract` has no key filter and would
+  also pull each locale's unrelated gaps). Translators reuse the old wording, and `validate` /
+  `insert` work as usual. Re-add a key only to the locales that had it, not to every locale.
 
 ## 4. Present, then insert (if approved)
 
