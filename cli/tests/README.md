@@ -2,7 +2,8 @@
 
 Shell-based end-to-end harnesses that drive the `amy` CLI binary — against an
 embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
-public servers, or no relay at all, depending on the suite. No suite depends on
+public servers, or no relay at all, depending on the suite. Apart from
+`buzz/buzz-relay-interop.sh`, which runs upstream Buzz's own relay, no suite depends on
 an external relay binary or a Rust toolchain for its relay: every relay-backed
 harness boots geode from the `amy` binary it already built, so the relay under
 test is the same server code that runs in production. Twelve directories:
@@ -53,6 +54,8 @@ cli/tests/
 ├── sno/                   # DECK-0003 conformance vs the cyberspace project's
 │   ├── sno-conformance.sh #   own reference implementations — no relay
 │   └── refdriver.py
+├── buzz/                  # Buzz agent jobs/workflows vs `amy serve`, plus
+│   └── buzz-relay-interop.sh #  amy's Buzz + NIP-29 verbs vs a REAL block/buzz relay
 ├── relaygroup/            # NIP-29 round-trip vs embedded `amy serve` (geode)
 │   └── relaygroup-headless.sh
 └── sync/                  # NIP-77 deletion propagation vs `amy serve`
@@ -126,6 +129,17 @@ Suite notes:
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
   emptiness is a relay capability, not a client bug.
+- **`buzz/buzz-relay-interop.sh`** is the one harness that runs an external relay:
+  upstream block/buzz's `buzz-relay` (a checkout via `--buzz-src`, built with
+  `cargo build --profile ci -j2 -p buzz-relay`, or `--relay-bin`) on Postgres, Redis
+  and MinIO from `buzz/buzz-relay-compose.yml` (compose project `buzz-b-interop`,
+  ports 7500-7512). Five fresh amy identities, one `$HOME` each, drive channel
+  create/edit/labels, join and the announce-channel guest role, posts, thread
+  replies, edits, reactions and deletes, roles, Buzz DMs (history ask/include/exclude,
+  the 9-people cap, an agent's untagged retry), jobs, pins, invite links and a
+  community ban, plus a raw unauthenticated socket (`ws-probe.py`) for the AUTH
+  answers. Where amy has no verb the event goes out through `amy event` in the
+  app's shape and the missing verb is a GAP row.
 - **`sync/sync-deletions-headless.sh`** proves NIP-77 deletion propagation
   both directions (plus the `--no-sync-deletions` opt-out) against
   `amy serve`, with one `$HOME` per account so stores don't share.
