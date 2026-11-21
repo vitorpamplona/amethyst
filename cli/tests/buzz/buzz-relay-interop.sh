@@ -22,6 +22,9 @@
 #   --build-amy      run ./gradlew :cli:installDist first (default: use the
 #                    installed cli/build/install/amy).
 #
+# Environment: AMY_BIN (the amy launcher, default this checkout's installed one),
+# BUZZ_COMPOSE_PROJECT (compose project name, default buzz-b-interop).
+#
 # Relay-side setup, the way upstream's own harness does it (no admin UI):
 #   * Postgres/Redis/MinIO from buzz-relay-compose.yml (upstream's harness
 #     images, tmpfs data, so every run starts empty). MinIO is not optional: the
@@ -53,9 +56,9 @@ LOG_DIR="$STATE_DIR/logs"
 LOG_FILE="$LOG_DIR/run.log"
 RESULTS_FILE="$STATE_DIR/results"
 TIMINGS_FILE="$STATE_DIR/timings"
-AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
+AMY_BIN="${AMY_BIN:-$REPO_ROOT/cli/build/install/amy/bin/amy}"
 COMPOSE_FILE="$SCRIPT_DIR/buzz-relay-compose.yml"
-PROJECT="buzz-b-interop"
+PROJECT="${BUZZ_COMPOSE_PROJECT:-buzz-b-interop}"
 PORT=7500
 BUZZ_SRC=""
 RELAY_BIN=""
@@ -69,7 +72,7 @@ while [[ $# -gt 0 ]]; do
     --port)      PORT="$2"; shift ;;
     --keep)      KEEP=1 ;;
     --build-amy) BUILD_AMY=1 ;;
-    -h|--help)   sed -n '3,42p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; exit 0 ;;
+    -h|--help)   sed -n '3,45p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
   shift
