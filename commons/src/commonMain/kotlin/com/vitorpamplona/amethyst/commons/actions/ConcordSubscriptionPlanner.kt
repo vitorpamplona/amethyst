@@ -155,10 +155,11 @@ object ConcordSubscriptionPlanner {
                     )
                 }
             }
-        // A restricted Channel's writer addresses, live and retired (CORD-03 §1, §3), and each Private
-        // Channel's access plane on Roles v2 (CORD-03 §5), where its keys are delivered.
+        // A restricted Channel's writer addresses, live and retired (CORD-03 §1, §3), once each though
+        // every read key held reads them, and each Private Channel's access plane on Roles v2
+        // (CORD-03 §5), where its keys are delivered.
         val writers =
-            ConcordActions.writerPlanes(entry, state).map { plane ->
+            ConcordActions.writerPlanes(entry, state).distinctBy { it.key.publicKeyHex }.map { plane ->
                 ConcordPlaneSub(channelId = ConcordChannelId(entry.id, plane.channelIdHex), pubKeyHex = plane.key.publicKeyHex, relays = relays)
             }
         val access =

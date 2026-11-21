@@ -426,10 +426,11 @@ object ConcordPinning {
         planes: Collection<ChannelPlane>,
         rumorId: HexKey,
     ): ConcordPinSource? {
-        val byAddress = planes.associateBy { it.key.publicKeyHex }
+        // A writer address is read under several keys (CORD-03 §1), so several planes share it.
+        val byAddress = planes.groupBy { it.key.publicKeyHex }
         for (wrap in wraps) {
-            val plane = byAddress[wrap.pubKey] ?: continue
-            sourceOf(wrap, plane, rumorId)?.let { return it }
+            val candidates = byAddress[wrap.pubKey] ?: continue
+            candidates.firstNotNullOfOrNull { sourceOf(wrap, it, rumorId) }?.let { return it }
         }
         return null
     }

@@ -221,19 +221,44 @@ object ConcordActions {
 
     /**
      * The writer addresses of every restricted Channel of [state] this account can read (CORD-03 §1,
-     * §3): one plane per live or retired window of each Writers ledger, decrypted with the Channel's
-     * current read key. A reader subscribes them all so a restricted Channel's posts reach it.
+     * §3): for each live or retired window of each Writers ledger, one plane per read key this
+     * account holds for the Channel, current first. A writer wrap is encrypted under the read key in
+     * force when it was posted and commits that key's `["epoch", n]`, so a window that outlived a
+     * Refounding (a Public Channel's older roots) or a channel rekey (a Private Channel's older keys)
+     * still opens under the key of its own era (Armada `writerStreams`). Several planes share one
+     * address; a reader subscribes each address once and tries its planes in order.
      */
     fun writerPlanes(
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ): List<ChannelPlane> =
         state.writers.flatMap { (channelIdHex, ledger) ->
-            val read = currentChannelPlane(entry, state, channelIdHex) ?: return@flatMap emptyList()
-            ledger.windows.map { w ->
-                ChannelPlane(channelIdHex, read.epoch, GroupKey(ByteArray(0), w.writerPubKey.hexToByteArray(), read.key.conversationKey), writerEpoch = w.epoch)
+            val def = state.channels[channelIdHex]?.definition ?: return@flatMap emptyList()
+            val current = currentChannelPlane(entry, channelIdHex, def.private) ?: return@flatMap emptyList()
+            val reads = listOf(current) + writerReadEras(entry, channelIdHex, def.private)
+            ledger.windows.flatMap { w ->
+                val address = w.writerPubKey.hexToByteArray()
+                reads.map { read -> ChannelPlane(channelIdHex, read.epoch, GroupKey(ByteArray(0), address, read.key.conversationKey), writerEpoch = w.epoch) }
             }
         }
+
+    /**
+     * The older read keys a writer window of [channelIdHex] may have been posted under: a Public
+     * Channel's planes under each held prior root, a Private Channel's under each older channel key
+     * the entry carries. Never a public channel's private-era key, nor the root-derived plane for a
+     * Private Channel, the same split [historicalChannelPlanes] makes.
+     */
+    private fun writerReadEras(
+        entry: ConcordCommunityListEntry,
+        channelIdHex: HexKey,
+        isPrivate: Boolean,
+    ): List<ChannelPlane> {
+        if (!isPrivate) return historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
+        val channelId = channelIdHex.hexToByteArray()
+        return ConcordChannelKeyring.historicalKeys(entry, channelIdHex).map { old ->
+            ChannelPlane(channelIdHex, old.epoch, ConcordChannelKeys.privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
+        }
+    }
 
     /**
      * The access planes (CORD-03 §5) of every live Private Channel of a Roles v2 [state], where a

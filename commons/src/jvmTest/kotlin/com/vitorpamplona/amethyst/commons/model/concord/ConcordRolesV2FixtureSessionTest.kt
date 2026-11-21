@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -132,5 +135,49 @@ class ConcordRolesV2FixtureSessionTest {
             assertNotNull(post, "the writer's post stands and lands")
             // Pinning reopens the wrap that carried it, on its writer plane.
             assertNotNull(session.pinSource(general, post.id), "a writer-address post can be pinned")
+        }
+
+    @Test
+    fun opensAnOlderWritersPostUnderTheReadKeyItWasPostedUnderAfterARefounding() =
+        runTest {
+            val f = Fixture("writers")
+            val member = f.actor("member")
+            val general = f.actor("general")
+            val session = ConcordCommunitySession(f.entry, member)
+            f.events.sortedByDescending { it.pubKey == f.controlPk }.forEach { session.ingest(it) }
+            val state = session.state.value!!
+            val window =
+                state.writers
+                    .getValue(general)
+                    .windows
+                    .single()
+            val atWriter = f.events.filter { it.pubKey == window.writerPubKey }
+
+            // A Refounding moved the root to epoch 1; the root of epoch 0, which the post was
+            // encrypted under (CORD-03 §1: the read key in force when posted), is held.
+            val refounded =
+                ConcordCommunityListEntry(
+                    id = f.entry.id,
+                    owner = f.entry.owner,
+                    ownerSalt = f.entry.ownerSalt,
+                    root = KeyPair().privKey!!.toHexKey(),
+                    rootEpoch = 1,
+                    heldRoots = listOf(HeldRoot(epoch = 0, key = f.entry.root)),
+                    relays = f.entry.relays,
+                )
+            val planes = ConcordActions.writerPlanes(refounded, state).filter { it.key.publicKeyHex == window.writerPubKey }
+            val opened =
+                atWriter.mapNotNull { wrap ->
+                    planes.firstNotNullOfOrNull { plane ->
+                        ConcordActions.openChannelRumorAnyExpiry(wrap, plane.key, plane.channelIdHex, plane.epoch, writerEpoch = plane.writerEpoch)
+                    }
+                }
+            assertTrue(opened.any { it.content == "a writer's post" }, "the epoch-0 writer post still opens once the root moved on")
+            // The current read key still serves the address too: a writer posting before the fresh
+            // epoch is minted encrypts under the root now in force.
+            assertTrue(planes.any { it.epoch == 1L }, "the address is also read under the current root")
+            // One subscription per address, however many read keys open it.
+            val subs = ConcordSubscriptionPlanner.channelPlaneSubs(refounded, state).filter { it.pubKeyHex == window.writerPubKey }
+            assertEquals(1, subs.size)
         }
 }
