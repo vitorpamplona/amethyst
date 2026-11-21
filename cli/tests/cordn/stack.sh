@@ -55,12 +55,22 @@ stack_require() {
 }
 
 stack_up() {
+    # A caller may hand in a WORK that does not exist yet; without it geode's log
+    # redirect fails, geode never starts, and every later step fails one timeout
+    # at a time instead of here.
+    mkdir -p "$WORK"
     "$GEODE" --port "$PORT" >"$WORK/geode.log" 2>&1 &
     GEODE_PID=$!
+    local relay_up=0
     for _ in $(seq 30); do
-        curl -sS --noproxy '*' -H 'Accept: application/nostr+json' "http://127.0.0.1:$PORT/" >/dev/null 2>&1 && break
+        curl -sS --noproxy '*' -H 'Accept: application/nostr+json' "http://127.0.0.1:$PORT/" >/dev/null 2>&1 && { relay_up=1; break; }
         sleep 1
     done
+    [ "$relay_up" = 1 ] || {
+        echo "geode never answered on port $PORT"
+        tail -20 "$WORK/geode.log" 2>/dev/null
+        exit 1
+    }
 
     # The container has to reach geode, which is on the host's loopback.
     #

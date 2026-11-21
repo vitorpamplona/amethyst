@@ -23,7 +23,7 @@
 set -uo pipefail
 
 WORK="${WORK:-$(mktemp -d)}"
-CONTAINER="cordn-migrate"
+CONTAINER="${CONTAINER:-cordn-migrate}"
 # shellcheck source=stack.sh
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/stack.sh"
 
