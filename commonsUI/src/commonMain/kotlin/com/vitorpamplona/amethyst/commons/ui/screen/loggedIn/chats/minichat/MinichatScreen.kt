@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalSup
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.JoinToPostNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.toConcordImeta
@@ -93,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -171,6 +173,10 @@ fun MinichatScreen(
     val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
     val relayGroup = remember(rootNote) { rootNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } }
     val buzzGroup = relayGroup?.takeIf { it.groupId.relayUrl in buzzRelays }
+    // The same gate as the group's own composer: a Buzz guest or an announce-channel visitor would
+    // have the reply (and the typing heartbeat) refused, after it already sat in the thread here.
+    val myPubkey = accountViewModel.userProfile().pubkeyHex
+    val mayPost = relayGroup?.let { relayGroupAllowsPosting(it, myPubkey) } ?: true
     val uploadState =
         remember(buzzGroup) {
             ChatFileUploadState(
@@ -285,79 +291,97 @@ fun MinichatScreen(
                 )
             }
 
-            Column(modifier = EditFieldModifier) {
-                ThinPaddingTextField(
-                    state = composer,
-                    spellCheck = true,
-                    onTextChanged = {
-                        val group = buzzGroup
-                        val now = TimeUtils.now()
-                        if (group != null && composer.text.isNotEmpty() && now - lastTypingSecs[0] >= BuzzTypingState.TYPING_HEARTBEAT_SECS) {
-                            lastTypingSecs[0] = now
-                            val rootEvent = rootNote.event
-                            accountViewModel.sendBuzzTyping(
-                                group,
-                                threadRootId = rootEvent?.tags?.buzzThreadRootForReplyTo(rootEvent.id) ?: rootNote.idHex,
-                                replyToId = rootNote.idHex,
+            if (relayGroup != null && !mayPost) {
+                JoinToPostNotice(relayGroup, myPubkey)
+            } else {
+                Column(modifier = EditFieldModifier) {
+                    ThinPaddingTextField(
+                        state = composer,
+                        spellCheck = true,
+                        onTextChanged = {
+                            val group = buzzGroup
+                            val now = TimeUtils.now()
+                            if (group != null && mayPost && composer.text.isNotEmpty() && now - lastTypingSecs[0] >= BuzzTypingState.TYPING_HEARTBEAT_SECS) {
+                                lastTypingSecs[0] = now
+                                val rootEvent = rootNote.event
+                                accountViewModel.sendBuzzTyping(
+                                    group,
+                                    threadRootId = rootEvent?.tags?.buzzThreadRootForReplyTo(rootEvent.id) ?: rootNote.idHex,
+                                    replyToId = rootNote.idHex,
+                                )
+                            }
+                        },
+                        onContentReceived = { uri, mimeType ->
+                            uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
+                            // Same encryption choice the gallery button makes below.
+                            uploadState.encryptFiles = isConcord
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = EditFieldBorder,
+                        placeholder = {
+                            Text(
+                                text = stringRes(Res.string.reply_here),
+                                color = MaterialTheme.colorScheme.placeholderText,
                             )
-                        }
-                    },
-                    onContentReceived = { uri, mimeType ->
-                        uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
-                        // Same encryption choice the gallery button makes below.
-                        uploadState.encryptFiles = isConcord
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = EditFieldBorder,
-                    placeholder = {
-                        Text(
-                            text = stringRes(Res.string.reply_here),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    leadingIcon = {
-                        SelectFromGallery(
-                            isUploading = uploadState.isUploadingImage,
-                            tint = MaterialTheme.colorScheme.placeholderText,
-                            modifier = Modifier.height(32.dp).padding(start = 2.dp),
-                            onImageChosen = { media ->
-                                uploadState.load(media)
-                                // Encrypt only where the backend is end-to-end (Concord); public chats
-                                // send plaintext blobs, matching how their main composer uploads.
-                                uploadState.encryptFiles = isConcord
-                            },
-                        )
-                    },
-                    trailingIcon = {
-                        ThinSendButton(
-                            isActive = canPost,
-                            modifier = EditFieldTrailingIconModifier,
-                        ) {
-                            val text = composer.text.toString().trim()
-                            if (text.isNotEmpty()) {
-                                composer.clearText()
-                                scope.launch(Dispatchers.IO) {
-                                    try {
-                                        accountViewModel.account.sendMinichatReply(rootNote, text)
-                                    } catch (e: Exception) {
-                                        currentCoroutineContext().ensureActive()
-                                        launch(Dispatchers.Main) {
-                                            shortNotice.show("Failed to send message: ${e.message}")
+                        },
+                        leadingIcon = {
+                            SelectFromGallery(
+                                isUploading = uploadState.isUploadingImage,
+                                tint = MaterialTheme.colorScheme.placeholderText,
+                                modifier = Modifier.height(32.dp).padding(start = 2.dp),
+                                onImageChosen = { media ->
+                                    uploadState.load(media)
+                                    // Encrypt only where the backend is end-to-end (Concord); public chats
+                                    // send plaintext blobs, matching how their main composer uploads.
+                                    uploadState.encryptFiles = isConcord
+                                },
+                            )
+                        },
+                        trailingIcon = {
+                            ThinSendButton(
+                                isActive = canPost,
+                                modifier = EditFieldTrailingIconModifier,
+                            ) {
+                                val text = composer.text.toString().trim()
+                                if (text.isNotEmpty()) {
+                                    composer.clearText()
+                                    scope.launch(Dispatchers.IO) {
+                                        try {
+                                            accountViewModel.account.sendMinichatReply(rootNote, text)
+                                        } catch (e: Exception) {
+                                            currentCoroutineContext().ensureActive()
+                                            launch(Dispatchers.Main) {
+                                                shortNotice.show("Failed to send message: ${e.message}")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    },
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                )
+                        },
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                    )
+                }
             }
         }
     }
+}
+
+/** Whether [me] may post in [channel], read from its live metadata so a join that lands opens the composer. */
+@Composable
+private fun relayGroupAllowsPosting(
+    channel: RelayGroupChannel,
+    me: HexKey,
+): Boolean {
+    val state by channel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val live = state.channel as? RelayGroupChannel ?: channel
+    return live.canPost(me)
 }
 
 /**

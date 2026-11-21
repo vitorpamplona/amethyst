@@ -32,6 +32,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.RelayGroupCreateResult
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.report
+import com.vitorpamplona.amethyst.commons.notices.ui.ResUserNoticeResolver
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_name_taken
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_name_taken_title
@@ -256,7 +260,10 @@ class RelayGroupMetadataViewModel : ViewModel() {
     private suspend fun publishReporting(onError: (String, String) -> Unit): Boolean =
         try {
             when (val outcome = publish()) {
-                PublishOutcome.Done -> {
+                is PublishOutcome.Done -> {
+                    // Sent, but not fully settled: say so, and still close the form, since the group
+                    // exists (or will) under this form's id and a second Create could only be refused.
+                    outcome.notice?.let { onError.report(ResUserNoticeResolver, it) }
                     true
                 }
 
@@ -286,7 +293,10 @@ class RelayGroupMetadataViewModel : ViewModel() {
         }
 
     private sealed interface PublishOutcome {
-        data object Done : PublishOutcome
+        /** Sent; [notice] is what the user should still hear about a create that did not fully settle. */
+        data class Done(
+            val notice: UserNotice? = null,
+        ) : PublishOutcome
 
         /** On Buzz, a loaded listed channel already holds [name]; nothing was sent. */
         data class NameTaken(
@@ -343,7 +353,21 @@ class RelayGroupMetadataViewModel : ViewModel() {
                     parent = parentGroupId,
                     channelType = channelType,
                 )
-            return if (result is RelayGroupCreateResult.Refused) PublishOutcome.Refused(creating = true, reason = result.message) else PublishOutcome.Done
+            return when (result) {
+                is RelayGroupCreateResult.Refused -> {
+                    PublishOutcome.Refused(creating = true, reason = result.message)
+                }
+
+                is RelayGroupCreateResult.Created -> {
+                    PublishOutcome.Done(
+                        when {
+                            !result.followed -> RelayGroupCreateNotice.NotFollowed
+                            !result.confirmed -> RelayGroupCreateNotice.Unconfirmed
+                            else -> null
+                        },
+                    )
+                }
+            }
         } else {
             // A rename clashes the same way; the channel being renamed keeps its own name.
             if (name != existing.event?.name()) {
@@ -371,7 +395,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                     // subgroup isn't dropped by this metadata edit.
                     parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
                 )
-            return if (refusal != null) PublishOutcome.Refused(creating = false, reason = refusal) else PublishOutcome.Done
+            return if (refusal != null) PublishOutcome.Refused(creating = false, reason = refusal) else PublishOutcome.Done()
         }
     }
 
