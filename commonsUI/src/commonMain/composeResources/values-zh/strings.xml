@@ -9975,4 +9975,5 @@
     <plurals name="sno_object_faces">
         <item quantity="other">%1$d 个面</item>
     </plurals>
+    <string name="poll_results_loaded_line">%1$s%2$s</string>
 </resources>

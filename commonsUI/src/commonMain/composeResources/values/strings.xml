@@ -5631,6 +5631,7 @@
         <item quantity="one">Loaded %1$d of about %2$d response.</item>
         <item quantity="other">Loaded %1$d of about %2$d responses.</item>
     </plurals>
+    <string name="poll_results_loaded_line">%1$s %2$s</string>
     <plurals name="poll_results_from_relays">
         <item quantity="one">From %1$d relay.</item>
         <item quantity="other">From %1$d relays.</item>
