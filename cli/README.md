@@ -654,7 +654,7 @@ screen speaks.
 | `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
 | `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
 | `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
-| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. |
+| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed] [--forum]` | Create a group (publishes 9007 + 9002, built as the app builds them); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. On a Buzz relay (its NIP-11 `software` is Buzz) the id is a UUID, the 9007 carries the name, visibility and channel type (`--forum`, else stream). A refused 9007 exits `rejected` with the relay's reason. |
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
 | `amy relaygroup join naddr1…[?invite=CODE]` | Same, from NIP-29's shareable group identifier; the `?invite=` suffix becomes the join `code`. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |

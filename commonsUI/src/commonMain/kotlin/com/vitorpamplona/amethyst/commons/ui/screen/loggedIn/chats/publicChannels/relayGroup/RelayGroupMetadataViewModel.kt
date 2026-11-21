@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.RelayGroupCreateResult
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.newRelayGroupId
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
@@ -48,13 +49,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.buzz.workspace.isValidBuzzChannelName
-import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.Dispatchers
@@ -157,9 +155,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
         this.account = accountViewModel.account
         if (this.relay == null) {
             this.relay = relay
-            // Random NIP-29 group id: 8 secure bytes, hex-encoded (matches Armada) — except on a
-            // Buzz relay, which keys channels by UUID and ignores an id it cannot parse as one.
-            this.groupId = if (BuzzRelayDialect.isBuzz(relay)) newBuzzChannelId() else RandomInstance.bytes(8).toHexKey()
+            this.groupId = newRelayGroupId(BuzzRelayDialect.isBuzz(relay))
         }
     }
 

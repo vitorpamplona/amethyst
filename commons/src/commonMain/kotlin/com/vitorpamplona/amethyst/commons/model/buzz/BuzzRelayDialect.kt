@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 import com.vitorpamplona.quartz.buzz.workspace.BuzzChannelLabels
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -36,8 +37,9 @@ import kotlinx.coroutines.flow.StateFlow
  * 1. **Event shape** (implemented): the first Buzz-only channel kind consumed from a
  *    relay marks it (`LocalCache` calls [mark] before materializing the channel). A
  *    vanilla NIP-29 relay never serves those kinds, so there are no false positives.
- * 2. **NIP-11** (future): a relay announcing Buzz in its info document can be marked
- *    at connect time, before any event arrives.
+ * 2. **NIP-11**: a relay whose info document names Buzz as its `software`
+ *    ([looksLikeBuzzRelay]); `amy` reads it before its first group command, which is
+ *    all a CLI run knows of the relay.
  *
  * The registry decides which channel type `LocalCache` materializes for a group
  * (`BuzzWorkspaceChannel` vs plain `RelayGroupChannel`) and which timeline kinds the
@@ -85,6 +87,22 @@ object BuzzRelayDialect {
     }
 
     private val UUID = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+    /**
+     * Whether [info] is a Buzz relay's NIP-11 document: Buzz names its repository as `software`
+     * (`https://github.com/block/buzz`, `buzz-relay/src/nip11.rs`). When it is, [relay] is marked.
+     */
+    fun looksLikeBuzzRelay(
+        relay: NormalizedRelayUrl,
+        info: Nip11RelayInformation?,
+    ): Boolean {
+        val software = info?.software?.trimEnd('/')?.removeSuffix(".git") ?: return false
+        if (!software.endsWith(BUZZ_SOFTWARE_SUFFIX, ignoreCase = true)) return false
+        mark(relay)
+        return true
+    }
+
+    private const val BUZZ_SOFTWARE_SUFFIX = "github.com/block/buzz"
 
     /** Test-only: clears all marks so unit tests don't leak state into each other. */
     fun clearForTesting() {

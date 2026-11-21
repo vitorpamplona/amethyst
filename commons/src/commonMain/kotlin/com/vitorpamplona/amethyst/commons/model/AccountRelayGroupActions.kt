@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
@@ -52,10 +53,12 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.buzz.workspace.buzzRoleFor
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
+import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -63,6 +66,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithH
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -467,37 +471,26 @@ class AccountRelayGroupActions(
         channelType: String? = null,
         banner: String? = null,
     ): RelayGroupCreateResult {
-        val isBuzz = BuzzRelayDialect.isBuzz(relay)
-
-        // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
-        // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
-        // a `name` (see CreateGroupEvent.build), which used to make "create group" on a Buzz relay
-        // publish two events and produce nothing at all.
-        val create =
-            CreateGroupEvent.build(
+        val templates =
+            relayGroupCreateTemplates(
+                isBuzz = BuzzRelayDialect.isBuzz(relay),
                 groupId = groupId,
                 name = name,
                 about = about,
-                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
+                picture = picture,
+                banner = banner,
+                isPrivate = isPrivate,
+                isClosed = isClosed,
+                isHidden = isHidden,
+                isRestricted = isRestricted,
+                hashtags = hashtags,
+                geohashes = geohashes,
+                parent = parent,
                 channelType = channelType,
             )
-        val signedCreate = account.signer.sign(create)
+        val signedCreate = account.signer.sign(templates.create)
         // Sign the 9002 up front too, so a signer that asks the user does it before anything is sent.
-        val edit =
-            account.signer.sign(
-                GroupEditMetadataEvent.build(
-                    groupId,
-                    name = name,
-                    about = about,
-                    picture = picture,
-                    banner = banner,
-                    status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                    // Never on Buzz: there `t` tags replace the channel's labels.
-                    hashtags = if (isBuzz) emptyList() else hashtags,
-                    geohashes = geohashes,
-                    parent = parent,
-                ),
-            )
+        val edit = account.signer.sign(templates.edit)
         account.cache.justConsumeMyOwnEvent(signedCreate)
         val results = publishAwaitingOk(signedCreate, relay, CREATE_OK_TIMEOUT_SECS, warmUpKind = GroupMetadataEvent.KIND)
         relayGroupCommandRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
@@ -797,6 +790,65 @@ class AccountRelayGroupActions(
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 }
+
+/** The two events that make a group: the 9007 create and the 9002 that names it. */
+class RelayGroupCreateTemplates(
+    val create: EventTemplate<CreateGroupEvent>,
+    val edit: EventTemplate<GroupEditMetadataEvent>,
+)
+
+/**
+ * A new group id for [isBuzz]'s dialect: a Buzz relay keys channels by UUID and ignores an id it
+ * cannot parse as one; a NIP-29 relay gets 8 random bytes, hex-encoded (as Armada does).
+ */
+fun newRelayGroupId(isBuzz: Boolean): String = if (isBuzz) newBuzzChannelId() else RandomInstance.bytes(8).toHexKey()
+
+/**
+ * The create and edit events of a new group, shared by the app's form and `amy relaygroup create`.
+ *
+ * The metadata rides the create event as well as the 9002. A plain NIP-29 relay takes its metadata
+ * from the 9002 and ignores these tags; Buzz rejects a bare 9007 outright (`invalid: channel name is
+ * required`), which is why a create used to publish two events and produce nothing on Buzz.
+ * [hashtags] are NIP-29 topics: on Buzz `t` tags are the channel's labels, so they are not sent.
+ */
+fun relayGroupCreateTemplates(
+    isBuzz: Boolean,
+    groupId: String,
+    name: String,
+    about: String? = null,
+    picture: String? = null,
+    banner: String? = null,
+    isPrivate: Boolean = false,
+    isClosed: Boolean = false,
+    isHidden: Boolean = false,
+    isRestricted: Boolean = false,
+    hashtags: List<String> = emptyList(),
+    geohashes: List<String> = emptyList(),
+    parent: String? = null,
+    channelType: String? = null,
+): RelayGroupCreateTemplates =
+    RelayGroupCreateTemplates(
+        create =
+            CreateGroupEvent.build(
+                groupId = groupId,
+                name = name,
+                about = about,
+                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
+                channelType = channelType,
+            ),
+        edit =
+            GroupEditMetadataEvent.build(
+                groupId,
+                name = name,
+                about = about,
+                picture = picture,
+                banner = banner,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = if (isBuzz) emptyList() else hashtags,
+                geohashes = geohashes,
+                parent = parent,
+            ),
+    )
 
 /**
  * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
