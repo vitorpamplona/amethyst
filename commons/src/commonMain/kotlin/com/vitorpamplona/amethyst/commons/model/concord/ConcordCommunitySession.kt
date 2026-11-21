@@ -990,6 +990,7 @@ class ConcordCommunitySession(
         // O(channels × history) of redundant decryption.
         for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
         rejudgeHeldBackWriterPosts()
+        releaseUncoveredHides()
     }
 
     /**
@@ -1172,7 +1173,10 @@ class ConcordCommunitySession(
             // and keeps applying across re-projections (CORD-03 §3). A target it already covers is
             // never handed to the store.
             if (rumor is DeletionRequestEvent) recordModerationHide(channelIdHex, rumor)
-            if (isHiddenByModeration(channelIdHex, rumor.id, rumor.pubKey)) continue
+            if (isHiddenByModeration(channelIdHex, rumor.id, rumor.pubKey)) {
+                markHiddenByModeration(channelIdHex, rumor.id, rumor.pubKey)
+                continue
+            }
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
@@ -1381,6 +1385,9 @@ class ConcordCommunitySession(
     // Channel id -> the moderation hides seen on it, by the deleting rumor's id, oldest first.
     private val hidesByChannel = HashMap<HexKey, LinkedHashMap<HexKey, ConcordModerationHide>>()
 
+    // Channel id -> rumor id -> author of each rumor a hide keeps out of the store, re-judged per fold.
+    private val hiddenByModeration = HashMap<HexKey, LinkedHashMap<HexKey, HexKey>>()
+
     // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
     private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
 
@@ -1438,6 +1445,55 @@ class ConcordCommunitySession(
         val folded = _state.value ?: return false
         return hides.any { folded.honorsModerationHide(it.hider, author, channelIdHex, it.citation) }
     }
+
+    /**
+     * Records that a moderation hide keeps [rumorId] by [author] out of the store on [channelIdHex]:
+     * the session never handed it to the sink, or [ConcordModerationHideSweep] removed it. Every fold
+     * re-judges it ([releaseUncoveredHides]), since a hide by someone later stripped of the bit comes
+     * undone (CORD-03 §3).
+     */
+    fun markHiddenByModeration(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+        author: HexKey,
+    ) {
+        lock.withLock {
+            val held = hiddenByModeration.getOrPut(channelIdHex) { LinkedHashMap() }
+            held[rumorId.lowercase()] = author
+            // Bounded like the hides that cover them: the oldest go first.
+            while (held.size > MAX_HIDDEN_RUMORS_PER_CHANNEL) held.remove(held.keys.first())
+        }
+    }
+
+    /**
+     * Emits again every buffered rumor a moderation hide kept out of the store that no hide the fold
+     * honors covers any more (its hider was banned, demoted or lost MANAGE_MESSAGES there): CORD-03
+     * §3, a hide by someone later stripped of the bit comes undone. One whose wrap the buffer no
+     * longer holds can't be reopened and is let go.
+     */
+    private fun releaseUncoveredHides() {
+        val hidden = lock.withLock { hiddenByModeration.flatMap { (channelIdHex, byId) -> byId.map { Triple(channelIdHex, it.key, it.value) } } }
+        if (hidden.isEmpty()) return
+        val uncovered = hidden.filter { (channelIdHex, rumorId, author) -> !isHiddenByModeration(channelIdHex, rumorId, author) }
+        if (uncovered.isEmpty()) return
+        val release =
+            lock.withLock {
+                uncovered.mapNotNull { (channelIdHex, rumorId, _) ->
+                    hiddenByModeration[channelIdHex]?.let { byId ->
+                        byId.remove(rumorId)
+                        if (byId.isEmpty()) hiddenByModeration.remove(channelIdHex)
+                    }
+                    val wrapId = wrapIdByRumorId[rumorId] ?: return@mapNotNull null
+                    val wrap = channelWrapsById[channelIdHex]?.get(wrapId) ?: return@mapNotNull null
+                    val planes = planesForLocked(wrap.pubKey) ?: return@mapNotNull null
+                    Triple(channelIdHex, planes, wrap)
+                }
+            }
+        for ((channelIdHex, planes, wrap) in release) emitChannelRumors(channelIdHex, planes, listOf(wrap))
+    }
+
+    /** The planes a wrap at [address] opens on: its current or older plane, or every plane of a writer address. Caller holds [lock]. */
+    private fun planesForLocked(address: HexKey): List<ChannelPlane>? = (channelKeysByAddress[address] ?: historicalChannelKeysByAddress[address])?.let(::listOf) ?: writerChannelKeysByAddress[address]
 
     /** Channel id -> every rumor id a held moderation hide names there (honored or not yet). */
     fun moderationHideTargets(): Map<HexKey, Set<HexKey>> = lock.withLock { hidesByTarget.mapValues { it.value.keys.toSet() } }
@@ -1513,7 +1569,7 @@ class ConcordCommunitySession(
                 val wrap = channelWrapsById[channelIdHex]?.get(wrapId) ?: return null
                 // A restricted Channel's post at a writer address reopens on the writer plane of the
                 // read key it was posted under (CORD-03 §1).
-                val planes = (channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey])?.let(::listOf) ?: writerChannelKeysByAddress[wrap.pubKey] ?: return null
+                val planes = planesForLocked(wrap.pubKey) ?: return null
                 wrap to planes
             }
         return planes.firstNotNullOfOrNull { plane -> if (plane.channelIdHex == channelIdHex) ConcordPinning.sourceOf(wrap, plane, rumorId) else null }
@@ -1548,5 +1604,8 @@ class ConcordCommunitySession(
 
         /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
         const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
+
+        /** How many hidden rumors per channel a session re-judges on each fold. */
+        const val MAX_HIDDEN_RUMORS_PER_CHANNEL = 4000
     }
 }

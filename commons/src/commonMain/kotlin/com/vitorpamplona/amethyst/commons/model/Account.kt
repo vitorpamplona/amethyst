@@ -828,7 +828,7 @@ class Account(
         // against the fold; apply what it covers now to this channel's notes only. A target that
         // arrives later, or a Grant that folds later, is handled by the session's gate and the sweep
         // in refreshConcordChannelIndex.
-        if (rumor is DeletionRequestEvent && session != null) ConcordModerationHideSweep.sweep(cache, session, channelIdHex)
+        if (rumor is DeletionRequestEvent && session != null) ConcordModerationHideSweep.sweep(cache, session, channelIdHex, rumor.deleteEventIds())
     }
 
     /**

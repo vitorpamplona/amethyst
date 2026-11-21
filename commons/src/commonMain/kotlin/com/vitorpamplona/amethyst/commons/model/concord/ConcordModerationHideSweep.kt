@@ -38,29 +38,47 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 object ConcordModerationHideSweep {
     /**
      * Removes from [cache] every note [session]'s held hides cover now, on [onlyChannel] or on
-     * every channel. Returns the ids removed.
+     * every channel, and only among [onlyTargets] when given (a new kind 5 changes nothing but what
+     * it names). Each note removed is marked on the session, so it comes back if the hide stops
+     * being honored (CORD-03 §3). Returns the ids removed.
      */
     fun sweep(
         cache: EventCache,
         session: ConcordCommunitySession,
         onlyChannel: HexKey? = null,
+        onlyTargets: Collection<HexKey>? = null,
     ): List<HexKey> {
         val removed = ArrayList<HexKey>()
         val communityId = session.entry.id
+        if (onlyChannel != null && onlyTargets != null) {
+            val channelId = ConcordChannelId(communityId, onlyChannel)
+            for (target in onlyTargets) sweepOne(cache, session, channelId, target.lowercase(), removed)
+            return removed
+        }
         for ((channelIdHex, targets) in session.moderationHideTargets()) {
             if (onlyChannel != null && channelIdHex != onlyChannel) continue
             val channelId = ConcordChannelId(communityId, channelIdHex)
-            for (target in targets) {
-                val note = cache.getNoteIfExists(target) ?: continue
-                if (!isRumorOf(note, channelId, session)) continue
-                val author = note.event?.pubKey ?: continue
-                if (!session.isHiddenByModeration(channelIdHex, target, author)) continue
-                note.detachFromChildren()
-                cache.pruner.unlinkAndRemove(note)
-                removed.add(target)
-            }
+            val candidates = if (onlyTargets == null) targets else onlyTargets.map { it.lowercase() }.filter { it in targets }
+            for (target in candidates) sweepOne(cache, session, channelId, target, removed)
         }
         return removed
+    }
+
+    private fun sweepOne(
+        cache: EventCache,
+        session: ConcordCommunitySession,
+        channelId: ConcordChannelId,
+        target: HexKey,
+        removed: MutableList<HexKey>,
+    ) {
+        val note = cache.getNoteIfExists(target) ?: return
+        if (!isRumorOf(note, channelId, session)) return
+        val author = note.event?.pubKey ?: return
+        if (!session.isHiddenByModeration(channelId.channelId, target, author)) return
+        note.detachFromChildren()
+        cache.pruner.unlinkAndRemove(note)
+        session.markHiddenByModeration(channelId.channelId, target, author)
+        removed.add(target)
     }
 
     /** True when [note] is a Chat rumor of [channelId]: attached to its channel, or carried by a wrap the session holds there. */
