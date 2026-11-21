@@ -154,4 +154,65 @@
     <string name="play">再生</string>
     <string name="pause">一時停止</string>
     <string name="nest_notification_channel">Nests</string>
+    <string name="always_on_notif_tile_label">通知サービス</string>
+    <string name="share_target_as_highlight">新しいハイライト</string>
+    <string name="share_target_as_picture">新しい画像</string>
+    <string name="share_target_as_short_video">新しいショート動画</string>
+    <string name="share_target_as_video">新しい動画</string>
+    <string name="share_target_scan_qr">QR コードをスキャン</string>
+    <string name="shortcut_scan_qr_short">QR をスキャン</string>
+    <string name="shortcut_scan_qr_long">QR コードをスキャン</string>
+    <string name="always_on_notif_hide_details">詳細を隠す</string>
+    <string name="always_on_notif_show_details">詳細を表示</string>
+    <string name="always_on_notif_tile_subtitle_off">オフ</string>
+    <string name="always_on_notif_tile_subtitle_on">オン</string>
+    <string name="blossom_sync_cancel">キャンセル</string>
+    <string name="blossom_sync_channel_description">Blossom サーバー間でファイルをコピーしている間、進捗を表示します。</string>
+    <string name="blossom_sync_channel_name">Blossom 同期</string>
+    <string name="pow_notification_channel_description">NIP-13 のプルーフ・オブ・ワークをマイニング中の投稿を表示し、アプリを離れた後も完了できるようにします。</string>
+    <string name="pow_notification_channel_name">プルーフ・オブ・ワークのマイニング</string>
+    <string name="pow_notification_send_without_pow">今すぐ送信</string>
+    <string name="blossom_syncing">ファイルをサーバー間でコピー中…</string>
+    <plurals name="pow_mining_job">
+        <item quantity="other">%1$s • %2$d ビットでマイニング中</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="other">プルーフ・オブ・ワークをマイニング中… (待機中の投稿 %1$d 件)</item>
+    </plurals>
+    <string name="pow_mining_title">プルーフ・オブ・ワークをマイニング中</string>
+    <string name="pow_notification_sending">relay に送信中…</string>
+    <string name="pow_notification_cancel_all">キャンセル</string>
+    <string name="front_page_print_channel_name">The Observer の印刷</string>
+    <string name="front_page_print_channel_description">印刷中の The Observer を表示し、アプリを離れた後も完了できるようにします。</string>
+    <string name="front_page_print_cancel">キャンセル</string>
+    <string name="front_page_print_title">The Observer を印刷中</string>
+    <string name="front_page_print_step_probe">ランキングを確認中</string>
+    <string name="front_page_print_step_pull">各デスクを読み込み中 · %2$d 件中 %1$d 件</string>
+    <string name="front_page_print_step_write">執筆中</string>
+    <string name="front_page_print_step_fix">紙面を修正中</string>
+    <string name="front_page_print_step_check">引用、画像、リンクを確認中</string>
+    <string name="front_page_print_step_publish">Observer を公開中</string>
+    <string name="pow_time_left">残り約 %1$s</string>
+    <string name="pow_time_left_soon">まもなく</string>
+    <string name="pow_estimate_instant">&lt;1 秒</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="other">%1$d 分</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="other">%1$d 時間</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="other">%1$d 日</item>
+    </plurals>
+    <string name="pow_kind_report">通報</string>
+    <string name="health_connect_rationale_activity_label">Health Connect と Amethyst</string>
+    <string name="pow_kind_chat_message">チャットメッセージ</string>
+    <string name="napplet_cap_signer">暗号化</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">ファイル</string>
+    <string name="napplet_cap_common">ソーシャル操作</string>
+    <string name="napplet_cap_intent">他のアプリを開く</string>
 </resources>

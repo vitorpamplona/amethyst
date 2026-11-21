@@ -155,4 +155,71 @@
     <string name="mute_button">Sonido activado. Hacer clic para silenciar.</string>
     <string name="play">Reproducir</string>
     <string name="pause">Pausar</string>
+    <string name="always_on_notif_tile_label">Servicio de notificaciones</string>
+    <string name="share_target_as_highlight">Nuevo destacado</string>
+    <string name="share_target_as_picture">Nueva imagen</string>
+    <string name="share_target_as_short_video">Nuevo video corto</string>
+    <string name="share_target_as_video">Nuevo video</string>
+    <string name="share_target_scan_qr">Escanear código QR</string>
+    <string name="shortcut_scan_qr_short">Escanear QR</string>
+    <string name="shortcut_scan_qr_long">Escanear un código QR</string>
+    <string name="always_on_notif_hide_details">Ocultar detalles</string>
+    <string name="always_on_notif_show_details">Mostrar detalles</string>
+    <string name="always_on_notif_tile_subtitle_off">Desactivado</string>
+    <string name="always_on_notif_tile_subtitle_on">Activado</string>
+    <string name="blossom_sync_cancel">Cancelar</string>
+    <string name="blossom_sync_channel_description">Muestra el progreso mientras se copian tus archivos entre tus servidores Blossom.</string>
+    <string name="blossom_sync_channel_name">Sincronización de Blossom</string>
+    <string name="pow_notification_channel_description">Muestra las publicaciones que aún están minando su prueba de trabajo NIP-13 para que puedan terminar después de que salgas de la app.</string>
+    <string name="pow_notification_channel_name">Minado de prueba de trabajo</string>
+    <string name="pow_notification_send_without_pow">Enviar ahora</string>
+    <string name="blossom_syncing">Copiando tus archivos entre servidores…</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • minando a %2$d bit</item>
+        <item quantity="other">%1$s • minando a %2$d bits</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Minando prueba de trabajo… (%1$d publicación en cola)</item>
+        <item quantity="other">Minando prueba de trabajo… (%1$d publicaciones en cola)</item>
+    </plurals>
+    <string name="pow_mining_title">Minando prueba de trabajo</string>
+    <string name="pow_notification_sending">Enviando a los relés…</string>
+    <string name="pow_notification_cancel_all">Cancelar</string>
+    <string name="front_page_print_channel_name">The Observer, imprimiendo</string>
+    <string name="front_page_print_channel_description">Muestra The Observer mientras se imprime, para que pueda terminar después de que salgas de la app.</string>
+    <string name="front_page_print_cancel">Cancelar</string>
+    <string name="front_page_print_title">Imprimiendo The Observer</string>
+    <string name="front_page_print_step_probe">Comprobando tu clasificación</string>
+    <string name="front_page_print_step_pull">Leyendo las secciones · %1$d de %2$d</string>
+    <string name="front_page_print_step_write">Escribiendo</string>
+    <string name="front_page_print_step_fix">Corrigiendo la página</string>
+    <string name="front_page_print_step_check">Comprobando citas, imágenes y enlaces</string>
+    <string name="front_page_print_step_publish">Publicando tu Observer</string>
+    <string name="pow_time_left">≈ %1$s restantes</string>
+    <string name="pow_time_left_soon">en cualquier momento</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d segundo</item>
+        <item quantity="other">%1$d segundos</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d día</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <string name="pow_kind_report">Reporte</string>
+    <string name="health_connect_rationale_activity_label">Health Connect y Amethyst</string>
+    <string name="pow_kind_chat_message">Mensaje de chat</string>
+    <string name="napplet_cap_signer">Cifrado</string>
+    <string name="napplet_cap_outbox">Bandeja de salida</string>
+    <string name="napplet_cap_fs">Archivos</string>
+    <string name="napplet_cap_common">Acciones sociales</string>
+    <string name="napplet_cap_intent">Abrir otras apps</string>
 </resources>

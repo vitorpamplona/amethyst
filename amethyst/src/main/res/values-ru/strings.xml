@@ -157,4 +157,83 @@
     <string name="play">Воспроизведение</string>
     <string name="pause">Пауза</string>
     <string name="nest_notification_channel">Nests</string>
+    <string name="always_on_notif_tile_label">Служба уведомлений</string>
+    <string name="share_target_as_highlight">Новое выделение</string>
+    <string name="share_target_as_picture">Новое изображение</string>
+    <string name="share_target_as_short_video">Новое короткое видео</string>
+    <string name="share_target_as_video">Новое видео</string>
+    <string name="share_target_scan_qr">Сканировать QR-код</string>
+    <string name="shortcut_scan_qr_short">Сканировать QR</string>
+    <string name="shortcut_scan_qr_long">Сканировать QR-код</string>
+    <string name="always_on_notif_hide_details">Скрыть подробности</string>
+    <string name="always_on_notif_show_details">Показать подробности</string>
+    <string name="always_on_notif_tile_subtitle_off">Выкл.</string>
+    <string name="always_on_notif_tile_subtitle_on">Вкл.</string>
+    <string name="blossom_sync_cancel">Отмена</string>
+    <string name="blossom_sync_channel_description">Показывает ход копирования ваших файлов между серверами Blossom.</string>
+    <string name="blossom_sync_channel_name">Синхронизация Blossom</string>
+    <string name="pow_notification_channel_description">Показывает посты, для которых ещё добывается доказательство работы NIP-13, чтобы они могли завершиться после выхода из приложения.</string>
+    <string name="pow_notification_channel_name">Добыча доказательства работы</string>
+    <string name="pow_notification_send_without_pow">Отправить сейчас</string>
+    <string name="blossom_syncing">Копируем ваши файлы между серверами…</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • добыча на %2$d бит</item>
+        <item quantity="few">%1$s • добыча на %2$d бита</item>
+        <item quantity="many">%1$s • добыча на %2$d бит</item>
+        <item quantity="other">%1$s • добыча на %2$d бита</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Добыча доказательства работы… (%1$d пост в очереди)</item>
+        <item quantity="few">Добыча доказательства работы… (%1$d поста в очереди)</item>
+        <item quantity="many">Добыча доказательства работы… (%1$d постов в очереди)</item>
+        <item quantity="other">Добыча доказательства работы… (%1$d поста в очереди)</item>
+    </plurals>
+    <string name="pow_mining_title">Добыча доказательства работы</string>
+    <string name="pow_notification_sending">Отправка на relay…</string>
+    <string name="pow_notification_cancel_all">Отмена</string>
+    <string name="front_page_print_channel_name">The Observer, печать</string>
+    <string name="front_page_print_channel_description">Показывает The Observer во время печати, чтобы она могла завершиться после выхода из приложения.</string>
+    <string name="front_page_print_cancel">Отмена</string>
+    <string name="front_page_print_title">Печать The Observer</string>
+    <string name="front_page_print_step_probe">Проверка вашего рейтинга</string>
+    <string name="front_page_print_step_pull">Читаем отделы · %1$d из %2$d</string>
+    <string name="front_page_print_step_write">Написание</string>
+    <string name="front_page_print_step_fix">Исправляем страницу</string>
+    <string name="front_page_print_step_check">Проверяем цитаты, изображения и ссылки</string>
+    <string name="front_page_print_step_publish">Публикуем ваш Observer</string>
+    <string name="pow_time_left">≈ осталось %1$s</string>
+    <string name="pow_time_left_soon">вот-вот</string>
+    <string name="pow_estimate_instant">&lt;1 с</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d секунда</item>
+        <item quantity="few">%1$d секунды</item>
+        <item quantity="many">%1$d секунд</item>
+        <item quantity="other">%1$d секунды</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d минута</item>
+        <item quantity="few">%1$d минуты</item>
+        <item quantity="many">%1$d минут</item>
+        <item quantity="other">%1$d минуты</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d час</item>
+        <item quantity="few">%1$d часа</item>
+        <item quantity="many">%1$d часов</item>
+        <item quantity="other">%1$d часа</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <string name="pow_kind_report">Жалоба</string>
+    <string name="health_connect_rationale_activity_label">Health Connect и Amethyst</string>
+    <string name="pow_kind_chat_message">Сообщение чата</string>
+    <string name="napplet_cap_signer">Шифрование</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Файлы</string>
+    <string name="napplet_cap_common">Социальные действия</string>
+    <string name="napplet_cap_intent">Открывать другие приложения</string>
 </resources>
