@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelDelivery
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
@@ -114,6 +115,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -3144,32 +3146,46 @@ class AccountConcordActions(
                 val channelIdHex = pending.channelIdHex
                 val delivery = pending.delivery
                 val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
-                val verdict =
-                    ConcordAccessDrain.verdict(delivery, channelIdHex, me, held?.epoch) {
-                        ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer)
-                    }
-                when (verdict) {
-                    ConcordAccessDrain.Verdict.WAIT -> {
-                        continue
-                    }
-
-                    ConcordAccessDrain.Verdict.NOT_FOR_ME, ConcordAccessDrain.Verdict.STALE -> {
-                        session.retireAccessWrap(pending.wrapId)
-                    }
-
-                    ConcordAccessDrain.Verdict.OPEN -> {
-                        val key = ConcordChannelAccess.openAccess(delivery, account.signer, channelIdHex.hexToByteArray())
-                        session.retireAccessWrap(pending.wrapId)
-                        if (key == null) continue
-                        val adopted =
-                            updateConcordEntry(session.entry.id) { cur ->
-                                ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))
-                            }
-                        if (adopted) Log.i("Concord") { "Access delivery ${session.entry.id}/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
-                    }
-                }
+                // Settled only once the key is written or the delivery definitively holds nothing for
+                // us: a signer that could not answer, or a List that could not be written, leaves it
+                // for the next drain (holders read us as served, so none would deliver again).
+                val settled =
+                    ConcordAccessDrain.drainOne(
+                        delivery = delivery,
+                        channelIdHex = channelIdHex,
+                        signer = account.signer,
+                        heldEpoch = held?.epoch,
+                        trusted = { ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer) },
+                    ) { key -> adoptAccessKey(session.entry.id, channelIdHex, key, delivery) }
+                if (settled) session.retireAccessWrap(pending.wrapId)
             }
         }
+    }
+
+    /**
+     * Writes a delivered Channel key into the Community List. True once the List holds it (written
+     * now, or already held at that epoch or later); false when the write failed and must be retried.
+     */
+    private suspend fun adoptAccessKey(
+        communityId: String,
+        channelIdHex: HexKey,
+        key: ByteArray,
+        delivery: ChannelDelivery,
+    ): Boolean {
+        var changed = false
+        val written =
+            try {
+                writeConcordList { list ->
+                    list.update(communityId) { cur ->
+                        ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))?.also { changed = true }
+                    }
+                }
+            } catch (e: SignerExceptions) {
+                Log.w("Concord", "Access delivery $communityId/$channelIdHex: Community List not signed, retrying later", e)
+                false
+            }
+        if (written && changed) Log.i("Concord") { "Access delivery $communityId/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
+        return written
     }
 
     /**
