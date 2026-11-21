@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
+import com.vitorpamplona.amethyst.commons.model.buzzDmAddRefusedHistoryTag
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
@@ -276,7 +277,9 @@ object BuzzCommands {
      * `needs-choice: history`, which this reports as `needs_history_choice` so the caller sends
      * again with `include` (the DM grows in place and PUBKEY sees its history) or `exclude` (no tag:
      * the relay finds or creates the DM of this DM's people plus PUBKEY). `--include-history` is the
-     * old spelling of `--history include`. `channel_id` is the DM the conversation is in now, read
+     * old spelling of `--history include`. An agent may send no history tag at all (the relay answers
+     * `forbidden: only people can share a DM's history`), so for the default `ask` that refusal is
+     * answered by sending the add again untagged, and `history` reports `exclude`. `channel_id` is the DM the conversation is in now, read
      * from the relay's OK, and `created` says whether the relay made it just now.
      */
     private suspend fun dmAddMember(
@@ -299,15 +302,17 @@ object BuzzCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val template =
-                DmAddMemberEvent.build(channelId, member) {
-                    when (history) {
-                        HISTORY_ASK -> dmHistory(DmHistoryTag.ASK)
-                        HISTORY_INCLUDE -> dmHistory(DmHistoryTag.INCLUDE)
-                    }
-                }
-            val signed = ctx.signer.sign(template)
-            val ack = ctx.publish(signed, setOf(relay))
+            var sentHistory = history
+            var signed = ctx.signer.sign(dmAddMemberTemplate(channelId, member, sentHistory))
+            var ack = ctx.publish(signed, setOf(relay))
+            if (sentHistory == HISTORY_ASK && buzzDmAddRefusedHistoryTag(ack)) {
+                // An agent may not send a history tag at all (only people choose): send the default
+                // add again untagged, as the app does. An explicit `--history include` keeps the
+                // relay's refusal instead of quietly becoming something else.
+                sentHistory = HISTORY_EXCLUDE
+                signed = ctx.signer.sign(dmAddMemberTemplate(channelId, member, sentHistory))
+                ack = ctx.publish(signed, setOf(relay))
+            }
             if (ack.values.none { it.accepted } && ack.values.any { it.message.startsWith(BuzzDmRules.NEEDS_HISTORY_CHOICE) }) {
                 return Output.error(
                     "needs_history_choice",
@@ -324,7 +329,7 @@ object BuzzCommands {
                     "relay" to relay.url,
                     "group_id" to channelId,
                     "member" to member,
-                    "history" to history,
+                    "history" to sentHistory,
                     "published" to ack.values.any { it.accepted },
                     "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
                     "created" to okMessage?.contains("\"created\":true"),
@@ -332,6 +337,17 @@ object BuzzCommands {
                 ),
             )
             return 0
+        }
+    }
+
+    private fun dmAddMemberTemplate(
+        channelId: String,
+        member: HexKey,
+        history: String,
+    ) = DmAddMemberEvent.build(channelId, member) {
+        when (history) {
+            HISTORY_ASK -> dmHistory(DmHistoryTag.ASK)
+            HISTORY_INCLUDE -> dmHistory(DmHistoryTag.INCLUDE)
         }
     }
 
