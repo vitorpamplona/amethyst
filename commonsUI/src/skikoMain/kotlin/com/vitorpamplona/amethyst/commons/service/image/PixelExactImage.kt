@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import coil3.compose.AsyncImagePainter
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Color
@@ -45,6 +48,10 @@ import kotlin.time.TimeSource
  * narrower), so this scales a copy to the size on screen once, keeps it ([ExactCopies]), and draws
  * that copy at whole pixels. A size that changes from frame to frame (a zoom, a resize being
  * dragged) draws the picture scaled, as before, rather than making a copy per frame.
+ *
+ * It sees only the scale of the canvas it records into, not a `graphicsLayer` scale applied when the
+ * layer plays back: under a layer that zooms in, the copy (made for the unzoomed size) is what gets
+ * enlarged. A viewer that zooms that way draws the full bitmap instead ([withFullResolution]).
  */
 class PixelExactImage(
     val bitmap: Bitmap,
@@ -123,10 +130,22 @@ class PixelExactImage(
 
     private companion object {
         const val ANIMATING_MS = 250L
-        const val MAX_COPY_PIXELS = 16L * 1024 * 1024
+
+        // A 2560x1600 screen: one copy can't take more than a quarter of [ExactCopies]' budget.
+        const val MAX_COPY_PIXELS = 4L * 1024 * 1024
         val SHRINK = FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR)
         val GROW = CubicResampler(1f / 3, 1f / 3)
     }
+}
+
+/**
+ * This state with a loaded [PixelExactImage] drawn from its full bitmap, for a viewer that zooms with
+ * a `graphicsLayer` scale (see [PixelExactImage]): the zoom then shows the picture's own pixels.
+ */
+fun AsyncImagePainter.State.withFullResolution(): AsyncImagePainter.State {
+    if (this !is AsyncImagePainter.State.Success) return this
+    val image = result.image as? PixelExactImage ?: return this
+    return AsyncImagePainter.State.Success(BitmapPainter(image.bitmap.asComposeImageBitmap()), result)
 }
 
 /**

@@ -51,6 +51,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.size.Size
 import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
+import com.vitorpamplona.amethyst.commons.service.image.withFullResolution
 import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 
@@ -171,6 +172,9 @@ fun ZoomableImage(
                     contentDescription = null,
                     modifier = imageModifier,
                     contentScale = ContentScale.Fit,
+                    // The zoom is a layer scale, which a 1:1 copy at the fitted size can't follow:
+                    // draw the decoded original, so zooming in shows its pixels.
+                    transform = { it.withFullResolution() },
                     onState = { state ->
                         when (state) {
                             is AsyncImagePainter.State.Success -> {

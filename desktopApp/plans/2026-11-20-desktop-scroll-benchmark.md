@@ -220,6 +220,15 @@ Fixed:
   channel values differ, by at most 25 of 255, at the seams).
 - The video's extracted thumbnail draws through `PixelExactImage` too.
 
+The copies live only in memory: Coil's disk cache keeps the downloaded file as it was, one per URL,
+and every size decodes from it (decoding runs off the UI thread; the drawing was what cost frames).
+A `PixelExactImage` sees only the scale of the canvas it is recorded into, not a `graphicsLayer`
+scale applied when the layer plays back, so a viewer that zooms with a layer would enlarge the copy
+made for the fitted size. The image viewer (`ZoomableImage`) asks for `Size.ORIGINAL`, which the
+feed's downsampled copies can't answer, and draws that decode's own bitmap
+(`AsyncImagePainter.State.withFullResolution`), so its zoom shows the picture's pixels
+(`PixelExactZoomTest`). Copies are capped at 4 MP, so one can't fill the copy budget alone.
+
 | pass, 3 boots | before | after |
 |---|---|---|
 | up: fps, UI work per frame | 46.0, 18.5 ms | 51.0, 11.8 ms |
