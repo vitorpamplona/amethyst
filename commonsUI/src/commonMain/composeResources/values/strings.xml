@@ -1795,6 +1795,7 @@
     <string name="reset_marmot_confirm_action">Reset</string>
     <string name="application_preferences">Application Preferences</string>
     <string name="language">Language</string>
+    <string name="language_system_default">System default</string>
     <string name="accent_color">Accent Color</string>
     <string name="accent_color_description">Main color used across buttons and links</string>
     <string name="accent_color_account_description">Overrides the application accent color for this account. Pick Application to follow it again.</string>

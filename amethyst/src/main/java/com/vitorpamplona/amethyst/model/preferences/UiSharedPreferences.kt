@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import android.app.LocaleManager
 import android.app.UiModeManager
 import android.content.Context
 import android.os.Build
@@ -65,6 +66,12 @@ class UiSharedPreferences(
 
     // UI Preferences. Makes sure to wait for it to avoid blinking themes and language preferences
     val value = UiSettingsFlow.build(prefs)
+
+    // Must stay above languageUpdate: initializers run in source order, so the eager collector
+    // below starts from Android's per-app locale instead of pushing the stored one over it.
+    init {
+        adoptSystemAppLanguage()
+    }
 
     val languageUpdate =
         value.preferredLanguage
@@ -116,7 +123,7 @@ class UiSharedPreferences(
      * unchanged, and ActivityRecord.applyAppSpecificConfig gates the activity reconfiguration on
      * having actually changed. What remains is one Binder round trip per launch, off the main
      * thread. (This is why the deduplication in applyLanguage below does not generalise here: it
-     * compares against getApplicationLocales(), the authoritative value, not a private copy.)
+     * compares against the system's per-app locale, the authoritative value, not a private copy.)
      *
      * MainActivity declares `uiMode` in its `configChanges`, so any change that does result is
      * delivered to `onConfigurationChanged` rather than recreating the activity.
@@ -141,6 +148,49 @@ class UiSharedPreferences(
     }
 
     /**
+     * On API 33+, makes the per-app locale Android holds for this package the preference, so the
+     * language picked or cleared in Android's own Settings › Apps › Amethyst › Language survives
+     * the next cold start instead of being overwritten by the stored choice.
+     *
+     * The system keeps that locale across process death and is what Android's screen edits, so on
+     * 33+ it is the source of truth; the preference only mirrors it. Below 33 there is no system
+     * store (and the manifest has no AppCompat `autoStoreLocales` service), so the stored
+     * preference must still be pushed at every start and this does nothing.
+     *
+     * A null preference means "System default": it is what an empty per-app locale list adopts,
+     * and what clears that list when the user picks it in the app.
+     */
+    private fun adoptSystemAppLanguage() {
+        val system = systemAppLocales() ?: return
+        val language = system.toLanguageTags().ifBlank { null }
+        if (language != value.preferredLanguage.value) {
+            value.preferredLanguage.tryEmit(language)
+        }
+    }
+
+    /**
+     * The per-app locale list Android holds for this package, read from the framework's
+     * [LocaleManager], or null below API 33 or when it can't be read.
+     *
+     * Not [AppCompatDelegate.getApplicationLocales]: on API 33+ AppCompat reaches the
+     * LocaleManager through a live AppCompat activity, and with none yet (this runs during
+     * Application start-up) it reports an empty list and its setter does nothing. The
+     * application context is enough for [LocaleManager].
+     */
+    private fun systemAppLocales(): LocaleListCompat? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+
+        return try {
+            context.getSystemService<LocaleManager>()?.applicationLocales?.let { LocaleListCompat.wrap(it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("UiSharedPreferences", "Could not read the per-application locales", e)
+            null
+        }
+    }
+
+    /**
      * Pushes the preferred language into AppCompat, skipping the call when the app already
      * runs in that locale.
      *
@@ -152,14 +202,17 @@ class UiSharedPreferences(
      * the locale had not changed since the previous run -- and StrictMode reported it as a
      * DiskReadViolation via the Binder call.
      *
-     * [AppCompatDelegate.getApplicationLocales] is `@AnyThread` and only reads state, so the
-     * comparison runs off the main thread. Actual changes still hop to the main thread:
-     * below API 33 AppCompat applies them in process by reconfiguring (and possibly
-     * recreating) the active activities.
+     * On API 33+ the comparison is against [systemAppLocales], the authoritative value, which is
+     * right before any activity exists; [AppCompatDelegate.getApplicationLocales] is not (see
+     * there). Below 33 AppCompat's own copy is the only one. Both reads are off the main thread.
+     * Actual changes still go through AppCompat on the main thread: user picks happen with
+     * MainActivity alive, and below API 33 AppCompat applies them in process by reconfiguring
+     * (and possibly recreating) the active activities.
      */
     private suspend fun applyLanguage(language: String?) {
         val newLocales = LocaleListCompat.forLanguageTags(language)
-        if (newLocales == AppCompatDelegate.getApplicationLocales()) return
+        val current = systemAppLocales() ?: AppCompatDelegate.getApplicationLocales()
+        if (newLocales == current) return
 
         withContext(Dispatchers.Main) {
             AppCompatDelegate.setApplicationLocales(newLocales)
