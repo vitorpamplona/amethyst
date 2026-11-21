@@ -9,6 +9,9 @@
 #
 #   scripts/contributors.sh                          # since the last release tag
 #   scripts/contributors.sh --from v1.18.0 --to v1.19.0
+#   scripts/contributors.sh --title Translations -- \
+#     'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
+#     'amethyst/src/main/res/values-*/strings.xml'   # translators only
 #
 # Flags:
 #   --from REF      Start of the range (exclusive). Defaults to the most recent
@@ -16,6 +19,8 @@
 #                   works both before tagging and once --to is the new tag.
 #   --to REF        End of the range (inclusive). Defaults to HEAD.
 #   --mapping PATH  Override the data file (default docs/changelog/github.json).
+#   --title NAME    Section heading (default Contributors).
+#   -- PATH...      Only count commits that touch these paths (git pathspecs).
 #
 # docs/changelog/github.json holds three lists:
 #   mappings  GitHub username -> npub. The key is what a GitHub noreply address
@@ -36,6 +41,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MAPPING="$REPO_ROOT/docs/changelog/github.json"
 FROM=""
 TO="HEAD"
+TITLE="Contributors"
+PATHS=()
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -44,7 +51,9 @@ while [ $# -gt 0 ]; do
     --from)    FROM="${2:?--from needs a value}"; shift 2 ;;
     --to)      TO="${2:?--to needs a value}"; shift 2 ;;
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
-    -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
+    --title)   TITLE="${2:?--title needs a value}"; shift 2 ;;
+    --)        shift; PATHS=("$@"); break ;;
+    -h|--help) sed -n '2,37p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
 done
@@ -61,17 +70,18 @@ if [ -z "$FROM" ]; then
 fi
 git -C "$REPO_ROOT" rev-parse --verify --quiet "$FROM^{commit}" >/dev/null || die "unknown ref: $FROM"
 
-echo "# Contributors from $FROM to $TO" >&2
+echo "# $TITLE from $FROM to $TO" >&2
 
-# One "name<TAB>email" line per author and per Co-authored-by trailer.
+# One "name<TAB>email" line per author and per Co-authored-by trailer. The
+# ${PATHS[@]+…} form keeps an empty array from tripping `set -u` on bash 3.2.
 identities() {
-  git -C "$REPO_ROOT" log --no-merges --format='%an%x09%ae' "$FROM..$TO"
+  git -C "$REPO_ROOT" log --no-merges --format='%an%x09%ae' "$FROM..$TO" -- ${PATHS[@]+"${PATHS[@]}"}
   git -C "$REPO_ROOT" log --no-merges \
-    --format='%(trailers:key=Co-authored-by,valueonly,separator=%x0A)' "$FROM..$TO" \
+    --format='%(trailers:key=Co-authored-by,valueonly,separator=%x0A)' "$FROM..$TO" -- ${PATHS[@]+"${PATHS[@]}"} \
     | sed -n 's/^[[:space:]]*\(.*[^[:space:]]\)[[:space:]]*<\([^>]*\)>[[:space:]]*$/\1\t\2/p'
 }
 
-identities | jq -n -R -r --slurpfile file "$MAPPING" '
+identities | jq -n -R -r --arg title "$TITLE" --slurpfile file "$MAPPING" '
   [inputs] | map(select(length > 0) | split("\t") | { name: .[0], email: (.[1] // "") }) as $ids
   | ($file[0]) as $f
   | ( ($f.mappings // {}) | with_entries(.key |= ascii_downcase) ) as $map
@@ -94,7 +104,7 @@ identities | jq -n -R -r --slurpfile file "$MAPPING" '
   | ( [ .[] | select(.key == null or (($map[.key] // "") | length) == 0) ]
       | group_by(.key // "\(.name) <\(.email)>")
       | map({ who: (.[0].key // "\(.[0].name) <\(.[0].email)>"), n: length }) | sort_by(-.n) ) as $unmapped
-  | "## Contributors\n\n"
+  | "## \($title)\n\n"
     + ( [ $credited[] | "- @\(.npub)" ] | join("\n") )
     + ( if ($unmapped | length) > 0
         then "\n\n# UNMAPPED (no npub in github.json — add it under mappings, or alias the identity):\n"
