@@ -96,6 +96,9 @@ Stop and ask the user about any missing English string that looks plural-shaped.
 `<plurals>` first: a key's type is fixed by the source, so a translator cannot make a `<string>` plural in
 one locale, and translating the wrong shape means fixing it in every locale.
 
+**Fixing plurals is part of this pass**, existing strings included: run the catalog scan below, review
+every hit, and fix the real ones (see "Fixing existing plurals" in step 4).
+
 **Judge by meaning, not by the English wording.** English barely inflects, so a count can look harmless
 and still need a plural. Any `%d` that counts things is a candidate:
 
@@ -236,6 +239,27 @@ repo:
    well; they write only to the scratch dir.
 4. `validate`, fix, repeat. Then spot-read a sample yourself: the checks catch structure, not meaning.
 5. `insert`, then the gates.
+
+### Fixing existing plurals
+
+**Two commits:** the missing translations first, then the plural fixes. A plural fix touches the English
+source, the call sites and every locale that has the key, so it reviews and reverts on its own.
+
+- **One counted noun:** convert the key to `<plurals>` (step 3), and pass the count as the quantity
+  at the call site: `pluralStringRes(Res.plurals.x, count, …args)`. The quantity can be any argument
+  (`audience_count_with_private` is chosen by `%2$d`).
+- **Several counted nouns in one string** (`"%1$d vertices · %2$d faces"`): split it into one plural per
+  noun and join the pieces at the call site, or turn a stats line into label: value
+  (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a number. The English changes shape, so ask
+  the user which one. Don't join sentence fragments whose word order a language may need to change;
+  whole sentences or list items are safe.
+- **Re-translate, don't patch:** save each locale's old wording, delete the old entries from every locale,
+  then write `<locale>.en.xml` by hand with only the changed keys (`extract` has no key filter and would
+  also pull each locale's unrelated gaps). Translators reuse the old wording, and `validate` /
+  `insert` work as usual. Re-add a key only to the locales that had it.
+- Still left as strings: constant counts, ratios against a constant (`"%1$d of %2$d pins"` with
+  `MAX_ENTRIES`), impersonal phrasing that agrees with nothing (cs `"Nalezeno %1$d z %2$d"`),
+  abbreviations and percentages.
 
 ## 5. Gates, in order
 
