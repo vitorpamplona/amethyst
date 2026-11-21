@@ -69,7 +69,7 @@ jobs:
           - { os: ubuntu-latest,    arch: x64,   family: linux-portable, tasks: "createReleaseDistributable trainReleaseAotCache createReleaseAppImage" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux-portable, tasks: "createReleaseDistributable trainReleaseAotCache createReleaseAppImage" }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60  # linux-portable leg also downloads the freedesktop runtime + builds the Flatpak bundle
+    timeout-minutes: 75  # linux-portable leg also trains the AOT cache (30 min an attempt), downloads the freedesktop runtime + builds the Flatpak bundle
     defaults:
       run:
         shell: bash
@@ -157,8 +157,9 @@ jobs:
           timeout_minutes: 15
           command: |
             set -euo pipefail
-            # xvfb: trainReleaseAotCache starts the app to train its AOT cache.
-            sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder xvfb
+            # xvfb: trainReleaseAotCache starts the app to train its AOT cache. libegl1: the arm64
+            # skiko links libEGL.so.1 (see the .deb step below), without which that start fails.
+            sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder xvfb libegl1
             flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
             FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.yml | cut -d"'" -f2)
             flatpak install --user --noninteractive flathub \
@@ -202,7 +203,10 @@ jobs:
           max_attempts: 2
           # macOS needs far longer: notarizeReleaseDmg blocks on `notarytool
           # submit --wait`, which is minutes-to-tens-of-minutes on Apple's side.
-          timeout_minutes: ${{ matrix.family == 'macos' && 45 || 15 }}
+          # The Linux portable legs build, then train the AOT cache (a start, a
+          # scroll of the feed, then assembling the cache) and the AppImage: a cold
+          # attempt ran past 15 min on both architectures (release run 478).
+          timeout_minutes: ${{ matrix.family == 'macos' && 45 || matrix.family == 'linux-portable' && 30 || 15 }}
           # Append notarization on the macOS leg. `packageReleaseDmg` only SIGNS
           # the DMG — notarization is a separate Compose task, and because it was
           # never invoked every release up to v1.13.1 shipped a signed but
@@ -213,10 +217,8 @@ jobs:
           # Gated on the cert AND all three notary secrets being present, so forks
           # and credential-less runs keep producing a plain unsigned DMG exactly as
           # before instead of failing.
-          # The portable legs train the image's AOT cache (trainReleaseAotCache), which starts the app
-          # and scrolls its feed: on a desktop-sized screen, so it trains the wide shell users see, not
-          # the phone layout xvfb-run's default 640x480 screen gives.
-          command: ${{ matrix.family == 'linux-portable' && 'xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" ' || '' }}./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}${{ (matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_ID != '') && ' :desktopApp:notarizeReleaseDmg' || '' }}
+          # The portable legs train the image's AOT cache (trainReleaseAotCache), which starts the app.
+          command: ${{ matrix.family == 'linux-portable' && 'xvfb-run --auto-servernum ' || '' }}./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}${{ (matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_ID != '') && ' :desktopApp:notarizeReleaseDmg' || '' }}
 
       # Regression guard. The missing-notarization bug was invisible for many
       # releases precisely because nothing ever asserted the outcome; assert it

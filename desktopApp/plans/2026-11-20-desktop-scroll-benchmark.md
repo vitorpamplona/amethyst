@@ -135,6 +135,9 @@ and linked and its method profiles (JEP 515), so the JIT compiles hot methods ea
 scroll path ran in no training run. `trainReleaseAotCache` now runs this benchmark while it
 records: the feed loads for `aotTrainingSeconds`, then the benchmark scrolls it and exits the app,
 whose JVM then writes the profile (`-Pamethyst.aotTrainingScroll=false` trains the start alone).
+It scrolls with `-Damethyst.scrollBench.measure=false`: the same passes without the timing event
+queue, image listener, frame recorder or screenshots, so the cache doesn't load the benchmark's
+classes at every start or profile its receivers at hot call sites.
 
 Measured on the packaged release image (JBR 25.0.4.1, same container as above), three images
 built from one `createReleaseDistributable`, the images taking turns over two rounds, 4 boots each
@@ -158,8 +161,27 @@ compiles more (7.7 s against 4.2 s), on the compiler threads, and every pass aft
 less and draws faster, because the code it runs was compiled with the training's profile instead
 of after a slow warm-up. The cost is 16 MB of cache and ~30 s more of the release's training run.
 
+The table's scroll cache was trained with the measuring on. Retrained without it (what ships),
+on a rebuilt image, start-only against start + scroll, 3 and 4 boots (one start-only boot lost its
+X connection before the app ran, a harness hiccup the next boot didn't repeat):
+
+| pass | AOT cache, start only | AOT cache, start + scroll (no measuring) |
+|---|---|---|
+| down: fps, gap p90 / p99 ms | 32.8, 54.1 / 113.3 | **37.0, 46.6 / 71.0** |
+| up: fps, gap p99 | 48.8, 62.6 | **55.1, 39.8** |
+| down-again: fps, gap p99 | 46.0, 54.2 | **54.5, 38.5** |
+| JIT ms in down / up / down-again | 4,992 / 1,657 / 1,090 | 6,076 / 724 / 606 |
+| cache size | 174 MB | 193 MB |
+
 Trained and measured on the same benchmark: the profile fits the feed's scroll path, which is what
 users scroll, but other screens gain only what the start already covered.
+
+### The release run itself
+
+Release run 478 (9 Nov), the only one with a trained cache so far, ran past the build step's
+15-minute attempt on both Linux portable legs, and its arm64 training failed: the app couldn't
+load `libskiko-linux-arm64.so`, which links `libEGL.so.1`, missing from the runner. Those legs now
+get 30 minutes an attempt (the job 75) and `libegl1`.
 
 ## Next
 

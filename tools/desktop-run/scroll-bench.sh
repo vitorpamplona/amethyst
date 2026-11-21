@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
     --out) out="$2"; shift 2 ;;
     --app) app="$2"; shift 2 ;;
     --) shift; extra=("$@"); break ;;
-    *) sed -n '3,27p' "$0"; exit 2 ;;
+    *) awk 'NR >= 3 && /^#/ { sub(/^# ?/, ""); print; next } NR >= 3 { exit }' "$0"; exit 2 ;;
   esac
 done
 
@@ -81,10 +81,16 @@ if [ -n "$app" ]; then
   [ -x "$app/bin/Amethyst" ] || { echo "No launcher at $app/bin/Amethyst" >&2; exit 2; }
   # The virtual display run-headless.sh uses, started the same way when it isn't up.
   export DISPLAY="${AMETHYST_DISPLAY:-:99}"
-  # A socket without its Xvfb is left over from one that exited: start a new one.
-  if ! { [ -S "/tmp/.X11-unix/X${DISPLAY#:}" ] && pgrep -f "^[^ ]*Xvfb $DISPLAY" > /dev/null; }; then
+  # Up means its socket exists and its Xvfb runs: a socket alone is left over from one that exited.
+  xdpy_alive() { [ -S "/tmp/.X11-unix/X${DISPLAY#:}" ] && pgrep -f "^[^ ]*Xvfb $DISPLAY" > /dev/null; }
+  if ! xdpy_alive; then
+    command -v Xvfb > /dev/null || { echo "Xvfb is not installed (apt-get install xvfb)" >&2; exit 1; }
+    # No Xvfb runs on this display, so its socket and lock are left over: remove them, so the socket
+    # that appears next is the new server's, listening.
+    rm -f "/tmp/.X11-unix/X${DISPLAY#:}" "/tmp/.X${DISPLAY#:}-lock"
     Xvfb "$DISPLAY" -screen 0 "${AMETHYST_SCREEN:-1600x1000x24}" -nolisten tcp > "$out/xvfb.log" 2>&1 &
-    for _ in $(seq 1 50); do [ -S "/tmp/.X11-unix/X${DISPLAY#:}" ] && break; sleep 0.1; done
+    for _ in $(seq 1 50); do xdpy_alive && break; sleep 0.1; done
+    xdpy_alive || { echo "Xvfb did not start on $DISPLAY:" >&2; cat "$out/xvfb.log" >&2; exit 1; }
   fi
 fi
 

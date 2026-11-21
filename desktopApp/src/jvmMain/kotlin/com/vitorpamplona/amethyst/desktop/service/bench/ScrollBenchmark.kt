@@ -78,7 +78,7 @@ import kotlin.system.exitProcess
 object ScrollBenchmark {
     private const val TAG = "ScrollBenchmark"
 
-    // Read with its `.waitSeconds`, `.notches`, `.intervalMs` and `.at` settings. The dev `run`
+    // Read with its `.waitSeconds`, `.notches`, `.intervalMs`, `.at` and `.measure` settings. The dev `run`
     // forwards only the properties desktopApp/build.gradle.kts lists: add a new one there too.
     const val PROPERTY = "amethyst.scrollBench"
 
@@ -92,6 +92,10 @@ object ScrollBenchmark {
         // Where in the window to scroll, as fractions of its width and height: the feed's column.
         val atX: Double,
         val atY: Double,
+        // False: scroll only, with none of the measuring (the timing event queue, the image-load
+        // listener, the frame recorder, screenshots). The release's AOT training scrolls this way, so
+        // the cache it ships profiles the app as users run it, not the benchmark's instruments.
+        val measure: Boolean = true,
     )
 
     fun config(): Config? {
@@ -109,13 +113,14 @@ object ScrollBenchmark {
             intervalMs = System.getProperty("$PROPERTY.intervalMs")?.toLongOrNull() ?: 16,
             atX = at[0],
             atY = at[1],
+            measure = System.getProperty("$PROPERTY.measure")?.toBooleanStrictOrNull() ?: true,
         )
     }
 
     private val configured: Config? by lazy { config() }
 
-    /** Whether this run is a benchmark: the image loader then reports to [ImageLoadStats]. */
-    val enabled: Boolean get() = configured != null
+    /** Whether this run measures: the image loader then reports to [ImageLoadStats]. */
+    val measuring: Boolean get() = configured?.measure == true
 
     /** Runs the benchmark in [window] when the property asks for it; nothing otherwise. */
     @Composable
@@ -144,23 +149,49 @@ object ScrollBenchmark {
         UP(-1),
     }
 
+    private val PASSES = listOf("down" to Direction.DOWN, "up" to Direction.UP, "down-again" to Direction.DOWN)
+
+    /** Written last when the passes are done, in either mode. */
+    const val DONE_FILE = "done.txt"
+
     private suspend fun run(
         window: JFrame,
         config: Config,
     ) {
         Log.i(TAG) { "Scroll benchmark: starting in ${config.waitSeconds} s, ${config.notches} notches every ${config.intervalMs} ms" }
         delay(config.waitSeconds * 1000)
+        if (config.measure) measure(window, config) else scrollOnly(window, config)
+        // Written last, in both modes: the run is done (the AOT training waits for it).
+        writeFile(File(config.outDir, DONE_FILE), PASSES.joinToString(" ") { it.first } + "\n")
+    }
 
+    /** The three passes, with no instruments: what the AOT training records. */
+    private suspend fun scrollOnly(
+        window: JFrame,
+        config: Config,
+    ) {
+        for ((name, direction) in PASSES) {
+            delay(2_000)
+            val (target, at) = wheelTarget(window, config)
+            withContext(Dispatchers.IO) { scroll(target, at, config, direction) }
+            delay(500)
+            Log.i(TAG) { "Pass $name scrolled" }
+        }
+    }
+
+    private suspend fun measure(
+        window: JFrame,
+        config: Config,
+    ) {
         val queue = TimingEventQueue()
         Toolkit.getDefaultToolkit().systemEventQueue.push(queue)
 
-        val passes = listOf("down" to Direction.DOWN, "up" to Direction.UP, "down-again" to Direction.DOWN)
         val stats = mutableListOf<PassStats>()
         val frames = StringBuilder("pass\tframe\tstart_ms\tinterval_ms\tbusy_ms\n")
         // The image memory cache after each pass: how full it is, and what it holds.
         val cacheLog = StringBuilder("pass\tsize_bytes\tmax_bytes\tentries\n")
         cacheLog.append("start\t").append(memoryCacheState()).append('\n')
-        for ((name, direction) in passes) {
+        for ((name, direction) in PASSES) {
             // Lets what the last pass started (image loads, a feed page) settle before the next.
             delay(2_000)
             val pass = measurePass(window, config, name, direction, queue)
@@ -187,7 +218,7 @@ object ScrollBenchmark {
         writeFile(File(config.outDir, "frames.tsv"), frames.toString())
         writeFile(File(config.outDir, "images.tsv"), ImageLoadStats.log())
         writeFile(File(config.outDir, "memory-cache.tsv"), cacheLog.toString())
-        // Written last: the script takes its presence as the run being done.
+        // Written last of the reports: scroll-bench.sh takes its presence as the run being done.
         writeFile(File(config.outDir, "summary.tsv"), summary.toString())
         Log.i(TAG) { "Scroll benchmark written to ${config.outDir}" }
     }
@@ -220,12 +251,7 @@ object ScrollBenchmark {
                     }
                 }
 
-            // Found here, on the UI thread, where Swing's component tree may be read.
-            val content = window.contentPane
-            val x = (content.width * config.atX).toInt()
-            val y = (content.height * config.atY).toInt()
-            val target = SwingUtilities.getDeepestComponentAt(content, x, y) ?: content
-            val at = SwingUtilities.convertPoint(content, x, y, target)
+            val (target, at) = wheelTarget(window, config)
             withContext(Dispatchers.IO) { scroll(target, at, config, direction) }
             // The smooth scroll's last animation frames.
             delay(500)
@@ -243,6 +269,18 @@ object ScrollBenchmark {
                 images = ImageLoadStats.snapshot(),
             )
         }
+
+    /** The component under the scroll point and the point in it; read on the UI thread, as Swing's tree must be. */
+    private fun wheelTarget(
+        window: JFrame,
+        config: Config,
+    ): Pair<Component, Point> {
+        val content = window.contentPane
+        val x = (content.width * config.atX).toInt()
+        val y = (content.height * config.atY).toInt()
+        val target = SwingUtilities.getDeepestComponentAt(content, x, y) ?: content
+        return target to SwingUtilities.convertPoint(content, x, y, target)
+    }
 
     /** Posts [Config.notches] wheel events at [at] in [target], one every [Config.intervalMs], on schedule. */
     private fun scroll(
@@ -313,9 +351,10 @@ object ScrollBenchmark {
         ManagementFactory
             .getRuntimeMXBean()
             .inputArguments
-            .filter { it.startsWith("-XX:AOTCache=") || it.startsWith("-XX:SharedArchiveFile=") || it.startsWith("-XX:AOTMode=") }
+            .filter { it.startsWith("-XX:AOTCache=") || it.startsWith("-XX:SharedArchiveFile=") || it.startsWith("-XX:AOTMode=") || it.startsWith("-Xshare:") }
             .joinToString(" ")
-            .ifEmpty { "none" }
+            // No flag: the JDK's own class archive, which the JVM maps by default.
+            .ifEmpty { "default CDS archive" }
 
     private fun memoryCacheState(): String {
         val cache = SingletonImageLoader.get(PlatformContext.INSTANCE).memoryCache ?: return "none"

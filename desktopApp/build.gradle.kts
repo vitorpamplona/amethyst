@@ -216,6 +216,7 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.scrollBench.notches",
             "amethyst.scrollBench.intervalMs",
             "amethyst.scrollBench.at",
+            "amethyst.scrollBench.measure",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
@@ -769,8 +770,10 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
 // file that way, and the AppImage step stamps its copy to match.
 //
 // Release CI runs it under xvfb-run, logged in read-only with -Pamethyst.aotTrainingLogin (an npub;
-// a default key otherwise) so the start goes through the home feed. -Pamethyst.aotTrainingSeconds
-// sets how long the run lasts.
+// a default key otherwise) so the start goes through the home feed, and the run then scrolls the feed
+// (ScrollBenchmark, without its measuring) and exits. -Pamethyst.aotTrainingSeconds sets how long
+// the feed loads before the scroll; -Pamethyst.aotTrainingScroll=false trains the start alone, for
+// -Pamethyst.aotTrainingSeconds and then an exit.
 val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
     group = "compose desktop"
     description = "Train an AOT cache into createReleaseDistributable's image (Linux, needs a display)."
@@ -839,6 +842,9 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
                     listOf(
                         "-Damethyst.scrollBench=${scrollDir.absolutePath}",
                         "-Damethyst.scrollBench.waitSeconds=${seconds.get()}",
+                        // Scroll as a user does: none of the benchmark's measuring, whose classes
+                        // and call sites would otherwise go into the cache's profile.
+                        "-Damethyst.scrollBench.measure=false",
                         "-Damethyst.exitAfterSeconds=${seconds.get() + 180}",
                     )
                 } else {
@@ -854,12 +860,14 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
             check(config.isFile) { "The training run recorded nothing: no $config" }
             if (scroll.get()) {
                 // A scroll that failed still leaves a valid cache of the start: worth a warning, not a
-                // failed release.
-                val summary = File(scrollDir, "summary.tsv")
-                if (summary.isFile) {
-                    logger.lifecycle("AOT training scrolled the feed:\n" + summary.readLines().filterNot { it.startsWith("#") }.joinToString("\n"))
+                // failed release. The work folder is deleted below, so the warning carries the error.
+                val done = File(scrollDir, "done.txt")
+                val error = File(scrollDir, "error.txt")
+                if (done.isFile) {
+                    logger.lifecycle("AOT training scrolled the feed: ${done.readText().trim()}")
                 } else {
-                    logger.warn("w: the AOT training run did not scroll the feed (no $summary): the cache covers the start only")
+                    val why = if (error.isFile) ":\n" + error.readLines().take(15).joinToString("\n") else " (no $done, no error.txt)"
+                    logger.warn("w: the AOT training run did not scroll the feed, so the cache covers the start only$why")
                 }
             }
 

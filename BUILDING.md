@@ -869,7 +869,7 @@ Every package has the first, and each has one of the other two:
   in read-only, lets it load the home feed, scrolls the feed down, back up and down
   again (`ScrollBenchmark`), and builds the cache from that run: the classes it
   loaded and the method profiles of both the start and the scroll, so the first
-  scroll of a start doesn't wait on the JIT (36.5 fps on the first pass against 31.7
+  scroll of a start doesn't wait on the JIT (37.0 fps on the first pass against 32.8
   for a cache trained on the start alone; `desktopApp/plans/2026-11-20-desktop-scroll-benchmark.md`).
   It is valid wherever the image is copied as long as every jar keeps its size and
   modification time, so its jars are stamped to time 0 (as OSTree stores them), and
