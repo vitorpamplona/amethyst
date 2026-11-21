@@ -244,12 +244,13 @@ scenario_a() {
   local apub ppub
   apub=$(printf '%s' "$aview" | jq -c '[.channels[]|select(.private==false)|.id]|sort')
   ppub=$(printf '%s' "$pview" | jq -c '[.channels[]|select(.readable==true)|.id]|sort')
-  [[ "$apub" == "$ppub" ]]
+  # Non-empty: two failed views would both read as "" and compare equal.
+  [[ -n "$apub" && "$apub" == "$ppub" ]]
   check $? a5-same-readable-channels "public channels $apub" "Armada public=$apub, amy readable=$ppub"
   local apriv ppriv
   apriv=$(printf '%s' "$aview" | jq -c '[.channels[]|select(.private)|.id]|sort')
   ppriv=$(printf '%s' "$pview" | jq -c '[.channels[]|select(.private)|.id]|sort')
-  [[ "$apriv" == "$ppriv" ]]
+  [[ -n "$apriv" && "$apriv" == "$ppriv" ]]
   check $? a6-same-private-channel-ids "private (sealed to amy) $ppriv" "Armada private=$apriv, amy private=$ppriv"
 
   # Link path: Armada's link, amy Q joins it.
@@ -447,7 +448,9 @@ scenario_d() {
     out=$(arm Y read "{\"cid\":\"$B\",\"ch\":\"ops\",\"wait\":[\"d11 ops after the rotation\"]}"); rc=$?
     check $rc d11-armada-follows-amy-channel-rotation "Armada Y reads ops at channel epoch $(printf '%s' "$out" | jq -r .epoch 2>/dev/null)" "$(printf '%s' "$out" | head -c 300)"
     out=$(arm X read "{\"cid\":\"$B\",\"ch\":\"ops\",\"absent\":[\"d11 ops after the rotation\"],\"settleMs\":8000}"); rc=$?
-    [[ $rc -ne 0 || "$(printf '%s' "$out" | jq -r '.leaked|length')" == 0 ]]
+    # Read and nothing leaked, or the channel never opened for X: any other failure (a dead driver,
+    # a timeout elsewhere) is no evidence of the cut. Pinned as e9 does.
+    [[ ( $rc -eq 0 && "$(printf '%s' "$out" | jq -r '.leaked|length')" == 0 ) || "$(printf '%s' "$out" | jq -r .error)" == "timed out waiting for channel ops" ]]
     check $? d12-armada-cut-by-amy-channel-rotation "Armada X no longer reads ops ($(printf '%s' "$out" | jq -r '.error // ("epoch " + (.epoch|tostring))' 2>/dev/null))" "Armada X read it: $(printf '%s' "$out" | head -c 300)"
   fi
 }
@@ -510,11 +513,15 @@ scenario_e() {
     check $rc e14-amy-honors-armada-ban "amy P's fold bans Q" "$(printf '%s' "$out" | jq -c .banned 2>/dev/null)"
     local xe; xe=$(arm X epoch "{\"cid\":\"$A\"}" | jq -r .epoch)
     out=$(amy_as P concord rekey "$A"); rc=$?
-    local pe; pe=$(amy_as P concord list | jq -r ".communities[]|select(.community_id==\"$A\")|.epoch // empty")
+    # `rekey` exits 0 whatever it found (`rekeyed:false`, `no_blob_for_us`), so the verdict is the
+    # adoption itself, at the epoch Armada moved to.
+    local pr pe
+    pr=$(printf '%s' "$out" | jq -r ".communities[]|select(.community_id==\"$A\")|.rekeyed" 2>/dev/null)
+    pe=$(printf '%s' "$out" | jq -r ".communities[]|select(.community_id==\"$A\")|.root_epoch // empty" 2>/dev/null)
     info "amy P rekey: $(printf '%s' "$out" | head -c 400)"
     out2=$(amy_as P concord channels "$A")
-    [[ $rc -eq 0 && "$xe" -ge 1 ]]
-    check $? e15-amy-follows-armada-refounding "Armada at epoch $xe; amy rekey: $(printf '%s' "$out" | jq -c . 2>/dev/null | head -c 200)" "Armada epoch $xe; amy rekey rc=$rc $(err_of) $out"
+    [[ $rc -eq 0 && -n "$xe" && "$xe" -ge 1 && "$pr" == true && "$pe" == "$xe" ]]
+    check $? e15-amy-follows-armada-refounding "Armada at epoch $xe; amy rekey: $(printf '%s' "$out" | jq -c . 2>/dev/null | head -c 200)" "Armada epoch $xe; amy rekeyed=$pr at epoch $pe, rc=$rc $(err_of) $out"
     arm X send "{\"cid\":\"$A\",\"ch\":\"general\",\"text\":\"e16 after armada refounding\"}" >/dev/null
     out=$(amy_until P '.messages|map(.content)|index("e16 after armada refounding")' 10 concord read "$A" general); rc=$?
     check $rc e16-amy-reads-post-refound "amy P reads Armada's epoch-$(printf '%s' "$out" | jq -r .epoch 2>/dev/null) message" "$(printf '%s' "$out" | jq -c '{epoch, m: [.messages[].content]}' 2>/dev/null) $(err_of)"

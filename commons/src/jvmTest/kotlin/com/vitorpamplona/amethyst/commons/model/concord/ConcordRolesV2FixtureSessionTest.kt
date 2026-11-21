@@ -20,13 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -36,6 +50,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -133,4 +148,182 @@ class ConcordRolesV2FixtureSessionTest {
             // Pinning reopens the wrap that carried it, on its writer plane.
             assertNotNull(session.pinSource(general, post.id), "a writer-address post can be pinned")
         }
+
+    @Test
+    fun opensAnOlderWritersPostUnderTheReadKeyItWasPostedUnderAfterARefounding() =
+        runTest {
+            val f = Fixture("writers")
+            val member = f.actor("member")
+            val general = f.actor("general")
+            val session = ConcordCommunitySession(f.entry, member)
+            f.events.sortedByDescending { it.pubKey == f.controlPk }.forEach { session.ingest(it) }
+            val state = session.state.value!!
+            val window =
+                state.writers
+                    .getValue(general)
+                    .windows
+                    .single()
+            val atWriter = f.events.filter { it.pubKey == window.writerPubKey }
+
+            // A Refounding moved the root to epoch 1; the root of epoch 0, which the post was
+            // encrypted under (CORD-03 §1: the read key in force when posted), is held.
+            val refounded =
+                ConcordCommunityListEntry(
+                    id = f.entry.id,
+                    owner = f.entry.owner,
+                    ownerSalt = f.entry.ownerSalt,
+                    root = KeyPair().privKey!!.toHexKey(),
+                    rootEpoch = 1,
+                    heldRoots = listOf(HeldRoot(epoch = 0, key = f.entry.root)),
+                    relays = f.entry.relays,
+                )
+            val planes = ConcordActions.writerPlanes(refounded, state).filter { it.key.publicKeyHex == window.writerPubKey }
+            val opened =
+                atWriter.mapNotNull { wrap ->
+                    planes.firstNotNullOfOrNull { plane ->
+                        ConcordActions.openChannelRumorAnyExpiry(wrap, plane.key, plane.channelIdHex, plane.epoch, writerEpoch = plane.writerEpoch)
+                    }
+                }
+            assertTrue(opened.any { it.content == "a writer's post" }, "the epoch-0 writer post still opens once the root moved on")
+            // The current read key still serves the address too: a writer posting before the fresh
+            // epoch is minted encrypts under the root now in force.
+            assertTrue(planes.any { it.epoch == 1L }, "the address is also read under the current root")
+            // One subscription per address, however many read keys open it.
+            val subs = ConcordSubscriptionPlanner.channelPlaneSubs(refounded, state).filter { it.pubKeyHex == window.writerPubKey }
+            assertEquals(1, subs.size)
+        }
+
+    @Test
+    fun showsAWriterTypingAtTheWriterAddress() =
+        runTest {
+            val f = Fixture("writers")
+            val member = f.actor("member")
+            val general = f.actor("general")
+            // The owner watches; the member, a writer, types where a restricted Channel's posts go.
+            val session = ConcordCommunitySession(f.entry, f.actor("owner"))
+            f.events.sortedByDescending { it.pubKey == f.controlPk }.forEach { session.ingest(it) }
+
+            val writerEpoch = f.actors["writer_epoch"]!!.jsonPrimitive.long
+            val writer = ConcordKeyDerivation.channelWriterKey(f.actor("writer_secret").hexToByteArray(), general.hexToByteArray(), writerEpoch)
+            val read = ConcordActions.currentChannelPlane(f.entry, general, isPrivate = false)!!
+            val stream = GroupKey(writer.secretKey, writer.publicKey, read.key.conversationKey)
+            val now = TimeUtils.now()
+            val typing = ChannelChat.typing(member, general, read.epoch, now)
+            val tags = typing.tags + arrayOf(arrayOf("wepoch", writerEpoch.toString()), arrayOf("wcert", f.actor("writer_cert")))
+            val rumor = RumorAssembler.assembleRumor<Event>(member, now, typing.kind, tags, "")
+            val signer = NostrSignerInternal(KeyPair(f.actor("member_secret").hexToByteArray()))
+            val wrap = ConcordStreamEnvelope.wrap(rumor, stream, signer, encrypted = true, ephemeral = true, createdAt = now)
+
+            session.ingest(wrap)
+            assertEquals(setOf(member), session.typing.value[general]?.keys, "a writer typing at the writer address shows")
+        }
+
+    @Test
+    fun keepsAnAccessDeliveryWhenTheSignerCannotAnswerAndSettlesItOnceTheKeyIsWritten() =
+        runTest {
+            val f = Fixture("members")
+            val member = f.actor("member")
+            val lounge = f.actor("lounge")
+            val session = ConcordCommunitySession(f.entry, member)
+            f.events.sortedByDescending { it.pubKey == f.controlPk }.forEach { session.ingest(it) }
+            val state = session.state.value!!
+            val pending =
+                session.pendingAccessDeliveries().first { p ->
+                    p.channelIdHex == lounge &&
+                        ConcordAccessDrain.verdict(p.delivery, p.channelIdHex, member, null) {
+                            ConcordChannelAccess.deliveryTrusted(state, p.channelIdHex, member, p.delivery.deliverer)
+                        } == ConcordAccessDrain.Verdict.OPEN
+                }
+            val signer = FlakySigner(NostrSignerInternal(KeyPair(f.actor("member_secret").hexToByteArray())))
+            val trusted = { ConcordChannelAccess.deliveryTrusted(state, lounge, member, pending.delivery.deliverer) }
+            val adopted = mutableListOf<ByteArray>()
+
+            // A NIP-46 timeout: nothing is known about the blob, so the delivery is kept.
+            signer.failNext = true
+            assertFalse(
+                ConcordAccessDrain.drainOne(pending.delivery, lounge, signer, null, trusted) {
+                    adopted += it
+                    true
+                },
+            )
+            assertTrue(adopted.isEmpty())
+
+            // The List could not be written: the key is collected again on the next drain.
+            assertFalse(
+                ConcordAccessDrain.drainOne(pending.delivery, lounge, signer, null, trusted) {
+                    adopted += it
+                    false
+                },
+            )
+
+            // The signer answers and the key is written: settled.
+            assertTrue(
+                ConcordAccessDrain.drainOne(pending.delivery, lounge, signer, null, trusted) {
+                    adopted += it
+                    true
+                },
+            )
+            assertEquals(2, adopted.size)
+            val expected = ConcordChannelAccess.openAccess(pending.delivery, signer, lounge.hexToByteArray())
+            assertTrue(adopted.last().contentEquals(expected))
+
+            // A blob that is not ours is settled without asking the signer to decrypt anything.
+            val before = signer.decrypts
+            val stranger = FlakySigner(NostrSignerInternal(KeyPair()))
+            assertEquals(ConcordAccessDrain.Opened.Refused, ConcordAccessDrain.open(pending.delivery, stranger, lounge))
+            assertEquals(before, signer.decrypts)
+            assertEquals(0, stranger.decrypts)
+        }
+
+    /** Delegates to [inner], throwing a transient signer failure on the next decrypt when [failNext]. */
+    private class FlakySigner(
+        private val inner: NostrSignerInternal,
+    ) : NostrSigner(inner.pubKey) {
+        var failNext = false
+        var decrypts = 0
+
+        override fun isWriteable() = inner.isWriteable()
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T = inner.sign(createdAt, kind, tags, content)
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip04Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip04Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip44Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ): String {
+            decrypts++
+            if (failNext) {
+                failNext = false
+                throw SignerExceptions.TimedOutException("signer busy")
+            }
+            return inner.nip44Decrypt(ciphertext, fromPublicKey)
+        }
+
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = inner.decryptZapEvent(event)
+
+        override suspend fun deriveKey(nonce: HexKey) = inner.deriveKey(nonce)
+
+        override suspend fun signPsbt(psbtHex: String) = inner.signPsbt(psbtHex)
+
+        override fun hasForegroundSupport() = inner.hasForegroundSupport()
+    }
 }

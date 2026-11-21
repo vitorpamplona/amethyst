@@ -84,7 +84,7 @@ class ConcordModerationHideTest {
         session =
             ConcordCommunitySession(entryOf(c), owner.pubKey) { communityId, channelIdHex, rumor, seen ->
                 cache.consumeConcordRumor(communityId, channelIdHex, rumor, seen)
-                if (rumor is DeletionRequestEvent) ConcordModerationHideSweep.sweep(cache, session, channelIdHex)
+                if (rumor is DeletionRequestEvent) ConcordModerationHideSweep.sweep(cache, session, channelIdHex, rumor.deleteEventIds())
             }
         return session
     }
@@ -206,6 +206,9 @@ class ConcordModerationHideTest {
             // The Role and Grant fold; the next sweep (the account runs it on every fold) hides it.
             controlWraps.drop(c.genesisWraps.size).forEach { session.ingest(it) }
             assertTrue(session.isHiddenByModeration(c.generalChannelIdHex, target.id, member.pubKey))
+            // A kind 5 naming something else sweeps only what it names.
+            assertTrue(ConcordModerationHideSweep.sweep(cache, session, c.generalChannelIdHex, listOf("f".repeat(64))).isEmpty())
+            assertTrue(inChannel(cache, c, target.id))
             ConcordModerationHideSweep.sweep(cache, session)
             assertFalse(inChannel(cache, c, target.id))
             assertNull(cache.getNoteIfExists(target.id)?.event)
@@ -243,5 +246,41 @@ class ConcordModerationHideTest {
             c.genesisWraps.forEach { fresh.ingest(it) }
             fresh.ingest(wrap(target, general(c), member))
             assertNull(cache.getNoteIfExists(target.id)?.event)
+        }
+
+    @Test
+    fun aHideComesUndoneWhenItsHiderLosesTheBit() =
+        runTest {
+            val cache = EventCache()
+            val c = ConcordCommunityFactory.create(owner, "Guild", createdAt = 1L, relays = listOf("wss://r.example"))
+            val session = sessionInto(cache, c)
+            c.genesisWraps.forEach { session.ingest(it) }
+
+            val controlWraps = c.genesisWraps.toMutableList()
+            val roleId = ByteArray(32) { 7 }
+            val role = RoleEntity(name = "Mod", position = 5, permissions = ConcordPermissions.of(ConcordPermissions.MANAGE_MESSAGES).toWire())
+            controlWraps += ConcordModeration.defineRole(owner, c.controlPlane, c.communityId, roleId, role, ConcordActions.controlEditions(controlWraps, c.controlPlane), 2L, owner = c.ownerPubKey)
+            controlWraps += ConcordModeration.grant(owner, c.controlPlane, c.communityId, mod.pubKey, listOf(roleId.toHexKey()), ConcordActions.controlEditions(controlWraps, c.controlPlane), 3L, owner = c.ownerPubKey)
+            controlWraps.drop(c.genesisWraps.size).forEach { session.ingest(it) }
+            val citation =
+                session.state.value!!
+                    .authority
+                    .citationFor(mod.pubKey)
+            assertNotNull(citation)
+
+            // One target was in the store before the hide (swept out), one arrives after it (never stored).
+            val before = message(c, "rude", 10L)
+            session.ingest(wrap(before, general(c), member))
+            val after = message(c, "ruder", 11L)
+            session.ingest(hide(c, mod, listOf(before.id, after.id), 20L, citation))
+            session.ingest(wrap(after, general(c), member))
+            assertFalse(inChannel(cache, c, before.id))
+            assertFalse(inChannel(cache, c, after.id))
+
+            // The owner strips the moderator's Role: both messages come back (CORD-03 §3).
+            session.ingest(ConcordModeration.grant(owner, c.controlPlane, c.communityId, mod.pubKey, emptyList(), ConcordActions.controlEditions(controlWraps, c.controlPlane), 30L, owner = c.ownerPubKey))
+            assertFalse(session.isHiddenByModeration(c.generalChannelIdHex, before.id, member.pubKey))
+            assertTrue(inChannel(cache, c, before.id), "a hide by someone stripped of the bit comes undone")
+            assertTrue(inChannel(cache, c, after.id), "also for a target that arrived after the hide")
         }
 }
