@@ -712,7 +712,12 @@ object BuzzAgentCommands {
         template: EventTemplate<out Event>,
     ) {
         val signed = ctx.signer.sign(template)
-        ctx.publish(signed, setOf(relay))
+        val ack = ctx.publish(signed, setOf(relay))
+        if (ack.values.none { it.accepted }) {
+            // Never silent: a job the room cannot see the answer to looks like a hung agent.
+            val why = BuzzJobCommands.jobKindsRefusal(ack)?.let { BuzzJobCommands.JOB_KINDS_UNSUPPORTED } ?: ack.values.joinToString("; ") { it.message }
+            System.err.println("[agent] ${relay.url} refused kind ${signed.kind}: $why")
+        }
     }
 
     private const val MAX_BODY = 60_000
