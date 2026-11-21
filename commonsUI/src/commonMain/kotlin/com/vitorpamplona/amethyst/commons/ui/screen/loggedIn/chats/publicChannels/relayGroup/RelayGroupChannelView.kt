@@ -357,7 +357,7 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
  * the top-bar Join action (open groups) or explains the invite requirement (closed groups).
  */
 @Composable
-private fun JoinToPostNotice(
+internal fun JoinToPostNotice(
     channel: RelayGroupChannel,
     myPubkey: HexKey,
 ) {
