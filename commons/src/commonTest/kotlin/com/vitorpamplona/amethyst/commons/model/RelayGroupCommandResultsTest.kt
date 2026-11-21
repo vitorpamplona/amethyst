@@ -71,6 +71,29 @@ class RelayGroupCommandResultsTest {
     }
 
     @Test
+    fun aRefusalThePoolWillRetryIsNotARefusal() {
+        // A slow signer: the AUTH hasn't landed when the retry is answered; the pool re-sends later.
+        val auth = mapOf(relay to PublishResult(false, "auth-required: we only accept events from authenticated users"))
+        assertNull(relayGroupCommandRefusal(auth))
+        assertEquals(BuzzDmAddResult.NoAnswer, buzzDmAddResult(auth, relay, dm))
+        // A back-off longer than the wait: the pool re-sends after it.
+        val backOff = mapOf(relay to PublishResult(false, "rate-limited: slow down", retryAfterMs = 30_000))
+        assertNull(relayGroupCommandRefusal(backOff))
+        assertEquals(BuzzDmAddResult.NoAnswer, buzzDmAddResult(backOff, relay, dm))
+        // Without a back-off the pool drops the event: that is the relay's answer.
+        val dropped = mapOf(relay to PublishResult(false, "rate-limited: slow down"))
+        assertEquals("slow down", relayGroupCommandRefusal(dropped))
+        assertEquals(BuzzDmAddResult.Refused("rate-limited: slow down"), buzzDmAddResult(dropped, relay, dm))
+    }
+
+    @Test
+    fun anAgentsHistoryTagRefusalAsksForAnUntaggedAdd() {
+        assertTrue(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, ONLY_PEOPLE_SHARE_HISTORY))))
+        assertFalse(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, "forbidden: not a member"))))
+        assertFalse(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(true, "response:{}"))))
+    }
+
+    @Test
     fun recognisesBuzzGroupStateWithAndWithoutTheCreatorTag() {
         // NIP-CL relay: channel type first, then the creator.
         assertTrue(BuzzRelayDialect.looksLikeBuzzGroupState(metadata(arrayOf("d", dm), arrayOf("t", "stream"), arrayOf("P", "bb".repeat(32)))))

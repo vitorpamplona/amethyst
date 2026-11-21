@@ -200,3 +200,15 @@ sealed interface CashuRedeemNotice : UserNotice {
         val userName: String,
     ) : CashuRedeemNotice
 }
+
+/** A NIP-29 or Buzz group create that went out but did not fully settle. */
+sealed interface RelayGroupCreateNotice : UserNotice {
+    /**
+     * The relay has not confirmed the create yet (no answer in time, or it is waiting on the
+     * sign-in or a back-off). The group is in the list and shows up once the relay takes it.
+     */
+    data object Unconfirmed : RelayGroupCreateNotice
+
+    /** The group was created, but the signer did not sign the list that remembers it. */
+    data object NotFollowed : RelayGroupCreateNotice
+}

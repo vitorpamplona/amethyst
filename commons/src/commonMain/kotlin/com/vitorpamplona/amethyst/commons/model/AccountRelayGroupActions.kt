@@ -57,12 +57,18 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -86,10 +92,14 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -197,13 +207,9 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK.
-     *
-     * NIP-42 write race: on a cold connection the relay rejects the first publish with
-     * `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm the
-     * connection with a pendingOnAuthRequired read of [warmUpKind] so the auth coordinator
-     * completes the handshake, then retry the publish on the now-authed socket. Mirrors the amy
-     * CLI fix.
+     * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK, getting past a
+     * cold socket's NIP-42 `auth-required:` ([publishAwaitingOkThroughAuth]). The warm-up is a
+     * pendingOnAuthRequired read of [warmUpKind], so the auth coordinator completes the handshake.
      */
     private suspend fun publishAwaitingOk(
         signed: Event,
@@ -213,16 +219,13 @@ class AccountRelayGroupActions(
     ): Map<NormalizedRelayUrl, PublishResult> {
         // Same delivery tracking as every other group command, so the chat shows it as sent.
         account.chatDeliveryTracker.trackPublic(signed.id, setOf(relay))
-        val results = account.client.publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
-        if (results.values.any { it.accepted } || results.values.none { it.message.contains("auth-required", ignoreCase = true) }) {
-            return results
+        return account.client.publishAwaitingOkThroughAuth(signed, relay, timeoutSecs) {
+            account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
+                filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
+                idleTimeoutMs = AUTH_WARM_UP_MS,
+                pendingOnAuthRequired = true,
+            ) { _, _ -> false }
         }
-        account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
-            filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
-            idleTimeoutMs = AUTH_WARM_UP_MS,
-            pendingOnAuthRequired = true,
-        ) { _, _ -> false }
-        return account.client.publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
     }
 
     /** The relay-assigned DM channel id from a DM command's OK message (`response:{"channel_id":"…"}`). */
@@ -443,8 +446,11 @@ class AccountRelayGroupActions(
      * warm-up included). A relay that refuses it (Buzz refuses a listed channel whose name another
      * listed channel has, ignoring case — buzz `5f8d0aab9`; any relay may refuse for policy) has
      * created nothing, so nothing else is sent or followed and the refusal comes back as
-     * [RelayGroupCreateResult.Refused]. A relay that does not answer in time is treated as before:
-     * the channel is assumed created, since the publish may still land when the socket comes back.
+     * [RelayGroupCreateResult.Refused]. A relay that does not answer in time, or answers "later"
+     * (`auth-required:` while a slow signer is still on the AUTH, a `rate-limited:` back-off), is
+     * [RelayGroupCreateResult.Created] with `confirmed = false`: the pool sends the 9007 again, so the
+     * channel is assumed created and followed, and a second press can't strand it under an id the
+     * relay now holds.
      *
      * Once the 9007 is out, the 9002 and the follow run to completion even if the caller is
      * cancelled: stopping between them would leave a group with no name that is in nobody's list.
@@ -503,6 +509,7 @@ class AccountRelayGroupActions(
         account.cache.justConsumeMyOwnEvent(signedCreate)
         val results = publishAwaitingOk(signedCreate, relay, CREATE_OK_TIMEOUT_SECS, warmUpKind = GroupMetadataEvent.KIND)
         relayGroupCommandRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
+        val confirmed = results.values.any { it.accepted }
 
         return withContext(NonCancellable) {
             account.cache.justConsumeMyOwnEvent(edit)
@@ -510,8 +517,18 @@ class AccountRelayGroupActions(
             account.client.publish(edit, setOf(relay))
 
             val id = GroupId(groupId, relay)
-            account.follow(LocalCache.getOrCreateRelayGroupChannel(id))
-            RelayGroupCreateResult.Created(id)
+            // The group exists (or may still land) whatever the signer says about the list: a refusal
+            // here must not read as a failed create, or the form stays open over a group that a
+            // second try with the same id can't make.
+            val followed =
+                try {
+                    account.follow(LocalCache.getOrCreateRelayGroupChannel(id))
+                    true
+                } catch (e: SignerExceptions) {
+                    Log.w("AccountRelayGroupActions", "Created $groupId but could not add it to the group list", e)
+                    false
+                }
+            RelayGroupCreateResult.Created(id, confirmed = confirmed, followed = followed)
         }
     }
 
@@ -809,9 +826,16 @@ fun relayGroupStatus(
 
 /** What became of a [AccountRelayGroupActions.createRelayGroup]. */
 sealed interface RelayGroupCreateResult {
-    /** The relay accepted the create (or never answered, and it may still land). */
+    /**
+     * The relay accepted the create ([confirmed]), or has not answered yet and it may still land: it
+     * went silent, or answered `auth-required:` / a `rate-limited:` back-off and the pool sends it
+     * again. Either way it is followed, so a group that lands later is in the list. [followed] is
+     * false when the signer would not sign the kind-10009 that lists it.
+     */
     data class Created(
         val groupId: GroupId,
+        val confirmed: Boolean = true,
+        val followed: Boolean = true,
     ) : RelayGroupCreateResult
 
     /** The relay refused the create, so no group exists; [message] is its reason. */
@@ -827,7 +851,7 @@ sealed interface RelayGroupCreateResult {
  */
 internal fun relayGroupCommandRefusal(results: Map<NormalizedRelayUrl, PublishResult>): String? {
     if (results.values.any { it.accepted }) return null
-    val refusal = results.values.firstOrNull { !it.isTransportFailure } ?: return null
+    val refusal = results.values.firstOrNull { !it.isTransportFailure && !it.isNotYetAnswered() } ?: return null
     val message = refusal.message
     val prefix = message.substringBefore(':', "")
     return if (prefix.isNotEmpty() && prefix.none { it.isWhitespace() }) message.substringAfter(':').trim() else message
@@ -877,12 +901,89 @@ internal fun buzzDmAddResult(
         return BuzzDmAddResult.Added(GroupId(landed, relay), moved = fromChannelId != null && landed != fromChannelId)
     }
     if (results.values.any { it.message.startsWith(BuzzDmRules.NEEDS_HISTORY_CHOICE) }) return BuzzDmAddResult.NeedsHistoryChoice
-    val refused = results.values.firstOrNull { !it.isTransportFailure } ?: return BuzzDmAddResult.NoAnswer
+    val refused = results.values.firstOrNull { !it.isTransportFailure && !it.isNotYetAnswered() } ?: return BuzzDmAddResult.NoAnswer
     return BuzzDmAddResult.Refused(refused.message)
 }
 
-/** The relay's refusal of a history tag from an agent (buzz `handle_dm_add_member`). */
-internal const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's history"
+/**
+ * A refusal that means "later", not "no": the pool keeps the event and sends it again, so the relay
+ * may still accept it after we stopped waiting. That is a NIP-42 `auth-required:` (re-sent once the
+ * AUTH lands; a NIP-46 or Android signer slower than the wait is enough) and a `rate-limited:` that
+ * states its back-off (re-sent after it). A `rate-limited:` without one is the relay's last word:
+ * the pool drops the event.
+ */
+internal fun PublishResult.isNotYetAnswered(): Boolean = !accepted && (message.startsWith(AUTH_REQUIRED_PREFIX) || (retryAfterMs != null && message.startsWith(RATE_LIMITED_PREFIX)))
+
+/** The relay's refusal of a history tag from an agent (buzz `handle_dm_add_member`, `ONLY_PEOPLE_SHARE_HISTORY`). */
+const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's history"
+
+/**
+ * True when the relay refused a DM add only because it carried a history tag and the sender is an
+ * agent: Buzz lets only people choose about history, so the add is sent again untagged. Shared by the
+ * app and `amy buzz dm add-member`.
+ */
+fun buzzDmAddRefusedHistoryTag(results: Map<NormalizedRelayUrl, PublishResult>): Boolean = results.values.none { it.accepted } && results.values.any { it.message == ONLY_PEOPLE_SHARE_HISTORY }
+
+/**
+ * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK.
+ *
+ * NIP-42 write race: on a cold connection the relay answers the first publish `auth-required:`.
+ * The pool keeps the event, and once our AUTH lands it re-sends it by itself: that re-send's OK is
+ * the relay's real answer (a Buzz DM command's carries the DM it made). So one OK listener stays
+ * open from before the first send until we return. After an `auth-required:` this runs [warmUp]
+ * (a read that makes the auth coordinator finish the handshake), stopping early once the re-send's
+ * OK is in; if no accepted OK came, it publishes once more on the now-authed socket. A relay that
+ * already processed the re-send answers that retry `duplicate:` (Buzz `command_executor.rs`), so an
+ * earlier accepted OK we saw wins over a later duplicate.
+ */
+internal suspend fun INostrClient.publishAwaitingOkThroughAuth(
+    signed: Event,
+    relay: NormalizedRelayUrl,
+    timeoutSecs: Long,
+    warmUp: suspend () -> Unit,
+): Map<NormalizedRelayUrl, PublishResult> {
+    val target = relay
+    // The first accepted OK for [signed] from [relay] that is not a duplicate notice.
+    val accepted = MutableStateFlow<PublishResult?>(null)
+    val watcher =
+        object : RelayConnectionListener {
+            override suspend fun onIncomingMessage(
+                relay: IRelayClient,
+                msgStr: String,
+                msg: Message,
+            ) {
+                if (msg is OkMessage && msg.success && msg.eventId == signed.id && relay.url == target && !msg.message.startsWith(DUPLICATE_PREFIX)) {
+                    accepted.compareAndSet(null, PublishResult(true, msg.message))
+                }
+            }
+        }
+    addConnectionListener(watcher)
+    try {
+        val first = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
+        if (first.values.any { it.accepted } || first.values.none { it.message.startsWith(AUTH_REQUIRED_PREFIX) }) return first
+
+        coroutineScope {
+            val warming = launch { warmUp() }
+            val answered =
+                launch {
+                    accepted.first { it != null }
+                    warming.cancel()
+                }
+            warming.join()
+            answered.cancel()
+        }
+        accepted.value?.let { return mapOf(relay to it) }
+
+        val retry = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
+        return accepted.value?.let { mapOf(relay to it) } ?: retry
+    } finally {
+        removeConnectionListener(watcher)
+    }
+}
+
+private const val AUTH_REQUIRED_PREFIX = "auth-required:"
+private const val RATE_LIMITED_PREFIX = "rate-limited:"
+private const val DUPLICATE_PREFIX = "duplicate:"
 
 /** How long a group command waits for its OK; the AUTH warm-up can double it. */
 private const val OK_TIMEOUT_SECS = 15L

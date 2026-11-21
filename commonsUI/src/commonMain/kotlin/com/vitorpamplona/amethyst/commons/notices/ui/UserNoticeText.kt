@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.NwcFailure
 import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
 import com.vitorpamplona.amethyst.commons.notices.ResolvedNotice
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UploadNotice
@@ -125,6 +126,10 @@ import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_followed
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_followed_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_state
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
@@ -294,6 +299,8 @@ fun UserNotice.text(): NoticeText =
                 },
             )
         ConcordNotice.DissolveFailed -> text(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+        RelayGroupCreateNotice.Unconfirmed -> text(Res.string.relay_group_create_unconfirmed_title, Res.string.relay_group_create_unconfirmed)
+        RelayGroupCreateNotice.NotFollowed -> text(Res.string.relay_group_create_not_followed_title, Res.string.relay_group_create_not_followed)
         ConcordNotice.ChannelKeyRotated -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
         ConcordNotice.ChannelKeyRotationFailed -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
         ConcordNotice.RolesUpdateFailed -> text(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)

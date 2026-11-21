@@ -5873,6 +5873,10 @@
     <string name="relay_explain_wallet">Your own wallet events, read back from the relays you published them to.</string>
     <string name="relay_group_create_title">Create a group</string>
     <string name="relay_group_create_refused">The relay did not create it</string>
+    <string name="relay_group_create_unconfirmed_title">The relay has not confirmed it yet</string>
+    <string name="relay_group_create_unconfirmed">The group is in your list and will appear once the relay accepts it. Don't create it again.</string>
+    <string name="relay_group_create_not_followed_title">Group created, not saved to your list</string>
+    <string name="relay_group_create_not_followed">Your signer did not sign the list of your groups, so this one is missing from it on your other devices and apps.</string>
     <string name="buzz_channel_name_taken">An open channel named %1$s already exists. Pick another name.</string>
     <string name="buzz_channel_name_taken_title">That name is taken</string>
     <string name="relay_group_edit_refused">The relay did not save the changes</string>
