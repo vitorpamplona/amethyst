@@ -2667,6 +2667,7 @@
     <string name="git_repo_push_first_get_ngit">Obter o ngit</string>
     <string name="profile_tab_apps">Apps e sites</string>
     <string name="profile_tab_repos">Repositórios</string>
+    <string name="profile_tab_lists">Listas</string>
     <string name="edit_article">Editar artigo</string>
     <string name="proposal_to_edit">Proposta para melhorar sua postagem</string>
     <string name="accept_the_suggestion">Aceitar a Sugestão</string>
