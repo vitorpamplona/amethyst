@@ -3049,4 +3049,7 @@
     <string name="relay_management_tab_ips">IPs</string>
     <string name="browser_address_hint">Buscar o introducir dirección</string>
     <string name="napplet_untitled">NApplet sin título</string>
+    <string name="relay_group_pin_refused_title">El relé no fijó el mensaje</string>
+    <string name="relay_group_unpin_refused_title">El relé no desfijó el mensaje</string>
+    <string name="kc_buzz_unpinned">Desfijó un mensaje</string>
 </resources>

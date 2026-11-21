@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
@@ -1858,12 +1859,12 @@ open class BaseAccountViewModel(
     fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note) }
+    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note)?.let { notices.notify(RelayGroupNotice.PinRefused(unpin = false, reason = it)) } }
 
     fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note) }
+    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note)?.let { notices.notify(RelayGroupNotice.PinRefused(unpin = true, reason = it)) } }
 
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,

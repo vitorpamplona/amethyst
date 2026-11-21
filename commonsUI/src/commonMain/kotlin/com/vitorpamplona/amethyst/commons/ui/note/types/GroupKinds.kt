@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
@@ -654,6 +655,31 @@ fun RenderGroupPinned(
     val event = baseNote.event as? GroupPinnedEvent ?: return
     val pins = remember(event) { event.pins() }
     val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (pins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size) else null
+
+    KindCard(
+        icon = MaterialSymbols.PushPin,
+        title = stringRes(Res.string.kc_group_pinned),
+        subtitle = groupSubtitle(groupId, channel, count),
+    ) {
+        RelayGroupHeader(channel, accountViewModel, nav)
+        GroupPinsBody(pins, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
+
+/** Buzz NIP-PM kind 30623: the channel's pinned messages, newest pin first, as the relay publishes them. */
+@Composable
+fun RenderBuzzChannelPins(
+    baseNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? ChannelPinsEvent ?: return
+    val pins = remember(event) { event.pinnedMessageIds().map(::EventPin) }
+    val groupId = remember(event) { event.channel() }
     val channel = rememberRelayGroup(baseNote, groupId)
     val count = if (pins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size) else null
 

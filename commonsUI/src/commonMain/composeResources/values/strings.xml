@@ -10438,4 +10438,7 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
+    <string name="relay_group_pin_refused_title">The relay did not pin the message</string>
+    <string name="relay_group_unpin_refused_title">The relay did not unpin the message</string>
+    <string name="kc_buzz_unpinned">Unpinned a message</string>
 </resources>

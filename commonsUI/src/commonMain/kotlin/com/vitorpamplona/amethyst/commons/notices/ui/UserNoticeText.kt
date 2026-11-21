@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.notices.NwcFailure
 import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
 import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupNotice
 import com.vitorpamplona.amethyst.commons.notices.ResolvedNotice
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UploadNotice
@@ -130,6 +131,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_follo
 import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_followed_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed
 import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_refused_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_refused_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_state
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
@@ -299,6 +302,8 @@ fun UserNotice.text(): NoticeText =
                 },
             )
         ConcordNotice.DissolveFailed -> text(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+        is RelayGroupNotice.PinRefused ->
+            NoticeText(if (unpin) Res.string.relay_group_unpin_refused_title else Res.string.relay_group_pin_refused_title, raw(reason))
         RelayGroupCreateNotice.Unconfirmed -> text(Res.string.relay_group_create_unconfirmed_title, Res.string.relay_group_create_unconfirmed)
         RelayGroupCreateNotice.NotFollowed -> text(Res.string.relay_group_create_not_followed_title, Res.string.relay_group_create_not_followed)
         ConcordNotice.ChannelKeyRotated -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)

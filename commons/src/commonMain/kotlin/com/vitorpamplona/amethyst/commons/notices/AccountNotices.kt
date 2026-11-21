@@ -212,3 +212,12 @@ sealed interface RelayGroupCreateNotice : UserNotice {
     /** The group was created, but the signer did not sign the list that remembers it. */
     data object NotFollowed : RelayGroupCreateNotice
 }
+
+/** A relay-group command the relay refused. */
+sealed interface RelayGroupNotice : UserNotice {
+    /** The relay refused a pin or an unpin, with its [reason] (a Buzz guest, an archived channel, the pin limit, a banned key). */
+    data class PinRefused(
+        val unpin: Boolean,
+        val reason: String,
+    ) : RelayGroupNotice
+}

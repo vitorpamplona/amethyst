@@ -39,6 +39,9 @@ import com.vitorpamplona.quartz.buzz.dm.tags.DmHistoryTag
 import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
@@ -587,27 +590,56 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Pin [note] by appending it to the current list (no-op if already pinned). An addressable
-     * note is pinned by its address (`a`), so the pin follows its latest version; anything else
-     * by event id (`e`). Every existing pin — including other clients' `a` pins — is kept.
+     * Pin [note] in [channel]. Returns the relay's refusal, or null when it went out (or there was
+     * nothing to do).
+     *
+     * NIP-29: append it to the current list (no-op if already pinned) and send the whole list as a
+     * 9010. An addressable note is pinned by its address (`a`), so the pin follows its latest
+     * version; anything else by event id (`e`). Every existing pin, other clients' `a` pins too, is kept.
+     *
+     * Buzz (NIP-PM): sign one kind-40010 command naming the message; the relay applies it and
+     * republishes the channel's 30623 list, which [RelayGroupChannel.updateBuzzPins] folds. Buzz
+     * refuses 9010 as an unknown kind.
      */
     suspend fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) {
-        val pin = pinFor(note) ?: return
-        if (channel.isPinned(pin.ref)) return
+    ): String? {
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            return sendBuzzPinCommand(channel, PinMessageEvent.build(channel.groupId.id, note.event?.id ?: note.idHex))
+        }
+        val pin = pinFor(note) ?: return null
+        if (channel.isPinned(pin.ref)) return null
         updateRelayGroupPins(channel, channel.pinsWith(pin))
+        return null
     }
 
-    /** Unpin [note] (by address or id) from the current list, keeping every other pin intact. */
+    /** Unpin [note] (by address or id), keeping every other pin intact. Returns the relay's refusal, as [pinRelayGroupMessage]. */
     suspend fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) {
+    ): String? {
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            return sendBuzzPinCommand(channel, UnpinMessageEvent.build(channel.groupId.id, note.event?.id ?: note.idHex))
+        }
         val refs = pinRefsFor(note)
-        if (refs.none { channel.isPinned(it) }) return
+        if (refs.none { channel.isPinned(it) }) return null
         updateRelayGroupPins(channel, channel.pins.filter { it.ref !in refs })
+        return null
+    }
+
+    /**
+     * Signs one NIP-PM command and sends it to [channel]'s relay, awaiting its OK through AUTH.
+     * NIP-PM: a client with no answer re-sends the same signed event and never signs a new one, which
+     * is what the pool does with the event it holds. Pinning a pinned message is accepted and
+     * changes nothing, so there is no local no-op check.
+     */
+    private suspend fun <T : Event> sendBuzzPinCommand(
+        channel: RelayGroupChannel,
+        template: EventTemplate<T>,
+    ): String? {
+        val signed = account.signer.sign(template)
+        return relayGroupCommandRefusal(publishAwaitingOk(signed, channel.groupId.relayUrl, CREATE_OK_TIMEOUT_SECS, warmUpKind = ChannelPinsEvent.KIND))
     }
 
     private fun addressOf(note: Note): Address? = note.address() ?: (note.event as? AddressableEvent)?.address()

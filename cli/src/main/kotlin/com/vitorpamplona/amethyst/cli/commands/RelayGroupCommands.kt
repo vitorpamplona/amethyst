@@ -75,9 +75,12 @@ object RelayGroupCommands {
         |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
         |    [--role admin|moderator]
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
-        |  relaygroup pin RELAY GID REF               pin an event (kind 9010); REF is a
-        |                                             note1/nevent1/hex id or naddr1/kind:pk:d
+        |  relaygroup pin RELAY GID REF               pin an event (kind 9010; on Buzz a
+        |                                             NIP-PM 40010); REF is a note1/nevent1/hex
+        |                                             id or naddr1/kind:pk:d (not on Buzz)
         |  relaygroup unpin RELAY GID REF             unpin it, keeping every other pin
+        |                                             (on Buzz a NIP-PM 40011)
+        |  relaygroup pins RELAY GID [--timeout S]    the pinned messages (39005; Buzz 30623)
         """.trimMargin()
 
     suspend fun dispatch(
@@ -87,7 +90,7 @@ object RelayGroupCommands {
         route(
             "relaygroup",
             tail,
-            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user|pin|unpin> …",
+            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user|pin|unpin|pins> …",
             help = USAGE,
             routes =
                 mapOf(
@@ -104,6 +107,7 @@ object RelayGroupCommands {
                     "remove-user" to { rest -> RelayGroupModerationCommands.removeUser(dataDir, rest) },
                     "pin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = true) },
                     "unpin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = false) },
+                    "pins" to { rest -> RelayGroupModerationCommands.pins(dataDir, rest) },
                 ),
         )
 
