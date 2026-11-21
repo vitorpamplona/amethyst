@@ -2768,7 +2768,8 @@ class AccountConcordActions(
      * below 1 (CORD-08 §1): a metadata edition under MANAGE_METADATA, laid over the folded metadata so
      * nothing else changes. Then, as §4 asks, one kind-1740 timer notice goes into every channel whose
      * key this account holds (a Private Channel without one simply gets none). Returns false when
-     * nothing was published (not authorized, no Control write key, or the timer is already [secs]).
+     * nothing was published (not authorized, no Control write key, no metadata folded yet, or the
+     * timer is already [secs]).
      */
     suspend fun setConcordMessageExpiration(
         communityId: String,
@@ -2780,7 +2781,9 @@ class AccountConcordActions(
         val timer = secs?.takeIf { it >= 1 }
         // Same rule as editConcordMetadata: never lay the timer over a head we were not served.
         val folded = session.foldForWrite() ?: return false
-        val standing = folded.metadata ?: MetadataEntity()
+        // The timer rides the metadata edition: over a fold with no metadata it would rename the
+        // community to "" for every reader (CORD-02 §6), so it waits for the metadata to fold.
+        val standing = folded.metadata ?: return false
         if (standing.messageExpirationSecs() == timer) return false
         val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner, floors = session.controlFloors())
         publishConcordWrap(session.entry, wrap)
