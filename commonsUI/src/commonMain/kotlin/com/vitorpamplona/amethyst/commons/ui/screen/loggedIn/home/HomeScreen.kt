@@ -397,6 +397,8 @@ fun HomeFeeds(
                 feedContentState = feedState,
                 accountViewModel = accountViewModel,
                 listState = listState,
+                // Note cards, with the live bubbles on top.
+                prefetchAtNoteWidth = true,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },

@@ -255,6 +255,11 @@ pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
 - The prefetch decodes at the card's media width (`FeedMediaGutter`, reported by
   `NoteComposeLayout`), not the list's: in the run below every feed photo decoded at 511, the
   width cards draw at, and none at 600, so they draw 1:1 without a copy.
+  Only lists of note cards take it (`mediaAtNoteWidth`: the default renderer of
+  `RenderFeedState`/`RenderFeedContentState`, home, hashtags, profile threads). Picture and video
+  cards draw media across the whole card, and a thread's main post sits 12 dp in from each side,
+  both wider than a note's content column: from the one gutter they would have decoded too small,
+  missed the cache and popped in. Every other list keeps decoding at its own width.
 
 3 boots each, the committed state before the audit fixes (`HEAD`) and after, the same hour:
 

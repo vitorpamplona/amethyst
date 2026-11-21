@@ -25,8 +25,8 @@ import kotlin.concurrent.Volatile
 /**
  * How much narrower a feed card's media is than the card: its side padding and author column, less
  * what edge-to-edge media takes back. [com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout]
- * reports it as it lays out a top-level note, and the feed's prefetch ([PrefetchFeedMedia]) decodes
- * images at the list's width less it: the width the card draws them at, so on the desktop they
+ * reports it as it lays out a top-level note, and the prefetch of a list of note cards
+ * ([PrefetchFeedMedia] with `mediaAtNoteWidth`) decodes images at the list's width less it: the width the card draws them at, so on the desktop they
  * draw 1:1 with no copy, and nowhere does a bitmap wider than its card sit in memory. It depends on
  * the layout settings and the density, not on the width of the list, so one value serves every feed
  * and deck column.
