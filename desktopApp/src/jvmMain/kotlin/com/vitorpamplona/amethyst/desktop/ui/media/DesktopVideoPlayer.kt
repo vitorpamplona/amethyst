@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
-import com.vitorpamplona.amethyst.commons.ui.components.cornerOnlyClip
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
@@ -398,7 +398,7 @@ fun DesktopVideoPlayer(
                     .width(width)
                     .height(constrainedHeight)
                     .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
-                    .cornerOnlyClip(shape)
+                    .mediaClip(shape)
                     .background(backdrop),
             contentAlignment = Alignment.Center,
         ) {
@@ -605,7 +605,7 @@ private fun ChromiumRoutedVideo(
                 .width(width)
                 .height(height)
                 .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
-                .cornerOnlyClip(shape)
+                .mediaClip(shape)
                 .background(if (failed) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Black),
             contentAlignment = Alignment.Center,
         ) {

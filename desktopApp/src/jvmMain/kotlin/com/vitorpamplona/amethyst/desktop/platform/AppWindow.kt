@@ -51,6 +51,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
+import com.vitorpamplona.quartz.utils.Log
+import org.jetbrains.skiko.GraphicsApi
 import java.awt.Color
 import java.awt.Dialog
 import java.awt.EventQueue
@@ -103,6 +106,8 @@ fun AppWindow(
     content: @Composable AppWindowScope.() -> Unit,
 ) {
     if (WaylandDisplay.isActive) {
+        // Swing-drawn: Skia renders every frame on the CPU.
+        SoftwareDrawing.active = true
         WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, fullscreenDevice, onPreviewKeyEvent, visible, content)
     } else {
         Window(
@@ -118,6 +123,18 @@ fun AppWindow(
             onPreviewKeyEvent = onPreviewKeyEvent,
         ) {
             val scope = remember(window) { AppWindowScope(window, this) }
+            // Skia picks the renderer when the window first draws, and falls back to software if the
+            // GPU fails later: the drawing follows it (SoftwareDrawing).
+            DisposableEffect(window) {
+                val update = {
+                    val api = window.renderApi
+                    SoftwareDrawing.active = api.isSoftware()
+                    Log.i("AppWindow") { "Skia renders with $api" }
+                }
+                update()
+                window.onRenderApiChanged(update)
+                onDispose { }
+            }
             ProvideDesktopUiScale { scope.content() }
         }
     }
@@ -360,3 +377,5 @@ private fun WaylandFrame.applyPlacement(placement: WindowPlacement) {
 private const val ICON_SIZE = 256f
 private const val DEFAULT_WIDTH = 800
 private const val DEFAULT_HEIGHT = 600
+
+private fun GraphicsApi.isSoftware() = this == GraphicsApi.SOFTWARE_FAST || this == GraphicsApi.SOFTWARE_COMPAT

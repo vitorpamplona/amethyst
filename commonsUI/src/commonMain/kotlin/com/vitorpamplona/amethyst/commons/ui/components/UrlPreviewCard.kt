@@ -132,7 +132,7 @@ fun UrlPreviewCard(
                 Modifier
                     .padding(vertical = RichTextBlockSpacing)
                     .fillMaxWidth()
-                    .clip(QuoteBorder)
+                    .mediaClip(QuoteBorder)
                     .border(1.dp, borderColor, QuoteBorder)
             }
         } else {

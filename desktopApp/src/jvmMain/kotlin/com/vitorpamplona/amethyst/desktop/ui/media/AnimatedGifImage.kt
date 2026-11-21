@@ -24,19 +24,26 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.service.image.exactScaleSampling
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -48,11 +55,15 @@ import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import org.jetbrains.skia.AnimationDisposalMode
 import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.Image
 import org.jetbrains.skia.impl.use
 import java.io.File
 import java.net.URI
+import kotlin.concurrent.Volatile
+import kotlin.math.roundToInt
 
 private const val MIN_FRAME_DURATION_MS = 20
 
@@ -113,6 +124,10 @@ fun AnimatedGifImage(
     // [url] is a file the user picked (the media Studio), read from disk. Off for anything a note
     // names, so remote content never makes the client read a local file.
     local: Boolean = false,
+    // Off for a viewer that zooms with a layer scale, which frames scaled to the box couldn't follow.
+    scaleToDrawnSize: Boolean = true,
+    // Whether a frame is on screen, for a caller that draws a placeholder under it until then.
+    onShown: (Boolean) -> Unit = {},
 ) {
     var gif by remember(url) { mutableStateOf(GifSourceCache.get(url)) }
     var loadFailed by remember(url) { mutableStateOf(false) }
@@ -126,18 +141,32 @@ fun AnimatedGifImage(
     }
 
     val data = gif
+    SideEffect { onShown(data != null) }
     when {
         data != null -> {
             var shown by remember(data) { mutableStateOf(data.firstFrame) }
+            // Whether [shown] is already the size it is drawn at (see GifPlayer.decode).
+            var prescaled by remember(data) { mutableStateOf(false) }
+            val box = remember { GifBox() }
+            val currentScale by rememberUpdatedState(contentScale)
             if (data.bytes != null) {
-                LaunchedEffect(data) { playGif(data.bytes) { shown = it } }
+                LaunchedEffect(data) {
+                    playGif(
+                        data.bytes,
+                        target = { width, height -> if (scaleToDrawnSize && SoftwareDrawing.active) box.drawnSize(width, height, currentScale) else null },
+                    ) { frame, scaled ->
+                        shown = frame
+                        prescaled = scaled
+                    }
+                }
             }
 
             Image(
                 bitmap = shown,
                 contentDescription = contentDescription,
-                modifier = modifier,
-                contentScale = contentScale,
+                modifier = modifier.onSizeChanged { box.size = it },
+                // A frame scaled to its drawn size draws as it is, centred, at whole pixels.
+                contentScale = if (prescaled) ContentScale.None else contentScale,
             )
         }
 
@@ -173,7 +202,8 @@ fun AnimatedGifImage(
  */
 private suspend fun playGif(
     bytes: ByteArray,
-    show: (ImageBitmap) -> Unit,
+    target: (width: Int, height: Int) -> IntSize?,
+    show: (frame: ImageBitmap, scaledToTarget: Boolean) -> Unit,
 ) {
     val player =
         try {
@@ -190,7 +220,8 @@ private suspend fun playGif(
         var frame = 0
         while (currentCoroutineContext().isActive) {
             val start = System.nanoTime()
-            show(withContext(Dispatchers.Default) { player.decode(frame) })
+            val size = target(player.width, player.height)
+            show(withContext(Dispatchers.Default) { player.decode(frame, size) }, size != null)
             val spentMs = (System.nanoTime() - start) / 1_000_000
             delay((player.duration(frame) - spentMs).coerceAtLeast(MIN_FRAME_GAP_MS))
             frame = (frame + 1) % player.frameCount
@@ -202,6 +233,28 @@ private suspend fun playGif(
         player.close()
     }
 }
+
+/** Where a GIF is drawn, as laid out, for the player's thread to scale its frames to. */
+private class GifBox {
+    @Volatile
+    var size: IntSize? = null
+
+    /** The size a [width] x [height] frame is drawn at in this box with [contentScale]; null when unknown or too big to scale. */
+    fun drawnSize(
+        width: Int,
+        height: Int,
+        contentScale: ContentScale,
+    ): IntSize? {
+        val box = size?.takeIf { it.width > 0 && it.height > 0 } ?: return null
+        val factor = contentScale.computeScaleFactor(Size(width.toFloat(), height.toFloat()), Size(box.width.toFloat(), box.height.toFloat()))
+        val w = (width * factor.scaleX).roundToInt().coerceAtLeast(1)
+        val h = (height * factor.scaleY).roundToInt().coerceAtLeast(1)
+        return if (w.toLong() * h > MAX_SCALED_FRAME_PIXELS) null else IntSize(w, h)
+    }
+}
+
+// A 2560x1600 screen: past it the frames are left at their own size.
+private const val MAX_SCALED_FRAME_PIXELS = 4L * 1024 * 1024
 
 /**
  * Decodes the frames of a GIF in order into two buffers that take turns: the next frame is drawn
@@ -224,6 +277,14 @@ internal class GifPlayer(
         }
     private val images = buffers.map { it.asComposeImageBitmap() }
 
+    // The frames scaled to the size they are drawn at, taking turns like [buffers]; sized on demand.
+    private var scaledSize: IntSize? = null
+    private var scaled: Array<Bitmap> = emptyArray()
+    private var scaledImages: List<ImageBitmap> = emptyList()
+
+    val width: Int = codec.width
+    val height: Int = codec.height
+
     // The buffer holding [lastFrame], or -1 before the first decode.
     private var front = -1
     private var lastFrame = -1
@@ -232,8 +293,39 @@ internal class GifPlayer(
 
     fun duration(frame: Int): Int = (frameInfos.getOrNull(frame)?.duration ?: 100).coerceAtLeast(MIN_FRAME_DURATION_MS)
 
-    /** The pixels of [frame], decoded into the buffer that is not on screen. */
-    fun decode(frame: Int): ImageBitmap {
+    /**
+     * The pixels of [frame], decoded into the buffer that is not on screen, and scaled to [target]
+     * when given: in software a frame drawn at another size is resampled on the UI thread every
+     * draw, so it is scaled here, on the player's thread, once per frame (see SoftwareDrawing).
+     */
+    fun decode(
+        frame: Int,
+        target: IntSize? = null,
+    ): ImageBitmap {
+        val native = decodeNative(frame)
+        if (target == null || (target.width == width && target.height == height)) return native
+        return scaleInto(target)
+    }
+
+    private fun scaleInto(target: IntSize): ImageBitmap {
+        if (scaledSize != target) {
+            scaled = Array(2) { Bitmap().apply { allocN32Pixels(target.width, target.height) } }
+            scaledImages = scaled.map { it.asComposeImageBitmap() }
+            scaledSize = target
+        }
+        val out = scaled[front]
+        // The native buffer is mutable, so this image is a snapshot of it.
+        Image.makeFromBitmap(buffers[front]).use { source ->
+            Canvas(out).use { canvas ->
+                canvas.clear(0)
+                canvas.drawImageRect(source, 0f, 0f, width.toFloat(), height.toFloat(), 0f, 0f, target.width.toFloat(), target.height.toFloat(), exactScaleSampling(target.width < width || target.height < height), null, true)
+            }
+        }
+        out.notifyPixelsChanged()
+        return scaledImages[front]
+    }
+
+    private fun decodeNative(frame: Int): ImageBitmap {
         val back = if (front == 0) 1 else 0
         val target = buffers[back]
         val required = frameInfos.getOrNull(frame)?.requiredFrame ?: -1

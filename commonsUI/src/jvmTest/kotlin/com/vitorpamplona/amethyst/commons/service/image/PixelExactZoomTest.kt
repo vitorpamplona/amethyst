@@ -39,7 +39,6 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class PixelExactZoomTest {
     /** A 1-pixel black and white checkerboard: any resampling turns it gray. */
@@ -90,9 +89,8 @@ class PixelExactZoomTest {
         val image = PixelExactImage(bitmap)
         val loaded = AsyncImagePainter.State.Success(ImagePainter(image), successResult(image))
 
-        // The 1:1 copy is made for the fitted size, so the layer's zoom only enlarges it.
-        assertTrue(sharpShare(ImagePainter(image)) < 0.1)
-        // What the viewer draws keeps every pixel of the checkerboard.
+        // The zoom is a layer scale, which a copy made for the fitted size couldn't follow: what the
+        // viewer draws keeps every pixel of the checkerboard.
         assertEquals(1.0, sharpShare(loaded.withFullResolution().painter!!))
     }
 

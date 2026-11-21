@@ -36,7 +36,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -48,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -90,7 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
-import com.vitorpamplona.amethyst.commons.ui.components.cornerOnlyClip
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -192,7 +190,7 @@ object DesktopNotePlatform : NotePlatform {
         shape: Shape,
         description: String?,
     ) {
-        val border = Modifier.clip(shape)
+        val border = Modifier.mediaClip(shape)
         if (artworkUri != null) {
             VideoStillFrame(model = artworkUri, ratio = ratio, blurhash = blurhash, thumbhash = thumbhash, borderModifier = border, contentDescription = description)
         } else {
@@ -292,7 +290,7 @@ object DesktopNotePlatform : NotePlatform {
                     size
                         // Where the viewer grows the image out of, and shrinks it back into.
                         .zoomSourceAnchor(source)
-                        .cornerOnlyClip(shape)
+                        .mediaClip(shape)
                         .clickable { showViewer = true }
                 // The note's blurhash/thumbhash sits under the image from the first frame, so the card
                 // is never a blank box while the image (or a GIF's frames) loads, nor when it fails.
@@ -359,11 +357,11 @@ object DesktopNotePlatform : NotePlatform {
 
         key(attempt) {
             if (animated) {
-                // The GIF player loads its frames on its own: the blurhash stays under it meanwhile.
-                SideEffect { onShown(false) }
                 AnimatedGifImage(
                     url = url,
                     contentDescription = description,
+                    // The blurhash stays under it until its first frame is in.
+                    onShown = onShown,
                     modifier = modifier,
                     contentScale = contentScale,
                     onFailure = { failure = mediaLoadFailureOf(it) },
@@ -502,7 +500,7 @@ object DesktopNotePlatform : NotePlatform {
         val fillsSlot = contentScale == ContentScale.Crop
         val modifier =
             (if (fillsSlot) Modifier.fillMaxSize() else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight))
-                .cornerOnlyClip(shape)
+                .mediaClip(shape)
                 .let { if (onDialog != null) it.clickable { onDialog() } else it }
         Box(modifier) {
             if (blurhash != null || thumbhash != null) {

@@ -152,6 +152,7 @@ fun ZoomableImage(
                     contentDescription = null,
                     modifier = imageModifier,
                     contentScale = ContentScale.Fit,
+                    scaleToDrawnSize = false,
                     onFailure = { failure = mediaLoadFailureOf(it) },
                 )
             } else {

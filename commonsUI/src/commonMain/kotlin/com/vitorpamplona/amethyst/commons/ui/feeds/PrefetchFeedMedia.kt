@@ -259,15 +259,18 @@ private data class VisibleEnds(
     /**
      * What a note's images are decoded to. A grid cell crops its image, so it is covered. A note
      * with several images draws them as an `ImageGallery` of cropped cells, each at most as wide
-     * as the list, so they cover a square that wide. A single image is drawn across the card's
-     * width, never larger than the list, so it fits the viewport.
+     * as the card's media, so they cover a square that wide. A single image is drawn across the
+     * card's media width ([FeedMediaGutter]: the list's width until a card has laid out), never
+     * taller than the list, so it fits that width and the viewport's height.
      */
-    fun boxFor(imageCount: Int): PrefetchBox =
-        when {
+    fun boxFor(imageCount: Int): PrefetchBox {
+        val media = FeedMediaGutter.mediaWidth(viewport.width)
+        return when {
             cell != null -> PrefetchBox(cell.width, cell.height, fill = true)
-            imageCount > 1 -> PrefetchBox(viewport.width, viewport.width, fill = true)
-            else -> PrefetchBox(viewport.width, viewport.height, fill = false)
+            imageCount > 1 -> PrefetchBox(media, media, fill = true)
+            else -> PrefetchBox(media, viewport.height, fill = false)
         }
+    }
 }
 
 /** A new visible range: only the keys count, so resizing the window doesn't warm again on every frame. */

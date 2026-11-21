@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import kotlin.concurrent.Volatile
 
 // Contrast colour (black or white) for content drawn on top of an accent swatch.
@@ -207,13 +208,13 @@ internal val LightOverPictureBackground = LightColorPalette.background.copy(0.62
 val DarkImageModifier =
     Modifier
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightImageModifier =
     Modifier
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkVideoModifier =
@@ -242,28 +243,28 @@ val DarkReplyBorderModifier =
     Modifier
         .padding(top = 5.dp)
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightReplyBorderModifier =
     Modifier
         .padding(top = 5.dp)
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkInnerPostBorderModifier =
     Modifier
         .padding(vertical = 4.dp)
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightInnerPostBorderModifier =
     Modifier
         .padding(vertical = 4.dp)
         .fillMaxWidth()
-        .clip(shape = QuoteBorder)
+        .mediaClip(QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkMaxWidthWithBackground =

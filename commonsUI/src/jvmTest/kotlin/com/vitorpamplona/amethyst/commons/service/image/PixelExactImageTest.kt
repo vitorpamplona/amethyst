@@ -20,14 +20,32 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Color
+import org.jetbrains.skia.Image
+import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class PixelExactImageTest {
+    @BeforeTest
+    fun drawInSoftware() {
+        SoftwareDrawing.active = true
+        ExactCopies.clear()
+    }
+
+    @AfterTest
+    fun reset() {
+        SoftwareDrawing.active = false
+        ExactCopies.clear()
+    }
+
     private fun solid(
         width: Int,
         height: Int,
@@ -90,5 +108,76 @@ class PixelExactImageTest {
                 image.draw(canvas)
             }, Color.GREEN)
         assertEquals(listOf(0, 0, 40, 30), area)
+    }
+
+    @Test
+    fun onAGpuItDrawsScaledExactlyAsAPlainBitmap() {
+        SoftwareDrawing.active = false
+        val image = solid(100, 80, Color.RED)
+        val expected =
+            render {
+                it.translate(10.4f, 5.6f)
+                it.scale(0.5f, 0.5f)
+                it.drawImageRect(Image.makeFromBitmap(image.bitmap), 0f, 0f, 100f, 80f, 0f, 0f, 100f, 80f, SamplingMode.LINEAR, null, true)
+            }
+        val actual =
+            render {
+                it.translate(10.4f, 5.6f)
+                it.scale(0.5f, 0.5f)
+                image.draw(it)
+            }
+        assertTrue(expected.contentEquals(actual))
+        assertEquals(0, ExactCopies.size)
+    }
+
+    @Test
+    fun smallTargetsAreNotCopied() {
+        val image = solid(100, 100, Color.RED)
+        render {
+            it.scale(0.5f, 0.5f)
+            image.draw(it)
+        }
+        assertEquals(0, ExactCopies.size)
+    }
+
+    @Test
+    fun imagesWrappingTheSameBitmapShareTheirCopy() {
+        val first = solid(400, 400, Color.RED)
+        val second = PixelExactImage(first.bitmap)
+        render {
+            it.scale(0.5f, 0.5f)
+            first.draw(it)
+        }
+        render {
+            it.scale(0.5f, 0.5f)
+            second.draw(it)
+        }
+        assertEquals(1, ExactCopies.size)
+        // The copy and the decoded picture it keeps alive.
+        assertEquals(200L * 200 * 4 + 400L * 400 * 4, ExactCopies.heldBytes)
+    }
+
+    @Test
+    fun theBudgetEvictsTheOldestCopies() {
+        // Each entry holds a 900x900 copy and its 1000x1000 source: ~7 MB, so ~9 fit in 64 MB.
+        repeat(20) {
+            val image = solid(1000, 1000, Color.BLUE)
+            render { c ->
+                c.scale(0.9f, 0.9f)
+                image.draw(c)
+            }
+        }
+        assertTrue(ExactCopies.heldBytes <= 64L * 1024 * 1024, "held ${ExactCopies.heldBytes}")
+        assertTrue(ExactCopies.size in 5..10, "kept ${ExactCopies.size}")
+    }
+
+    private fun render(draw: (Canvas) -> Unit): ByteArray {
+        val surface = Surface.makeRasterN32Premul(600, 600)
+        surface.canvas.clear(Color.WHITE)
+        draw(surface.canvas)
+        val out = Bitmap()
+        out.allocN32Pixels(600, 600, true)
+        surface.readPixels(out, 0, 0)
+        return out.readPixels()!!
     }
 }

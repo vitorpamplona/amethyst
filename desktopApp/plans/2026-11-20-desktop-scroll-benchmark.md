@@ -237,6 +237,33 @@ feed's downsampled copies can't answer, and draws that decode's own bitmap
 One of the three boots ran 49.8 fps on `down-again` (the live feed differs per boot). The cold `down`
 pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
 
+### After the audit
+
+- `PixelExactImage` applies only while Skia draws in software (`SoftwareDrawing`, set by the
+  window from its renderer, and always on for the Swing-drawn Wayland window); on a GPU it draws
+  scaled, as a plain bitmap. The "animating" guard is gone: making a copy costs about one scaled
+  draw (8.2 ms against 7.9 ms for a 600x800 photo into 511x681), and the guard misfired when one
+  image was drawn at two sizes, leaving the slow draw recorded in the card. Targets under 128x128
+  draw scaled (microseconds, no copy); the copy budget counts the decoded bitmap each entry keeps
+  alive; copies are keyed by the bitmap, so wrappers of the same pixels share them.
+- GIFs: the blurhash goes once the first frame is in, and in software each frame is scaled to its
+  drawn size on the player's thread, then drawn 1:1 (`GifPlayer.decode(frame, target)`); the image
+  viewer, which zooms with a layer, keeps full-size frames.
+- `mediaClip(shape)` (expect/actual; `clip` on Android) records the content once and plays it
+  through the band and corner clips; it now also clips quoted notes, link previews and the
+  captured video still.
+- The prefetch decodes at the card's media width (`FeedMediaGutter`, reported by
+  `NoteComposeLayout`), not the list's: in the run below every feed photo decoded at 511, the
+  width cards draw at, and none at 600, so they draw 1:1 without a copy.
+
+3 boots each, the committed state before the audit fixes (`HEAD`) and after, the same hour:
+
+| pass | before | after |
+|---|---|---|
+| down: fps, gap p99 | 28.5, 144.7 ms | 31.8, 95.7 ms |
+| up: fps | 53.5 | 55.1 |
+| down-again: fps (boots), frames over 25 ms | 56.0 (52.3-58.3), 10.3% | **58.6 (58.6-59.3), 4.9%** |
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
@@ -250,7 +277,7 @@ pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
    (classes only, no profiles), so they keep the slow first scroll the "no AOT cache" row shows.
    Training them needs their packaging rebuilt around a trained image (startup plan, "Next").
 5. **HiDPI.** Measure the image fixes at 2x scale, where every pixel cost is four times larger.
-6. **GPU drawing.** `PixelExactImage` also runs where Skia draws on the GPU (macOS, Windows, X11);
-   check it there, or limit it to software drawing.
+6. **GPU drawing.** Run the benchmark where Skia draws on the GPU (macOS, Windows, X11) for the
+   numbers users there see; the software-only paths stay off there.
 7. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
    `jit_ms` are stable enough to watch there if wanted.

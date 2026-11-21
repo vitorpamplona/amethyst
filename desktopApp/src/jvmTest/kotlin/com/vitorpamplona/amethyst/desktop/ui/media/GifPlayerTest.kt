@@ -20,10 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.unit.IntSize
+import com.vitorpamplona.amethyst.commons.service.image.exactScaleSampling
 import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.Image
+import org.jetbrains.skia.impl.use
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -123,6 +129,44 @@ class GifPlayerTest {
                     val shown = player.decode(frame).asSkiaBitmap().readPixels()!!
                     assertContentEquals(expected[frame], shown, "frame $frame")
                 }
+            }
+        }
+    }
+
+    // Frame [frame] decoded on its own, scaled to [target] with the filter the player uses.
+    private fun referenceScaled(
+        bytes: ByteArray,
+        frame: Int,
+        target: IntSize,
+    ): ByteArray {
+        val codec = Codec.makeFromData(Data.makeFromBytes(bytes))
+        val source = Bitmap().apply { allocN32Pixels(codec.width, codec.height) }
+        codec.readPixels(source, frame)
+        val out = Bitmap().apply { allocN32Pixels(target.width, target.height) }
+        Image.makeFromBitmap(source).use { image ->
+            Canvas(out).use { canvas ->
+                canvas.clear(0)
+                canvas.drawImageRect(image, 0f, 0f, width.toFloat(), height.toFloat(), 0f, 0f, target.width.toFloat(), target.height.toFloat(), exactScaleSampling(false), null, true)
+            }
+        }
+        return out.readPixels()!!
+    }
+
+    @Test
+    fun framesScaledToTheirDrawnSizeMatchTheFramesScaledOnTheirOwn() {
+        val bytes = animatedGif()
+        val target = IntSize(width * 2, height * 2)
+
+        GifPlayer(bytes).use { player ->
+            var previous: Pair<ImageBitmap, ByteArray>? = null
+            for (frame in 0 until player.frameCount) {
+                val shown = player.decode(frame, target)
+                assertEquals(target, IntSize(shown.width, shown.height))
+                val pixels = shown.asSkiaBitmap().readPixels()!!
+                assertContentEquals(referenceScaled(bytes, frame, target), pixels, "frame $frame")
+                // The frame before may still be on screen: decoding this one leaves it as it was.
+                previous?.let { (image, before) -> assertContentEquals(before, image.asSkiaBitmap().readPixels()!!, "frame ${frame - 1}") }
+                previous = shown to pixels
             }
         }
     }

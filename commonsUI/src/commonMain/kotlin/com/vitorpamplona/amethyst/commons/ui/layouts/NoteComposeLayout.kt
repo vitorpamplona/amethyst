@@ -39,8 +39,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedMediaGutter
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 
@@ -269,6 +271,9 @@ private fun NoteComposeLayoutBoostedPreview() {
  * @param authorGutter Slot for the author column below the picture, sized to run down
  *   to the end of the note content (the expanded text's "Show Less"). Usually empty;
  *   when it emits, the main area grows to fit at least its minimum height.
+ * @param mediaBleed How far the note's media reaches past each side of its content column.
+ * @param reportsMediaGutter Whether this is a feed's top-level note, whose media width tells the
+ *   feed's prefetch what width to decode images at ([FeedMediaGutter]).
  */
 @Composable
 fun NoteComposeLayout(
@@ -284,8 +289,11 @@ fun NoteComposeLayout(
     noteContent: @Composable () -> Unit,
     reactionsRow: @Composable () -> Unit,
     authorGutter: @Composable () -> Unit = {},
+    mediaBleed: Dp = 0.dp,
+    reportsMediaGutter: Boolean = false,
 ) {
     val density = LocalDensity.current
+    val mediaBleedPx = with(density) { mediaBleed.roundToPx() }
     val px =
         remember(density) {
             with(density) {
@@ -329,6 +337,9 @@ fun NoteComposeLayout(
         val authorW = if (showAuthorColumn && !authorOnTop) px.authorWidth else 0
         val gap = if (showAuthorColumn && !authorOnTop) px.authorContentGap else 0
         val contentWidth = (innerWidth - authorW - gap).coerceAtLeast(0)
+        if (reportsMediaGutter && constraints.hasBoundedWidth) {
+            FeedMediaGutter.report(maxWidth - (contentWidth + 2 * mediaBleedPx).coerceAtMost(maxWidth))
+        }
 
         // Constraints is a value class (inline Long) so these don't allocate.
         val authorConstraints = Constraints(maxWidth = px.authorWidth)
