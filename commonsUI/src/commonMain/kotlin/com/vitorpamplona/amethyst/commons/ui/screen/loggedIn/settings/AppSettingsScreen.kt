@@ -526,10 +526,10 @@ private fun LanguageTile(
     languageEntries: ImmutableMap<String, String>,
 ) {
     val systemDefault = stringRes(Res.string.language_system_default)
-    val languageList =
-        remember(languageEntries, systemDefault) {
-            (listOf(systemDefault) + languageEntries.keys).map { TitleExplainer(it) }.toImmutableList()
-        }
+    // (label, tag) per dialog row; the tag is what a pick stores.
+    val options: List<Pair<String, String?>> =
+        remember(languageEntries, systemDefault) { listOf(systemDefault to null) + languageEntries.toList() }
+    val languageList = remember(options) { options.map { TitleExplainer(it.first) }.toImmutableList() }
 
     val language by sharedPrefs.preferredLanguage.collectAsState()
     val currentLabel = languageLabel(languageEntries, language) ?: systemDefault
@@ -566,7 +566,7 @@ private fun LanguageTile(
             onDismiss = { showPicker = false },
         ) { index ->
             showPicker = false
-            sharedPrefs.preferredLanguage.tryEmit(if (index == 0) null else languageEntries.values.elementAt(index - 1))
+            sharedPrefs.preferredLanguage.tryEmit(options[index].second)
         }
     }
 }
@@ -584,8 +584,7 @@ fun languageLabel(
     language: String?,
 ): String? {
     if (language == null) return null
-    entries.entries.firstOrNull { it.value == language }?.let { return it.key }
     val subtag = language.substringBefore('-')
-    entries.entries.firstOrNull { it.value == subtag }?.let { return it.key }
-    return language
+    val match = entries.entries.firstOrNull { it.value == language } ?: entries.entries.firstOrNull { it.value == subtag }
+    return match?.key ?: language
 }
