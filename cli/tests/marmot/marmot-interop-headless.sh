@@ -152,6 +152,8 @@ source "$SCRIPT_DIR/tests-extras.sh"
 source "$SCRIPT_DIR/tests-media.sh"
 # shellcheck source=tests-mdk014.sh
 source "$SCRIPT_DIR/tests-mdk014.sh"
+# shellcheck source=tests-mdk018.sh
+source "$SCRIPT_DIR/tests-mdk018.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,
@@ -222,6 +224,7 @@ ALL_TESTS=(
   test_35_media_from_an_earlier_epoch_wn_to_amy
   test_36_admin_deletion_amy_to_wn
   test_37_admin_deletion_wn_to_amy
+  test_38_thread_message_wn_to_amy
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous
