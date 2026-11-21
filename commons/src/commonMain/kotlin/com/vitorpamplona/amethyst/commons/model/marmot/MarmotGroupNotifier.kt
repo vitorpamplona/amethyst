@@ -56,8 +56,19 @@ interface MarmotGroupNotifier {
          * (docs/marmot-architecture/overview/thread-messages.md, mdk#3581) has a thread message
          * notify and mention like kind 9, and White Noise sends them. Reactions, deletions, edits
          * and control messages stay silent.
+         *
+         * A kind 1111 is a thread message only when it names its parent with a lowercase `e`
+         * (with or without `k`: White Noise before 2026-11-17 sent `e` alone, and MDK still reads
+         * that as a thread message). One with a numeric `k` but no `e` is a comment without a
+         * parent and one with neither is a custom event; MDK counts neither as chat activity, so
+         * neither notifies.
          */
-        fun notifies(innerEvent: Event): Boolean = innerEvent is ChatEvent || innerEvent is CommentEvent
+        fun notifies(innerEvent: Event): Boolean =
+            when (innerEvent) {
+                is ChatEvent -> true
+                is CommentEvent -> innerEvent.replyEventIds().isNotEmpty()
+                else -> false
+            }
     }
 
     /** Notifies nothing (previews, tests). */

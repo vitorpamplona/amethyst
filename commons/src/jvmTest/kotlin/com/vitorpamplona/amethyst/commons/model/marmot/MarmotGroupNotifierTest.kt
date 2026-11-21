@@ -63,6 +63,33 @@ class MarmotGroupNotifierTest {
     }
 
     @Test
+    fun anOlderThreadMessageWithOnlyAParentNotifies() {
+        // White Noise Linux before 2026-11-17: `e` alone, which MDK still reads as a thread message.
+        val tags = arrayOf(arrayOf("e", root, "", author))
+        assertTrue(MarmotGroupNotifier.notifies(make(::CommentEvent, tags)))
+    }
+
+    @Test
+    fun aCommentWithoutAParentStaysSilent() {
+        // A numeric `k` but no lowercase `e`: a comment without a parent, a custom row, not chat.
+        val tags =
+            arrayOf(
+                arrayOf("E", root, "", author),
+                arrayOf("K", "9"),
+                arrayOf("P", author),
+                arrayOf("k", "9"),
+            )
+        assertFalse(MarmotGroupNotifier.notifies(make(::CommentEvent, tags)))
+    }
+
+    @Test
+    fun aCustomKind1111StaysSilent() {
+        // Neither a lowercase `e` nor a `k`: a plain custom event.
+        assertFalse(MarmotGroupNotifier.notifies(make(::CommentEvent)))
+        assertFalse(MarmotGroupNotifier.notifies(make(::CommentEvent, arrayOf(arrayOf("p", author)))))
+    }
+
+    @Test
     fun reactionsAndDeletionsStaySilent() {
         assertFalse(MarmotGroupNotifier.notifies(make(::ReactionEvent)))
         assertFalse(MarmotGroupNotifier.notifies(make(::DeletionRequestEvent)))
