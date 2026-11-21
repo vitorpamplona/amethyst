@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.service.image
 
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DecodeResult
 import coil3.decode.DecodeUtils
 import coil3.decode.Decoder
@@ -108,7 +107,7 @@ internal fun downsample(
         }
 
     return DecodeResult(
-        image = bitmap.asImage(),
+        image = PixelExactImage(bitmap),
         isSampled = width < srcWidth || height < srcHeight,
     )
 }
@@ -142,7 +141,7 @@ internal fun shrinkJpeg(
                 codec.readPixels(scaled, 0)
                 scaled.setImmutable()
                 Image.makeFromBitmap(scaled).use { image ->
-                    DecodeResult(image = drawScaled(image, width, height, origin).asImage(), isSampled = true)
+                    DecodeResult(image = PixelExactImage(drawScaled(image, width, height, origin)), isSampled = true)
                 }
             } catch (e: Exception) {
                 // A JPEG Skia can't decode at that scale (a broken or exotic file): the usual path.

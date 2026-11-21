@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.cornerOnlyClip
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -290,12 +292,15 @@ object DesktopNotePlatform : NotePlatform {
                     size
                         // Where the viewer grows the image out of, and shrinks it back into.
                         .zoomSourceAnchor(source)
-                        .clip(shape)
+                        .cornerOnlyClip(shape)
                         .clickable { showViewer = true }
                 // The note's blurhash/thumbhash sits under the image from the first frame, so the card
                 // is never a blank box while the image (or a GIF's frames) loads, nor when it fails.
+                // Once a still image has drawn it covers the slot, and the blurhash under it goes: a
+                // tiny bitmap stretched over the slot costs as much to draw in software as the photo.
+                var shown by remember(url) { mutableStateOf(false) }
                 Box(modifier) {
-                    if (content.blurhash != null || content.thumbhash != null) {
+                    if ((content.blurhash != null || content.thumbhash != null) && !shown) {
                         DisplayBlurHash(content.blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = content.thumbhash)
                     }
                     // With no known shape the image itself sizes the card, so it must not just match it.
@@ -305,6 +310,7 @@ object DesktopNotePlatform : NotePlatform {
                         contentScale,
                         if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
                         shapeUnknown = ratio == null,
+                        onShown = { shown = it },
                         blurhash = content.blurhash,
                         thumbhash = content.thumbhash,
                         // A gallery cell fixes its size but gives children no minimum height, so
@@ -338,6 +344,7 @@ object DesktopNotePlatform : NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         shapeUnknown: Boolean = false,
+        onShown: (Boolean) -> Unit = {},
         blurhash: String? = null,
         thumbhash: String? = null,
         failureModifier: Modifier = modifier,
@@ -352,6 +359,8 @@ object DesktopNotePlatform : NotePlatform {
 
         key(attempt) {
             if (animated) {
+                // The GIF player loads its frames on its own: the blurhash stays under it meanwhile.
+                SideEffect { onShown(false) }
                 AnimatedGifImage(
                     url = url,
                     contentDescription = description,
@@ -369,6 +378,7 @@ object DesktopNotePlatform : NotePlatform {
                     modifier = modifier,
                     contentScale = contentScale,
                     onState = { state ->
+                        onShown(state is AsyncImagePainter.State.Success)
                         when (state) {
                             is AsyncImagePainter.State.Success -> {
                                 val image = state.result.image
@@ -492,7 +502,7 @@ object DesktopNotePlatform : NotePlatform {
         val fillsSlot = contentScale == ContentScale.Crop
         val modifier =
             (if (fillsSlot) Modifier.fillMaxSize() else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight))
-                .clip(shape)
+                .cornerOnlyClip(shape)
                 .let { if (onDialog != null) it.clickable { onDialog() } else it }
         Box(modifier) {
             if (blurhash != null || thumbhash != null) {

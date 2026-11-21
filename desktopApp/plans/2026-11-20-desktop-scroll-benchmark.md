@@ -1,6 +1,6 @@
 # Desktop scroll benchmark
 
-Status: built. The benchmark, its script, the first measurements, the image-prefetch fix it found, and the AOT cache trained on scrolling.
+Status: built. The benchmark, its script, the first measurements, the image-prefetch fix it found, the AOT cache trained on scrolling, and the 1:1 image drawing that brought warm scrolling to ~60 fps in software.
 
 ## What it measures
 
@@ -183,6 +183,51 @@ Release run 478 (9 Nov), the only one with a trained cache so far, ran past the 
 load `libskiko-linux-arm64.so`, which links `libEGL.so.1`, missing from the runner. Those legs now
 get 30 minutes an attempt (the job 75) and `libegl1`.
 
+## Where a warm frame goes, and the images that took half of it
+
+A CPU-time profile of the warm passes (JDK 25's `jdk.CPUTimeSample`, dev `run`) put ~66% of the UI
+thread in Skia rasterizing the frame in software (`Canvas._nDrawPicture` and the blit), ~20% in all
+of Compose (recomposition ~11%, measure and layout ~6%). The cost follows the pixels: the same image
+at `-Dsun.java2d.uiScale=2` (4x the pixels) scrolled at 16.7 fps against 47.8.
+
+Switching parts of the screen off one at a time (still composed and laid out, but drawing nothing),
+2 boots each, dev `run`:
+
+| drawn nothing | warm fps (down-again) | UI work per frame (median) |
+|---|---|---|
+| (base) | 51.0 | 16.2 ms |
+| avatars, action rows | ~50 | no change |
+| drawer + notification panel | 54.3 | ~-1 to -2 ms |
+| note images and videos | 59.2 | 9.3 ms |
+| all cards + drawer + panel | 59.5 | 6.3 ms |
+
+The images were half the frame. A Skia microbenchmark (skiko 0.150.2, AVX-512 CPU) of one 450x600
+photo explained it: drawn at a size other than its own it costs 5.9-7.6 ms a frame whatever the
+sampling; drawn 1:1 at whole pixels 0.3-0.4 ms; 1:1 at a half-pixel offset 6.1 ms; 1:1 inside an
+antialiased rounded clip 1.7 ms, aliased or rectangular 0.4 ms. Cards drew the image the feed's
+prefetch decoded at the list's width (600 px) into a ~511 px slot, so every frame resampled it, and
+the photo card also kept its blurhash (a few dozen pixels stretched over the slot) drawn under it.
+
+Fixed:
+
+- `PixelExactImage` (`commonsUI/src/skikoMain/.../service/image/`): the Skia decoders and the
+  blurhash/thumbhash bridge return an image that scales one copy to its size on screen and draws
+  that 1:1 at whole pixels. Copies sit in a 64 MB LRU (`ExactCopies`); a size that changes frame to
+  frame draws scaled, without copies.
+- The photo card drops its blurhash once a still image has loaded (an animated one keeps it).
+- `cornerOnlyClip(shape)`: the photo and video cards clip with rectangles and use the antialiased
+  rounded outline only inside the four corner squares (pixel-compared against the rounded clip: 12
+  channel values differ, by at most 25 of 255, at the seams).
+- The video's extracted thumbnail draws through `PixelExactImage` too.
+
+| pass, 3 boots | before | after |
+|---|---|---|
+| up: fps, UI work per frame | 46.0, 18.5 ms | 51.0, 11.8 ms |
+| down-again: fps, UI work per frame, frames over 25 ms | 51.0, 16.2 ms, 12.0% | **59.2, 10.6 ms, 5.6%** |
+
+One of the three boots ran 49.8 fps on `down-again` (the live feed differs per boot). The cold `down`
+pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
@@ -195,5 +240,8 @@ get 30 minutes an attempt (the job 75) and `libegl1`.
 4. **Train the installers too.** The `.deb`, `.rpm`, `.dmg` and `.msi` carry the per-user archive
    (classes only, no profiles), so they keep the slow first scroll the "no AOT cache" row shows.
    Training them needs their packaging rebuilt around a trained image (startup plan, "Next").
-5. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
+5. **HiDPI.** Measure the image fixes at 2x scale, where every pixel cost is four times larger.
+6. **GPU drawing.** `PixelExactImage` also runs where Skia draws on the GPU (macOS, Windows, X11);
+   check it there, or limit it to software drawing.
+7. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
    `jit_ms` are stable enough to watch there if wanted.

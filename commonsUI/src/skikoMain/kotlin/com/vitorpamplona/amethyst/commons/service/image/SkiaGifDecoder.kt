@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.service.image
 
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DecodeResult
 import coil3.decode.Decoder
 import coil3.decode.ImageSource
@@ -52,7 +51,7 @@ class SkiaGifDecoder(
             }
 
         val (width, height) = decodedSize(bitmap.width, bitmap.height, options)
-        if (width == bitmap.width && height == bitmap.height) return DecodeResult(image = bitmap.asImage(), isSampled = false)
+        if (width == bitmap.width && height == bitmap.height) return DecodeResult(image = PixelExactImage(bitmap), isSampled = false)
 
         // Shrunk to the drawn size like every other image (see SkiaDownsamplingDecoder). The bitmap
         // is immutable, so the image shares its pixels instead of copying them.
