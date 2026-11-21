@@ -376,6 +376,9 @@ object BuzzCommands {
 
         val invite = BuzzInviteLink.parse(urlArg) ?: return Output.error("bad_args", "not a Buzz invite link: $urlArg")
         if (invite.isExpired(TimeUtils.now())) return Output.error("expired", "this invite has expired")
+        // The relay writes the link's scheme from its own url: `http://` for a `ws://` deployment.
+        val secure = BuzzInviteLink.isSecure(urlArg)
+        val httpBase = invite.httpBase(secure)
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -384,7 +387,7 @@ object BuzzCommands {
             // 1. Join policy (optional). A relay with a configured policy requires an accepted
             //    receipt before the claim; one without returns 404 and we skip straight to claim.
             var policyReceipt: String? = null
-            val (policyCode, policyBody) = httpGet(http, "${invite.httpBase()}/api/join-policy")
+            val (policyCode, policyBody) = httpGet(http, "$httpBase/api/join-policy")
             if (policyCode == 200) {
                 val policy = jsonParser.parseToJsonElement(policyBody).jsonObject["policy"]?.jsonObject
                 val version = policy?.get("version")?.jsonPrimitive?.content
@@ -402,7 +405,7 @@ object BuzzCommands {
                             put("policy_version", version)
                             put("age_confirmed", true)
                         }.toString()
-                    val (acceptCode, acceptBody) = httpPost(http, "${invite.httpBase()}/api/invites/accept-policy", acceptReq, null)
+                    val (acceptCode, acceptBody) = httpPost(http, "$httpBase/api/invites/accept-policy", acceptReq, null)
                     if (acceptCode != 200) return Output.error("policy_failed", "accept-policy failed ($acceptCode): $acceptBody")
                     policyReceipt =
                         jsonParser
@@ -415,7 +418,7 @@ object BuzzCommands {
             }
 
             // 3. Claim — NIP-98-signed POST. The `u` tag must equal the tenant-host URL.
-            val claimUrl = "${invite.httpBase()}/api/invites/claim"
+            val claimUrl = "$httpBase/api/invites/claim"
             val claimReq =
                 buildJsonObject {
                     put("code", invite.code)
@@ -444,7 +447,7 @@ object BuzzCommands {
                     "community_id" to (result["community_id"]?.jsonPrimitive?.content ?: invite.communityId),
                     "role" to (result["role"]?.jsonPrimitive?.content ?: invite.role),
                     "host" to invite.host,
-                    "relay" to invite.relayUrl(),
+                    "relay" to invite.relayUrl(secure),
                 ),
             )
             return 0
