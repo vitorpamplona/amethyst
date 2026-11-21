@@ -1487,7 +1487,6 @@
     <string name="event_sync_start_anyway">このまま開始（モバイルデータ使用）</string>
     <string name="event_sync_cancel">キャンセル</string>
     <string name="event_sync_relays_progress">relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">再配布済みイベント：%2$d件送信・%3$d件受信のうち%1$d件が新規</string>
     <string name="event_sync_done_title">同期完了</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">受信した%2$d件のうち%1$d件のイベントを宛先relayに転送しました。</item>
@@ -3780,7 +3779,6 @@
     <string name="audience_sheet_title">ユーザーを追加</string>
     <string name="audience_sheet_search">ユーザーとリストを検索</string>
     <string name="audience_sheet_no_lists">ユーザーリストやフォローパックはまだありません。上で検索して直接追加してください。</string>
-    <string name="audience_count_with_private">%1$d · 非公開 %2$d</string>
     <string name="audience_over_limit">上限超過</string>
     <string name="audience_recipients_are_visible">この投稿の全員が受信者リスト全体を見ることができます。</string>
     <string name="looking_for_event_title">読み込み中</string>
@@ -5726,8 +5724,6 @@
     <plurals name="poll_results_option_count">
         <item quantity="other">%1$d 人の投票者</item>
     </plurals>
-    <string name="poll_results_partial">%3$d 個の relay から %2$d 件中 %1$d 件の回答を読み込みました。</string>
-    <string name="poll_results_partial_approx">%3$d 個の relay から約 %2$d 件中 %1$d 件の回答を読み込みました。</string>
     <plurals name="poll_results_selections">
         <item quantity="other">· %1$d 件の選択</item>
     </plurals>
@@ -6235,7 +6231,6 @@
     <string name="cordn_migrate_exposure_title">この端末から送信されるもの</string>
     <string name="cordn_migrate_exposure_body">別のスマートフォンが取得できるよう、グループの状態は暗号化されてメディアサーバーにアップロードされます。サーバーには読み取れず、サイズと時刻しかわかりません。何も残したくない場合は、後で blob を削除してください。</string>
     <string name="sno_object_title">3D オブジェクト</string>
-    <string name="sno_object_details">%1$d 頂点 · %2$d 面</string>
     <string name="sno_object_unreadable">この 3D オブジェクトを読み取れませんでした (ルール %1$s)</string>
     <string name="sno_avatar_title">サイバースペースのアバター</string>
     <string name="sno_avatar_unpaid">このアバターはサイズ分の支払いがされていないため、描画されません</string>
@@ -9924,4 +9919,23 @@
     <string name="llama_garden_model_kind_help">量子化の場合、元になっているモデルの種類。</string>
     <string name="llama_garden_matches_hf_label">HuggingFace のリポジトリと一致</string>
     <string name="llama_garden_all_models">すべてのモデル torrent</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="other">%1$d · 非公開 %2$d</item>
+    </plurals>
+    <string name="event_sync_events_sent">再配布済みイベント · 新規：%1$d · 送信：%2$d · 受信：%3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="other">%2$d 件中 %1$d 件の回答を読み込みました。</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="other">約 %2$d 件中 %1$d 件の回答を読み込みました。</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="other">%1$d 個の relay から取得しました。</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="other">%1$d 頂点</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="other">%1$d 面</item>
+    </plurals>
 </resources>

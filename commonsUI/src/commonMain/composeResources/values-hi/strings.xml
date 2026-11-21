@@ -1428,7 +1428,6 @@
     <string name="audience_sheet_title">लोग जोडें</string>
     <string name="audience_sheet_search">लोग तथा सूचियों को खोजें</string>
     <string name="audience_sheet_no_lists">आपका कोई व्यक्ति सूचियाँ अथवा अनुगमन पोटलियाँ नहीं अब तक। ऊपर खोजें किसी को सीधे जोडने के लिए।</string>
-    <string name="audience_count_with_private">%1$d \u00b7 %2$d निजी</string>
     <string name="audience_over_limit">सीमा पार</string>
     <string name="audience_recipients_are_visible">इस टीका में सभी देख सकेंगे पूर्ण प्राप्तकर्ता सूची को।</string>
     <string name="bookmark_absence_indicator">स्मर्त्तव्य चिह्नित नहीं</string>
@@ -2893,7 +2892,6 @@
     <string name="event_sync_start_anyway">तो भी आरम्भ करें (चलनशील सम्वादजाल)</string>
     <string name="event_sync_cancel">निरस्त करें</string>
     <string name="event_sync_relays_progress">पुनःप्रसारक। %2$d में से %1$d</string>
-    <string name="event_sync_events_sent">घटनाएँ पुनःवितरित। %1$d नए %2$d भेजे गए तथा %3$d प्राप्त</string>
     <string name="event_sync_done_title">समचरणीकरण समाप्त</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">अग्रतःप्रेषित %2$d प्राप्त में से %1$d घटना गन्तव्य पुनःप्रसारकों तक।</item>
@@ -5214,8 +5212,6 @@
         <item quantity="one">%1$d मतदाता</item>
         <item quantity="other">%1$d मतदाता</item>
     </plurals>
-    <string name="poll_results_partial">%2$d में से %1$d प्रतिवचनों का आवहन हो गया %3$d पुनःप्रसारकों से।</string>
-    <string name="poll_results_partial_approx">लगभग %2$d में से %1$d प्रतिवचनों का आवहन हो गया %3$d पुनःप्रसारकों से।</string>
     <plurals name="poll_results_selections">
         <item quantity="one">%1$d चयन</item>
         <item quantity="other">%1$d चयन</item>
@@ -6020,7 +6016,6 @@
     <string name="cordn_migrate_exposure_title">इस यन्त्र से क्या जाता है</string>
     <string name="cordn_migrate_exposure_body">आपकी समूह स्थिति रहस्यीकृत है तथा आपके श्रव्यदृश्याभिलेख सेवासंगणक पर आरोहित जिससे अन्य सम्वादयन्त्र उसको प्राप्त कर सके। वह उस सेवासंगणक के लिए पठन साध्य नहीं। वह केवल आकार तथा समय देख सकता है। तत्पश्चात अभिलेखों को मिटा दें यदि आप कुछ पीछे नहीं छोडना चाहते।</string>
     <string name="sno_object_title">त्रिमा वस्तु</string>
-    <string name="sno_object_details">%1$d अस्र। %2$d मुख</string>
     <string name="sno_object_unreadable">इस त्रिमा वस्तु का पठन असफल। नियम %1$s</string>
     <string name="sno_avatar_title">यन्त्रलोक परिचायकचित्र</string>
     <string name="sno_avatar_unpaid">इस परिचायकचित्र ने अपने आकार के लिए भुगतान नहीं किया। इसलिए इसे नहीं दिखाया</string>
@@ -10303,4 +10298,29 @@
     <string name="llama_garden_model_kind_help">परिमाणित प्रतिरूप के लिए। इसके नीचे मूल रूप से प्रतिरूप क्या है।</string>
     <string name="llama_garden_matches_hf_label">HuggingFace क्रमलेखकोष से मेल खाता है</string>
     <string name="llama_garden_all_models">सभी प्रतिरूप अनेकत्रावरोहण</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d निजी</item>
+        <item quantity="other">%1$d · %2$d निजी</item>
+    </plurals>
+    <string name="event_sync_events_sent">घटनाएँ पुनःवितरित · नए: %1$d · भेजे गए: %2$d · प्राप्त: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%2$d में से %1$d प्रतिवचन का आवहन हो गया।</item>
+        <item quantity="other">%2$d में से %1$d प्रतिवचनों का आवहन हो गया।</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">लगभग %2$d में से %1$d प्रतिवचन का आवहन हो गया।</item>
+        <item quantity="other">लगभग %2$d में से %1$d प्रतिवचनों का आवहन हो गया।</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">%1$d पुनःप्रसारक से।</item>
+        <item quantity="other">%1$d पुनःप्रसारकों से।</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d अस्र</item>
+        <item quantity="other">%1$d अस्र</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d मुख</item>
+        <item quantity="other">%1$d मुख</item>
+    </plurals>
 </resources>

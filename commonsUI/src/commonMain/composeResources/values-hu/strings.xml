@@ -1428,7 +1428,6 @@
     <string name="audience_sheet_title">Emberek hozzáadása</string>
     <string name="audience_sheet_search">Emberek és listák keresése</string>
     <string name="audience_sheet_no_lists">Még nincsenek személylistái vagy követési csomagjai. Keressen fent, hogy valakit közvetlenül hozzáadjon.</string>
-    <string name="audience_count_with_private">%1$d \u00b7 %2$d privát</string>
     <string name="audience_over_limit">Korlát felett</string>
     <string name="audience_recipients_are_visible">Mindenki, aki szerepel a jegyzetben láthatja a teljes címzettlistát.</string>
     <string name="bookmark_absence_indicator">itt nem egy könyvjelző</string>
@@ -2893,7 +2892,6 @@
     <string name="event_sync_start_anyway">Indítás mindenképpen (mobiladat-forgalom)</string>
     <string name="event_sync_cancel">Mégse</string>
     <string name="event_sync_relays_progress">Átjátszók: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Újraelosztott események: %1$d új / %2$d elküldött és %3$d fogadott</string>
     <string name="event_sync_done_title">Szinkronizálás kész</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%1$d esemény továbbítva a célátjátszóknak a fogadott %2$d eseményből.</item>
@@ -5216,8 +5214,6 @@
         <item quantity="one">%1$d szavazó</item>
         <item quantity="other">%1$d szavazó</item>
     </plurals>
-    <string name="poll_results_partial">%1$d válasz betöltve az %2$d közül, %3$d átjátszóról.</string>
-    <string name="poll_results_partial_approx">%1$d válasz betöltve a körülbelül %2$d közül, %3$d átjátszóról.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d kiválasztva</item>
         <item quantity="other">· %1$d kiválasztva</item>
@@ -6022,7 +6018,6 @@
     <string name="cordn_migrate_exposure_title">Mi hagyja el ezt az eszközt</string>
     <string name="cordn_migrate_exposure_body">A csoport állapota titkosítva van, és fel lesz töltve a médiakiszolgálójára, hogy a másik eszköz le tudja kérni. Az a kiszolgáló számára olvashatatlan, csak egy méretet és egy időpontot lát. Ha nem szeretne semmit hátrahagyni, utána törölje a blobokat.</string>
     <string name="sno_object_title">3D-objektum</string>
-    <string name="sno_object_details">%1$d csúcs · %2$d lap</string>
     <string name="sno_object_unreadable">Ezt a 3D-objektumot nem sikerült beolvasni (%1$s szabály)</string>
     <string name="sno_avatar_title">Cyberspace-avatar</string>
     <string name="sno_avatar_unpaid">Ez az avatar nem fizetett a méretéért, ezért nem jelenik meg</string>
@@ -10303,4 +10298,29 @@
     <string name="llama_garden_model_kind_help">Kvantált változatnál: milyen modell van mögötte.</string>
     <string name="llama_garden_matches_hf_label">Egyezik a HuggingFace-tárolóval</string>
     <string name="llama_garden_all_models">Összes modelltorrent</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d privát</item>
+        <item quantity="other">%1$d · %2$d privát</item>
+    </plurals>
+    <string name="event_sync_events_sent">Újraelosztott események · Új: %1$d · Elküldött: %2$d · Fogadott: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%2$d válaszból %1$d betöltve.</item>
+        <item quantity="other">%2$d válaszból %1$d betöltve.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Körülbelül %2$d válaszból %1$d betöltve.</item>
+        <item quantity="other">Körülbelül %2$d válaszból %1$d betöltve.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">%1$d átjátszóról.</item>
+        <item quantity="other">%1$d átjátszóról.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d csúcs</item>
+        <item quantity="other">%1$d csúcs</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d lap</item>
+        <item quantity="other">%1$d lap</item>
+    </plurals>
 </resources>

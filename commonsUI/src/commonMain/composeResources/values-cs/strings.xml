@@ -1465,7 +1465,6 @@
     <string name="audience_sheet_title">Přidat lidi</string>
     <string name="audience_sheet_search">Hledat lidi a seznamy</string>
     <string name="audience_sheet_no_lists">Zatím nemáte žádné seznamy lidí ani balíčky sledování. Vyhledáváním výše můžete někoho přidat přímo.</string>
-    <string name="audience_count_with_private">%1$d · %2$d soukromě</string>
     <string name="audience_over_limit">Překročen limit</string>
     <string name="audience_recipients_are_visible">Každý, kdo je v této poznámce, vidí celý seznam příjemců.</string>
     <string name="bookmark_absence_indicator">zde není záložkou</string>
@@ -2960,7 +2959,6 @@
     <string name="event_sync_start_anyway">Spustit přesto (mobilní data)</string>
     <string name="event_sync_cancel">Zrušit</string>
     <string name="event_sync_relays_progress">Relé: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Přerozděleno událostí: %1$d nových z %2$d odeslaných a %3$d přijatých</string>
     <string name="event_sync_done_title">Synchronizace dokončena</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Předána %1$d událost na cílová relé z %2$d přijatých.</item>
@@ -5455,8 +5453,6 @@
         <item quantity="many">%1$d hlasujícího</item>
         <item quantity="other">%1$d hlasujících</item>
     </plurals>
-    <string name="poll_results_partial">Načteno %1$d z %2$d odpovědí z %3$d relé.</string>
-    <string name="poll_results_partial_approx">Načteno %1$d z přibližně %2$d odpovědí z %3$d relé.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d výběr</item>
         <item quantity="few">· %1$d výběry</item>
@@ -6329,7 +6325,6 @@
     <string name="cordn_migrate_exposure_title">Co opouští toto zařízení</string>
     <string name="cordn_migrate_exposure_body">Stav vašich skupin se zašifruje a nahraje na váš mediální server, aby si ho druhý telefon mohl stáhnout. Server ho nedokáže přečíst, vidí jen velikost a čas. Pokud nechcete nic zanechat, soubory potom smažte.</string>
     <string name="sno_object_title">3D objekt</string>
-    <string name="sno_object_details">%1$d vrcholů · %2$d stěn</string>
     <string name="sno_object_unreadable">Tento 3D objekt nelze přečíst (pravidlo %1$s)</string>
     <string name="sno_avatar_title">Avatar Cyberspace</string>
     <string name="sno_avatar_unpaid">Tento avatar nezaplatil za svou velikost, proto se nevykresluje</string>
@@ -11063,4 +11058,41 @@
     <string name="llama_garden_all_models">Všechny torrenty modelů</string>
     <string name="language_system_default">Podle systému</string>
     <string name="profile_tab_lists">Seznamy</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d soukromý</item>
+        <item quantity="few">%1$d · %2$d soukromí</item>
+        <item quantity="many">%1$d · %2$d soukromého</item>
+        <item quantity="other">%1$d · %2$d soukromých</item>
+    </plurals>
+    <string name="event_sync_events_sent">Přerozdělené události · Nové: %1$d · Odeslané: %2$d · Přijaté: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">Načteno %1$d z %2$d odpovědi.</item>
+        <item quantity="few">Načteno %1$d z %2$d odpovědí.</item>
+        <item quantity="many">Načteno %1$d z %2$d odpovědi.</item>
+        <item quantity="other">Načteno %1$d z %2$d odpovědí.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Načteno %1$d z přibližně %2$d odpovědi.</item>
+        <item quantity="few">Načteno %1$d z přibližně %2$d odpovědí.</item>
+        <item quantity="many">Načteno %1$d z přibližně %2$d odpovědi.</item>
+        <item quantity="other">Načteno %1$d z přibližně %2$d odpovědí.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Z %1$d relé.</item>
+        <item quantity="few">Z %1$d relé.</item>
+        <item quantity="many">Z %1$d relé.</item>
+        <item quantity="other">Z %1$d relé.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d vrchol</item>
+        <item quantity="few">%1$d vrcholy</item>
+        <item quantity="many">%1$d vrcholu</item>
+        <item quantity="other">%1$d vrcholů</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d stěna</item>
+        <item quantity="few">%1$d stěny</item>
+        <item quantity="many">%1$d stěny</item>
+        <item quantity="other">%1$d stěn</item>
+    </plurals>
 </resources>

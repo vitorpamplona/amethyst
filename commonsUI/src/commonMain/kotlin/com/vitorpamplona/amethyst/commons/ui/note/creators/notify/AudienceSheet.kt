@@ -314,7 +314,7 @@ private fun AudienceListRow(
                 if (list.privateMembers.isEmpty()) {
                     list.memberCount.toString()
                 } else {
-                    stringRes(Res.string.audience_count_with_private, list.memberCount, list.privateMembers.size)
+                    pluralStringRes(Res.plurals.audience_count_with_private, list.privateMembers.size, list.memberCount, list.privateMembers.size)
                 },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.placeholderText,

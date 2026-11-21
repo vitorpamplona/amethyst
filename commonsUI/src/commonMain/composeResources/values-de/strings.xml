@@ -1425,7 +1425,6 @@
     <string name="audience_sheet_title">Personen hinzufügen</string>
     <string name="audience_sheet_search">Personen und Listen suchen</string>
     <string name="audience_sheet_no_lists">Du hast noch keine Personenlisten oder Follow-Pakete. Suche oben, um jemanden direkt hinzuzufügen.</string>
-    <string name="audience_count_with_private">%1$d · %2$d privat</string>
     <string name="audience_over_limit">Über dem Limit</string>
     <string name="audience_recipients_are_visible">Alle in dieser Notiz können die vollständige Empfängerliste sehen.</string>
     <string name="bookmark_absence_indicator">ist hier kein Lesezeichen</string>
@@ -2890,7 +2889,6 @@
     <string name="event_sync_start_anyway">Trotzdem starten (mobile Daten)</string>
     <string name="event_sync_cancel">Abbrechen</string>
     <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Ereignisse verteilt: %1$d neue von %2$d gesendeten und %3$d empfangenen</string>
     <string name="event_sync_done_title">Synchronisierung abgeschlossen</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%1$d Ereignis an Ziel-Relays weitergeleitet von %2$d empfangenen.</item>
@@ -5187,8 +5185,6 @@
         <item quantity="one">%1$d abstimmende Person</item>
         <item quantity="other">%1$d abstimmende Personen</item>
     </plurals>
-    <string name="poll_results_partial">%1$d von %2$d Antworten von %3$d Relays geladen.</string>
-    <string name="poll_results_partial_approx">%1$d von etwa %2$d Antworten von %3$d Relays geladen.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d Auswahl</item>
         <item quantity="other">· %1$d Auswahlen</item>
@@ -5995,7 +5991,6 @@
     <string name="cordn_migrate_exposure_title">Was dieses Gerät verlässt</string>
     <string name="cordn_migrate_exposure_body">Dein Gruppenzustand wird verschlüsselt und auf deinen Medienserver hochgeladen, damit das andere Smartphone ihn abrufen kann. Für diesen Server ist er nicht lesbar, er sieht nur eine Größe und einen Zeitpunkt. Lösche die Blobs danach, wenn nichts zurückbleiben soll.</string>
     <string name="sno_object_title">3D-Objekt</string>
-    <string name="sno_object_details">%1$d Eckpunkte · %2$d Flächen</string>
     <string name="sno_object_unreadable">Dieses 3D-Objekt konnte nicht gelesen werden (Regel %1$s)</string>
     <string name="sno_avatar_title">Cyberspace-Avatar</string>
     <string name="sno_avatar_unpaid">Dieser Avatar hat nicht für seine Größe bezahlt und wird daher nicht gezeichnet</string>
@@ -10344,4 +10339,29 @@
     <string name="llama_garden_all_models">Alle Modell-Torrents</string>
     <string name="language_system_default">Systemstandard</string>
     <string name="profile_tab_lists">Listen</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d privat</item>
+        <item quantity="other">%1$d · %2$d privat</item>
+    </plurals>
+    <string name="event_sync_events_sent">Ereignisse verteilt · Neu: %1$d · Gesendet: %2$d · Empfangen: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">%1$d von %2$d Antwort geladen.</item>
+        <item quantity="other">%1$d von %2$d Antworten geladen.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">%1$d von etwa %2$d Antwort geladen.</item>
+        <item quantity="other">%1$d von etwa %2$d Antworten geladen.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">Von %1$d Relay.</item>
+        <item quantity="other">Von %1$d Relays.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d Eckpunkt</item>
+        <item quantity="other">%1$d Eckpunkte</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d Fläche</item>
+        <item quantity="other">%1$d Flächen</item>
+    </plurals>
 </resources>

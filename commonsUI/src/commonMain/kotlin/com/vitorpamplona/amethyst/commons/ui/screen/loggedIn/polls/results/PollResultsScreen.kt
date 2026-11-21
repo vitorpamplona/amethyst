@@ -82,15 +82,16 @@ import com.vitorpamplona.amethyst.commons.resources.poll_results_backdated_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_checking_completeness
 import com.vitorpamplona.amethyst.commons.resources.poll_results_closes_in
 import com.vitorpamplona.amethyst.commons.resources.poll_results_ended
+import com.vitorpamplona.amethyst.commons.resources.poll_results_from_relays
 import com.vitorpamplona.amethyst.commons.resources.poll_results_hidden_voters
 import com.vitorpamplona.amethyst.commons.resources.poll_results_ignored_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_late_votes
+import com.vitorpamplona.amethyst.commons.resources.poll_results_loaded
+import com.vitorpamplona.amethyst.commons.resources.poll_results_loaded_approx
 import com.vitorpamplona.amethyst.commons.resources.poll_results_loading
 import com.vitorpamplona.amethyst.commons.resources.poll_results_no_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_open
 import com.vitorpamplona.amethyst.commons.resources.poll_results_option_count
-import com.vitorpamplona.amethyst.commons.resources.poll_results_partial
-import com.vitorpamplona.amethyst.commons.resources.poll_results_partial_approx
 import com.vitorpamplona.amethyst.commons.resources.poll_results_selections
 import com.vitorpamplona.amethyst.commons.resources.poll_results_title
 import com.vitorpamplona.amethyst.commons.resources.poll_results_your_pick
@@ -702,17 +703,15 @@ private fun Completeness(state: PollResultsUiState) {
     if (!state.isIncomplete) return
 
     Text(
+        // Two sentences, each agreeing with its own count: "responses" with the total, "relays" with
+        // the relays that answered.
         text =
-            stringRes(
-                if (state.reportIsApproximate) {
-                    Res.string.poll_results_partial_approx
-                } else {
-                    Res.string.poll_results_partial
-                },
+            pluralStringRes(
+                if (state.reportIsApproximate) Res.plurals.poll_results_loaded_approx else Res.plurals.poll_results_loaded,
+                reported,
                 state.loadedResponses,
                 reported,
-                state.relaysAnswered,
-            ),
+            ) + " " + pluralStringRes(Res.plurals.poll_results_from_relays, state.relaysAnswered, state.relaysAnswered),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.warningColor,
     )

@@ -1497,7 +1497,6 @@
     <string name="event_sync_start_anyway">যেভাবেই হোক শুরু করুন (মোবাইল ডেটা)</string>
     <string name="event_sync_cancel">বাতিল করুন</string>
     <string name="event_sync_relays_progress">relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">ইভেন্ট পুনরায় বিতরণ করা হয়েছে: %2$d পাঠানো এবং %3$d প্রাপ্তের মধ্যে %1$d নতুন</string>
     <string name="event_sync_done_title">সিঙ্ক সম্পন্ন</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%2$d প্রাপ্তের মধ্যে %1$d ইভেন্ট গন্তব্য relay-এ ফরওয়ার্ড করা হয়েছে।</item>
@@ -2958,4 +2957,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">ইভেন্ট পুনরায় বিতরণ করা হয়েছে · নতুন: %1$d · পাঠানো: %2$d · প্রাপ্ত: %3$d</string>
 </resources>

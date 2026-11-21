@@ -1530,7 +1530,6 @@
     <string name="event_sync_start_anyway">Начать всё равно (мобильный интернет)</string>
     <string name="event_sync_cancel">Отмена</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Перераспределено событий: %1$d новых из %2$d отправленных и %3$d полученных</string>
     <string name="event_sync_done_title">Синхронизация завершена</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Переслано %1$d событие на целевые relay из %2$d полученных.</item>
@@ -4000,7 +3999,6 @@
     <string name="audience_sheet_title">Добавить людей</string>
     <string name="audience_sheet_search">Поиск людей и списков</string>
     <string name="audience_sheet_no_lists">У вас пока нет списков людей или наборов подписок. Найдите человека выше, чтобы добавить его напрямую.</string>
-    <string name="audience_count_with_private">%1$d · %2$d скрытых</string>
     <string name="audience_over_limit">Превышен лимит</string>
     <string name="audience_recipients_are_visible">Все получатели этой записи видят полный список получателей.</string>
     <string name="looking_for_event_title">Загрузка</string>
@@ -6194,8 +6192,6 @@
         <item quantity="many">%1$d голосующих</item>
         <item quantity="other">%1$d голосующего</item>
     </plurals>
-    <string name="poll_results_partial">Загружено %1$d из %2$d ответов с %3$d relay.</string>
-    <string name="poll_results_partial_approx">Загружено %1$d из примерно %2$d ответов с %3$d relay.</string>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d выбор</item>
         <item quantity="few">· %1$d выбора</item>
@@ -6784,7 +6780,6 @@
     <string name="cordn_migrate_exposure_title">Что покидает это устройство</string>
     <string name="cordn_migrate_exposure_body">Состояние ваших групп шифруется и загружается на ваш медиасервер, чтобы другой телефон мог его получить. Сервер не может его прочитать и видит только размер и время. Удалите blob-файлы потом, если хотите, чтобы ничего не осталось.</string>
     <string name="sno_object_title">3D-объект</string>
-    <string name="sno_object_details">%1$d вершин · %2$d граней</string>
     <string name="sno_object_unreadable">Не удалось прочитать этот 3D-объект (правило %1$s)</string>
     <string name="sno_avatar_title">Аватар киберпространства</string>
     <string name="sno_avatar_unpaid">Этот аватар не оплатил свой размер, поэтому не отображается</string>
@@ -11061,4 +11056,41 @@
     <string name="llama_garden_model_kind_help">Какая модель лежит в основе, для квантизации.</string>
     <string name="llama_garden_matches_hf_label">Совпадает с репозиторием HuggingFace</string>
     <string name="llama_garden_all_models">Все торренты моделей</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d · %2$d скрытый</item>
+        <item quantity="few">%1$d · %2$d скрытых</item>
+        <item quantity="many">%1$d · %2$d скрытых</item>
+        <item quantity="other">%1$d · %2$d скрытого</item>
+    </plurals>
+    <string name="event_sync_events_sent">События перераспределены · Новых: %1$d · Отправлено: %2$d · Получено: %3$d</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">Загружено %1$d из %2$d ответа.</item>
+        <item quantity="few">Загружено %1$d из %2$d ответов.</item>
+        <item quantity="many">Загружено %1$d из %2$d ответов.</item>
+        <item quantity="other">Загружено %1$d из %2$d ответа.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Загружено %1$d из примерно %2$d ответа.</item>
+        <item quantity="few">Загружено %1$d из примерно %2$d ответов.</item>
+        <item quantity="many">Загружено %1$d из примерно %2$d ответов.</item>
+        <item quantity="other">Загружено %1$d из примерно %2$d ответа.</item>
+    </plurals>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">С %1$d relay.</item>
+        <item quantity="few">С %1$d relay.</item>
+        <item quantity="many">С %1$d relay.</item>
+        <item quantity="other">С %1$d relay.</item>
+    </plurals>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d вершина</item>
+        <item quantity="few">%1$d вершины</item>
+        <item quantity="many">%1$d вершин</item>
+        <item quantity="other">%1$d вершины</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d грань</item>
+        <item quantity="few">%1$d грани</item>
+        <item quantity="many">%1$d граней</item>
+        <item quantity="other">%1$d грани</item>
+    </plurals>
 </resources>

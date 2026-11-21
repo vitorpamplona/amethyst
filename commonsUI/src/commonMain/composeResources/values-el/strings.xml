@@ -1483,7 +1483,6 @@
     <string name="event_sync_start">Έναρξη Συγχρονισμού</string>
     <string name="event_sync_start_anyway">Έναρξη Ούτως ή Άλλως (δεδομένα κινητής)</string>
     <string name="event_sync_cancel">Ακύρωση</string>
-    <string name="event_sync_events_sent">Συμβάντα αναδιανεμημένα: %1$d νέα από %2$d αποστολών και %3$d ληφθέντων</string>
     <string name="event_sync_done_title">Ο συγχρονισμός ολοκληρώθηκε</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Προωθήθηκε %1$d συμβάν στα relay προορισμού από τα %2$d που ελήφθησαν.</item>
@@ -2901,4 +2900,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">Συμβάντα αναδιανεμημένα · Νέα: %1$d · Απεσταλμένα: %2$d · Ληφθέντα: %3$d</string>
 </resources>
