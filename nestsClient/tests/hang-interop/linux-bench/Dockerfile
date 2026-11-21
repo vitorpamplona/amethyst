@@ -1,9 +1,9 @@
 # Linux audio-latency benchmark image for AudioLatencyComparisonTest.
-# Mirrors the macOS host toolchain (JDK 21, rustc 1.95, cmake 3) so the
+# Mirrors the macOS host toolchain (JDK 25, rustc 1.95, cmake 3) so the
 # Kotlin vs Rust hang-publish comparison runs end-to-end against the
 # same set of sidecars, just on a different OS.
 
-FROM eclipse-temurin:21-jdk-jammy
+FROM eclipse-temurin:25-jdk-jammy
 
 # rustup pulls 1.95.0 explicitly. cmake/build-essential/pkg-config/libssl-dev
 # are needed by transitive *-sys crates (audiopus_sys bundles libopus and

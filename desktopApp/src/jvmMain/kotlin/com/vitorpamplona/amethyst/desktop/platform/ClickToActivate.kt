@@ -26,13 +26,9 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.WindowInfo
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.Desktop
 import java.awt.Window
-import java.awt.event.FocusEvent
 
 /**
  * A click on the window while it is in the background only brings it forward, as in native apps,
@@ -67,7 +63,7 @@ fun Modifier.clickToActivate(
                     seenFocused = true
                     event.changes.forEach { it.consume() }
                     // A real click has already activated the window; a programmatic one has not.
-                    if (!window.isActive) launch { activate(window) }
+                    if (!window.isActive) launch { window.activate() }
                     // Swallow the rest of this press (moves, the release) so nothing under it reacts.
                     while (true) {
                         val rest = awaitPointerEvent(PointerEventPass.Initial)
@@ -78,30 +74,3 @@ fun Modifier.clickToActivate(
             }
         }
     }
-
-/**
- * Brings [window] to the front and focuses it; on macOS also makes the app the active one. The
- * activation is asynchronous, and a focus request made before it lands is dropped (the app comes
- * forward with no key window), so the request repeats briefly until the window is active.
- */
-private suspend fun activate(window: Window) {
-    try {
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_REQUEST_FOREGROUND)) {
-            Desktop.getDesktop().requestForeground(true)
-        }
-    } catch (e: Exception) {
-        Log.w("ClickToActivate", "Could not bring the app forward", e)
-    }
-    repeat(ACTIVATION_ATTEMPTS) {
-        if (window.isActive) return
-        window.toFront()
-        // A mouse click is what asks for focus here. macOS's AWT drops focus requests of any other
-        // cause while the app is not yet active (CPlatformWindow.rejectFocusRequest), which is
-        // exactly the moment this runs in, so the window came forward without becoming key.
-        window.requestFocus(FocusEvent.Cause.MOUSE_EVENT)
-        delay(ACTIVATION_RETRY_MS)
-    }
-}
-
-private const val ACTIVATION_ATTEMPTS = 10
-private const val ACTIVATION_RETRY_MS = 50L

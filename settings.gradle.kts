@@ -23,7 +23,7 @@ pluginManagement {
 // serves their groups, trusting only the release key vitorpamplona.com names as `releases`, and
 // gradle/magpie.lock pins that key and every resolved version's files: commit its changes with the
 // version bump, and ask before editing it by hand, since a lock failure means a key or a release
-// changed. It needs Gradle on Java 21.
+// changed. It needs Gradle on Java 21 or newer; the build runs on JDK 25 (BUILDING.md).
 plugins {
     id("com.vitorpamplona.magpie") version "0.2.3"
 }

@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
@@ -136,8 +137,11 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.bringToForeground
 import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -625,10 +629,15 @@ private fun ConsentWindow(
             if (!centered) {
                 state.position = WindowPosition.Aligned(Alignment.Center)
                 centered = true
-                if (raise) {
-                    window.toFront()
-                    window.requestFocus()
-                }
+            }
+        }
+        if (raise) {
+            // Once the window has its size and place, so it comes up where it will stay (content that
+            // reports no height never gets one). Pinned on top until it has had the focus: the OS
+            // may not hand a background app the focus.
+            LaunchedEffect(window) {
+                withTimeoutOrNull(CONSENT_PLACE_WAIT_MS) { snapshotFlow { centered }.first { it } }
+                window.bringToForeground()
             }
         }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
@@ -661,6 +670,7 @@ private val CONSENT_WIDTH = 460.dp
 private val CONSENT_START_HEIGHT = 680.dp
 private val CONSENT_MIN_HEIGHT = 240.dp
 private val CONSENT_SCREEN_MARGIN = 48.dp
+private const val CONSENT_PLACE_WAIT_MS = 500L
 
 @Composable
 internal fun LoadingPane(

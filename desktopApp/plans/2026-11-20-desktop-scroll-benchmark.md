@@ -1,6 +1,6 @@
 # Desktop scroll benchmark
 
-Status: built. The benchmark, its script, the first measurements, and the image-prefetch fix it found.
+Status: built. The benchmark, its script, the first measurements, the image-prefetch fix it found, and the AOT cache trained on scrolling.
 
 ## What it measures
 
@@ -127,6 +127,62 @@ resize alone no longer re-runs the warm-up on every frame.
 The re-visits left on disk are avatars (25–55 px) drawn at two sizes. Frame timing did not move
 beyond its noise.
 
+## The AOT cache, trained on scrolling
+
+The release's trained AOT cache (tarball, AppImage, Flatpak; `trainReleaseAotCache`) recorded a
+start that loaded the home feed and exited. On JDK 25 the cache keeps the classes that run loaded
+and linked and its method profiles (JEP 515), so the JIT compiles hot methods early; but the
+scroll path ran in no training run. `trainReleaseAotCache` now runs this benchmark while it
+records: the feed loads for `aotTrainingSeconds`, then the benchmark scrolls it and exits the app,
+whose JVM then writes the profile (`-Pamethyst.aotTrainingScroll=false` trains the start alone).
+It scrolls with `-Damethyst.scrollBench.measure=false`: the same passes without the timing event
+queue, image listener, frame recorder or screenshots, so the cache doesn't load the benchmark's
+classes at every start or profile its receivers at hot call sites.
+
+Measured on the packaged release image (JBR 25.0.4.1, same container as above), three images
+built from one `createReleaseDistributable`, the images taking turns over two rounds, 4 boots each
+after a warm-up boot, the AOT caches required to map (`-XX:AOTMode=on`;
+`scroll-bench.sh --app <image> -- -XX:AOTMode=on`):
+
+| pass | no AOT cache (per-user archive, the installers) | AOT cache, start only | AOT cache, start + scroll |
+|---|---|---|---|
+| down: fps | 25.9 | 31.7 | **36.5** |
+| down: gap p90 / p99 ms | 71.6 / 117.6 | 56.0 / 90.8 | **46.2 / 77.9** |
+| down: frames over 50 ms | 27.1% | 14.1% | **7.8%** |
+| up: fps, gap p99 | 42.0, 58.9 | 43.0, 61.4 | **52.2, 37.8** |
+| down-again: fps, gap p99 | 48.8, 44.2 | 48.8, 43.5 | **52.8, 38.4** |
+| JIT ms in down / up / down-again | 8,509 / 2,550 / 1,507 | 4,203 / 1,783 / 1,328 | 7,716 / 1,022 / 664 |
+| cache size | — | 182 MB | 198 MB |
+
+Per boot, the scroll-trained image's slowest first pass (34.5 fps, p99 81 ms) is level with the
+start-only image's best (34.8 fps, p99 81 ms). Scrolling back up, its boots ran 48–54 fps against
+34–49; the warm `down-again` pass overlaps (48–54 against 43–50). The profiles move JIT work forward: the first pass
+compiles more (7.7 s against 4.2 s), on the compiler threads, and every pass after it compiles
+less and draws faster, because the code it runs was compiled with the training's profile instead
+of after a slow warm-up. The cost is 16 MB of cache and ~30 s more of the release's training run.
+
+The table's scroll cache was trained with the measuring on. Retrained without it (what ships),
+on a rebuilt image, start-only against start + scroll, 3 and 4 boots (one start-only boot lost its
+X connection before the app ran, a harness hiccup the next boot didn't repeat):
+
+| pass | AOT cache, start only | AOT cache, start + scroll (no measuring) |
+|---|---|---|
+| down: fps, gap p90 / p99 ms | 32.8, 54.1 / 113.3 | **37.0, 46.6 / 71.0** |
+| up: fps, gap p99 | 48.8, 62.6 | **55.1, 39.8** |
+| down-again: fps, gap p99 | 46.0, 54.2 | **54.5, 38.5** |
+| JIT ms in down / up / down-again | 4,992 / 1,657 / 1,090 | 6,076 / 724 / 606 |
+| cache size | 174 MB | 193 MB |
+
+Trained and measured on the same benchmark: the profile fits the feed's scroll path, which is what
+users scroll, but other screens gain only what the start already covered.
+
+### The release run itself
+
+Release run 478 (9 Nov), the only one with a trained cache so far, ran past the build step's
+15-minute attempt on both Linux portable legs, and its arm64 training failed: the app couldn't
+load `libskiko-linux-arm64.so`, which links `libEGL.so.1`, missing from the runner. Those legs now
+get 30 minutes an attempt (the job 75) and `libegl1`.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
@@ -136,6 +192,8 @@ beyond its noise.
    would remove that noise.
 3. **A GPU run.** Run it on a real Linux, macOS and Windows desktop (the property works on the dev
    `run` anywhere) for the absolute numbers, and native Wayland against XWayland with OpenGL.
-4. **An AOT cache trained on scrolling**, measured with the `down` pass's `jit_ms` and gaps.
+4. **Train the installers too.** The `.deb`, `.rpm`, `.dmg` and `.msi` carry the per-user archive
+   (classes only, no profiles), so they keep the slow first scroll the "no AOT cache" row shows.
+   Training them needs their packaging rebuilt around a trained image (startup plan, "Next").
 5. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
    `jit_ms` are stable enough to watch there if wanted.

@@ -149,7 +149,13 @@ Status against Flathub's
    Gradle and jpackage, so the bundled runtime keeps JBR's Wayland toolkit), the
    Gradle distribution, and `gradle-sources.json`: every Maven file the build
    resolves, for x86_64 and aarch64. `flathub-offline.init.gradle` replaces every
-   repository with that local copy. Flathub already ships a prebuilt JBR and
+   repository with that local copy. The groups Magpie resolves from Nostr +
+   Blossom (quartz, its MLS bindings, crypto-kmp, quic-kmp, kiko-kmp, negentropy,
+   libschnorr256k1) are on no Maven repository: their entries are Blossom URLs by
+   sha256, from the servers each release names, laid out as Magpie's own offline
+   mirror (`gradle-home/magpie/mirror/<publisher>/`). Under `--offline` the Magpie
+   plugin reads only that mirror, with the key the tag's `gradle/magpie.lock`
+   pins, and the init script keeps its repositories. Flathub already ships a prebuilt JBR and
    Skiko's natives in `com.prof18.feedflow`, a Compose Desktop app built the same
    way.
 
@@ -164,9 +170,17 @@ Status against Flathub's
    Flathub's builder (`org.flatpak.Builder`) could not run nested in Docker, so
    that was not checked end to end.
 
+   The Magpie half was checked on `main` after the move to Magpie (x86_64, no
+   flatpak-builder): the generator listed 3,660 Maven and 120 Magpie files with
+   none left unserved, every Magpie file downloaded from its Blossom URL with a
+   matching sha256, and the manifest's `--offline` build, laid out from that list
+   into a fresh Gradle home and run with no network at all, built the release
+   tree with quartz and the other Magpie libraries from the mirror.
+
    Every release: `flathub/tools/regenerate-gradle-sources.sh vX.Y.Z` (about
    35 minutes, both arches in Docker) rewrites `gradle-sources.json` from a real
-   online build and prints the tarball's sha256 for the manifest. Flathub's
+   online build and prints the tarball's sha256 for the manifest. When Maven
+   Central throttles the capture (HTTP 429), it runs the same build again. Flathub's
    update bot can't regenerate that list, so each release is a manual PR to the
    Flathub app repo.
 

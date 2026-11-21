@@ -29,9 +29,10 @@ secrets it needs, the distribution channels, and one-time bootstrap steps.
 
 All platforms:
 
-- **JDK 21** or newer (Zulu or Temurin recommended). The desktop release packages are built on
-  **JDK 25**, the runtime they bundle (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux));
-  JDK 21 still builds and runs everything.
+- **JDK 25** (Temurin recommended, or the JetBrains Runtime 25 that Android Studio bundles). CI
+  and the releases build on it, and the desktop, `amy` and `geode` packages bundle it as their
+  runtime (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux)). The code still compiles to
+  Java 21 bytecode.
 - **Git**
 
 Platform-specific:
@@ -223,9 +224,9 @@ artifact on F-Droid / Zapstore / GitHub was built from this code and nothing
 else. What makes that hold:
 
 - **Pinned toolchain.** AGP, Kotlin, R8, and the Compose compiler are pinned in
-  `gradle/libs.versions.toml`; the build targets **JDK 21**. R8 is deterministic
-  for a fixed version + inputs, so the minified output is stable. Build with the
-  same JDK 21 you see in `BUILDING.md` / CI.
+  `gradle/libs.versions.toml`; the code targets **Java 21** bytecode. R8 is
+  deterministic for a fixed version + inputs, so the minified output is stable.
+  Build on the same JDK 25 you see in `BUILDING.md` / CI.
 - **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
   build dates into `BuildConfig` (`verifyKmpPurity` bans the call in the shared
   source sets of `commons` and `commonsUI`, and quartz keeps its own copy of that
@@ -865,7 +866,11 @@ Every package has the first, and each has one of the other two:
   classes behind.
 - **The trained AOT cache**, in the tarball, the AppImage and the Flatpak bundle
   (`lib/app/amethyst.aot`). `trainReleaseAotCache` starts the release image logged
-  in read-only, lets it load the home feed, and builds the cache from that run.
+  in read-only, lets it load the home feed, scrolls the feed down, back up and down
+  again (`ScrollBenchmark`), and builds the cache from that run: the classes it
+  loaded and the method profiles of both the start and the scroll, so the first
+  scroll of a start doesn't wait on the JIT (37.0 fps on the first pass against 32.8
+  for a cache trained on the start alone; `desktopApp/plans/2026-11-20-desktop-scroll-benchmark.md`).
   It is valid wherever the image is copied as long as every jar keeps its size and
   modification time, so its jars are stamped to time 0 (as OSTree stores them), and
   the AppImage step stamps its copy again. jpackage's installers rewrite those
@@ -878,7 +883,8 @@ loads the classes from the jars. To train locally (Linux, JDK 25):
 xvfb-run ./gradlew :desktopApp:trainReleaseAotCache -Pamethyst.aotTrainingLogin=npub1...
 ```
 
-`-Pamethyst.aotTrainingSeconds` (default 45) sets the training run's length.
+`-Pamethyst.aotTrainingSeconds` (default 45) sets how long the feed loads before the
+training run scrolls it; `-Pamethyst.aotTrainingScroll=false` trains the start alone.
 
 ---
 

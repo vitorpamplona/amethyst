@@ -258,7 +258,7 @@ Lastly, the user's account information (private key/pub key) is stored in the An
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 21+
+1. JDK 25 (Android Studio bundles it)
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 
@@ -276,7 +276,7 @@ Build the Android app:
 ./gradlew assembleDebug
 ```
 
-Build and run the Desktop app (requires Java 21+):
+Build and run the Desktop app (requires JDK 25):
 ```bash
 ./gradlew :desktopApp:run
 ```
