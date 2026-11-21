@@ -24,12 +24,18 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -179,5 +185,30 @@ class ConcordRolesV2FixtureSessionTest {
             // One subscription per address, however many read keys open it.
             val subs = ConcordSubscriptionPlanner.channelPlaneSubs(refounded, state).filter { it.pubKeyHex == window.writerPubKey }
             assertEquals(1, subs.size)
+        }
+
+    @Test
+    fun showsAWriterTypingAtTheWriterAddress() =
+        runTest {
+            val f = Fixture("writers")
+            val member = f.actor("member")
+            val general = f.actor("general")
+            // The owner watches; the member, a writer, types where a restricted Channel's posts go.
+            val session = ConcordCommunitySession(f.entry, f.actor("owner"))
+            f.events.sortedByDescending { it.pubKey == f.controlPk }.forEach { session.ingest(it) }
+
+            val writerEpoch = f.actors["writer_epoch"]!!.jsonPrimitive.long
+            val writer = ConcordKeyDerivation.channelWriterKey(f.actor("writer_secret").hexToByteArray(), general.hexToByteArray(), writerEpoch)
+            val read = ConcordActions.currentChannelPlane(f.entry, general, isPrivate = false)!!
+            val stream = GroupKey(writer.secretKey, writer.publicKey, read.key.conversationKey)
+            val now = TimeUtils.now()
+            val typing = ChannelChat.typing(member, general, read.epoch, now)
+            val tags = typing.tags + arrayOf(arrayOf("wepoch", writerEpoch.toString()), arrayOf("wcert", f.actor("writer_cert")))
+            val rumor = RumorAssembler.assembleRumor<Event>(member, now, typing.kind, tags, "")
+            val signer = NostrSignerInternal(KeyPair(f.actor("member_secret").hexToByteArray()))
+            val wrap = ConcordStreamEnvelope.wrap(rumor, stream, signer, encrypted = true, ephemeral = true, createdAt = now)
+
+            session.ingest(wrap)
+            assertEquals(setOf(member), session.typing.value[general]?.keys, "a writer typing at the writer address shows")
         }
 }

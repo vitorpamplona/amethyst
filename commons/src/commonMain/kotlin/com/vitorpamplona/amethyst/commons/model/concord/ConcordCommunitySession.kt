@@ -887,7 +887,7 @@ class ConcordCommunitySession(
         // typing state, never the stored buffer or the Note sink. Typing is a current-epoch live
         // signal, so a prior-epoch ephemeral (there won't be any — old epochs are frozen) is harmless.
         if (wrap.kind == ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL) {
-            ingestTyping(wrap, planes.first().key, channelIdHex, planes.first().epoch)
+            ingestTyping(wrap, channelIdHex, planes)
             return ConcordIngestOutcome.NON_STRUCTURAL
         }
         // An expired wrap this session already swept, delivered again: ours, but never opened again.
@@ -913,14 +913,16 @@ class ConcordCommunitySession(
 
     private fun ingestTyping(
         wrap: Event,
-        key: GroupKey,
         channelIdHex: HexKey,
-        epoch: Long,
+        planes: List<ChannelPlane>,
     ) {
-        val opened = ConcordStreamEnvelope.openOrNull(wrap, key) ?: return
-        // The same Chat gate as a stored rumor: encrypted seal, strict binding, well-formed ms.
-        val rumor = ChannelChat.acceptOpened(opened, channelIdHex, epoch) ?: return
+        // The same Chat gate as a stored rumor: encrypted seal, strict binding, well-formed ms, and
+        // at a restricted Channel's writer address (where typing moves with posting, CORD-03 §1) the
+        // writer epoch it commits.
+        val (plane, rumor) = openOnAny(wrap, planes) ?: return
         if (!ChannelChat.isTyping(rumor)) return
+        // A signal of the moment that doesn't stand is dropped (CORD-03 §1): never held back.
+        if (plane.writerEpoch != null && !writerPostStands(channelIdHex, plane.key.publicKeyHex, rumor)) return
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
         // A banned member's messages are dropped everywhere, so their typing heartbeat must be too —
