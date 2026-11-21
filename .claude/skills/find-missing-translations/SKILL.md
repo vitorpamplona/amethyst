@@ -97,7 +97,7 @@ Stop and ask the user about any missing English string that looks plural-shaped.
 one locale, and translating the wrong shape means fixing it in every locale.
 
 **Fixing plurals is part of this pass**, existing strings included: run the catalog scan below, review
-every hit, and fix the real ones (see "Fixing existing plurals" in step 4).
+every hit, and fix the real ones ("Fixing existing plurals", step 3).
 
 **Judge by meaning, not by the English wording.** English barely inflects, so a count can look harmless
 and still need a plural. Any `%d` that counts things is a candidate:
@@ -112,7 +112,9 @@ and still need a plural. Any `%d` that counts things is a candidate:
   the range).
 
 Not candidates: identifiers (`"kind %1$d"`, `"line %1$d"`), percentages, unit abbreviations
-(`"5 min"`, `"10 MB"`), and a count that is always the same constant. **Check the call site first**: a
+(`"5 min"`, `"10 MB"`), a count that is always the same constant, a ratio against a constant
+(`"%1$d of %2$d pins"` with `MAX_ENTRIES`), and phrasing that agrees with nothing (cs
+`"Nalezeno %1$d z %2$d"`). **Check the call site first**: a
 `"%1$d days"` fed `UNUSED_MIRROR_DAYS = 60` has one correct form in every locale and stays a `<string>`.
 Amounts pre-formatted into `%s` (sats) can't be plurals at all; they read as units.
 
@@ -214,6 +216,23 @@ falls back to `other` and lint doesn't ask for it, so leave it out; the snippet 
 
 Call-site patterns for plurals: `amethyst/src/main/res/AGENTS.md` "Plural call-site patterns".
 
+### Fixing existing plurals
+
+**Two commits:** the missing translations first, then the plural fixes. A plural fix touches the English
+source, the call sites and every locale that has the key, so it reviews and reverts on its own.
+
+- **One counted noun:** convert it as above. The quantity can be any argument
+  (`audience_count_with_private` is chosen by `%2$d`).
+- **Several counted nouns in one string** (`"%1$d vertices · %2$d faces"`): split it into one plural per
+  noun, or turn a stats line into label: value (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a
+  number. The English changes shape, so ask the user which one. Join independent list items in code
+  (`" · "`); join sentences through a `"%1$s %2$s"` string, since Japanese and Chinese put no space
+  after `。`.
+- **Re-translate, don't patch:** save each locale's old wording, delete the old entries from every locale,
+  then write `<locale>.en.xml` by hand with only the changed keys (`extract` has no key filter and would
+  also pull each locale's unrelated gaps). Translators reuse the old wording, and `validate` /
+  `insert` work as usual. Re-add a key only to the locales that had it, not to every locale.
+
 ## 4. Present, then insert (if approved)
 
 Show the missing entries, flag the plural-shaped ones, then ask: "Translate these into [locales]?" A
@@ -239,27 +258,6 @@ repo:
    well; they write only to the scratch dir.
 4. `validate`, fix, repeat. Then spot-read a sample yourself: the checks catch structure, not meaning.
 5. `insert`, then the gates.
-
-### Fixing existing plurals
-
-**Two commits:** the missing translations first, then the plural fixes. A plural fix touches the English
-source, the call sites and every locale that has the key, so it reviews and reverts on its own.
-
-- **One counted noun:** convert the key to `<plurals>` (step 3), and pass the count as the quantity
-  at the call site: `pluralStringRes(Res.plurals.x, count, …args)`. The quantity can be any argument
-  (`audience_count_with_private` is chosen by `%2$d`).
-- **Several counted nouns in one string** (`"%1$d vertices · %2$d faces"`): split it into one plural per
-  noun and join the pieces at the call site, or turn a stats line into label: value
-  (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a number. The English changes shape, so ask
-  the user which one. Don't join sentence fragments whose word order a language may need to change;
-  whole sentences or list items are safe.
-- **Re-translate, don't patch:** save each locale's old wording, delete the old entries from every locale,
-  then write `<locale>.en.xml` by hand with only the changed keys (`extract` has no key filter and would
-  also pull each locale's unrelated gaps). Translators reuse the old wording, and `validate` /
-  `insert` work as usual. Re-add a key only to the locales that had it.
-- Still left as strings: constant counts, ratios against a constant (`"%1$d of %2$d pins"` with
-  `MAX_ENTRIES`), impersonal phrasing that agrees with nothing (cs `"Nalezeno %1$d z %2$d"`),
-  abbreviations and percentages.
 
 ## 5. Gates, in order
 
