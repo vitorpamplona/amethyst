@@ -72,8 +72,8 @@ object DesktopImageLoaderSetup {
                     add(SkiaDownsamplingDecoder.Factory())
                 },
             )
-        // A scroll benchmark counts where each image came from (memory, disk or network).
-        SingletonImageLoader.setUnsafe(if (ScrollBenchmark.enabled) loader.newBuilder().eventListener(ImageLoadStats.listener).build() else loader)
+        // A measuring scroll benchmark counts where each image came from (memory, disk or network).
+        SingletonImageLoader.setUnsafe(if (ScrollBenchmark.measuring) loader.newBuilder().eventListener(ImageLoadStats.listener).build() else loader)
     }
 
     // Where the disk cache unlinks the files it evicts, off its lock (see DeferredDeleteFileSystem).
