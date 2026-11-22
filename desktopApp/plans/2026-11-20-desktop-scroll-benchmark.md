@@ -358,6 +358,42 @@ and the notification panel is a live feed that would invalidate it anyway. A cor
 needs damage tracking inside skiko's `RenderNode` (an upstream change); until then, cost
 per card (which the main feed pays many times over) is the lever.
 
+## Where Skia's time goes, and the backgrounds painted twice
+
+A native profile of the UI thread during a Home scroll (`perf record -e cpu-clock`, with
+`--call-graph dwarf` because skiko is built without frame pointers; `libskiko` is not stripped)
+splits it about evenly between Java (composition, layout, recording) and Skia. On the Skia side,
+in share of all samples:
+
+| Work | Share |
+|---|---|
+| Solid fills (`rect_memset32`, from `drawRect`/`drawPaint`/`clear`) | 6.2% (about 12% of the UI thread) |
+| Text (`blit_mask_d32_a8_*`, glyph masks) | 4.9% |
+| Presenting the frame (`XPutImage`; Xvfb's path) | 5.2% |
+| Images (1:1 blits and the scaled draws left) | about 2.8% |
+
+The fills are mostly overdraw. At rest a pixel in the centre pane is filled by skiko's clear (two
+on X11, one on the Wayland path), then `NavDisplay`'s background, then `CappedScreenContent`'s,
+then the screen's `DisappearingScaffold` surface, all with the same theme color; the docked
+notification panel was filled twice too (the shell's cross-fade backdrop and the panel's
+`Surface`).
+
+- `CappedScreenContent` now paints only while its entry's navigation transition runs
+  (`LocalNavBackdrop`, provided by the host's display, which paints the same color under every
+  screen). The fill still covers what is below while a screen slides, fades or scales:
+  `NavigationHostBackgroundTest.aCappedScreenCoversTheOneBelowWhileItSlidesIn` fails without it.
+- The notification panel and its folded strip paint no fill of their own; the shell's backdrop
+  under them is the only one.
+
+Those two fills cost 0.28 ms a frame at 1x, timed alone in Skia (0.23 ms for the centre pane,
+which sits at a fractional x and so takes the antialiased path, 0.05 ms for the panel), about 2.5%
+of a warm frame and four times that at 2x. The scroll benchmark can't resolve a change that small
+against the live feed's noise (its A/B moved busy p50 by less than a millisecond either way).
+
+Left in place: the scaffold's surface (a dialog opened from a screen inherits the screen's
+composition locals, so it can't tell it is at rest under the display), and skiko's clears, which
+happen inside the library.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
