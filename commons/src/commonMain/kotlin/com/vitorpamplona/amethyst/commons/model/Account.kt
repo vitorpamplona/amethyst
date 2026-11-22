@@ -4569,6 +4569,10 @@ class Account(
                 // not wait on the network.
                 scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
 
+                // A first login publishes before the account's relay lists have loaded; once they
+                // do (and whenever they change), the KeyPackages follow them to the chosen relays.
+                scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
