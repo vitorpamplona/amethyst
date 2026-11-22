@@ -9064,7 +9064,7 @@
     <string name="media_failed_unknown_image">无法加载此图片</string>
     <string name="media_failed_unknown_gif">无法加载此 GIF</string>
     <string name="media_failed_open_in_browser">在浏览器中打开</string>
-    <string name="ai_code_title">AI 编程</string>
+    <string name="ai_code_title">智能体编程</string>
     <string name="claude_code_new_session">新会话</string>
     <string name="claude_code_search_hint">搜索会话</string>
     <string name="claude_code_no_sessions">此电脑上还没有 Claude Code 会话。在此开始一个，或在终端中运行 claude，它就会显示在此列表中。</string>

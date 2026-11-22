@@ -9360,7 +9360,7 @@
     <string name="media_failed_unknown_image">No se pudo cargar esta imagen</string>
     <string name="media_failed_unknown_gif">No se pudo cargar este GIF</string>
     <string name="media_failed_open_in_browser">Abrir en el navegador</string>
-    <string name="ai_code_title">Código con IA</string>
+    <string name="ai_code_title">Programación agéntica</string>
     <string name="claude_code_new_session">Nueva sesión</string>
     <string name="claude_code_search_hint">Buscar sesiones</string>
     <string name="claude_code_no_sessions">Aún no hay sesiones de Claude Code en esta computadora. Inicia una aquí, o ejecuta claude en una terminal y aparecerá en esta lista.</string>

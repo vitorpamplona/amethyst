@@ -10142,7 +10142,7 @@
     <string name="claude_code_storage_measuring">मापन चालू…</string>
     <string name="claude_code_archive">संग्रह करें</string>
     <string name="claude_code_unarchive">संग्रह से निकालें</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">कर्षण अनुरोध बनाएँ</string>
     <string name="claude_code_update_pr">कर्षण अनुरोध अद्यतन करें</string>
     <string name="claude_code_drafting">%1$s शीर्षक तथा विवरण लिख रहा है…</string>

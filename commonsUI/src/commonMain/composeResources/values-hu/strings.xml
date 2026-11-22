@@ -10142,7 +10142,7 @@
     <string name="claude_code_storage_measuring">Mérés…</string>
     <string name="claude_code_archive">Archiválás</string>
     <string name="claude_code_unarchive">Archiválás visszavonása</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Beolvasztási kérés létrehozása</string>
     <string name="claude_code_update_pr">Beolvasztási kérés frissítése</string>
     <string name="claude_code_drafting">%1$s írja a címet és a leírást…</string>

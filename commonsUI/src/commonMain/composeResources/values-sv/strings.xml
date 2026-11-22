@@ -10142,7 +10142,7 @@
     <string name="media_trim_hint">Dra i ändarna för att behålla en del</string>
     <string name="media_trim_upload_failed">Det gick inte att klippa videon</string>
     <string name="media_crop_failed">Bilden kan inte beskäras här. Spara använder den som den är.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Skapa en PR</string>
     <string name="claude_code_update_pr">Uppdatera PR</string>
     <string name="claude_code_drafting">%1$s skriver titeln och beskrivningen…</string>

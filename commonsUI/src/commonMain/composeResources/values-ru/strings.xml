@@ -10026,7 +10026,7 @@
     <string name="media_failed_unknown_image">Не удалось загрузить изображение</string>
     <string name="media_failed_unknown_gif">Не удалось загрузить GIF</string>
     <string name="media_failed_open_in_browser">Открыть в браузере</string>
-    <string name="ai_code_title">ИИ-код</string>
+    <string name="ai_code_title">Агентное программирование</string>
     <string name="claude_code_new_session">Новая сессия</string>
     <string name="claude_code_search_hint">Поиск сессий</string>
     <string name="claude_code_no_sessions">На этом компьютере пока нет сессий Claude Code. Начните здесь или запустите claude в терминале — сессия появится в этом списке.</string>

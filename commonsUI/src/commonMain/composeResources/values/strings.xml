@@ -9477,7 +9477,7 @@
     <string name="media_failed_unknown_gif">Couldn't load this GIF</string>
     <string name="media_failed_open_in_browser">Open in browser</string>
     <!-- Claude Code: drive the user's installed Claude Code CLI from the desktop app -->
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_new_session">New session</string>
     <string name="claude_code_search_hint">Search sessions</string>
     <string name="claude_code_no_sessions">No Claude Code sessions on this computer yet. Start one here, or run claude in a terminal and it shows up in this list.</string>
