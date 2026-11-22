@@ -580,6 +580,7 @@
     <string name="concord_dissolve_message">This ends the community for everyone. It becomes read-only: members keep its history, but nobody can post, change it, or invite anyone again. This can't be undone.</string>
     <string name="concord_dissolve_confirm">Dissolve</string>
     <string name="concord_dissolve_failed">The community was not dissolved: only its owner can, from an account that can sign.</string>
+    <string name="concord_private_channel_unnamed">Private channel</string>
     <string name="concord_private_channel_no_key">This is a private channel and you don't hold its key, so you can't read it or post here.</string>
     <string name="concord_private_channel_cut">You no longer have access to this private channel: its key was rotated without you, so you can't read new messages or post here.</string>
     <string name="concord_banned_notice">You're banned from this community, so you can't post here and your messages are hidden from everyone.</string>

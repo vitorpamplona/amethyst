@@ -3052,5 +3052,6 @@
     <string name="concord_join_not_saved_named">No te uniste a %1$s: no se pudo actualizar tu lista de comunidades. Vuelve a probar la invitación en un momento.</string>
     <string name="concord_home_loading">Cargando tus comunidades…</string>
     <string name="concord_home_joining">Uniéndote a la comunidad…</string>
+    <string name="concord_private_channel_unnamed">Canal privado</string>
     <string name="marmot_message_deleted">Mensaje eliminado</string>
 </resources>

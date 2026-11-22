@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import kotlinx.coroutines.flow.combine
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -252,16 +253,19 @@ fun ConcordHomeScreen(
                 if (mode != ChannelExpand.CLOSED && state != null) {
                     // Channels, most-recently-active first, each with its last message + unread state.
                     // In UNREAD mode a row hides itself unless it has new messages (peek).
+                    // Private Channels without a held key are unreadable and nameless: left out, as Armada does.
                     val channels =
-                        state.channels.entries.sortedByDescending {
-                            LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
-                        }
+                        state.channels.entries
+                            .filter { (key, ch) -> !ch.definition.private || ConcordChannelKeyring.heldKey(entry, key) != null }
+                            .sortedByDescending {
+                                LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
+                            }
                     items(channels, key = { "${entry.id}/${it.key}" }) { ch ->
                         val def = ch.value.definition
                         ConcordChannelRow(
                             communityId = entry.id,
                             channelKey = ch.key,
-                            channelName = def.name.ifBlank { ch.key },
+                            channelName = def.name.ifBlank { ch.key.take(8) },
                             icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag,
                             hideIfRead = mode == ChannelExpand.UNREAD,
                             accountViewModel = accountViewModel,

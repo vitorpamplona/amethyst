@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
+import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
@@ -523,12 +524,17 @@ fun ConcordChannelListScreen(
             }
         },
     ) { padding ->
+        // A Private Channel this account holds no key for can't be read or posted in, and its
+        // definition is sealed, so all a row could show is its 64-char id. Armada hides them; so
+        // do we, except for those who manage channels, who see a locked row they can act on.
+        val heldEntry = session?.entry
         val channels =
             state
                 ?.channels
                 ?.entries
-                ?.toList()
-                .orEmpty()
+                ?.filter { (key, ch) ->
+                    canManageChannels || !ch.definition.private || (heldEntry != null && ConcordChannelKeyring.heldKey(heldEntry, key) != null)
+                }.orEmpty()
         if (channels.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
@@ -550,7 +556,7 @@ fun ConcordChannelListScreen(
             ) {
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
-                    val name = def.name.ifBlank { entry.key }
+                    val name = def.name.ifBlank { if (def.private) stringRes(Res.string.concord_private_channel_unnamed) else entry.key.take(8) }
                     val typingAuthors =
                         remember(typingMap, typingNow, entry.key) {
                             (typingMap[entry.key] ?: emptyMap())
