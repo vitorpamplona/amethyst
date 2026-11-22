@@ -80,18 +80,22 @@ preflight() {
   # compatible with tip"; testing against this answers "are we compatible with
   # what users are running", which is the question the harness exists to answer.
   #
-  # As of 2026-11-18 THE TWO APPS AGREE: whitenoise-android (`0c60d22f`,
-  # release android-v2026.11.17) and whitenoise-ios (`bca654d`, release
-  # v2026.11.16) both name `mdk-sha=4df811aea99269b437a6023be9446a5141e93cbe`,
-  # the MDK v0.17.0 release (marmotkit-v0.17.0), which is pinned here. v0.15.0
-  # in between is the one that changed the wire (account-devices `0x800d` in
-  # KeyPackages, leaves and new groups; every device of an account invited);
-  # 0.16 and 0.17 change only where events are sent.
+  # As of 2026-11-22 this pins the MDK v0.19.0 release (marmotkit-v0.19.0,
+  # `3fce9546`), one release ahead of the apps: whitenoise-android master
+  # (`7a1e558`) names `mdk-sha=34646a57`, MarmotKit 0.18.0. 0.19.0 retires the
+  # agent text stream over QUIC (spec marmot#513): new groups stop including
+  # `0x8006`, the `send`/`fanout` roles stop being advertised, kind 1200 is no
+  # longer sent, and the QUIC broker binary is gone. Amethyst follows the same
+  # retirement, so the harness tests the release the apps move to next rather
+  # than one whose groups we no longer create the same way. Between them 0.18
+  # and 0.19 carry the NIP-22 thread messages (mdk#3581) and device-group
+  # maintenance; v0.15.0 was the last wire change before (account-devices
+  # `0x800d` in KeyPackages, leaves and new groups).
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
   # If they agree, that is the value; if they disagree, take the newer and say
   # so here.
-  MDK_PIN="${MDK_PIN:-4df811aea99269b437a6023be9446a5141e93cbe}"
+  MDK_PIN="${MDK_PIN:-3fce95465cdea1edc8456dbd1c6691d1c8dc1f2e}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"
