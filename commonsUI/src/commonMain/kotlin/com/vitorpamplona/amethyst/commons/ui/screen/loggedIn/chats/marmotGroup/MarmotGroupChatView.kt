@@ -158,20 +158,6 @@ fun MarmotGroupChatView(
         }
     }
 
-    // The live agent-preview watcher is NOT started here.
-    //
-    // Opening the chat used to build a [MarmotAgentStreamWatcher] and call
-    // `watchLatest` on every feed change, which dials the QUIC brokers a
-    // kind:1200 advertises. Nothing in the deployed network publishes those
-    // streams, so that was a UDP connection attempt to a third-party endpoint
-    // on behalf of a feature no one is using — a service we start, not a
-    // capability we hold.
-    //
-    // The watcher, the transport and the banner all still exist and are still
-    // tested; `amy marmot stream watch` drives the same code on demand. Wiring
-    // it back is re-adding the watcher, the LaunchedEffect and the banner
-    // below, once there is something to watch.
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier =

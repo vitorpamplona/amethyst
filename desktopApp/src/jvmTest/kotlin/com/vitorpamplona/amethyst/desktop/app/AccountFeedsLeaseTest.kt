@@ -31,14 +31,12 @@ import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirect
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountFeeds
-import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,7 +74,6 @@ class AccountFeedsLeaseTest {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = { QuicAgentTextStreamTransport(parentScope = it, certificateValidator = JdkCertificateValidator()) },
         )
     }
 

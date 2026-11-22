@@ -283,7 +283,6 @@ mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "moc
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartzKmp" }
 marmot = { module = "com.vitorpamplona.marmot:marmot", version.ref = "marmotKmp" }
-marmot-quic = { module = "com.vitorpamplona.marmot:marmot-quic", version.ref = "marmotKmp" }
 cordn = { module = "com.vitorpamplona.cordn:cordn", version.ref = "cordnKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 kiko = { module = "com.vitorpamplona.kiko:kiko", version.ref = "kikoKmp" }

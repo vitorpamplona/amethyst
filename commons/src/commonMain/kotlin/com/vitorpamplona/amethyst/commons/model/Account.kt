@@ -220,7 +220,6 @@ import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.aes.AES_GCM_NAME
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotPushCoordinator
@@ -472,8 +471,6 @@ class Account(
     val nip46Consent: Nip46ConsentPrompter,
     /** Where this account's geohash-chat seed and nickname are kept (the app's encrypted storage). */
     val geohashIdentityStore: GeohashIdentityStore,
-    /** Builds the raw-QUIC transport for agent text stream previews, on the account's scope. */
-    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -1293,16 +1290,6 @@ class Account(
         marmotManager?.let {
             marmotPushStateStore?.let { store -> MarmotPushCoordinator(it, store) } ?: MarmotPushCoordinator(it)
         }
-
-    /**
-     * Raw QUIC for agent text stream previews (`transports/quic.md`).
-     *
-     * Only the live preview needs it. A device that cannot open a QUIC
-     * connection still participates fully — it reads every stream's
-     * authoritative kind:9 like ordinary chat — which is why this is a
-     * separate optional piece rather than part of [marmotManager].
-     */
-    val marmotStreamTransport: MarmotQuicTransport by lazy { marmotStreamTransportFactory(scope) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
