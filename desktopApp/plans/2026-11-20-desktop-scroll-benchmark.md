@@ -331,6 +331,116 @@ Geocaches, Web Bookmarks).
 - Discover, back to back: down-again 40.8 -> 51.0 fps (UI work 21.6 -> 17.0 ms); Home within noise.
 - `tools/desktop-run/screen-survey.sh` runs the per-screen survey (`--profile` for the hotspots).
 
+## Caching the static panes: ruled out
+
+Software Skia rasterizes the whole window on every frame, including the drawer and the docked
+notification panel, which rarely change while the feed scrolls. Cutting both out of the shell (an
+ablation, not a fix) took Home's warm `busy_p50` from 10.7 to 7.3 ms. Rasterizing each pane on
+its own into an offscreen surface accounts for that: the drawer costs 0.7 ms a frame and the
+notification panel 2.3 ms (300x900 and 360x860 px at 1x).
+
+The fix that suggests is a raster cache: draw the pane into a bitmap once and blit it until
+something in it changes. Compose on skiko gives no signal for "something in it changed":
+
+- A parent's recording references each child layer live (`GraphicsLayer.draw` →
+  `RenderNode.drawInto`, a drawable). A child layer that re-records or changes a property (alpha,
+  offset, a scroll) shows up at playback without re-running any ancestor's draw. In an
+  `ImageComposeScene` spike, a pane's draw block re-ran when a text outside a child layer changed,
+  but not when a child layer's alpha changed or a `LazyColumn` inside it scrolled.
+- The real drawer records 25 nested layers (its scroll container, each row, the header images),
+  and over a session of hovering and scrolling its own draw ran once. A cache keyed on that draw
+  would keep showing stale hover states, ripples and avatars.
+- The children are tracked only in internal fields (`childDependenciesTracker`), and a leaf layer's
+  re-record leaves no trace there, so even reflection can't tell when to refresh.
+
+Caching only panes whose recording holds no sublayers would be correct, but neither pane qualifies,
+and the notification panel is a live feed that would invalidate it anyway. A correct pane cache
+needs damage tracking inside skiko's `RenderNode` (an upstream change); until then, cost
+per card (which the main feed pays many times over) is the lever.
+
+## Where Skia's time goes, and the backgrounds painted twice
+
+A native profile of the UI thread during a Home scroll (`perf record -e cpu-clock`, with
+`--call-graph dwarf` because skiko is built without frame pointers; `libskiko` is not stripped)
+splits it about evenly between Java (composition, layout, recording) and Skia. On the Skia side,
+in share of all samples:
+
+| Work | Share |
+|---|---|
+| Solid fills (`rect_memset32`, from `drawRect`/`drawPaint`/`clear`) | 6.2% (about 12% of the UI thread) |
+| Text (`blit_mask_d32_a8_*`, glyph masks) | 4.9% |
+| Presenting the frame (`XPutImage`; Xvfb's path) | 5.2% |
+| Images (1:1 blits and the scaled draws left) | about 2.8% |
+
+The fills are mostly overdraw. At rest a pixel in the centre pane is filled by skiko's clear (two
+on X11, one on the Wayland path), then `NavDisplay`'s background, then `CappedScreenContent`'s,
+then the screen's `DisappearingScaffold` surface, all with the same theme color; the docked
+notification panel was filled twice too (the shell's cross-fade backdrop and the panel's
+`Surface`).
+
+- `CappedScreenContent` now paints only while its entry's navigation transition runs
+  (`LocalNavBackdrop`, provided by the host's display, which paints the same color under every
+  screen). The fill still covers what is below while a screen slides, fades or scales:
+  `NavigationHostBackgroundTest.aCappedScreenCoversTheOneBelowWhileItSlidesIn` fails without it.
+- The notification panel and its folded strip paint no fill of their own; the shell's backdrop
+  under them is the only one.
+
+Those two fills cost 0.28 ms a frame at 1x, timed alone in Skia (0.23 ms for the centre pane,
+which sits at a fractional x and so takes the antialiased path, 0.05 ms for the panel), about 2.5%
+of a warm frame and four times that at 2x. The scroll benchmark can't resolve a change that small
+against the live feed's noise (its A/B moved busy p50 by less than a millisecond either way).
+
+Left in place: the scaffold's surface (a dialog opened from a screen inherits the screen's
+composition locals, so it can't tell it is at rest under the display), and skiko's clears, which
+happen inside the library.
+
+## The Java half: cards composed inside scroll frames
+
+JFR's CPU-time sampler on the UI thread (the survey's `--profile`, and a recording of the first
+pass with `-XX:FlightRecorderOptions:stackdepth=512`, since 64 frames cut composition stacks off
+before the frames that classify them) splits Home this way:
+
+| Pass | raster | compose | layout | record | input | other |
+|---|---|---|---|---|---|---|
+| warm (down again) | 59% | 14% (+ most of "other") | 6% | 7% | 3% | 12% |
+| first pass down | 36% | 33% | 5% | 9% | 7% | 10% |
+
+The warm passes already run at about 60 fps here (busy p50 9 to 10 ms); the first pass down is the
+slow one (25 to 47 fps a boot). There, each wheel frame scrolls the `LazyColumn`, which remeasures
+and composes every card scrolling in for the first time inside that frame (`subcompose` →
+`composeInitial`: 13.6% of the UI thread). Only about 8 points of the compose share are the
+card's own composables (`NoteCompose` and below); the rest is Compose's machinery around them.
+
+Compose for desktop never prefetches: the scheduler the desktop scene provides,
+`NoOpPlatformPrefetchScheduler`, drops every request, so the list can never compose a card
+ahead of the frame that shows it, as it does on Android. `ProvideFramePrefetch`
+(`desktopApp/.../platform/FramePrefetchScheduler.kt`, installed by `AppWindow` for every window)
+provides one through `LocalPlatformPrefetchScheduler` (an `InternalComposeUiApi`): after each frame
+has drawn, it runs the requests, high priority first, in the time left before the next frame is
+due. When eight frames in a row finish no request (no frame leaves idle time, or the items
+take longer to compose than the gaps), it drops its queue and stops asking for frames, so a slow
+window is never kept drawing just to prefetch. `FramePrefetchSchedulerTest` checks that the default composes nothing ahead (if a Compose
+update starts to, this scheduler can go) and that this one composes the next row.
+
+Unlike Android's scheduler it runs nothing after a frame that is already late. A first version that
+let one request run after a late frame, as Android does, made the first pass worse (38 to 32 fps
+over 3 boots): most of its frames are over budget, so it composed a card after each one and pushed
+the next frame back. Idle time only, over 4 boots each:
+
+| Pass | fps before → after | jank | interval p90 |
+|---|---|---|---|
+| up | 54 → 60 | 10% → 4.2% | 25 → 20 ms |
+| down again | 58 → 62 | 6.7% → 3.2% | 24 → 18 ms |
+| first pass down | 38 → 34.5 | (boots 26–42 vs 28–45: no signal) | |
+
+Cards that scroll back in were composed and thrown away when they scrolled out, so the up and down
+again passes compose too; that work now lands between frames. The first pass rarely has idle time
+to spare, and stays as it was.
+
+Allocation samples on the UI thread were no lead: a handful of samples of Compose's own frame
+dispatcher carry nearly all the weight (JFR weights each sample by everything since the thread's
+last one), and GC takes 40 to 80 ms of a 4.5 s pass.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what

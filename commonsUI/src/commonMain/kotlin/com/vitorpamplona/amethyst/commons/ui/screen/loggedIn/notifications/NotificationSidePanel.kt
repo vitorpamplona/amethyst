@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_UNREAD_CAP
 import com.vitorpamplona.amethyst.commons.feeds.Card
@@ -113,9 +114,11 @@ fun NotificationSidePanel(
     // The Surface provides the Material container color + onBackground as LocalContentColor;
     // in a bare Row the default text color falls back to Color.Black and is invisible on the
     // dark theme (same reason DisappearingScaffold roots itself in a Surface).
+    // The shell paints the theme background under the panel (AppShellLayout), so a fill here
+    // would paint the same pixels twice a frame; the Surface stays for its content color.
     Surface(
         modifier = modifier.width(NotificationPanelWidth).fillMaxHeight(),
-        color = MaterialTheme.colorScheme.background,
+        color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Column(
@@ -234,9 +237,11 @@ fun CollapsedNotificationPanel(
 
     // The Surface provides the Material container color + onBackground as LocalContentColor, as
     // in the expanded panel above.
+    // The shell paints the theme background under the panel (AppShellLayout), so a fill here
+    // would paint the same pixels twice a frame; the Surface stays for its content color.
     Surface(
         modifier = modifier.width(NotificationPanelCollapsedWidth).fillMaxHeight(),
-        color = MaterialTheme.colorScheme.background,
+        color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Column(
