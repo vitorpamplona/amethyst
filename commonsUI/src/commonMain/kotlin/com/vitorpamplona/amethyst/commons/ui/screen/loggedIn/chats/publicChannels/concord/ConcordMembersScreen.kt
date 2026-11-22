@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_unban
 import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_open
 import com.vitorpamplona.amethyst.commons.resources.concord_role_kicked
 import com.vitorpamplona.amethyst.commons.resources.concord_role_left
 import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
@@ -194,9 +196,30 @@ fun ConcordMembersScreen(
                 .sortedBy { it.position }
         }
 
+    var showRoleEditor by remember { mutableStateOf(false) }
+    val editorAuthority = state?.authority
+    if (showRoleEditor && editorAuthority != null) {
+        ConcordRoleEditorDialog(communityId, editorAuthority, accountViewModel, onDismiss = { showRoleEditor = false })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = {
+                    // Where the roles are defined: create, rename, re-rank or delete one. Roles v2
+                    // can't be written yet, which is said rather than offered and then refused.
+                    if (iCanManageRoles) {
+                        IconButton(onClick = {
+                            if (rolesV2) {
+                                accountViewModel.notices.notify(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.ROLES))
+                            } else {
+                                showRoleEditor = true
+                            }
+                        }) {
+                            SymbolIcon(symbol = MaterialSymbols.Shield, contentDescription = stringRes(Res.string.concord_role_editor_open))
+                        }
+                    }
+                },
                 title = {
                     Column {
                         Text(stringRes(Res.string.concord_members_title), maxLines = 1)

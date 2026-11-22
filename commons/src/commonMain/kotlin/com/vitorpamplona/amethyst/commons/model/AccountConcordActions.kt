@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -1747,6 +1748,78 @@ class AccountConcordActions(
         // Role-gated channel keys follow the Grant: vend what it opened, rotate what it closed.
         reconcileConcordChannelAccess(communityId, before)
         return true
+    }
+
+    /**
+     * Creates ([roleIdHex] null) or edits a legacy CORD-04 role: [name], [position] (1 and up, lower
+     * ranks higher) and [permissions]. The fold honors a role edition only from a MANAGE_ROLES
+     * holder who strictly outranks both the role's old and new position, so anything else is
+     * refused here instead of published to be dropped. A Roles v2 community refuses it with
+     * [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
+     */
+    suspend fun defineConcordRole(
+        communityId: String,
+        roleIdHex: String?,
+        name: String,
+        position: Long,
+        permissions: ConcordPermissions,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || position < 1) return false
+        val state = session.state.value ?: return false
+        val existing = roleIdHex?.let { state.roles[it] ?: return false }
+        if (!canEditConcordRole(state.authority, existing?.position, position)) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
+        val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
+        val wrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleId, role, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        // A role's permissions can open or close a role-gated private channel, like a Grant.
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Deletes the legacy role [roleIdHex] (terminal, CORD-04 §2), under [defineConcordRole]'s rules. */
+    suspend fun deleteConcordRole(
+        communityId: String,
+        roleIdHex: String,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val state = session.state.value ?: return false
+        val existing = state.roles[roleIdHex] ?: return false
+        if (!canEditConcordRole(state.authority, existing.position, existing.position)) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val wrap =
+            ConcordModeration.defineRole(
+                account.signer,
+                cp,
+                communityId.hexToByteArray(),
+                roleIdHex.hexToByteArray(),
+                existing.copy(deleted = true),
+                session.controlEditions(),
+                TimeUtils.now(),
+                owner = session.entry.owner,
+            )
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Whether this account may move a role from [oldPosition] (null for a new one) to [newPosition]. */
+    private fun canEditConcordRole(
+        authority: AuthorityResolver,
+        oldPosition: Long?,
+        newPosition: Long,
+    ): Boolean {
+        val me = account.signer.pubKey
+        if (!authority.hasPermission(me, ConcordPermissions.MANAGE_ROLES)) return false
+        val myRank = authority.rank(me) ?: return false
+        return ConcordRoleRules.canPlace(myRank, oldPosition, newPosition)
     }
 
     /**

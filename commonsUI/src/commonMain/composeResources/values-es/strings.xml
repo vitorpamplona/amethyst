@@ -3054,4 +3054,26 @@
     <string name="concord_home_joining">Uniéndote a la comunidad…</string>
     <string name="concord_private_channel_unnamed">Canal privado</string>
     <string name="marmot_message_deleted">Mensaje eliminado</string>
+    <string name="concord_role_editor_title">Roles</string>
+    <string name="concord_role_editor_open">Editar roles</string>
+    <string name="concord_role_editor_new">Nuevo rol</string>
+    <string name="concord_role_editor_edit">Editar rol</string>
+    <string name="concord_role_editor_delete">Eliminar rol</string>
+    <string name="concord_role_editor_delete_message">¿Eliminar %1$s? Los miembros que lo tienen pierden sus permisos. No se puede deshacer.</string>
+    <string name="concord_role_editor_empty">Esta comunidad aún no tiene roles.</string>
+    <string name="concord_role_editor_name">Nombre</string>
+    <string name="concord_role_editor_position">Posición</string>
+    <string name="concord_role_editor_position_hint">Los números más bajos tienen más rango. La más alta que puedes dar es %1$d.</string>
+    <string name="concord_role_editor_position_label">Posición %1$d</string>
+    <string name="concord_role_editor_permissions">Permisos</string>
+    <string name="concord_perm_manage_roles">Gestionar roles</string>
+    <string name="concord_perm_manage_channels">Gestionar canales</string>
+    <string name="concord_perm_manage_metadata">Editar los datos de la comunidad</string>
+    <string name="concord_perm_kick">Expulsar miembros</string>
+    <string name="concord_perm_ban">Bloquear miembros</string>
+    <string name="concord_perm_manage_messages">Eliminar mensajes de otros</string>
+    <string name="concord_perm_create_invite">Crear invitaciones</string>
+    <string name="concord_perm_view_audit_log">Ver el registro de auditoría</string>
+    <string name="concord_perm_mention_everyone">Mencionar a todos</string>
+    <string name="concord_perm_pin_messages">Fijar mensajes</string>
 </resources>
