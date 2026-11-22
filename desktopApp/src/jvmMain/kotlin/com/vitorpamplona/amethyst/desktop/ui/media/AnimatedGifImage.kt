@@ -35,6 +35,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.skiaCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
@@ -44,7 +48,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.ImagePainter
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.image.PixelExactImage
-import com.vitorpamplona.amethyst.commons.service.image.exactScaleSampling
+import com.vitorpamplona.amethyst.commons.service.image.drawAtWholePixels
+import com.vitorpamplona.amethyst.commons.service.image.scaleInto
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
@@ -58,14 +63,13 @@ import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import org.jetbrains.skia.AnimationDisposalMode
 import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.Image
+import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.impl.use
 import java.io.File
 import java.net.URI
-import kotlin.concurrent.Volatile
 import kotlin.math.roundToInt
 
 private const val MIN_FRAME_DURATION_MS = 20
@@ -147,36 +151,18 @@ fun AnimatedGifImage(
     SideEffect { onShown(data != null) }
     when {
         data != null -> {
-            var shown by remember(data) { mutableStateOf(data.firstFrame) }
-            // Whether [shown] is already the size it is drawn at (see GifPlayer.decode).
-            var prescaled by remember(data) { mutableStateOf(false) }
+            var shown by remember(data) { mutableStateOf<GifFrame>(GifFrame.First) }
             val box = remember { GifBox() }
             val currentScale by rememberUpdatedState(contentScale)
             if (data.bytes != null) {
                 LaunchedEffect(data) {
                     playGif(
                         data.bytes,
-                        target = { width, height -> if (scaleToDrawnSize && SoftwareDrawing.active) box.drawnSize(width, height, currentScale) else null },
-                    ) { frame, scaled ->
-                        shown = frame
-                        prescaled = scaled
-                    }
+                        target = { width, height -> box.target(width, height, currentScale, scaleToDrawnSize) },
+                    ) { shown = it }
                 }
             }
-
-            val measured = modifier.onSizeChanged { box.size = it }
-            when {
-                // Scaled (and cropped) to its box on the player's thread: drawn as it is, at whole pixels.
-                prescaled -> Image(bitmap = shown, contentDescription = contentDescription, modifier = measured, contentScale = ContentScale.None)
-                // A still GIF, or one whose player has not handed over a frame yet (it restarts each
-                // time the card scrolls back in): the first frame, scaled once and drawn 1:1 in
-                // software (PixelExactImage), not resampled on every draw.
-                scaleToDrawnSize && shown === data.firstFrame -> {
-                    val painter = remember(data) { ImagePainter(PixelExactImage(data.firstFrame.asSkiaBitmap())) }
-                    Image(painter = painter, contentDescription = contentDescription, modifier = measured, contentScale = contentScale)
-                }
-                else -> Image(bitmap = shown, contentDescription = contentDescription, modifier = measured, contentScale = contentScale)
-            }
+            GifFrameImage(shown, data, scaleToDrawnSize, contentDescription, modifier.onSizeChanged { box.size = it }, contentScale)
         }
 
         loadFailed -> {
@@ -203,6 +189,88 @@ fun AnimatedGifImage(
     }
 }
 
+/** What a GIF shows. */
+private sealed interface GifFrame {
+    /** Its first frame, before the player hands over one (or for good, in a still GIF). */
+    data object First : GifFrame
+
+    /** A frame at the GIF's own size, scaled as it is drawn (on a GPU, or in a zooming viewer). */
+    class Native(
+        val bitmap: ImageBitmap,
+    ) : GifFrame
+
+    /** A frame the player scaled (and cropped) to its box: an immutable snapshot, drawn 1:1. */
+    class Exact(
+        val image: Image,
+    ) : GifFrame
+}
+
+@Composable
+private fun GifFrameImage(
+    frame: GifFrame,
+    data: GifSource,
+    scaleToDrawnSize: Boolean,
+    contentDescription: String?,
+    modifier: Modifier,
+    contentScale: ContentScale,
+) {
+    when (frame) {
+        is GifFrame.Exact -> {
+            val painter = remember(frame) { ExactFramePainter(frame.image) }
+            Image(painter = painter, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale)
+        }
+
+        is GifFrame.Native -> Image(bitmap = frame.bitmap, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale)
+
+        GifFrame.First ->
+            if (scaleToDrawnSize) {
+                // A still GIF, or one whose player has not handed over a frame yet (it restarts each
+                // time the card scrolls back in): scaled once and drawn 1:1 in software
+                // (PixelExactImage), not resampled on every draw.
+                val painter = remember(data) { ImagePainter(PixelExactImage(data.firstFrame.asSkiaBitmap())) }
+                Image(painter = painter, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale)
+            } else {
+                Image(bitmap = data.firstFrame, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale)
+            }
+    }
+}
+
+/**
+ * Draws a frame the player scaled to its box: 1:1 at whole pixels when the slot is still the size it
+ * was scaled for (so the frame lands as Compose would place it, unscaled), and resampled to the slot
+ * when the box has changed since (a resize), until the player's next frame catches up.
+ */
+private class ExactFramePainter(
+    private val image: Image,
+) : Painter() {
+    override val intrinsicSize: Size get() = Size(image.width.toFloat(), image.height.toFloat())
+
+    override fun DrawScope.onDraw() {
+        drawIntoCanvas { canvas ->
+            val native = canvas.skiaCanvas
+            if (size.width.roundToInt() == image.width && size.height.roundToInt() == image.height) {
+                native.drawAtWholePixels(image)
+            } else {
+                native.drawImageRect(image, 0f, 0f, image.width.toFloat(), image.height.toFloat(), 0f, 0f, size.width, size.height, SamplingMode.LINEAR, null, true)
+            }
+        }
+    }
+}
+
+/** Where the player is told to put the next frame. */
+private sealed interface FrameTarget {
+    /** At the GIF's own size, for the composable to scale (a GPU, or a zooming viewer). */
+    data object Native : FrameTarget
+
+    /** Not known yet: the box has not been laid out. */
+    data object Wait : FrameTarget
+
+    /** Scaled (and cropped) to the box. */
+    class Scaled(
+        val plan: FramePlan,
+    ) : FrameTarget
+}
+
 /**
  * Loops the GIF in [bytes] for as long as the caller stays active, handing each frame to [show].
  * Frames decode one at a time, off the UI thread, the way Android's `AnimatedImageDrawable` plays
@@ -211,8 +279,8 @@ fun AnimatedGifImage(
  */
 private suspend fun playGif(
     bytes: ByteArray,
-    target: (width: Int, height: Int) -> FramePlan?,
-    show: (frame: ImageBitmap, scaledToTarget: Boolean) -> Unit,
+    target: (width: Int, height: Int) -> FrameTarget,
+    show: (GifFrame) -> Unit,
 ) {
     val player =
         try {
@@ -227,10 +295,29 @@ private suspend fun playGif(
     // codec closes.
     try {
         var frame = 0
+        // The snapshots shown last, released two frames on: by then nothing draws them but the
+        // pictures already recorded with them, which keep their own reference to the pixels.
+        val shownSnapshots = ArrayDeque<Image>()
         while (currentCoroutineContext().isActive) {
             val start = System.nanoTime()
-            val plan = target(player.width, player.height)
-            show(withContext(Dispatchers.Default) { player.decode(frame, plan) }, plan != null)
+            when (val next = target(player.width, player.height)) {
+                // Until the box is laid out: a frame now would be scaled again on every draw.
+                FrameTarget.Wait -> {
+                    delay(MIN_FRAME_GAP_MS)
+                    continue
+                }
+
+                FrameTarget.Native -> {
+                    show(GifFrame.Native(withContext(Dispatchers.Default) { player.decode(frame) }))
+                }
+
+                is FrameTarget.Scaled -> {
+                    val snapshot = withContext(Dispatchers.Default) { player.decodeScaled(frame, next.plan) }
+                    show(GifFrame.Exact(snapshot))
+                    shownSnapshots.addLast(snapshot)
+                    while (shownSnapshots.size > 2) shownSnapshots.removeFirst().close()
+                }
+            }
             val spentMs = (System.nanoTime() - start) / 1_000_000
             delay((player.duration(frame) - spentMs).coerceAtLeast(MIN_FRAME_GAP_MS))
             frame = (frame + 1) % player.frameCount
@@ -245,8 +332,19 @@ private suspend fun playGif(
 
 /** Where a GIF is drawn, as laid out, for the player's thread to scale its frames to. */
 private class GifBox {
-    @Volatile
-    var size: IntSize? = null
+    // State, so a resize recomposes the frame on screen; read by the player's thread too.
+    var size: IntSize? by mutableStateOf(null)
+
+    fun target(
+        width: Int,
+        height: Int,
+        contentScale: ContentScale,
+        scaleToDrawnSize: Boolean,
+    ): FrameTarget {
+        if (!scaleToDrawnSize || !SoftwareDrawing.active) return FrameTarget.Native
+        if (size == null) return FrameTarget.Wait
+        return drawnSize(width, height, contentScale)?.let { FrameTarget.Scaled(it) } ?: FrameTarget.Native
+    }
 
     /** How a [width] x [height] frame lands in this box with [contentScale]; null when unknown or too big to scale. */
     fun drawnSize(
@@ -312,11 +410,6 @@ internal class GifPlayer(
         }
     private val images = buffers.map { it.asComposeImageBitmap() }
 
-    // The frames scaled to the size they are drawn at, taking turns like [buffers]; sized on demand.
-    private var scaledSize: IntSize? = null
-    private var scaled: Array<Bitmap> = emptyArray()
-    private var scaledImages: List<ImageBitmap> = emptyList()
-
     val width: Int = codec.width
     val height: Int = codec.height
 
@@ -328,51 +421,27 @@ internal class GifPlayer(
 
     fun duration(frame: Int): Int = (frameInfos.getOrNull(frame)?.duration ?: 100).coerceAtLeast(MIN_FRAME_DURATION_MS)
 
-    /**
-     * The pixels of [frame], decoded into the buffer that is not on screen, and scaled to [target]
-     * when given: in software a frame drawn at another size is resampled on the UI thread every
-     * draw, so it is scaled here, on the player's thread, once per frame (see SoftwareDrawing).
-     */
-    fun decode(
-        frame: Int,
-        plan: FramePlan? = null,
-    ): ImageBitmap {
-        val native = decodeNative(frame)
-        if (plan == null || (plan.scaled.width == width && plan.scaled.height == height && plan.out == plan.scaled)) return native
-        return scaleInto(plan)
-    }
+    /** The pixels of [frame], decoded into the buffer that is not on screen. */
+    fun decode(frame: Int): ImageBitmap = decodeNative(frame)
 
-    private fun scaleInto(plan: FramePlan): ImageBitmap {
-        val size = plan.out
-        if (scaledSize != size) {
-            scaled = Array(2) { Bitmap().apply { allocN32Pixels(size.width, size.height) } }
-            scaledImages = scaled.map { it.asComposeImageBitmap() }
-            scaledSize = size
+    /**
+     * [frame] scaled to its box as [plan] says: in software a frame drawn at another size is resampled
+     * on the UI thread every draw, so it is scaled here, on the player's thread, once per frame (see
+     * SoftwareDrawing). An immutable snapshot, so the UI thread draws it without copying it.
+     */
+    fun decodeScaled(
+        frame: Int,
+        plan: FramePlan,
+    ): Image {
+        decodeNative(frame)
+        val out = Bitmap()
+        out.allocN32Pixels(plan.out.width, plan.out.height)
+        // Shares the buffer's pixels: drawn from right away, before the next decode changes them.
+        buffers[front].peekPixels()?.let { pixels ->
+            Image.makeFromPixmap(pixels).use { source -> scaleInto(out, source, plan.scaled.width, plan.scaled.height, plan.dx, plan.dy) }
         }
-        val out = scaled[front]
-        val target = plan.scaled
-        // The native buffer is mutable, so this image is a snapshot of it.
-        Image.makeFromBitmap(buffers[front]).use { source ->
-            Canvas(out).use { canvas ->
-                canvas.clear(0)
-                canvas.drawImageRect(
-                    source,
-                    0f,
-                    0f,
-                    width.toFloat(),
-                    height.toFloat(),
-                    plan.dx.toFloat(),
-                    plan.dy.toFloat(),
-                    (plan.dx + target.width).toFloat(),
-                    (plan.dy + target.height).toFloat(),
-                    exactScaleSampling(target.width < width || target.height < height),
-                    null,
-                    true,
-                )
-            }
-        }
-        out.notifyPixelsChanged()
-        return scaledImages[front]
+        out.setImmutable()
+        return Image.makeFromBitmap(out).also { out.close() }
     }
 
     private fun decodeNative(frame: Int): ImageBitmap {

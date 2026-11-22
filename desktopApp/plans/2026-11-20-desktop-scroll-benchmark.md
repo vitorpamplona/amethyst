@@ -310,6 +310,27 @@ Geocaches, Web Bookmarks).
   posters and their full-size blurhash copies outgrowing the 64 MB budget), `stringRes` (up to 1%),
   `RichTextViewer.measureSpaceWidth` (up to 0.7%), `croppedImageSize` on Software Apps (1.7%).
 
+### Audit of the survey round
+
+- `SoftwareDrawing` follows every open window (`report`/`forget`): on while any draws in software,
+  so the fullscreen overlay, a pop-out screen or a napplet window can no longer switch the main
+  window's drawing by reporting another renderer.
+- One scaling helper (`ExactScaling.kt`: `scaleInto`, `scaledBitmap`, `drawAtWholePixels`) for the
+  decoder, `PixelExactImage` and the GIF player; at an unchanged size it copies pixel for pixel (the
+  cubic softened a GIF frame that was only cropped).
+- GIFs: a frame scaled to its box is an immutable snapshot made on the player's thread (the native
+  frame shared through `makeFromPixmap`, not copied) and drawn 1:1 by `ExactFramePainter`, resampled
+  only while the box has changed size since; the player waits for the box's size instead of handing
+  over a frame that would be resampled every draw.
+- Copies made on the UI thread when an image first draws (~8 ms each): Home made 22-24 a boot. The
+  prefetch now fits single images to the platform's inline height cap
+  (`NotePlatform.maxInlineMediaHeight`), an image of unknown shape gets the cap in its own
+  constraints, and a video's thumbnail is scaled off the UI thread before it shows
+  (`PixelExactImage.prepare`). Then: 11 a boot (77 ms), placeholders and small images shown larger.
+  A source over 16 MB draws scaled rather than keep the copy budget for itself.
+- Discover, back to back: down-again 40.8 -> 51.0 fps (UI work 21.6 -> 17.0 ms); Home within noise.
+- `tools/desktop-run/screen-survey.sh` runs the per-screen survey (`--profile` for the hotspots).
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what

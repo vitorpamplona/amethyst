@@ -148,6 +148,8 @@ import com.vitorpamplona.amethyst.desktop.ui.media.EpisodeAudioPlayer as Desktop
 object DesktopNotePlatform : NotePlatform {
     private val MaxInlineMediaHeight = 600.dp
 
+    override val maxInlineMediaHeight: Dp get() = MaxInlineMediaHeight
+
     private fun BaseMediaContent.mediaUrl(): String? =
         when (this) {
             is MediaUrlContent -> url
@@ -306,7 +308,8 @@ object DesktopNotePlatform : NotePlatform {
                         url,
                         content.description,
                         contentScale,
-                        if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                        // Capped like its box, so the image decodes at the height the box draws it.
+                        if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                         shapeUnknown = ratio == null,
                         onShown = { shown = it },
                         blurhash = content.blurhash,
@@ -511,7 +514,7 @@ object DesktopNotePlatform : NotePlatform {
                 videoUri,
                 contentDescription,
                 contentScale,
-                if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                 shapeUnknown = !fillsSlot && ratio == null,
                 blurhash = blurhash,
                 thumbhash = thumbhash,

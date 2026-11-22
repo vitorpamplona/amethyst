@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.PlatformContext
@@ -124,7 +125,9 @@ fun PrefetchFeedMedia(
     // media across the whole card (pictures, videos, a thread's main post) need that.
     mediaAtNoteWidth: Boolean = false,
 ) {
-    val visibleEnds = remember(listState, mediaAtNoteWidth) { listState.visibleEnds(mediaAtNoteWidth) }
+    // A card draws a single image no taller than its platform's cap: decoded to fit it, it draws 1:1.
+    val maxMediaHeight = LocalNotePlatform.current.maxInlineMediaHeight?.let { with(LocalDensity.current) { it.roundToPx() } }
+    val visibleEnds = remember(listState, mediaAtNoteWidth, maxMediaHeight) { listState.visibleEnds(mediaAtNoteWidth, maxMediaHeight) }
     PrefetchVisibleMedia(listState, visibleEnds, notes, accountViewModel, radius, prefetchVideoHeads = true)
 }
 
@@ -263,6 +266,8 @@ internal data class VisibleEnds(
     val cell: IntSize? = null,
     // The list's items are note cards, whose media is narrower than the list (see PrefetchFeedMedia).
     val mediaAtNoteWidth: Boolean = false,
+    // The tallest a card draws a single image (NotePlatform.maxInlineMediaHeight), in pixels.
+    val maxMediaHeight: Int? = null,
 ) {
     /**
      * What a note's images are decoded to. A grid cell crops its image, so it is covered. A note
@@ -277,7 +282,7 @@ internal data class VisibleEnds(
         return when {
             cell != null -> PrefetchBox(cell.width, cell.height, fill = true)
             imageCount > 1 -> PrefetchBox(media, media, fill = true)
-            else -> PrefetchBox(media, viewport.height, fill = false)
+            else -> PrefetchBox(media, maxMediaHeight?.let { minOf(it, viewport.height) } ?: viewport.height, fill = false)
         }
     }
 }
@@ -289,10 +294,13 @@ private fun sameRange(
 ) = old.firstKey == new.firstKey && old.lastKey == new.lastKey
 
 /** Emits the visible range ends, once per change. */
-private fun LazyListState.visibleEnds(mediaAtNoteWidth: Boolean): Flow<VisibleEnds> =
+private fun LazyListState.visibleEnds(
+    mediaAtNoteWidth: Boolean,
+    maxMediaHeight: Int?,
+): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize, mediaAtNoteWidth = mediaAtNoteWidth)
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize, mediaAtNoteWidth = mediaAtNoteWidth, maxMediaHeight = maxMediaHeight)
     }.distinctUntilChanged(::sameRange)
 
 /** Grid equivalent of [visibleEnds]. */

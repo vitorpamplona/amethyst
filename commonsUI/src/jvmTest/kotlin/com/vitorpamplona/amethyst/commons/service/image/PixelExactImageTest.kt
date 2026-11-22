@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.image
 
 import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Color
@@ -31,6 +32,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PixelExactImageTest {
@@ -169,6 +171,33 @@ class PixelExactImageTest {
         }
         assertTrue(ExactCopies.heldBytes <= 64L * 1024 * 1024, "held ${ExactCopies.heldBytes}")
         assertTrue(ExactCopies.size in 5..10, "kept ${ExactCopies.size}")
+    }
+
+    @Test
+    fun preparedCopiesAreReadyBeforeTheFirstDraw() {
+        val image = solid(400, 300, Color.RED)
+        assertFalse(image.isReady(200, 150))
+        runBlocking { image.prepare(200, 150) }
+        assertTrue(image.isReady(200, 150))
+        assertEquals(1, ExactCopies.size)
+        // The draw finds it: no second copy.
+        render {
+            it.scale(0.5f, 0.5f)
+            image.draw(it)
+        }
+        assertEquals(1, ExactCopies.size)
+    }
+
+    @Test
+    fun aHugeSourceDrawsScaledWithoutACopy() {
+        // 2200x2000 is 17.6 MB: past what a copy's source may keep alive.
+        val image = solid(2200, 2000, Color.BLUE)
+        render {
+            it.scale(0.25f, 0.25f)
+            image.draw(it)
+        }
+        assertEquals(0, ExactCopies.size)
+        assertTrue(image.isReady(550, 500))
     }
 
     private fun render(draw: (Canvas) -> Unit): ByteArray {

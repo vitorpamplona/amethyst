@@ -57,6 +57,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.ImagePainter
@@ -77,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
@@ -99,6 +102,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.roundToInt
 
 // Shorter than this, a video is a still image (one frame); see the poster fade below.
 private const val STILL_VIDEO_MILLIS = 300L
@@ -744,7 +748,37 @@ private fun VideoPoster(
         AsyncImage(model = posterUrl, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit, onError = { onPosterFailed() })
     } else if (thumbnail != null) {
         // Drawn 1:1 from a copy at the card's size, not resampled every frame (see PixelExactImage).
-        val painter = remember(thumbnail) { ImagePainter(PixelExactImage(thumbnail.asSkiaBitmap())) }
-        Image(painter = painter, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
+        // The frame's size is known once the box is laid out, so the copy is made then, off the UI
+        // thread, and the poster waits for it (the box's backdrop shows meanwhile); scrolled back in,
+        // the copy is still there.
+        val image = remember(thumbnail) { PixelExactImage(thumbnail.asSkiaBitmap()) }
+        val painter = remember(image) { ImagePainter(image) }
+        var box by remember { mutableStateOf(IntSize.Zero) }
+        val drawn = remember(image, box) { fittedSize(image.width, image.height, box) }
+        // In software, not before the box is laid out: a draw at an unknown size would copy on the UI thread.
+        var ready by remember(image, drawn) { mutableStateOf(!SoftwareDrawing.active || (drawn != null && image.isReady(drawn.width, drawn.height))) }
+        if (!ready && drawn != null) {
+            LaunchedEffect(image, drawn) {
+                image.prepare(drawn.width, drawn.height)
+                ready = true
+            }
+        }
+        val measured = modifier.onSizeChanged { box = it }
+        if (ready) {
+            Image(painter = painter, contentDescription = null, modifier = measured, contentScale = ContentScale.Fit)
+        } else {
+            Box(measured)
+        }
     }
+}
+
+/** The size a [width] x [height] picture is drawn at to fit [box] ([ContentScale.Fit]); null before the box is laid out. */
+private fun fittedSize(
+    width: Int,
+    height: Int,
+    box: IntSize,
+): IntSize? {
+    if (box.width <= 0 || box.height <= 0 || width <= 0 || height <= 0) return null
+    val scale = minOf(box.width.toFloat() / width, box.height.toFloat() / height)
+    return IntSize((width * scale).roundToInt().coerceAtLeast(1), (height * scale).roundToInt().coerceAtLeast(1))
 }

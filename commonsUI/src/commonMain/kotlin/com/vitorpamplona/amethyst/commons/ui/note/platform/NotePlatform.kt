@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -61,6 +62,13 @@ import okio.Path
 @Stable
 interface NotePlatform {
     // Media
+
+    /**
+     * The tallest a note's inline image is drawn, when this platform caps it (a portrait photo then
+     * draws narrower than the card). The feed's prefetch fits single images to it, so they decode at
+     * the size the card draws them. Null: no cap.
+     */
+    val maxInlineMediaHeight: Dp? get() = null
 
     @Composable
     fun ZoomableContentView(

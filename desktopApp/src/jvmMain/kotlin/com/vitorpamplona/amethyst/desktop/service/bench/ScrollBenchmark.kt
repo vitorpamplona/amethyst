@@ -180,7 +180,9 @@ object ScrollBenchmark {
                 while (navigator.nav == null || navigator.accountViewModel == null) delay(200)
                 navigator.accountViewModel
             } ?: error("No logged-in account after 60 s to open $item in")
-        navigator.goDrawer { def.resolveRoute(accountViewModel) }
+        val route = def.resolveRoute(accountViewModel)
+        require(navigator.destinations?.has(route) != false) { "$item opens ${route::class.simpleName}, which this desktop has no screen for" }
+        navigator.goDrawer { route }
         Log.i(TAG) { "Scroll benchmark: opened $item" }
     }
 

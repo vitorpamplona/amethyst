@@ -106,8 +106,6 @@ fun AppWindow(
     content: @Composable AppWindowScope.() -> Unit,
 ) {
     if (WaylandDisplay.isActive) {
-        // Swing-drawn: Skia renders every frame on the CPU.
-        SoftwareDrawing.active = true
         WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, fullscreenDevice, onPreviewKeyEvent, visible, content)
     } else {
         Window(
@@ -126,14 +124,21 @@ fun AppWindow(
             // Skia picks the renderer when the window first draws, and falls back to software if the
             // GPU fails later: the drawing follows it (SoftwareDrawing).
             DisposableEffect(window) {
+                var open = true
                 val update = {
-                    val api = window.renderApi
-                    SoftwareDrawing.active = api.isSoftware()
-                    Log.i("AppWindow") { "Skia renders with $api" }
+                    if (open) {
+                        val api = window.renderApi
+                        SoftwareDrawing.report(window, api.isSoftware())
+                        Log.i("AppWindow") { "Skia renders with $api" }
+                    }
                 }
                 update()
                 window.onRenderApiChanged(update)
-                onDispose { }
+                onDispose {
+                    // The listener can't be removed: it stops reporting instead.
+                    open = false
+                    SoftwareDrawing.forget(window)
+                }
             }
             ProvideDesktopUiScale { scope.content() }
         }
@@ -262,8 +267,11 @@ private fun WaylandWindow(
 
         frame.isVisible = visible
         frame.applyPlacement(state.placement)
+        // Swing-drawn: Skia renders every frame on the CPU.
+        SoftwareDrawing.report(frame, software = true)
 
         onDispose {
+            SoftwareDrawing.forget(frame)
             KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyDispatcher)
             frame.removeWindowListener(closeListener)
             frame.removeWindowStateListener(closeListener)

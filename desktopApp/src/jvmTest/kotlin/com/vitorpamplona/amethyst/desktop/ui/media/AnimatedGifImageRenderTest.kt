@@ -89,7 +89,7 @@ class AnimatedGifImageRenderTest {
         codec.readPixels(source, frame)
         val scaled = Bitmap().apply { allocN32Pixels(160, 120) }
         Image.makeFromBitmap(source).use { image ->
-            Canvas(scaled).use { it.drawImageRect(image, 0f, 0f, 40f, 30f, 0f, 0f, 160f, 120f, exactScaleSampling(false), null, true) }
+            Canvas(scaled).use { it.drawImageRect(image, 0f, 0f, 40f, 30f, 0f, 0f, 160f, 120f, exactScaleSampling(40, 30, 160, 120), null, true) }
         }
         val out = Bitmap().apply { allocN32Pixels(boxWidth, boxHeight) }
         Image.makeFromBitmap(scaled).use { image ->

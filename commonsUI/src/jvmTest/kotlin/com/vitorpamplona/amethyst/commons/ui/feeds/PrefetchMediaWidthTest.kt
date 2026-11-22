@@ -50,4 +50,13 @@ class PrefetchMediaWidthTest {
         val ends = VisibleEnds("a", "b", viewport, cell = IntSize(200, 200), mediaAtNoteWidth = true)
         assertEquals(200, ends.boxFor(1).width)
     }
+
+    @Test
+    fun aSingleImageFitsThePlatformsHeightCap() {
+        // A 600 dp cap at 1x: a portrait photo draws 600 px tall, narrower than the card.
+        val ends = VisibleEnds("a", "b", viewport, mediaAtNoteWidth = true, maxMediaHeight = 600)
+        assertEquals(600, ends.boxFor(1).height)
+        // The gallery's square is not capped by it.
+        assertEquals(ends.boxFor(1).width, ends.boxFor(3).height)
+    }
 }

@@ -24,17 +24,13 @@ import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import coil3.compose.AsyncImagePainter
 import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skia.Color
 import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.CubicResampler
-import org.jetbrains.skia.FilterMipmap
-import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.Image
-import org.jetbrains.skia.MipmapMode
 import org.jetbrains.skia.SamplingMode
-import org.jetbrains.skia.impl.use // skia types are AutoCloseable only on JVM, so kotlin.use breaks iOS
 import kotlin.math.roundToInt
 
 /**
@@ -82,36 +78,48 @@ class PixelExactImage(
         val copy =
             when {
                 w == width && h == height -> original
-                w.toLong() * h < MIN_COPY_PIXELS || w.toLong() * h > MAX_COPY_PIXELS -> return drawScaled(canvas)
+                !copies(w, h) -> return drawScaled(canvas)
                 else -> ExactCopies.get(bitmap, w, h) ?: scaledCopy(w, h).also { ExactCopies.put(bitmap, w, h, it, size) }
             }
-
-        // Where it lands, snapped to whole pixels, with no scale left for Skia to resample by. In a
-        // recorded picture the reset is relative to where the picture is played.
-        canvas.save()
-        canvas.resetMatrix()
-        canvas.drawImage(copy, m[2].roundToInt().toFloat(), m[5].roundToInt().toFloat())
-        canvas.restore()
+        canvas.drawAtWholePixels(copy)
     }
+
+    /** Whether a draw at [w] x [h] goes through a copy: not tiny, not huge, not from a huge source. */
+    private fun copies(
+        w: Int,
+        h: Int,
+    ): Boolean = w.toLong() * h in MIN_COPY_PIXELS..MAX_COPY_PIXELS && size <= MAX_SOURCE_BYTES
+
+    /**
+     * Makes, off the UI thread, the copy a draw at [width] x [height] would make on it, so that draw
+     * finds it ready: for a picture whose drawn size is known before it first draws (a video's
+     * thumbnail in its box). Call it from the UI thread; it returns once the copy is in place.
+     */
+    suspend fun prepare(
+        width: Int,
+        height: Int,
+    ) {
+        if (!SoftwareDrawing.active || (width == this.width && height == this.height) || !copies(width, height)) return
+        if (ExactCopies.get(bitmap, width, height) != null) return
+        val copy = withContext(Dispatchers.Default) { scaledCopy(width, height) }
+        ExactCopies.put(bitmap, width, height, copy, size)
+    }
+
+    /** Whether a draw at [width] x [height] can draw right away, without making a copy on the UI thread. */
+    fun isReady(
+        width: Int,
+        height: Int,
+    ): Boolean = !SoftwareDrawing.active || (width == this.width && height == this.height) || !copies(width, height) || ExactCopies.get(bitmap, width, height) != null
 
     private fun drawScaled(canvas: Canvas) {
         canvas.drawImageRect(original, 0f, 0f, width.toFloat(), height.toFloat(), 0f, 0f, width.toFloat(), height.toFloat(), SamplingMode.LINEAR, null, true)
     }
 
-    /** The picture filtered once to [w] x [h]: through mipmaps when shrinking, a cubic when growing. */
+    /** The picture filtered once to [w] x [h] ([scaledBitmap]). */
     private fun scaledCopy(
         w: Int,
         h: Int,
-    ): Image {
-        val target = Bitmap()
-        target.allocN32Pixels(w, h, bitmap.alphaType == ColorAlphaType.OPAQUE)
-        Canvas(target).use { c ->
-            c.clear(Color.TRANSPARENT)
-            c.drawImageRect(original, 0f, 0f, width.toFloat(), height.toFloat(), 0f, 0f, w.toFloat(), h.toFloat(), exactScaleSampling(w < width || h < height), null, true)
-        }
-        target.setImmutable()
-        return Image.makeFromBitmap(target)
-    }
+    ): Image = Image.makeFromBitmap(scaledBitmap(original, w, h, opaque = bitmap.alphaType == ColorAlphaType.OPAQUE))
 
     private companion object {
         // 128x128: below it a scaled draw costs ~0.3 ms or less.
@@ -119,17 +127,12 @@ class PixelExactImage(
 
         // A 2560x1600 screen: one copy can't take more than a quarter of [ExactCopies]' budget.
         const val MAX_COPY_PIXELS = 4L * 1024 * 1024
+
+        // A source this big (a 4 MP original) and its copy would take most of [ExactCopies]' budget,
+        // which counts the sources it keeps alive: it draws scaled instead.
+        const val MAX_SOURCE_BYTES = 16L * 1024 * 1024
     }
 }
-
-private val SHRINK = FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR)
-private val GROW = CubicResampler(1f / 3, 1f / 3)
-
-/**
- * How to scale a picture once to the size it is drawn at, so it can then be drawn 1:1: through
- * mipmaps when [shrinking], a cubic when growing. Slower than a frame's bilinear draw, but paid once.
- */
-fun exactScaleSampling(shrinking: Boolean): SamplingMode = if (shrinking) SHRINK else GROW
 
 /**
  * This state with a loaded [PixelExactImage] drawn from its full bitmap, for a viewer that zooms with
