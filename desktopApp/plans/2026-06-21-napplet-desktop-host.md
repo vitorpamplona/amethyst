@@ -181,8 +181,6 @@ with the favorite star and a prefetch of its files while on screen); Open goes t
 
 Open:
 
-- "Manage permissions" is hidden on desktop: the per-app permission screen
-  (`ConnectedAppDetailScreen`) is still Android's.
 - A site's service worker can't register on either platform: neither host serves worker scripts.
 - While any site is on the open web, Chromium's own services go direct too (one process-wide
   route, as on Android).

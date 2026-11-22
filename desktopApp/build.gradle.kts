@@ -34,8 +34,8 @@ sourceSets {
     }
 }
 
-// Compiled by the JDK Gradle runs on, as Java 21 bytecode. The packages bundle that JDK (JDK 25 in
-// CI), and a dev run on JDK 21 still works; a toolchain would make CI install a second JDK just to
+// Compiled by the JDK Gradle runs on (JDK 25, BUILDING.md), as Java 21 bytecode like the other
+// modules. The packages bundle that JDK; a toolchain would make CI install a second JDK just to
 // compile.
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -121,6 +121,15 @@ dependencies {
         exclude(group = "org.slf4j", module = "slf4j-simple")
     }
 
+    // System tray icon (the NIP-46 signer keeps running with the window closed) — MIT, same author,
+    // now published under dev.nucleusframework (the io.github.kdroidfilter coordinates stopped at
+    // 1.3.3), with its MIT nucleus dependencies. Native trays: Win32 on Windows, an NSStatusItem on
+    // macOS, StatusNotifierItem over D-Bus on Linux (the system's libsystemd, LGPL-2.1, and its
+    // theme detector's libdbus-1, AFL-2.1 or GPL-2.0+, both loaded at runtime, not bundled).
+    implementation(libs.composenativetray)
+    // Its native loader, called directly to check the tray library loads before hiding the window.
+    implementation(libs.nucleus.core.runtime)
+
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
     // wrapper library needed (see VideoThumbnailCache.runFfmpegToImage).
@@ -200,6 +209,14 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.login",
             "amethyst.signup",
             "amethyst.videoTimeline",
+            // ScrollBenchmark: `-Damethyst.scrollBench=<dir>` scrolls the feed, writes frame
+            // timings to <dir> and exits (tools/desktop-run/scroll-bench.sh).
+            "amethyst.scrollBench",
+            "amethyst.scrollBench.waitSeconds",
+            "amethyst.scrollBench.notches",
+            "amethyst.scrollBench.intervalMs",
+            "amethyst.scrollBench.at",
+            "amethyst.scrollBench.measure",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
@@ -399,6 +416,8 @@ compose.desktop {
                                 <array>
                                     <string>nostr</string>
                                     <string>amethyst</string>
+                                    <!-- NIP-46: an app's offer to pair with Amethyst's signer. -->
+                                    <string>nostrconnect</string>
                                 </array>
                             </dict>
                         </array>
@@ -701,12 +720,12 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
             // StartupWMClass so docks match the window (AmethystDesktop.kt); MimeType + %u so
-            // the desktop offers the app for nostr:/amethyst: links and passes the URI to the
+            // the desktop offers the app for nostr:/amethyst:/nostrconnect: links and passes the URI to the
             // launcher (DesktopDeepLinks.extractFromArgs).
             val desktopEntry =
                 desktopTemplate.trimEnd()
                     .replace(Regex("^Exec=(\\S.*)$", RegexOption.MULTILINE)) { "Exec=${it.groupValues[1]} %u" }
-                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;\n")
+                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;x-scheme-handler/nostrconnect;\n")
             File(resources, "${appName.get()}.desktop").writeText(desktopEntry)
 
             // The task's own options, one per line with quoted values, minus the app-image ones.
@@ -751,8 +770,10 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
 // file that way, and the AppImage step stamps its copy to match.
 //
 // Release CI runs it under xvfb-run, logged in read-only with -Pamethyst.aotTrainingLogin (an npub;
-// a default key otherwise) so the start goes through the home feed. -Pamethyst.aotTrainingSeconds
-// sets how long the run lasts.
+// a default key otherwise) so the start goes through the home feed, and the run then scrolls the feed
+// (ScrollBenchmark, without its measuring) and exits. -Pamethyst.aotTrainingSeconds sets how long
+// the feed loads before the scroll; -Pamethyst.aotTrainingScroll=false trains the start alone, for
+// -Pamethyst.aotTrainingSeconds and then an exit.
 val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
     group = "compose desktop"
     description = "Train an AOT cache into createReleaseDistributable's image (Linux, needs a display)."
@@ -764,6 +785,10 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
         providers.gradleProperty("amethyst.aotTrainingLogin")
             .orElse("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
     val seconds = providers.gradleProperty("amethyst.aotTrainingSeconds").map(String::toLong).orElse(45L)
+    // The training run also scrolls the home feed (ScrollBenchmark: down, back up, down again), so
+    // the cache holds the scroll path's classes and method profiles too: without them the first
+    // scroll of every start ran ~9 s of JIT compilation (desktopApp/plans/2026-11-20-desktop-scroll-benchmark.md, "The AOT cache, trained on scrolling").
+    val scroll = providers.gradleProperty("amethyst.aotTrainingScroll").map(String::toBoolean).orElse(true)
     val dropped = perUserArchiveArgs
 
     doLast {
@@ -808,15 +833,43 @@ val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
         }
 
         try {
-            // 1. Record: a start logged in, through the home feed, then a normal exit.
+            // 1. Record: a start logged in, through the home feed, then a normal exit. With scrolling,
+            // the feed gets the same time to load, then the benchmark scrolls it and exits the app
+            // itself; the exit timer only stops a run that hangs.
+            val scrollDir = File(work, "scroll")
+            val recordOptions =
+                if (scroll.get()) {
+                    listOf(
+                        "-Damethyst.scrollBench=${scrollDir.absolutePath}",
+                        "-Damethyst.scrollBench.waitSeconds=${seconds.get()}",
+                        // Scroll as a user does: none of the benchmark's measuring, whose classes
+                        // and call sites would otherwise go into the cache's profile.
+                        "-Damethyst.scrollBench.measure=false",
+                        "-Damethyst.exitAfterSeconds=${seconds.get() + 180}",
+                    )
+                } else {
+                    listOf("-Damethyst.exitAfterSeconds=${seconds.get()}")
+                }
             writeCfg(
                 "-XX:AOTMode=record",
                 "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf",
                 "-Damethyst.dataDir=${File(work, "profile").absolutePath}",
-                "-Damethyst.exitAfterSeconds=${seconds.get()}",
+                *recordOptions.toTypedArray(),
             )
-            launch("record", mapOf("AMETHYST_LOGIN" to login.get(), "SKIKO_RENDER_API" to "SOFTWARE"), seconds.get() + 120)
+            launch("record", mapOf("AMETHYST_LOGIN" to login.get(), "SKIKO_RENDER_API" to "SOFTWARE"), seconds.get() + 300)
             check(config.isFile) { "The training run recorded nothing: no $config" }
+            if (scroll.get()) {
+                // A scroll that failed still leaves a valid cache of the start: worth a warning, not a
+                // failed release. The work folder is deleted below, so the warning carries the error.
+                val done = File(scrollDir, "done.txt")
+                val error = File(scrollDir, "error.txt")
+                if (done.isFile) {
+                    logger.lifecycle("AOT training scrolled the feed: ${done.readText().trim()}")
+                } else {
+                    val why = if (error.isFile) ":\n" + error.readLines().take(15).joinToString("\n") else " (no $done, no error.txt)"
+                    logger.warn("w: the AOT training run did not scroll the feed, so the cache covers the start only$why")
+                }
+            }
 
             // 2. Create: the launcher's JVM assembles the cache and exits without starting the app.
             writeCfg("-XX:AOTMode=create", "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf", "-XX:AOTCache=\$APPDIR/amethyst.aot")

@@ -27,6 +27,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
@@ -96,6 +97,16 @@ interface AppPlatform {
 
     /** The note announcing this release, which the notifications tab's donation card links to; null shows no card. */
     val releaseNotesId: String? get() = null
+
+    /**
+     * Drops the "allow for this session" signer grants the running napplet broker holds for
+     * [coordinate]. Those are consulted before the stored policy, so a trust-level change, a revoked
+     * override or a Forget only takes effect now if they go too. Nothing to drop where no broker runs.
+     */
+    suspend fun revokeNappletSessionGrants(coordinate: String) {}
+
+    /** The in-app browser's per-site camera / microphone / location answers; null where no browser asks for them. */
+    val browserSitePermissions: BrowserSitePermissionStore? get() = null
 
     /** Dumps the app's runtime state (memory, caches, subscriptions) to the log, for the logo's debug tap. */
     fun logDebugState() {}

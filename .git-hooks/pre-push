@@ -3,6 +3,13 @@
 GREEN='\033[0;32m'
 NO_COLOR='\033[0m'
 
+# Git runs this hook with GIT_DIR (and from a worktree, GIT_INDEX_FILE and friends) pointing at
+# this repository, and the tests below inherit them. A test that runs `git init` or `git commit`
+# in a temp directory then works on this repository instead: a push from a worktree once set
+# core.bare=true in the shared config (breaking every checkout) and replaced the worktree's index.
+# The hook itself runs no git after this point, so drop them all, as git's own scripts do.
+unset $(git rev-parse --local-env-vars)
+
 echo "*********************************************************"
 echo "Running git pre-push hook."
 echo "*********************************************************"

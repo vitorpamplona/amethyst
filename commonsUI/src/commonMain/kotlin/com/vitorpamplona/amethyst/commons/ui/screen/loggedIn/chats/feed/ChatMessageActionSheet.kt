@@ -210,6 +210,8 @@ fun ChatMessageActionSheet(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        // The editor takes over from the sheet, as the other follow-ups do.
+        return
     }
 
     if (reportDialogShowing) {
@@ -217,6 +219,8 @@ fun ChatMessageActionSheet(
             reportDialogShowing = false
             onDismiss()
         }
+        // The report takes over from the sheet, as the other follow-ups do.
+        return
     }
 
     if (addLabelDialogShowing) {

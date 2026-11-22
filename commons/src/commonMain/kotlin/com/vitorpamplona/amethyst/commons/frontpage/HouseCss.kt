@@ -42,6 +42,18 @@ internal const val HOUSE_CSS: String =
  *
  * THEMES: the original redefined these tokens for a dark theme in two more
  * blocks. Both are removed in this port; the paper is light only.
+ *
+ * LAYOUTS THE MARKUP CAN USE, before reaching for a <style> of its own:
+ *   figure.lead-art    the lead's picture, across its column above the story, 3:2
+ *   figure.crop-4x3, figure.crop-16x9   a card's or a long read's picture
+ *   figure.whole       a picture that may stand taller than the cap
+ *                      (every other picture is capped in height, set narrower, never cropped)
+ *   div.spread         a picture spread of <figure>s, the first one large
+ *   div.agate          the small-print strip: up to five .cell columns of
+ *                      .box-head + .wire-item (headlines, on air, classifieds,
+ *                      coming up, conditions)
+ *   .cols5             a five-column band
+ *   section.band.tinted   a band set apart from the network's own news
  */
 
 :root {
@@ -384,6 +396,10 @@ a:focus-visible {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
 }
+.cols5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
 .cell {
   padding: 0 18px;
   border-left: 1px solid var(--rule-soft);
@@ -435,11 +451,45 @@ figure {
   gap: 7px;
 }
 figure img {
-  width: 100%;
+  /* A PICTURE KEEPS TO A NEWSPAPER'S PROPORTIONS, AND STAYS WHOLE.
+   *
+   * Posts arrive as phone portraits as often as not, and set at a column's full
+   * width a portrait stands half a screen tall and pushes its story off the
+   * page. Capped in height, a tall picture is set narrower, centred, never
+   * cropped: a screenshot or a chart keeps every word. Only the crop classes
+   * below crop, and `figure.whole` lifts the cap. */
+  width: auto;
+  max-width: 100%;
   height: auto;
+  max-height: 28rem;
+  align-self: center;
   display: block;
   border: 1px solid var(--rule);
   background: var(--paper-2);
+}
+/* The crops a desk sets in its markup: the lead's picture across its column, a
+ * card's or a spread's picture, a long read's cover. Full width, cut to shape. */
+figure.lead-art img,
+figure.crop-4x3 img,
+figure.crop-16x9 img,
+.spread > figure img {
+  width: 100%;
+  align-self: stretch;
+  object-fit: cover;
+  object-position: center 30%;
+}
+figure.lead-art img {
+  aspect-ratio: 3 / 2;
+  max-height: none;
+}
+figure.crop-4x3 img {
+  aspect-ratio: 4 / 3;
+}
+figure.crop-16x9 img {
+  aspect-ratio: 16 / 9;
+}
+figure.whole img {
+  max-height: none;
 }
 figcaption {
   font-style: italic;
@@ -557,6 +607,80 @@ td.num {
   font-size: 0.78rem;
 }
 
+/* --- layouts ---------------------------------------------------------- */
+
+/* A PICTURE SPREAD: the day's photographs together, the first one large.
+ * `<div class="spread">` holding `<figure>`s; the first takes half the width
+ * and two rows, the rest a quarter each, all cropped to a common shape. */
+.spread {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px 18px;
+}
+.spread > figure {
+  grid-column: span 3;
+}
+.spread > figure:first-child {
+  grid-column: span 6;
+  grid-row: span 2;
+}
+.spread > figure img {
+  aspect-ratio: 4 / 3;
+}
+.spread > figure:first-child img {
+  aspect-ratio: 3 / 2;
+  max-height: none;
+}
+
+/* THE AGATE: the paper's small print in one strip of narrow columns, the way a
+ * broadsheet sets its listings. `<section class="band"><div class="agate">`
+ * holding up to five `.cell`s, each a `.box-head` and its `.wire-item`s or a
+ * small table: headlines, what's on air, classifieds, coming up, conditions. */
+.agate {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 3px double var(--ink);
+  padding-top: 14px;
+}
+.agate .cell {
+  padding: 0 14px;
+}
+.agate .cell:first-child {
+  padding-left: 0;
+}
+.agate .cell:last-child {
+  padding-right: 0;
+}
+.agate .box-head {
+  font-size: 0.62rem;
+}
+.agate .wire-item {
+  padding: 8px 0;
+}
+.agate .wire-item p,
+.agate .note,
+.agate p {
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+.agate th,
+.agate td {
+  font-size: 0.76rem;
+  padding: 5px 8px 5px 0;
+}
+
+/* A TINTED BAND sets apart what isn't the network's own news: a section that
+ * reads differently from the pages around it. Bleeds to the sheet's edges. */
+.band.tinted {
+  background: var(--paper-2);
+  margin: 0 -22px;
+  padding: 22px 22px 26px;
+  border-bottom: 0;
+}
+.band.tinted .band-head {
+  border-bottom-color: var(--rule);
+}
+
 /* --- responsive ------------------------------------------------------- */
 
 @media (max-width: 1000px) {
@@ -565,8 +689,18 @@ td.num {
   .span-5 {
     grid-column: span 6;
   }
-  .cols4 {
+  .cols4,
+  .cols5 {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .agate {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 14px;
+  }
+  .spread > figure,
+  .spread > figure:first-child {
+    grid-column: span 6;
+    grid-row: auto;
   }
 }
 @media (max-width: 720px) {
@@ -587,9 +721,22 @@ td.num {
   }
   .cols2,
   .cols3,
-  .cols4 {
+  .cols4,
+  .cols5,
+  .agate,
+  .spread {
     display: flex;
     flex-direction: column;
+  }
+  .agate .cell {
+    padding: 14px 0;
+  }
+  .agate .cell:first-child {
+    padding-top: 0;
+  }
+  .band.tinted {
+    margin: 0 -15px;
+    padding: 22px 15px 26px;
   }
   .cell {
     padding: 16px 0;
@@ -605,3 +752,23 @@ td.num {
   }
 }
 """
+
+/**
+ * The house stylesheet as the writer reads it in its prompt: every rule, and the list of layouts it
+ * can use, without the notes kept for the people who edit it. Every byte of the prompt is paid for
+ * on every print, by the reader's own key; the notes are about a third of the sheet.
+ */
+internal val HOUSE_CSS_FOR_WRITER: String by lazy { houseCssForWriter(HOUSE_CSS) }
+
+/** [css] with its comments gone, but for the layout list, and without the blank lines they leave. */
+internal fun houseCssForWriter(css: String): String =
+    css
+        .replace(Regex("/\\*[\\s\\S]*?\\*/")) { comment ->
+            val at = comment.value.indexOf(LAYOUTS_MARKER)
+            if (at < 0) "" else "/* " + comment.value.substring(at).trimEnd()
+        }.lines()
+        .map { it.trimEnd() }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n")
+
+private const val LAYOUTS_MARKER = "LAYOUTS THE MARKUP CAN USE"

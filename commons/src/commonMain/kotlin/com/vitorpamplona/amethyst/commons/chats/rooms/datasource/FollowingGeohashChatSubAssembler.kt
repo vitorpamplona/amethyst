@@ -82,9 +82,11 @@ class FollowingGeohashChatSubAssembler(
                         invalidateFilters()
                     }
                 },
-                // Once the live relay directory loads, re-route to the proper nearest relays.
+                // Once the live relay directory loads, re-route to the proper nearest relays. Only an
+                // account that follows a geohash, with geohash chats on, needs it: the others never
+                // download it.
                 key.account.scope.launch(Dispatchers.IO) {
-                    if (GeohashRelays.ensureLoaded()) invalidateFilters()
+                    if (GeohashRelays.ensureLoadedOnceNeeded(key.account.geohashList.flow, key.account.chatFeedToggles.applied)) invalidateFilters()
                 },
             )
 

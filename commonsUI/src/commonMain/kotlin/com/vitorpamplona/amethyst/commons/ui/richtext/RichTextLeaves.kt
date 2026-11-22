@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.ui.richtext
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
@@ -45,12 +48,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
-import com.vitorpamplona.amethyst.commons.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
@@ -187,8 +190,8 @@ fun DisplaySecretEmoji(
 
 /**
  * A decoded secret message, laid out by the shared viewer with the platform's segment renderer
- * (so it gets the same media, payment cards and LaTeX as a note body). Several paragraphs sit in
- * a card, so the reveal reads as one block.
+ * (so it gets the same media, payment cards and LaTeX as a note body). Several paragraphs sit
+ * inset, so the reveal reads as one block.
  */
 @Composable
 fun SecretMessageContent(
@@ -215,8 +218,16 @@ fun SecretMessageContent(
         LocalRichTextSegmentRenderer provides renderer,
         LocalRichTextInteractions provides interactions,
     ) {
-        Column(if (content.paragraphs.size > 1) CashuCardBorders else Modifier) {
-            RichTextViewer(state = content, canPreview = true, quotesLeft = quotesLeft)
+        // Embedded, like a quote: its media stays inside it, never running past the column the way
+        // a note's own media may (a reaction's reveal sits outside the note body's bleed reset).
+        ProvideMediaBleed(0.dp) {
+            Column(if (content.paragraphs.size > 1) SecretMessageInset else Modifier) {
+                RichTextViewer(state = content, canPreview = true, quotesLeft = quotesLeft)
+            }
         }
     }
 }
+
+// Not clipped: a rounded clip on the text's own edge cut into the glyph in its bottom-left corner
+// (the "I" of a last line starting with "It"). Inline media rounds its own corners.
+private val SecretMessageInset = Modifier.fillMaxWidth().padding(10.dp)

@@ -21,7 +21,7 @@ from collections import defaultdict
 LOCALE = re.compile(r"^values-(?:b\+[A-Za-z0-9+]+|[a-z]{2,3}(?:-r[A-Z]{2,3})?)$")
 NAMED = re.compile(r'<(?:string|plurals|string-array)\s+[^>]*name="([^"]+)"')
 
-# Both Crowdin-managed resource systems (see the find-missing-translations
+# Both translated resource systems (see the find-missing-translations
 # skill, "Resource trees — scan BOTH"), each with what an orphan costs there.
 # Android res is the tree lint policies; the Compose-Multiplatform catalog is
 # not lint-checked, but an orphan there is the same authoring mistake and
@@ -75,8 +75,8 @@ def main():
     print(file=out)
     print(
         "A key removed or renamed in a default values/strings.xml must be deleted\n"
-        "from every values-*/strings.xml in the SAME commit. Crowdin's next sync is\n"
-        "not a cleanup step CI waits for — lint runs on the tree you push.\n"
+        "from every values-*/strings.xml in the SAME commit. No later sync cleans\n"
+        "up after you — lint runs on the tree you push.\n"
         "See amethyst/src/main/res/AGENTS.md, 'Renaming or removing a string key'.",
         file=out,
     )

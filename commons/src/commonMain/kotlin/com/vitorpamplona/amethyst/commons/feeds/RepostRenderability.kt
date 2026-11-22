@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefini
 import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.UnrecognizedShape
@@ -121,13 +123,18 @@ val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
         MostroInfoEvent.KIND,
         ProductCollectionEvent.KIND,
         ShippingOptionEvent.KIND,
-        // drss.io's lists, folders and provenance notes; other apps' events on these numbers
-        // (room listings, votes, Ditto ratings) have no card.
+        // drss.io's lists, folders and provenance notes, and llama.garden's releases and seeder
+        // requests on 30100 and 30102; the other apps' events on these numbers (room listings,
+        // votes, Ditto ratings) have no card.
         DrssFeedListEvent.KIND,
         DrssListFolderEvent.KIND,
         DrssEventListEvent.KIND,
         DrssProvenanceFolderEvent.KIND,
         DrssProvenanceEvent.KIND,
+        // llama.garden's model torrents and model requests; nostr-golded's manifests and usage
+        // counters share the numbers and have no card.
+        ModelTorrentEvent.KIND,
+        ModelRequestEvent.KIND,
     )
 
 /**

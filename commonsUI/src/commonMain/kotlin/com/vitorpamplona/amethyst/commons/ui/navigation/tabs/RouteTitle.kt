@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
@@ -128,6 +129,8 @@ fun routeTitle(
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
+        // The screen's own title; spelled out, its name read "Nip46 connected apps".
+        is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
         else -> {}
     }
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }

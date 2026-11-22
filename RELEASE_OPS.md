@@ -29,10 +29,11 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-Nothing here publishes to Maven Central. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
-mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
-`create-release.yml`; an Amethyst release only consumes the versions pinned in
-`gradle/libs.versions.toml`, so those must already be on Maven Central when you tag.
+Nothing here publishes a library. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
+mls-kmp, marmot-kmp, cordn-kmp, quic-kmp, kiko-kmp, negentropy-kmp) each release from their own
+repo to Nostr + Blossom; an Amethyst release only consumes the versions pinned in
+`gradle/libs.versions.toml`, which Magpie resolves and `gradle/magpie.lock` pins, so those must
+already be on Nostr when you tag.
 
 ---
 
@@ -48,8 +49,9 @@ mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
    else hardcodes the version. The libraries version themselves in their own repos.
 
    Check that every library version pinned in `gradle/libs.versions.toml`
-   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`)
-   resolves on Maven Central: a pin to an unreleased library fails the build.
+   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`, `kikoKmp`)
+   resolves through Magpie, and that `gradle/magpie.lock` has its entries committed: a pin to an
+   unreleased library fails the build.
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
@@ -68,25 +70,15 @@ mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
    then add their npub or an alias so future releases pick them up. Pass
    `--from`/`--to` to rebuild an older release's list.
 
-   For the `## Translations` section, generate the credits instead of writing
-   them by hand — no token needed:
+   For the `## Translations` section, run the same script over the locale files:
    ```bash
-   scripts/translators.sh
+   scripts/contributors.sh --title Translations -- \
+     'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
+     'amethyst/src/main/res/values-*/strings.xml'
    ```
-   This runs offline. It reads `docs/changelog/translators.json` (kept next to
-   the changelogs), which CI keeps fresh: the Crowdin sync workflow's
-   `seed-translators` job records everyone who has translated since the last `v*`
-   tag, with their languages, in the file's `sinceLastTag` list, and accumulates
-   their npubs in the forever-growing `mappings` registry. The script resolves
-   that list to npubs and prints the `## Translations` block, one line per
-   translator with all their languages. Usernames under `ignore` (the account
-   that uploads machine translations) are left out, so credit translations that
-   arrived through git rather than Crowdin by hand.
-   Contributors with no npub yet are listed under `UNMAPPED` — credit them by
-   hand, then add their npub under `mappings` so future releases pick them up
-   automatically. (To re-query Crowdin live as a sanity check, run
-   `scripts/translators.sh --seed` with `CROWDIN_PROJECT_ID` /
-   `CROWDIN_PERSONAL_TOKEN` set, which refreshes the file.)
+   Add each person's languages by hand, and drop commits that only moved or
+   removed keys. Someone who translated through Crowdin, before it was retired,
+   may have their npub in `docs/changelog/translators.json` (by Crowdin username).
 
 3. **Publish the release-notes note on Nostr** — *minor releases only.* In
    practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,
@@ -470,7 +462,7 @@ ownership:
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | Nothing here any more: they published `quartz` to Maven Central, which now releases from vitorpamplona/quartz. No workflow in this repo reads them | Delete from this repo's secrets |
 | *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
-| `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
+| ~~`CROWDIN_PERSONAL_TOKEN`~~, ~~`CROWDIN_PROJECT_ID`~~ | Nothing: translations no longer go through Crowdin | Delete from this repo's secrets |
 
 The Maven Central secrets (`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`,
 `SIGNING_PASSWORD`) belong to the library repos' release workflows; no workflow in this repo

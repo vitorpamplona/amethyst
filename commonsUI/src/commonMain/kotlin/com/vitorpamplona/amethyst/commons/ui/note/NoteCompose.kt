@@ -276,6 +276,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowProgress
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowResult
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClassifieds
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClientRelease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityRules
@@ -369,9 +370,12 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazine
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazineIssue
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderManagedAgent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMavenPublication
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderModelRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderModelTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDevFee
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDispute
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroUserRating
@@ -430,6 +434,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoutstrNode
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSeederRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
@@ -704,6 +709,12 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVe
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.ModelRequestEvent
+import com.vitorpamplona.quartz.llamagarden.modelRequest.UnrecognizedKind30103Event
+import com.vitorpamplona.quartz.llamagarden.release.ClientReleaseEvent
+import com.vitorpamplona.quartz.llamagarden.seederRequest.SeederRequestEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.ModelTorrentEvent
+import com.vitorpamplona.quartz.llamagarden.torrent.UnrecognizedKind30099Event
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -967,6 +978,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.release.MavenReleaseEvent
+import com.vitorpamplona.quartz.nipFCMavenRepositories.snapshot.MavenSnapshotEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -2243,14 +2256,35 @@ internal fun RenderNoteRow(
             is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
             is DrssReadWriteListsEvent -> RenderDrssReadWriteLists(baseNote, accountViewModel, nav)
 
+            // llama.garden's model torrents, seeder requests, model requests and viewer releases
+            // (types/LlamaGarden.kt); the other apps' events on 30099 and 30103 below.
+            is ModelTorrentEvent -> RenderModelTorrent(baseNote, accountViewModel, nav)
+            is SeederRequestEvent -> RenderSeederRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ModelRequestEvent -> RenderModelRequest(baseNote)
+            is ClientReleaseEvent -> RenderClientRelease(baseNote)
+
             // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
             // were typed.
             is UnrecognizedKind30054Event,
+            is UnrecognizedKind30099Event,
+            is UnrecognizedKind30103Event,
             is UnrecognizedKind30100Event,
             is UnrecognizedKind30101Event,
             is UnrecognizedKind30102Event,
             is UnrecognizedKind30104Event,
             is UnrecognizedKind31985Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+
+            // llama.garden's model torrents, model, seeder and client releases: typed by Quartz
+            // 2.20.0, but Amethyst has no card for them yet, so they keep the unknown-kind card they
+            // had before they were typed. (NIP-FC Maven releases and snapshots have their own card:
+            // RenderMavenPublication, below.)
+            is ModelTorrentEvent,
+            is UnrecognizedKind30099Event,
+            is ClientReleaseEvent,
+            is SeederRequestEvent,
+            is ModelRequestEvent,
+            is UnrecognizedKind30103Event,
             -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {
@@ -3057,6 +3091,7 @@ internal fun RenderNoteRow(
             is AssetBundleEvent -> RenderAssetBundle(baseNote, backgroundColor, accountViewModel, nav)
             is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote, backgroundColor, accountViewModel, nav)
+            is MavenReleaseEvent, is MavenSnapshotEvent -> RenderMavenPublication(baseNote, accountViewModel, nav)
             is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
             is AppDataEvent -> RenderAppData(baseNote)
             is NNSEvent -> RenderNNS(baseNote)

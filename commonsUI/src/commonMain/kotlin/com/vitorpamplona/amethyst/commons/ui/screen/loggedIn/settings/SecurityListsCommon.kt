@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -110,7 +111,7 @@ internal fun BlockListTopBar(
         ShorterTopAppBar(
             title = {
                 Text(
-                    text = stringRes(Res.string.num_selected, selectedCount),
+                    text = pluralStringRes(Res.plurals.num_selected, selectedCount, selectedCount),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Start,
                     overflow = TextOverflow.Ellipsis,

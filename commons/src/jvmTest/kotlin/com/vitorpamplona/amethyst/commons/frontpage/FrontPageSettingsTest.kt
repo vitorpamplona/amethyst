@@ -119,7 +119,7 @@ class FrontPageSettingsTest {
     fun theModelAndKeyPickedAreWrittenAsParams() =
         runTest {
             val relays = Relays(task)
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, now, null) { withObserverSettings(it, "anthropic/claude-sonnet-4.5", openRouterTwo) })
+            assertIs<ScheduleEdit.Saved>(relays.edit(now) { withObserverSettings(it, "anthropic/claude-sonnet-4.5", openRouterTwo) })
             val written = relays.task()!!
             assertEquals("anthropic/claude-sonnet-4.5", ObserverParams.model(written))
             // The key's endpoint and its last 4 characters, never the key.
@@ -129,7 +129,7 @@ class FrontPageSettingsTest {
             // The schedule itself is as it was.
             assertEquals("0 6 * * *", written.cron)
             // Picking it again writes nothing.
-            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, now + 1, null) { withObserverSettings(it, "anthropic/claude-sonnet-4.5", openRouterTwo) })
+            assertEquals(ScheduleEdit.Unchanged, relays.edit(now + 1) { withObserverSettings(it, "anthropic/claude-sonnet-4.5", openRouterTwo) })
             assertEquals(2, relays.writes)
         }
 
@@ -137,7 +137,7 @@ class FrontPageSettingsTest {
     fun withNoScheduleTheSettingsGoInAnEventThatNeverRuns() =
         runTest {
             val relays = Relays(null)
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, now, null) { withObserverSettings(it, "openai/gpt-5", anthropic) })
+            assertIs<ScheduleEdit.Saved>(relays.edit(now) { withObserverSettings(it, "openai/gpt-5", anthropic) })
             val settings = relays.task()!!
             assertTrue(isSettingsOnly(settings))
             assertNull(settings.cron)
@@ -155,7 +155,7 @@ class FrontPageSettingsTest {
 
             // Turning the schedule on keeps the settings and adds the time.
             val seed = ObserverSchedule.new(ny, now).withEnabled(true, now)
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, now + 1, null) { current -> current?.let { withScheduleOn(it, seed, on = true, now + 1) } })
+            assertIs<ScheduleEdit.Saved>(relays.edit(now + 1) { current -> current?.let { withScheduleOn(it, seed, on = true, now + 1) } })
             val scheduled = relays.task()!!
             assertFalse(isSettingsOnly(scheduled))
             assertTrue(scheduled.enabled)
@@ -185,51 +185,11 @@ class FrontPageSettingsTest {
     }
 
     @Test
-    fun thisInstallsRememberedModelMovesInOnItsFirstEditUnlessTheEventNamesOne() =
-        runTest {
-            assertEquals("m/remembered", ObserverParams.model(withMigratedModel(task, "m/remembered")))
-            assertEquals("m/shared", ObserverParams.model(withMigratedModel(ObserverParams.withModel(task, "m/shared"), "m/remembered")))
-            assertEquals(task, withMigratedModel(task, null))
-            assertEquals(task, withMigratedModel(task, ""))
-
-            // Folded into the edit this install makes, whatever it changes.
-            val relays = Relays(task)
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, now, "m/remembered") { it?.withEnabled(false, now) })
-            val migrated = relays.task()!!
-            assertTrue(migrated.paused)
-            assertEquals("m/remembered", ObserverParams.model(migrated))
-            // An edit that changes nothing writes nothing, migration or not.
-            val untouched = Relays(task)
-            assertEquals(ScheduleEdit.Unchanged, editMigrating(untouched, now, "m/remembered") { null })
-            assertEquals(1, untouched.writes)
-            // Another device's model since then is kept.
-            val shared = Relays(ObserverParams.withModel(task, "m/shared"))
-            editMigrating(shared, now, "m/remembered") { it?.withEnabled(false, now) }
-            assertEquals("m/shared", ObserverParams.model(shared.task()!!))
-        }
-
-    @Test
-    fun theMemoryRemembersThatThisInstallMigrated() =
-        runTest {
-            val memory =
-                object : FrontPageModelMemory {
-                    override suspend fun get(url: String): String? = null
-
-                    override suspend fun set(
-                        url: String,
-                        model: String,
-                    ) {}
-                }
-            // A memory that keeps no flag migrates (it never says it did).
-            assertFalse(memory.isMigrated(signer.pubKey))
-        }
-
-    @Test
     fun everyUnknownParamIsKeptAndStopsTheScheduleFromRunningHere() =
         runTest {
             val withSize = task.withParam("size", "broadsheet").withAddedParam("extra", listOf("1"))
             val relays = Relays(withSize)
-            editMigrating(relays, now, "m/remembered") { withObserverSettings(it, "m/picked", anthropic) }
+            relays.edit(now) { withObserverSettings(it, "m/picked", anthropic) }
             val written = relays.task()!!
             assertEquals(listOf("broadsheet"), written.paramValues("size"))
             assertEquals(listOf("1"), written.paramValues("extra"))

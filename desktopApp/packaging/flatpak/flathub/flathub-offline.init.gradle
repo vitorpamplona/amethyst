@@ -1,14 +1,31 @@
 // Flathub builds without network: every repository settings.gradle.kts
 // declares is replaced by the Maven repository the manifest lays out from
-// gradle-sources-*.json, so nothing can reach the network even by accident.
+// gradle-sources.json, so nothing can reach the network even by accident.
+//
+// The groups Magpie resolves (Nostr + Blossom) are the exception: under
+// --offline its settings plugin reads them from its own mirror in the Gradle
+// home (magpie/mirror/<publisher>/, also laid out from gradle-sources.json),
+// through repositories named magpie*, and only from there. Those stay.
 def offlineRepo = new File(System.getenv('AMETHYST_OFFLINE_REPO') ?: 'offline-repository').absoluteFile
 if (!offlineRepo.isDirectory()) {
     throw new GradleException("No offline Maven repository at ${offlineRepo}")
 }
 
-settingsEvaluated { settings ->
-    [settings.pluginManagement.repositories, settings.dependencyResolutionManagement.repositories].each { repos ->
-        repos.clear()
-        repos.maven { url = offlineRepo.toURI() }
+def offlineOnly = { repos ->
+    repos.removeAll(repos.findAll { !it.name.startsWith('magpie') && it.name != 'flathub-offline' })
+    if (repos.findByName('flathub-offline') == null) {
+        repos.maven { name = 'flathub-offline'; url = offlineRepo.toURI() }
     }
+}
+
+// The plugins settings.gradle.kts applies itself (Magpie) resolve while it is
+// evaluated, before settingsEvaluated, so the offline repository goes first
+// now. Its pluginManagement block adds the online ones after it; --offline
+// keeps Gradle from calling them, and settingsEvaluated removes them.
+beforeSettings { settings ->
+    offlineOnly(settings.pluginManagement.repositories)
+}
+
+settingsEvaluated { settings ->
+    [settings.pluginManagement.repositories, settings.dependencyResolutionManagement.repositories].each(offlineOnly)
 }

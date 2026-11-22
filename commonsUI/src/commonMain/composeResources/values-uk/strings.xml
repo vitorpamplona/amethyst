@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Key Backup (Desktop settings) -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <string name="replying_to">у відповідь </string>
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Дозволи:</string>
+    <string name="nsite_root_site">Кореневий сайт</string>
+    <string name="nsite_source">Джерело:</string>
+    <string name="nsite_servers">Сервери:</string>
+    <string name="nsite_open">Відкрити</string>
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Використовувати пряме посилання</string>
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Відкрито</string>
     <string name="git_status_merged">Злито</string>
     <string name="git_status_closed">Закрито</string>
@@ -28,6 +48,7 @@
     <string name="road_event_speed_camera">Камера швидкості</string>
     <string name="road_event_traffic_jam">Затор</string>
     <string name="road_event_unknown">Дорожня подія</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Відкрити</string>
     <string name="relay_monitor_rtt_read">Читати</string>
     <string name="relay_monitor_rtt_write">Писати</string>
@@ -57,7 +78,6 @@
     <string name="post_was_hidden">Цей пост приховано, оскільки він згадує ваших прихованих користувачів або слова</string>
     <string name="post_was_flagged_as_inappropriate_by">Допис було відмічено як недоречний</string>
     <string name="post_not_found">допис не знайдено</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Фото каналу</string>
     <string name="referenced_event_not_found">Пов'язану подію не знайдено</string>
     <string name="could_not_decrypt_the_message">Не вдалося розшифрувати повідомлення</string>
@@ -83,7 +103,6 @@
     <string name="report_illegal_behaviour">Повідомити про незаконні дії</string>
     <string name="report_malware">Поскаржитись на шкідливе ПЗ</string>
     <string name="malware">Шкідливе ПЗ</string>
-    <string name="chat_zap_amount_suffix">zapped %1$s sats</string>
     <string name="chat_zap_anonymous">Анонімно</string>
     <string name="chat_raid_is_raiding">рейдить</string>
     <string name="chat_clip_created_a_clip">створив(-ла) кліп</string>
@@ -92,8 +111,6 @@
     <string name="quote">Цитувати</string>
     <string name="fork">Форк</string>
     <string name="new_amount_in_sats">Нова сума в sat</string>
-    <string name="replying_to">у відповідь </string>
-    <string name="and"> та </string>
     <string name="following"> Підписок</string>
     <string name="followers"> Підписників</string>
     <string name="number_following">%1$s підписок</string>
@@ -102,19 +119,16 @@
     <string name="show_more">Більше</string>
     <string name="lightning_invoice">Lightning інвойс</string>
     <string name="invoice_expired">Прострочено</string>
-    <string name="clink_lightning_offer">CLINK Offer</string>
     <string name="clink_offer_pay_to">Кому</string>
     <string name="clink_confirm_payment_title">Підтвердити платіж</string>
     <string name="clink_offer_amount_sats">Сума (sats)</string>
     <string name="clink_offer_amount_range">Допустимий діапазон: %1$s–%2$s sats</string>
-    <string name="clink_offer_label">CLINK Offer (noffer)</string>
     <string name="clink_budget_set">Бюджет</string>
     <string name="clink_budget_title">Бюджет витрат</string>
     <string name="clink_budget_amount_sats">Сума (sats)</string>
     <string name="clink_budget_request">Запит</string>
     <string name="clink_budget_approved">Бюджет затверджено</string>
     <string name="clink_debit_pay_only">Лише оплата</string>
-    <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Платіть і робіть zap з гаманця, який попередньо авторизував ваш обліковий запис. Лише витрати — без балансу чи історії.</string>
     <string name="wallet_add_clink_invalid">Недійсний CLINK debit покажчик. Очікується рядок ndebit1…</string>
     <string name="wallet_paste_ndebit">Вставити ndebit покажчик</string>
@@ -124,10 +138,7 @@
     <string name="send_payment_source_external">Інший гаманець</string>
     <string name="send_payment_source_onchain_wallet">Гаманець на блокчейні</string>
     <string name="send_payment_source_cashu_wallet">Cashu гаманець</string>
-    <string name="send_payment_method_lightning">Lightning</string>
-    <string name="send_payment_method_clink">CLINK Offer</string>
     <string name="send_payment_method_onchain">На блокчейні</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Сума</string>
     <string name="send_payment_fixed_price">Ціна встановлена offer</string>
     <string name="send_payment_receipt_section">Квитанція zap</string>
@@ -160,7 +171,6 @@
     <string name="secret_note_to_receiver">Секретна нотатка отримувачу</string>
     <string name="secret_note_to_receiver_placeholder">Моє приховане повідомлення</string>
     <string name="secret_visible_text">Видимий префікс</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Додати до публікації</string>
     <string name="article">Стаття</string>
     <string name="channel_name">Назва каналу</string>
@@ -173,7 +183,6 @@
     <string name="my_name">Моє ім'я з @тегом</string>
     <string name="display_name">Видиме ім'я</string>
     <string name="my_display_name">Моє видиме ім'я</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">Ласкаво просимо, Ostrich!</string>
     <string name="username">Нікнейм</string>
     <string name="about_me">Про мене</string>
@@ -244,7 +253,6 @@
     <string name="refresh">Оновити</string>
     <string name="channel_created">Канал створено</string>
     <string name="channel_information_changed_to">Інформацію каналу змінено на</string>
-    <string name="marmot_group_no_messages_yet">Повідомлень ще немає</string>
     <string name="paid_relay">Платний relay</string>
     <string name="tor_relay">Примусово використовує Tor при підключенні</string>
     <string name="posts_received">дописів отримано</string>
@@ -389,8 +397,6 @@
     <string name="app_definition_by">від</string>
     <string name="app_definition_available_on">Доступно на</string>
     <string name="platform_web">Веб</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Тренування</string>
     <string name="workout_title">Назва</string>
     <string name="workout_duration">Тривалість</string>
@@ -415,8 +421,9 @@
     <string name="workout_suggestion_connect_button">Підключити</string>
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">З Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites ще не знайдено.</string>
-    <string name="browser_reload">Оновити</string>
     <string name="browser_unsupported">Вбудований браузер потребує Android 11 або новішої версії.</string>
     <string name="embedded_tab_load_failed">Не вдалося завантажити цей застосунок.</string>
     <string name="browser_go">Відкрити</string>
@@ -424,10 +431,6 @@
     <string name="browser_recent_options">Параметри</string>
     <string name="browser_recent_remove">Видалити з історії</string>
     <string name="favorite_apps_empty">Улюблених застосунків ще немає. Відкрийте веб-клієнт або nsite і натисніть зірочку, щоб закріпити його тут.</string>
-    <string name="favorite_app_open_window">Відкрити у власному вікні</string>
-    <string name="favorite_app_access_title">До чого має доступ цей застосунок</string>
-    <string name="favorite_app_access_static">Запускається в пісочниці без спеціального доступу до вашого акаунта.</string>
-    <string name="favorite_app_access_show">Що він може переглядати</string>
     <string name="favorite_app_unavailable">Цей застосунок ще не завантажено. Відкрийте його з картки або спробуйте ще раз через мить.</string>
     <string name="napplet_manage_permissions">Керувати дозволами</string>
     <string name="napplet_none_found">nApplets ще не знайдено.</string>
@@ -436,7 +439,6 @@
     <string name="napplet_consent_deny_always">Ніколи не дозволяти</string>
     <string name="napplet_consent_not_now">Не зараз</string>
     <string name="nip82_repository_label">Джерело: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Завантажити</string>
     <string name="nip82_section_about">Про застосунок</string>
     <string name="nip82_section_platforms">Платформи</string>
@@ -472,7 +474,12 @@
     <string name="nest_lobby_host_label">Хост</string>
     <string name="nest_lobby_open_action">Відкрити</string>
     <string name="nest_lobby_no_listeners">Зараз у кімнаті нікого немає.</string>
-    <string name="nest_lobby_listeners_count">%1$d слухає</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="one">%1$d слухає</item>
+        <item quantity="few">%1$d слухають</item>
+        <item quantity="many">%1$d слухають</item>
+        <item quantity="other">%1$d слухають</item>
+    </plurals>
     <string name="nest_role_host">Хост</string>
     <string name="nest_role_moderator">Модератор</string>
     <string name="nest_state_muted">Мікрофон вимкнено</string>
@@ -546,7 +553,6 @@
     <string name="nests_servers_add_auth_field">URL Auth (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Додати</string>
     <string name="nests_servers_relay_label">relay</string>
-    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_use_defaults">Використати типові налаштування Amethyst</string>
     <string name="nests_servers_add_recommended">Додати сервер</string>
     <string name="nests_servers_remove">Видалити сервер</string>
@@ -581,7 +587,12 @@
     <string name="hashtag_label_added_by">додано</string>
     <string name="pinned_notes">Закріплені нотатки</string>
     <string name="pinned_notes_explainer">Ваші закріплені нотатки</string>
-    <string name="deleted_items_banner_title">%1$d елемент(ів) у цьому списку видалено їхнім автором.</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="one">%1$d елемент у цьому списку видалено його автором.</item>
+        <item quantity="few">%1$d елементи у цьому списку видалено їхнім автором.</item>
+        <item quantity="many">%1$d елементів у цьому списку видалено їхнім автором.</item>
+        <item quantity="other">%1$d елемента у цьому списку видалено їхнім автором.</item>
+    </plurals>
     <string name="deleted_items_banner_remove">Видалити зі списку</string>
     <string name="deleted_items_banner_dismiss">Закрити</string>
     <string name="bookmark_lists">Списки закладок</string>
@@ -597,7 +608,12 @@
     <string name="interest_set_name_placeholder">Мої інтереси</string>
     <string name="interest_set_hashtag_add_placeholder">Додати хештег</string>
     <string name="interest_set_hashtag_private_toggle">Приватний</string>
-    <string name="interest_set_hashtag_count">%1$d хештег(ів)</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="one">%1$d хештег</item>
+        <item quantity="few">%1$d хештеги</item>
+        <item quantity="many">%1$d хештегів</item>
+        <item quantity="other">%1$d хештега</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">Дії з набором інтересів</string>
     <string name="interest_set_clone">Клонувати</string>
     <string name="interest_set_add_hashtag">Додати хештег</string>
@@ -625,7 +641,6 @@
     <string name="quick_zap_amounts_explainer">Відображається при натисканні кнопки зап. Кожну суму можна сплатити будь-яким методом, який підтримує одержувач — Lightning, Cashu або on-chain (on-chain лише для великих сум). Натисніть суму, щоб видалити її. Якщо залишити порожнім, щоразу відкриватиметься діалог для введення суми.</string>
     <string name="send_onchain_instead">Надіслати on-chain</string>
     <string name="reload_mint_title">Поповнити mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Сума поповнення</string>
     <string name="reload_mint_section_to">Mint для поповнення</string>
     <string name="reload_mint_section_from">Кошти з</string>
@@ -651,7 +666,6 @@
     <string name="pledge_amount_in_sats">Сума внеску в sat</string>
     <string name="poll_zap_value_min">Мінімальний зап</string>
     <string name="poll_zap_value_max">Максимальний зап</string>
-    <string name="poll_consensus_threshold">Консенсус</string>
     <string name="looking_for_event">Пошук події %1$s</string>
     <string name="send_zap">Надіслати зап</string>
     <string name="custom_zaps_add_a_message">Додати публічне повідомлення</string>
@@ -659,11 +673,6 @@
     <string name="custom_zaps_add_a_message_nonzap">Додати примітку до інвойсу</string>
     <string name="custom_zaps_add_a_message_example">Дякую всім вам за роботу!</string>
     <string name="lightning_create_and_add_invoice">Створити та Додати</string>
-    <string name="add_content">Додати до повідомлення</string>
-    <string name="add_caption">Додати підпис</string>
-    <string name="add_caption_example">Мій чудовий друг</string>
-    <string name="content_description">Опис вмісту</string>
-    <string name="content_description_example">Компанія веселих молодих людей</string>
     <string name="ai_suggested_alt_text_hint">Запропоновано ШІ, відредагуйте</string>
     <string name="ai_suggested_alt_text_dismiss">Відхилити пропозицію ШІ</string>
     <string name="zap_type">Тип запу</string>
@@ -735,6 +744,9 @@
     <string name="call_calling">Виклик…</string>
     <string name="call_connecting">З'єднання…</string>
     <string name="call_ended">Дзвінок завершено</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Закрити</string>
     <string name="call_switch_camera">Перемкнути камеру</string>
     <string name="call_voice">Голосовий дзвінок</string>
@@ -772,8 +784,6 @@
     <string name="show_sensitive_content_explainer">Показує попередження, коли автор посту позначив його як чутливий</string>
     <string name="max_hashtag_limit_title">Максимальна кількість хештегів у пості</string>
     <string name="max_hashtag_limit_explainer">Приховує пости з більшою кількістю хештегів, ніж цей ліміт. Встановіть 0, щоб вимкнути</string>
-    <string name="security_unlimited">∞</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Додає цільову суму сат, яку потрібно отримати для цієї посади. Клієнти, які підтримують, можуть відображати це як індикатор прогресу, щоб стимулювати пожертвування</string>
     <string name="zapraiser_target_amount_in_sats">Цільова сума в sats</string>
     <string name="sats_to_complete">Zapraiser на %1$s. %2$s sats до мети</string>
@@ -808,8 +818,18 @@
     <string name="relay_req_subscriptions">REQ підписки (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT підписки (%1$d)</string>
     <string name="relay_outbox_events">Outbox події (%1$d)</string>
-    <string name="relay_filter_authors">%1$d авторів</string>
-    <string name="relay_filter_ids">%1$d ід.</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="one">%1$d автор</item>
+        <item quantity="few">%1$d автори</item>
+        <item quantity="many">%1$d авторів</item>
+        <item quantity="other">%1$d автора</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="one">%1$d ід.</item>
+        <item quantity="few">%1$d ід.</item>
+        <item quantity="many">%1$d ід.</item>
+        <item quantity="other">%1$d ід.</item>
+    </plurals>
     <string name="relay_filter_since">від %1$s</string>
     <string name="relay_filter_until">до %1$s</string>
     <string name="relay_filter_limit">ліміт %1$d</string>
@@ -833,7 +853,6 @@
     <string name="max_filters_per_sub">Максимум фільтрів на підписку</string>
     <string name="max_limit_events_returning">Максимальний ліміт (подій, що повертаються)</string>
     <string name="max_subid_length">Максимальна довжина SubID</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Отримати</string>
     <string name="cashu_copy_token">Копіювати токен</string>
     <string name="quick_actions_open_in_another_app">Відкрити в іншому додатку</string>
@@ -901,7 +920,6 @@
     <string name="messages_create_public_private_chat_description">Нова публічна або приватна група</string>
     <string name="messages_new_message_to">Кому</string>
     <string name="messages_new_message_subject_caption">Тема бесіди</string>
-    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
     <string name="messages_group_descriptor">Учасники цієї групи</string>
     <string name="messages_new_subject_message">Пояснення для учасників</string>
     <string name="messages_new_subject_message_placeholder">Зміна назви нових цілей.</string>
@@ -951,7 +969,6 @@
     <string name="send_the_seller_a_message">Надіслати продавцю повідомлення</string>
     <string name="hi_there_is_this_still_available">Привіт, це ще доступно?</string>
     <string name="classifieds_title">Назва</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Стан</string>
     <string name="classifieds_category">Категорія</string>
     <string name="classifieds_price">Ціна (у sats)</string>
@@ -980,7 +997,6 @@
     <string name="wallet_send">Надіслати</string>
     <string name="wallet_receive">Отримати</string>
     <string name="wallet_transactions">Транзакції</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Вставте BOLT-11 інвойс</string>
     <string name="wallet_pay">Сплатити</string>
     <string name="wallet_payment_success">Оплату виконано успішно</string>
@@ -997,9 +1013,7 @@
     <string name="wallet_outgoing">Надіслано</string>
     <string name="wallet_refresh">Оновити</string>
     <string name="wallet_filter_all">Усі</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Не-Zaps</string>
-    <string name="wallet_add">Додати гаманець</string>
     <string name="wallet_default">За замовчуванням</string>
     <string name="wallet_set_default">Встановити за замовчуванням</string>
     <string name="wallet_remove">Видалити</string>
@@ -1020,7 +1034,6 @@
     <string name="cashu_discovering">Пошук вашого гаманця…</string>
     <string name="cashu_discovering_description">NIP-60 гаманці синхронізуються між клієнтами. Якщо ви створили гаманець в іншому додатку з цим Nostr ключем, він має з'явитися за кілька секунд.</string>
     <string name="cashu_balance">Баланс</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL mint</string>
     <string name="cashu_remove_mint">Видалити mint</string>
     <string name="cashu_add_mint">Додати mint</string>
@@ -1076,9 +1089,7 @@
     <string name="cashu_getting_quote">Запит котирування у mint…</string>
     <string name="cashu_verify">Перевірити</string>
     <string name="cashu_mint_reachable">✓ Mint доступний</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Не вдалося зв'язатися з mint: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Створити токен</string>
     <string name="cashu_redeem_button">Обміняти</string>
     <string name="cashu_done">Готово</string>
@@ -1094,8 +1105,6 @@
     <string name="cashu_redeemed_amount">Обміняно %1$s sats у ваш гаманець.</string>
     <string name="wallet_paste_uri">Вставте nostr+walletconnect:// URI</string>
     <string name="wallet_save">Зберегти</string>
-    <string name="wallet_rename">Перейменувати</string>
-    <string name="wallet_rename_title">Перейменувати гаманець</string>
     <string name="wallet_onchain_transactions">Onchain транзакції</string>
     <string name="wallet_onchain_no_address">Для цього акаунту немає доступної onchain адреси.</string>
     <string name="wallet_onchain_no_backend">Не налаштовано жодного chain бекенду.</string>
@@ -1113,11 +1122,9 @@
     <string name="onchain_send_recipient_placeholder">ім'я, NIP-05 або npub</string>
     <string name="onchain_send_change_recipient">Змінити отримувача</string>
     <string name="onchain_send_amount">Сума</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Мінімальний onchain zap становить %1$s sats — менші суми поглинаються комісіями майнерів. Натомість використайте Lightning zap.</string>
     <string name="onchain_send_comment_label">Коментар (необов'язково)</string>
     <string name="onchain_send_priority">Пріоритет</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Завантаження оцінок комісій…</string>
     <string name="onchain_send_button_amount">Надіслати %1$s sats</string>
     <string name="onchain_send_dont_split">Не ділити — сплатити одному отримувачу</string>
@@ -1126,7 +1133,6 @@
     <string name="onchain_send_result_transaction">Транзакція</string>
     <string name="onchain_send_result_fee">Комісія</string>
     <string name="onchain_send_result_change">Решта</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Готово</string>
     <string name="onchain_send_failed_at">Збій на: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Платіж було транслювано (tx %1$s), але квитанцію не опубліковано.</string>
@@ -1242,7 +1248,6 @@
     <string name="reactions_settings_boost_description">Репостнути або процитувати цю нотатку</string>
     <string name="reactions_settings_like">Подобається</string>
     <string name="reactions_settings_like_description">Відреагувати на цю нотатку емодзі</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Надіслати Lightning-платіж автору</string>
     <string name="reactions_settings_share">Поділитися</string>
     <string name="reactions_settings_share_description">Поділитися цією нотаткою зовні</string>
@@ -1275,14 +1280,11 @@
     <string name="audio_visualizer_classic">Класична форма хвилі</string>
     <string name="audio_visualizer_static">Статичне зображення</string>
     <string name="profile_image_of_user">Фото профілю %1$s</string>
-    <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Розгорнути список relay</string>
     <string name="note_options">Параметри нотатки</string>
     <string name="poll">Опитування</string>
     <string name="disable_poll">Вимкнути опитування</string>
-    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
     <string name="cancel_bitcoin_invoice">Скасувати Bitcoin Invoice</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Скасувати Zapraiser</string>
     <string name="add_location">Місце</string>
     <string name="remove_location">Видалити місце</string>
@@ -1345,7 +1347,6 @@
     <string name="accessibility_play_username">Відтворити ім'я користувача як аудіо</string>
     <string name="accessibility_pushpin">Шпилька</string>
     <string name="accessibility_scan_qr_code">Сканувати QR-код</string>
-    <string name="accessibility_select_date">Вибрати дату</string>
     <string name="load_from_text">З повідомлення</string>
     <string name="dvm_looking_for_app">Пошук застосунку</string>
     <string name="dvm_waiting_status">Завдання надіслано, очікування відповіді</string>
@@ -1379,7 +1380,6 @@
     <string name="search_scope_people">Люди</string>
     <string name="search_scope_notes">Нотатки</string>
     <string name="search_source_local">Локально</string>
-    <string name="search_source_relays">Relays</string>
     <string name="search_follows_only">Лише підписки</string>
     <string name="search_sort_newest">Найновіші</string>
     <string name="search_sort_oldest">Найстаріші</string>
@@ -1390,7 +1390,6 @@
     <string name="search_filters_section_source">Джерело</string>
     <string name="search_filters_section_sort">Сортувати за</string>
     <string name="search_filters_open">Фільтри</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Пошук мов</string>
     <string name="add_language">Додати мову</string>
     <string name="add_language_pair">Додати пару мов</string>
@@ -1414,9 +1413,13 @@
     <string name="public_members_count">Публічні учасники (%1$s)</string>
     <string name="add_user_to_the_list">Додати користувача до списку</string>
     <string name="remove_user_from_the_list">Видалити користувача зі списку</string>
-    <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Учасники</string>
-    <string name="contact_list_containing_label">Список підписок, що містить %1$d користувача(ів):</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="one">Список підписок, що містить %1$d користувача:</item>
+        <item quantity="few">Список підписок, що містить %1$d користувачі:</item>
+        <item quantity="many">Список підписок, що містить %1$d користувачів:</item>
+        <item quantity="other">Список підписок, що містить %1$d користувача:</item>
+    </plurals>
     <string name="contact_list_screen_title">Список підписок</string>
     <string name="contact_list_screen_title_with_count">Список підписок (%1$d)</string>
     <string name="follow_pack_creation_name_label">Назва пакету</string>
@@ -1426,7 +1429,6 @@
     <string name="follow_pack_broadcast">Поширити пакет</string>
     <string name="follow_set_delete">Видалити список</string>
     <string name="follow_pack_delete">Видалити пакет</string>
-    <string name="kinds">Kinds</string>
     <string name="retry_failed">Повторити невдалі</string>
     <string name="tap_to_view_details">Натисніть для перегляду деталей</string>
     <string name="event_sent">%1$s надіслано</string>
@@ -1437,20 +1439,27 @@
     <string name="timeout">Час вийшов</string>
     <string name="retrying">Повторна спроба…</string>
     <string name="dismiss">Відхилити</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Поширення</string>
     <string name="broadcasting_name">Поширення %1$s</string>
-    <string name="broadcasting_number_events">Поширення %1$d подій…</string>
-    <string name="sent_number_events">%1$d подій надіслано</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="one">Поширення %1$d події…</item>
+        <item quantity="few">Поширення %1$d подій…</item>
+        <item quantity="many">Поширення %1$d подій…</item>
+        <item quantity="other">Поширення %1$d події…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="one">%1$d подію надіслано</item>
+        <item quantity="few">%1$d події надіслано</item>
+        <item quantity="many">%1$d подій надіслано</item>
+        <item quantity="other">%1$d події надіслано</item>
+    </plurals>
     <string name="bradcasting_result_partial">Деякі події не вдалося надіслати</string>
     <string name="bradcasting_result_success">Усі події успішно надіслано</string>
     <string name="bradcasting_result_failure">Усі події не вдалося надіслати</string>
     <string name="closing_time">Час закриття</string>
     <string name="confirm">Підтвердити</string>
     <string name="next">Далі</string>
-    <string name="go_back">Назад</string>
     <string name="approve">Схвалити</string>
-    <string name="connected">Підключено</string>
     <string name="social_proof">Соціальний доказ</string>
     <string name="poll_submit">Надіслати</string>
     <string name="poll_view_results">Переглянути результати</string>
@@ -1458,7 +1467,12 @@
     <string name="new_chess_game">Нова шахова партія</string>
     <string name="chess_loading_game">Завантаження гри…</string>
     <string name="chess_game_not_found">Гру не знайдено</string>
-    <string name="badge_and_n_others"> та %1$d інших</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="one"> та %1$d інший</item>
+        <item quantity="few"> та %1$d інші</item>
+        <item quantity="many"> та %1$d інших</item>
+        <item quantity="other"> та %1$d інших</item>
+    </plurals>
     <string name="remove_language">Видалити %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Почніть з чудової стрічки, підписавшись на тих самих людей, що й хтось, кому ви довіряєте.</string>
     <string name="import_follow_list">Імпорт списку підписок</string>
@@ -1467,9 +1481,24 @@
     <string name="name_search_npub1_alice_example_com">пошук, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Підтримує npub, nprofile, NIP-05, hex та Namecoin (.bit)</string>
     <string name="tip">Порада</string>
-    <string name="accounts_found">Знайдено %1$d акаунтів</string>
-    <string name="num_selected">Вибрано %1$d</string>
-    <string name="follow_accounts">Підписатись на %1$d акаунтів</string>
+    <plurals name="accounts_found">
+        <item quantity="one">Знайдено %1$d акаунт</item>
+        <item quantity="few">Знайдено %1$d акаунти</item>
+        <item quantity="many">Знайдено %1$d акаунтів</item>
+        <item quantity="other">Знайдено %1$d акаунта</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="one">Вибрано %1$d</item>
+        <item quantity="few">Вибрано %1$d</item>
+        <item quantity="many">Вибрано %1$d</item>
+        <item quantity="other">Вибрано %1$d</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="one">Підписатись на %1$d акаунт</item>
+        <item quantity="few">Підписатись на %1$d акаунти</item>
+        <item quantity="many">Підписатись на %1$d акаунтів</item>
+        <item quantity="other">Підписатись на %1$d акаунта</item>
+    </plurals>
     <string name="skip_for_now">Пропустити зараз</string>
     <string name="fetching_follow_list">Завантаження списку підписок…</string>
     <string name="no_follows_found">Підписки не знайдено</string>
@@ -1499,18 +1528,39 @@
     <string name="event_sync_start_anyway">Почати все одно (мобільні дані)</string>
     <string name="event_sync_cancel">Скасувати</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Перерозподілено подій: %1$d нових із %2$d надісланих і %3$d отриманих</string>
     <string name="event_sync_done_title">Синхронізацію завершено</string>
-    <string name="event_sync_done_sent">Переслано %1$d подій до цільових relay із %2$d отриманих.</string>
-    <string name="event_sync_done_accepted">%1$d подій прийнято як нові цільовими relay.</string>
-    <string name="event_sync_done_duration">Завершено за %1$d секунд.</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="one">Переслано %1$d подію до цільових relay із %2$d отриманих.</item>
+        <item quantity="few">Переслано %1$d події до цільових relay із %2$d отриманих.</item>
+        <item quantity="many">Переслано %1$d подій до цільових relay із %2$d отриманих.</item>
+        <item quantity="other">Переслано %1$d події до цільових relay із %2$d отриманих.</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="one">%1$d подію прийнято як нову цільовими relay.</item>
+        <item quantity="few">%1$d події прийнято як нові цільовими relay.</item>
+        <item quantity="many">%1$d подій прийнято як нові цільовими relay.</item>
+        <item quantity="other">%1$d події прийнято як нові цільовими relay.</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="one">Завершено за %1$d секунду.</item>
+        <item quantity="few">Завершено за %1$d секунди.</item>
+        <item quantity="many">Завершено за %1$d секунд.</item>
+        <item quantity="other">Завершено за %1$d секунди.</item>
+    </plurals>
     <string name="event_sync_error_title">Помилка синхронізації</string>
     <string name="event_sync_sending_to">Надсилання до</string>
-    <string name="event_sync_outbox_relays">Outbox</string>
-    <string name="event_sync_inbox_relays">Inbox</string>
-    <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Зараз перевіряється (%1$d relay)</string>
-    <string name="event_sync_activity_log_finished">Завершено (%1$d relay)</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="one">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="few">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="many">Зараз перевіряється (%1$d relay)</item>
+        <item quantity="other">Зараз перевіряється (%1$d relay)</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="one">Завершено (%1$d relay)</item>
+        <item quantity="few">Завершено (%1$d relay)</item>
+        <item quantity="many">Завершено (%1$d relay)</item>
+        <item quantity="other">Завершено (%1$d relay)</item>
+    </plurals>
     <string name="event_sync_log_sent">надіслано %1$s</string>
     <string name="event_sync_log_recv">отримано %1$s</string>
     <string name="event_sync_log_new">нове %1$s</string>
@@ -1528,7 +1578,6 @@
     <string name="cashu_move_coins_withdraw_ln">Вивести через Lightning…</string>
     <string name="cashu_move_coins_export_token">Експортувати як токен Cashu…</string>
     <string name="cashu_move_coins_working">Переміщення монет…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Підключення</string>
     <string name="event_sync_status_downloading">Завантаження</string>
     <string name="event_sync_status_error">Помилка</string>
@@ -1551,7 +1600,6 @@
     <string name="hls_content_warning_reason_placeholder">Причина (необов'язково)</string>
     <string name="hls_codec_label">Кодек</string>
     <string name="hls_codec_h265">H.265 (краще стиснення)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 недоступний на цьому пристрої — використовується H.264.</string>
     <string name="hls_renditions_label">Варіанти якості</string>
     <string name="hls_renditions_source_format">Вихідна роздільна здатність: %1$d×%2$d</string>
@@ -1589,14 +1637,11 @@
     <string name="event_sync_date_filter_until">До</string>
     <string name="event_sync_date_filter_now">Зараз</string>
     <string name="event_sync_date_filter_all_time">За весь час</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Заголовок</string>
     <string name="web_bookmark_title_placeholder">Назва закладки</string>
     <string name="web_bookmark_description_label">Опис</string>
     <string name="web_bookmark_description_placeholder">Короткий опис</string>
     <string name="web_bookmark_tags_label">Теги (через кому)</string>
-    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
     <string name="web_bookmark_save">Зберегти</string>
     <string name="web_bookmark_delete">Видалити</string>
     <string name="web_bookmark_delete_confirm">Видалити це веб-закладення?</string>
@@ -1605,15 +1650,12 @@
     <string name="fundraiser_ends">Завершується %1$s</string>
     <string name="fundraiser_onchain_donation">Пожертва on-chain</string>
     <string name="goal_amount_label">Сума мети (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Опишіть вашу ціль</string>
     <string name="goal_description_placeholder">На що ви збираєте кошти?</string>
     <string name="goal_summary_label">Короткий підсумок</string>
     <string name="goal_summary_placeholder">Стислий опис, що відображається у попередньому перегляді</string>
     <string name="goal_image_label">URL зображення (необов'язково)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL сайту (необов'язково)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Встановити кінцевий термін</string>
     <string name="request_to_vanish_description">Запросіть relay видалити всі ваші дані до вибраної дати назавжди. Ця дія ґрунтується на NIP-62 та є юридично обов'язковою в деяких юрисдикціях.</string>
     <string name="vanish_target_relay">Цільові relay</string>
@@ -1678,7 +1720,12 @@
     <string name="manage">Управляти</string>
     <string name="relay_members">Учасники</string>
     <string name="relay_members_title">Учасники %1$s</string>
-    <string name="relay_members_count">%1$d учасників</string>
+    <plurals name="relay_members_count">
+        <item quantity="one">%1$d учасник</item>
+        <item quantity="few">%1$d учасники</item>
+        <item quantity="many">%1$d учасників</item>
+        <item quantity="other">%1$d учасника</item>
+    </plurals>
     <string name="relay_members_loading">Завантаження учасників…</string>
     <string name="relay_members_empty">Учасників не знайдено</string>
     <string name="relay_members_request_join">Запит на вступ</string>
@@ -1688,9 +1735,19 @@
     <string name="relay_members_you_are_member">Ви є учасником</string>
     <string name="relay_membership_list">Список учасників relay</string>
     <string name="relay_member_added">Учасника додано до relay</string>
-    <string name="relay_members_added">%1$d учасників додано до relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="one">%1$d учасника додано до relay</item>
+        <item quantity="few">%1$d учасники додано до relay</item>
+        <item quantity="many">%1$d учасників додано до relay</item>
+        <item quantity="other">%1$d учасника додано до relay</item>
+    </plurals>
     <string name="relay_member_removed">Учасника видалено з relay</string>
-    <string name="relay_members_removed">%1$d учасників видалено з relay</string>
+    <plurals name="relay_members_removed">
+        <item quantity="one">%1$d учасника видалено з relay</item>
+        <item quantity="few">%1$d учасники видалено з relay</item>
+        <item quantity="many">%1$d учасників видалено з relay</item>
+        <item quantity="other">%1$d учасника видалено з relay</item>
+    </plurals>
     <string name="relay_join_request">Запит на вступ до relay</string>
     <string name="relay_leave_request">Запит на вихід з relay</string>
     <string name="ai_writing_use_this">Використати</string>
@@ -1716,7 +1773,12 @@
     <string name="emoji_pack_upload_image_cta">Завантажити обкладинку</string>
     <string name="emoji_pack_upload_image_hint">Оберіть квадратне зображення для представлення цього пакету емодзі.</string>
     <string name="no_emoji_packs">У вас ще немає жодного пакету емодзі</string>
-    <string name="emoji_pack_count">%1$d емодзі</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="one">%1$d емодзі</item>
+        <item quantity="few">%1$d емодзі</item>
+        <item quantity="many">%1$d емодзі</item>
+        <item quantity="other">%1$d емодзі</item>
+    </plurals>
     <string name="my_emoji_list_title">Мій список емодзі</string>
     <string name="my_emoji_list_explainer">Пакети емодзі, які ви додали до свого вибору (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Ви ще не додали жодного пакету емодзі до свого списку</string>
@@ -1730,7 +1792,6 @@
     <string name="emoji_pack_actions_dialog_title">Дії з пакетом емодзі</string>
     <string name="emoji_private_toggle">Приватний</string>
     <string name="emoji_private_badge">Приватний емодзі</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Порушення правил спільноти</string>
     <string name="community_rules_violation_author_denied">Ви у списку заборонених цієї спільноти. Публікації не будуть прийняті.</string>
     <string name="community_rules_violation_kind_not_allowed">Ця спільнота не приймає події kind %1$d.</string>
@@ -1742,7 +1803,6 @@
     <string name="marmot_create_group_footer">Буде створено нову групу MLS. Після цього можна додати учасників.</string>
     <string name="marmot_group_default_name">Група Marmot</string>
     <string name="marmot_group_fallback_name">Група %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Відомі</string>
     <string name="marmot_tab_known_count">Відомі (%1$d)</string>
     <string name="marmot_tab_new_requests">Нові запити</string>
@@ -1756,6 +1816,9 @@
     <string name="marmot_group_name_placeholder">Введіть назву групи</string>
     <string name="marmot_group_description_placeholder">Введіть опис групи (необов'язково)</string>
     <string name="marmot_edit_info_footer">Зміни буде збережено в групі через MLS та поширено для всіх учасників.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays не налаштовано</string>
     <string name="marmot_keypackage_relays_not_set_message">У вас ще немає списку KeyPackage Relay (MIP-00). Цей список повідомляє іншим людям, де опубліковано ваш KeyPackage, щоб вони могли запросити вас до групових чатів.\n\nВикористати поточні вихідні relay для цього?</string>
     <string name="marmot_use_outbox_relays">Використати вихідні relay</string>
@@ -1790,14 +1853,6 @@
     <string name="ots_explorer_api_label">Базова URL-адреса Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатити рахунок від DVM</string>
     <string name="dvm_pay_amount_to_dvm">Сплатити %1$s sats DVM</string>
-    <string name="use_direct_url">Використовувати пряме посилання</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Дозволи:</string>
-    <string name="nsite_root_site">Кореневий сайт</string>
-    <string name="nsite_source">Джерело:</string>
-    <string name="nsite_servers">Сервери:</string>
-    <string name="nsite_open">Відкрити</string>
     <string name="about_legal">Про додаток і правові відомості</string>
     <string name="account_settings">Налаштування акаунту</string>
     <string name="add">Додати</string>
@@ -1805,7 +1860,6 @@
     <string name="add_a_nip96_server">Додати сервер NIP-96</string>
     <string name="add_client_tag_explainer">Коли увімкнено, Amethyst додає NIP-89 клієнтський тег до подій, які ви публікуєте.</string>
     <string name="add_client_tag_title">Додавати клієнтський тег до моїх подій</string>
-    <string name="add_sensitive_content_description">Додає попередження про чутливий контент перед показом цього контенту</string>
     <string name="add_sensitive_content_label">Чутливий контент</string>
     <string name="add_to_public_bookmarks">Додати в Публічні закладки</string>
     <string name="ai_writing_setting_description">Використовує AI-модель на пристрої для пропозиції виправлень тексту та зміни тону.</string>
@@ -1884,14 +1938,12 @@
     <string name="broadcast_section_explainer">Relay-сервери, що спеціалізуються на поширенні ваших нотаток до всіх інших relay-серверів, наприклад sendit.nosflare.com. Amethyst додаватиме цей relay-сервер до всіх нових подій, створених вами</string>
     <string name="browser">Браузер</string>
     <string name="browser_favorites">Вибране</string>
-    <string name="browser_tor_off">Завантаження через відкриту мережу. Торкніться, щоб використати Tor.</string>
-    <string name="browser_tor_on">Завантаження через Tor. Торкніться, щоб використати відкриту мережу.</string>
     <plurals name="calendar_day_a11y_events">
-    <item quantity="one">%1$s, %2$d подія</item>
-    <item quantity="few">%1$s, %2$d події</item>
-    <item quantity="many">%1$s, %2$d подій</item>
-    <item quantity="other">%1$s, %2$d подій</item>
-</plurals>
+        <item quantity="one">%1$s, %2$d подія</item>
+        <item quantity="few">%1$s, %2$d події</item>
+        <item quantity="many">%1$s, %2$d подій</item>
+        <item quantity="other">%1$s, %2$d подій</item>
+    </plurals>
     <string name="calendar_event_image_upload_failed">Помилка завантаження зображення</string>
     <string name="calendar_event_image_upload_failed_body">Вибране зображення не вдалося завантажити. Спробуйте ще раз або вставте URL.</string>
     <string name="calendar_export_share_title">Поділитися подією календаря</string>
@@ -1900,30 +1952,28 @@
     <string name="calendar_relative_ongoing">Відбувається зараз</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · закінчується %2$s</string>
     <plurals name="calendar_reminder_body">
-    <item quantity="one">Починається через %1$d хвилину</item>
-    <item quantity="few">Починається через %1$d хвилини</item>
-    <item quantity="many">Починається через %1$d хвилин</item>
-    <item quantity="other">Починається через %1$d хвилин</item>
-</plurals>
+        <item quantity="one">Починається через %1$d хвилину</item>
+        <item quantity="few">Починається через %1$d хвилини</item>
+        <item quantity="many">Починається через %1$d хвилин</item>
+        <item quantity="other">Починається через %1$d хвилин</item>
+    </plurals>
     <string name="calendar_reminder_channel_description">Сповіщення, коли подія, на яку ви зареєструвалися, ось-ось розпочнеться.</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Нагадування календаря</string>
     <string name="calendar_reminder_default_title">Подія календаря</string>
     <string name="calendar_reminder_settings_enabled_subtitle">Сповіщення надходить, коли подія, на яку ви зареєструвалися, ось-ось розпочнеться.</string>
     <string name="calendar_reminder_settings_enabled_title">Надсилати нагадування</string>
     <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="one">%1$d хв</item>
-    <item quantity="few">%1$d хв</item>
-    <item quantity="many">%1$d хв</item>
-    <item quantity="other">%1$d хв</item>
-</plurals>
+        <item quantity="one">%1$d хв</item>
+        <item quantity="few">%1$d хв</item>
+        <item quantity="many">%1$d хв</item>
+        <item quantity="other">%1$d хв</item>
+    </plurals>
     <string name="calendar_reminder_settings_title">Нагадування календаря</string>
     <string name="calendar_view_day">День</string>
     <string name="calendar_view_feed">Стрічка</string>
     <string name="calendar_view_month">Місяць</string>
     <string name="calendar_view_week">Тиждень</string>
     <string name="call_accept">Прийняти</string>
-    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_camera_off">Камера вимкнена</string>
     <string name="call_camera_on">Камера увімкнена</string>
     <string name="call_earpiece">Навушник</string>
@@ -1948,44 +1998,38 @@
     <string name="cashu_history_outgoing">Надіслано</string>
     <string name="cashu_mint_matches_header">Відповідні mints</string>
     <plurals name="cashu_mint_plus_others">
-    <item quantity="one">+%1$d ще</item>
-    <item quantity="few">+%1$d ще</item>
-    <item quantity="many">+%1$d ще</item>
-    <item quantity="other">+%1$d ще</item>
-</plurals>
+        <item quantity="one">+%1$d ще</item>
+        <item quantity="few">+%1$d ще</item>
+        <item quantity="many">+%1$d ще</item>
+        <item quantity="other">+%1$d ще</item>
+    </plurals>
     <string name="cashu_mint_popular_header">Популярні mints</string>
     <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="one">Рекомендовано %1$d іншим</item>
-    <item quantity="few">Рекомендовано %1$d іншими</item>
-    <item quantity="many">Рекомендовано %1$d іншими</item>
-    <item quantity="other">Рекомендовано %1$d іншими</item>
-</plurals>
+        <item quantity="one">Рекомендовано %1$d іншим</item>
+        <item quantity="few">Рекомендовано %1$d іншими</item>
+        <item quantity="many">Рекомендовано %1$d іншими</item>
+        <item quantity="other">Рекомендовано %1$d іншими</item>
+    </plurals>
     <string name="cashu_move_coins_done">Переміщено %1$s sat до %2$s.</string>
     <string name="cashu_no_wallet_found">У системі не знайдено сумісний гаманець Cashu</string>
     <plurals name="cashu_pending_quotes_title">
-    <item quantity="one">%1$d очікуючий інвойс</item>
-    <item quantity="few">%1$d очікуючих інвойси</item>
-    <item quantity="many">%1$d очікуючих інвойсів</item>
-    <item quantity="other">%1$d очікуючих інвойси</item>
-</plurals>
+        <item quantity="one">%1$d очікуючий інвойс</item>
+        <item quantity="few">%1$d очікуючих інвойси</item>
+        <item quantity="many">%1$d очікуючих інвойсів</item>
+        <item quantity="other">%1$d очікуючих інвойси</item>
+    </plurals>
     <string name="cashu_quote_confirm">Сплатити %1$s sat + до %2$s sat комісії?</string>
     <string name="cashu_settings_delete_confirm_body">Опублікувати запит на видалення вашої kind:38000 рекомендації %1$s. Relay, які дотримуються NIP-09, видалять її.</string>
     <string name="cashu_settings_restore_result">Відновлено %1$s sats у %2$s підтвердженнях.</string>
     <string name="cashu_successful_redemption">Отримано Cashu</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats були відправлені в ваш гаманець. (Fees: %2$s sats)</string>
     <plurals name="cashu_untrusted_mint_title">
-    <item quantity="one">Кошти зберігаються в %1$d mint, який ви не використовуєте</item>
-    <item quantity="few">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
-    <item quantity="many">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
-    <item quantity="other">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
-</plurals>
+        <item quantity="one">Кошти зберігаються в %1$d mint, який ви не використовуєте</item>
+        <item quantity="few">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
+        <item quantity="many">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
+        <item quantity="other">Кошти зберігаються в %1$d mint, які ви не використовуєте</item>
+    </plurals>
     <string name="cashu_waiting_for_payment">Очікування оплати інвойсу…</string>
-    <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="one">%1$d mint</item>
-    <item quantity="few">%1$d mint</item>
-    <item quantity="many">%1$d mint</item>
-    <item quantity="other">%1$d mint</item>
-</plurals>
     <string name="cast_stop_casting">Зупинити трансляцію</string>
     <string name="cast_to_device">Трансляція на пристрій</string>
     <string name="child_safety_standards">Стандарти безпеки дітей</string>
@@ -2019,7 +2063,12 @@
     <string name="communities">Спільноти</string>
     <string name="community_rules_violation_kind_size_exceeded">Чернетка займає %1$d байт; ця спільнота обмежує цей kind до %2$d байт.</string>
     <string name="community_rules_violation_max_size_exceeded">Чернетка займає %1$d байт; ця спільнота обмежує події до %2$d байт.</string>
-    <string name="community_rules_violation_quota_exceeded">Ви вже опублікували %1$d подій цього kind сьогодні (ліміт %2$d).</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="one">Ви вже опублікували %1$d подію цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="few">Ви вже опублікували %1$d події цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="many">Ви вже опублікували %1$d подій цього kind сьогодні (ліміт %2$d).</item>
+        <item quantity="other">Ви вже опублікували %1$d події цього kind сьогодні (ліміт %2$d).</item>
+    </plurals>
     <string name="compose_settings">Налаштування редактора</string>
     <string name="connect_through_your_orbot_setup_short">Стандартний порт — 9050</string>
     <string name="connected_section">Підключені relay-сервери</string>
@@ -2028,15 +2077,10 @@
     <string name="connectivity_type_always">Завжди</string>
     <string name="connectivity_type_never">Ніколи</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi без ліміту</string>
-    <string name="content_description_add_document">Додати документ</string>
-    <string name="content_description_add_image">Додати фото</string>
-    <string name="content_description_add_media">Додати медіа</string>
-    <string name="content_description_add_video">Додати відео</string>
     <string name="content_warning_hide_all_sensitive_content_option">Приховати</string>
     <string name="content_warning_see_warnings_option">Попереджати</string>
     <string name="content_warning_show_all_sensitive_content_option">Показати</string>
     <string name="conversations">Обговорення</string>
-    <string name="convert_gif_to_mp4_description">Конвертує анімований GIF у відео MP4 для зменшення розміру файлу та кращої сумісності відтворення.</string>
     <string name="convert_gif_to_mp4_label">Конвертувати GIF у MP4</string>
     <string name="copied_note_id_to_clipboard">ID запису (note1) скопійовано</string>
     <string name="copied_note_text_to_clipboard">Скопіювати текст</string>
@@ -2064,7 +2108,6 @@
     <string name="discover_marketplace">Торгівельний майданчик</string>
     <string name="discover_reads">Читання</string>
     <string name="dm_relays_title">Relay-сервери для вхідних DM</string>
-    <string name="dms">DMs</string>
     <string name="dont_translate_from">Не перекладати з</string>
     <string name="dont_translate_from_description">Мови, вказані тут, не перекладатимуться. Виберіть мову, щоб прибрати її зі списку та знову отримувати переклад.</string>
     <string name="download_to_phone">Зберегти на телефон</string>
@@ -2078,41 +2121,41 @@
     <string name="drawer_section_system">Система</string>
     <string name="drawer_section_you">Ви</string>
     <plurals name="duration_days">
-    <item quantity="one">%1$d день</item>
-    <item quantity="few">%1$d дні</item>
-    <item quantity="many">%1$d днів</item>
-    <item quantity="other">%1$d дні</item>
-</plurals>
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дні</item>
+        <item quantity="many">%1$d днів</item>
+        <item quantity="other">%1$d дні</item>
+    </plurals>
     <plurals name="duration_hours">
-    <item quantity="one">%1$d година</item>
-    <item quantity="few">%1$d години</item>
-    <item quantity="many">%1$d годин</item>
-    <item quantity="other">%1$d години</item>
-</plurals>
+        <item quantity="one">%1$d година</item>
+        <item quantity="few">%1$d години</item>
+        <item quantity="many">%1$d годин</item>
+        <item quantity="other">%1$d години</item>
+    </plurals>
     <plurals name="duration_minutes">
-    <item quantity="one">%1$d хвилина</item>
-    <item quantity="few">%1$d хвилини</item>
-    <item quantity="many">%1$d хвилин</item>
-    <item quantity="other">%1$d хвилини</item>
-</plurals>
+        <item quantity="one">%1$d хвилина</item>
+        <item quantity="few">%1$d хвилини</item>
+        <item quantity="many">%1$d хвилин</item>
+        <item quantity="other">%1$d хвилини</item>
+    </plurals>
     <plurals name="duration_months">
-    <item quantity="one">%1$d місяць</item>
-    <item quantity="few">%1$d місяці</item>
-    <item quantity="many">%1$d місяців</item>
-    <item quantity="other">%1$d місяці</item>
-</plurals>
+        <item quantity="one">%1$d місяць</item>
+        <item quantity="few">%1$d місяці</item>
+        <item quantity="many">%1$d місяців</item>
+        <item quantity="other">%1$d місяці</item>
+    </plurals>
     <plurals name="duration_weeks">
-    <item quantity="one">%1$d тиждень</item>
-    <item quantity="few">%1$d тижні</item>
-    <item quantity="many">%1$d тижнів</item>
-    <item quantity="other">%1$d тижні</item>
-</plurals>
+        <item quantity="one">%1$d тиждень</item>
+        <item quantity="few">%1$d тижні</item>
+        <item quantity="many">%1$d тижнів</item>
+        <item quantity="other">%1$d тижні</item>
+    </plurals>
     <plurals name="duration_years">
-    <item quantity="one">%1$d рік</item>
-    <item quantity="few">%1$d роки</item>
-    <item quantity="many">%1$d років</item>
-    <item quantity="other">%1$d роки</item>
-</plurals>
+        <item quantity="one">%1$d рік</item>
+        <item quantity="few">%1$d роки</item>
+        <item quantity="many">%1$d років</item>
+        <item quantity="other">%1$d роки</item>
+    </plurals>
     <string name="edit_calendar_collection">Редагувати календар</string>
     <string name="edit_calendar_event">Редагувати подію календаря</string>
     <string name="edit_community">Редагувати спільноту</string>
@@ -2122,7 +2165,6 @@
     <string name="emoji_private_explainer">Приватні емодзі зберігаються зашифровано на relay і видимі лише вам. Вони з'являються в меню реакцій та автодоповненні «:», як і публічні.</string>
     <string name="emoji_public_explainer">Публічні емодзі видимі всім і з'являються в меню реакцій та автодоповненні «:», коли цей пакет знаходиться у вашому списку емодзі.</string>
     <string name="emoji_sets">Емодзі</string>
-    <string name="encrypt_files_description">Шифрувати файли перед вивантаженням для захисту конфіденційності. Деякі сервери можуть не приймати зашифровані файли на безкоштовних акаунтах.</string>
     <string name="encrypt_files_label">Шифрувати файли</string>
     <string name="ephemeral_relay_chat">Тимчасовий чат</string>
     <string name="error">Помилка</string>
@@ -2142,11 +2184,9 @@
     <string name="event_sync_title">Синхронізація relay</string>
     <string name="events_from_you">події від вас</string>
     <string name="events_to_you">події до вас</string>
-    <string name="exercise_amrap">AMRAP</string>
     <string name="exercise_circuit">Кругове тренування</string>
     <string name="exercise_cycling">Велоспорт</string>
     <string name="exercise_diet">Дієта</string>
-    <string name="exercise_emom">EMOM</string>
     <string name="exercise_fasting">Голодування</string>
     <string name="exercise_hiking">Туристичний похід</string>
     <string name="exercise_meditation">Медитація</string>
@@ -2170,8 +2210,6 @@
     <string name="failed_to_upload_media_no_details">Не вдалося завантажити фото</string>
     <string name="failed_to_upload_to_server_with_message">Не вдалося завантажити на %1$s: %2$s</string>
     <string name="favorite_app_add">Додати до улюблених</string>
-    <string name="favorite_app_network_open">Завантажується через відкриту мережу.</string>
-    <string name="favorite_app_network_tor">Завантажується через Tor.</string>
     <string name="favorite_app_recent">Нещодавні</string>
     <string name="favorite_app_remove">Видалити з улюблених</string>
     <string name="favorite_app_still_loading">Цей застосунок ще не завантажено. Спробуйте ще раз за мить.</string>
@@ -2209,7 +2247,6 @@
     <string name="follow_pack_edit_list_metadata">Редагувати Follow Pack</string>
     <string name="follow_pack_explainer">Метадані Follow Pack може бачити будь-хто у Nostr, і вони часто публікуються на багатьох сайтах як стартові набори для нових користувачів.</string>
     <string name="follow_pack_title">Метадані Follow Pack</string>
-    <string name="follow_packs">Follow Packs</string>
     <string name="follow_set_creation_dialog_title">Новий список підписок</string>
     <string name="follow_set_edit_list_metadata">Редагувати список</string>
     <string name="gallery_style">Стиль галереї профілю</string>
@@ -2280,7 +2317,6 @@
     <string name="key_is_required">Треба ввести ключ</string>
     <string name="keypackage_section">Relay-сервери для KeyPackage</string>
     <string name="keypackage_section_explainer">Relay-сервери, на яких публікуються ваші MLS KeyPackages (MIP-00). Інші користувачі завантажують ці KeyPackages, щоб запросити вас до групових чатів Marmot. Введіть від 1 до 3 relay-серверів, які приймають від вас події KeyPackage та дозволяють публічне читання.</string>
-    <string name="keypackages">KeyPackages</string>
     <string name="kind_accepted_badge_set">Набір прийнятих бейджів</string>
     <string name="kind_adventure_prologue">Пролог пригоди</string>
     <string name="kind_adventure_reading">Читання пригоди</string>
@@ -2298,10 +2334,7 @@
     <string name="kind_blob_headers">Blob заголовки</string>
     <string name="kind_blocked_relays">Заблоковані Relays</string>
     <string name="kind_blogs">Блоги</string>
-    <string name="kind_blossom_auth">Blossom Auth</string>
-    <string name="kind_blossom_servers">Blossom Servers</string>
     <string name="kind_bookmark_list">Список закладок</string>
-    <string name="kind_broadcast_relays">Broadcast Relays</string>
     <string name="kind_calendar">Календар</string>
     <string name="kind_channel_definition">Визначення каналу</string>
     <string name="kind_channel_hide_msg">Приховати повідомлення каналу</string>
@@ -2309,7 +2342,6 @@
     <string name="kind_channel_message">Повідомлення каналу</string>
     <string name="kind_channel_metadata">Метадані каналу</string>
     <string name="kind_channel_mute_user">Заглушити користувача каналу</string>
-    <string name="kind_chess_auth">Chess Auth</string>
     <string name="kind_chess_challenges">Шахові виклики</string>
     <string name="kind_chess_draw_offer">Пропозиція нічиєї</string>
     <string name="kind_chess_game_accept">Прийняття шахової партії</string>
@@ -2326,13 +2358,7 @@
     <string name="kind_deletions">Видалення</string>
     <string name="kind_dm_file">Файл особистого повідомлення</string>
     <string name="kind_dm_message">Особисте повідомлення</string>
-    <string name="kind_dm_relays">DM Relays</string>
     <string name="kind_drafts">Чернетки</string>
-    <string name="kind_dvm_content_req">DVM Content Req</string>
-    <string name="kind_dvm_content_resp">DVM Content Resp</string>
-    <string name="kind_dvm_status">DVM Status</string>
-    <string name="kind_dvm_user_req">DVM User Req</string>
-    <string name="kind_dvm_user_resp">DVM User Resp</string>
     <string name="kind_edits">Редагування</string>
     <string name="kind_emoji_pack_list">Список наборів емодзі</string>
     <string name="kind_emoji_packs">Набори емодзі</string>
@@ -2342,17 +2368,9 @@
     <string name="kind_favorite_relays">Улюблені Relays</string>
     <string name="kind_file_headers">Заголовки файлів</string>
     <string name="kind_file_servers">Файлові сервери</string>
-    <string name="kind_follow_list">Follow List</string>
-    <string name="kind_follow_packs">Follow Packs</string>
     <string name="kind_geohash_follows">Підписки геохешу</string>
-    <string name="kind_gift_wraps">GiftWraps</string>
-    <string name="kind_git_issue">Git Issue</string>
-    <string name="kind_git_patch">Git Patch</string>
-    <string name="kind_git_reply">Git Reply</string>
-    <string name="kind_git_repo">Git Repo</string>
     <string name="kind_hashtag_follows">Підписки хештегу</string>
     <string name="kind_highlights">Виділення</string>
-    <string name="kind_http_auth">Http Auth</string>
     <string name="kind_index_relay_list">Список індексних Relays</string>
     <string name="kind_live_chats">Живі чати</string>
     <string name="kind_live_streams">Живі трансляції</string>
@@ -2363,18 +2381,8 @@
     <string name="kind_music_track">Музичний трек</string>
     <string name="kind_mute_list">Список заглушених</string>
     <string name="kind_named_bookmarks">Іменовані закладки</string>
-    <string name="kind_nests_servers">Nests Servers</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_nns">NNS</string>
-    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_notes">Нотатки</string>
-    <string name="kind_nwc_request">NWC Request</string>
-    <string name="kind_nwc_response">NWC Response</string>
     <string name="kind_old_bookmark_list">Старий список закладок</string>
-    <string name="kind_ots">OTS</string>
-    <string name="kind_outbox_relays">Outbox Relays</string>
-    <string name="kind_pay_to">PayTo</string>
     <string name="kind_people_lists">Списки людей</string>
     <string name="kind_pictures">Зображення</string>
     <string name="kind_pins">Закріплення</string>
@@ -2400,8 +2408,6 @@
     <string name="kind_room_presence">Присутність у кімнаті</string>
     <string name="kind_seals">Печатки</string>
     <string name="kind_search_relays">Пошукові relay</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     <string name="kind_torrent_comments">Коментарі до торрентів</string>
     <string name="kind_torrents">Торренти</string>
     <string name="kind_trusted_providers">Довірені провайдери</string>
@@ -2413,14 +2419,10 @@
     <string name="kind_video_repl">Відео (Repl)</string>
     <string name="kind_voice_msg">Голос. повідомлення</string>
     <string name="kind_voice_reply">Голосова відповідь</string>
-    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Веб-закладка</string>
-    <string name="kind_wiki">Wiki</string>
     <string name="kind_workouts">Тренування</string>
     <string name="kind_zap_goals">Цілі Zap</string>
     <string name="kind_zap_poll">Zap-голосування</string>
-    <string name="kind_zap_req">Zap Req</string>
-    <string name="kind_zaps">Zaps</string>
     <string name="known">Відомі</string>
     <string name="language_preferences">Налаштування відображення мови</string>
     <string name="language_preferences_description">Для кожної пари мов перекладу оберіть, яку мову показувати першою.</string>
@@ -2456,21 +2458,14 @@
     <string name="marmot_failed_to_remove_member">Не вдалося видалити учасника: %1$s</string>
     <string name="marmot_failed_to_revoke_admin">Не вдалося відкликати права адміністратора: %1$s</string>
     <string name="marmot_failed_to_update">Не вдалося оновити: %1$s</string>
-    <string name="marmot_group">Marmot Group</string>
     <string name="marmot_group_info_updated">Інформацію про групу оновлено</string>
     <plurals name="marmot_member_count">
-    <item quantity="one">%1$d учасник</item>
-    <item quantity="few">%1$d учасники</item>
-    <item quantity="many">%1$d учасників</item>
-    <item quantity="other">%1$d учасників</item>
-</plurals>
+        <item quantity="one">%1$d учасник</item>
+        <item quantity="few">%1$d учасники</item>
+        <item quantity="many">%1$d учасників</item>
+        <item quantity="other">%1$d учасників</item>
+    </plurals>
     <string name="marmot_member_removed">Учасника видалено</string>
-    <plurals name="marmot_message_count">
-    <item quantity="one">%1$d повідомлення</item>
-    <item quantity="few">%1$d повідомлення</item>
-    <item quantity="many">%1$d повідомлень</item>
-    <item quantity="other">%1$d повідомлень</item>
-</plurals>
     <string name="marmot_not_a_member">Не є учасником цієї групи</string>
     <string name="marmot_unknown_error">невідома помилка</string>
     <string name="media_added">Медіа додано</string>
@@ -2490,23 +2485,23 @@
     <string name="music_playlist_cover_upload_cta">Завантажити обкладинку</string>
     <string name="music_playlist_cover_upload_hint">Виберіть квадратне зображення для обкладинки цього плейлисту.</string>
     <plurals name="music_playlist_more_tracks">
-    <item quantity="one">+%1$d додатковий трек</item>
-    <item quantity="few">+%1$d додаткові треки</item>
-    <item quantity="many">+%1$d додаткових треків</item>
-    <item quantity="other">+%1$d додаткових треків</item>
-</plurals>
+        <item quantity="one">+%1$d додатковий трек</item>
+        <item quantity="few">+%1$d додаткові треки</item>
+        <item quantity="many">+%1$d додаткових треків</item>
+        <item quantity="other">+%1$d додаткових треків</item>
+    </plurals>
     <plurals name="music_playlist_track_count">
-    <item quantity="one">%1$d трек</item>
-    <item quantity="few">%1$d треки</item>
-    <item quantity="many">%1$d треків</item>
-    <item quantity="other">%1$d треків</item>
-</plurals>
+        <item quantity="one">%1$d трек</item>
+        <item quantity="few">%1$d треки</item>
+        <item quantity="many">%1$d треків</item>
+        <item quantity="other">%1$d треків</item>
+    </plurals>
     <plurals name="music_playlist_track_count_short">
-    <item quantity="one">%1$d трек</item>
-    <item quantity="few">%1$d треки</item>
-    <item quantity="many">%1$d треків</item>
-    <item quantity="other">%1$d треку</item>
-</plurals>
+        <item quantity="one">%1$d трек</item>
+        <item quantity="few">%1$d треки</item>
+        <item quantity="many">%1$d треків</item>
+        <item quantity="other">%1$d треку</item>
+    </plurals>
     <string name="music_playlist_uploading_banner">Завантаження обкладинки і публікація. Процес продовжиться навіть якщо ви залишите екран.</string>
     <string name="music_track_audio_upload_cta">Завантажити аудіофайл</string>
     <string name="music_track_audio_upload_hint">Виберіть MP3, WAV або FLAC. Файл буде завантажено на ваш медіасервер після збереження.</string>
@@ -2543,11 +2538,11 @@
     <string name="napplet_consent_identity_read">Цей nApplet хоче прочитати ваш профіль і дані облікового запису.</string>
     <string name="napplet_consent_notify">Цей nApplet хоче показати вам сповіщення.</string>
     <plurals name="napplet_consent_pay_amount">
-    <item quantity="one">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sat.</item>
-    <item quantity="few">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
-    <item quantity="many">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
-    <item quantity="other">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
-</plurals>
+        <item quantity="one">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sat.</item>
+        <item quantity="few">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
+        <item quantity="many">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
+        <item quantity="other">Цей nApplet хоче оплатити Lightning-інвойс на %1$d sats.</item>
+    </plurals>
     <string name="napplet_consent_publish">Цей nApplet хоче підписати та опублікувати подію kind:%1$d від вашого імені.</string>
     <string name="napplet_consent_publish_encrypted">Цей nApplet хоче надіслати зашифровану подію від вашого імені.</string>
     <string name="napplet_consent_publish_preview">Цей nApplet хоче підписати та опублікувати подію kind:%1$d від вашого імені:</string>
@@ -2556,30 +2551,21 @@
     <string name="napplet_consent_sign">Цей сайт хоче підписати подію kind:%1$d за допомогою вашого ключа Nostr.</string>
     <string name="napplet_consent_storage">Цей nApplet хоче використовувати своє приватне сховище.</string>
     <string name="napplet_consent_upload">Цей nApplet хоче завантажити файл на ваш медіасервер.</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
-    <string name="napplets">nApplets</string>
     <string name="nest_chat_send_failed_title">Не вдалося надіслати повідомлення</string>
     <string name="nest_hush_local">Заглушити цього спікера</string>
     <string name="nest_hush_local_restore">Відновити цього спікера</string>
     <string name="nest_leave">Вийти</string>
     <string name="nest_leave_host_close_failed">Не вдалося позначити кімнату як закриту. Виходимо — кімната закриється автоматично.</string>
     <plurals name="nest_listener_count">
-    <item quantity="one">%1$d слухач</item>
-    <item quantity="few">%1$d слухачі</item>
-    <item quantity="many">%1$d слухачів</item>
-    <item quantity="other">%1$d слухача</item>
-</plurals>
+        <item quantity="one">%1$d слухач</item>
+        <item quantity="few">%1$d слухачі</item>
+        <item quantity="many">%1$d слухачів</item>
+        <item quantity="other">%1$d слухача</item>
+    </plurals>
     <string name="nest_lower_hand">Опустити руку</string>
     <string name="nest_mic_mute">Вимкнути мікрофон</string>
     <string name="nest_mic_unmute">Увімкнути мікрофон</string>
-    <string name="nest_mute">Вимкнути звук</string>
     <string name="nest_no_server_save_failed">Не вдалося зберегти список nest-серверів. Спробуйте ще раз.</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Підтримує відтворення аудіо, поки кімната відкрита.</string>
-    <string name="nest_notification_listening">Nest підключено</string>
-    <string name="nest_notification_stop">Зупинити</string>
-    <string name="nest_notification_text">Торкніться, щоб повернутися.</string>
     <string name="nest_participant_follow">Стежити</string>
     <string name="nest_participant_mute">Вимкнути звук</string>
     <string name="nest_participant_unfollow">Не стежити</string>
@@ -2590,8 +2576,6 @@
     <string name="nest_presence_raised_hand">підняв(-ла) руку</string>
     <string name="nest_presence_speaking">говорить</string>
     <string name="nest_raise_hand">Підняти руку</string>
-    <string name="nest_unmute">Увімкнути звук</string>
-    <string name="nests">Nests</string>
     <string name="nests_servers_my_explainer">Збережено як замінна подія kind:10112, щоб інші клієнти могли читати ваші налаштування.</string>
     <string name="nests_servers_my_section">Ваші сервери</string>
     <string name="nests_servers_recommended_explainer">Вбудовані пропозиції, які можна додати до списку одним дотиком.</string>
@@ -2624,12 +2608,6 @@
     <string name="new_requests">Нові запити</string>
     <string name="new_threads">Нові треди</string>
     <string name="new_workout">Нове тренування</string>
-    <plurals name="nip82_assets_count">
-    <item quantity="one">%1$d актив у комплекті</item>
-    <item quantity="few">%1$d активи у комплекті</item>
-    <item quantity="many">%1$d активів у комплекті</item>
-    <item quantity="other">%1$d актива у комплекті</item>
-</plurals>
     <string name="no_blossom_apps_found_description">Blossom додатки не знайдено. Встановіть локальний Blossom додаток, щоб переглянути цей файл</string>
     <string name="no_blossom_apps_found_title">Неможливо відкрити Blossom посилання</string>
     <string name="no_camera_app_found">На цьому пристрої не знайдено застосунок камери</string>
@@ -2639,7 +2617,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">Для цього користувача не вибрано жодного типу реакції. Довге натискання на кнопку серця, щоб змінити</string>
     <string name="no_reactions_setup">Реакції не налаштовані</string>
     <string name="no_wallet_found">Не знайдено гаманців для оплати Lightning інвойсу. Встановіть Lightning гаманець для використання зап</string>
-    <string name="no_wallet_found_with_error">Не знайдено гаманців для оплати Lightning інвойсу (Помилка: %1$s). Встановіть Lightning гаманець для використання зап</string>
     <string name="no_zap_amount_setup_long_press_to_change">Не налаштовані запи. Натисніть та утримуйте для налаштування</string>
     <string name="notification_settings">Сповіщення</string>
     <string name="notification_settings_section_categories">Категорії</string>
@@ -2655,29 +2632,28 @@
     <string name="nowhere_link_card_message">Повідомлення Nowhere</string>
     <string name="nowhere_link_card_petition">Петиція Nowhere</string>
     <string name="nowhere_link_card_store">Магазин Nowhere</string>
-    <string name="nsites">nSites</string>
     <string name="nudity">Нагота</string>
     <string name="nutzap_failed_no_event">Не вдалося створити посилання на event</string>
     <string name="nutzap_failed_no_recipient">Немає публічного ключа отримувача в нотатці</string>
     <string name="nutzap_failed_private_note">Nutzap є публічними та розкриють цю приватну нотатку. Натомість використайте Lightning zap.</string>
     <string name="nutzap_failed_title">Nutzap не вдався</string>
     <plurals name="onchain_send_button_amount_split">
-    <item quantity="one">Надіслати %1$s sats, %2$d одержувачу</item>
-    <item quantity="few">Надіслати %1$s sats, %2$d одержувачам</item>
-    <item quantity="many">Надіслати %1$s sats, %2$d одержувачам</item>
-    <item quantity="other">Надіслати %1$s sats, %2$d одержувачам</item>
-</plurals>
+        <item quantity="one">Надіслати %1$s sats, %2$d одержувачу</item>
+        <item quantity="few">Надіслати %1$s sats, %2$d одержувачам</item>
+        <item quantity="many">Надіслати %1$s sats, %2$d одержувачам</item>
+        <item quantity="other">Надіслати %1$s sats, %2$d одержувачам</item>
+    </plurals>
     <string name="onchain_send_error_backend_not_configured">Bitcoin chain бекенд не налаштовано</string>
     <string name="onchain_send_error_broadcast">Не вдалося транслювати транзакцію</string>
     <string name="onchain_send_error_build">Не вдалося побудувати транзакцію</string>
     <string name="onchain_send_error_load_utxos">Не вдалося завантажити ваш Bitcoin баланс</string>
     <string name="onchain_send_error_publish_receipt">Платіж надіслано, але квитанцію zap не вдалося опублікувати</string>
     <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="one">Платіж надіслано (%1$d з %2$d квитанцію опубліковано), але наступну квитанцію не вдалося опублікувати</item>
-    <item quantity="few">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
-    <item quantity="many">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
-    <item quantity="other">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
-</plurals>
+        <item quantity="one">Платіж надіслано (%1$d з %2$d квитанцію опубліковано), але наступну квитанцію не вдалося опублікувати</item>
+        <item quantity="few">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
+        <item quantity="many">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
+        <item quantity="other">Платіж надіслано (%1$d з %2$d квитанцій опубліковано), але наступну квитанцію не вдалося опублікувати</item>
+    </plurals>
     <string name="onchain_send_error_recipient_dust">Частка отримувача нижча за пиловий ліміт</string>
     <string name="onchain_send_error_sign">Не вдалося підписати транзакцію</string>
     <string name="onchain_send_fee_eta_fast">~10 хв</string>
@@ -2686,25 +2662,24 @@
     <string name="onchain_send_fee_fast">Швидко</string>
     <string name="onchain_send_fee_normal">Нормально</string>
     <string name="onchain_send_fee_slow">Повільно</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <plurals name="onchain_send_splits_label">
-    <item quantity="one">Поділ між %1$d отримувачем</item>
-    <item quantity="few">Поділ між %1$d отримувачами</item>
-    <item quantity="many">Поділ між %1$d отримувачами</item>
-    <item quantity="other">Поділ між %1$d отримувачами</item>
-</plurals>
+        <item quantity="one">Поділ між %1$d отримувачем</item>
+        <item quantity="few">Поділ між %1$d отримувачами</item>
+        <item quantity="many">Поділ між %1$d отримувачами</item>
+        <item quantity="other">Поділ між %1$d отримувачами</item>
+    </plurals>
     <plurals name="onchain_send_splits_skipped">
-    <item quantity="one">Пропуск %1$d отримувача, що має лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
-    <item quantity="few">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
-    <item quantity="many">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
-    <item quantity="other">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
-</plurals>
+        <item quantity="one">Пропуск %1$d отримувача, що має лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
+        <item quantity="few">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
+        <item quantity="many">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
+        <item quantity="other">Пропуск %1$d отримувачів, що мають лише Lightning адресу — onchain потребує Nostr pubkey для отримання адреси.</item>
+    </plurals>
     <plurals name="onchain_send_use_note_split">
-    <item quantity="one">Використати %1$d-сторонній поділ zap цієї нотатки</item>
-    <item quantity="few">Використати %1$d-сторонній поділ zap цієї нотатки</item>
-    <item quantity="many">Використати %1$d-сторонній поділ zap цієї нотатки</item>
-    <item quantity="other">Використати %1$d-сторонній поділ zap цієї нотатки</item>
-</plurals>
+        <item quantity="one">Використати %1$d-сторонній поділ zap цієї нотатки</item>
+        <item quantity="few">Використати %1$d-сторонній поділ zap цієї нотатки</item>
+        <item quantity="many">Використати %1$d-сторонній поділ zap цієї нотатки</item>
+        <item quantity="other">Використати %1$d-сторонній поділ zap цієї нотатки</item>
+    </plurals>
     <string name="onchain_stage_broadcasting">трансляція</string>
     <string name="onchain_stage_building">побудова транзакції</string>
     <string name="onchain_stage_loading_utxos">завантаження балансу</string>
@@ -2714,7 +2689,6 @@
     <string name="open_all_reactions_to_this_post">Відкрити всі реакції на цей допис</string>
     <string name="open_polls">Відкриті</string>
     <string name="orbot_socks_port">Порт Orbot Socks</string>
-    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="ots_info_description">Є доказ того, що ця публікація була підписана до %1$s. Доказ засвідчено в блокчейні Bitcoin на ту дату та час.</string>
     <string name="ots_info_title">Доказ часової позначки</string>
     <string name="outbox_relays_title">Relay для вихідних</string>
@@ -2732,25 +2706,25 @@
     <string name="pin_to_profile">Закріпити у профілі</string>
     <string name="play">Відтворити</string>
     <plurals name="podcast_episode_count">
-    <item quantity="one">%1$d епізод</item>
-    <item quantity="few">%1$d епізоди</item>
-    <item quantity="many">%1$d епізодів</item>
-    <item quantity="other">%1$d епізоду</item>
-</plurals>
+        <item quantity="one">%1$d епізод</item>
+        <item quantity="few">%1$d епізоди</item>
+        <item quantity="many">%1$d епізодів</item>
+        <item quantity="other">%1$d епізоду</item>
+    </plurals>
     <string name="poll_author_no_vote">Автор опитування не може голосувати</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Опитування закрито для нових голосів</string>
     <string name="poll_multiple_choice">Кілька відповідей</string>
     <string name="poll_single_choice">Одна відповідь</string>
     <string name="poll_unable_to_vote">Неможливо проголосувати</string>
     <string name="polls">Опитування</string>
     <string name="post">Надіслати</string>
+    <string name="post_noun">Допис</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
-    <item quantity="one">Цей пост містить більше ніж %1$d хештег</item>
-    <item quantity="few">Цей пост містить більше ніж %1$d хештеги</item>
-    <item quantity="many">Цей пост містить більше ніж %1$d хештегів</item>
-    <item quantity="other">Цей пост містить більше ніж %1$d хештега</item>
-</plurals>
+        <item quantity="one">Цей пост містить більше ніж %1$d хештег</item>
+        <item quantity="few">Цей пост містить більше ніж %1$d хештеги</item>
+        <item quantity="many">Цей пост містить більше ніж %1$d хештегів</item>
+        <item quantity="other">Цей пост містить більше ніж %1$d хештега</item>
+    </plurals>
     <string name="preview_card_image_for">Перегляд для %1$s</string>
     <string name="privacy_options">Параметри конфіденційності</string>
     <string name="privacy_policy">Політика конфіденційності</string>
@@ -2807,7 +2781,6 @@
     <string name="relay_chat_title">Чати relay</string>
     <string name="relay_management_tab_events">Події</string>
     <string name="relay_management_tab_ips">IP-адреси</string>
-    <string name="relay_management_tab_kinds">Kinds</string>
     <string name="relay_management_tab_pubkeys">Користувачі</string>
     <string name="relay_management_tab_settings">Налаштування</string>
     <string name="relay_settings">Налаштування relay-серверів</string>
@@ -2851,43 +2824,43 @@
     <string name="scheduled_posts_error_prefix">Помилка: %1$s</string>
     <string name="scheduled_posts_event_id_copied">ID нотатки скопійовано</string>
     <plurals name="scheduled_posts_logout_toast">
-    <item quantity="one">Вихід виконано · %1$d запланований допис видалено</item>
-    <item quantity="few">Вихід виконано · %1$d заплановані дописи видалено</item>
-    <item quantity="many">Вихід виконано · %1$d запланованих дописів видалено</item>
-    <item quantity="other">Вихід виконано · %1$d запланованих дописів видалено</item>
-</plurals>
+        <item quantity="one">Вихід виконано · %1$d запланований допис видалено</item>
+        <item quantity="few">Вихід виконано · %1$d заплановані дописи видалено</item>
+        <item quantity="many">Вихід виконано · %1$d запланованих дописів видалено</item>
+        <item quantity="other">Вихід виконано · %1$d запланованих дописів видалено</item>
+    </plurals>
     <string name="scheduled_posts_logout_toast_zero">Вихід виконано</string>
     <plurals name="scheduled_posts_logout_warning">
-    <item quantity="one">У вас є %1$d запланований допис, який ще не опубліковано. Вихід з акаунта назавжди видалить його.</item>
-    <item quantity="few">У вас є %1$d заплановані дописи, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
-    <item quantity="many">У вас є %1$d запланованих дописів, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
-    <item quantity="other">У вас є %1$d запланованих дописів, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
-</plurals>
+        <item quantity="one">У вас є %1$d запланований допис, який ще не опубліковано. Вихід з акаунта назавжди видалить його.</item>
+        <item quantity="few">У вас є %1$d заплановані дописи, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
+        <item quantity="many">У вас є %1$d запланованих дописів, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
+        <item quantity="other">У вас є %1$d запланованих дописів, які ще не опубліковано. Вихід з акаунта назавжди видалить їх.</item>
+    </plurals>
     <string name="scheduled_posts_notification_failed_title">Помилка запланованого допису</string>
     <string name="scheduled_posts_notification_sent_title">Запланований допис опубліковано</string>
     <plurals name="scheduled_posts_relay_count">
-    <item quantity="one">на %1$d relay</item>
-    <item quantity="few">на %1$d relay</item>
-    <item quantity="many">на %1$d relay</item>
-    <item quantity="other">на %1$d relay</item>
-</plurals>
+        <item quantity="one">на %1$d relay</item>
+        <item quantity="few">на %1$d relay</item>
+        <item quantity="many">на %1$d relay</item>
+        <item quantity="other">на %1$d relay</item>
+    </plurals>
     <string name="scheduled_posts_status_cancelled">Скасовано</string>
     <string name="scheduled_posts_status_failed">Помилка</string>
     <string name="scheduled_posts_status_pending">Заплановано</string>
     <string name="scheduled_posts_status_publishing">Надсилається…</string>
     <string name="scheduled_posts_status_sent">Надіслано</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="one"> · %1$d через 1 год</item>
-    <item quantity="few"> · %1$d через 1 год</item>
-    <item quantity="many"> · %1$d через 1 год</item>
-    <item quantity="other"> · %1$d через 1 год</item>
-</plurals>
+        <item quantity="one"> · %1$d через 1 год</item>
+        <item quantity="few"> · %1$d через 1 год</item>
+        <item quantity="many"> · %1$d через 1 год</item>
+        <item quantity="other"> · %1$d через 1 год</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="one">%1$d у черзі</item>
-    <item quantity="few">%1$d у черзі</item>
-    <item quantity="many">%1$d у черзі</item>
-    <item quantity="other">%1$d у черзі</item>
-</plurals>
+        <item quantity="one">%1$d у черзі</item>
+        <item quantity="few">%1$d у черзі</item>
+        <item quantity="many">%1$d у черзі</item>
+        <item quantity="other">%1$d у черзі</item>
+    </plurals>
     <string name="search_relays_not_found_examples">Гарні варіанти:\n%1$s</string>
     <string name="search_relays_title">Relay-сервери для пошуку</string>
     <string name="search_section">Relay-сервери для пошуку</string>
@@ -2913,9 +2886,7 @@
     <string name="settings_muted_threads_title">Вимкнені теми</string>
     <string name="share_as_image">Поділитися як зображення</string>
     <string name="share_as_image_url">Поділитися як URL зображення</string>
-    <string name="share_hls_video">HLS Upload</string>
     <string name="share_or_save">Поділитися або зберегти</string>
-    <string name="shorts">Shorts</string>
     <string name="show_messages_in_notifications_setting_description">Включати особисті та групові повідомлення на вкладку «Сповіщення». Вимкніть, щоб залишити повідомлення лише на вкладці «Повідомлення».</string>
     <string name="show_messages_in_notifications_setting_title">Показувати повідомлення</string>
     <string name="sign_request_rejected2">Запит на підписання відхилено</string>
@@ -2940,17 +2911,16 @@
     <string name="theme_description">Темна, світла або системна тема</string>
     <string name="this_message_will_disappear_in">Це повідомлення зникне через %1$s</string>
     <plurals name="thread_collapsed_reply_count">
-    <item quantity="one">+%1$d\\nвідповідь</item>
-    <item quantity="few">+%1$d\\nвідповіді</item>
-    <item quantity="many">+%1$d\\nвідповідей</item>
-    <item quantity="other">+%1$d\\nвідповіді</item>
-</plurals>
+        <item quantity="one">+%1$d\\nвідповідь</item>
+        <item quantity="few">+%1$d\\nвідповіді</item>
+        <item quantity="many">+%1$d\\nвідповідей</item>
+        <item quantity="other">+%1$d\\nвідповіді</item>
+    </plurals>
     <string name="today">Сьогодні</string>
     <string name="tor_custom">Власний</string>
     <string name="tor_custom_explainer">Налаштуйте власний варіант</string>
     <string name="tor_default">Стандартний</string>
     <string name="tor_default_explainer">Приховати вашу IP-адресу від випадкових relay</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_full_privacy">Повна приватність</string>
     <string name="tor_full_privacy_explainer">Приховати вашу IP-адресу в усіх з'єднаннях</string>
     <string name="tor_internal">Вбудований</string>
@@ -3018,8 +2988,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Користувач %1$s не має налаштованої Lightning адреси для отримання sats</string>
     <string name="vanish_history">Історія зникнень</string>
     <string name="vanish_request_sent">Запит на зникнення надіслано</string>
-    <string name="video_codec_h265_description">Краща якість при менших розмірах файлів, але не всі пристрої підтримують відтворення H.265.</string>
-    <string name="video_codec_h265_label">Використовувати кодек H.265/HEVC</string>
     <string name="video_download_has_started_toast">Завантаження відео розпочато…</string>
     <string name="video_player_settings">Кнопки відеоплеєра</string>
     <string name="video_saved_to_the_gallery">Відео збережено до відеогалереї телефону</string>
@@ -3031,7 +2999,6 @@
     <string name="voice_reply">Голосова відповідь</string>
     <string name="wallet">Гаманець</string>
     <string name="wallet_add_cashu_title">Cashu гаманець (NIP-60)</string>
-    <string name="wallet_connect">Wallet Connect</string>
     <string name="wallet_connect_pay_invoice_error_error">Постачальник підключення гаманця повернув наступну помилку: %1$s</string>
     <string name="wallet_edit_cashu_title">Редагувати mints</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Показує попередження, коли на пости або профілі надходять скарги від людей, за якими ви стежите</string>
@@ -3044,7 +3011,6 @@
     <string name="write_a_message">Написати повідомлення…</string>
     <string name="write_to_relay">Писати до relay</string>
     <string name="write_to_relay_description">Кількість байтів, надісланих до цього relay, включаючи фільтри та події</string>
-    <string name="zap_description">Zap</string>
     <string name="zaps">Запи</string>
     <string name="block_hide_user"><![CDATA[Заблокувати та приховати користувача]]></string>
     <string name="rename">Перейменувати</string>
@@ -3054,6 +3020,134 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервіс отримувача за адресою %1$s недоступний. Він був розрахований із lightning-адреси "%2$s". Помилка: %3$s. Перевірте, чи працює сервер і чи правильна lightning-адреса</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Неможливо створити lightning-рахунок від %1$s: Елемент pr не знайдено у відповідному JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Неможливо створити lightning-рахунок. Повідомлення від %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="post_not_found_short">👀</string>
+    <string name="chat_zap_amount_suffix">zapped %1$s sats</string>
+    <string name="clink_lightning_offer">CLINK Offer</string>
+    <string name="clink_offer_label">CLINK Offer (noffer)</string>
+    <string name="wallet_add_clink_title">CLINK Debit</string>
+    <string name="send_payment_method_lightning">Lightning</string>
+    <string name="send_payment_method_clink">CLINK Offer</string>
+    <string name="send_payment_method_cashu">Cashu</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="security_unlimited">∞</string>
+    <string name="zapraiser">Zapraiser</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="cashu_mints">Mints</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="search_source_relays">Relays</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="follow_list_item_label">Follow Pack</string>
+    <string name="kinds">Kinds</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="gif">Gif</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <plurals name="cashu_wallet_subtitle_mints">
+    <item quantity="one">%1$d mint</item>
+    <item quantity="few">%1$d mint</item>
+    <item quantity="many">%1$d mint</item>
+    <item quantity="other">%1$d mint</item>
+</plurals>
+    <string name="dms">DMs</string>
+    <string name="exercise_amrap">AMRAP</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="follow_packs">Follow Packs</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="kind_blossom_auth">Blossom Auth</string>
+    <string name="kind_blossom_servers">Blossom Servers</string>
+    <string name="kind_broadcast_relays">Broadcast Relays</string>
+    <string name="kind_chess_auth">Chess Auth</string>
+    <string name="kind_dm_relays">DM Relays</string>
+    <string name="kind_dvm_content_req">DVM Content Req</string>
+    <string name="kind_dvm_content_resp">DVM Content Resp</string>
+    <string name="kind_dvm_status">DVM Status</string>
+    <string name="kind_dvm_user_req">DVM User Req</string>
+    <string name="kind_dvm_user_resp">DVM User Resp</string>
+    <string name="kind_follow_list">Follow List</string>
+    <string name="kind_follow_packs">Follow Packs</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_git_issue">Git Issue</string>
+    <string name="kind_git_patch">Git Patch</string>
+    <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_repo">Git Repo</string>
+    <string name="kind_http_auth">Http Auth</string>
+    <string name="kind_nests_servers">Nests Servers</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
+    <string name="kind_nwc_request">NWC Request</string>
+    <string name="kind_nwc_response">NWC Response</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_outbox_relays">Outbox Relays</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_wake">WakeUp</string>
+    <string name="kind_wiki">Wiki</string>
+    <string name="kind_zap_req">Zap Req</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="marmot_group">Marmot Group</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <string name="napplets">nApplets</string>
+    <string name="nests">Nests</string>
+    <string name="nsites">nSites</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="relay_management_tab_kinds">Kinds</string>
+    <string name="share_hls_video">HLS Upload</string>
+    <string name="shorts">Shorts</string>
+    <string name="tor_external">Orbot</string>
+    <string name="wallet_connect">Wallet Connect</string>
+    <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Пошук або введіть адресу</string>
     <string name="napplet_untitled">NApplet без назви</string>
+    <string name="event_sync_events_sent">Перерозподілені події · Нові: %1$d · Надіслані: %2$d · Отримані: %3$d</string>
 </resources>

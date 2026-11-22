@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Translate a batch of missing strings: extract the English, validate the translations, insert them.
 
-Usage (from the repo root; LOCALE is the values-* suffix, e.g. cs de-rDE sv-rSE pt-rBR):
+Usage (from the repo root; LOCALE is the values-* suffix, e.g. cs de sv pt):
 
   batch.py extract  DIR [--base BASE] LOCALE...
       Re-diffs each locale against the default and writes DIR/<LOCALE>.en.xml: every <string> and
@@ -19,10 +19,15 @@ Usage (from the repo root; LOCALE is the values-* suffix, e.g. cs de-rDE sv-rSE 
 
 BASE defaults to the commonsUI catalog (commonsUI/src/commonMain/composeResources); pass
 amethyst/src/main/res for the Android one.
+
+Translate into a language's base folder (values-es, not values-es-rES): a regional folder only holds
+that region's differences, so "every key it lacks" is nearly the whole catalog. The tool refuses a
+regional LOCALE whose base folder exists, except zh-rTW / zh-rHK (full Traditional-Chinese files).
 """
 import argparse
 import collections
 import io
+import os
 import re
 import sys
 import xml.dom.minidom
@@ -58,7 +63,7 @@ def missing(base, locale):
 
 
 def plural_rule(locale):
-    """The CLDR plural rule for a values-* suffix: pt-rBR -> pt_BR, `in` is the old code for id."""
+    """The CLDR plural rule for a values-* suffix: es-rES -> es_ES, `in` is the old code for id."""
     try:
         from babel import Locale
     except ImportError:
@@ -186,6 +191,19 @@ def cmd_insert(a):
         print(f"{loc}: inserted {len(add)}" + (f", {skipped} already present (skipped)" if skipped else ""))
 
 
+FULL_REGIONAL = {"zh-rTW", "zh-rHK"}
+
+
+def check_targets(base, locales):
+    for loc in locales:
+        lang, sep, _ = loc.partition("-r")
+        if sep and loc not in FULL_REGIONAL and os.path.isdir(f"{base}/values-{lang}"):
+            sys.exit(
+                f"{loc} is a regional override file: it holds only what that region says differently. "
+                f"Translate values-{lang} instead (tools/agent-hooks/locale_layout_check.py explains the layout)."
+            )
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("command", choices=["extract", "validate", "insert"])
@@ -195,6 +213,7 @@ def main():
     p.add_argument("--verbatim", default="", type=lambda s: set(filter(None, s.split(","))),
                    help="comma-separated keys that must stay identical to the English")
     a = p.parse_args()
+    check_targets(a.base, a.locales)
     return {"extract": cmd_extract, "validate": cmd_validate, "insert": cmd_insert}[a.command](a) or 0
 
 

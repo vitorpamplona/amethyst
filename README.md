@@ -258,7 +258,7 @@ Lastly, the user's account information (private key/pub key) is stored in the An
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 21+
+1. JDK 25 (Android Studio bundles it)
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 
@@ -276,7 +276,7 @@ Build the Android app:
 ./gradlew assembleDebug
 ```
 
-Build and run the Desktop app (requires Java 21+):
+Build and run the Desktop app (requires JDK 25):
 ```bash
 ./gradlew :desktopApp:run
 ```
@@ -351,7 +351,8 @@ Quick links:
   [pull requests](https://github.com/vitorpamplona/amethyst/pulls).
 - Nostr-native issue tracker:
   [gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst).
-- Translations: [Crowdin](https://crowdin.com/project/amethyst-social).
+- Translations: pull requests to the `values-<language>/strings.xml` files (see
+  [CONTRIBUTING.md](CONTRIBUTING.md#translations)).
 - Patches over Nostr: [GitStr](https://github.com/fiatjaf/gitstr) to
   [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac).
 - Security issues: [SECURITY.md](SECURITY.md) (do **not** file as public

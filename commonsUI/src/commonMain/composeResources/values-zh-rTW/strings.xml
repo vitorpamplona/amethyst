@@ -12,8 +12,6 @@
     <!-- Notes & Replies -->
     <string name="replying_to">回覆 </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nSite：%1$s</string>
-    <string name="napplet_card_title">nApplet：%1$s</string>
     <string name="napplet_card_permissions">權限：</string>
     <string name="nsite_root_site">根網站</string>
     <string name="nsite_source">來源：</string>
@@ -108,7 +106,6 @@
     <string name="quote">引用</string>
     <string name="fork">分叉</string>
     <string name="new_amount_in_sats">新的聰金額</string>
-    <string name="and"> 和 </string>
     <string name="following"> 關注</string>
     <string name="followers"> 粉絲</string>
     <string name="number_following">%1$s 位追蹤中</string>
@@ -252,7 +249,6 @@
     <string name="refresh">刷新</string>
     <string name="channel_created">頻道已創建</string>
     <string name="channel_information_changed_to">頻道信息已更改為</string>
-    <string name="marmot_group_no_messages_yet">尚無訊息</string>
     <string name="paid_relay">付費 relay</string>
     <string name="tor_relay">連線時強制使用 Tor</string>
     <string name="posts_received">收到文章</string>
@@ -424,7 +420,6 @@
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">尚未找到任何 nSite。</string>
-    <string name="browser_reload">重新載入</string>
     <string name="browser_unsupported">應用程式內瀏覽器需要 Android 11 或更新版本。</string>
     <string name="embedded_tab_load_failed">無法載入此應用程式。</string>
     <string name="browser_go">開啟</string>
@@ -432,10 +427,6 @@
     <string name="browser_recent_options">選項</string>
     <string name="browser_recent_remove">從歷史記錄中移除</string>
     <string name="favorite_apps_empty">尚無我的最愛應用程式。開啟網頁客戶端或 nsite，點擊星號以釘選至此。</string>
-    <string name="favorite_app_open_window">在獨立視窗中開啟</string>
-    <string name="favorite_app_access_title">此應用程式可存取的內容</string>
-    <string name="favorite_app_access_static">在沙盒中執行，無法特別存取您的帳戶。</string>
-    <string name="favorite_app_access_show">可存取的內容</string>
     <string name="favorite_app_unavailable">此應用程式尚未載入。請從其卡片開啟，或稍後再試。</string>
     <string name="napplet_manage_permissions">管理權限</string>
     <string name="napplet_none_found">尚未找到任何 nApplet。</string>
@@ -478,7 +469,9 @@
     <string name="nest_lobby_host_label">主持人</string>
     <string name="nest_lobby_open_action">開啟</string>
     <string name="nest_lobby_no_listeners">目前房間內沒有任何人。</string>
-    <string name="nest_lobby_listeners_count">%1$d 位正在收聽</string>
+    <plurals name="nest_lobby_listeners_count">
+        <item quantity="other">%1$d 位正在收聽</item>
+    </plurals>
     <string name="nest_role_host">主持人</string>
     <string name="nest_role_moderator">主持人</string>
     <string name="nest_state_muted">麥克風已靜音</string>
@@ -586,7 +579,9 @@
     <string name="hashtag_label_added_by">新增者</string>
     <string name="pinned_notes">置頂筆記</string>
     <string name="pinned_notes_explainer">您的置頂筆記</string>
-    <string name="deleted_items_banner_title">此清單中有 %1$d 個項目已被作者刪除。</string>
+    <plurals name="deleted_items_banner_title">
+        <item quantity="other">此清單中有 %1$d 個項目已被作者刪除。</item>
+    </plurals>
     <string name="deleted_items_banner_remove">從清單中移除</string>
     <string name="deleted_items_banner_dismiss">關閉</string>
     <string name="bookmark_lists">書籤清單</string>
@@ -602,7 +597,9 @@
     <string name="interest_set_name_placeholder">我的興趣</string>
     <string name="interest_set_hashtag_add_placeholder">新增主題標籤</string>
     <string name="interest_set_hashtag_private_toggle">私密</string>
-    <string name="interest_set_hashtag_count">%1$d 個主題標籤</string>
+    <plurals name="interest_set_hashtag_count">
+        <item quantity="other">%1$d 個主題標籤</item>
+    </plurals>
     <string name="interest_set_actions_dialog_title">興趣集操作</string>
     <string name="interest_set_clone">複製</string>
     <string name="interest_set_add_hashtag">新增主題標籤</string>
@@ -655,7 +652,6 @@
     <string name="pledge_amount_in_sats">承諾聰金額</string>
     <string name="poll_zap_value_min">打閃最低金額</string>
     <string name="poll_zap_value_max">打閃最高金額</string>
-    <string name="poll_consensus_threshold">共識</string>
     <string name="looking_for_event">正在查找事件 %1$s</string>
     <string name="send_zap">傳送 Zap</string>
     <string name="custom_zaps_add_a_message">添加公開消息</string>
@@ -663,11 +659,6 @@
     <string name="custom_zaps_add_a_message_nonzap">添加發票消息</string>
     <string name="custom_zaps_add_a_message_example">感謝你的所有工作！</string>
     <string name="lightning_create_and_add_invoice">創建並添加</string>
-    <string name="add_content">添加到消息</string>
-    <string name="add_caption">新增說明文字</string>
-    <string name="add_caption_example">我親愛的朋友</string>
-    <string name="content_description">內容描述</string>
-    <string name="content_description_example">一艘藍色的船，在白沙灘上的日落點</string>
     <string name="ai_suggested_alt_text_hint">AI 建議，請編輯</string>
     <string name="ai_suggested_alt_text_dismiss">關閉 AI 建議</string>
     <string name="zap_type">打閃種類</string>
@@ -813,8 +804,12 @@
     <string name="relay_req_subscriptions">REQ 訂閱（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT 訂閱（%1$d）</string>
     <string name="relay_outbox_events">發件箱事件（%1$d）</string>
-    <string name="relay_filter_authors">%1$d 位作者</string>
-    <string name="relay_filter_ids">%1$d 個 ID</string>
+    <plurals name="relay_filter_authors">
+        <item quantity="other">%1$d 位作者</item>
+    </plurals>
+    <plurals name="relay_filter_ids">
+        <item quantity="other">%1$d 個 ID</item>
+    </plurals>
     <string name="relay_filter_since">自 %1$s 起</string>
     <string name="relay_filter_until">至 %1$s 止</string>
     <string name="relay_filter_limit">限制 %1$d</string>
@@ -1000,7 +995,6 @@
     <string name="wallet_refresh">重新整理</string>
     <string name="wallet_filter_all">全部</string>
     <string name="wallet_filter_non_zaps">非 Zaps</string>
-    <string name="wallet_add">新增錢包</string>
     <string name="wallet_default">預設</string>
     <string name="wallet_set_default">設為預設</string>
     <string name="wallet_remove">移除</string>
@@ -1091,8 +1085,6 @@
     <string name="cashu_redeemed_amount">已將 %1$s sats 兌換至您的錢包。</string>
     <string name="wallet_paste_uri">貼上 nostr+walletconnect:// URI</string>
     <string name="wallet_save">儲存</string>
-    <string name="wallet_rename">重新命名</string>
-    <string name="wallet_rename_title">重新命名錢包</string>
     <string name="wallet_onchain_transactions">鏈上交易</string>
     <string name="wallet_onchain_no_address">此帳戶沒有可用的鏈上地址。</string>
     <string name="wallet_onchain_no_backend">未設定鏈上後端。</string>
@@ -1336,7 +1328,6 @@
     <string name="accessibility_play_username">作爲音頻播放用戶名</string>
     <string name="accessibility_pushpin">圖釘</string>
     <string name="accessibility_scan_qr_code">掃描二維碼</string>
-    <string name="accessibility_select_date">選擇日期</string>
     <string name="load_from_text">來自消息</string>
     <string name="dvm_looking_for_app">正在查找應用程式</string>
     <string name="dvm_waiting_status">數據作業已申請，正在等待回覆</string>
@@ -1405,7 +1396,9 @@
     <string name="remove_user_from_the_list">從清單中移除用戶</string>
     <string name="follow_list_item_label">追蹤包</string>
     <string name="members">成員</string>
-    <string name="contact_list_containing_label">包含 %1$d 位用戶的追蹤清單：</string>
+    <plurals name="contact_list_containing_label">
+        <item quantity="other">包含 %1$d 位用戶的追蹤清單：</item>
+    </plurals>
     <string name="contact_list_screen_title">追蹤清單</string>
     <string name="contact_list_screen_title_with_count">追蹤清單（%1$d）</string>
     <string name="follow_pack_creation_name_label">包名稱</string>
@@ -1428,17 +1421,19 @@
     <string name="dismiss">關閉</string>
     <string name="broadcasting">廣播中</string>
     <string name="broadcasting_name">正在廣播 %1$s</string>
-    <string name="broadcasting_number_events">正在廣播 %1$d 個事件…</string>
-    <string name="sent_number_events">已傳送 %1$d 個事件</string>
+    <plurals name="broadcasting_number_events">
+        <item quantity="other">正在廣播 %1$d 個事件…</item>
+    </plurals>
+    <plurals name="sent_number_events">
+        <item quantity="other">已傳送 %1$d 個事件</item>
+    </plurals>
     <string name="bradcasting_result_partial">部分事件失敗</string>
     <string name="bradcasting_result_success">所有事件成功</string>
     <string name="bradcasting_result_failure">所有事件失敗</string>
     <string name="closing_time">關閉時間</string>
     <string name="confirm">確認</string>
     <string name="next">下一步</string>
-    <string name="go_back">返回</string>
     <string name="approve">批准</string>
-    <string name="connected">已連線</string>
     <string name="social_proof">社會證明</string>
     <string name="poll_submit">提交</string>
     <string name="poll_view_results">查看結果</string>
@@ -1446,7 +1441,9 @@
     <string name="new_chess_game">新棋局</string>
     <string name="chess_loading_game">載入遊戲中…</string>
     <string name="chess_game_not_found">找不到棋局</string>
-    <string name="badge_and_n_others"> 以及其他 %1$d 人</string>
+    <plurals name="badge_and_n_others">
+        <item quantity="other"> 以及其他 %1$d 人</item>
+    </plurals>
     <string name="remove_language">移除 %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">追蹤您信任的人所追蹤的帳號，開始享受精彩的訊息流。</string>
     <string name="import_follow_list">匯入追蹤清單</string>
@@ -1455,9 +1452,15 @@
     <string name="name_search_npub1_alice_example_com">搜尋、npub1…、alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">支援 npub、nprofile、NIP-05、hex 及 Namecoin（.bit）</string>
     <string name="tip">小費</string>
-    <string name="accounts_found">找到 %1$d 個帳號</string>
-    <string name="num_selected">已選擇 %1$d 個</string>
-    <string name="follow_accounts">追蹤 %1$d 個帳號</string>
+    <plurals name="accounts_found">
+        <item quantity="other">找到 %1$d 個帳號</item>
+    </plurals>
+    <plurals name="num_selected">
+        <item quantity="other">已選擇 %1$d 個</item>
+    </plurals>
+    <plurals name="follow_accounts">
+        <item quantity="other">追蹤 %1$d 個帳號</item>
+    </plurals>
     <string name="skip_for_now">暫時跳過</string>
     <string name="fetching_follow_list">正在取得追蹤清單…</string>
     <string name="no_follows_found">未找到任何追蹤對象</string>
@@ -1487,18 +1490,27 @@
     <string name="event_sync_start_anyway">仍要開始（使用行動數據）</string>
     <string name="event_sync_cancel">取消</string>
     <string name="event_sync_relays_progress">Relay：%1$d / %2$d</string>
-    <string name="event_sync_events_sent">已重新分配的事件：%2$d 筆已傳送、%3$d 筆已接收中有 %1$d 筆為新事件</string>
     <string name="event_sync_done_title">同步完成</string>
-    <string name="event_sync_done_sent">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</string>
-    <string name="event_sync_done_accepted">%1$d 筆事件已被目的地 relay 接受為新事件。</string>
-    <string name="event_sync_done_duration">已在 %1$d 秒內完成。</string>
+    <plurals name="event_sync_done_sent">
+        <item quantity="other">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</item>
+    </plurals>
+    <plurals name="event_sync_done_accepted">
+        <item quantity="other">%1$d 筆事件已被目的地 relay 接受為新事件。</item>
+    </plurals>
+    <plurals name="event_sync_done_duration">
+        <item quantity="other">已在 %1$d 秒內完成。</item>
+    </plurals>
     <string name="event_sync_error_title">同步錯誤</string>
     <string name="event_sync_sending_to">傳送至</string>
     <string name="event_sync_outbox_relays">發件箱</string>
     <string name="event_sync_inbox_relays">收件箱</string>
     <string name="event_sync_dm_relays">私訊</string>
-    <string name="event_sync_activity_log">目前正在檢查（%1$d 個 relay）</string>
-    <string name="event_sync_activity_log_finished">已完成（%1$d 個 relay）</string>
+    <plurals name="event_sync_activity_log">
+        <item quantity="other">目前正在檢查（%1$d 個 relay）</item>
+    </plurals>
+    <plurals name="event_sync_activity_log_finished">
+        <item quantity="other">已完成（%1$d 個 relay）</item>
+    </plurals>
     <string name="event_sync_log_sent">已傳送 %1$s</string>
     <string name="event_sync_log_recv">已接收 %1$s</string>
     <string name="event_sync_log_new">新增 %1$s</string>
@@ -1658,7 +1670,9 @@
     <string name="manage">管理</string>
     <string name="relay_members">成員</string>
     <string name="relay_members_title">%1$s 的成員</string>
-    <string name="relay_members_count">%1$d 位成員</string>
+    <plurals name="relay_members_count">
+        <item quantity="other">%1$d 位成員</item>
+    </plurals>
     <string name="relay_members_loading">正在載入成員…</string>
     <string name="relay_members_empty">未找到成員</string>
     <string name="relay_members_request_join">申請加入</string>
@@ -1668,9 +1682,13 @@
     <string name="relay_members_you_are_member">您是成員</string>
     <string name="relay_membership_list">Relay 成員清單</string>
     <string name="relay_member_added">成員已新增至 relay</string>
-    <string name="relay_members_added">%1$d 位成員已新增至 relay</string>
+    <plurals name="relay_members_added">
+        <item quantity="other">%1$d 位成員已新增至 relay</item>
+    </plurals>
     <string name="relay_member_removed">成員已從 relay 移除</string>
-    <string name="relay_members_removed">%1$d 位成員已從 relay 移除</string>
+    <plurals name="relay_members_removed">
+        <item quantity="other">%1$d 位成員已從 relay 移除</item>
+    </plurals>
     <string name="relay_join_request">Relay 加入申請</string>
     <string name="relay_leave_request">Relay 退出申請</string>
     <string name="ai_writing_use_this">使用此版本</string>
@@ -1695,7 +1713,9 @@
     <string name="emoji_pack_upload_image_cta">上傳封面圖片</string>
     <string name="emoji_pack_upload_image_hint">選擇一張正方形圖片來代表此 emoji 包。</string>
     <string name="no_emoji_packs">您還沒有任何 emoji 包</string>
-    <string name="emoji_pack_count">%1$d 個 emoji</string>
+    <plurals name="emoji_pack_count">
+        <item quantity="other">%1$d 個 emoji</item>
+    </plurals>
     <string name="my_emoji_list_title">我的 Emoji 清單</string>
     <string name="my_emoji_list_explainer">您已新增至選取項目的 emoji 包（NIP-51 kind 10030）</string>
     <string name="my_emoji_list_empty">您尚未將任何 emoji 包新增至清單</string>
@@ -1777,7 +1797,6 @@
     <string name="add_a_nip96_server">添加 NIP-96 服務器</string>
     <string name="add_client_tag_explainer">啟用後，Amethyst 會在您發布的事件中附加 NIP-89 客戶端標籤。</string>
     <string name="add_client_tag_title">在我的事件中新增客戶端標籤</string>
-    <string name="add_sensitive_content_description">在顯示此內容之前添加敏感內容警告</string>
     <string name="add_sensitive_content_label">敏感內容</string>
     <string name="add_to_public_bookmarks">添加到公開書籤</string>
     <string name="ai_writing_setting_description">使用裝置上的 AI 模型提出文字修正和語氣變更建議。</string>
@@ -1856,8 +1875,6 @@
     <string name="broadcast_section_explainer">專門將您的貼文推送至所有其他 relay 的 relay，例如 sendit.nosflare.com。Amethyst 會將此 relay 加入您發出的所有新事件中。</string>
     <string name="browser">瀏覽器</string>
     <string name="browser_favorites">我的最愛</string>
-    <string name="browser_tor_off">正透過開放網路載入。點擊以使用 Tor。</string>
-    <string name="browser_tor_on">正透過 Tor 載入。點擊以使用開放網路。</string>
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s，%2$d 個活動</item>
     </plurals>
@@ -1966,7 +1983,9 @@
     <string name="communities">社群</string>
     <string name="community_rules_violation_kind_size_exceeded">草稿為 %1$d 位元組；此社群將此類型上限設為 %2$d 位元組。</string>
     <string name="community_rules_violation_max_size_exceeded">草稿為 %1$d 位元組；此社群將事件上限設為 %2$d 位元組。</string>
-    <string name="community_rules_violation_quota_exceeded">您今天已發布 %1$d 個此類型的事件（上限 %2$d 個）。</string>
+    <plurals name="community_rules_violation_quota_exceeded">
+        <item quantity="other">您今天已發布 %1$d 個此類型的事件（上限 %2$d 個）。</item>
+    </plurals>
     <string name="compose_settings">撰寫設定</string>
     <string name="connect_through_your_orbot_setup_short">預設連接埠為 9050</string>
     <string name="connected_section">已連線的 Relay</string>
@@ -1975,15 +1994,10 @@
     <string name="connectivity_type_always">始終</string>
     <string name="connectivity_type_never">永不</string>
     <string name="connectivity_type_unmetered_wifi_only">未計量的 WiFi</string>
-    <string name="content_description_add_document">添加文件</string>
-    <string name="content_description_add_image">添加圖像</string>
-    <string name="content_description_add_media">新增媒體</string>
-    <string name="content_description_add_video">添加視頻</string>
     <string name="content_warning_hide_all_sensitive_content_option">隱藏</string>
     <string name="content_warning_see_warnings_option">警告</string>
     <string name="content_warning_show_all_sensitive_content_option">顯示</string>
     <string name="conversations">會話</string>
-    <string name="convert_gif_to_mp4_description">將動態 GIF 轉換為 MP4 影片，以縮小檔案大小並提高播放相容性。</string>
     <string name="convert_gif_to_mp4_label">將 GIF 轉換為 MP4</string>
     <string name="copied_note_id_to_clipboard">複製文章ID (@note1) 到剪貼板</string>
     <string name="copied_note_text_to_clipboard">文本已複製到剪貼板</string>
@@ -2051,7 +2065,6 @@
     <string name="emoji_private_explainer">私人 emoji 以加密方式儲存在 relay 上，只有您可以看見。它們與公開 emoji 一樣顯示在您的回應選單和「:」自動完成中。</string>
     <string name="emoji_public_explainer">公開 emoji 對所有人可見，當此包在您的 emoji 清單中時，會顯示在您的回應選單和「:」自動完成選擇器中。</string>
     <string name="emoji_sets">Emoji</string>
-    <string name="encrypt_files_description">上傳前加密檔案以保護隱私。部分伺服器可能不接受免費帳號上傳加密檔案。</string>
     <string name="encrypt_files_label">加密檔案</string>
     <string name="ephemeral_relay_chat">閱後即焚聊天</string>
     <string name="error">錯誤</string>
@@ -2097,8 +2110,6 @@
     <string name="failed_to_upload_media_no_details">上傳媒體失敗</string>
     <string name="failed_to_upload_to_server_with_message">上傳至 %1$s 失敗：%2$s</string>
     <string name="favorite_app_add">加入我的最愛</string>
-    <string name="favorite_app_network_open">透過開放網路載入。</string>
-    <string name="favorite_app_network_tor">透過 Tor 載入。</string>
     <string name="favorite_app_recent">最近</string>
     <string name="favorite_app_remove">從我的最愛移除</string>
     <string name="favorite_app_still_loading">該應用程式尚未載入。請稍後再試。</string>
@@ -2374,9 +2385,6 @@
         <item quantity="other">%1$d 位成員</item>
     </plurals>
     <string name="marmot_member_removed">成員已移除</string>
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d 則訊息</item>
-    </plurals>
     <string name="marmot_not_a_member">非此群組的成員</string>
     <string name="marmot_unknown_error">未知錯誤</string>
     <string name="media_added">媒體已新增</string>
@@ -2460,13 +2468,7 @@
     <string name="nest_lower_hand">放下手</string>
     <string name="nest_mic_mute">靜音麥克風</string>
     <string name="nest_mic_unmute">取消麥克風靜音</string>
-    <string name="nest_mute">靜音</string>
     <string name="nest_no_server_save_failed">無法儲存您的 nest 伺服器列表。請再試一次。</string>
-    <string name="nest_notification_broadcasting">Nest — 直播中</string>
-    <string name="nest_notification_channel_description">在房間開啟期間保持音訊播放。</string>
-    <string name="nest_notification_listening">Nest 已連線</string>
-    <string name="nest_notification_stop">停止</string>
-    <string name="nest_notification_text">點擊以返回。</string>
     <string name="nest_participant_follow">追蹤</string>
     <string name="nest_participant_mute">靜音</string>
     <string name="nest_participant_unfollow">取消追蹤</string>
@@ -2477,7 +2479,6 @@
     <string name="nest_presence_raised_hand">舉起了手</string>
     <string name="nest_presence_speaking">正在發言</string>
     <string name="nest_raise_hand">舉手</string>
-    <string name="nest_unmute">取消靜音</string>
     <string name="nests_servers_my_explainer">儲存為 kind:10112 可替換事件，讓其他客戶端可以讀取您的偏好設定。</string>
     <string name="nests_servers_my_section">您的伺服器</string>
     <string name="nests_servers_recommended_explainer">內建建議，只需點擊一下即可新增至您的列表。</string>
@@ -2510,9 +2511,6 @@
     <string name="new_requests">新請求</string>
     <string name="new_threads">新動態</string>
     <string name="new_workout">新運動記錄</string>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">已捆綁 %1$d 個資源</item>
-    </plurals>
     <string name="no_blossom_apps_found_description">找不到 Blossom 應用程式。請安裝本地 Blossom 應用程式以查看此檔案</string>
     <string name="no_blossom_apps_found_title">無法開啟 Blossom 連結</string>
     <string name="no_camera_app_found">此裝置上找不到相機應用程式</string>
@@ -2522,7 +2520,6 @@
     <string name="no_reaction_type_setup_long_press_to_change">未選擇回應類型。長按可更改</string>
     <string name="no_reactions_setup">沒有設置回應</string>
     <string name="no_wallet_found">找不到支付閃電發票的錢包。請安裝一個閃電錢包來使用打閃</string>
-    <string name="no_wallet_found_with_error">找不到支付閃電發票的錢包（錯誤：%1$s）。請安裝一個閃電錢包來使用打閃</string>
     <string name="no_zap_amount_setup_long_press_to_change">沒有設置打閃金額。長按以更改</string>
     <string name="notification_settings">通知</string>
     <string name="notification_settings_section_categories">類別</string>
@@ -2600,13 +2597,13 @@
         <item quantity="other">%1$d 集</item>
     </plurals>
     <string name="poll_author_no_vote">投票作者不能在自己的投票中投票。</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">該投票已結束</string>
     <string name="poll_multiple_choice">多選</string>
     <string name="poll_single_choice">單選</string>
     <string name="poll_unable_to_vote">無法投票</string>
     <string name="polls">投票</string>
     <string name="post">發佈</string>
+    <string name="post_noun">貼文</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">此貼文含有超過 %1$d 個主題標籤</item>
     </plurals>
@@ -2858,8 +2855,6 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未設置接收聰的閃電地址</string>
     <string name="vanish_history">消除記錄</string>
     <string name="vanish_request_sent">消除請求已送出</string>
-    <string name="video_codec_h265_description">在較小的檔案大小下提供更好的品質，但並非所有裝置都支援 H.265 播放。</string>
-    <string name="video_codec_h265_label">使用 H.265/HEVC 編解碼器</string>
     <string name="video_download_has_started_toast">影片下載已開始…</string>
     <string name="video_player_settings">影片播放器按鈕</string>
     <string name="video_saved_to_the_gallery">影片已儲存至手機的影片相簿</string>
@@ -2910,4 +2905,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">已重新分配的事件 · 新事件：%1$d · 已傳送：%2$d · 已接收：%3$d</string>
 </resources>

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composersOpenAsDialogs
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -223,7 +225,12 @@ fun ZapCustomDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(horizontal = 16.dp),
+            // Capped where composers open as dialogs (a wide window with a mouse), which it would
+            // otherwise cross edge to edge; phones and touch tablets keep the full width they had.
+            modifier =
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .then(if (composersOpenAsDialogs()) Modifier.widthIn(max = 480.dp) else Modifier),
         ) {
             Column(
                 modifier =

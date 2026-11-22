@@ -44,6 +44,6 @@ fun NavDestinations.jvmDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.CordnGroupChat> {
         CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
     }
-    composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryNewPullRequest> { GitNewPullRequestScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composerArgs<Route.GitRepositoryNewIssue>(ComposerSize.FORM, NavFamily.END) { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composerArgs<Route.GitRepositoryNewPullRequest>(ComposerSize.FORM, NavFamily.END) { GitNewPullRequestScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 }

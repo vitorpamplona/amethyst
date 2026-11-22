@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_ma
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_quota_exceeded
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_stale_rules
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_wot_gate_failed
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 
@@ -110,8 +111,9 @@ private fun describeViolation(violation: CommunityRulesValidator.Violation): Str
         }
 
         is CommunityRulesValidator.Violation.QuotaExceeded -> {
-            stringRes(
-                Res.string.community_rules_violation_quota_exceeded,
+            pluralStringRes(
+                Res.plurals.community_rules_violation_quota_exceeded,
+                violation.postsToday,
                 violation.postsToday,
                 violation.maxPerDay,
             )

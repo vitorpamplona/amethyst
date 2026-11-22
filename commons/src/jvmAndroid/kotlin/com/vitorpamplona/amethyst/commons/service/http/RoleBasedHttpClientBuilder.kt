@@ -145,6 +145,21 @@ class RoleBasedHttpClientBuilder(
             TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
         }
 
+    /**
+     * Relay directories (the georelays CSV that routes geohash chats) list relays the user has
+     * not picked, so they follow the "new relays" switch: the directory is fetched over Tor
+     * whenever the relays it names would be dialed over Tor.
+     */
+    fun shouldUseTorForRelayDirectory(url: String) =
+        when (torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.newRelaysViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.newRelaysViaTor.value)
+        }
+
+    // Not [metered]: untagged requests already count as UsageKeys.ROLE_OTHER.
+    fun okHttpClientForRelayDirectory(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelayDirectory(url))
+
     override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(shouldUseTorForVideoDownload(url))
 
     override fun okHttpClientForNip05(url: String): OkHttpClient = metered(UsageKeys.ROLE_NIP05, okHttpClient.getHttpClient(shouldUseTorForNIP05(url)))

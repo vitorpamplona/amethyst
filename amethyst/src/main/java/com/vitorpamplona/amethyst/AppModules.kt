@@ -42,7 +42,6 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
-import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
@@ -731,8 +730,9 @@ class AppModules(
     // event, which is why this sits next to the cache rather than in a later init block.
     init {
         cache.appHost = AmethystLocalCacheHost(this, isDebug)
-        // Geohash chats route through the live georelays directory, fetched over this app's clients.
-        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader { okHttpClients.getHttpClient(false) }.fetch() }
+        // Geohash chats route through the live georelays directory, fetched over this app's clients:
+        // through Tor whenever the relays it lists would be dialed through Tor.
+        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader(roleBasedHttpClientBuilder::okHttpClientForRelayDirectory).fetch() }
     }
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so
@@ -1261,7 +1261,6 @@ class AppModules(
             store = FrontPageEditionStore(File(appContext.filesDir, FrontPageEditionStore.FOLDER).path),
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = frontPageNotifier,
-            observerPrefs = DataStoreObserverPrefsStore(appStores),
             installs = DataStoreFrontPageInstallStore(appStores),
             // How this phone appears in the reader's synced schedule ("Printed each morning by Pixel 8").
             installInfo = FrontPageInstallInfo(name = Build.MODEL?.trim()?.ifEmpty { null } ?: "Android", app = "amethyst-android"),

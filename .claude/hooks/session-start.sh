@@ -1,5 +1,5 @@
 #!/bin/bash
-# Session start hook: Configure proxy auth, SSL trust, and Android SDK for Claude Code on the web
+# Session start hook: Configure proxy auth, JDK 25, SSL trust, and Android SDK for Claude Code on the web
 set -euo pipefail
 
 # Only run in remote (web) environments
@@ -64,6 +64,44 @@ EOF
   echo "Configured Maven/Gradle proxy from HTTPS_PROXY" >&2
 fi
 
+# --- JDK 25: the JDK every build runs on (CI, and Android Studio's bundled runtime) ---
+# The image ships JDK 21 only. This installs the JetBrains Runtime 25 that CI's Linux legs
+# build with: amethyst's .github/actions/setup-jbr pins the same version, build and SHA-512s,
+# so change them together. The archive is checked against the pinned SHA-512 before it is
+# unpacked. Idempotent. A failed download only warns: the session then stays on JDK 21.
+JBR_VERSION="25.0.4.1"
+JBR_BUILD="b635.79"
+JDK25_DIR="/root/jbr-25"
+install_jdk25() {
+  [ -x "$JDK25_DIR/bin/java" ] && return 0
+  local arch sha512
+  case "$(uname -m)" in
+    x86_64) arch=x64; sha512=1ad3ba2aef8bb417cb3c15e51fda53a7f7fd3a53db44e55902e926541cbf170c53b241832136ad4ca78e4098cd328f7c59ffeb59ac86e230816fd4f9a0a5b097 ;;
+    aarch64 | arm64) arch=aarch64; sha512=07b746512a26c7d459222644c35b1b01861bc81c9e28ce1b24b152e6081d1f4dec1a7214ef8ffd19f0a196d9daf25cfa69422def1f3b6c7dbad8a3a972c8265e ;;
+    *) echo "No pinned JDK 25 for $(uname -m): builds stay on the image's JDK" >&2; return 0 ;;
+  esac
+  local file="jbrsdk-${JBR_VERSION}-linux-${arch}-${JBR_BUILD}.tar.gz"
+  local tmp
+  tmp=$(mktemp -d)
+  if ! curl -fsSL --retry 5 --retry-all-errors -o "$tmp/$file" "https://cache-redirector.jetbrains.com/intellij-jbr/$file"; then
+    echo "Could not download JDK 25 ($file): builds stay on the image's JDK" >&2
+    rm -rf "$tmp"
+    return 0
+  fi
+  if ! echo "$sha512  $tmp/$file" | sha512sum -c - >/dev/null 2>&1; then
+    echo "JDK 25 archive failed its SHA-512 check: not installed" >&2
+    rm -rf "$tmp"
+    return 0
+  fi
+  mkdir -p "$tmp/jdk"
+  tar -xzf "$tmp/$file" -C "$tmp/jdk" --strip-components=1
+  rm -rf "$JDK25_DIR"
+  mv "$tmp/jdk" "$JDK25_DIR"
+  rm -rf "$tmp"
+  echo "Installed JDK 25 (JetBrains Runtime $JBR_VERSION) at $JDK25_DIR" >&2
+}
+install_jdk25
+
 # --- SSL trust: import Anthropic TLS inspection CA into JVM trust stores ---
 ANTHROPIC_CA_PEM=$(python3 -c "
 import re, ssl, sys
@@ -84,6 +122,7 @@ if [ -n "$ANTHROPIC_CA_PEM" ]; then
   echo "$ANTHROPIC_CA_PEM" > "$TMPCA"
   for cacerts in \
     /usr/lib/jvm/java-21-openjdk-amd64/lib/security/cacerts \
+    "$JDK25_DIR"/lib/security/cacerts \
     /root/.gradle/jdks/*/lib/security/cacerts; do
     [ -f "$cacerts" ] || continue
     keytool -list -keystore "$cacerts" -storepass changeit \
@@ -172,6 +211,11 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export ANDROID_HOME=$ANDROID_SDK_DIR" >> "$CLAUDE_ENV_FILE"
   echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_DIR" >> "$CLAUDE_ENV_FILE"
   echo "export PATH=\$PATH:$ANDROID_SDK_DIR/platform-tools" >> "$CLAUDE_ENV_FILE"
+  # Every Gradle run and `java` on the PATH use JDK 25, as CI does.
+  if [ -x "$JDK25_DIR/bin/java" ]; then
+    echo "export JAVA_HOME=$JDK25_DIR" >> "$CLAUDE_ENV_FILE"
+    echo "export PATH=$JDK25_DIR/bin:\$PATH" >> "$CLAUDE_ENV_FILE"
+  fi
 fi
 
 # --- Kotlin/Native: pre-install native dependencies (GCC sysroot, LLDB) ---

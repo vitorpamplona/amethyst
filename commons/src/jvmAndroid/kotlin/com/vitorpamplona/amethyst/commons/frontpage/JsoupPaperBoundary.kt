@@ -626,6 +626,26 @@ object JsoupPaperBoundary : PaperBoundary {
 
     private val IMPORTANT = Regex("!important\\s*$", RegexOption.IGNORE_CASE)
 
+    /**
+     * Whether a declaration block holds a `{` outside its strings: a nested rule
+     * (`main { & blockquote em { display: none } }`). Browsers apply those, and the checks below
+     * read only flat declarations, so they are refused outright.
+     */
+    private fun hasNestedRule(body: String): Boolean {
+        var i = 0
+        while (i < body.length) {
+            val ch = body[i]
+            when {
+                ch == '"' || ch == '\'' -> i = skipString(body, i)
+                ch == '{' -> return true
+                else -> i++
+            }
+        }
+        return false
+    }
+
+    private const val NESTED = "a nested CSS rule - every rule is flat, so the checks read what a browser applies"
+
     /** `prop: value` pairs of a declaration block. */
     private fun declarations(body: String): List<Declaration> {
         val out = mutableListOf<Declaration>()
@@ -667,11 +687,18 @@ object JsoupPaperBoundary : PaperBoundary {
     private val CSS_STRING = Regex("\"([^\"]*)\"|'([^']*)'")
     private val NO_CONTENT = Regex("^(none|normal|\"\"|'')$", RegexOption.IGNORE_CASE)
 
+    /** Properties whose value can print a string of its own: keywords only. */
+    private val MARKER_TEXT = setOf("list-style", "list-style-type", "hyphenate-character")
+    private val KEYWORDS = Regex("^[-\\w\\s]*$")
+
     private fun declarationViolation(
         prop: String,
         value: String,
     ): String? {
         if (prop == "content" && !NO_CONTENT.matches(value.trim())) return "CSS generated content - every word on the page is in its markup"
+        // `list-style-type: "Nobody believes this: "` on a `display: list-item` prints words the
+        // markup doesn't hold; `symbols()` and `hyphenate-character` do the same.
+        if (prop in MARKER_TEXT && !KEYWORDS.matches(value.trim())) return "CSS $prop that is not a keyword - every word on the page is in its markup"
         if (prop == "quotes") {
             for (match in CSS_STRING.findAll(value)) {
                 val text = match.groups[1]?.value ?: match.groups[2]?.value ?: ""
@@ -843,6 +870,10 @@ object JsoupPaperBoundary : PaperBoundary {
             refuseConstructs(css, css.take(80))
             val rules = styleRules(css) { name -> out.add(Violation(Violation.Kind.MARKUP, "a CSS @$name rule", "@$name")) }
             for (rule in rules) {
+                if (hasNestedRule(rule.body)) {
+                    out.add(Violation(Violation.Kind.MARKUP, NESTED, squash(rule.selector).take(80)))
+                    continue
+                }
                 for (decl in declarations(rule.body)) {
                     declarationViolation(decl.prop, decl.value)?.let {
                         out.add(Violation(Violation.Kind.MARKUP, it, "${squash(rule.selector)} { ${decl.prop}: ${decl.value} }".take(120)))
@@ -854,6 +885,10 @@ object JsoupPaperBoundary : PaperBoundary {
         for (el in doc.select("[style]")) {
             val css = el.attr("style")
             refuseConstructs(css, css.take(80))
+            if (hasNestedRule(stripComments(css))) {
+                out.add(Violation(Violation.Kind.MARKUP, NESTED, excerptOf(el)))
+                continue
+            }
             for (decl in declarations(stripComments(css))) {
                 declarationViolation(decl.prop, decl.value)?.let { out.add(Violation(Violation.Kind.MARKUP, it, excerptOf(el))) }
             }

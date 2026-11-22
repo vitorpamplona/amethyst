@@ -37,9 +37,10 @@ import kotlin.system.exitProcess
  * archives of other versions, and deletes one older than a jar (a same-version reinstall), so the
  * next start writes a new one.
  *
- * The release build trains the AOT cache by starting the packaged app logged in and letting it
- * load the feed; [prepare] ends that run on time with a normal exit, which is when the JVM writes
- * what it recorded.
+ * The release build trains the AOT cache by starting the packaged app logged in, letting it load
+ * the feed and scroll it (ScrollBenchmark, which then exits normally, which is when the JVM writes
+ * what it recorded). [prepare]'s exit timer ends a training run that hangs, or one trained on the
+ * start alone.
  */
 object StartupArchive {
     private const val TAG = "StartupArchive"
