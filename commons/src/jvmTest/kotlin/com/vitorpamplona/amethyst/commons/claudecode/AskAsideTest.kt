@@ -85,6 +85,10 @@ class AskAsideTest {
         var killed = false
         val sent = CompletableDeferred<String>()
 
+        /** The copy is a saved session, as Claude Code's file is, from its first message until deleted. */
+        @Volatile
+        var copySaved = false
+
         override val id = "fake"
         override val displayName = "Fake"
         override val capabilities =
@@ -116,6 +120,7 @@ class AskAsideTest {
                 ) {
                     sent.complete(text)
                     events.send(AgentEvent.SessionStarted("copy", null, options.permissionMode))
+                    copySaved = true
                     events.send(AgentEvent.ApprovalRequested(request()))
                     if (reply != null) {
                         events.send(AgentEvent.Reply(listOf(ContentBlock.Text(reply))))
@@ -149,13 +154,13 @@ class AskAsideTest {
             }
         }
 
-        override fun listSessions(cwd: String?) = listOf(session())
+        override fun listSessions(cwd: String?) = listOf(saved("source")) + if (copySaved) listOf(saved("copy")) else emptyList()
 
-        override fun session(sessionId: String) = if (sessionId == "source") session() else null
+        override fun session(sessionId: String) = if (sessionId == "source") saved(sessionId) else null
 
-        private fun session() =
+        private fun saved(id: String) =
             AgentSessionInfo(
-                sessionId = "source",
+                sessionId = id,
                 title = "Work",
                 customTitle = null,
                 firstPrompt = "do the work",
@@ -175,6 +180,7 @@ class AskAsideTest {
 
         override fun delete(sessionId: String): Boolean {
             deleted += sessionId
+            if (sessionId == "copy") copySaved = false
             return true
         }
     }
@@ -237,6 +243,25 @@ class AskAsideTest {
 
             assertTrue(agent.killed)
             assertEquals(listOf("copy"), agent.deleted)
+        }
+
+    @Test
+    fun theListNeverShowsTheCopyWhileTheAgentWrites() =
+        runBlocking {
+            val agent = FakeAgent(reply = null)
+            val service = service(agent)
+            service.refresh()
+
+            val asking = async(Dispatchers.Default) { service.askAside("source", "describe the work") }
+            withTimeout(5_000) {
+                while (agent.decisions.isEmpty()) delay(10)
+            }
+            // The sessions screen re-reads the disk every few seconds while the draft is written.
+            assertTrue(agent.copySaved)
+            service.refresh()
+
+            assertEquals(listOf("source"), service.rows.value.map { it.sessionId })
+            asking.cancelAndJoin()
         }
 
     @Test

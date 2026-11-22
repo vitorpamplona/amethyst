@@ -799,10 +799,17 @@ class ClaudeCodeService(
     }
 
     /**
+     * The copies [askAside] made, never listed: each is a saved session from its first message
+     * until it is deleted, minutes later for a long answer. Kept after the delete, as a refresh
+     * that read the disk before it would otherwise list the copy again until the next one.
+     */
+    private val asideCopies: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
      * Asks [key]'s agent [prompt] on a copy of its session, so the answer knows the conversation,
      * and gives the reply's text, or null when the agent can't start or says nothing. The copy
-     * has no tools, runs read-only, is refused every approval, and is deleted afterwards, so it
-     * never shows in the list. Cancelling stops the agent; the copy is deleted all the same.
+     * has no tools, runs read-only, is refused every approval, and is deleted afterwards. The list never shows
+     * it, even while it runs ([asideCopies]). Cancelling stops the agent; the copy is deleted all the same.
      */
     suspend fun askAside(
         key: String,
@@ -840,7 +847,12 @@ class ClaudeCodeService(
                                 .takeWhile { it !is AgentEvent.TurnEnded }
                                 .collect { event ->
                                     when (event) {
-                                        is AgentEvent.SessionStarted -> if (event.sessionId != state.sessionId) copyId = event.sessionId
+                                        is AgentEvent.SessionStarted ->
+                                            if (event.sessionId != state.sessionId) {
+                                                copyId = event.sessionId
+                                                // Saved while the agent writes: a refresh meanwhile would list it.
+                                                if (asideCopies.add(event.sessionId)) rebuildRows()
+                                            }
                                         is AgentEvent.Reply ->
                                             event.content
                                                 .filterIsInstance<ContentBlock.Text>()
@@ -988,7 +1000,7 @@ class ClaudeCodeService(
         }
 
         val fromDisk =
-            saved.value.map { info ->
+            saved.value.filter { it.sessionId !in asideCopies }.map { info ->
                 val chat = openBySession[info.sessionId]
                 ClaudeSessionRow(
                     key = chat?.key ?: info.sessionId,
