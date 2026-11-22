@@ -189,6 +189,11 @@ fi
 
 step "starting buzz-relay"
 T_RELAY0=$(date +%s%N)
+# buzz-relay keeps its git pack cache in `repos/` under its working directory, so
+# it starts inside the (git-ignored) state dir rather than wherever the harness was
+# run from, which left a stray `repos/` at the repo root.
+RELAY_BIN=$(realpath "$RELAY_BIN")
+pushd "$STATE_DIR" >/dev/null
 env DATABASE_URL="$PG_URL" \
   REDIS_URL="redis://127.0.0.1:$BUZZ_REDIS_PORT" \
   RELAY_URL="$RELAY" \
@@ -206,6 +211,7 @@ env DATABASE_URL="$PG_URL" \
   RUST_LOG="${RUST_LOG:-info}" \
   "$RELAY_BIN" >"$LOG_DIR/relay.log" 2>&1 &
 RELAY_PID=$!
+popd >/dev/null
 for _ in $(seq 1 120); do
   curl -sf -m 1 "$HTTP/health" >/dev/null 2>&1 && break
   kill -0 "$RELAY_PID" 2>/dev/null || break
