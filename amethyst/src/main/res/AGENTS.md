@@ -78,7 +78,8 @@ Always consider Slavic / Baltic / Semitic / Celtic languages when a string conta
 
 ## Plural anti-patterns to flag
 
-When adding or reviewing strings, flag these:
+When adding or reviewing strings, flag these. `tools/agent-hooks/plural_candidates_check.py` warns about
+the shapes a regex can see in newly added keys on every push (`--all` scans the whole catalog):
 
 - `<string name="…">%1$d items</string>` where the noun is countable → should be `<plurals>`.
 - `<item quantity="one">1 reply</item>` → hardcoded `1`, should be `%1$d reply`.
