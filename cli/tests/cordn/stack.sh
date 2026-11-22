@@ -31,6 +31,11 @@ IMAGE="${CORDN_IMAGE:-ghcr.io/cordn-msg/cordn:latest}"
 
 PORT="${PORT:-7447}"
 RELAY="ws://127.0.0.1:$PORT"
+# amy stays on this relay: AMY_BOOTSTRAP_RELAYS replaces every public default
+# (`amy create`'s advertised lists included), and AMY_LOCAL_ONLY refuses any host
+# that is not on this machine, so the accounts these runs mint never leave it.
+export AMY_BOOTSTRAP_RELAYS="${AMY_BOOTSTRAP_RELAYS:-$RELAY}"
+export AMY_LOCAL_ONLY="${AMY_LOCAL_ONLY:-1}"
 CONTAINER="${CONTAINER:-cordn-test}"
 GEODE_PID=""
 

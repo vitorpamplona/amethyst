@@ -888,11 +888,17 @@ object ConcordActions {
      * their kind-10050 DM relays, else their NIP-65 read relays, else the stock Concord set every
      * client ships (Armada `inviteDeliveryRelays`). Send and scan share this so both sides meet. The
      * stock set is fallback-only: a curated private inbox is never also fanned out to public relays.
+     *
+     * [fallback] replaces the stock set when the caller runs somewhere the public relays must not
+     * be reached (an offline test, a private deployment).
      */
-    fun directInviteDeliveryRelays(lists: RecipientRelayFetcher.Lists?): Set<NormalizedRelayUrl> {
+    fun directInviteDeliveryRelays(
+        lists: RecipientRelayFetcher.Lists?,
+        fallback: Set<NormalizedRelayUrl>? = null,
+    ): Set<NormalizedRelayUrl> {
         val inbox = lists?.dmInboxOrFallback().orEmpty()
         if (inbox.isNotEmpty()) return inbox.toSet()
-        return InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        return fallback ?: InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
     }
 
     /** Mints a shareable public invite link + bundle event (see [ConcordInviteBundle.mintLink]). */

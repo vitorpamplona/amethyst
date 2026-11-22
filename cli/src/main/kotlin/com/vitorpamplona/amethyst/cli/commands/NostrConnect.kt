@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
@@ -35,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketF
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
-import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -77,7 +78,7 @@ object NostrConnect {
         if (dataDir.identityExists()) {
             return Output.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
         }
-        val relays = RawEventSupport.relayFlag(args).ifEmpty { DefaultNIP65RelaySet }
+        val relays = RawEventSupport.relayFlag(args).ifEmpty { Context.bootstrapOverride() ?: DefaultNIP65RelaySet }
         if (relays.isEmpty()) return Output.error("bad_args", "no relays; pass --relay URL[,URL…]")
         val timeoutMs = args.timeoutMs(120)
         val name = args.flag("name")
@@ -102,7 +103,7 @@ object NostrConnect {
         System.err.println("[nostrconnect] paste this into your signer within ${timeoutMs / 1000}s:")
         System.err.println(code.uri)
 
-        val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
+        val okhttp = LocalOnly.httpClientBuilder().socketFactory(TcpNoDelaySocketFactory).build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
         try {
             client.connect()

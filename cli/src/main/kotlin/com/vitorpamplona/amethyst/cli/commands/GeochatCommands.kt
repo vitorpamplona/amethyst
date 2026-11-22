@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
@@ -47,7 +48,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -276,7 +276,7 @@ object GeochatCommands {
 
         val directory = GeoRelayDirectory()
         if (!noFetch) {
-            runCatching { GeoRelayCsvLoader { OkHttpClient() }.refresh(directory) }
+            runCatching { GeoRelayCsvLoader { LocalOnly.httpClient() }.refresh(directory) }
         }
         return directory.closestRelays(geohash)
     }

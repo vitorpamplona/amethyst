@@ -83,7 +83,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
@@ -151,8 +150,8 @@ class Context(
     // Internal (not private) so [CashuContext] can reuse the shared instance
     // for mint HTTP.
     internal val okhttp =
-        OkHttpClient
-            .Builder()
+        LocalOnly
+            .httpClientBuilder()
             .socketFactory(TcpNoDelaySocketFactory)
             // The crawl opens WebSockets to thousands of relays. Each WS-upgrade
             // handshake is an async call through OkHttp's shared Dispatcher, whose
@@ -511,7 +510,7 @@ class Context(
      */
     suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
         relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
-            ?: DefaultNIP65RelaySet
+            ?: fallbackRelays(DefaultNIP65RelaySet)
 
     /**
      * NIP-65 *write* relays only, with no fallback: where a NIP-FA key list and NIP-FB tasks are
@@ -552,7 +551,7 @@ class Context(
      */
     suspend fun inboxRelays(): Set<NormalizedRelayUrl> =
         dmInboxOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
-            ?: DefaultDMRelayList.toSet()
+            ?: fallbackRelays(DefaultDMRelayList.toSet())
 
     /**
      * Our own KeyPackage relay list (MIP-00 kind:10051). Falls back to
@@ -616,12 +615,12 @@ class Context(
         }
     }
 
-    private fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
-        System
-            .getenv(BOOTSTRAP_ENV)
-            ?.split(',')
-            ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-            ?.toSet()
+    /**
+     * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
+     * relays to use instead. Every place amy would fall back to a public default set asks this, so
+     * an offline harness's accounts stay on its own relays even when nobody advertised a list.
+     */
+    fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
 
     /**
      * Publish an event to the given relays and wait for OK confirmations.
@@ -1043,6 +1042,14 @@ class Context(
     }
 
     companion object {
+        /** The relays [BOOTSTRAP_ENV] names, or null when it is unset. */
+        fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
+            System
+                .getenv(BOOTSTRAP_ENV)
+                ?.split(',')
+                ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+                ?.toSet()
+
         /** Replaces [bootstrapRelays]' seed set, comma-separated. */
         const val BOOTSTRAP_ENV = "AMY_BOOTSTRAP_RELAYS"
 

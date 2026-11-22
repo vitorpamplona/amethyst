@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
@@ -39,6 +40,8 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 
 /**
  * Full set of "new Amethyst account" bootstrap events: the nine signed
@@ -88,10 +91,15 @@ data class AccountBootstrapEvents(
  *
  * [name] is the optional display name; null or blank produces a kind:0
  * event with no `name` field.
+ *
+ * [relays], when given, replaces every relay set Amethyst ships (outbox, inbox, KeyPackage,
+ * search, indexer, favorites) with that one set, so an account made for an offline test or a
+ * private deployment never advertises the public defaults.
  */
 fun bootstrapAccountEvents(
     signer: NostrSignerSync,
     name: String? = null,
+    relays: Set<NormalizedRelayUrl>? = null,
 ): AccountBootstrapEvents =
     AccountBootstrapEvents(
         userMetadata = signer.sign(MetadataEvent.newUser(name)),
@@ -101,14 +109,14 @@ fun bootstrapAccountEvents(
                 relayUse = emptyMap(),
                 signer = signer,
             ),
-        nip65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, signer),
-        dmRelayList = DmRelayListEvent.create(DefaultDMRelayList, signer),
+        nip65RelayList = AdvertisedRelayListEvent.create(relays?.map { AdvertisedRelayInfo(it, AdvertisedRelayType.BOTH) } ?: DefaultNIP65List, signer),
+        dmRelayList = DmRelayListEvent.create(relays?.toList() ?: DefaultDMRelayList, signer),
         // MIP-00: advertise the default outbox relays as KeyPackage hosts
         // so other users can discover and fetch this account's KeyPackage
         // events without having to guess where they were published.
-        keyPackageRelayList = KeyPackageRelayListEvent.create(DefaultNIP65RelaySet.toList(), signer),
-        searchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), signer),
-        indexerRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), signer),
+        keyPackageRelayList = KeyPackageRelayListEvent.create((relays ?: DefaultNIP65RelaySet).toList(), signer),
+        searchRelayList = SearchRelayListEvent.create((relays ?: DefaultSearchRelayList).toList(), signer),
+        indexerRelayList = IndexerRelayListEvent.create((relays ?: DefaultIndexerRelayList).toList(), signer),
         publicChatList = PublicChatListEvent.create(emptyList(), DefaultChannels, signer),
-        favoriteRelayList = FavoriteRelayListEvent.create(DefaultGlobalRelays, signer),
+        favoriteRelayList = FavoriteRelayListEvent.create(relays?.toList() ?: DefaultGlobalRelays, signer),
     )

@@ -34,7 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 /**
  * `amy create [--name NAME]` — provision a brand-new Nostr account with the
  * same defaults Amethyst uses and publish the nine bootstrap events to the
- * default NIP-65 relay set.
+ * default NIP-65 relay set — or, when `AMY_BOOTSTRAP_RELAYS` is set, to those relays, which then
+ * also replace every default in the lists the account advertises.
  *
  * The bootstrap events include kind:10002 / 10050 / 10051, which are
  * persisted into [Context.store] as a side effect of [Context.publish].
@@ -77,7 +78,10 @@ object CreateCommand {
 
         // 2. Build the nine signed bootstrap events via the shared helper.
         val signer = NostrSignerSync(identity.keyPair())
-        val bootstrap = bootstrapAccountEvents(signer, name)
+        // An offline harness names its relays in AMY_BOOTSTRAP_RELAYS: the new account then
+        // advertises those, and only those, in every list it publishes.
+        val override = Context.bootstrapOverride()
+        val bootstrap = bootstrapAccountEvents(signer, name, override)
 
         // 3. Open a Context so we reuse publishAndConfirmDetailed + the
         //    NostrClient plumbing instead of reinventing a second client.
@@ -89,7 +93,7 @@ object CreateCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             for (event in bootstrap.all()) {
-                val ack = ctx.publish(event, DefaultNIP65RelaySet)
+                val ack = ctx.publish(event, override ?: DefaultNIP65RelaySet)
                 accepted[event.kind.toString()] =
                     ack.filterValues { it.accepted }.keys.map { it.url }
             }
@@ -105,9 +109,9 @@ object CreateCommand {
                 "published_to" to accepted,
                 "relays" to
                     mapOf(
-                        "nip65" to DefaultNIP65List.map { it.relayUrl.url },
-                        "inbox" to DefaultDMRelayList.map { it.url },
-                        "key_package" to DefaultNIP65RelaySet.map { it.url },
+                        "nip65" to (override?.map { it.url } ?: DefaultNIP65List.map { it.relayUrl.url }),
+                        "inbox" to (override?.map { it.url } ?: DefaultDMRelayList.map { it.url }),
+                        "key_package" to (override ?: DefaultNIP65RelaySet).map { it.url },
                     ),
             ),
         )
