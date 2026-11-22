@@ -223,7 +223,8 @@ class CordnGroupChatroom(
         lock.withLock {
             // The summary is the newest entry the store appended, which can be a
             // reaction or a poll vote: never a row, so never the preview either.
-            if (byId.isEmpty() && !CordnMessageKinds.isStreamHidden(newest.envelope.kind)) setNewest(newest)
+            // So can an unknown kind with nothing to show (CordnStreamRows.isNeverARow).
+            if (byId.isEmpty() && !CordnStreamRows.isNeverARow(newest.envelope)) setNewest(newest)
         }
 
     /** Restores what the store remembered for this room. */
@@ -287,10 +288,15 @@ class CordnGroupChatroom(
 
         // Not only annotations: poll votes and RSVPs are their poll's and
         // event's aggregate, and a calendar revision replaces the one before
-        // it in place (CordnAnnotationIndex.isHidden).
+        // it in place (CordnAnnotationIndex.isHidden). A call's revisions, and
+        // any other addressable kind's, collapse the same way, and a kind this
+        // client does not draw with nothing to show is no row at all
+        // (CordnStreamRows): each used to be an empty bubble, and the last one
+        // the room's preview.
+        val alsoHidden = CordnStreamRows.hidden(everything)
         val visible =
             everything
-                .filterNot { index.isHidden(it.envelope.id) }
+                .filterNot { index.isHidden(it.envelope.id) || it.envelope.id in alsoHidden }
                 .sortedWith(ORDER)
 
         _messages.value = visible
