@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
@@ -45,7 +44,10 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.mutate
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.channels.BufferOverflow
@@ -73,6 +75,25 @@ class MarmotGroupChatroom(
      */
     var messages: PersistentSet<Note> = persistentSetOf()
         private set
+
+    /**
+     * The order each message reached this room (decryption order live, append order on a
+     * restore, which replays the store in the order it was written), by note id.
+     */
+    private var arrival: PersistentMap<String, Long> = persistentMapOf()
+    private var nextArrival = 0L
+
+    /**
+     * Newest first, like every feed, but messages of the same second keep the order they arrived
+     * in: `created_at` has one-second resolution, and three messages sent within one second
+     * (White Noise does) showed shuffled under the id tiebreak of the default feed order. Neither the
+     * Marmot spec nor MDK orders them by anything the sender controls; MDK breaks the tie by
+     * message id. The id stays the last resort here, for notes this room never saw arrive.
+     */
+    val feedOrder: Comparator<Note> =
+        compareByDescending<Note> { it.createdAt() }
+            .thenByDescending { arrival[it.idHex] ?: -1L }
+            .thenBy { it.idHex }
     var displayName = MutableStateFlow<String?>(null)
     var description = MutableStateFlow<String?>(null)
 
@@ -302,12 +323,15 @@ class MarmotGroupChatroom(
         syncLock.withLock {
             if (msg !in messages) {
                 messages = messages.add(msg)
+                arrival = arrival.put(msg.idHex, nextArrival++)
                 msg.addGatherer(this)
                 // The group counts its polls' votes by its own rules, whatever the cache derived.
                 (msg.event as? PollEvent)?.let { msg.pollState().updatePolicy(pollTallyPolicy(it)) }
 
+                // `>=`: a message of the same second that arrived later is the newer one (feedOrder).
                 val createdAt = msg.createdAt() ?: 0L
-                if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                val newest = newestMessage
+                if (newest == null || createdAt >= (newest.createdAt() ?: 0L)) {
                     newestMessage = msg
                 }
 
@@ -324,8 +348,9 @@ class MarmotGroupChatroom(
                 msg.removeGatherer(this)
 
                 if (msg == newestMessage) {
-                    newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+                    newestMessage = messages.minWithOrNull(feedOrder)
                 }
+                arrival = arrival.remove(msg.idHex)
 
                 changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
                 return@withLock true
@@ -344,13 +369,14 @@ class MarmotGroupChatroom(
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {
-        val sorted = messages.sortedWith(DefaultFeedOrder)
+        val sorted = messages.sortedWith(feedOrder)
         val toKeep =
             sorted.take(100).toSet() +
                 sorted.filter { it.flowSet?.isInUse() ?: false }
 
         val toRemove = messages.minus(toKeep)
         messages = toKeep.toPersistentSet()
+        arrival = arrival.mutate { map -> toRemove.forEach { map.remove(it.idHex) } }
 
         changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
         return toRemove
@@ -367,6 +393,7 @@ class MarmotGroupChatroom(
             val toRemove = messages
             if (toRemove.isEmpty()) return@withLock toRemove
             messages = persistentSetOf()
+            arrival = persistentMapOf()
             newestMessage = null
             changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
             toRemove
