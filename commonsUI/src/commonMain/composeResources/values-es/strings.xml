@@ -3049,4 +3049,9 @@
     <string name="relay_management_tab_ips">IPs</string>
     <string name="browser_address_hint">Buscar o introducir dirección</string>
     <string name="napplet_untitled">NApplet sin título</string>
+    <string name="cordn_call_started">Llamada iniciada</string>
+    <string name="cordn_call_started_titled">Llamada iniciada · %1$s</string>
+    <string name="cordn_call_ended">Llamada finalizada</string>
+    <string name="cordn_call_ended_titled">Llamada finalizada · %1$s</string>
+    <string name="cordn_call_unsupported">Anuncio de llamada no compatible</string>
 </resources>

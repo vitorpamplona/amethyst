@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
+import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnCallAnnouncement
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -74,8 +75,6 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_action_editing
 import com.vitorpamplona.amethyst.commons.resources.cordn_action_unpin
-import com.vitorpamplona.amethyst.commons.resources.cordn_calendar_event
-import com.vitorpamplona.amethyst.commons.resources.cordn_calendar_event_cancelled
 import com.vitorpamplona.amethyst.commons.resources.cordn_chat_empty_description
 import com.vitorpamplona.amethyst.commons.resources.cordn_chat_empty_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_info
@@ -139,9 +138,7 @@ import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
-import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -463,75 +460,76 @@ private fun CordnGroupChat(
                                     UnreadDivider()
                                 }
 
-                                CordnMessageRow(
-                                    message = message,
-                                    room = room,
-                                    annotations = annotations,
-                                    me = me,
-                                    // Grouped when the same person keeps talking inside the
-                                    // shared chat window: one avatar and name per burst
-                                    // instead of per line, and the bubbles of a burst square
-                                    // off against each other — which is most of what makes a
-                                    // wall of messages readable.
-                                    groupPosition =
-                                        remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
-                                            cordnGroupPositionFor(newer, message, older)
+                                val label = cordnRowLabel(message.envelope, annotations)
+                                if (message.envelope.kind == CordnCallAnnouncement.KIND && label != null) {
+                                    CordnCallRow(message, label)
+                                } else {
+                                    CordnMessageRow(
+                                        message = message,
+                                        room = room,
+                                        annotations = annotations,
+                                        me = me,
+                                        // Grouped when the same person keeps talking inside the
+                                        // shared chat window: one avatar and name per burst
+                                        // instead of per line, and the bubbles of a burst square
+                                        // off against each other — which is most of what makes a
+                                        // wall of messages readable.
+                                        groupPosition =
+                                            remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
+                                                cordnGroupPositionFor(newer, message, older)
+                                            },
+                                        // The edit if there is one, and nothing at all if the
+                                        // message was withdrawn: rendering the original text of
+                                        // a deleted message would defeat the deletion.
+                                        // A calendar event names itself (its content is its description,
+                                        // often empty, and a cancelled one stays visible as cancelled,
+                                        // calendar-events.md §6), and a kind this client does not draw
+                                        // says its NIP-31 alt (cordnRowLabel).
+                                        text =
+                                            when {
+                                                annotations.isDeleted(message.envelope.id) -> null
+                                                else -> label ?: annotations.contentOf(message.envelope.id)
+                                            },
+                                        isEdited = annotations.isEdited(message.envelope.id) || annotations.isRevised(message.envelope.id),
+                                        shouldHighlight = highlighted == message.envelope.id,
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                        onHighlightFinished = { highlighted = null },
+                                        onScrollToMessage = jumpTo,
+                                        onReply = {
+                                            replyingTo = message
+                                            editing = null
                                         },
-                                    // The edit if there is one, and nothing at all if the
-                                    // message was withdrawn: rendering the original text of
-                                    // a deleted message would defeat the deletion.
-                                    text =
-                                        when {
-                                            annotations.isDeleted(message.envelope.id) -> null
-                                            // A calendar event's content is its description, often
-                                            // empty; the row names the event, and a cancelled one
-                                            // stays visible as cancelled (calendar-events.md §6).
-                                            CordnMessageKinds.isCalendarEvent(message.envelope.kind) ->
-                                                stringRes(
-                                                    if (annotations.isCancelled(message.envelope.id)) Res.string.cordn_calendar_event_cancelled else Res.string.cordn_calendar_event,
-                                                    CordnCalendar.titleOf(message.envelope),
-                                                )
-                                            else -> annotations.contentOf(message.envelope.id)
+                                        onEdit = {
+                                            editing = message
+                                            replyingTo = null
+                                            room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
                                         },
-                                    isEdited = annotations.isEdited(message.envelope.id) || annotations.isRevised(message.envelope.id),
-                                    shouldHighlight = highlighted == message.envelope.id,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                    onHighlightFinished = { highlighted = null },
-                                    onScrollToMessage = jumpTo,
-                                    onReply = {
-                                        replyingTo = message
-                                        editing = null
-                                    },
-                                    onEdit = {
-                                        editing = message
-                                        replyingTo = null
-                                        room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
-                                    },
-                                    onDelete = {
-                                        // Through trySend like the rest: a deletion is an
-                                        // annotation, and an annotation of your own comes back
-                                        // as an Echo too, so deleting your own message used to
-                                        // look like nothing had happened until someone else's
-                                        // traffic refreshed the fold.
-                                        scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
-                                    },
-                                    onTogglePin = {
-                                        val pinned = annotations.isPinned(message.envelope.id)
-                                        scope.launch {
-                                            trySend {
-                                                it.post(
-                                                    gid = room.gid,
-                                                    pinTo = message.target(),
-                                                    pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                                                )
+                                        onDelete = {
+                                            // Through trySend like the rest: a deletion is an
+                                            // annotation, and an annotation of your own comes back
+                                            // as an Echo too, so deleting your own message used to
+                                            // look like nothing had happened until someone else's
+                                            // traffic refreshed the fold.
+                                            scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
+                                        },
+                                        onTogglePin = {
+                                            val pinned = annotations.isPinned(message.envelope.id)
+                                            scope.launch {
+                                                trySend {
+                                                    it.post(
+                                                        gid = room.gid,
+                                                        pinTo = message.target(),
+                                                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                    onReact = { emoji ->
-                                        scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
-                                    },
-                                )
+                                        },
+                                        onReact = { emoji ->
+                                            scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -947,7 +945,7 @@ private fun AllPinnedDialog(
                                     if (annotations.isDeleted(message.envelope.id)) {
                                         stringRes(Res.string.cordn_message_deleted)
                                     } else {
-                                        annotations.contentOf(message.envelope.id).orEmpty()
+                                        cordnRowLabel(message.envelope, annotations) ?: annotations.contentOf(message.envelope.id).orEmpty()
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,

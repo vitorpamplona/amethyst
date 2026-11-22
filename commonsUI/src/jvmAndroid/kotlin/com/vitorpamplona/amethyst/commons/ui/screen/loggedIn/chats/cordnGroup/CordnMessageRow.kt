@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnCallAnnouncement
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -611,6 +612,46 @@ private fun CordnQuoteActionSheet(
 }
 
 /**
+ * A group call, as one compact line between the bubbles rather than a bubble of its own.
+ *
+ * A call announcement (kind 30312, [CordnCallAnnouncement]) has empty content: what it says is
+ * in its tags, and the room already shows only its current revision (`CordnStreamRows`), so
+ * this line moves from "Call started" to "Call ended" in place when anyone closes it. Joining a
+ * call is not supported yet, so the line offers no action: no reply, edit or delete, which
+ * cordn-web does not offer on a call either.
+ */
+@Composable
+fun CordnCallRow(
+    message: CordnDeliveredMessage,
+    label: String,
+) {
+    val isOpen = remember(message.envelope.id) { CordnCallAnnouncement.parse(message.envelope.kind, message.envelope.tags)?.isOpen == true }
+    val tint = if (isOpen) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = if (isOpen) MaterialSymbols.Call else MaterialSymbols.CallEnd,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = tint,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 6.dp).weight(1f, fill = false),
+        )
+        ChatTimestamp(message.envelope.createdAt)
+    }
+}
+
+/**
  * The line where the messages you have already read end.
  *
  * Drawn from a cursor snapshotted when the room opened: `markRead()` runs on open, so a
@@ -974,6 +1015,8 @@ private fun groupsWith(
     older: CordnDeliveredMessage,
 ): Boolean {
     if (newer.envelope.pubKey != older.envelope.pubKey) return false
+    // A call is a line of its own (CordnCallRow), not a bubble a burst can square off against.
+    if (newer.envelope.kind == CordnCallAnnouncement.KIND || older.envelope.kind == CordnCallAnnouncement.KIND) return false
     if (abs(newer.envelope.createdAt - older.envelope.createdAt) > CHAT_GROUP_WINDOW_SECONDS) return false
     // A day separator between the two breaks the run, exactly as a date divisor does in
     // the DM feed.

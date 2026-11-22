@@ -143,6 +143,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.cordnRowLabel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
@@ -655,10 +656,15 @@ internal fun CordnGroupRoomCompose(
     val lastContent =
         newest?.let { message ->
             val authorName by observeUserName(LocalCache.getOrCreateUser(message.envelope.pubKey), accountViewModel)
-            // The edited text when there is one: showing the original in the
-            // inbox while the room shows the edit is the kind of mismatch that
-            // reads as a sync bug.
-            val text = annotations.contentOf(message.envelope.id) ?: message.envelope.content
+            // What the room's row says: a call, a calendar event and an alt-only
+            // kind say it in their own words (an empty call announcement used to
+            // preview as "File"). Otherwise the edited text when there is one:
+            // showing the original in the inbox while the room shows the edit is
+            // the kind of mismatch that reads as a sync bug.
+            val text =
+                cordnRowLabel(message.envelope, annotations)
+                    ?: annotations.contentOf(message.envelope.id)
+                    ?: message.envelope.content
             // A voice note or a photo carries no text, so the row used to read
             // "Someone: " and trail off — an attachment looked like an empty
             // message. Name what was sent instead, the way the bubble does.

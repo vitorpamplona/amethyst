@@ -7244,6 +7244,11 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_calendar_event">Event: %1$s</string>
     <string name="cordn_calendar_event_cancelled">Cancelled event: %1$s</string>
+    <string name="cordn_call_started">Call started</string>
+    <string name="cordn_call_started_titled">Call started · %1$s</string>
+    <string name="cordn_call_ended">Call ended</string>
+    <string name="cordn_call_ended_titled">Call ended · %1$s</string>
+    <string name="cordn_call_unsupported">Unsupported call announcement</string>
     <string name="cordn_message_details_coordinator">Coordinator</string>
     <string name="cordn_message_details_cursor">Cursor</string>
     <string name="cordn_message_details_sent_at">Sent</string>
