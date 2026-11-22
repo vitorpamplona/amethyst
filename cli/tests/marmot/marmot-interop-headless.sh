@@ -144,6 +144,8 @@ source "$SCRIPT_DIR/tests-media.sh"
 source "$SCRIPT_DIR/tests-mdk014.sh"
 # shellcheck source=tests-mdk018.sh
 source "$SCRIPT_DIR/tests-mdk018.sh"
+# shellcheck source=tests-devices.sh
+source "$SCRIPT_DIR/tests-devices.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,
@@ -153,6 +155,7 @@ cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
   stop_daemons
+  stop_device_daemons
   stop_blossom
   stop_local_relay
   print_summary
@@ -211,6 +214,11 @@ ALL_TESTS=(
   test_36_admin_deletion_amy_to_wn
   test_37_admin_deletion_wn_to_amy
   test_38_thread_message_wn_to_amy
+  test_40_link_amy_new_to_wn_existing
+  test_41_prelink_chat_reaches_amy
+  test_42_link_wn_new_to_amy_existing
+  test_44_amy_adds_wn_device_to_chats
+  test_43_amy_removes_wn_device
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous
