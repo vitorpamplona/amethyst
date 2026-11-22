@@ -67,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
@@ -432,6 +435,9 @@ private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
 /** Delay before the first stock-relay Direct Invite sweep, so it doesn't compete with the start-up fetches. */
 private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
 
+/** How often the Marmot device-group duties (heartbeats, private KeyPackages, gap fills, pairing expiry) run. */
+private const val MARMOT_DEVICE_GROUP_TICK_MS = 60_000L
+
 /** How often to sweep the stock relays for Direct Invites while the account is loaded. */
 private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
@@ -506,6 +512,12 @@ class Account(
      * once and start waking a device its owner asked to be forgotten.
      */
     val marmotPushStateStore: com.vitorpamplona.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
+    /**
+     * Marmot device groups (one account's devices linked into a hidden device group), or null
+     * while the account's switch is off (the default; `MarmotDeviceGroupSwitch`). The blobs hold
+     * secrets, so the app passes stores that encrypt them at rest.
+     */
+    val marmotDeviceGroupStores: DeviceGroupBlobStores? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -1274,6 +1286,30 @@ class Account(
                 marmotPublishObligationStore,
                 marmotIngestDedupStore,
                 scope = scope,
+                deviceGroupConfig =
+                    marmotDeviceGroupStores?.config(
+                        outboxRelays.flow.value
+                            .ifEmpty {
+                                settings.backupNIP65RelayList
+                                    ?.writeRelaysNorm()
+                                    ?.toSet()
+                                    .orEmpty()
+                            }.map { it.url },
+                    ),
+            )
+        }
+
+    /**
+     * Device groups for this account (linking its devices, the hidden device group, adding
+     * siblings to chats), or null while the switch is off. See [MarmotDevices].
+     */
+    val marmotDevices: MarmotDevices? =
+        marmotManager?.takeIf { it.deviceGroups != null }?.let { manager ->
+            MarmotDevices(
+                manager = manager,
+                signer = signer,
+                transport = AccountMarmotDevicesTransport(this),
+                keyPackageRelays = { marmot.keyPackagePublishRelays() },
             )
         }
 
@@ -4537,8 +4573,22 @@ class Account(
                 }
             }
 
+            // The device group is not a chat: no room, so no list, feed or notification ever shows it.
+            marmotGroupList.isHidden = { id -> marmotDevices?.isDeviceGroup(id) == true }
+
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
+
+                // Device groups (behind their switch): load trust, announce this device, run the timers.
+                marmotDevices?.let { devices ->
+                    runCatchingCancellable { devices.start() }.onFailure { Log.w("Account", "Marmot device groups failed to start", it) }
+                    scope.launch(Dispatchers.IO) {
+                        while (isActive) {
+                            delay(MARMOT_DEVICE_GROUP_TICK_MS)
+                            devices.tick()
+                        }
+                    }
+                }
 
                 // Ensure the local user has a KeyPackage published to relays
                 // so other users can invite them to groups. Without this,
@@ -4570,6 +4620,11 @@ class Account(
                 // after the ratchet advances, so persisted plaintext is the
                 // only way to restore group history across restarts.
                 marmotManager.activeGroupIds().forEach { groupId ->
+                    if (marmotDevices?.isDeviceGroup(groupId) == true) {
+                        // Still subscribed (its kind 445s run the device group), never a chatroom.
+                        marmotGroupList.notifyGroupChanged(groupId)
+                        return@forEach
+                    }
                     val chatroom = marmotGroupList.getOrCreateGroup(groupId)
                     marmotManager.syncMetadataTo(groupId, chatroom)
                     // Force the kind:445 EOSE manager to re-poll its filter

@@ -63,7 +63,19 @@ class MarmotGroupList(
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
 
-    fun getOrCreateGroup(nostrGroupId: HexKey): MarmotGroupChatroom = rooms.getOrCreate(nostrGroupId) { MarmotGroupChatroom(nostrGroupId) }
+    /**
+     * Groups that are never chats: the account's Marmot device group. They get no room, so no list,
+     * feed, unread count or notification ever reaches them; a caller that asks still gets a detached
+     * room it can write to harmlessly.
+     */
+    var isHidden: (HexKey) -> Boolean = { false }
+
+    fun getOrCreateGroup(nostrGroupId: HexKey): MarmotGroupChatroom =
+        if (isHidden(nostrGroupId)) {
+            MarmotGroupChatroom(nostrGroupId)
+        } else {
+            rooms.getOrCreate(nostrGroupId) { MarmotGroupChatroom(nostrGroupId) }
+        }
 
     /**
      * Every group, newest activity first, split into Known and New Requests
@@ -89,6 +101,7 @@ class MarmotGroupList(
         nostrGroupId: HexKey,
         msg: Note,
     ) {
+        if (isHidden(nostrGroupId)) return
         if (!isDisplayableFeedMessage(msg)) return
         // An admin deletion applies to chat messages only (`features/content-moderation.md`).
         if (msg.event?.kind == ChatEvent.KIND && isAdminRemoved(nostrGroupId, msg.idHex)) return

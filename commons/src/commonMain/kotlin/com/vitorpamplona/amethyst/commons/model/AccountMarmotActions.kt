@@ -846,6 +846,14 @@ class AccountMarmotActions(
         event: KeyPackageEvent,
         relays: Set<NormalizedRelayUrl>,
     ) {
+        // A linked device names the KeyPackage in its roster entry before publishing it, so its
+        // siblings do not read it as a new sign-in (`device-group.md` "Slot announcements").
+        try {
+            account.marmotDevices?.beforeKeyPackagePublish(event)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "could not announce KeyPackage ${event.id.take(8)}… in the device group", e)
+        }
         if (account.client.publishAndConfirm(event, relays)) {
             recordKeyPackageReach(event, relays)
             manager.confirmKeyPackagePublished(event)
@@ -1110,14 +1118,23 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
-        manager.createCurrentProfileGroup(
-            nostrGroupId = nostrGroupId,
-            relays =
-                account.outboxRelays.flow.value
-                    .map { it.url },
-            profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description),
-            retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
-        )
+        val relays =
+            account.outboxRelays.flow.value
+                .map { it.url }
+        val profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description)
+        val devices = account.marmotDevices
+        if (devices != null && disappearingMessageSecs == null) {
+            // With device groups on, the chat starts with this account's linked devices in it.
+            devices.createChat(nostrGroupId, relays, profile)
+        } else {
+            // A retention chat starts alone; linked devices join it through a later gap fill.
+            manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = relays,
+                profile = profile,
+                retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
+            )
+        }
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
@@ -1147,6 +1164,8 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
+        // The decline that takes this account's other devices out too, sent while still a member.
+        account.marmotDevices?.beforeLeave(nostrGroupId)
         val departure = manager.leave(nostrGroupId, groupRelays.toList())
         // manager.leave already wiped MLS state, relay subscriptions and
         // the persisted message log. Drop the in-memory chatroom too — that
