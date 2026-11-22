@@ -62,11 +62,14 @@ fun RefresheableFeedContentStateView(
 fun SaveableFeedContentState(
     feedContentState: FeedContentState,
     scrollStateKey: String? = null,
+    // Composes a screen of items ahead (rememberForeverLazyListState): only for a list whose items
+    // sit in a FirstShownItem.
+    cacheAhead: Boolean = false,
     content: @Composable (LazyListState) -> Unit,
 ) {
     val listState =
         if (scrollStateKey != null) {
-            rememberForeverLazyListState(scrollStateKey)
+            rememberForeverLazyListState(scrollStateKey, cacheAhead = cacheAhead)
         } else {
             rememberLazyListState()
         }

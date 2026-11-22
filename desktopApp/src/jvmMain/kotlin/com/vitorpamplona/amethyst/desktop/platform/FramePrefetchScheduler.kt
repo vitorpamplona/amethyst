@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.platform
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -30,6 +31,8 @@ import androidx.compose.ui.platform.LocalPlatformPrefetchScheduler
 import androidx.compose.ui.platform.PlatformPrefetchRequest
 import androidx.compose.ui.platform.PlatformPrefetchRequestScope
 import androidx.compose.ui.platform.PlatformPrefetchScheduler
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedCacheWindow
+import com.vitorpamplona.amethyst.commons.ui.feeds.LocalLazyListCacheWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -47,7 +50,7 @@ import kotlin.coroutines.resume
  * that composition. This one runs the requests after each frame has drawn, in the time left
  * before the next one is due.
  */
-@OptIn(InternalComposeUiApi::class)
+@OptIn(InternalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProvideFramePrefetch(
     window: Window,
@@ -55,7 +58,13 @@ fun ProvideFramePrefetch(
 ) {
     val scope = rememberCoroutineScope()
     val scheduler = remember(scope, window) { FramePrefetchScheduler(scope, frameIntervalNanos = { frameIntervalNanos(window) }) }
-    CompositionLocalProvider(LocalPlatformPrefetchScheduler provides scheduler, content = content)
+    // With prefetches that run, a feed that asks for it composes a screen of notes ahead
+    // (rememberForeverLazyListState(cacheAhead)).
+    CompositionLocalProvider(
+        LocalPlatformPrefetchScheduler provides scheduler,
+        LocalLazyListCacheWindow provides FeedCacheWindow,
+        content = content,
+    )
 }
 
 /**

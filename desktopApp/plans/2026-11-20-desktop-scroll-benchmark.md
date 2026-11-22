@@ -441,6 +441,46 @@ Allocation samples on the UI thread were no lead: a handful of samples of Compos
 dispatcher carry nearly all the weight (JFR weights each sample by everything since the thread's
 last one), and GC takes 40 to 80 ms of a 4.5 s pass.
 
+## A screen of notes composed ahead, and read only when seen
+
+Compose 1.12's `LazyLayoutCacheWindow` keeps a range of items past the viewport composed, filled
+in idle time by the prefetch scheduler. With `ProvideFramePrefetch` running those requests, a
+window of one screen ahead composes the next screenful while the user reads the top of the feed,
+so the first scroll down finds those cards built.
+
+It was blocked by when a card marks itself read: `calculateBackgroundColor` called
+`loadAndMarkAsRead` (which also dismisses the note's tray notification) during composition and
+started the 5-second "new" highlight there. A screen composed ahead would have been marked read,
+its notifications dismissed and its highlight spent before anyone saw it. Compose's own prefetch
+already did that to one card on Android.
+
+- `FirstShownItem` (`commonsUI/.../feeds/FirstShown.kt`) gives a list item a signal that completes
+  on its first placement. Inside one, `calculateBackgroundColor` only checks at composition
+  (`isUnread`) and marks read, dismisses and starts the highlight when the card shows. Outside one
+  nothing changed.
+- `rememberForeverLazyListState(cacheAhead = true)` takes the window from `LocalLazyListCacheWindow`,
+  which only a platform with a working scheduler provides: Android (`MainActivity`) and desktop
+  (`ProvideFramePrefetch`). The window is `FeedCacheWindow`, one screen ahead and none behind: a
+  card that leaves the screen is disposed as before, so a video that scrolled away can't keep its
+  last "fully shown" report and play on off screen.
+- Home is the only feed that opts in so far; its notes are `FirstShownItem`s. Another feed opts in
+  once everything its items do at composition that should wait for the user waits for the signal.
+- `FeedCacheWindowTest` checks that rows composed ahead are not seen until they scroll in.
+
+Home, 4 boots each, nothing else running (a first attempt was discarded: one baseline boot froze
+for seconds and another overlapped a build):
+
+| Pass | fps before → after | busy p50 | interval p90 | jank |
+|---|---|---|---|---|
+| first pass down | 21.1 → 31.6 | -28% | -40% | |
+| up | 52.2 → 59.2 | | | -61% |
+| down again | 57.3 → 62.2 | | | -80% |
+
+First-pass boots: 21.7, 14.1, 20.5, 29.7 before, 31.5, 31.8, 51.8, 23.6 after. Android was not
+measured here (no device, no KVM for an emulator). `baselineprofile`'s `FeedScrollBenchmark`
+measures the same first scroll on a device (frame timing of four flings down Home after a cold
+start) for an A/B there.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
