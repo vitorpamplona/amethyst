@@ -42,36 +42,37 @@ class MarmotKeyPackageRelaysTest {
 
     @Test
     fun beforeAnyListLoadsTheDefaultsAreAProvisionalChoice() {
-        val choice = MarmotKeyPackageRelays.choose(outbox = defaults, assumedDefaults = defaults, keyPackageList = emptySet())
+        val choice = MarmotKeyPackageRelays.choose(nip65Write = null, otherChosen = emptySet(), defaults = defaults, keyPackageList = emptySet())
         assertEquals(defaults, choice.relays)
         assertTrue(choice.provisional, "a later list must replace it")
     }
 
     @Test
     fun aKeyPackageListKeepsTheDefaultsOut() {
-        // The 10051 arrived but the 10002 has not: the outbox still holds the app's guesses.
-        val choice = MarmotKeyPackageRelays.choose(outbox = defaults + privateStorage, assumedDefaults = defaults, keyPackageList = setOf(mineKp))
+        // The 10051 arrived but the 10002 has not: the app would still be guessing the outbox.
+        val choice = MarmotKeyPackageRelays.choose(nip65Write = null, otherChosen = setOf(privateStorage), defaults = defaults, keyPackageList = setOf(mineKp))
         assertEquals(setOf(mineKp, privateStorage), choice.relays)
         assertFalse(choice.provisional)
     }
 
     @Test
     fun theNip65WriteRelaysAndTheKeyPackageListAreUnioned() {
-        val choice = MarmotKeyPackageRelays.choose(outbox = setOf(mineWrite), assumedDefaults = emptySet(), keyPackageList = setOf(mineKp))
+        val choice = MarmotKeyPackageRelays.choose(nip65Write = setOf(mineWrite), otherChosen = emptySet(), defaults = defaults, keyPackageList = setOf(mineKp))
         assertEquals(setOf(mineWrite, mineKp), choice.relays)
         assertFalse(choice.provisional)
     }
 
     @Test
     fun aKnownNip65ListWithoutAKeyPackageListIsTheWriteSet() {
-        val choice = MarmotKeyPackageRelays.choose(outbox = setOf(mineWrite), assumedDefaults = emptySet(), keyPackageList = emptySet())
-        assertEquals(setOf(mineWrite), choice.relays)
+        // The defaults never join a known list, whatever order the lists' flows updated in.
+        val choice = MarmotKeyPackageRelays.choose(nip65Write = setOf(mineWrite), otherChosen = setOf(privateStorage), defaults = defaults, keyPackageList = emptySet())
+        assertEquals(setOf(mineWrite, privateStorage), choice.relays)
         assertFalse(choice.provisional)
     }
 
     @Test
-    fun aKnownListWithNoWriteRelaysFallsBackToTheOutbox() {
-        val choice = MarmotKeyPackageRelays.choose(outbox = emptySet(), assumedDefaults = emptySet(), keyPackageList = emptySet())
+    fun aKnownListWithNoWriteRelaysIsNotTheDefaults() {
+        val choice = MarmotKeyPackageRelays.choose(nip65Write = emptySet(), otherChosen = emptySet(), defaults = defaults, keyPackageList = emptySet())
         assertTrue(choice.relays.isEmpty())
         assertFalse(choice.provisional)
     }

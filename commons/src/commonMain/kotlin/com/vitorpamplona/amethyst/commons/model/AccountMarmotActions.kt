@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
@@ -693,19 +694,24 @@ class AccountMarmotActions(
      */
     fun keyPackageRelayChoice(): MarmotKeyPackageRelays.Choice =
         MarmotKeyPackageRelays.choose(
-            outbox = account.outboxRelays.flow.value,
-            assumedDefaults = account.nip65RelayList.assumedDefaultsFlow.value,
-            keyPackageList = account.keyPackageRelayList.flow.value,
+            nip65Write =
+                account.nip65RelayList
+                    .nip65Event(account.nip65RelayList.nip65ListNote)
+                    ?.let { it.allWriteRelaysNorm()?.toSet() ?: emptySet() },
+            otherChosen = account.privateStorageRelayList.flow.value + account.localRelayList.flow.value + account.broadcastRelayList.flow.value,
+            defaults = Constants.eventFinderRelays,
+            keyPackageList = account.keyPackageRelayList.normalizeKeyPackageRelayListWithBackup(account.keyPackageRelayList.keyPackageListNote),
         )
 
+    // Re-read from the notes on every change of any input, so no two inputs come from different moments.
     private fun keyPackageRelayChoices(): Flow<MarmotKeyPackageRelays.Choice> =
         combine(
-            account.outboxRelays.flow,
-            account.nip65RelayList.assumedDefaultsFlow,
-            account.keyPackageRelayList.flow,
-        ) { outbox, assumed, keyPackageList ->
-            MarmotKeyPackageRelays.choose(outbox, assumed, keyPackageList)
-        }.distinctUntilChanged()
+            account.nip65RelayList.getNIP65RelayListFlow(),
+            account.keyPackageRelayList.getKeyPackageRelayListFlow(),
+            account.privateStorageRelayList.flow,
+            account.localRelayList.flow,
+            account.broadcastRelayList.flow,
+        ) { _, _, _, _, _ -> keyPackageRelayChoice() }.distinctUntilChanged()
 
     /**
      * Each KeyPackage this session published, by its slot (`d` tag), and the relays that took it.
