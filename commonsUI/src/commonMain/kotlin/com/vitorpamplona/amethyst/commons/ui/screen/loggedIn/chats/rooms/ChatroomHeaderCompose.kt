@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDeletedMessageNote
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -551,7 +552,7 @@ private fun MarmotGroupRoomCompose(
     val groupName = marmotGroupTitle(displayName, otherMembers, chatroom.nostrGroupId, accountViewModel)
 
     // The row is handed the group's placeholder note when it has no messages.
-    val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null }, accountViewModel)
+    val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null || it is MarmotDeletedMessageNote }, accountViewModel)
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
 

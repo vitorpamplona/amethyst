@@ -4612,7 +4612,7 @@ class Account(
                                 // they never carry a Schnorr signature.
                                 // Same indexing as live decryption, so a restored
                                 // kind:1009 edit is re-linked to its message too.
-                                val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
+                                val innerNote = marmot.indexMarmotGroupInnerEvent(groupId, innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
                                 marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {

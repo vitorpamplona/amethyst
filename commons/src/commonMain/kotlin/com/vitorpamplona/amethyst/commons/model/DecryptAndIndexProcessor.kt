@@ -877,7 +877,7 @@ class GroupEventHandler(
         // needs this path to surface the note (otherwise the
         // operator saw nothing but a misleading "inner event
         // already in cache" log and the message never rendered).
-        val indexed = account.marmot.indexMarmotInnerEvent(innerEvent)
+        val indexed = account.marmot.indexMarmotGroupInnerEvent(result.groupId, innerEvent)
         val innerNote = indexed.note
         val isNew = indexed.isNew
 

@@ -20,21 +20,32 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDeletedMessageNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_message_deleted
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_admin_added
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_admin_added_passive
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_admin_removed
@@ -50,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_added_p
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_left
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_removed
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_removed_passive
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatFeedRowRenderer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -74,10 +87,14 @@ import org.jetbrains.compose.resources.StringResource
 class MarmotSystemRowRenderer(
     private val accountViewModel: AccountViewModel,
 ) : ChatFeedRowRenderer {
-    override fun claims(note: Note): Boolean = note.event?.kind == MarmotAppEvent.KIND_SYSTEM
+    override fun claims(note: Note): Boolean = note is MarmotDeletedMessageNote || note.event?.kind == MarmotAppEvent.KIND_SYSTEM
 
     @Composable
     override fun Render(note: Note) {
+        if (note is MarmotDeletedMessageNote) {
+            DeletedMessageRow(note)
+            return
+        }
         val event = note.event ?: return
         val row = remember(event.id) { MarmotSystemEvent.fromAppEvent(MarmotAppEvent.fromEvent(event)) }
         // An unknown `system_type` decodes to null rather than throwing, because
@@ -163,6 +180,52 @@ class MarmotSystemRowRenderer(
     ): String {
         if (subject == null) return ""
         return if (actor != null) stringRes(active, actor, subject) else stringRes(passive, subject)
+    }
+
+    /**
+     * Where a message its author deleted stood: who wrote it and when, never what it said. On the
+     * author's side of the conversation, like the bubble it replaces, in a muted outline.
+     */
+    @Composable
+    private fun DeletedMessageRow(note: MarmotDeletedMessageNote) {
+        val authorHex = note.author?.pubkeyHex
+        val mine = authorHex == accountViewModel.account.signer.pubKey
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
+            horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    if (!mine && authorHex != null) {
+                        Text(
+                            text = displayName(authorHex),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringRes(Res.string.marmot_message_deleted),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        ToggleableTimeAgoText(
+                            timestamp = note.createdAt(),
+                            style = TimeAgoStyle.Short,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     /** A known display name, or a short key when the account is a stranger. */

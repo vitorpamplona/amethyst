@@ -6453,6 +6453,7 @@
     <string name="cordn_group_no_messages_yet">No messages yet</string>
     <string name="cordn_group_via_coordinator">Cordn group, carried by %1$s</string>
     <string name="cordn_preview_deleted">Message deleted</string>
+    <string name="marmot_message_deleted">Message deleted</string>
     <string name="cordn_preview_voice_note">Voice note</string>
     <string name="cordn_preview_photo">Photo</string>
     <string name="cordn_preview_video">Video</string>

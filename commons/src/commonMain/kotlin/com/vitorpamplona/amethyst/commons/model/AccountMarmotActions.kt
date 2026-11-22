@@ -206,7 +206,7 @@ class AccountMarmotActions(
         // LocalCache does not dispatch (push-token lists 447-449, edits, stream starts), which
         // left our own copy an EVENTLESS note in the conversation: an "Event is loading or can't
         // be found" row for every push-token answer we sent.
-        val innerNote = indexMarmotInnerEvent(innerEvent).note
+        val innerNote = indexMarmotGroupInnerEvent(nostrGroupId, innerEvent).note
         account.marmotGroupList.addMessage(nostrGroupId, innerNote)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before the relay round-trip so the UI
@@ -345,6 +345,21 @@ class AccountMarmotActions(
      * cache but its note, so it is attached directly.
      */
     fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
+
+    /**
+     * [indexMarmotInnerEvent] for an inner event of [nostrGroupId]: a kind:5 that takes down one of
+     * the group's messages leaves a "message deleted" row where it stood, as White Noise does,
+     * instead of the message just vanishing.
+     */
+    fun indexMarmotGroupInnerEvent(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ): IndexedInnerEvent {
+        val deleted = account.marmotGroupList.messagesDeletedBy(nostrGroupId, innerEvent)
+        val indexed = indexMarmotInnerEvent(innerEvent)
+        account.marmotGroupList.leaveDeletedPlaceholders(nostrGroupId, deleted)
+        return indexed
+    }
 
     /**
      * Apply an admin's moderation, when its author was an admin of the group in the epoch it was

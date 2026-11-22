@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -102,6 +103,41 @@ class MarmotGroupList(
     }
 
     fun groupIdForNote(noteId: HexKey): HexKey? = noteToGroupIndex.get(noteId)
+
+    /**
+     * The messages of [nostrGroupId] that [deletion] (a kind:5 inner event) takes down: the ones
+     * this group shows and its sender wrote. Read before the deletion is applied, while they are
+     * still here; hand the result to [leaveDeletedPlaceholders] afterwards.
+     */
+    fun messagesDeletedBy(
+        nostrGroupId: HexKey,
+        deletion: Event,
+    ): List<Note> {
+        if (deletion.kind != DELETION_KIND) return emptyList()
+        val room = rooms.get(nostrGroupId) ?: return emptyList()
+        val targets = deletion.tags.mapNotNullTo(HashSet()) { if (it.size > 1 && it[0] == "e") it[1] else null }
+        if (targets.isEmpty()) return emptyList()
+        return room.messages.filter { it.idHex in targets && it.author?.pubkeyHex == deletion.pubKey && it.event != null }
+    }
+
+    /**
+     * Puts a [MarmotDeletedMessageNote] where each of [deleted] stood, once the deletion took it
+     * out of [nostrGroupId]. One that is still there (the cache refused the deletion) is left alone.
+     */
+    fun leaveDeletedPlaceholders(
+        nostrGroupId: HexKey,
+        deleted: List<Note>,
+    ) {
+        if (deleted.isEmpty()) return
+        val room = getOrCreateGroup(nostrGroupId)
+        var changed = false
+        deleted.forEach { gone ->
+            if (gone in room.messages) return@forEach
+            val createdAt = gone.event?.createdAt ?: gone.createdAt() ?: return@forEach
+            if (room.addMessageSync(MarmotDeletedMessageNote(gone.idHex, gone.author, createdAt))) changed = true
+        }
+        if (changed) _groupListChanges.tryEmit(nostrGroupId)
+    }
 
     /** True when [note] is one of [nostrGroupId]'s messages. */
     fun isInGroup(
