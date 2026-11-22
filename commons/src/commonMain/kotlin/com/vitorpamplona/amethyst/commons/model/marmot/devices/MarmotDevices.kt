@@ -39,6 +39,7 @@ import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -360,6 +361,15 @@ class MarmotDevices(
         now: Long,
     ) {
         val request = prompt.request
+        // This device's own Request (an echo, or one from an earlier run of a per-command front end):
+        // its KeyPackage may be replaced on the relays already, so recognise it by the ref.
+        if (groups.trust().linkedKeyPackageRef == request.keyPackageRef ||
+            manager.keyPackageRotationManager.findBundleByRef(request.keyPackageRef.hexToByteArray()) != null
+        ) {
+            prompts.remove(request.sessionId)
+            pairing.cancel(request.sessionId)
+            return
+        }
         // Not on our relays yet (the new device may still be publishing it): try again on a later tick.
         val keyPackage = transport.fetchOwnKeyPackage(request.keyPackageEventId) ?: return
         val matches =
