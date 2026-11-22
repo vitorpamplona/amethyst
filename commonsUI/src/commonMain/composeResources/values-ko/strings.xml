@@ -1477,7 +1477,6 @@
     <string name="event_sync_start_anyway">어쨌든 시작 (모바일 데이터)</string>
     <string name="event_sync_cancel">취소</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">이벤트 재배분됨: %2$d개 전송 및 %3$d개 수신 중 %1$d개 신규</string>
     <string name="event_sync_done_title">동기화 완료</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">수신된 %2$d개 중 %1$d개의 이벤트를 목적지 relay로 전달했습니다.</item>
@@ -2887,4 +2886,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">이벤트 재배분됨 · 신규: %1$d · 전송: %2$d · 수신: %3$d</string>
 </resources>

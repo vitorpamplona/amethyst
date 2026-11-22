@@ -1490,7 +1490,6 @@
     <string name="event_sync_start_anyway">仍要開始（使用行動數據）</string>
     <string name="event_sync_cancel">取消</string>
     <string name="event_sync_relays_progress">Relay：%1$d / %2$d</string>
-    <string name="event_sync_events_sent">已重新分配的事件：%2$d 筆已傳送、%3$d 筆已接收中有 %1$d 筆為新事件</string>
     <string name="event_sync_done_title">同步完成</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">已將 %2$d 筆接收事件中的 %1$d 筆轉送至目的地 relay。</item>
@@ -2906,4 +2905,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">已重新分配的事件 · 新事件：%1$d · 已傳送：%2$d · 已接收：%3$d</string>
 </resources>

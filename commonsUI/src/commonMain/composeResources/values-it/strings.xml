@@ -1478,7 +1478,6 @@
     <string name="event_sync_start_anyway">Avvia comunque (dati mobili)</string>
     <string name="event_sync_cancel">Annulla</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Eventi ridistribuiti: %1$d nuovi su %2$d inviati e %3$d ricevuti</string>
     <string name="event_sync_done_title">Sincronizzazione completata</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Inoltrato %1$d evento ai relay di destinazione su %2$d ricevuti.</item>
@@ -2908,4 +2907,5 @@
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
     <string name="post_noun">Post</string>
+    <string name="event_sync_events_sent">Eventi ridistribuiti · Nuovi: %1$d · Inviati: %2$d · Ricevuti: %3$d</string>
 </resources>

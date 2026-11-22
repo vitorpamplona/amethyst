@@ -26,7 +26,7 @@ Compose as a leading line break plus eight spaces -- which CommonMark renders as
 code block (`account_backup_tips2_md`). This script applies aapt's rule to runs that
 contain a line break or tab, which only XML layout produces (a deliberate newline is
 written \\n). In a translation it also trims a leading/trailing space the source
-string does not have: Crowdin exports a translator's stray edge space, aapt used to
+string does not have: Crowdin exported a translator's stray edge space, aapt used to
 drop it, Compose would draw it (" miejsca zniknęły" beside "tematy zniknęły").
 Deliberate edge spaces (" and ") exist in the source too, and are kept.
 

@@ -36,19 +36,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.sno_object_details
+import com.vitorpamplona.amethyst.commons.resources.sno_object_faces
 import com.vitorpamplona.amethyst.commons.resources.sno_object_scale
 import com.vitorpamplona.amethyst.commons.resources.sno_object_title
 import com.vitorpamplona.amethyst.commons.resources.sno_object_unreadable
+import com.vitorpamplona.amethyst.commons.resources.sno_object_vertices
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.quartz.cyberspace.CyberspaceScale
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 private val THUMBNAIL_SIZE = 96.dp
+
+/**
+ * "12 vertices · 20 faces": one plural per count, since each noun agrees with its own number
+ * (Czech 1 vrchol / 3 vrcholy / 5 vrcholů).
+ */
+@Composable
+internal fun snoGeometrySummary(payload: SnoPayload): String =
+    pluralStringResource(Res.plurals.sno_object_vertices, payload.vertexCount, payload.vertexCount) +
+        " · " +
+        pluralStringResource(Res.plurals.sno_object_faces, payload.faceCount, payload.faceCount)
 
 /**
  * A Simple Nostr Object in a feed or a thread (DECK-0003 kind 33331).
@@ -140,7 +152,7 @@ private fun SnoObjectDetails(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringResource(Res.string.sno_object_details, payload.vertexCount, payload.faceCount),
+            text = snoGeometrySummary(payload),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import android.app.LocaleManager
 import android.app.UiModeManager
 import android.content.Context
 import android.os.Build
@@ -64,7 +65,11 @@ class UiSharedPreferences(
     private val store = UiSettingsStore(dataStore)
 
     // UI Preferences. Makes sure to wait for it to avoid blinking themes and language preferences
-    val value = UiSettingsFlow.build(prefs)
+    // On API 33+ the language starts from Android's per-app locale, so it is never pushed over it.
+    val value =
+        UiSettingsFlow.build(
+            prefs.copy(preferredLanguage = languageToKeep(prefs.preferredLanguage, systemAppLocales()?.toLanguageTags())),
+        )
 
     val languageUpdate =
         value.preferredLanguage
@@ -116,7 +121,7 @@ class UiSharedPreferences(
      * unchanged, and ActivityRecord.applyAppSpecificConfig gates the activity reconfiguration on
      * having actually changed. What remains is one Binder round trip per launch, off the main
      * thread. (This is why the deduplication in applyLanguage below does not generalise here: it
-     * compares against getApplicationLocales(), the authoritative value, not a private copy.)
+     * compares against the system's per-app locale, the authoritative value, not a private copy.)
      *
      * MainActivity declares `uiMode` in its `configChanges`, so any change that does result is
      * delivered to `onConfigurationChanged` rather than recreating the activity.
@@ -141,6 +146,26 @@ class UiSharedPreferences(
     }
 
     /**
+     * The per-app locale list Android holds for this package, read from the framework's
+     * [LocaleManager], or null below API 33 or when it can't be read.
+     *
+     * Not [AppCompatDelegate.getApplicationLocales]: on API 33+ AppCompat reaches the
+     * LocaleManager through a live AppCompat activity, and with none yet (this runs during
+     * Application start-up) it reports an empty list and its setter does nothing. The
+     * application context is enough for [LocaleManager].
+     */
+    private fun systemAppLocales(): LocaleListCompat? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+
+        return try {
+            context.getSystemService<LocaleManager>()?.applicationLocales?.let { LocaleListCompat.wrap(it) }
+        } catch (e: Exception) {
+            Log.w("UiSharedPreferences", "Could not read the per-application locales", e)
+            null
+        }
+    }
+
+    /**
      * Pushes the preferred language into AppCompat, skipping the call when the app already
      * runs in that locale.
      *
@@ -152,14 +177,15 @@ class UiSharedPreferences(
      * the locale had not changed since the previous run -- and StrictMode reported it as a
      * DiskReadViolation via the Binder call.
      *
-     * [AppCompatDelegate.getApplicationLocales] is `@AnyThread` and only reads state, so the
-     * comparison runs off the main thread. Actual changes still hop to the main thread:
-     * below API 33 AppCompat applies them in process by reconfiguring (and possibly
-     * recreating) the active activities.
+     * The comparison reads [systemAppLocales] on API 33+ and AppCompat's own copy below it, off
+     * the main thread. Actual changes still go through AppCompat on the main thread: user picks
+     * happen with MainActivity alive, and below API 33 AppCompat applies them in process by
+     * reconfiguring (and possibly recreating) the active activities.
      */
     private suspend fun applyLanguage(language: String?) {
         val newLocales = LocaleListCompat.forLanguageTags(language)
-        if (newLocales == AppCompatDelegate.getApplicationLocales()) return
+        val current = systemAppLocales() ?: AppCompatDelegate.getApplicationLocales()
+        if (newLocales == current) return
 
         withContext(Dispatchers.Main) {
             AppCompatDelegate.setApplicationLocales(newLocales)
@@ -181,6 +207,23 @@ class UiSharedPreferences(
             )
 
     companion object {
+        /**
+         * The language preference to start from: Android's per-app locale ([systemTags], comma
+         * separated, empty when none is set) when it could be read, else the [stored] one.
+         *
+         * On API 33+ the system keeps the per-app locale across process death and its Settings ›
+         * Apps › Amethyst › Language screen edits it, so it is the source of truth and the
+         * preference only mirrors it: a language picked or cleared there survives the next cold
+         * start instead of being overwritten by the stored choice. An empty list is null, the
+         * picker's "System default". Below API 33 [systemTags] is null (no system store, and the
+         * manifest has no AppCompat `autoStoreLocales` service), so the stored choice is kept and
+         * pushed at every start.
+         */
+        fun languageToKeep(
+            stored: String?,
+            systemTags: String?,
+        ): String? = if (systemTags == null) stored else systemTags.ifBlank { null }
+
         suspend fun uiPreferences(dataStore: DataStore<Preferences>): UiSettings? = UiSettingsStore(dataStore).load()
     }
 }

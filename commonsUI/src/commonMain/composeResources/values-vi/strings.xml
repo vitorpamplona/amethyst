@@ -1475,7 +1475,6 @@
     <string name="event_sync_start_anyway">Vẫn bắt đầu (dùng dữ liệu di động)</string>
     <string name="event_sync_cancel">Hủy</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Sự kiện đã phân phối lại: %1$d mới trong số %2$d đã gửi và %3$d đã nhận</string>
     <string name="event_sync_done_title">Đồng bộ hoàn tất</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">Đã chuyển tiếp %1$d sự kiện đến các relay đích trong số %2$d đã nhận.</item>
@@ -2873,4 +2872,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">Sự kiện đã phân phối lại · Mới: %1$d · Đã gửi: %2$d · Đã nhận: %3$d</string>
 </resources>

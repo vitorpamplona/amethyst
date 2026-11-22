@@ -78,11 +78,13 @@ Always consider Slavic / Baltic / Semitic / Celtic languages when a string conta
 
 ## Plural anti-patterns to flag
 
-When adding or reviewing strings, flag these:
+When adding or reviewing strings, flag these. `tools/agent-hooks/plural_candidates_check.py` warns about
+the shapes a regex can see in newly added keys on every push (`--all` scans the whole catalog):
 
 - `<string name="…">%1$d items</string>` where the noun is countable → should be `<plurals>`.
 - `<item quantity="one">1 reply</item>` → hardcoded `1`, should be `%1$d reply`.
 - A locale `strings.xml` providing only `one`/`other` for Polish / Czech / Russian → missing `few`/`many`, will silently fall through to `other` for counts 2–4, 22–24, etc.
+- Two counted nouns in one string (`"%1$d vertices · %2$d faces"`, `"… %2$d responses from %3$d relays"`) → a `<plurals>` picks one form for one count, so split it: one plural per noun, joined in code when the pieces are independent list items (`" · "`), or through a `"%1$s %2$s"` join string when they are sentences a language may punctuate differently. A stats line can be label: value instead (`"New: %1$d · Sent: %2$d"`), where nothing agrees with a number.
 
 ## Plural call-site patterns
 
@@ -110,6 +112,6 @@ Defined in `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/StringResourceC
 ## Workflow for new count strings
 
 1. Add the new `<plurals>` to default `values/strings.xml` with `one` + `other`.
-2. If you're also adding a locale-specific translation (e.g. zh, pl), give it that locale's **full CLDR category set** (Polish needs `one`/`few`/`many`/`other`, Chinese only `other`). An `other`-only block in a locale that has more categories fails lint's `MissingQuantity` before Crowdin ever syncs.
-3. If you're **converting** an existing `<string>` to `<plurals>`, you **must** convert it in every locale that already had the `<string>` — otherwise aapt2 will fail with a resource-type mismatch, and an orphaned locale `<string>` trips `ExtraTranslation`. Give each locale its **full CLDR category set** at conversion time. Carrying the old text over as an `other`-only block does **not** work: lint's `MissingQuantity` is an error, so CI fails long before Crowdin gets a chance to backfill. Mind the declension too — the retained text is usually the plural form, so reusing it verbatim for `one` yields "1 odpowiedzi".
+2. If you're also adding a locale-specific translation (e.g. zh, pl), give it that locale's **full CLDR category set** (Polish needs `one`/`few`/`many`/`other`, Chinese only `other`). An `other`-only block in a locale that has more categories fails lint's `MissingQuantity`.
+3. If you're **converting** an existing `<string>` to `<plurals>`, you **must** convert it in every locale that already had the `<string>` — otherwise aapt2 will fail with a resource-type mismatch, and an orphaned locale `<string>` trips `ExtraTranslation`. Give each locale its **full CLDR category set** at conversion time. Carrying the old text over as an `other`-only block does **not** work: lint's `MissingQuantity` is an error, so CI fails. Mind the declension too — the retained text is usually the plural form, so reusing it verbatim for `one` yields "1 odpowiedzi".
 4. Reference: [Android `<plurals>` docs](https://developer.android.com/guide/topics/resources/string-resource#Plurals) and [CLDR plural rules](https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html).

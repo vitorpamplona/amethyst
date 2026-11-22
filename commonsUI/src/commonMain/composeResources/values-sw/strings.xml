@@ -1492,7 +1492,6 @@
     <string name="event_sync_start_anyway">Anza Hata Hivyo (data ya simu)</string>
     <string name="event_sync_cancel">Ghairi</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Matukio yaliyosambazwa upya: %1$d mapya kati ya %2$d yaliyotumwa na %3$d yaliyopokelewa</string>
     <string name="event_sync_done_title">Usawazishaji umekamilika</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Tukio %1$d lilipitishwa kwenye relay za marudio kati ya %2$d yaliyopokelewa.</item>
@@ -2940,4 +2939,5 @@
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="event_sync_events_sent">Matukio yaliyosambazwa upya · Mapya: %1$d · Yaliyotumwa: %2$d · Yaliyopokelewa: %3$d</string>
 </resources>

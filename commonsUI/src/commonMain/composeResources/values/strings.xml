@@ -1463,7 +1463,10 @@
     <string name="audience_sheet_title">Add people</string>
     <string name="audience_sheet_search">Search people and lists</string>
     <string name="audience_sheet_no_lists">You have no people lists or follow packs yet. Search above to add someone directly.</string>
-    <string name="audience_count_with_private">%1$d \u00b7 %2$d private</string>
+    <plurals name="audience_count_with_private">
+        <item quantity="one">%1$d \u00b7 %2$d private</item>
+        <item quantity="other">%1$d \u00b7 %2$d private</item>
+    </plurals>
     <string name="audience_over_limit">Over limit</string>
     <string name="audience_recipients_are_visible">Everyone on this note can see the full recipient list.</string>
     <string name="bookmark_absence_indicator">is not a bookmark here</string>
@@ -1795,6 +1798,7 @@
     <string name="reset_marmot_confirm_action">Reset</string>
     <string name="application_preferences">Application Preferences</string>
     <string name="language">Language</string>
+    <string name="language_system_default">System default</string>
     <string name="accent_color">Accent Color</string>
     <string name="accent_color_description">Main color used across buttons and links</string>
     <string name="accent_color_account_description">Overrides the application accent color for this account. Pick Application to follow it again.</string>
@@ -2983,6 +2987,7 @@
     <string name="git_repo_push_first_get_ngit">Get ngit</string>
     <string name="profile_tab_apps">Apps &amp; Sites</string>
     <string name="profile_tab_repos">Repos</string>
+    <string name="profile_tab_lists">Lists</string>
     <string name="edit_article">Edit Article</string>
     <string name="proposal_to_edit">Proposal to improve a post</string>
     <string name="accept_the_suggestion">Accept the Suggestion</string>
@@ -3207,7 +3212,7 @@
     <string name="event_sync_start_anyway">Start Anyway (mobile data)</string>
     <string name="event_sync_cancel">Cancel</string>
     <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Events redistributed: %1$d new out of %2$d sent and %3$d received</string>
+    <string name="event_sync_events_sent">Events redistributed · New: %1$d · Sent: %2$d · Received: %3$d</string>
     <string name="event_sync_done_title">Sync complete</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Forwarded %1$d event to destination relays out of %2$d received.</item>
@@ -5618,8 +5623,19 @@
         <item quantity="one">%1$d voter</item>
         <item quantity="other">%1$d voters</item>
     </plurals>
-    <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>
-    <string name="poll_results_partial_approx">%1$d of about %2$d responses loaded from %3$d relays.</string>
+    <plurals name="poll_results_loaded">
+        <item quantity="one">Loaded %1$d of %2$d response.</item>
+        <item quantity="other">Loaded %1$d of %2$d responses.</item>
+    </plurals>
+    <plurals name="poll_results_loaded_approx">
+        <item quantity="one">Loaded %1$d of about %2$d response.</item>
+        <item quantity="other">Loaded %1$d of about %2$d responses.</item>
+    </plurals>
+    <string name="poll_results_loaded_line">%1$s %2$s</string>
+    <plurals name="poll_results_from_relays">
+        <item quantity="one">From %1$d relay.</item>
+        <item quantity="other">From %1$d relays.</item>
+    </plurals>
     <plurals name="poll_results_selections">
         <item quantity="one">· %1$d selection</item>
         <item quantity="other">· %1$d selections</item>
@@ -6492,7 +6508,14 @@
     <string name="cordn_migrate_exposure_title">What leaves this device</string>
     <string name="cordn_migrate_exposure_body">Your group state is encrypted and uploaded to your media server so the other phone can fetch it. It is unreadable to that server, which sees only a size and a time. Delete the blobs afterwards if you want nothing left behind.</string>
     <string name="sno_object_title">3D object</string>
-    <string name="sno_object_details">%1$d vertices · %2$d faces</string>
+    <plurals name="sno_object_vertices">
+        <item quantity="one">%1$d vertex</item>
+        <item quantity="other">%1$d vertices</item>
+    </plurals>
+    <plurals name="sno_object_faces">
+        <item quantity="one">%1$d face</item>
+        <item quantity="other">%1$d faces</item>
+    </plurals>
     <string name="sno_object_unreadable">This 3D object could not be read (rule %1$s)</string>
     <string name="sno_avatar_title">Cyberspace avatar</string>
     <string name="sno_avatar_unpaid">This avatar has not paid for its size, so it is not drawn</string>
