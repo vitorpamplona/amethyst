@@ -70,9 +70,12 @@ the way an ngit contributor's does and shows up on gitworkshop like any other pr
 2. **Links live in git.** `branch.<name>.nostr-repo`, `nostr-issue`, `nostr-proposal` and
    `amethyst-base` in the branch's config (`GitWorkspace`), so the next session on the branch, or
    any checkout of it, knows what it is.
-3. **The agent can't publish.** A session on a nostr repository starts with
-   `--disallowedTools` for `git push`, `ngit send`, `ngit pr merge`, `ngit sync` and
-   `amy git pr/pr-update` (`ClaudeChat.NO_PUBLISHING`): CONTRIBUTING-WITH-AI.md.
+3. **The agent pushes branches, never merges.** As on Claude Code on the web, a session on a
+   nostr repository or in a workstream may push a branch and open a PR or proposal when asked.
+   Its pushes go through a pre-push guard passed as a git config hook
+   (`ClaudeChat.pushGuardEnvironment`): no tags, no deletions, and the default branch only moves
+   forward to the commit another remote has there (a mirror sync). Merging, releases and repo
+   state are `--disallowedTools` (`ClaudeChat.NO_MERGING`): CONTRIBUTING-WITH-AI.md.
 4. **Changes** (`Route.ClaudeCodeChanges`): commits ahead of the base and the diff, uncommitted
    work included, through the git dashboard's `GitDiffView`.
 5. **Propose** (`Route.ClaudeCodePropose`): title and description (from the commits, or drafted
