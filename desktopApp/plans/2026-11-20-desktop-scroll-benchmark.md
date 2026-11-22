@@ -394,6 +394,51 @@ Left in place: the scaffold's surface (a dialog opened from a screen inherits th
 composition locals, so it can't tell it is at rest under the display), and skiko's clears, which
 happen inside the library.
 
+## The Java half: cards composed inside scroll frames
+
+JFR's CPU-time sampler on the UI thread (the survey's `--profile`, and a recording of the first
+pass with `-XX:FlightRecorderOptions:stackdepth=512`, since 64 frames cut composition stacks off
+before the frames that classify them) splits Home this way:
+
+| Pass | raster | compose | layout | record | input | other |
+|---|---|---|---|---|---|---|
+| warm (down again) | 59% | 14% (+ most of "other") | 6% | 7% | 3% | 12% |
+| first pass down | 36% | 33% | 5% | 9% | 7% | 10% |
+
+The warm passes already run at about 60 fps here (busy p50 9 to 10 ms); the first pass down is the
+slow one (25 to 47 fps a boot). There, each wheel frame scrolls the `LazyColumn`, which remeasures
+and composes every card scrolling in for the first time inside that frame (`subcompose` →
+`composeInitial`: 13.6% of the UI thread). Only about 8 points of the compose share are the
+card's own composables (`NoteCompose` and below); the rest is Compose's machinery around them.
+
+Compose for desktop never prefetches: the scheduler the desktop scene provides,
+`NoOpPlatformPrefetchScheduler`, drops every request, so the list can never compose a card
+ahead of the frame that shows it, as it does on Android. `ProvideFramePrefetch`
+(`desktopApp/.../platform/FramePrefetchScheduler.kt`, installed by `AppWindow` for every window)
+provides one through `LocalPlatformPrefetchScheduler` (an `InternalComposeUiApi`): after each frame
+has drawn, it runs the requests, high priority first, in the time left before the next frame is
+due. `FramePrefetchSchedulerTest` checks that the default composes nothing ahead (if a Compose
+update starts to, this scheduler can go) and that this one composes the next row.
+
+Unlike Android's scheduler it runs nothing after a frame that is already late. A first version that
+let one request run after a late frame, as Android does, made the first pass worse (38 to 32 fps
+over 3 boots): most of its frames are over budget, so it composed a card after each one and pushed
+the next frame back. Idle time only, over 4 boots each:
+
+| Pass | fps before → after | jank | interval p90 |
+|---|---|---|---|
+| up | 54 → 60 | 10% → 4.2% | 25 → 20 ms |
+| down again | 58 → 62 | 6.7% → 3.2% | 24 → 18 ms |
+| first pass down | 38 → 34.5 | (boots 26–42 vs 28–45: no signal) | |
+
+Cards that scroll back in were composed and thrown away when they scrolled out, so the up and down
+again passes compose too; that work now lands between frames. The first pass rarely has idle time
+to spare, and stays as it was.
+
+Allocation samples on the UI thread were no lead: a handful of samples of Compose's own frame
+dispatcher carry nearly all the weight (JFR weights each sample by everything since the thread's
+last one), and GC takes 40 to 80 ms of a 4.5 s pass.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
