@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPollRumors
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
@@ -1636,16 +1637,7 @@ class AccountMarmotActions(
         endsAt: Long?,
         /** The accounts the question and options mention, `p`-tagged as a message tags them. */
         mentions: List<PTag> = emptyList(),
-    ): Event? {
-        val createdAt = TimeUtils.now()
-        val tags = MarmotPolls.pollTags(createdAt, question, options, type, endsAt) ?: return null
-        // MDK ignores tags a poll does not define, within MAX_TAGS in all. A mention past that
-        // still reads as a link in the text; it just notifies no one.
-        val room = (MarmotPolls.MAX_TAGS - tags.size).coerceAtLeast(0)
-        val pTags = mentions.distinctBy { it.pubKey }.take(room).map { it.toTagArray() }
-        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL, tags + pTags, question)
-        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
-    }
+    ): Event? = MarmotPollRumors.poll(account.signer.pubKey, question, options, type, endsAt, mentions)
 
     /**
      * Build a vote (kind 1018) on [poll] choosing [optionIds], or null when the
@@ -1655,14 +1647,7 @@ class AccountMarmotActions(
     suspend fun buildMarmotPollVote(
         poll: Event,
         optionIds: List<String>,
-    ): Event? {
-        val definition = MarmotPolls.parsePoll(poll) ?: return null
-        val createdAt = TimeUtils.now()
-        if (!MarmotPolls.isValidResponse(definition, createdAt, optionIds)) return null
-        val tags = MarmotPolls.responseTags(poll.id, optionIds) ?: return null
-        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL_RESPONSE, tags, "")
-        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
-    }
+    ): Event? = MarmotPollRumors.vote(account.signer.pubKey, poll, optionIds)
 
     /**
      * Report [target], a message in [nostrGroupId], to the group's members for [type] (a kind
@@ -1710,13 +1695,7 @@ class AccountMarmotActions(
         poll: Event,
         optionIds: Set<String>,
     ): Boolean {
-        val ordered =
-            MarmotPolls
-                .parsePoll(poll)
-                ?.options
-                ?.map { it.id }
-                ?.filter { it in optionIds } ?: return false
-        val vote = buildMarmotPollVote(poll, ordered) ?: return false
+        val vote = buildMarmotPollVote(poll, optionIds.toList()) ?: return false
         sendMarmotGroupMessage(nostrGroupId, vote, marmotGroupRelays(nostrGroupId))
         return true
     }

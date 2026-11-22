@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
@@ -188,9 +189,15 @@ object MarmotMediaCommands {
                     ?: return Output.error("bad_args", "'$rawMediaType' is not a usable media type")
             // The message is pinned to the epoch whose key encrypted the file, so a commit that
             // lands during the upload refuses the send instead of delivering an unreadable file.
+            val bytes = file.readBytes()
+            // The size and preview a receiver lays the attachment out with before it has fetched
+            // and decrypted it, as the app's uploader sends them. Read from the plaintext, so they
+            // describe what the receiver will see.
+            val meta = if (mediaType.startsWith("image/")) MediaMetadataReader.compute(bytes, mediaType) else null
+            val dim = meta?.width?.let { w -> meta.height?.let { h -> "${w}x$h" } }
             val pinned =
                 try {
-                    ctx.marmot.encryptMediaForSend(resolved, file.readBytes(), mediaType, file.name)
+                    ctx.marmot.encryptMediaForSend(resolved, bytes, mediaType, file.name)
                 } catch (e: IllegalArgumentException) {
                     return Output.error("bad_args", e.message ?: "cannot encrypt this attachment")
                 }
@@ -228,6 +235,8 @@ object MarmotMediaCommands {
                     nonce = encrypted.nonce,
                     mediaType = mediaType,
                     filename = file.name,
+                    dim = dim,
+                    thumbhash = meta?.thumbhash,
                 )
 
             val bundle =
@@ -250,6 +259,8 @@ object MarmotMediaCommands {
                     "plaintext_sha256" to encrypted.plaintextSha256.toHexKey(),
                     "m" to mediaType,
                     "filename" to file.name,
+                    "dim" to dim,
+                    "thumbhash" to meta?.thumbhash,
                 ) + RawEventSupport.ackFields(ack),
             )
             return 0
