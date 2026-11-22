@@ -51,6 +51,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
+import com.vitorpamplona.quartz.utils.Log
+import org.jetbrains.skiko.GraphicsApi
 import java.awt.Color
 import java.awt.Dialog
 import java.awt.EventQueue
@@ -118,6 +121,25 @@ fun AppWindow(
             onPreviewKeyEvent = onPreviewKeyEvent,
         ) {
             val scope = remember(window) { AppWindowScope(window, this) }
+            // Skia picks the renderer when the window first draws, and falls back to software if the
+            // GPU fails later: the drawing follows it (SoftwareDrawing).
+            DisposableEffect(window) {
+                var open = true
+                val update = {
+                    if (open) {
+                        val api = window.renderApi
+                        SoftwareDrawing.report(window, api.isSoftware())
+                        Log.i("AppWindow") { "Skia renders with $api" }
+                    }
+                }
+                update()
+                window.onRenderApiChanged(update)
+                onDispose {
+                    // The listener can't be removed: it stops reporting instead.
+                    open = false
+                    SoftwareDrawing.forget(window)
+                }
+            }
             ProvideDesktopUiScale { scope.content() }
         }
     }
@@ -245,8 +267,11 @@ private fun WaylandWindow(
 
         frame.isVisible = visible
         frame.applyPlacement(state.placement)
+        // Swing-drawn: Skia renders every frame on the CPU.
+        SoftwareDrawing.report(frame, software = true)
 
         onDispose {
+            SoftwareDrawing.forget(frame)
             KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyDispatcher)
             frame.removeWindowListener(closeListener)
             frame.removeWindowStateListener(closeListener)
@@ -360,3 +385,5 @@ private fun WaylandFrame.applyPlacement(placement: WindowPlacement) {
 private const val ICON_SIZE = 256f
 private const val DEFAULT_WIDTH = 800
 private const val DEFAULT_HEIGHT = 600
+
+private fun GraphicsApi.isSoftware() = this == GraphicsApi.SOFTWARE_FAST || this == GraphicsApi.SOFTWARE_COMPAT

@@ -217,6 +217,7 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.scrollBench.intervalMs",
             "amethyst.scrollBench.at",
             "amethyst.scrollBench.measure",
+            "amethyst.scrollBench.screen",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")

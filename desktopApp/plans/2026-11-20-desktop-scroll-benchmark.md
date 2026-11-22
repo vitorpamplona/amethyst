@@ -1,6 +1,6 @@
 # Desktop scroll benchmark
 
-Status: built. The benchmark, its script, the first measurements, the image-prefetch fix it found, and the AOT cache trained on scrolling.
+Status: built. The benchmark, its script, the first measurements, the image-prefetch fix it found, the AOT cache trained on scrolling, and the 1:1 image drawing that brought warm scrolling to ~60 fps in software.
 
 ## What it measures
 
@@ -183,6 +183,154 @@ Release run 478 (9 Nov), the only one with a trained cache so far, ran past the 
 load `libskiko-linux-arm64.so`, which links `libEGL.so.1`, missing from the runner. Those legs now
 get 30 minutes an attempt (the job 75) and `libegl1`.
 
+## Where a warm frame goes, and the images that took half of it
+
+A CPU-time profile of the warm passes (JDK 25's `jdk.CPUTimeSample`, dev `run`) put ~66% of the UI
+thread in Skia rasterizing the frame in software (`Canvas._nDrawPicture` and the blit), ~20% in all
+of Compose (recomposition ~11%, measure and layout ~6%). The cost follows the pixels: the same image
+at `-Dsun.java2d.uiScale=2` (4x the pixels) scrolled at 16.7 fps against 47.8.
+
+Switching parts of the screen off one at a time (still composed and laid out, but drawing nothing),
+2 boots each, dev `run`:
+
+| drawn nothing | warm fps (down-again) | UI work per frame (median) |
+|---|---|---|
+| (base) | 51.0 | 16.2 ms |
+| avatars, action rows | ~50 | no change |
+| drawer + notification panel | 54.3 | ~-1 to -2 ms |
+| note images and videos | 59.2 | 9.3 ms |
+| all cards + drawer + panel | 59.5 | 6.3 ms |
+
+The images were half the frame. A Skia microbenchmark (skiko 0.150.2, AVX-512 CPU) of one 450x600
+photo explained it: drawn at a size other than its own it costs 5.9-7.6 ms a frame whatever the
+sampling; drawn 1:1 at whole pixels 0.3-0.4 ms; 1:1 at a half-pixel offset 6.1 ms; 1:1 inside an
+antialiased rounded clip 1.7 ms, aliased or rectangular 0.4 ms. Cards drew the image the feed's
+prefetch decoded at the list's width (600 px) into a ~511 px slot, so every frame resampled it, and
+the photo card also kept its blurhash (a few dozen pixels stretched over the slot) drawn under it.
+
+Fixed:
+
+- `PixelExactImage` (`commonsUI/src/skikoMain/.../service/image/`): the Skia decoders and the
+  blurhash/thumbhash bridge return an image that scales one copy to its size on screen and draws
+  that 1:1 at whole pixels. Copies sit in a 64 MB LRU (`ExactCopies`); a size that changes frame to
+  frame draws scaled, without copies.
+- The photo card drops its blurhash once a still image has loaded (an animated one keeps it).
+- `cornerOnlyClip(shape)`: the photo and video cards clip with rectangles and use the antialiased
+  rounded outline only inside the four corner squares (pixel-compared against the rounded clip: 12
+  channel values differ, by at most 25 of 255, at the seams).
+- The video's extracted thumbnail draws through `PixelExactImage` too.
+
+The copies live only in memory: Coil's disk cache keeps the downloaded file as it was, one per URL,
+and every size decodes from it (decoding runs off the UI thread; the drawing was what cost frames).
+A `PixelExactImage` sees only the scale of the canvas it is recorded into, not a `graphicsLayer`
+scale applied when the layer plays back, so a viewer that zooms with a layer would enlarge the copy
+made for the fitted size. The image viewer (`ZoomableImage`) asks for `Size.ORIGINAL`, which the
+feed's downsampled copies can't answer, and draws that decode's own bitmap
+(`AsyncImagePainter.State.withFullResolution`), so its zoom shows the picture's pixels
+(`PixelExactZoomTest`). Copies are capped at 4 MP, so one can't fill the copy budget alone.
+
+| pass, 3 boots | before | after |
+|---|---|---|
+| up: fps, UI work per frame | 46.0, 18.5 ms | 51.0, 11.8 ms |
+| down-again: fps, UI work per frame, frames over 25 ms | 51.0, 16.2 ms, 12.0% | **59.2, 10.6 ms, 5.6%** |
+
+One of the three boots ran 49.8 fps on `down-again` (the live feed differs per boot). The cold `down`
+pass is unchanged (~26 fps on the dev `run`): that one is the JIT.
+
+### After the audit
+
+- `PixelExactImage` applies only while Skia draws in software (`SoftwareDrawing`, set by the
+  window from its renderer, and always on for the Swing-drawn Wayland window); on a GPU it draws
+  scaled, as a plain bitmap. The "animating" guard is gone: making a copy costs about one scaled
+  draw (8.2 ms against 7.9 ms for a 600x800 photo into 511x681), and the guard misfired when one
+  image was drawn at two sizes, leaving the slow draw recorded in the card. Targets under 128x128
+  draw scaled (microseconds, no copy); the copy budget counts the decoded bitmap each entry keeps
+  alive; copies are keyed by the bitmap, so wrappers of the same pixels share them.
+- GIFs: the blurhash goes once the first frame is in, and in software each frame is scaled to its
+  drawn size on the player's thread, then drawn 1:1 (`GifPlayer.decode(frame, target)`); the image
+  viewer, which zooms with a layer, keeps full-size frames.
+- `mediaClip(shape)` (expect/actual; `clip` on Android) records the content once and plays it
+  through the band and corner clips; it now also clips quoted notes, link previews and the
+  captured video still.
+- The prefetch decodes at the card's media width (`FeedMediaGutter`, reported by
+  `NoteComposeLayout`), not the list's: in the run below every feed photo decoded at 511, the
+  width cards draw at, and none at 600, so they draw 1:1 without a copy.
+  Only lists of note cards take it (`mediaAtNoteWidth`: the default renderer of
+  `RenderFeedState`/`RenderFeedContentState`, home, hashtags, profile threads). Picture and video
+  cards draw media across the whole card, and a thread's main post sits 12 dp in from each side,
+  both wider than a note's content column: from the one gutter they would have decoded too small,
+  missed the cache and popped in. Every other list keeps decoding at its own width.
+
+3 boots each, the committed state before the audit fixes (`HEAD`) and after, the same hour:
+
+| pass | before | after |
+|---|---|---|
+| down: fps, gap p99 | 28.5, 144.7 ms | 31.8, 95.7 ms |
+| up: fps | 53.5 | 55.1 |
+| down-again: fps (boots), frames over 25 ms | 56.0 (52.3-58.3), 10.3% | **58.6 (58.6-59.3), 4.9%** |
+
+## Every feed screen in the drawer
+
+`-Damethyst.scrollBench.screen=<NavBarItem>` opens a drawer entry before the passes. One boot per
+screen (37 of the drawer's feed screens), JFR's CPU-time sampler recording the warm passes, then 2
+clean boots for the slow ones. Eleven screens had nothing to scroll for a read-only `npub` (Messages,
+My Lists, Interest Sets, Favorite Algo Feeds, Front Page, Badges, Products, Relay Groups, Nests,
+Geocaches, Web Bookmarks).
+
+- Everywhere, Skia rasterizing in software is still most of the UI thread (45-88%); no app function
+  takes more than ~3%. The image fixes reach every screen: every Coil image decodes to a
+  `PixelExactImage`, and Pictures (62-63 fps), Video, Shorts, Longs, Podcasts and Articles scroll
+  near 60.
+- Single boots swing ±5 fps with the live feed. Confirmed slow with clean boots: **Discover** (49.2
+  fps, 18 ms of UI work a frame), **Profile** (51.4, 13 ms) and **Polls** (54.0, 13 ms); Home ran
+  53.7 the same hour.
+- **Discover's follow-pack banners** are animated GIFs (the author's banner through `MyAsyncImage`,
+  then `AnimatedGifImage`). Drawn as nothing, the screen does 10.9 ms a frame against 16.2 (49 ->
+  58 fps); as still first frames, 14.9. A GIF's first frame (`data.firstFrame`, and a still GIF)
+  draws through `Image(bitmap)`, resampled every frame; the playing frames, scaled on the player's
+  thread, did not come out cheaper either in this `Crop` case. Switching the banner's rounded clip
+  to `mediaClip` saved ~1 ms of the 18.
+  Fixed: a GIF's first frame (a still GIF, and every GIF until its player, restarted each time its
+  card scrolls back in, hands over a frame) draws through `PixelExactImage`; and a frame that
+  overflows its box (a crop) is scaled only where it shows (`FramePlan`), so the player scales and
+  Compose copies a banner-sized frame, not a 580x876 one. Discover, back to back, 2 boots each: down
+  31.9 -> 39.6 fps (gap p99 269 -> 60 ms), up 42.6 -> 49.3, down-again 49.5 -> 53.0 with frames
+  over 25 ms 18.9% -> 12.6%. The median frame barely moved: the fix took out the spikes.
+- Large covers still clip with an antialiased rounded clip (~1.3 ms a cover in software): live
+  stream covers, community covers, public-chat channel thumbs, follow-pack banners, profile gallery
+  cells, music playlist covers, the podcast player.
+- An idle screen still costs 6-9 ms a frame whenever a frame happens: Skia repaints the whole
+  window. Anything animating on screen (a GIF, a spinner, a playing video's progress) keeps that up
+  at its frame rate even when nothing scrolls.
+- In this container every video falls back to Chromium (the native engine can't open them here), so
+  its teardown and message loop show on the UI thread (up to ~4% on Profile); and a video Chromium
+  failed on was tried again each time its card scrolled back (9 times in one run).
+- Smaller and spread out: `NoteComposeLayout`'s measure (2-3%), `PixelExactImage.scaledCopy` in
+  Shorts and Music Playlists (2-3%: copies made again in the warm passes, likely full-width portrait
+  posters and their full-size blurhash copies outgrowing the 64 MB budget), `stringRes` (up to 1%),
+  `RichTextViewer.measureSpaceWidth` (up to 0.7%), `croppedImageSize` on Software Apps (1.7%).
+
+### Audit of the survey round
+
+- `SoftwareDrawing` follows every open window (`report`/`forget`): on while any draws in software,
+  so the fullscreen overlay, a pop-out screen or a napplet window can no longer switch the main
+  window's drawing by reporting another renderer.
+- One scaling helper (`ExactScaling.kt`: `scaleInto`, `scaledBitmap`, `drawAtWholePixels`) for the
+  decoder, `PixelExactImage` and the GIF player; at an unchanged size it copies pixel for pixel (the
+  cubic softened a GIF frame that was only cropped).
+- GIFs: a frame scaled to its box is an immutable snapshot made on the player's thread (the native
+  frame shared through `makeFromPixmap`, not copied) and drawn 1:1 by `ExactFramePainter`, resampled
+  only while the box has changed size since; the player waits for the box's size instead of handing
+  over a frame that would be resampled every draw.
+- Copies made on the UI thread when an image first draws (~8 ms each): Home made 22-24 a boot. The
+  prefetch now fits single images to the platform's inline height cap
+  (`NotePlatform.maxInlineMediaHeight`), an image of unknown shape gets the cap in its own
+  constraints, and a video's thumbnail is scaled off the UI thread before it shows
+  (`PixelExactImage.prepare`). Then: 11 a boot (77 ms), placeholders and small images shown larger.
+  A source over 16 MB draws scaled rather than keep the copy budget for itself.
+- Discover, back to back: down-again 40.8 -> 51.0 fps (UI work 21.6 -> 17.0 ms); Home within noise.
+- `tools/desktop-run/screen-survey.sh` runs the per-screen survey (`--profile` for the hotspots).
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
@@ -195,5 +343,8 @@ get 30 minutes an attempt (the job 75) and `libegl1`.
 4. **Train the installers too.** The `.deb`, `.rpm`, `.dmg` and `.msi` carry the per-user archive
    (classes only, no profiles), so they keep the slow first scroll the "no AOT cache" row shows.
    Training them needs their packaging rebuilt around a trained image (startup plan, "Next").
-5. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
+5. **HiDPI.** Measure the image fixes at 2x scale, where every pixel cost is four times larger.
+6. **GPU drawing.** Run the benchmark where Skia draws on the GPU (macOS, Windows, X11) for the
+   numbers users there see; the software-only paths stay off there.
+7. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
    `jit_ms` are stable enough to watch there if wanted.

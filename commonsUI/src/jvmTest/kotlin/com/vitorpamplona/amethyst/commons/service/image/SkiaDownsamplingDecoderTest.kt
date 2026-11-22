@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
-import coil3.BitmapImage
 import coil3.PlatformContext
 import coil3.decode.DecodeResult
 import coil3.decode.ImageSource
@@ -53,7 +52,7 @@ class SkiaDownsamplingDecoderTest {
     fun fineDetailAveragesToGrayInsteadOfAliasing() =
         runTest {
             val result = decode(checkerboard(400, 400), options(Size(40, 40)))
-            val bitmap = (result.image as BitmapImage).bitmap
+            val bitmap = (result.image as PixelExactImage).bitmap
 
             assertEquals(40, bitmap.width)
             assertEquals(40, bitmap.height)
@@ -69,7 +68,7 @@ class SkiaDownsamplingDecoderTest {
     @Test
     fun fillKeepsTheAspectRatioAndCoversTheSlot() =
         runTest {
-            val bitmap = (decode(checkerboard(400, 300), options(Size(36, 36), Scale.FILL)).image as BitmapImage).bitmap
+            val bitmap = (decode(checkerboard(400, 300), options(Size(36, 36), Scale.FILL)).image as PixelExactImage).bitmap
 
             assertEquals(48, bitmap.width)
             assertEquals(36, bitmap.height)
@@ -79,7 +78,7 @@ class SkiaDownsamplingDecoderTest {
     fun aSmallerPictureIsNotBlownUp() =
         runTest {
             val result = decode(checkerboard(20, 10), options(Size(200, 200)))
-            val bitmap = (result.image as BitmapImage).bitmap
+            val bitmap = (result.image as PixelExactImage).bitmap
 
             assertEquals(20, bitmap.width)
             assertEquals(10, bitmap.height)
@@ -89,7 +88,7 @@ class SkiaDownsamplingDecoderTest {
     @Test
     fun originalSizeKeepsEveryPixel() =
         runTest {
-            val bitmap = (decode(checkerboard(64, 32), options(Size.ORIGINAL)).image as BitmapImage).bitmap
+            val bitmap = (decode(checkerboard(64, 32), options(Size.ORIGINAL)).image as PixelExactImage).bitmap
 
             assertEquals(64, bitmap.width)
             assertEquals(32, bitmap.height)
@@ -100,7 +99,7 @@ class SkiaDownsamplingDecoderTest {
         runTest {
             val gif = checkerboard(300, 300, "gif")
             val result = SkiaGifDecoder(source(gif), options(Size(30, 30))).decode()
-            val bitmap = (result.image as BitmapImage).bitmap
+            val bitmap = (result.image as PixelExactImage).bitmap
 
             assertEquals(30, bitmap.width)
             assertEquals(30, bitmap.height)
@@ -120,7 +119,7 @@ class SkiaDownsamplingDecoderTest {
 
             assertNotNull(shrinkJpeg(jpeg, options))
             val result = decode(jpeg, options)
-            val bitmap = (result.image as BitmapImage).bitmap
+            val bitmap = (result.image as PixelExactImage).bitmap
             assertEquals(100, bitmap.width)
             assertEquals(50, bitmap.height)
             assertTrue(result.isSampled)
@@ -149,7 +148,7 @@ class SkiaDownsamplingDecoderTest {
             assertEquals(400, upright.width)
             assertEquals(800, upright.height)
 
-            val bitmap = (decode(jpeg, options(Size(100, 100))).image as BitmapImage).bitmap
+            val bitmap = (decode(jpeg, options(Size(100, 100))).image as PixelExactImage).bitmap
             assertEquals(50, bitmap.width)
             assertEquals(100, bitmap.height)
             assertEquals(dominant(upright.getColor(200, 100)), dominant(bitmap.getColor(25, 12)))

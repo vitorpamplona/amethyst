@@ -47,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -148,6 +148,8 @@ import com.vitorpamplona.amethyst.desktop.ui.media.EpisodeAudioPlayer as Desktop
 object DesktopNotePlatform : NotePlatform {
     private val MaxInlineMediaHeight = 600.dp
 
+    override val maxInlineMediaHeight: Dp get() = MaxInlineMediaHeight
+
     private fun BaseMediaContent.mediaUrl(): String? =
         when (this) {
             is MediaUrlContent -> url
@@ -190,7 +192,7 @@ object DesktopNotePlatform : NotePlatform {
         shape: Shape,
         description: String?,
     ) {
-        val border = Modifier.clip(shape)
+        val border = Modifier.mediaClip(shape)
         if (artworkUri != null) {
             VideoStillFrame(model = artworkUri, ratio = ratio, blurhash = blurhash, thumbhash = thumbhash, borderModifier = border, contentDescription = description)
         } else {
@@ -290,12 +292,15 @@ object DesktopNotePlatform : NotePlatform {
                     size
                         // Where the viewer grows the image out of, and shrinks it back into.
                         .zoomSourceAnchor(source)
-                        .clip(shape)
+                        .mediaClip(shape)
                         .clickable { showViewer = true }
                 // The note's blurhash/thumbhash sits under the image from the first frame, so the card
                 // is never a blank box while the image (or a GIF's frames) loads, nor when it fails.
+                // Once a still image has drawn it covers the slot, and the blurhash under it goes: a
+                // tiny bitmap stretched over the slot costs as much to draw in software as the photo.
+                var shown by remember(url) { mutableStateOf(false) }
                 Box(modifier) {
-                    if (content.blurhash != null || content.thumbhash != null) {
+                    if ((content.blurhash != null || content.thumbhash != null) && !shown) {
                         DisplayBlurHash(content.blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = content.thumbhash)
                     }
                     // With no known shape the image itself sizes the card, so it must not just match it.
@@ -303,8 +308,10 @@ object DesktopNotePlatform : NotePlatform {
                         url,
                         content.description,
                         contentScale,
-                        if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                        // Capped like its box, so the image decodes at the height the box draws it.
+                        if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                         shapeUnknown = ratio == null,
+                        onShown = { shown = it },
                         blurhash = content.blurhash,
                         thumbhash = content.thumbhash,
                         // A gallery cell fixes its size but gives children no minimum height, so
@@ -338,6 +345,7 @@ object DesktopNotePlatform : NotePlatform {
         contentScale: ContentScale,
         modifier: Modifier,
         shapeUnknown: Boolean = false,
+        onShown: (Boolean) -> Unit = {},
         blurhash: String? = null,
         thumbhash: String? = null,
         failureModifier: Modifier = modifier,
@@ -355,6 +363,8 @@ object DesktopNotePlatform : NotePlatform {
                 AnimatedGifImage(
                     url = url,
                     contentDescription = description,
+                    // The blurhash stays under it until its first frame is in.
+                    onShown = onShown,
                     modifier = modifier,
                     contentScale = contentScale,
                     onFailure = { failure = mediaLoadFailureOf(it) },
@@ -369,6 +379,7 @@ object DesktopNotePlatform : NotePlatform {
                     modifier = modifier,
                     contentScale = contentScale,
                     onState = { state ->
+                        onShown(state is AsyncImagePainter.State.Success)
                         when (state) {
                             is AsyncImagePainter.State.Success -> {
                                 val image = state.result.image
@@ -492,7 +503,7 @@ object DesktopNotePlatform : NotePlatform {
         val fillsSlot = contentScale == ContentScale.Crop
         val modifier =
             (if (fillsSlot) Modifier.fillMaxSize() else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight))
-                .clip(shape)
+                .mediaClip(shape)
                 .let { if (onDialog != null) it.clickable { onDialog() } else it }
         Box(modifier) {
             if (blurhash != null || thumbhash != null) {
@@ -503,7 +514,7 @@ object DesktopNotePlatform : NotePlatform {
                 videoUri,
                 contentDescription,
                 contentScale,
-                if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                 shapeUnknown = !fillsSlot && ratio == null,
                 blurhash = blurhash,
                 thumbhash = thumbhash,

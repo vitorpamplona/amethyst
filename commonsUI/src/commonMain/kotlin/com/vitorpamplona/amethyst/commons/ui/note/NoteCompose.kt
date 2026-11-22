@@ -1465,6 +1465,8 @@ fun InnerNoteWithReactions(
             addPadding = !isBoostedNote,
             showAuthorColumn = notBoostedNorQuote,
             fullWidth = fullWidth,
+            mediaBleed = mediaBleed,
+            reportsMediaGutter = notBoostedNorQuote,
             showSecondRow = showSecondRow,
             // Under a repost's header the boosted body takes the header's spacer, not one of its own.
             showContentSpacer = (isNotRepost && !boostedFrame.headerShown) || repostedNote != null,

@@ -21,9 +21,14 @@
 package com.vitorpamplona.amethyst.desktop.ui.media
 
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.unit.IntSize
+import com.vitorpamplona.amethyst.commons.service.image.exactScaleSampling
 import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.Image
+import org.jetbrains.skia.impl.use
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -124,6 +129,61 @@ class GifPlayerTest {
                     assertContentEquals(expected[frame], shown, "frame $frame")
                 }
             }
+        }
+    }
+
+    // Frame [frame] decoded on its own, scaled to [target] with the filter the player uses.
+    private fun referenceScaled(
+        bytes: ByteArray,
+        frame: Int,
+        target: IntSize,
+    ): ByteArray {
+        val codec = Codec.makeFromData(Data.makeFromBytes(bytes))
+        val source = Bitmap().apply { allocN32Pixels(codec.width, codec.height) }
+        codec.readPixels(source, frame)
+        val out = Bitmap().apply { allocN32Pixels(target.width, target.height) }
+        Image.makeFromBitmap(source).use { image ->
+            Canvas(out).use { canvas ->
+                canvas.clear(0)
+                canvas.drawImageRect(image, 0f, 0f, width.toFloat(), height.toFloat(), 0f, 0f, target.width.toFloat(), target.height.toFloat(), exactScaleSampling(width, height, target.width, target.height), null, true)
+            }
+        }
+        return out.readPixels()!!
+    }
+
+    @Test
+    fun framesScaledToTheirDrawnSizeMatchTheFramesScaledOnTheirOwn() {
+        val bytes = animatedGif()
+        val target = IntSize(width * 2, height * 2)
+
+        GifPlayer(bytes).use { player ->
+            var previous: Pair<Image, ByteArray>? = null
+            for (frame in 0 until player.frameCount) {
+                val shown = player.decodeScaled(frame, FramePlan(target))
+                assertEquals(target, IntSize(shown.width, shown.height))
+                val pixels = Bitmap.makeFromImage(shown).readPixels()!!
+                assertContentEquals(referenceScaled(bytes, frame, target), pixels, "frame $frame")
+                // The frame before may still be on screen: decoding this one leaves it as it was.
+                previous?.let { (image, before) -> assertContentEquals(before, Bitmap.makeFromImage(image).readPixels()!!, "frame ${frame - 1}") }
+                previous = shown to pixels
+            }
+        }
+    }
+
+    @Test
+    fun aCroppedPlanKeepsOnlyWhatShowsOfTheScaledFrame() {
+        val bytes = animatedGif()
+        val target = IntSize(width * 2, height * 2)
+        // An 80x60 frame in a 60x40 box: the middle, 10 pixels in from each side.
+        val plan = FramePlan(target, IntSize(60, 40), dx = -10, dy = -10)
+        val full = referenceScaled(bytes, 0, target)
+        val expected = ByteArray(60 * 40 * 4)
+        for (y in 0 until 40) System.arraycopy(full, ((y + 10) * target.width + 10) * 4, expected, y * 60 * 4, 60 * 4)
+
+        GifPlayer(bytes).use { player ->
+            val shown = player.decodeScaled(0, plan)
+            assertEquals(IntSize(60, 40), IntSize(shown.width, shown.height))
+            assertContentEquals(expected, Bitmap.makeFromImage(shown).readPixels()!!)
         }
     }
 

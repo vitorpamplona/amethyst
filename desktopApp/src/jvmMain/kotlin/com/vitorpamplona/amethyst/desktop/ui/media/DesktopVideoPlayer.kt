@@ -49,16 +49,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.ImagePainter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -67,13 +70,16 @@ import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_o
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
+import com.vitorpamplona.amethyst.commons.service.image.PixelExactImage
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
@@ -96,6 +102,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.roundToInt
 
 // Shorter than this, a video is a still image (one frame); see the poster fade below.
 private const val STILL_VIDEO_MILLIS = 300L
@@ -395,7 +402,7 @@ fun DesktopVideoPlayer(
                     .width(width)
                     .height(constrainedHeight)
                     .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
-                    .clip(shape)
+                    .mediaClip(shape)
                     .background(backdrop),
             contentAlignment = Alignment.Center,
         ) {
@@ -602,7 +609,7 @@ private fun ChromiumRoutedVideo(
                 .width(width)
                 .height(height)
                 .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
-                .clip(shape)
+                .mediaClip(shape)
                 .background(if (failed) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Black),
             contentAlignment = Alignment.Center,
         ) {
@@ -740,6 +747,38 @@ private fun VideoPoster(
     if (posterUrl != null) {
         AsyncImage(model = posterUrl, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit, onError = { onPosterFailed() })
     } else if (thumbnail != null) {
-        Image(bitmap = thumbnail, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
+        // Drawn 1:1 from a copy at the card's size, not resampled every frame (see PixelExactImage).
+        // The frame's size is known once the box is laid out, so the copy is made then, off the UI
+        // thread, and the poster waits for it (the box's backdrop shows meanwhile); scrolled back in,
+        // the copy is still there.
+        val image = remember(thumbnail) { PixelExactImage(thumbnail.asSkiaBitmap()) }
+        val painter = remember(image) { ImagePainter(image) }
+        var box by remember { mutableStateOf(IntSize.Zero) }
+        val drawn = remember(image, box) { fittedSize(image.width, image.height, box) }
+        // In software, not before the box is laid out: a draw at an unknown size would copy on the UI thread.
+        var ready by remember(image, drawn) { mutableStateOf(!SoftwareDrawing.active || (drawn != null && image.isReady(drawn.width, drawn.height))) }
+        if (!ready && drawn != null) {
+            LaunchedEffect(image, drawn) {
+                image.prepare(drawn.width, drawn.height)
+                ready = true
+            }
+        }
+        val measured = modifier.onSizeChanged { box = it }
+        if (ready) {
+            Image(painter = painter, contentDescription = null, modifier = measured, contentScale = ContentScale.Fit)
+        } else {
+            Box(measured)
+        }
     }
+}
+
+/** The size a [width] x [height] picture is drawn at to fit [box] ([ContentScale.Fit]); null before the box is laid out. */
+private fun fittedSize(
+    width: Int,
+    height: Int,
+    box: IntSize,
+): IntSize? {
+    if (box.width <= 0 || box.height <= 0 || width <= 0 || height <= 0) return null
+    val scale = minOf(box.width.toFloat() / width, box.height.toFloat() / height)
+    return IntSize((width * scale).roundToInt().coerceAtLeast(1), (height * scale).roundToInt().coerceAtLeast(1))
 }
