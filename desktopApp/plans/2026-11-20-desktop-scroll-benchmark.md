@@ -290,6 +290,12 @@ Geocaches, Web Bookmarks).
   draws through `Image(bitmap)`, resampled every frame; the playing frames, scaled on the player's
   thread, did not come out cheaper either in this `Crop` case. Switching the banner's rounded clip
   to `mediaClip` saved ~1 ms of the 18.
+  Fixed: a GIF's first frame (a still GIF, and every GIF until its player, restarted each time its
+  card scrolls back in, hands over a frame) draws through `PixelExactImage`; and a frame that
+  overflows its box (a crop) is scaled only where it shows (`FramePlan`), so the player scales and
+  Compose copies a banner-sized frame, not a 580x876 one. Discover, back to back, 2 boots each: down
+  31.9 -> 39.6 fps (gap p99 269 -> 60 ms), up 42.6 -> 49.3, down-again 49.5 -> 53.0 with frames
+  over 25 ms 18.9% -> 12.6%. The median frame barely moved: the fix took out the spikes.
 - Large covers still clip with an antialiased rounded clip (~1.3 ms a cover in software): live
   stream covers, community covers, public-chat channel thumbs, follow-pack banners, profile gallery
   cells, music playlist covers, the podcast player.

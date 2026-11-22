@@ -51,13 +51,13 @@ class AnimatedGifImageRenderTest {
     }
 
     /** Two frames, a 1-pixel checkerboard and its inverse: any resampling at draw time changes them. */
-    private fun checkerGif(): File {
+    private fun checkerGif(frames: Int = 2): File {
         val writer = ImageIO.getImageWritersByFormatName("gif").next()
         val file = File.createTempFile("checker", ".gif").apply { deleteOnExit() }
         ImageIO.createImageOutputStream(file).use { stream ->
             writer.output = stream
             writer.prepareWriteSequence(null)
-            for (phase in 0..1) {
+            for (phase in 0 until frames) {
                 val image = BufferedImage(40, 30, BufferedImage.TYPE_INT_RGB)
                 for (y in 0 until 30) for (x in 0 until 40) image.setRGB(x, y, if ((x + y + phase) % 2 == 0) 0x000000 else 0xFFFFFF)
                 val param = writer.defaultWriteParam
@@ -74,19 +74,68 @@ class AnimatedGifImageRenderTest {
         return file
     }
 
-    /** Frame [frame] of [file] scaled to 160x120 with the player's filter, as RGBA bytes. */
+    /**
+     * Frame [frame] of [file] scaled to 160x120 with the player's filter, then placed 1:1 in a
+     * [boxWidth] x [boxHeight] box, centred (cropped when the box is smaller), as RGBA bytes.
+     */
     private fun prescaled(
         file: File,
         frame: Int,
+        boxWidth: Int = 160,
+        boxHeight: Int = 120,
     ): ByteArray {
         val codec = Codec.makeFromData(Data.makeFromBytes(file.readBytes()))
         val source = Bitmap().apply { allocN32Pixels(40, 30) }
         codec.readPixels(source, frame)
-        val out = Bitmap().apply { allocN32Pixels(160, 120) }
+        val scaled = Bitmap().apply { allocN32Pixels(160, 120) }
         Image.makeFromBitmap(source).use { image ->
-            Canvas(out).use { it.drawImageRect(image, 0f, 0f, 40f, 30f, 0f, 0f, 160f, 120f, exactScaleSampling(false), null, true) }
+            Canvas(scaled).use { it.drawImageRect(image, 0f, 0f, 40f, 30f, 0f, 0f, 160f, 120f, exactScaleSampling(false), null, true) }
+        }
+        val out = Bitmap().apply { allocN32Pixels(boxWidth, boxHeight) }
+        Image.makeFromBitmap(scaled).use { image ->
+            Canvas(out).use { it.drawImage(image, ((boxWidth - 160) / 2).toFloat(), ((boxHeight - 120) / 2).toFloat()) }
         }
         return out.readPixels()!!
+    }
+
+    /** Renders [file] in a [width] x [height] box until a frame equals one of [expected], up to 10 s. */
+    private fun rendersOneOf(
+        file: File,
+        width: Int,
+        height: Int,
+        contentScale: ContentScale,
+        expected: List<ByteArray>,
+    ): Boolean {
+        val scene =
+            ImageComposeScene(width, height, Density(1f)) {
+                AnimatedGifImage(url = file.path, local = true, modifier = Modifier.size(width.dp, height.dp), contentScale = contentScale)
+            }
+        var matched = false
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!matched && System.currentTimeMillis() < deadline) {
+            val pixels = Bitmap.makeFromImage(scene.render(System.nanoTime())).readPixels()!!
+            matched = expected.any { it.contentEquals(pixels) }
+            if (!matched) Thread.sleep(30)
+        }
+        scene.close()
+        return matched
+    }
+
+    @Test
+    fun croppedFramesDrawScaledOnceAndThen1to1() {
+        SoftwareDrawing.active = true
+        val file = checkerGif()
+        // A banner: 4x scales the 40x30 GIF to 160x120, of which the box shows the middle 80 rows.
+        val expected = listOf(prescaled(file, 0, 160, 80), prescaled(file, 1, 160, 80))
+        assertTrue(rendersOneOf(file, 160, 80, ContentScale.Crop, expected), "no rendered frame was a cropped frame scaled by the player and drawn 1:1")
+    }
+
+    @Test
+    fun aStillGifDrawsItsFrameScaledOnceAndThen1to1() {
+        SoftwareDrawing.active = true
+        // One frame: nothing plays, so the first frame is what draws, every frame.
+        val file = checkerGif(frames = 1)
+        assertTrue(rendersOneOf(file, 160, 120, ContentScale.Fit, listOf(prescaled(file, 0))), "the still frame was not drawn 1:1 from a scaled copy")
     }
 
     @Test

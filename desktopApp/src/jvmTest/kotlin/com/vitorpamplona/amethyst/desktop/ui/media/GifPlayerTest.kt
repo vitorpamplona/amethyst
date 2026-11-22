@@ -160,7 +160,7 @@ class GifPlayerTest {
         GifPlayer(bytes).use { player ->
             var previous: Pair<ImageBitmap, ByteArray>? = null
             for (frame in 0 until player.frameCount) {
-                val shown = player.decode(frame, target)
+                val shown = player.decode(frame, FramePlan(target))
                 assertEquals(target, IntSize(shown.width, shown.height))
                 val pixels = shown.asSkiaBitmap().readPixels()!!
                 assertContentEquals(referenceScaled(bytes, frame, target), pixels, "frame $frame")
