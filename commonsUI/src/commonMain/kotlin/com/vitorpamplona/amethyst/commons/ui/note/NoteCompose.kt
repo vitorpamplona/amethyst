@@ -199,6 +199,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzArchiveRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzArchivedIdentitiesList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzCanvas
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzChannelPins
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzChannelSummary
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDiffCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmAddMember
@@ -233,6 +234,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationBan
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationResolveReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationTimeout
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationUntimeout
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzPinCommand
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzPresenceSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzPresenceUpdate
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzProductFeedback
@@ -569,6 +571,9 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
 import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
@@ -2906,6 +2911,7 @@ internal fun RenderNoteRow(
             is CanvasEvent -> RenderBuzzCanvas(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is StreamMessageEditEvent -> RenderBuzzMessageEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is StreamMessagePinnedEvent -> RenderBuzzMessagePinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is PinMessageEvent, is UnpinMessageEvent -> RenderBuzzPinCommand(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is StreamMessageBookmarkedEvent -> RenderBuzzMessageBookmarked(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is StreamMessageScheduledEvent -> RenderBuzzMessageScheduled(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is StreamReminderEvent -> RenderBuzzReminder(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -2965,6 +2971,7 @@ internal fun RenderNoteRow(
             is GroupRolesEvent -> RenderGroupRoles(baseNote, backgroundColor, accountViewModel, nav)
             is GroupParticipantsEvent -> RenderGroupParticipants(baseNote, accountViewModel, nav)
             is GroupPinnedEvent -> RenderGroupPinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ChannelPinsEvent -> RenderBuzzChannelPins(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ChannelHideMessageEvent -> RenderChannelHideMessage(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ChannelMuteUserEvent -> RenderChannelMuteUser(baseNote, backgroundColor, accountViewModel, nav)
             is PublicChatListEvent -> RenderPublicChatList(baseNote, backgroundColor, accountViewModel, nav)

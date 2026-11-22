@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.channel
 
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_PIN_KINDS
@@ -27,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
 /**
  * The relay-signed metadata for a NIP-29 group (name/picture/about + admin,
@@ -63,7 +65,9 @@ fun filterRelayGroupState(
         if (pinnedIds.isEmpty()) {
             emptyList()
         } else {
-            relays.map { RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, ids = pinnedIds)) }
+            // Buzz (NIP-PM) serves a pinned message only to a filter that also names its channel by `#h`.
+            val channelScope = if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) mapOf(GroupIdTag.TAG_NAME to listOf(channel.groupId.id)) else null
+            relays.map { RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, ids = pinnedIds, tags = channelScope)) }
         }
 
     // Same back-fill for `a` pins (addressable events, NIP-29 #2416): one kind+author filter per

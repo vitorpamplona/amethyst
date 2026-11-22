@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
@@ -38,6 +39,9 @@ import com.vitorpamplona.quartz.buzz.dm.tags.DmHistoryTag
 import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
@@ -52,22 +56,20 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.buzz.workspace.buzzRoleFor
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
+import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -95,11 +97,8 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -219,7 +218,7 @@ class AccountRelayGroupActions(
     ): Map<NormalizedRelayUrl, PublishResult> {
         // Same delivery tracking as every other group command, so the chat shows it as sent.
         account.chatDeliveryTracker.trackPublic(signed.id, setOf(relay))
-        return account.client.publishAwaitingOkThroughAuth(signed, relay, timeoutSecs) {
+        return account.client.publishAwaitingOkThroughAuth(signed, setOf(relay), timeoutSecs) {
             account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
                 filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
                 idleTimeoutMs = AUTH_WARM_UP_MS,
@@ -475,37 +474,26 @@ class AccountRelayGroupActions(
         channelType: String? = null,
         banner: String? = null,
     ): RelayGroupCreateResult {
-        val isBuzz = BuzzRelayDialect.isBuzz(relay)
-
-        // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
-        // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
-        // a `name` (see CreateGroupEvent.build), which used to make "create group" on a Buzz relay
-        // publish two events and produce nothing at all.
-        val create =
-            CreateGroupEvent.build(
+        val templates =
+            relayGroupCreateTemplates(
+                isBuzz = BuzzRelayDialect.isBuzz(relay),
                 groupId = groupId,
                 name = name,
                 about = about,
-                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
+                picture = picture,
+                banner = banner,
+                isPrivate = isPrivate,
+                isClosed = isClosed,
+                isHidden = isHidden,
+                isRestricted = isRestricted,
+                hashtags = hashtags,
+                geohashes = geohashes,
+                parent = parent,
                 channelType = channelType,
             )
-        val signedCreate = account.signer.sign(create)
+        val signedCreate = account.signer.sign(templates.create)
         // Sign the 9002 up front too, so a signer that asks the user does it before anything is sent.
-        val edit =
-            account.signer.sign(
-                GroupEditMetadataEvent.build(
-                    groupId,
-                    name = name,
-                    about = about,
-                    picture = picture,
-                    banner = banner,
-                    status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                    // Never on Buzz: there `t` tags replace the channel's labels.
-                    hashtags = if (isBuzz) emptyList() else hashtags,
-                    geohashes = geohashes,
-                    parent = parent,
-                ),
-            )
+        val edit = account.signer.sign(templates.edit)
         account.cache.justConsumeMyOwnEvent(signedCreate)
         val results = publishAwaitingOk(signedCreate, relay, CREATE_OK_TIMEOUT_SECS, warmUpKind = GroupMetadataEvent.KIND)
         relayGroupCommandRefusal(results)?.let { return RelayGroupCreateResult.Refused(it) }
@@ -602,27 +590,56 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Pin [note] by appending it to the current list (no-op if already pinned). An addressable
-     * note is pinned by its address (`a`), so the pin follows its latest version; anything else
-     * by event id (`e`). Every existing pin — including other clients' `a` pins — is kept.
+     * Pin [note] in [channel]. Returns the relay's refusal, or null when it went out (or there was
+     * nothing to do).
+     *
+     * NIP-29: append it to the current list (no-op if already pinned) and send the whole list as a
+     * 9010. An addressable note is pinned by its address (`a`), so the pin follows its latest
+     * version; anything else by event id (`e`). Every existing pin, other clients' `a` pins too, is kept.
+     *
+     * Buzz (NIP-PM): sign one kind-40010 command naming the message; the relay applies it and
+     * republishes the channel's 30623 list, which [RelayGroupChannel.updateBuzzPins] folds. Buzz
+     * refuses 9010 as an unknown kind.
      */
     suspend fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) {
-        val pin = pinFor(note) ?: return
-        if (channel.isPinned(pin.ref)) return
+    ): String? {
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            return sendBuzzPinCommand(channel, PinMessageEvent.build(channel.groupId.id, note.event?.id ?: note.idHex))
+        }
+        val pin = pinFor(note) ?: return null
+        if (channel.isPinned(pin.ref)) return null
         updateRelayGroupPins(channel, channel.pinsWith(pin))
+        return null
     }
 
-    /** Unpin [note] (by address or id) from the current list, keeping every other pin intact. */
+    /** Unpin [note] (by address or id), keeping every other pin intact. Returns the relay's refusal, as [pinRelayGroupMessage]. */
     suspend fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) {
+    ): String? {
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            return sendBuzzPinCommand(channel, UnpinMessageEvent.build(channel.groupId.id, note.event?.id ?: note.idHex))
+        }
         val refs = pinRefsFor(note)
-        if (refs.none { channel.isPinned(it) }) return
+        if (refs.none { channel.isPinned(it) }) return null
         updateRelayGroupPins(channel, channel.pins.filter { it.ref !in refs })
+        return null
+    }
+
+    /**
+     * Signs one NIP-PM command and sends it to [channel]'s relay, awaiting its OK through AUTH.
+     * NIP-PM: a client with no answer re-sends the same signed event and never signs a new one, which
+     * is what the pool does with the event it holds. Pinning a pinned message is accepted and
+     * changes nothing, so there is no local no-op check.
+     */
+    private suspend fun <T : Event> sendBuzzPinCommand(
+        channel: RelayGroupChannel,
+        template: EventTemplate<T>,
+    ): String? {
+        val signed = account.signer.sign(template)
+        return relayGroupCommandRefusal(publishAwaitingOk(signed, channel.groupId.relayUrl, CREATE_OK_TIMEOUT_SECS, warmUpKind = ChannelPinsEvent.KIND))
     }
 
     private fun addressOf(note: Note): Address? = note.address() ?: (note.event as? AddressableEvent)?.address()
@@ -806,6 +823,65 @@ class AccountRelayGroupActions(
     }
 }
 
+/** The two events that make a group: the 9007 create and the 9002 that names it. */
+class RelayGroupCreateTemplates(
+    val create: EventTemplate<CreateGroupEvent>,
+    val edit: EventTemplate<GroupEditMetadataEvent>,
+)
+
+/**
+ * A new group id for [isBuzz]'s dialect: a Buzz relay keys channels by UUID and ignores an id it
+ * cannot parse as one; a NIP-29 relay gets 8 random bytes, hex-encoded (as Armada does).
+ */
+fun newRelayGroupId(isBuzz: Boolean): String = if (isBuzz) newBuzzChannelId() else RandomInstance.bytes(8).toHexKey()
+
+/**
+ * The create and edit events of a new group, shared by the app's form and `amy relaygroup create`.
+ *
+ * The metadata rides the create event as well as the 9002. A plain NIP-29 relay takes its metadata
+ * from the 9002 and ignores these tags; Buzz rejects a bare 9007 outright (`invalid: channel name is
+ * required`), which is why a create used to publish two events and produce nothing on Buzz.
+ * [hashtags] are NIP-29 topics: on Buzz `t` tags are the channel's labels, so they are not sent.
+ */
+fun relayGroupCreateTemplates(
+    isBuzz: Boolean,
+    groupId: String,
+    name: String,
+    about: String? = null,
+    picture: String? = null,
+    banner: String? = null,
+    isPrivate: Boolean = false,
+    isClosed: Boolean = false,
+    isHidden: Boolean = false,
+    isRestricted: Boolean = false,
+    hashtags: List<String> = emptyList(),
+    geohashes: List<String> = emptyList(),
+    parent: String? = null,
+    channelType: String? = null,
+): RelayGroupCreateTemplates =
+    RelayGroupCreateTemplates(
+        create =
+            CreateGroupEvent.build(
+                groupId = groupId,
+                name = name,
+                about = about,
+                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
+                channelType = channelType,
+            ),
+        edit =
+            GroupEditMetadataEvent.build(
+                groupId,
+                name = name,
+                about = about,
+                picture = picture,
+                banner = banner,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = if (isBuzz) emptyList() else hashtags,
+                geohashes = geohashes,
+                parent = parent,
+            ),
+    )
+
 /**
  * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
  * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
@@ -924,66 +1000,8 @@ const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's h
  */
 fun buzzDmAddRefusedHistoryTag(results: Map<NormalizedRelayUrl, PublishResult>): Boolean = results.values.none { it.accepted } && results.values.any { it.message == ONLY_PEOPLE_SHARE_HISTORY }
 
-/**
- * Publishes [signed] to [relay] alone and waits up to [timeoutSecs] for its OK.
- *
- * NIP-42 write race: on a cold connection the relay answers the first publish `auth-required:`.
- * The pool keeps the event, and once our AUTH lands it re-sends it by itself: that re-send's OK is
- * the relay's real answer (a Buzz DM command's carries the DM it made). So one OK listener stays
- * open from before the first send until we return. After an `auth-required:` this runs [warmUp]
- * (a read that makes the auth coordinator finish the handshake), stopping early once the re-send's
- * OK is in; if no accepted OK came, it publishes once more on the now-authed socket. A relay that
- * already processed the re-send answers that retry `duplicate:` (Buzz `command_executor.rs`), so an
- * earlier accepted OK we saw wins over a later duplicate.
- */
-internal suspend fun INostrClient.publishAwaitingOkThroughAuth(
-    signed: Event,
-    relay: NormalizedRelayUrl,
-    timeoutSecs: Long,
-    warmUp: suspend () -> Unit,
-): Map<NormalizedRelayUrl, PublishResult> {
-    val target = relay
-    // The first accepted OK for [signed] from [relay] that is not a duplicate notice.
-    val accepted = MutableStateFlow<PublishResult?>(null)
-    val watcher =
-        object : RelayConnectionListener {
-            override suspend fun onIncomingMessage(
-                relay: IRelayClient,
-                msgStr: String,
-                msg: Message,
-            ) {
-                if (msg is OkMessage && msg.success && msg.eventId == signed.id && relay.url == target && !msg.message.startsWith(DUPLICATE_PREFIX)) {
-                    accepted.compareAndSet(null, PublishResult(true, msg.message))
-                }
-            }
-        }
-    addConnectionListener(watcher)
-    try {
-        val first = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
-        if (first.values.any { it.accepted } || first.values.none { it.message.startsWith(AUTH_REQUIRED_PREFIX) }) return first
-
-        coroutineScope {
-            val warming = launch { warmUp() }
-            val answered =
-                launch {
-                    accepted.first { it != null }
-                    warming.cancel()
-                }
-            warming.join()
-            answered.cancel()
-        }
-        accepted.value?.let { return mapOf(relay to it) }
-
-        val retry = publishAndCollectResults(signed, setOf(relay), timeoutInSeconds = timeoutSecs)
-        return accepted.value?.let { mapOf(relay to it) } ?: retry
-    } finally {
-        removeConnectionListener(watcher)
-    }
-}
-
 private const val AUTH_REQUIRED_PREFIX = "auth-required:"
 private const val RATE_LIMITED_PREFIX = "rate-limited:"
-private const val DUPLICATE_PREFIX = "duplicate:"
 
 /** How long a group command waits for its OK; the AUTH warm-up can double it. */
 private const val OK_TIMEOUT_SECS = 15L

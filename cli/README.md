@@ -654,7 +654,7 @@ screen speaks.
 | `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
 | `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
 | `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
-| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. |
+| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed] [--forum]` | Create a group (publishes 9007 + 9002, built as the app builds them); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. On a Buzz relay (its NIP-11 `software` is Buzz) the id is a UUID, the 9007 carries the name, visibility and channel type (`--forum`, else stream). A refused 9007 exits `rejected` with the relay's reason. |
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
 | `amy relaygroup join naddr1…[?invite=CODE]` | Same, from NIP-29's shareable group identifier; the `?invite=` suffix becomes the join `code`. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
@@ -664,6 +664,8 @@ screen speaks.
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role (sent as the `role` tag with a bare `p`, since Buzz reads `p[2]` first and refuses NIP-29 roles there); without it an existing member keeps theirs. |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
+| `amy relaygroup pin` / `unpin` on Buzz | Buzz pins are NIP-PM: one 40010 pin / 40011 unpin command naming the message (by id; no `a` pins), allowed to anyone who may post in the channel. The relay rewrites its relay-signed 30623 list, read back into `pins`. |
+| `amy relaygroup pins RELAY GID [--timeout S]` | The pinned messages in display order: the 39005 (NIP-29, `#d`) or Buzz's 30623 (`#h`), only when signed by the relay's NIP-11 `self`. |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 

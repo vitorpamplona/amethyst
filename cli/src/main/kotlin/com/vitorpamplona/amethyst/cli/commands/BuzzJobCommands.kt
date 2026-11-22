@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -56,6 +57,32 @@ object BuzzJobCommands {
         |amy buzz job cancel RELAY JOBID [--reason R]  cancel a job (kind-43005)
         |    [--channel GID]
         """.trimMargin()
+
+    /**
+     * Why every job verb fails on a current Buzz relay: `block/buzz` lists 43001-43006 in its kinds
+     * but its ingest has no scope for them (`required_scope_for_kind` in
+     * `buzz-relay/src/handlers/ingest.rs` at 52cbc6113), so it refuses each one from a client as
+     * `restricted: unknown event kind`. Its own desktop app marks the job sounds "coming soon": nothing
+     * emits them, and `buzz-acp` agents answer with plain channel messages instead.
+     */
+    const val JOB_KINDS_UNSUPPORTED =
+        "this relay does not accept Buzz agent-job events (kinds 43001-43006) from clients: block/buzz reserves them, " +
+            "but its relay ingests none yet; agents there answer with plain channel messages (`amy buzz post`)"
+
+    private const val UNKNOWN_KIND_REFUSAL = "restricted: unknown event kind"
+
+    /** The relay's unknown-kind refusal of a job event, or null when it said anything else. */
+    fun jobKindsRefusal(ack: Map<NormalizedRelayUrl, PublishResult>): String? = ack.values.firstOrNull { !it.accepted && it.message.startsWith(UNKNOWN_KIND_REFUSAL) }?.message
+
+    /** Ends a job verb with [JOB_KINDS_UNSUPPORTED] when every relay refused the job event as an unknown kind. */
+    fun jobKindsGuard(
+        ack: Map<NormalizedRelayUrl, PublishResult>,
+        eventId: String,
+    ): Int? {
+        if (ack.values.any { it.accepted }) return null
+        val refusal = jobKindsRefusal(ack) ?: return null
+        return Output.error("unsupported", JOB_KINDS_UNSUPPORTED, extra = mapOf("event_id" to eventId, "relay_message" to refusal))
+    }
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -96,6 +123,7 @@ object BuzzJobCommands {
             ctx.prepare()
             val signed = ctx.signer.sign(JobRequestEvent.build(text, channel, agent))
             val ack = ctx.publish(signed, setOf(relay))
+            jobKindsGuard(ack, signed.id)?.let { return it }
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
@@ -200,6 +228,7 @@ object BuzzJobCommands {
             ctx.prepare()
             val signed = ctx.signer.sign(JobCancelEvent.build(jobId, reason, channel))
             val ack = ctx.publish(signed, setOf(relay))
+            jobKindsGuard(ack, signed.id)?.let { return it }
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(

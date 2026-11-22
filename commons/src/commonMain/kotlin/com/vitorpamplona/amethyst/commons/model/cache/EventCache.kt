@@ -118,6 +118,9 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
 import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
@@ -2634,6 +2637,23 @@ open class EventCache :
     }
 
     /**
+     * Buzz NIP-PM relay-signed pin list (kind 30623) → the channel's pins. Its `d` and `h` both name
+     * the channel; a list not signed by the relay's NIP-11 `self` key is stored but never folded.
+     */
+    fun consume(
+        event: ChannelPinsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? ChannelPinsEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.channel(), relay)).updateBuzzPins(it) }
+        }
+        return new
+    }
+
+    /**
      * A Kanban card (kind 30302) is stored like any addressable event and also counted as a reply
      * of its board ([computeReplyTo] links the board), which [consumeBaseReplaceable] alone does
      * not do: the board card reads its column counts from those replies. A newer version of the
@@ -4060,6 +4080,7 @@ open class EventCache :
                 is GroupMembersEvent -> consume(event, relay, wasVerified)
                 is GroupAdminsEvent -> consume(event, relay, wasVerified)
                 is GroupPinnedEvent -> consume(event, relay, wasVerified)
+                is ChannelPinsEvent -> consume(event, relay, wasVerified)
 
                 // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
                 // route it onto the channel so a moderation UI can offer the relay's role set.
@@ -4177,6 +4198,8 @@ open class EventCache :
                 is ForumCommentEvent,
                 is ForumVoteEvent,
                 is StreamMessagePinnedEvent,
+                is PinMessageEvent,
+                is UnpinMessageEvent,
                 is StreamMessageBookmarkedEvent,
                 is StreamMessageScheduledEvent,
                 is StreamReminderEvent,

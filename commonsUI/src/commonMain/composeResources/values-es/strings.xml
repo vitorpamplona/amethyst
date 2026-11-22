@@ -3054,4 +3054,7 @@
     <string name="cordn_call_ended">Llamada finalizada</string>
     <string name="cordn_call_ended_titled">Llamada finalizada · %1$s</string>
     <string name="cordn_call_unsupported">Anuncio de llamada no compatible</string>
+    <string name="relay_group_pin_refused_title">El relé no fijó el mensaje</string>
+    <string name="relay_group_unpin_refused_title">El relé no desfijó el mensaje</string>
+    <string name="kc_buzz_unpinned">Desfijó un mensaje</string>
 </resources>

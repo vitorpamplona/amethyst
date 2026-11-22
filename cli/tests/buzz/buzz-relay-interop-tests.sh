@@ -67,7 +67,7 @@ else
   WHY_HEX=$(last_reason A)
   amy_as A event --kind 9007 --relay "$RELAY" --tags "[[\"h\",\"$(new_uuid)\"]]"
   WHY_UUID=$(last_reason A)
-  fail create-verb "relaygroup create exits $VERB_RC with published=false and no reason; Buzz refuses its bare 9007 ('$WHY_HEX'; with a UUID id: '$WHY_UUID')"
+  fail create-verb "relaygroup create rc=$VERB_RC published=$(j .published) $(last_err A); a bare 9007: '$WHY_HEX', with a UUID id: '$WHY_UUID'"
 fi
 
 # 2b. The app's shape, via amy event: UUID id + name/about/visibility/channel_type on the 9007.
@@ -281,7 +281,7 @@ ACK_ID=$(j '.channel_id // empty'); ACK_MSG=$(j '.relay_message // empty')
 if [[ -n "$ACK_ID" ]]; then
   pass dm-open-channel-id "the ack carried the relay-assigned DM id $ACK_ID"
 else
-  fail dm-open-channel-id "channel_id null, relay_message '$ACK_MSG': the relay's real OK (with response:{channel_id}) went to the pool's post-AUTH re-send; Context.publish's own retry then got duplicate:"
+  fail dm-open-channel-id "channel_id null, relay_message '$ACK_MSG'"
 fi
 DM1=$(dm_lookup A "${HEX[A]}" "${HEX[B]}")
 [[ -n "$DM1" ]] && pass dm-list "A's dm list finds the DM {A,B} → $DM1" || fail dm-list "no {A,B} DM in A's dm list: $(j -c .)"
@@ -369,33 +369,66 @@ banner "8. Jobs (A files a job for agent G)"
 amy_as A relaygroup put-user "$RELAY" "$STREAM" "${HEX[G]}" --buzz-role bot
 amy_as A buzz job request "$RELAY" "say hi" --agent "${HEX[G]}" --channel "$STREAM"
 JOB=$(j '.job_id // empty')
+JOB_ERR=$(last_err A)
 if [[ $RC -eq 0 ]]; then
   pass job-request "43001 accepted ($JOB)"
   amy_as G buzz agent serve "$RELAY" --exec 'cat' --accept-from "${HEX[A]}" --channel "$STREAM" --once --timeout 6
   amy_as A buzz job show "$RELAY" "$JOB"
   [[ "$(j .state)" == "completed" ]] && pass job-completed "agent served the job; A sees state=completed" || fail job-completed "job state=$(j .state)"
+elif [[ "$(jq -r .error <<<"$JOB_ERR" 2>/dev/null)" == "unsupported" ]]; then
+  # Upstream at 52cbc6113 ingests no 43001-43006 from clients (required_scope_for_kind has no arm;
+  # its desktop marks job sounds "coming soon"): amy must say so instead of a bare rejection.
+  pass job-request "amy says the relay takes no job events: '$(jq -r .detail <<<"$JOB_ERR")' (relay: '$(jq -r .relay_message <<<"$JOB_ERR")')"
+  gap job-protocol "Buzz ingests no agent-job kinds (43001-43006) from clients yet; buzz-acp agents answer with plain stream messages"
 else
-  fail job-request "Buzz refuses kind 43001: '$(last_reason A)' (ingest.rs required_scope_for_kind has no arm for 43001-43006)"
+  fail job-request "rc=$RC '$(last_reason A)': not the unknown-kind refusal amy should explain"
 fi
 
-
 # ---------------------------------------------------------------------------
-banner "9. Pins (NIP-29 9010 vs Buzz NIP-PM 40010/30623)"
+banner "9. Pins (Buzz NIP-PM: 40010 pin / 40011 unpin / relay-signed 30623)"
 # ---------------------------------------------------------------------------
+# On Buzz, `relaygroup pin/unpin` send one NIP-PM command (not NIP-29's 9010, which Buzz
+# refuses as an unknown kind) and read back the relay's 30623 by #h; `relaygroup pins` reads it.
+pins_of() { printf '%s' "$OUT" | jq -r '(.pins // []) | join(",")' 2>/dev/null; }
 amy_as A relaygroup pin "$RELAY" "$STREAM" "$ROOT"
-if [[ $RC -eq 0 ]]; then
-  fail pin-nip29 "relaygroup pin (9010) was accepted by Buzz: $(j -c .)"
+if [[ $RC -eq 0 && "$(j .kind)" == "40010" && "$(pins_of)" == "$ROOT" ]]; then
+  pass pin-verb "A pinned ROOT with a 40010; the relay's 30623 lists it"
 else
-  info "relaygroup pin on Buzz: $(last_err A)"
-  gap pin-nip29 "relaygroup pin sends NIP-29 9010, which Buzz does not take: $(last_err A | jq -r '.detail' 2>/dev/null)"
+  fail pin-verb "rc=$RC kind=$(j .kind) pins='$(pins_of)' $(last_err A)"
 fi
-gap pin-nip-pm "Buzz pins are NIP-PM (40010 pin / 40011 unpin / relay-signed 30623 list, upstream e95d7a950); quartz/amy/Amethyst have none of the three kinds"
-amy_as A event --kind 40010 --relay "$RELAY" --tags "[[\"h\",\"$STREAM\"],[\"e\",\"$ROOT\"]]"
-[[ $RC -eq 0 ]] && info "raw 40010 accepted" || info "raw 40010: $(last_err A)"
-fetch_as B 30623 "d=$STREAM"
-PINS=$(printf '%s' "$OUT" | jq -r '[..|objects|select(.kind==30623)|.tags[]|select(.[0]=="e")|.[1]]|join(",")' 2>/dev/null)
-[[ "$PINS" == *"$ROOT"* ]] && pass pin-nip-pm-relay "relay publishes 30623 with the pinned message (what Amethyst would need to read)" \
-  || fail pin-nip-pm-relay "no 30623 with the pin: '$PINS'"
+amy_as A relaygroup pin "$RELAY" "$STREAM" "$M_PLAIN"
+[[ $RC -eq 0 && "$(pins_of)" == "$M_PLAIN,$ROOT" ]] && pass pin-order "the newest pin comes first: $(pins_of)" || fail pin-order "rc=$RC pins='$(pins_of)'"
+amy_as B relaygroup pins "$RELAY" "$STREAM"
+[[ $RC -eq 0 && "$(j .dialect)" == "buzz" && "$(pins_of)" == "$M_PLAIN,$ROOT" ]] && pass pins-read "B reads the 30623 by #h: $(pins_of)" || fail pins-read "rc=$RC dialect=$(j .dialect) pins='$(pins_of)' $(last_err B)"
+fetch_as C 30623 "h=$STREAM"
+SIGNER=$(printf '%s' "$OUT" | jq -r '[..|objects|select(.kind==30623)|.pubkey]|first // empty' 2>/dev/null)
+REL_SELF=$(curl -s -H 'Accept: application/nostr+json' "$HTTP" | jq -r '.self // empty')
+[[ -n "$SIGNER" && "$SIGNER" == "$REL_SELF" ]] && pass pins-relay-signed "the 30623 is signed by the relay's NIP-11 self" || fail pins-relay-signed "30623 signer '$SIGNER' vs self '$REL_SELF'"
+# Any member who may post can unpin, not only the one who pinned.
+amy_as B relaygroup unpin "$RELAY" "$STREAM" "$ROOT"
+[[ $RC -eq 0 && "$(j .kind)" == "40011" && "$(pins_of)" == "$M_PLAIN" ]] && pass unpin-verb "B unpinned A's pin with a 40011: $(pins_of)" || fail unpin-verb "rc=$RC kind=$(j .kind) pins='$(pins_of)' $(last_err B)"
+# Deleting a pinned message takes it off the list (the relay rewrites the 30623 in the delete).
+amy_as B buzz post "$RELAY" "$STREAM" "pin me, then delete me"
+M_DEL=$(j '.event_id // empty')
+amy_as B relaygroup pin "$RELAY" "$STREAM" "$M_DEL"
+amy_as B delete "$M_DEL" --relay "$RELAY"
+amy_as A relaygroup pins "$RELAY" "$STREAM"
+[[ $RC -eq 0 && "$(pins_of)" == "$M_PLAIN" ]] && pass pin-deleted-dropped "a deleted pinned message left the list: $(pins_of)" || fail pin-deleted-dropped "rc=$RC pins='$(pins_of)'"
+# A guest may not post, so may not pin (NIP-PM: the rule for posting decides).
+amy_as C relaygroup join "$RELAY" "$ANNOUNCE"
+amy_as A buzz post "$RELAY" "$ANNOUNCE" "an announcement"
+ANN_MSG=$(j '.event_id // empty')
+R=$(role_of A "$ANNOUNCE" "${HEX[C]}")
+amy_as C relaygroup pin "$RELAY" "$ANNOUNCE" "$ANN_MSG"
+if [[ $RC -ne 0 && "$(last_err C | jq -r .error)" == "rejected" ]]; then
+  pass pin-guest-refused "guest C (role '$R') refused with the relay's reason: '$(last_reason C)'"
+else
+  fail pin-guest-refused "guest C (role '$R') pin: rc=$RC $(last_err C) $(j -c .)"
+fi
+amy_as A relaygroup pins "$RELAY" "$ANNOUNCE"
+[[ $RC -eq 0 && -z "$(pins_of)" ]] && pass pin-guest-no-effect "the announce channel has no pins" || fail pin-guest-no-effect "pins='$(pins_of)'"
+amy_as A relaygroup pin "$RELAY" "$STREAM" "30023:${HEX[A]}:an-article"
+[[ $RC -ne 0 ]] && pass pin-address-refused "an address pin is refused locally on Buzz: $(last_err A | jq -r .detail)" || fail pin-address-refused "rc=$RC"
 
 # ---------------------------------------------------------------------------
 banner "10. Invite links"
@@ -420,9 +453,12 @@ if [[ -n "$INVITE_URL" ]]; then
   if [[ $RC -eq 0 ]]; then
     pass invite-claim "amy buzz join claimed it: status=$(j .status) role=$(j .role)"
   else
-    fail invite-claim "amy buzz join $INVITE_URL: rc=$RC '$(last_reason C)' (BuzzInvite.httpBase() is always https://; Buzz mints http:// links for a ws:// relay)"
+    fail invite-claim "amy buzz join $INVITE_URL: rc=$RC '$(last_reason C)'"
   fi
   # The same claim over the link's own scheme, NIP-98 signed by amy: does the relay side work?
+  # A second apart from amy's own claim, or the two NIP-98 events are one event and the relay
+  # answers `replay detected`.
+  sleep 1
   CODE=${INVITE_URL##*/invite/}
   CLAIM_BODY="{\"code\":\"$CODE\"}"
   CLAIM=$(curl -s -X POST "$HTTP/api/invites/claim" -H 'Content-Type: application/json' \
@@ -454,7 +490,7 @@ if [[ $RC -eq 0 ]]; then
     fail ban-enforced "D still posts after the ban"
   else
     pass ban-enforced "relay owner's 9040 ban: D's next post refused (exit $RC)"
-    if last_reason D | grep -q 'banned'; then
+    if last_reason D | grep -q 'banned' && (( BAN_MS < 20000 )); then
       pass ban-reported "amy reports the ban: '$(last_reason D)' after $BAN_MS ms"
     else
       fail ban-reported "amy took $BAN_MS ms and reported '$(last_err D | jq -r .error)': '$(last_reason D)'; the AUTH refusal (blocked: you are banned …) never reaches the caller"

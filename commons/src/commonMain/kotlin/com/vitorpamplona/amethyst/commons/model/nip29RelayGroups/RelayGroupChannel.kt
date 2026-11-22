@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_GUEST
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -300,6 +301,33 @@ class RelayGroupChannel(
         pinnedUpdatedAt = event.createdAt
         updateChannelInfo()
     }
+
+    /**
+     * Buzz NIP-PM pin list (kind 30623): the relay-signed list of this channel's pinned messages,
+     * newest pin first. Buzz uses it instead of NIP-29's 39005 (a thread summary there), and only
+     * pins messages by id, so it folds into [pins] as [EventPin]s. The caller checks the signer.
+     */
+    fun updateBuzzPins(event: ChannelPinsEvent) {
+        if (event.createdAt <= pinnedUpdatedAt) return
+        val ids = event.pinnedMessageIds()
+        pins = ids.map(::EventPin)
+        pinnedEventIds = ids
+        pinnedAddresses = emptyList()
+        pinnedUpdatedAt = event.createdAt
+        updateChannelInfo()
+    }
+
+    /**
+     * Whether [pubkey] may pin and unpin messages here. NIP-29 (kind 9010) leaves it to moderators.
+     * Buzz (NIP-PM) lets anyone who may post in the channel pin, and nobody in an archived channel:
+     * the relay checks the rule for posting, so a guest is refused.
+     */
+    fun canPin(pubkey: HexKey): Boolean =
+        if (BuzzRelayDialect.isBuzz(groupId.relayUrl)) {
+            !isArchived() && canPost(pubkey)
+        } else {
+            membershipOf(pubkey).canModerate()
+        }
 
     fun updateGroupRoles(event: GroupRolesEvent) {
         // Only newer definitions supersede; equal-or-older is dropped (no redundant emit).

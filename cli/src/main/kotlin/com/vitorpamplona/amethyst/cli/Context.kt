@@ -49,8 +49,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchRes
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.streamAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -640,29 +640,16 @@ class Context(
         verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
 
-        var results = client.publishAndCollectResults(event, relayList, timeoutSecs)
-
-        // NIP-42 write path: an auth-required relay rejects the FIRST publish with
-        // `auth-required`. The publish opens a connection, races the async AUTH reply, and
-        // tears down before it lands — and [relayAuth] only re-auths on a REQ `CLOSED`, never
-        // on a rejected EVENT `OK`. The READ path, though, holds the connection open and its
-        // `auth-required:` CLOSED reliably drives a re-auth (`reauthenticateIfAuthRequired`),
-        // leaving the pooled connection authenticated. So on `auth-required` we warm auth with
-        // a tiny `pendingOnAuthRequired` REQ, then retry the publish on the now-authed socket.
-        var attempt = 0
-        while (attempt < 4) {
-            val needAuth =
-                results
-                    .filterValues { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }
-                    .keys
-            if (needAuth.isEmpty()) break
-            // A cheap REQ whose only purpose is to force the AUTH handshake to completion.
+        // NIP-42 write path: an auth-required relay refuses the FIRST publish `auth-required:`, and the
+        // pool sends the event again once our AUTH lands. That re-send's OK is the relay's real answer
+        // (a Buzz DM command's carries the channel it made); publishing again ourselves only gets
+        // `duplicate:`. [publishAwaitingOkThroughAuth] keeps one OK listener open across the AUTH and
+        // warms it up with a `pendingOnAuthRequired` read, the same code the app runs. A relay that
+        // refuses our AUTH `blocked:` (a banned key) answers with that at once.
+        return client.publishAwaitingOkThroughAuth(event, relayList, timeoutSecs) { needAuth ->
             val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
             drain(needAuth.associateWith { warmFilter }, idleTimeoutMs = 8_000, pendingOnAuthRequired = true)
-            results = results + client.publishAndCollectResults(event, needAuth, timeoutSecs)
-            attempt++
         }
-        return results
     }
 
     /**

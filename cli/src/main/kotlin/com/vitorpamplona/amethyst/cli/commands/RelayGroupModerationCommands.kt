@@ -25,6 +25,9 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLES
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
@@ -37,6 +40,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEve
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 
 /**
@@ -175,10 +180,14 @@ object RelayGroupModerationCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
+            val info = ctx.relayInfo(relay)
+            if (BuzzRelayDialect.isBuzz(relay) || BuzzRelayDialect.looksLikeBuzzRelay(relay, info)) {
+                return buzzPin(ctx, relay, info?.self, groupId, target, pin)
+            }
             // NIP-29: the 39005 is "signed by the relay keypair … as stated by the NIP-11 `self`".
             // Without that key we cannot tell the real list from a forged one, so do not rewrite it.
             val relayKey =
-                ctx.relayInfo(relay)?.self
+                info?.self
                     ?: return Output.error("no_relay_key", "could not read the NIP-11 self pubkey of ${relay.url}; refusing to rewrite the pin list")
             val filter =
                 Filter(
@@ -217,6 +226,97 @@ object RelayGroupModerationCommands {
         }
     }
 
+    /**
+     * Buzz (NIP-PM): one kind-40010 pin or 40011 unpin command naming the message; the relay
+     * applies it and republishes the channel's relay-signed 30623, read back here for the output.
+     * Buzz refuses NIP-29's 9010 as an unknown kind, and pins messages by id only.
+     */
+    private suspend fun buzzPin(
+        ctx: Context,
+        relay: NormalizedRelayUrl,
+        relayKey: HexKey?,
+        groupId: String,
+        target: GroupPin,
+        pin: Boolean,
+    ): Int {
+        val eventId = (target as? EventPin)?.eventId ?: return Output.error("bad_args", "a Buzz channel pins messages by event id (note1/nevent1/hex), not by address: ${target.ref}")
+        val template = if (pin) PinMessageEvent.build(groupId, eventId) else UnpinMessageEvent.build(groupId, eventId)
+        val signed = ctx.signer.sign(template)
+        val ack = ctx.publish(signed, setOf(relay))
+        RawEventSupport.publishGuard(ack, signed.id, extra = mapOf("group_id" to groupId, "dialect" to "buzz"))?.let { return it }
+        val pins = (readPinList(ctx.drainResult(mapOf(relay to listOf(buzzPinListFilter(groupId, relayKey))), 6_000), relay, relayKey) as? PinListRead.Found)?.pins
+        Output.emit(
+            mapOf(
+                "event_id" to signed.id,
+                "kind" to signed.kind,
+                "group_id" to groupId,
+                "relay" to relay.url,
+                "dialect" to "buzz",
+                "target" to eventId,
+                "pins" to pins?.map { it.ref },
+                "published" to ack.values.any { it.accepted },
+            ),
+        )
+        return 0
+    }
+
+    /** A Buzz channel's NIP-PM pin list: read by `#h`, which names the channel under NIP-CL (a `#d` read gets no new lists). */
+    private fun buzzPinListFilter(
+        groupId: String,
+        relayKey: HexKey?,
+    ) = Filter(
+        kinds = listOf(ChannelPinsEvent.KIND),
+        authors = relayKey?.let { listOf(it) },
+        tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId)),
+        limit = 1,
+    )
+
+    /**
+     * `relaygroup pins RELAY GROUP_ID [--timeout SECS]`: the group's pinned messages, in the relay's
+     * display order. NIP-29 reads the relay-signed 39005 by `#d`; Buzz the NIP-PM 30623 by `#h`. Only
+     * a list signed by the relay's NIP-11 `self` key counts, when the relay names one.
+     */
+    suspend fun pins(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val usage = "relaygroup pins RELAY GROUP_ID [--timeout SECS]"
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 6) * 1000
+        args.rejectUnknown("timeout")
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val info = ctx.relayInfo(relay)
+            val relayKey = info?.self
+            val isBuzz = BuzzRelayDialect.isBuzz(relay) || BuzzRelayDialect.looksLikeBuzzRelay(relay, info)
+            val filter =
+                if (isBuzz) {
+                    buzzPinListFilter(groupId, relayKey)
+                } else {
+                    Filter(kinds = listOf(GroupPinnedEvent.KIND), authors = relayKey?.let { listOf(it) }, tags = mapOf("d" to listOf(groupId)), limit = 1)
+                }
+            val pins =
+                when (val read = readPinList(ctx.drainResult(mapOf(relay to listOf(filter)), timeoutMs), relay, relayKey)) {
+                    is PinListRead.Found -> read.pins
+                    is PinListRead.Failed -> return Output.error(read.code, read.detail)
+                }
+            Output.emit(
+                mapOf(
+                    "group_id" to groupId,
+                    "relay" to relay.url,
+                    "dialect" to if (isBuzz) "buzz" else "nip29",
+                    "pins" to pins.map { it.ref },
+                    "count" to pins.size,
+                ),
+            )
+            return 0
+        }
+    }
+
     /** The outcome of reading a group's current kind-39005 before a read-merge-write. */
     internal sealed interface PinListRead {
         class Found(
@@ -237,16 +337,17 @@ object RelayGroupModerationCommands {
     internal fun readPinList(
         result: FetchAllResult,
         relay: NormalizedRelayUrl,
-        relayKey: HexKey,
+        relayKey: HexKey?,
     ): PinListRead {
         val latest =
             result.events
                 .map { it.second }
-                .filterIsInstance<GroupPinnedEvent>()
-                .filter { it.pubKey == relayKey }
+                .filter { it is GroupPinnedEvent || it is ChannelPinsEvent }
+                .filter { relayKey == null || it.pubKey == relayKey }
                 .maxByOrNull { it.createdAt }
         return when {
-            latest != null -> PinListRead.Found(latest.pins())
+            latest is GroupPinnedEvent -> PinListRead.Found(latest.pins())
+            latest is ChannelPinsEvent -> PinListRead.Found(latest.pinnedMessageIds().map(::EventPin))
             result.anyRelayServed -> PinListRead.Found(emptyList())
             relay in result.stalled -> PinListRead.Failed("timeout", "${relay.url} did not answer the pin-list read; refusing to overwrite pins")
             else -> PinListRead.Failed("fetch_failed", "could not read the pin list from ${relay.url} (${result.doneReasons[relay] ?: "no answer"}); refusing to overwrite pins")
