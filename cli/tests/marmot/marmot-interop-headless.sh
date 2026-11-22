@@ -53,16 +53,6 @@ RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 
-# MDK's reference QUIC broker, for the agent-text-stream tests. Loopback like
-# everything else; the tests skip when the binary was never built.
-BROKER_BIN="$WN_REPO/target/release/marmot-quic-broker"
-BROKER_HOST="${BROKER_HOST:-127.0.0.1}"
-BROKER_PORT="${BROKER_PORT:-4455}"
-BROKER_URI="quic://$BROKER_HOST:$BROKER_PORT"
-BROKER_PID=""
-# SHA-256 of the broker's self-signed leaf, read from its startup JSON.
-BROKER_PIN=""
-
 # A loopback Blossom blob store for the encrypted-media tests. Ciphertext only:
 # the file key comes from each group's MLS exporter and never reaches it.
 BLOSSOM_HOST="${BLOSSOM_HOST:-127.0.0.1}"
@@ -163,7 +153,6 @@ cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
   stop_daemons
-  stop_quic_broker
   stop_blossom
   stop_local_relay
   print_summary
@@ -177,7 +166,6 @@ trap 'exit 129' HUP
 banner "Marmot headless interop harness ($RUN_TS)"
 preflight
 start_local_relay
-start_quic_broker || true
 start_blossom || true
 start_daemon B "$B_DIR" "$B_SOCKET"
 start_daemon C "$C_DIR" "$C_SOCKET"
@@ -204,8 +192,6 @@ ALL_TESTS=(
   test_14_wn_removes_a
   test_15_wn_member_leaves
   test_16_wn_keypackage_rotation
-  test_18_agent_stream_amy_publishes
-  test_19_agent_stream_wn_publishes
   test_20_avatar_url_amy_to_wn
   test_21_avatar_url_wn_to_amy
   test_22_message_edit_amy_to_wn

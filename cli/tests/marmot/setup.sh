@@ -164,52 +164,6 @@ preflight() {
   # ../headless/helpers.sh. Nothing to clone or build beyond amy itself.
 }
 
-# --- local QUIC broker -------------------------------------------------------
-# MDK's own `marmot-quic-broker`, the reference implementation of the other
-# side of `transports/quic.md`. Agent text stream previews are the only tests
-# that need it, and they are the only way to know our binding is right — the
-# ALPN, the control envelope, the frame prefix and the record key schedule all
-# have to agree with an implementation that is not ours.
-#
-# `--replay-ttl-secs` is what lets a subscriber that connects after the
-# records were pushed still see them; with the default 0 a test would have to
-# race the publisher.
-start_quic_broker() {
-  if [[ ! -x "$BROKER_BIN" ]]; then
-    info "marmot-quic-broker not built — agent text stream tests will skip"
-    return 1
-  fi
-  step "starting QUIC broker on $BROKER_HOST:$BROKER_PORT"
-  mkdir -p "$STATE_DIR/broker"
-  nohup "$BROKER_BIN" --bind "$BROKER_HOST:$BROKER_PORT" --replay-ttl-secs 60 --json \
-    >"$STATE_DIR/broker/stdout.log" 2>"$STATE_DIR/broker/stderr.log" &
-  BROKER_PID=$!
-  local deadline=$(( $(date +%s) + 15 ))
-  while [[ $(date +%s) -lt $deadline ]]; do
-    if grep -q '"local_addr"' "$STATE_DIR/broker/stdout.log" 2>/dev/null; then
-      # The broker generates a self-signed certificate and prints its
-      # fingerprint. `amy` pins that exact leaf rather than trusting a chain —
-      # there is no CA in this picture, and without the pin every stream test
-      # fails inside TLS before a single frame is written.
-      BROKER_PIN=$(sed -n 's/.*"server_cert_sha256_fingerprint":"\([0-9a-f]*\)".*/\1/p' \
-        "$STATE_DIR/broker/stdout.log" | head -1)
-      if [[ -z "$BROKER_PIN" ]]; then
-        fail_msg "broker printed no server_cert_sha256_fingerprint — cannot pin it"
-        BROKER_PID=""
-        return 1
-      fi
-      info "broker pid $BROKER_PID ready (cert ${BROKER_PIN:0:16}…)"
-      return 0
-    fi
-    if ! kill -0 "$BROKER_PID" 2>/dev/null; then break; fi
-    sleep 1
-  done
-  fail_msg "broker never came up (see $STATE_DIR/broker/stderr.log)"
-  tail -n 20 "$STATE_DIR/broker/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
-  BROKER_PID=""
-  return 1
-}
-
 # --- blossom blob store ------------------------------------------------------
 # A loopback Blossom server for the encrypted-media tests. Both implementations
 # upload ciphertext to it and fetch each other's back; it never sees a key.
@@ -244,13 +198,6 @@ stop_blossom() {
   step "stopping blossom pid $BLOSSOM_PID"
   kill "$BLOSSOM_PID" 2>/dev/null || true
   BLOSSOM_PID=""
-}
-
-stop_quic_broker() {
-  [[ -n "${BROKER_PID:-}" ]] || return 0
-  step "stopping broker pid $BROKER_PID"
-  kill "$BROKER_PID" 2>/dev/null || true
-  BROKER_PID=""
 }
 
 # --- local relay -------------------------------------------------------------

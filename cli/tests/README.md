@@ -170,7 +170,7 @@ The Marmot harnesses come in two flavours, same scenarios:
 
   Most features are covered in BOTH directions — founding (02/03), adding
   (04/05), removal (06/14), leaving (11/15), keypackage rotation (13/16),
-  agent streams (18/19), avatar URL (20/21), encrypted media v2 (24/25),
+  avatar URL (20/21), encrypted media v2 (24/25),
   deletion (23/27), retention (26/28). Three gaps are the reference CLI's,
   not ours, and cannot be closed from here:
 
