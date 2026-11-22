@@ -331,6 +331,33 @@ Geocaches, Web Bookmarks).
 - Discover, back to back: down-again 40.8 -> 51.0 fps (UI work 21.6 -> 17.0 ms); Home within noise.
 - `tools/desktop-run/screen-survey.sh` runs the per-screen survey (`--profile` for the hotspots).
 
+## Caching the static panes: ruled out
+
+Software Skia rasterizes the whole window on every frame, including the drawer and the docked
+notification panel, which rarely change while the feed scrolls. Cutting both out of the shell (an
+ablation, not a fix) took Home's warm `busy_p50` from 10.7 to 7.3 ms. Rasterizing each pane on
+its own into an offscreen surface accounts for that: the drawer costs 0.7 ms a frame and the
+notification panel 2.3 ms (300x900 and 360x860 px at 1x).
+
+The fix that suggests is a raster cache: draw the pane into a bitmap once and blit it until
+something in it changes. Compose on skiko gives no signal for "something in it changed":
+
+- A parent's recording references each child layer live (`GraphicsLayer.draw` →
+  `RenderNode.drawInto`, a drawable). A child layer that re-records or changes a property (alpha,
+  offset, a scroll) shows up at playback without re-running any ancestor's draw. In an
+  `ImageComposeScene` spike, a pane's draw block re-ran when a text outside a child layer changed,
+  but not when a child layer's alpha changed or a `LazyColumn` inside it scrolled.
+- The real drawer records 25 nested layers (its scroll container, each row, the header images),
+  and over a session of hovering and scrolling its own draw ran once. A cache keyed on that draw
+  would keep showing stale hover states, ripples and avatars.
+- The children are tracked only in internal fields (`childDependenciesTracker`), and a leaf layer's
+  re-record leaves no trace there, so even reflection can't tell when to refresh.
+
+Caching only panes whose recording holds no sublayers would be correct, but neither pane qualifies,
+and the notification panel is a live feed that would invalidate it anyway. A correct pane cache
+needs damage tracking inside skiko's `RenderNode` (an upstream change); until then, cost
+per card (which the main feed pays many times over) is the lever.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
