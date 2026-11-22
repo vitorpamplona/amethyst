@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermission
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.cordn.client.CordnBlobCipher
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -92,8 +91,6 @@ class AccountCacheState(
      * Android's NIP-55 apps. Returns null where the platform has none, which leaves such an account read-only.
      */
     val externalSignerFactory: (pubKey: HexKey, packageName: String) -> NostrSigner?,
-    /** Builds the raw-QUIC transport for Marmot agent text stream previews. */
-    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Encrypts the Cordn group files kept in each account's directory. Null where the platform has no
      * key store for it yet, which keeps Cordn's state in memory only.
@@ -468,7 +465,6 @@ class AccountCacheState(
             marmotNotifier = marmotNotifier,
             nip46Consent = nip46Consent,
             geohashIdentityStore = geohashIdentityStore(signer.pubKey),
-            marmotStreamTransportFactory = marmotStreamTransportFactory,
             cordnBlobCipher = cordnBlobCipher,
             scope =
                 CoroutineScope(

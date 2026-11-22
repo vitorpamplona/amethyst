@@ -72,9 +72,7 @@ dependencies {
     // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
-
-    // Marmot's raw-QUIC transport for agent text stream previews, as on Android
-    implementation(libs.marmot.quic)
+    // quic-kmp's QuicLog, which the app routes into Quartz's Log (QuicLogBridge).
     implementation(libs.quic)
 
     // The shared preference files (DataStore), as commons opens them

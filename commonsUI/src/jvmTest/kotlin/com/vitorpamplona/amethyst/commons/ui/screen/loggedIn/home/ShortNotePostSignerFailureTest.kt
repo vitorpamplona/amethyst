@@ -386,7 +386,6 @@ private fun accountViewModel(
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = { error("Tests do not stream") },
         )
 
     return AccountViewModel(
