@@ -4045,7 +4045,6 @@
     <string name="concord_create_failed">Komunitu se nepodařilo vytvořit: žádný relay ji nepřijal, nebo se nepodařilo aktualizovat váš seznam komunit. Zkontrolujte relaye a zkuste to znovu.</string>
     <string name="concord_create_relays">Relaye</string>
     <string name="concord_create_relays_desc">Relaye, které uchovávají šifrované zprávy této komunity. Nechte prázdné pro použití vlastních.</string>
-    <string name="concord_create_title">Nový kanál Concord</string>
     <string name="concord_direct_invite_accept">Přijmout</string>
     <string name="concord_direct_invite_accept_failed">Tuto komunitu se nepodařilo kontaktovat. Zkuste to za chvíli znovu.</string>
     <string name="concord_direct_invite_action">Pozvat podle npub…</string>

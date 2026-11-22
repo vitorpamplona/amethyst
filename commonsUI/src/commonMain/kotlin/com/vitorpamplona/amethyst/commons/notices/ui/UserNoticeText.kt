@@ -69,8 +69,11 @@ import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invites_title
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
+import com.vitorpamplona.amethyst.commons.resources.concord_join_not_saved_named
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
@@ -301,6 +304,14 @@ fun UserNotice.text(): NoticeText =
                     else -> Res.string.concord_pin_failed_generic
                 },
             )
+        is ConcordNotice.JoinNotSaved -> {
+            val name = communityName?.takeIf { it.isNotBlank() }
+            if (name != null) {
+                NoticeText(Res.string.concord_direct_invites_title, str(Res.string.concord_join_not_saved_named, raw(name)))
+            } else {
+                text(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_not_saved)
+            }
+        }
         ConcordNotice.DissolveFailed -> text(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
         is RelayGroupNotice.PinRefused ->
             NoticeText(if (unpin) Res.string.relay_group_unpin_refused_title else Res.string.relay_group_pin_refused_title, raw(reason))

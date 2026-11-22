@@ -65,9 +65,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_create_about
+import com.vitorpamplona.amethyst.commons.resources.concord_create_community_title
 import com.vitorpamplona.amethyst.commons.resources.concord_create_icon_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_create_name
-import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_name_budget
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -214,7 +214,7 @@ private fun ConcordIconHero(
             RobohashFallbackAsyncImage(
                 robot = robotSeed,
                 model = iconModel,
-                contentDescription = displayName.ifBlank { stringRes(Res.string.concord_create_title) },
+                contentDescription = displayName.ifBlank { stringRes(Res.string.concord_create_community_title) },
                 modifier = Modifier.size(104.dp).clip(CircleShape),
                 loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
                 loadRobohash = LocalDisplaySettings.current.loadRobohash,

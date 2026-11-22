@@ -3919,7 +3919,6 @@
     <string name="concord_create_failed">De community kon niet worden gemaakt: geen enkele relay heeft hem geaccepteerd, of je community-lijst kon niet worden bijgewerkt. Controleer de relays en probeer het opnieuw.</string>
     <string name="concord_create_relays">Relays</string>
     <string name="concord_create_relays_desc">Relays die de versleutelde berichten van deze community opslaan. Laat leeg om je eigen te gebruiken.</string>
-    <string name="concord_create_title">Nieuw Concord-kanaal</string>
     <string name="concord_direct_invite_accept">Accepteren</string>
     <string name="concord_direct_invite_accept_failed">Kon deze community niet bereiken. Probeer het zo meteen opnieuw.</string>
     <string name="concord_direct_invite_action">Uitnodigen via npub…</string>

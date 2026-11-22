@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
@@ -77,8 +79,14 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -199,7 +207,7 @@ class AccountMarmotActions(
         // LocalCache does not dispatch (push-token lists 447-449, edits, stream starts), which
         // left our own copy an EVENTLESS note in the conversation: an "Event is loading or can't
         // be found" row for every push-token answer we sent.
-        val innerNote = indexMarmotInnerEvent(innerEvent).note
+        val innerNote = indexMarmotGroupInnerEvent(nostrGroupId, innerEvent).note
         account.marmotGroupList.addMessage(nostrGroupId, innerNote)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before the relay round-trip so the UI
@@ -338,6 +346,21 @@ class AccountMarmotActions(
      * cache but its note, so it is attached directly.
      */
     fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
+
+    /**
+     * [indexMarmotInnerEvent] for an inner event of [nostrGroupId]: a kind:5 that takes down one of
+     * the group's messages leaves a "message deleted" row where it stood, as White Noise does,
+     * instead of the message just vanishing.
+     */
+    fun indexMarmotGroupInnerEvent(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ): IndexedInnerEvent {
+        val deleted = account.marmotGroupList.messagesDeletedBy(nostrGroupId, innerEvent)
+        val indexed = indexMarmotInnerEvent(innerEvent)
+        account.marmotGroupList.leaveDeletedPlaceholders(nostrGroupId, deleted)
+        return indexed
+    }
 
     /**
      * Apply an admin's moderation, when its author was an admin of the group in the epoch it was
@@ -663,11 +686,109 @@ class AccountMarmotActions(
      * dedicated kind:10051 KeyPackage relay list. The account's own 10051 is
      * still unioned in so peers that have not migrated keep finding us.
      */
-    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
-        KeyPackageFetcher.publishRelaysFor(
-            myOutbox = account.outboxRelays.flow.value,
-            legacyKeyPackageRelayList = account.keyPackageRelayList.flow.value,
+    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> = keyPackageRelayChoice().relays
+
+    /**
+     * [keyPackagePublishRelays] and whether it is only the app's defaults standing in for relay
+     * lists that have not loaded yet ([MarmotKeyPackageRelays]).
+     */
+    fun keyPackageRelayChoice(): MarmotKeyPackageRelays.Choice =
+        MarmotKeyPackageRelays.choose(
+            nip65Write =
+                account.nip65RelayList
+                    .nip65Event(account.nip65RelayList.nip65ListNote)
+                    ?.let { it.allWriteRelaysNorm()?.toSet() ?: emptySet() },
+            otherChosen = account.privateStorageRelayList.flow.value + account.localRelayList.flow.value + account.broadcastRelayList.flow.value,
+            defaults = Constants.eventFinderRelays,
+            keyPackageList = account.keyPackageRelayList.normalizeKeyPackageRelayListWithBackup(account.keyPackageRelayList.keyPackageListNote),
         )
+
+    // Re-read from the notes on every change of any input, so no two inputs come from different moments.
+    private fun keyPackageRelayChoices(): Flow<MarmotKeyPackageRelays.Choice> =
+        combine(
+            account.nip65RelayList.getNIP65RelayListFlow(),
+            account.keyPackageRelayList.getKeyPackageRelayListFlow(),
+            account.privateStorageRelayList.flow,
+            account.localRelayList.flow,
+            account.broadcastRelayList.flow,
+        ) { _, _, _, _, _ -> keyPackageRelayChoice() }.distinctUntilChanged()
+
+    /**
+     * Each KeyPackage this session published, by its slot (`d` tag), and the relays that took it.
+     * When the account's relay lists change (first of all, when they load after a first login put
+     * the KeyPackage on the app's defaults), [runMarmotKeyPackageRelayWatcher] republishes these
+     * to the relays they have not reached yet.
+     */
+    private val publishedKeyPackages = HashMap<String, Pair<KeyPackageEvent, Set<NormalizedRelayUrl>>>()
+    private val publishedKeyPackagesLock = KmpLock()
+
+    private fun recordKeyPackageReach(
+        event: KeyPackageEvent,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        val slot = event.dTag()
+        publishedKeyPackagesLock.withLock {
+            val current = publishedKeyPackages[slot]
+            // A newer KeyPackage in the slot replaces the old one; an older one never comes back.
+            if (current == null || current.first.id != event.id) {
+                if (current == null || event.createdAt >= current.first.createdAt) publishedKeyPackages[slot] = event to relays
+            } else {
+                publishedKeyPackages[slot] = event to (current.second + relays)
+            }
+        }
+    }
+
+    /**
+     * Keeps this account's KeyPackages on the relays it currently chose: whenever that set
+     * changes and is not just the app's defaults, every KeyPackage held is published to the relays
+     * it has not reached. A KeyPackage left by an earlier session (this one published none yet)
+     * is found on the relays first. Runs until [account]'s scope is cancelled.
+     */
+    suspend fun runMarmotKeyPackageRelayWatcher() {
+        var lookedUpEarlier = false
+        keyPackageRelayChoices()
+            .filter { !it.provisional && it.relays.isNotEmpty() }
+            .collect { choice ->
+                val manager = account.marmotManager ?: return@collect
+                if (!account.isWriteable()) return@collect
+                try {
+                    if (!lookedUpEarlier && publishedKeyPackagesLock.withLock { publishedKeyPackages.isEmpty() }) {
+                        lookedUpEarlier = true
+                        if (manager.hasActiveKeyPackages()) {
+                            val searchOn = choice.relays + account.outboxRelays.flow.value
+                            KeyPackageFetcher
+                                .fetchKeyPackage(account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS), account.signer.pubKey, searchOn)
+                                ?.takeIf { manager.ownsKeyPackage(it) }
+                                ?.let { recordKeyPackageReach(it, emptySet()) }
+                        }
+                    }
+                    val held = publishedKeyPackagesLock.withLock { publishedKeyPackages.values.toList() }
+                    held.forEach { (event, reached) ->
+                        val missing = MarmotKeyPackageRelays.missing(choice.relays, reached)
+                        if (missing.isEmpty()) return@forEach
+                        Log.d("MarmotDbg") { "KeyPackage ${event.id.take(8)}… → ${missing.size} newly chosen relay(s): ${missing.map { it.url }}" }
+                        // Not a new KeyPackage, so no replacement clock to start: only its reach grows.
+                        if (account.client.publishAndConfirm(event, missing)) recordKeyPackageReach(event, missing)
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "KeyPackage relay sync failed", e)
+                }
+            }
+    }
+
+    /**
+     * The relays to publish a first KeyPackage on. On a first login the account's relay lists
+     * are still loading and the choice is only the app's defaults: wait a little for them, so the
+     * KeyPackage goes where inviters look, then take whatever is known (the watcher moves it later).
+     */
+    private suspend fun awaitKeyPackageRelays(): Set<NormalizedRelayUrl> {
+        val now = keyPackageRelayChoice()
+        if (!now.provisional) return now.relays
+        return withTimeoutOrNull(KEY_PACKAGE_LIST_WAIT_MS) {
+            keyPackageRelayChoices().first { !it.provisional }.relays
+        } ?: keyPackagePublishRelays()
+    }
 
     /**
      * Publish or rotate KeyPackage events.
@@ -726,6 +847,7 @@ class AccountMarmotActions(
         relays: Set<NormalizedRelayUrl>,
     ) {
         if (account.client.publishAndConfirm(event, relays)) {
+            recordKeyPackageReach(event, relays)
             manager.confirmKeyPackagePublished(event)
             return
         }
@@ -735,7 +857,11 @@ class AccountMarmotActions(
             repeat(KEY_PACKAGE_RETRIES) {
                 delay(wait)
                 wait *= 4
-                if (account.client.publishAndConfirm(event, relays)) {
+                // Recomputed each time: the relay lists may have loaded since the first attempt,
+                // and retrying the app's defaults would keep missing the relays inviters read.
+                val now = keyPackagePublishRelays().ifEmpty { relays }
+                if (account.client.publishAndConfirm(event, now)) {
+                    recordKeyPackageReach(event, now)
                     manager.confirmKeyPackagePublished(event)
                     return@launch
                 }
@@ -751,7 +877,7 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val relays = keyPackagePublishRelays()
+        val relays = awaitKeyPackageRelays()
         Log.d("MarmotDbg") {
             "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
         }
@@ -948,6 +1074,7 @@ class AccountMarmotActions(
         val event = manager.generateKeyPackageEvent(relays.toList())
         account.cache.justConsumeMyOwnEvent(event)
         val accepted = account.client.publishAndConfirm(event, relays)
+        if (accepted) recordKeyPackageReach(event, relays)
         Log.d("MarmotDbg") {
             "republishKeyPackageConfirmed: id=${event.id.take(8)}… accepted=$accepted on ${relays.size} relay(s)"
         }
@@ -1620,6 +1747,9 @@ class AccountMarmotActions(
         // Retries of an unconfirmed KeyPackage publish: after 30 s, 2 min, 8 min and 32 min.
         private const val KEY_PACKAGE_RETRY_FIRST_MS = 30_000L
         private const val KEY_PACKAGE_RETRIES = 4
+
+        // How long a first KeyPackage waits for the account's relay lists before taking the defaults.
+        private const val KEY_PACKAGE_LIST_WAIT_MS = 20_000L
 
         fun indexMarmotInnerEvent(
             cache: EventCache,

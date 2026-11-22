@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -219,6 +220,15 @@ class AccountConcordActions(
         fetchedWraps: List<Event> = emptyList(),
         readmit: Boolean = false,
     ): Boolean {
+        // The List write below first waits for the List to load: a drain of every stock and outbox
+        // relay that takes ~30 s on a real network. The joiner would stare at an empty hub for all
+        // of it, so a fresh join the List can't take yet is shown at once from the entry we hold,
+        // and made durable in the background. Its own relays were already reached for the bundle
+        // and the Control Plane, so nothing the screen needs waits on the stock relays.
+        if (!readmit && !account.concordChannelList.relaysConfirmed) {
+            joinConcordCommunityOptimistically(entry, inviteCreator, inviteLabel, fetchedWraps)
+            return true
+        }
         // False when the List could not take the membership (not loaded, or every held fragment is
         // full while others are missing, CORD-02 §8). Callers must say so: the community would
         // otherwise look joined now and be gone after a restart.
@@ -239,6 +249,50 @@ class AccountConcordActions(
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
         return true
     }
+
+    /**
+     * [joinConcordCommunity] for a List that has not loaded yet: the community shows (and its
+     * session folds [fetchedWraps]) right away, as a pending join, while the List write and the
+     * Guestbook JOIN wait for the List in the account's scope. If the write fails the community is
+     * taken back out and [concordJoinFailures] says so: it would otherwise look joined now and be
+     * gone after a restart.
+     */
+    private suspend fun joinConcordCommunityOptimistically(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+        fetchedWraps: List<Event>,
+    ) {
+        val list = account.concordChannelList
+        list.addPendingJoin(entry)
+        awaitConcordSession(entry.id)
+        fetchedWraps.forEach { account.concordSessions.ingest(it) }
+        account.scope.launch(Dispatchers.IO) {
+            val persisted =
+                try {
+                    persistConcordEntry(entry)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("Concord", "Community List write for ${entry.id} failed", e)
+                    false
+                }
+            if (persisted) {
+                // Hand over to the written entry before letting go of the pending one, or the
+                // community would vanish for a beat and its session be torn down and rebuilt.
+                withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
+                list.dropPendingJoin(entry.id)
+                announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+            } else {
+                list.dropPendingJoin(entry.id)
+                _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
+            }
+        }
+    }
+
+    private val _concordJoinFailures = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** Names of communities whose background join (see [joinConcordCommunity]) could not be saved. */
+    val concordJoinFailures: SharedFlow<String> = _concordJoinFailures.asSharedFlow()
 
     /** The community's current name: its folded metadata, else the name it was joined under. */
     private fun currentConcordName(
@@ -788,7 +842,9 @@ class AccountConcordActions(
                 }
             }
         }
-        return writeConcordList { it.unfollow(communityId) }
+        val left = writeConcordList { it.unfollow(communityId) }
+        if (left) account.concordChannelList.dropPendingJoin(communityId)
+        return left
     }
 
     /**
@@ -1003,6 +1059,9 @@ class AccountConcordActions(
      * to say why, so an invite being accepted is hidden. A failed accept puts it back.
      */
     private val acceptingConcordDirectInvites = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /** Wrap ids of the Direct Invites being accepted right now; a hub shows "joining" meanwhile. */
+    val joiningConcordDirectInvites: StateFlow<Set<HexKey>> = acceptingConcordDirectInvites.asStateFlow()
 
     /**
      * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
@@ -1689,6 +1748,78 @@ class AccountConcordActions(
         // Role-gated channel keys follow the Grant: vend what it opened, rotate what it closed.
         reconcileConcordChannelAccess(communityId, before)
         return true
+    }
+
+    /**
+     * Creates ([roleIdHex] null) or edits a legacy CORD-04 role: [name], [position] (1 and up, lower
+     * ranks higher) and [permissions]. The fold honors a role edition only from a MANAGE_ROLES
+     * holder who strictly outranks both the role's old and new position, so anything else is
+     * refused here instead of published to be dropped. A Roles v2 community refuses it with
+     * [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
+     */
+    suspend fun defineConcordRole(
+        communityId: String,
+        roleIdHex: String?,
+        name: String,
+        position: Long,
+        permissions: ConcordPermissions,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || position < 1) return false
+        val state = session.state.value ?: return false
+        val existing = roleIdHex?.let { state.roles[it] ?: return false }
+        if (!canEditConcordRole(state.authority, existing?.position, position)) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
+        val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
+        val wrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleId, role, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        // A role's permissions can open or close a role-gated private channel, like a Grant.
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Deletes the legacy role [roleIdHex] (terminal, CORD-04 §2), under [defineConcordRole]'s rules. */
+    suspend fun deleteConcordRole(
+        communityId: String,
+        roleIdHex: String,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val state = session.state.value ?: return false
+        val existing = state.roles[roleIdHex] ?: return false
+        if (!canEditConcordRole(state.authority, existing.position, existing.position)) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val wrap =
+            ConcordModeration.defineRole(
+                account.signer,
+                cp,
+                communityId.hexToByteArray(),
+                roleIdHex.hexToByteArray(),
+                existing.copy(deleted = true),
+                session.controlEditions(),
+                TimeUtils.now(),
+                owner = session.entry.owner,
+            )
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Whether this account may move a role from [oldPosition] (null for a new one) to [newPosition]. */
+    private fun canEditConcordRole(
+        authority: AuthorityResolver,
+        oldPosition: Long?,
+        newPosition: Long,
+    ): Boolean {
+        val me = account.signer.pubKey
+        if (!authority.hasPermission(me, ConcordPermissions.MANAGE_ROLES)) return false
+        val myRank = authority.rank(me) ?: return false
+        return ConcordRoleRules.canPlace(myRank, oldPosition, newPosition)
     }
 
     /**

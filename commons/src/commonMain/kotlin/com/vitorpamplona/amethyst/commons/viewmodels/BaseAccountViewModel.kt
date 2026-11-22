@@ -117,6 +117,7 @@ import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MediaUploadKey
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -291,6 +292,13 @@ open class BaseAccountViewModel(
         viewModelScope.launch {
             account.concord.concordKicks.collect { notice ->
                 notices.notify(ConcordNotice.Kicked(notice.communityName))
+            }
+        }
+
+        // A join shown at once whose List write failed later: the community was taken back out.
+        viewModelScope.launch {
+            account.concord.concordJoinFailures.collect { name ->
+                notices.notify(ConcordNotice.JoinNotSaved(name))
             }
         }
     }
@@ -696,6 +704,33 @@ open class BaseAccountViewModel(
         roleIds: List<String>,
     ) = launchSigner {
         if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
+            notices.notify(ConcordNotice.RolesUpdateFailed)
+        }
+    }
+
+    /**
+     * Create ([roleIdHex] null) or edit a CORD-04 role of [communityId] from the role editor. A
+     * Roles v2 community refuses it with [ConcordNotice.RolesV2Unsupported], reported by
+     * [launchSigner] like the other legacy editors.
+     */
+    fun defineConcordRole(
+        communityId: String,
+        roleIdHex: String?,
+        name: String,
+        position: Long,
+        permissions: ConcordPermissions,
+    ) = launchSigner {
+        if (!account.concord.defineConcordRole(communityId, roleIdHex, name, position, permissions)) {
+            notices.notify(ConcordNotice.RolesUpdateFailed)
+        }
+    }
+
+    /** Delete the role [roleIdHex] of [communityId] from the role editor. */
+    fun deleteConcordRole(
+        communityId: String,
+        roleIdHex: String,
+    ) = launchSigner {
+        if (!account.concord.deleteConcordRole(communityId, roleIdHex)) {
             notices.notify(ConcordNotice.RolesUpdateFailed)
         }
     }

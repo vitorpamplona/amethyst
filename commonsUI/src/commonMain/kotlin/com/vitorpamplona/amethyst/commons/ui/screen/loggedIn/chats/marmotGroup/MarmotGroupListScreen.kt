@@ -43,10 +43,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupSplit
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -91,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,31 +98,25 @@ fun MarmotGroupListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
     var selectedTab by remember { mutableIntStateOf(0) }
-
-    // Load group list
-    LaunchedEffect(Unit) {
-        loadGroupList(accountViewModel, onUpdate = { groupList = it })
-    }
-
-    // Listen for group list changes
-    LaunchedEffect(Unit) {
-        accountViewModel.account.marmotGroupList.groupListChanges.collect {
-            loadGroupList(accountViewModel, onUpdate = { groupList = it })
-        }
-    }
 
     // KeyPackage publishing is handled at Account startup
     // (Account.ensureMarmotKeyPackagePublished), so this screen no longer
     // needs to do anything to make sure invitees can find a KeyPackage.
 
-    val followState by accountViewModel.account.kind3FollowList.flow
-        .collectAsStateWithLifecycle()
-    val followingKeySet = followState.authors
-
-    val knownGroups = remember(groupList, followingKeySet) { groupList.filter { it.second.isKnown(followingKeySet) } }
-    val newRequestGroups = remember(groupList, followingKeySet) { groupList.filter { !it.second.isKnown(followingKeySet) } }
+    // Recomputed on every group change, so a reply moves its group from New Requests to Known
+    // the moment it is sent (MarmotGroupList.knownSplit).
+    val account = accountViewModel.account
+    val splitFlow =
+        remember(account) {
+            account.marmotGroupList.knownSplit(
+                follows = account.kind3FollowList.flow.map { it.authors },
+                extraGroupIds = { account.marmotManager?.activeGroupIds().orEmpty() },
+            )
+        }
+    val split by splitFlow.collectAsStateWithLifecycle(MarmotGroupSplit(emptyList(), emptyList()))
+    val knownGroups = split.known
+    val newRequestGroups = split.requests
     val visibleGroups = if (selectedTab == 0) knownGroups else newRequestGroups
 
     Scaffold(
@@ -260,24 +254,6 @@ fun MarmotGroupListScreen(
             }
         }
     }
-}
-
-private fun loadGroupList(
-    accountViewModel: AccountViewModel,
-    onUpdate: (List<Pair<HexKey, MarmotGroupChatroom>>) -> Unit,
-) {
-    val groups = mutableListOf<Pair<HexKey, MarmotGroupChatroom>>()
-    accountViewModel.account.marmotGroupList.rooms.forEach { key, chatroom ->
-        groups.add(key to chatroom)
-    }
-    // Also add groups from MarmotManager that might not have messages yet
-    accountViewModel.account.marmotManager?.activeGroupIds()?.forEach { groupId ->
-        if (groups.none { it.first == groupId }) {
-            groups.add(groupId to accountViewModel.account.marmotGroupList.getOrCreateGroup(groupId))
-        }
-    }
-    groups.sortByDescending { it.second.newestMessage?.createdAt() ?: 0L }
-    onUpdate(groups)
 }
 
 @Composable

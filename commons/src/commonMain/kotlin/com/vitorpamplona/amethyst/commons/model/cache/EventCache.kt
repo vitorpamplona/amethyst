@@ -164,6 +164,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
+import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -262,6 +263,9 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenListEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRemovalEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -4679,6 +4683,11 @@ open class EventCache :
                         } else {
                             consumeRegularEvent(event, relay, wasVerified)
                         }
+                    } else if (event.kind in KINDS_HANDLED_ELSEWHERE) {
+                        // Known kinds whose meaning is applied where they arrive, never stored:
+                        // Marmot push gossip by the group's push coordinator, ContextVM messages
+                        // (cordn's coordinator traffic) by their transport. Not news, so no warning.
+                        Log.d("EventCache") { "Kind ${event.kind} is handled outside the cache; not stored" }.let { false }
                     } else {
                         Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
                     }
@@ -4747,3 +4756,6 @@ class LocalCacheFlow {
         }
     }
 }
+
+/** Kinds [EventCache] leaves unstored on purpose: see the branch that reads it. */
+private val KINDS_HANDLED_ELSEWHERE = setOf(TokenRequestEvent.KIND, TokenListEvent.KIND, TokenRemovalEvent.KIND, CvmMessageEvent.KIND)

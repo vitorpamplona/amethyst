@@ -4039,7 +4039,6 @@
     <string name="concord_create_failed">Nie udało się utworzyć społeczności: żaden transmiter nie zaakceptował jej lub nie udało się zaktualizować listy społeczności. Sprawdź transmitery i spróbuj ponownie.</string>
     <string name="concord_create_relays">Transmitery</string>
     <string name="concord_create_relays_desc">Transmitery, które przechowują zaszyfrowane wiadomości tej społeczności. Pozostaw puste, aby użyć własnych.</string>
-    <string name="concord_create_title">Nowy kanał Concord</string>
     <string name="concord_direct_invite_accept">Zaakceptuj</string>
     <string name="concord_direct_invite_accept_failed">Nie udało się połączyć z tą społecznością. Spróbuj ponownie za chwilę.</string>
     <string name="concord_direct_invite_action">Zaproszenie od npub…</string>

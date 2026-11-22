@@ -4569,6 +4569,10 @@ class Account(
                 // not wait on the network.
                 scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
 
+                // A first login publishes before the account's relay lists have loaded; once they
+                // do (and whenever they change), the KeyPackages follow them to the chosen relays.
+                scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
@@ -4608,7 +4612,7 @@ class Account(
                                 // they never carry a Schnorr signature.
                                 // Same indexing as live decryption, so a restored
                                 // kind:1009 edit is re-linked to its message too.
-                                val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
+                                val innerNote = marmot.indexMarmotGroupInnerEvent(groupId, innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
                                 marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {

@@ -179,10 +179,14 @@ fun MarmotGroupChatView(
                     .fillMaxHeight()
                     .weight(1f, true),
         ) {
-            // Two members is a 1:1 chat: drop the other person's name and picture from every
-            // bubble, as a NIP-17 conversation does. Zero means not loaded yet, so keep them.
+            // An unnamed group of two (White Noise's direct messages) is a 1:1 chat: drop the other
+            // person's name and picture from every bubble, as a NIP-17 conversation does. A named
+            // group is a group however few joined it yet, and its bubbles say who wrote them like
+            // cordn's and Concord's do (the first of a run of one author's messages only). Zero
+            // members means not loaded yet, so keep them.
             val memberCount by chatroom.memberCount.collectAsStateWithLifecycle()
-            CompositionLocalProvider(LocalChatIsOneOnOne provides (memberCount in 1..2)) {
+            val groupName by chatroom.displayName.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalChatIsOneOnOne provides (memberCount in 1..2 && groupName.isNullOrBlank())) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,

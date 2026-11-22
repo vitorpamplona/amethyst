@@ -44,10 +44,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_create_action
+import com.vitorpamplona.amethyst.commons.resources.concord_create_community_title
 import com.vitorpamplona.amethyst.commons.resources.concord_create_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays_desc
-import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -98,7 +98,7 @@ fun ConcordCreateScreen(
                 if (communityId != null) {
                     nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
                 } else {
-                    accountViewModel.toastManager.toast(Res.string.concord_create_title, Res.string.concord_create_failed)
+                    accountViewModel.toastManager.toast(Res.string.concord_create_community_title, Res.string.concord_create_failed)
                 }
             }
         }
@@ -108,7 +108,7 @@ fun ConcordCreateScreen(
         topBar = {
             ActionTopBar(
                 postRes = Res.string.concord_create_action,
-                titleRes = Res.string.concord_create_title,
+                titleRes = Res.string.concord_create_community_title,
                 isActive = { canCreate },
                 onCancel = { nav.popBack() },
                 onPost = create,

@@ -45,12 +45,13 @@ class MarmotGroupFeedFilter(
         chatroom()
             .messages
             .filter { account.isAcceptable(it) }
-            .sortedWith(DefaultFeedOrder)
+            .sortedWith(chatroom().feedOrder)
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val chatroom = chatroom()
         return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    // Same-second messages keep their arrival order (MarmotGroupChatroom.feedOrder).
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(chatroom().feedOrder)
 }
