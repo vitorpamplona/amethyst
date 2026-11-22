@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultGlobalRelays
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -41,16 +44,13 @@ class AccountBootstrapRelaysTest {
     fun givenRelaysReplaceEveryDefaultSet() {
         val local = RelayUrlNormalizer.normalizeOrNull("ws://127.0.0.1:7777")!!
         val events = bootstrapAccountEvents(NostrSignerSync(KeyPair()), "t", setOf(local))
-        val lists =
-            listOf(
-                events.nip65RelayList,
-                events.dmRelayList,
-                events.keyPackageRelayList,
-                events.searchRelayList,
-                events.indexerRelayList,
-                events.favoriteRelayList,
-            )
-        lists.forEach { assertEquals(setOf(local.url), relayUrlsIn(it), "kind ${it.kind}") }
+        // The lists other clients read to reach this account carry their relays as plain tags.
+        listOf(events.nip65RelayList, events.dmRelayList, events.keyPackageRelayList)
+            .forEach { assertEquals(setOf(local.url), relayUrlsIn(it), "kind ${it.kind}") }
+        // Search, indexer and favorites are NIP-51 lists with their relays encrypted in the
+        // content; none of them may name a public default in the clear.
+        val defaults = (DefaultNIP65RelaySet + DefaultSearchRelayList + DefaultIndexerRelayList + DefaultGlobalRelays).map { it.url }.toSet()
+        events.all().forEach { event -> assertTrue(relayUrlsIn(event).none { it in defaults }, "kind ${event.kind}") }
     }
 
     @Test

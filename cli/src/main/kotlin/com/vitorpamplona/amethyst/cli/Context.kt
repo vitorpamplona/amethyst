@@ -637,7 +637,11 @@ class Context(
         // truth — even if every relay rejects, we want our own outbound
         // event in the local cache.
         verifyAndStore(event)
-        if (relayList.isEmpty()) return emptyMap()
+        // Under AMY_LOCAL_ONLY a refused relay is answered here, without dialing it: the socket
+        // would only fail, and the pool would wait out the timeout on it.
+        val (allowed, refused) = relayList.partition { LocalOnly.allowsRelay(it) }
+        val refusedResults = refused.associateWith { PublishResult(false, "${LocalOnly.ENV}: not on this machine or its private network") }
+        if (allowed.isEmpty()) return refusedResults
 
         // NIP-42 write path: an auth-required relay refuses the FIRST publish `auth-required:`, and the
         // pool sends the event again once our AUTH lands. That re-send's OK is the relay's real answer
@@ -645,10 +649,10 @@ class Context(
         // `duplicate:`. [publishAwaitingOkThroughAuth] keeps one OK listener open across the AUTH and
         // warms it up with a `pendingOnAuthRequired` read, the same code the app runs. A relay that
         // refuses our AUTH `blocked:` (a banned key) answers with that at once.
-        return client.publishAwaitingOkThroughAuth(event, relayList, timeoutSecs) { needAuth ->
+        return client.publishAwaitingOkThroughAuth(event, allowed.toSet(), timeoutSecs) { needAuth ->
             val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
             drain(needAuth.associateWith { warmFilter }, idleTimeoutMs = 8_000, pendingOnAuthRequired = true)
-        }
+        } + refusedResults
     }
 
     /**
@@ -699,7 +703,7 @@ class Context(
         pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
-            filters = filters,
+            filters = filters.filterKeys { LocalOnly.allowsRelay(it) },
             idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
         ) { _, event -> verifyAndStore(event) }

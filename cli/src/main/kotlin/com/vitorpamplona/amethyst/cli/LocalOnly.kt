@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.io.IOException
@@ -92,6 +93,9 @@ object LocalOnly {
             allowed
         }
     }
+
+    /** [allows] for a relay url; always true while [enabled] is off. */
+    fun allowsRelay(relay: NormalizedRelayUrl): Boolean = !enabled || hostOf(relay.url)?.let { allows(it) } ?: false
 
     private val interceptor =
         Interceptor { chain ->
