@@ -54,6 +54,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -78,6 +79,8 @@ class AskAsideTest {
     /** An agent with one saved session, `source`, whose copies answer [reply] (or never, when null). */
     private inner class FakeAgent(
         val reply: String?,
+        /** Whether the copy is saved anyway, as Codex does; Claude Code writes none when asked not to. */
+        val savesCopy: Boolean = true,
     ) : AgentBackend {
         val started = mutableListOf<AgentStartOptions>()
         val deleted = mutableListOf<String>()
@@ -120,7 +123,7 @@ class AskAsideTest {
                 ) {
                     sent.complete(text)
                     events.send(AgentEvent.SessionStarted("copy", null, options.permissionMode))
-                    copySaved = true
+                    copySaved = savesCopy
                     events.send(AgentEvent.ApprovalRequested(request()))
                     if (reply != null) {
                         events.send(AgentEvent.Reply(listOf(ContentBlock.Text(reply))))
@@ -156,7 +159,7 @@ class AskAsideTest {
 
         override fun listSessions(cwd: String?) = listOf(saved("source")) + if (copySaved) listOf(saved("copy")) else emptyList()
 
-        override fun session(sessionId: String) = if (sessionId == "source") saved(sessionId) else null
+        override fun session(sessionId: String) = if (sessionId == "source" || (sessionId == "copy" && copySaved)) saved(sessionId) else null
 
         private fun saved(id: String) =
             AgentSessionInfo(
@@ -218,6 +221,7 @@ class AskAsideTest {
             assertEquals("source", options.resumeSessionId)
             assertTrue(options.forkSession)
             assertTrue(options.onlyHostTools)
+            assertFalse(options.persist)
             assertEquals(PermissionMode.PLAN, options.permissionMode)
             assertEquals("describe the work", agent.sent.await())
             assertIs<PermissionDecision.Deny>(agent.decisions.single())
@@ -243,6 +247,19 @@ class AskAsideTest {
 
             assertTrue(agent.killed)
             assertEquals(listOf("copy"), agent.deleted)
+        }
+
+    @Test
+    fun aCopyTheAgentNeverSavedIsNotDeleted() =
+        runBlocking {
+            val agent = FakeAgent("""{"title": "fix: it", "description": "Why."}""", savesCopy = false)
+            val service = service(agent)
+            service.refresh()
+
+            service.askAside("source", "describe the work")
+
+            assertTrue(agent.deleted.isEmpty())
+            assertTrue(agent.killed)
         }
 
     @Test

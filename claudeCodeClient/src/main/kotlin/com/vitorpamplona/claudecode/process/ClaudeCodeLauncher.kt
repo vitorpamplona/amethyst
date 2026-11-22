@@ -65,6 +65,8 @@ data class ClaudeCodeOptions(
     val allowedTools: List<String> = emptyList(),
     /** Added to Claude Code's own system prompt: what this session is for. */
     val appendSystemPrompt: String? = null,
+    /** False: nothing of the session is written to disk; it can't be resumed or listed. */
+    val persistSession: Boolean = true,
 )
 
 /** Starts sessions; [ClaudeCodeLauncher] in the app, a scripted one in tests. */
@@ -131,6 +133,7 @@ class ClaudeCodeLauncher(
                 add(SdkMcpDispatcher.mcpConfig(options.sdkMcpServers))
             }
             if (options.strictMcpConfig) add("--strict-mcp-config")
+            if (!options.persistSession) add("--no-session-persistence")
             options.appendSystemPrompt?.let {
                 add("--append-system-prompt")
                 add(it)

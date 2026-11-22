@@ -167,6 +167,11 @@ data class AgentStartOptions(
     val blockedCommands: List<String> = emptyList(),
     /** Only to learn the agent's commands and models: start no session. */
     val probeOnly: Boolean = false,
+    /**
+     * False: the session is never saved, so it can't be resumed or listed. Agents that can't
+     * run a session unsaved ignore it and save it as usual.
+     */
+    val persist: Boolean = true,
 )
 
 /** A saved session, as the session list shows it. */

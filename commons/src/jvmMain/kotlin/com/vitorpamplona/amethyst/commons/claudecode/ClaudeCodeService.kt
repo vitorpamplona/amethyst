@@ -799,8 +799,8 @@ class ClaudeCodeService(
     }
 
     /**
-     * The copies [askAside] made, never listed: each is a saved session from its first message
-     * until it is deleted, minutes later for a long answer. Kept after the delete, as a refresh
+     * The copies [askAside] made, never listed: an agent that can't run one unsaved (Codex) saves
+     * it from its first message until it is deleted, minutes later for a long answer. Kept after the delete, as a refresh
      * that read the disk before it would otherwise list the copy again until the next one.
      */
     private val asideCopies: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -808,8 +808,9 @@ class ClaudeCodeService(
     /**
      * Asks [key]'s agent [prompt] on a copy of its session, so the answer knows the conversation,
      * and gives the reply's text, or null when the agent can't start or says nothing. The copy
-     * has no tools, runs read-only, is refused every approval, and is deleted afterwards. The list never shows
-     * it, even while it runs ([asideCopies]). Cancelling stops the agent; the copy is deleted all the same.
+     * has no tools, runs read-only and is refused every approval. Claude Code never saves it; an
+     * agent that must save it has it deleted afterwards, and the list never shows it, even while
+     * it runs ([asideCopies]). Cancelling stops the agent; the copy is deleted all the same.
      */
     suspend fun askAside(
         key: String,
@@ -828,6 +829,8 @@ class ClaudeCodeService(
                 model = state.modelChoice,
                 permissionMode = if (PermissionMode.PLAN in agent.capabilities.modes) PermissionMode.PLAN else PermissionMode.DEFAULT,
                 onlyHostTools = true,
+                // Claude Code then writes no copy at all; Codex saves it, and it is deleted below.
+                persist = false,
             )
         val connection =
             try {
@@ -875,7 +878,8 @@ class ClaudeCodeService(
         } finally {
             withContext(NonCancellable + Dispatchers.IO) {
                 connection.kill()
-                copyId?.let { id -> if (!agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
+                // An unsaved copy has nothing to delete.
+                copyId?.let { id -> if (agent.session(id) != null && !agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
             }
         }
         return answer
