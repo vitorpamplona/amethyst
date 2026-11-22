@@ -191,9 +191,8 @@ object MarmotMediaCommands {
             // lands during the upload refuses the send instead of delivering an unreadable file.
             val bytes = file.readBytes()
             // The size and preview a receiver lays the attachment out with before it has fetched
-            // and decrypted it, as the app's uploader sends them: without `dim`, White Noise
-            // stretches the image to the column width. Read from the plaintext, so it describes
-            // what the receiver will see.
+            // and decrypted it, as the app's uploader sends them. Read from the plaintext, so they
+            // describe what the receiver will see.
             val meta = if (mediaType.startsWith("image/")) MediaMetadataReader.compute(bytes, mediaType) else null
             val dim = meta?.width?.let { w -> meta.height?.let { h -> "${w}x$h" } }
             val pinned =
