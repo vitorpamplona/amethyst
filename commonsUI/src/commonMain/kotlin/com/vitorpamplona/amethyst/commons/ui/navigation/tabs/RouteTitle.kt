@@ -136,7 +136,7 @@ fun routeTitle(
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }
     if (section != null && route !is Route.Profile) return stringRes(section.labelRes)
     val name = route::class.simpleName.orEmpty()
-    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "AI Code changes".
+    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "Agentic Coding changes".
     if (name.startsWith(AGENT_ROUTE_PREFIX)) return stringRes(Res.string.ai_code_title) + " " + spellOut(name.removePrefix(AGENT_ROUTE_PREFIX)).lowercase()
     return spellOut(name)
 }

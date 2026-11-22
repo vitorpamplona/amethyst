@@ -10898,7 +10898,7 @@
     <string name="media_trim_hint">Přetažením konců vyberte část, kterou chcete ponechat</string>
     <string name="media_trim_upload_failed">Video se nepodařilo zkrátit</string>
     <string name="media_crop_failed">Tento obrázek zde nelze oříznout. Tlačítko Uložit ho použije beze změn.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Vytvořit PR</string>
     <string name="claude_code_update_pr">Aktualizovat PR</string>
     <string name="claude_code_drafting">%1$s píše název a popis…</string>

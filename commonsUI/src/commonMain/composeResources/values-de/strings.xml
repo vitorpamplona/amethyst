@@ -10181,7 +10181,7 @@
     <string name="media_trim_hint">Ziehe die Enden, um einen Teil zu behalten</string>
     <string name="media_trim_upload_failed">Video konnte nicht gekürzt werden</string>
     <string name="media_crop_failed">Dieses Bild kann hier nicht zugeschnitten werden. Speichern verwendet es unverändert.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">PR erstellen</string>
     <string name="claude_code_update_pr">PR aktualisieren</string>
     <string name="claude_code_drafting">%1$s schreibt Titel und Beschreibung…</string>

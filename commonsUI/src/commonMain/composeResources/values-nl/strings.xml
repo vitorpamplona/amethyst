@@ -10142,7 +10142,7 @@
     <string name="claude_code_storage_measuring">Meten…</string>
     <string name="claude_code_archive">Archiveren</string>
     <string name="claude_code_unarchive">Uit archief halen</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Pull request maken</string>
     <string name="claude_code_update_pr">PR bijwerken</string>
     <string name="claude_code_drafting">%1$s schrijft de titel en beschrijving…</string>

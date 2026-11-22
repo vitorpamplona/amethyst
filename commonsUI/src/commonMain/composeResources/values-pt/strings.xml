@@ -10143,7 +10143,7 @@
     <string name="media_trim_hint">Arraste as pontas para manter um trecho</string>
     <string name="media_trim_upload_failed">Não foi possível aparar este vídeo</string>
     <string name="media_crop_failed">Esta imagem não pode ser cortada aqui. Ao salvar, ela será usada como está.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Criar um PR</string>
     <string name="claude_code_update_pr">Atualizar PR</string>
     <string name="claude_code_drafting">%1$s está escrevendo o título e a descrição…</string>

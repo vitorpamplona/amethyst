@@ -9027,7 +9027,7 @@
     <string name="media_failed_unknown_image">この画像を読み込めませんでした</string>
     <string name="media_failed_unknown_gif">この GIF を読み込めませんでした</string>
     <string name="media_failed_open_in_browser">ブラウザで開く</string>
-    <string name="ai_code_title">AI コード</string>
+    <string name="ai_code_title">エージェント型コーディング</string>
     <string name="claude_code_new_session">新しいセッション</string>
     <string name="claude_code_search_hint">セッションを検索</string>
     <string name="claude_code_no_sessions">このコンピューターにはまだ Claude Code のセッションがありません。ここで開始するか、ターミナルで claude を実行するとこの一覧に表示されます。</string>
