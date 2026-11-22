@@ -77,6 +77,7 @@ class ConfiguredNamecoinLifecycleServiceTest {
                     subjectPubkey = AccountLifecycleTestFixtures.old,
                     oldEvents = listOf(AccountLifecycleTestFixtures.event("old_root")),
                 )
+            val state = service.accountLifecycle.stateFor(request)
             val result = service.accountLifecycle.resolve(request, AccountLifecycleTestFixtures.metadata).result
             assertTrue(result.isCompromiseWarning)
             assertEquals("d/example", requestedName)
@@ -89,7 +90,26 @@ class ConfiguredNamecoinLifecycleServiceTest {
 
             settings.value = settings.value.copy(customServers = listOf("other.example:50002"))
             runCurrent()
+            assertEquals(1, service.accountLifecycle.invalidationVersion.value)
+            assertEquals(
+                AccountLifecycleStatus.STALE,
+                state.value.evaluation
+                    ?.result
+                    ?.status,
+            )
+            assertEquals(
+                SuccessorConfirmation.STALE,
+                state.value.evaluation
+                    ?.result
+                    ?.successorConfirmation,
+            )
             service.accountLifecycle.resolve(request, AccountLifecycleTestFixtures.metadata)
+            assertEquals(
+                AccountLifecycleStatus.CURRENT,
+                state.value.evaluation
+                    ?.result
+                    ?.status,
+            )
             assertEquals(2, calls, "settings changes invalidate the positive raw cache")
         }
 }

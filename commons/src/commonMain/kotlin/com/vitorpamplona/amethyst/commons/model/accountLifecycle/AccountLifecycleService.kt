@@ -29,6 +29,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
@@ -65,6 +66,7 @@ data class AccountLifecycleRequest(
     val subjectPubkey: String,
     val subjectOnly: Boolean = false,
     val oldEvents: List<Event> = emptyList(),
+    val successorEventIds: List<String> = emptyList(),
     val forceRefresh: Boolean = false,
 )
 
@@ -181,6 +183,9 @@ class AccountLifecycleService(
     private val lookupPermits = Semaphore(MAX_CONCURRENT_LOOKUPS)
     private var generation = 0L
 
+    private val mutableInvalidationVersion = MutableStateFlow(0L)
+    val invalidationVersion: StateFlow<Long> = mutableInvalidationVersion
+
     private val validationMutex = Mutex()
     private val validatedEntries = mutableMapOf<AccountLifecycleRequestKey, ValidatedEntry>()
     private var validationSequence = 0L
@@ -222,11 +227,7 @@ class AccountLifecycleService(
         val context = NamecoinNameContexts.parse(request.identifier, request.subjectOnly)
         val canonicalRequest = request.copy(identifier = NamecoinNameContexts.canonicalIdentifier(context, request.subjectOnly))
         val key = requestKey(canonicalRequest)
-        val initialFingerprint =
-            canonicalRequest.oldEvents
-                .map { it.id }
-                .sorted()
-                .joinToString(",")
+        val initialFingerprint = metadataFingerprint(canonicalRequest.oldEvents.map { it.id }, canonicalRequest.successorEventIds)
         val inFlight =
             validationMutex.withLock {
                 if (key !in validatedEntries) pruneValidatedEntriesLocked()
@@ -283,7 +284,7 @@ class AccountLifecycleService(
             validationMutex.withLock {
                 if (entry.latestRequest == requestId) {
                     val previous = entry.state.value.evaluation
-                    if (!canonicalRequest.forceRefresh && entry.fingerprint == fingerprint && previous != null) {
+                    if (!canonicalRequest.forceRefresh && entry.fingerprint == fingerprint && previous == outcome.evaluation) {
                         entry.state.value = AccountLifecycleRequestState(loading = false, evaluation = previous)
                     } else {
                         if (outcome.persist) save(canonicalRequest, outcome)
@@ -313,8 +314,10 @@ class AccountLifecycleService(
         currentIdentifier: String?,
         oldEvents: List<Event>,
         metadataProvider: LifecycleMetadataProvider,
+        successorEventIds: Map<String, String> = emptyMap(),
         forceRefresh: Boolean = false,
     ): List<AccountLifecycleEvaluation> {
+        val successorIds = successorEventIds.values.sorted()
         val current = canonicalCurrentIdentifier(currentIdentifier)
         val retained = retainedAssociations(viewerNamespace, subjectPubkey)
         val requests =
@@ -326,6 +329,7 @@ class AccountLifecycleService(
                             identifier = current,
                             subjectPubkey = subjectPubkey,
                             oldEvents = oldEvents,
+                            successorEventIds = successorIds,
                             forceRefresh = forceRefresh,
                         ),
                     )
@@ -340,6 +344,7 @@ class AccountLifecycleService(
                                 subjectPubkey = subjectPubkey,
                                 subjectOnly = association.subjectOnly,
                                 oldEvents = oldEvents,
+                                successorEventIds = successorIds,
                                 forceRefresh = forceRefresh,
                             ),
                         )
@@ -363,7 +368,7 @@ class AccountLifecycleService(
             }
         val fingerprint =
             requests.joinToString(separator = "|") { "${it.identifier}:${it.subjectOnly}" } +
-                ":" + oldEvents.map { it.id }.sorted().joinToString(",")
+                ":" + metadataFingerprint(oldEvents.map { it.id }, successorIds)
         val subjectKey = viewerNamespace to subjectPubkey
         val inFlight =
             subjectMutex.withLock {
@@ -424,6 +429,7 @@ class AccountLifecycleService(
         forceRefresh: Boolean,
     ): List<AccountLifecycleEvaluation> {
         val evaluations = requests.map { resolve(it, metadataProvider) }.toMutableList()
+        val successorEventIds = requests.flatMap { it.successorEventIds }.distinct().sorted()
         val predecessorRequests =
             evaluations
                 .filter { it.subjectPubkey == subjectPubkey }
@@ -438,6 +444,7 @@ class AccountLifecycleService(
                                 identifier = NamecoinNameContexts.canonicalIdentifier(own.context, subjectOnly = true),
                                 subjectPubkey = oldPubkey,
                                 subjectOnly = true,
+                                successorEventIds = successorEventIds,
                                 forceRefresh = forceRefresh,
                             )
                         }
@@ -465,9 +472,35 @@ class AccountLifecycleService(
             rawEntries.clear()
         }
         validationMutex.withLock {
-            validatedEntries.values.forEach { it.fingerprint = null }
+            validatedEntries.values.forEach { entry ->
+                entry.fingerprint = null
+                val current = entry.state.value
+                entry.state.value =
+                    current.copy(
+                        loading = current.evaluation != null && entry.state.subscriptionCount.value > 0,
+                        evaluation = current.evaluation?.let(::staleWhileRechecking),
+                    )
+            }
         }
+        subjectMutex.withLock {
+            subjectEntries.values.forEach { entry ->
+                val current = entry.state.value
+                entry.state.value =
+                    current.copy(
+                        loading = current.evaluations.isNotEmpty() && entry.state.subscriptionCount.value > 0,
+                        evaluations = current.evaluations.map(::staleWhileRechecking),
+                    )
+            }
+        }
+        mutableInvalidationVersion.value++
     }
+
+    private fun staleWhileRechecking(evaluation: AccountLifecycleEvaluation): AccountLifecycleEvaluation =
+        if (evaluation.result.isAccountWarning && evaluation.result.status != AccountLifecycleStatus.STALE) {
+            evaluation.copy(result = AccountLifecycleParser.stale(evaluation.result, "invalidated"))
+        } else {
+            evaluation
+        }
 
     private suspend fun evaluate(
         request: AccountLifecycleRequest,
@@ -605,6 +638,24 @@ class AccountLifecycleService(
         return currentHeight.toLong() > previousHeight.toLong() + NAMECOIN_REGISTRATION_EXPIRY_BLOCKS
     }
 
+    private fun metadataFingerprint(
+        oldEventIds: List<String>,
+        successorEventIds: List<String>,
+    ): String =
+        oldEventIds.distinct().sorted().joinToString(",", prefix = "old=") +
+            successorEventIds.distinct().sorted().joinToString(",", prefix = ";successor=")
+
+    private fun cacheTtlSeconds(lookup: RawLookup): Long {
+        val recordTtl =
+            lookup.record
+                ?.provenance
+                ?.expiresIn
+                ?.let { blocks ->
+                    minOf(positiveTtlSeconds, blocks.toLong() * NAMECOIN_TARGET_BLOCK_SECONDS).coerceAtLeast(0)
+                } ?: positiveTtlSeconds
+        return if (lookup.record != null && lookup.diagnostic == null) recordTtl else retryTtlSeconds
+    }
+
     private suspend fun raw(
         canonicalName: String,
         forceRefresh: Boolean,
@@ -615,18 +666,9 @@ class AccountLifecycleService(
                 rawMutex.withLock {
                     val existing = rawEntries[canonicalName]
                     val ready = (existing?.state?.value as? RawLookupState.Ready)?.lookup
-                    val recordTtl =
-                        ready
-                            ?.record
-                            ?.provenance
-                            ?.expiresIn
-                            ?.let { blocks ->
-                                minOf(positiveTtlSeconds, blocks.toLong() * NAMECOIN_TARGET_BLOCK_SECONDS).coerceAtLeast(0)
-                            } ?: positiveTtlSeconds
                     val fresh =
                         ready != null &&
-                            now() - ready.observedAt <
-                            if (ready.record != null && ready.diagnostic == null) recordTtl else retryTtlSeconds
+                            now() - ready.observedAt < cacheTtlSeconds(ready)
                     if (existing != null && !forceRefresh && (ready == null || fresh)) {
                         existing
                     } else {
@@ -687,6 +729,14 @@ class AccountLifecycleService(
                 if (rawEntries[canonicalName] === entry) entry.state.value = RawLookupState.Ready(lookup)
             }
             entry.deferred.complete(lookup)
+            val ttlSeconds = cacheTtlSeconds(lookup)
+            if (ttlSeconds > 0) {
+                scope.launch {
+                    delay(ttlSeconds * 1_000)
+                    val expired = rawMutex.withLock { rawEntries[canonicalName] === entry }
+                    if (expired) invalidateAndWait()
+                }
+            }
         }
     }
 
@@ -704,11 +754,15 @@ class AccountLifecycleService(
 
     private suspend fun pruneValidatedEntriesLocked() {
         while (validatedEntries.size >= MAX_VALIDATED_REQUESTS) {
-            val candidate =
+            val idle =
                 validatedEntries.entries
                     .filter { it.value.inFlight == null && it.value.state.subscriptionCount.value == 0 }
                     .sortedBy { it.value.lastUsed }
-                    .firstOrNull { canEvictValidatedEntry(it.key, it.value) }
+            val candidate =
+                idle.firstOrNull { canEvictValidatedEntry(it.key, it.value) }
+                    // A full warning-only store must not pin unpersisted warnings in memory. Prefer
+                    // ordinary/durable entries, then evict the oldest volatile warning if necessary.
+                    ?: idle.firstOrNull()
                     ?: return
             validatedEntries.remove(candidate.key)
         }
@@ -729,16 +783,18 @@ class AccountLifecycleService(
                     subjectOnly = key.subjectOnly,
                 ),
             )
-        return persisted.selectedRecord != null && persisted.result.isAccountWarning
+        return persisted.selectedRecord == evaluation.selectedRecord && persisted.result.isAccountWarning
     }
 
     private suspend fun pruneSubjectEntriesLocked() {
         while (subjectEntries.size >= MAX_SUBJECTS) {
-            val candidate =
+            val idle =
                 subjectEntries.entries
                     .filter { it.value.inFlight == null && it.value.state.subscriptionCount.value == 0 }
                     .sortedBy { it.value.lastUsed }
-                    .firstOrNull { canEvictSubjectEntry(it.key, it.value) }
+            val candidate =
+                idle.firstOrNull { canEvictSubjectEntry(it.key, it.value) }
+                    ?: idle.firstOrNull()
                     ?: return
             subjectEntries.remove(candidate.key)
         }
@@ -752,18 +808,19 @@ class AccountLifecycleService(
             entry.state.value.evaluations
                 .filter { it.result.isAccountWarning }
         if (warnings.isEmpty()) return true
-        val persisted = retainedAssociations(key.first, key.second).filter { it.selectedRecord != null && it.result.isAccountWarning }
         return warnings.all { warning ->
-            persisted.any { record ->
-                if (record.selectedRecord != warning.selectedRecord) return@any false
-                val recordName =
-                    try {
-                        NamecoinNameContexts.parse(record.identifier, record.subjectOnly).name
-                    } catch (_: IllegalArgumentException) {
-                        return@any false
-                    }
-                recordName == warning.context.name
-            }
+            val subjectOnly = warning.context.localPart == null
+            val persisted =
+                load(
+                    AccountLifecycleRequest(
+                        viewerNamespace = key.first,
+                        identifier = NamecoinNameContexts.canonicalIdentifier(warning.context, subjectOnly),
+                        subjectPubkey = warning.subjectPubkey,
+                        subjectOnly = subjectOnly,
+                    ),
+                )
+            // A predecessor warning belongs to OLD, not the viewed NEW subject.
+            persisted.selectedRecord == warning.selectedRecord && persisted.result.isAccountWarning
         }
     }
 
@@ -859,6 +916,7 @@ class AccountLifecycleService(
         cached.isCompromiseWarning &&
             current.status in
             setOf(
+                AccountLifecycleStatus.NO_DECLARATION,
                 AccountLifecycleStatus.INVALID,
                 AccountLifecycleStatus.UNSUPPORTED_STATE,
                 AccountLifecycleStatus.UNSUPPORTED_TRAVERSAL,

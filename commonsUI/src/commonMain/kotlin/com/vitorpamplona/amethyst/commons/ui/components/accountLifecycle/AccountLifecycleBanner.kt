@@ -35,8 +35,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -125,14 +127,29 @@ fun AccountLifecycleBanner(
     val currentEvent = userInfo?.event
     val currentIdentifier = userInfo?.info?.nip05
     val viewerNamespace = accountViewModel.account.userProfile().pubkeyHex
-    var refreshVersion by remember(user.pubkeyHex) { mutableIntStateOf(0) }
-    var successorMetadataVersion by remember(user.pubkeyHex, lifecycle) { mutableIntStateOf(0) }
+    val invalidationVersion by lifecycle.invalidationVersion.collectAsState()
+    var refreshVersion by remember(user.pubkeyHex, viewerNamespace, lifecycle) { mutableIntStateOf(0) }
+    val successorEventIds = remember(user.pubkeyHex, lifecycle) { mutableStateMapOf<String, String>() }
     var subjectState by remember(user.pubkeyHex, lifecycle) { mutableStateOf(AccountLifecycleSubjectState()) }
 
     LaunchedEffect(user.pubkeyHex, viewerNamespace, lifecycle) {
         val sharedState = lifecycle.subjectState(viewerNamespace, user.pubkeyHex)
         sharedState.collect { subjectState = it }
     }
+
+    val metadataProvider =
+        remember {
+            LifecycleMetadataProvider { pubkey ->
+                listOfNotNull(
+                    LocalCache
+                        .getUserIfExists(pubkey)
+                        ?.metadataOrNull()
+                        ?.flow
+                        ?.value
+                        ?.event,
+                )
+            }
+        }
 
     val successorPubkeys = subjectState.evaluations.mapNotNull { it.result.successorPubkey }.distinct()
     successorPubkeys.forEach { successor ->
@@ -141,32 +158,46 @@ fun AccountLifecycleBanner(
                 val successorInfo by observeUserInfo(successorUser, accountViewModel)
                 val successorEventId = successorInfo?.event?.id
                 LaunchedEffect(successor, successorEventId) {
-                    if (successorEventId != null) successorMetadataVersion++
+                    if (successorEventId != null) successorEventIds[successor] = successorEventId
                 }
             }
         }
     }
 
-    LaunchedEffect(user.pubkeyHex, currentIdentifier, currentEvent?.id, successorMetadataVersion, refreshVersion, lifecycle) {
+    val successorEventIdSnapshot = successorEventIds.toMap()
+    LaunchedEffect(
+        user.pubkeyHex,
+        viewerNamespace,
+        currentIdentifier,
+        currentEvent?.id,
+        successorEventIdSnapshot,
+        invalidationVersion,
+        lifecycle,
+    ) {
         lifecycle.resolveSubject(
             viewerNamespace = viewerNamespace,
             subjectPubkey = user.pubkeyHex,
             currentIdentifier = currentIdentifier,
             oldEvents = listOfNotNull(currentEvent),
-            metadataProvider =
-                LifecycleMetadataProvider { pubkey ->
-                    listOfNotNull(
-                        LocalCache
-                            .getUserIfExists(pubkey)
-                            ?.metadataOrNull()
-                            ?.flow
-                            ?.value
-                            ?.event,
-                    )
-                },
-            // A NEW kind-0 replacement must supersede, not join, an older in-flight confirmation.
-            forceRefresh = refreshVersion > 0 || successorMetadataVersion > 0,
+            metadataProvider = metadataProvider,
+            successorEventIds = successorEventIdSnapshot,
         )
+    }
+
+    LaunchedEffect(user.pubkeyHex, viewerNamespace, refreshVersion, lifecycle) {
+        if (refreshVersion > 0) {
+            // Only this explicit, one-shot recheck forces transport. Successor metadata identity
+            // joins shared validation without repeatedly replacing raw lookups on later effects.
+            lifecycle.resolveSubject(
+                viewerNamespace = viewerNamespace,
+                subjectPubkey = user.pubkeyHex,
+                currentIdentifier = currentIdentifier,
+                oldEvents = listOfNotNull(currentEvent),
+                metadataProvider = metadataProvider,
+                successorEventIds = successorEventIdSnapshot,
+                forceRefresh = true,
+            )
+        }
     }
 
     if (!compact) {
