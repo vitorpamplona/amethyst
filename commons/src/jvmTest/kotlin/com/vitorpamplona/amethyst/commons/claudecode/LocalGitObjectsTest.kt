@@ -41,6 +41,8 @@ class LocalGitObjectsTest {
             ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false") + args)
                 .directory(dir)
                 .apply { environment().forgetInheritedRepository() }
+                // Run from an agent session, the push guard's config would come along.
+                .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
                 .redirectErrorStream(true)
                 .start()
         val out = p.inputStream.bufferedReader().readText()
@@ -220,6 +222,74 @@ class LocalGitObjectsTest {
         } finally {
             remote.deleteRecursively()
         }
+    }
+
+    @Test
+    fun theGuardPushesBranchesAndSyncsMainButNothingElse() {
+        val origin = Files.createTempDirectory("origin").toFile()
+        val mirror = Files.createTempDirectory("mirror").toFile()
+        val hooks = Files.createTempDirectory("hooks").toFile()
+        try {
+            git("init", "-q", "--bare", origin.absolutePath)
+            git("init", "-q", "--bare", mirror.absolutePath)
+            git("remote", "add", "origin", origin.absolutePath)
+            git("remote", "add", "mirror", mirror.absolutePath)
+            git("push", "-q", "origin", "main")
+            git("push", "-q", "mirror", "main")
+            git("fetch", "-q", "--all")
+            val env = ClaudeChat.pushGuardEnvironment(emptyMap(), listOf(dir), File(hooks, "push-guard.sh"))
+            assertTrue(env.values.any { it == "pre-push" }, "expected the config hook, got $env")
+
+            fun asTheSession(command: String): Int {
+                val p =
+                    ProcessBuilder("sh", "-c", command)
+                        .directory(dir)
+                        .apply { environment().forgetInheritedRepository() }
+                        .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
+                        .redirectErrorStream(true)
+                        .apply { environment().putAll(env) }
+                        .start()
+                p.inputStream.readBytes()
+                return p.waitFor()
+            }
+
+            fun originHas(ref: String) = GitWorkspace.git(origin, "rev-parse", "-q", "--verify", ref)?.trim()
+
+            assertEquals(0, asTheSession("git push -q origin HEAD:refs/heads/agent/x"), "a branch must go")
+            assertEquals(0, asTheSession("git push -q -f origin main:refs/heads/agent/x"), "a branch may be rewritten, as on the web")
+            git("tag", "v1")
+            listOf(
+                "git push -q origin v1",
+                "git push -q origin --tags",
+                "git push -q origin :agent/x",
+                "git push -q origin --delete agent/x",
+                // New work on main, not on any other remote.
+                "git push -q origin HEAD:main",
+                "git -C . push -q origin HEAD:refs/heads/main",
+            ).forEach { assertTrue(asTheSession(it) != 0, "pushed with: $it") }
+            git("config", "hook.pre-push.enabled", "false")
+            assertTrue(asTheSession("git push -q origin HEAD:main") != 0, "the repository's config turned the guard off")
+            git("config", "--unset", "hook.pre-push.enabled")
+            assertEquals(null, originHas("refs/tags/v1"))
+            assertEquals(GitWorkspace.git(dir, "rev-parse", "main")?.trim(), originHas("refs/heads/main"))
+            assertNotNull(originHas("refs/heads/agent/x"))
+
+            // The mirror moved ahead: main may follow it, and only to that commit.
+            git("push", "-q", "mirror", "HEAD:main")
+            git("fetch", "-q", "mirror")
+            assertEquals(0, asTheSession("git push -q origin mirror/main:refs/heads/main"), "a sync to the mirror's main must go")
+            assertEquals(GitWorkspace.git(dir, "rev-parse", "HEAD")?.trim(), originHas("refs/heads/main"))
+        } finally {
+            origin.deleteRecursively()
+            mirror.deleteRecursively()
+            hooks.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theGuardFallsBackToNoPushWithoutARepositoryToAsk() {
+        val env = ClaudeChat.pushGuardEnvironment(emptyMap(), emptyList(), File(dir, "unused.sh"))
+        assertEquals("url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf", env["GIT_CONFIG_KEY_0"])
     }
 
     @Test

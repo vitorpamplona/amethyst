@@ -592,7 +592,7 @@ class ClaudeChat internal constructor(
             }
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
-            // A nostr checkout, or a workspace whose pull requests the user opens: publishing is theirs.
+            // A nostr checkout, or an agent workstream: its pushes go through the guard, merging is the user's.
             val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null || publishingIsTheUsers(workDir)
             val options =
                 AgentStartOptions(
@@ -602,9 +602,10 @@ class ClaudeChat internal constructor(
                     forkAt = if (forkOnStart) forkBefore?.parentUuid else null,
                     model = model,
                     permissionMode = current.permissionMode,
-                    // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
-                    blockedCommands = if (nostrCheckout) NO_PUBLISHING else emptyList(),
-                    environment = if (nostrCheckout) noPushEnvironment(remoteUrls = withContext(Dispatchers.IO) { remoteUrls(workDir) }) else emptyMap(),
+                    // As on Claude Code on the web: the agent pushes branches and opens pull requests when asked;
+                    // merging, tags, deleting branches and moving the default branch stay the user's.
+                    blockedCommands = if (nostrCheckout) NO_MERGING else emptyList(),
+                    environment = if (nostrCheckout) withContext(Dispatchers.IO) { pushGuardEnvironment(repos = repos(workDir)) } else emptyMap(),
                     hostTools = mcpServers,
                     instructions = folderBrief(workDir),
                 ).let(launchOptions)
@@ -806,19 +807,142 @@ class ClaudeChat internal constructor(
 
         private const val STREAM_PUBLISH_MS = 50L
 
-        /** What a session on a nostr repository may not run (command prefixes): pushing and publishing proposals. */
-        val NO_PUBLISHING =
+        /**
+         * What a session on a nostr repository or in a workstream may not run (command prefixes):
+         * merging a pull request or proposal, marking one merged, and publishing the repository's
+         * state (its branches and tags, signed) outside git push and [pushGuardEnvironment].
+         * Pushing a branch and opening a pull request or proposal are allowed, as on Claude Code
+         * on the web.
+         */
+        val NO_MERGING =
             listOf(
-                "git push",
-                "ngit send",
+                "gh pr merge",
                 "ngit pr merge",
                 "ngit sync",
-                "amy git pr",
-                "amy git pr-update",
-                "gh pr create",
-                "gh pr merge",
+                "amy git merge",
+                "amy git applied",
+                "amy git merged",
+                "amy git resolved",
+                "amy git state",
             )
         private const val STDERR_SHOWN = 2_000
+
+        /**
+         * Git config, through the environment, that runs [PUSH_GUARD_SCRIPT] before each of the
+         * session's pushes, as a config hook (git 2.54+), beside the repository's own hooks. The
+         * guard lets a branch through and refuses tags, deletions and other refs, and moves the
+         * default branch (`main`, `master`, the remote's `HEAD`) only forward to a commit another
+         * remote already has there: a sync between mirrors, never new work. Without config hooks
+         * (an older git, or no repository in [repos] to ask) it falls back to [noPushEnvironment].
+         *
+         * Like [noPushEnvironment], it guards against a push by mistake, not against an agent set
+         * on it: `git push --no-verify` skips every pre-push hook. Turning the event off in the
+         * repository's config doesn't: this config is read last and turns it back on.
+         */
+        fun pushGuardEnvironment(
+            parent: Map<String, String> = System.getenv(),
+            repos: List<File>,
+            guardFile: File = PUSH_GUARD_FILE,
+        ): Map<String, String> {
+            if (repos.none { supportsConfigHooks(it) } || !writeGuard(guardFile)) {
+                return noPushEnvironment(parent, repos.flatMap { remoteUrlsOf(it) }.distinct())
+            }
+            val n = parent["GIT_CONFIG_COUNT"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+            val entries =
+                listOf(
+                    "hook.$GUARD_NAME.command" to "sh '${guardFile.absolutePath.replace("'", "'\\''")}'",
+                    "hook.$GUARD_NAME.event" to "pre-push",
+                    "hook.$GUARD_NAME.enabled" to "true",
+                    "hook.pre-push.enabled" to "true",
+                )
+            return buildMap {
+                put("GIT_CONFIG_COUNT", (n + entries.size).toString())
+                entries.forEachIndexed { i, (key, value) ->
+                    put("GIT_CONFIG_KEY_${n + i}", key)
+                    put("GIT_CONFIG_VALUE_${n + i}", value)
+                }
+            }
+        }
+
+        private const val GUARD_NAME = "amethyst-push-guard"
+
+        private val PUSH_GUARD_FILE = File(System.getProperty("user.home"), ".amethyst/agents/hooks/push-guard.sh")
+
+        /** Whether the git in [repo] runs hooks named in config: asked by listing one. */
+        private fun supportsConfigHooks(repo: File): Boolean =
+            GitWorkspace
+                .git(repo, "-c", "hook.amethyst-probe.command=true", "-c", "hook.amethyst-probe.event=pre-push", "hook", "list", "pre-push")
+                ?.lines()
+                ?.any { it.trim() == "amethyst-probe" } == true
+
+        /** Writes [PUSH_GUARD_SCRIPT] to [file] when it isn't there already; false if it couldn't. */
+        private fun writeGuard(file: File): Boolean =
+            try {
+                if (!file.isFile || file.readText() != PUSH_GUARD_SCRIPT) {
+                    val dir = file.parentFile
+                    if (!dir.isDirectory && !dir.mkdirs()) throw IOException("could not create $dir")
+                    val temp = File(dir, "${file.name}.tmp")
+                    temp.writeText(PUSH_GUARD_SCRIPT)
+                    if (!temp.renameTo(file)) throw IOException("could not write $file")
+                }
+                true
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not write the push guard; the session cannot push", e)
+                false
+            }
+
+        /**
+         * The pre-push check of [pushGuardEnvironment]. Git passes the remote's name (or the URL
+         * pushed to) and URL, and one line per ref on stdin: local ref, local id, remote ref,
+         * remote id, a zero id for a ref that doesn't exist on that side.
+         */
+        internal val PUSH_GUARD_SCRIPT =
+            """
+            |#!/bin/sh
+            |# Amethyst's guard on an agent session's pushes (ClaudeChat.pushGuardEnvironment).
+            |remote="${'$'}1"
+            |url="${'$'}2"
+            |zero=${'$'}(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+            |default=${'$'}(git symbolic-ref -q --short "refs/remotes/${'$'}remote/HEAD" 2>/dev/null)
+            |default=${'$'}{default#"${'$'}remote"/}
+            |status=0
+            |refuse() {
+            |    echo "amethyst: ${'$'}1 is the user's to do from the app; not pushed: ${'$'}2" >&2
+            |    status=1
+            |}
+            |while read -r local_ref local_oid remote_ref remote_oid; do
+            |    case "${'$'}remote_ref" in
+            |    refs/heads/*) branch=${'$'}{remote_ref#refs/heads/} ;;
+            |    refs/tags/*) refuse "Publishing a tag" "${'$'}remote_ref"; continue ;;
+            |    *) refuse "Pushing anything but a branch" "${'$'}remote_ref"; continue ;;
+            |    esac
+            |    if [ "${'$'}local_oid" = "${'$'}zero" ]; then
+            |        refuse "Deleting a branch" "${'$'}branch"
+            |        continue
+            |    fi
+            |    case "${'$'}branch" in
+            |    main | master) ;;
+            |    *) [ -n "${'$'}default" ] && [ "${'$'}branch" = "${'$'}default" ] || continue ;;
+            |    esac
+            |    # The default branch: only forward, to the commit another remote has on it.
+            |    if [ "${'$'}remote_oid" = "${'$'}zero" ] || ! git merge-base --is-ancestor "${'$'}remote_oid" "${'$'}local_oid" 2>/dev/null; then
+            |        refuse "Moving ${'$'}branch other than forward" "${'$'}branch"
+            |        continue
+            |    fi
+            |    mirrored=
+            |    for other in ${'$'}(git remote); do
+            |        [ "${'$'}other" = "${'$'}remote" ] && continue
+            |        [ "${'$'}(git remote get-url "${'$'}other" 2>/dev/null)" = "${'$'}url" ] && continue
+            |        if [ "${'$'}(git rev-parse -q --verify "refs/remotes/${'$'}other/${'$'}branch^{commit}" 2>/dev/null)" = "${'$'}local_oid" ]; then
+            |            mirrored=1
+            |            break
+            |        fi
+            |    done
+            |    [ -n "${'$'}mirrored" ] || refuse "Adding work to ${'$'}branch (only a sync to another remote's ${'$'}branch passes)" "${'$'}branch"
+            |done
+            |exit ${'$'}status
+            |
+            """.trimMargin()
 
         /**
          * Git config, through the environment, that sends the session's pushes to a transport
@@ -854,19 +978,17 @@ class ClaudeChat internal constructor(
 
         private const val NO_PUSH_URL = "publishing-is-the-users-step-in-amethyst://"
 
-        /**
-         * The remote URLs of the repository in [dir], or of the clones one folder down (a
-         * workspace's), as [noPushEnvironment] wants them.
-         */
-        fun remoteUrls(dir: File): List<String> =
-            (listOf(dir) + dir.listFiles().orEmpty().filter { it.isDirectory })
-                .filter { File(it, ".git").exists() }
-                .flatMap { repo ->
-                    GitWorkspace
-                        .git(repo, "config", "--get-regexp", "^remote\\..*\\.url$")
-                        ?.lines()
-                        .orEmpty()
-                        .mapNotNull { line -> line.substringAfter(' ', "").trim().takeIf { it.isNotEmpty() } }
-                }.distinct()
+        /** The repository in [dir], or the clones one folder down (a workspace's). */
+        fun repos(dir: File): List<File> = (listOf(dir) + dir.listFiles().orEmpty().filter { it.isDirectory }).filter { File(it, ".git").exists() }
+
+        /** The remote URLs of [repos] of [dir], as [noPushEnvironment] wants them. */
+        fun remoteUrls(dir: File): List<String> = repos(dir).flatMap { remoteUrlsOf(it) }.distinct()
+
+        private fun remoteUrlsOf(repo: File): List<String> =
+            GitWorkspace
+                .git(repo, "config", "--get-regexp", "^remote\\..*\\.url$")
+                ?.lines()
+                .orEmpty()
+                .mapNotNull { line -> line.substringAfter(' ', "").trim().takeIf { it.isNotEmpty() } }
     }
 }
