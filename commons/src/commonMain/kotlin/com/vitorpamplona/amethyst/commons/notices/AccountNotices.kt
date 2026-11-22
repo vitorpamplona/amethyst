@@ -115,6 +115,14 @@ sealed interface ConcordNotice : UserNotice {
 
     data object DissolveFailed : ConcordNotice
 
+    /**
+     * A join that was shown at once could not be saved to the Community List once it loaded, so
+     * the community was taken back out ([communityName] when known).
+     */
+    data class JoinNotSaved(
+        val communityName: String?,
+    ) : ConcordNotice
+
     data object ChannelKeyRotated : ConcordNotice
 
     data object ChannelKeyRotationFailed : ConcordNotice

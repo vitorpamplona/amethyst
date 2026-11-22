@@ -219,6 +219,15 @@ class AccountConcordActions(
         fetchedWraps: List<Event> = emptyList(),
         readmit: Boolean = false,
     ): Boolean {
+        // The List write below first waits for the List to load: a drain of every stock and outbox
+        // relay that takes ~30 s on a real network. The joiner would stare at an empty hub for all
+        // of it, so a fresh join the List can't take yet is shown at once from the entry we hold,
+        // and made durable in the background. Its own relays were already reached for the bundle
+        // and the Control Plane, so nothing the screen needs waits on the stock relays.
+        if (!readmit && !account.concordChannelList.relaysConfirmed) {
+            joinConcordCommunityOptimistically(entry, inviteCreator, inviteLabel, fetchedWraps)
+            return true
+        }
         // False when the List could not take the membership (not loaded, or every held fragment is
         // full while others are missing, CORD-02 §8). Callers must say so: the community would
         // otherwise look joined now and be gone after a restart.
@@ -239,6 +248,50 @@ class AccountConcordActions(
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
         return true
     }
+
+    /**
+     * [joinConcordCommunity] for a List that has not loaded yet: the community shows (and its
+     * session folds [fetchedWraps]) right away, as a pending join, while the List write and the
+     * Guestbook JOIN wait for the List in the account's scope. If the write fails the community is
+     * taken back out and [concordJoinFailures] says so: it would otherwise look joined now and be
+     * gone after a restart.
+     */
+    private suspend fun joinConcordCommunityOptimistically(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+        fetchedWraps: List<Event>,
+    ) {
+        val list = account.concordChannelList
+        list.addPendingJoin(entry)
+        awaitConcordSession(entry.id)
+        fetchedWraps.forEach { account.concordSessions.ingest(it) }
+        account.scope.launch(Dispatchers.IO) {
+            val persisted =
+                try {
+                    persistConcordEntry(entry)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("Concord", "Community List write for ${entry.id} failed", e)
+                    false
+                }
+            if (persisted) {
+                // Hand over to the written entry before letting go of the pending one, or the
+                // community would vanish for a beat and its session be torn down and rebuilt.
+                withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
+                list.dropPendingJoin(entry.id)
+                announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+            } else {
+                list.dropPendingJoin(entry.id)
+                _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
+            }
+        }
+    }
+
+    private val _concordJoinFailures = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** Names of communities whose background join (see [joinConcordCommunity]) could not be saved. */
+    val concordJoinFailures: SharedFlow<String> = _concordJoinFailures.asSharedFlow()
 
     /** The community's current name: its folded metadata, else the name it was joined under. */
     private fun currentConcordName(
@@ -788,7 +841,9 @@ class AccountConcordActions(
                 }
             }
         }
-        return writeConcordList { it.unfollow(communityId) }
+        val left = writeConcordList { it.unfollow(communityId) }
+        if (left) account.concordChannelList.dropPendingJoin(communityId)
+        return left
     }
 
     /**
@@ -1003,6 +1058,9 @@ class AccountConcordActions(
      * to say why, so an invite being accepted is hidden. A failed accept puts it back.
      */
     private val acceptingConcordDirectInvites = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /** Wrap ids of the Direct Invites being accepted right now; a hub shows "joining" meanwhile. */
+    val joiningConcordDirectInvites: StateFlow<Set<HexKey>> = acceptingConcordDirectInvites.asStateFlow()
 
     /**
      * The parked Direct Invites a UI should show, followed senders first, then newest: invites for

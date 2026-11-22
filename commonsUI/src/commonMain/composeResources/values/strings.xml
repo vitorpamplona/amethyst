@@ -4323,6 +4323,9 @@
     <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
     <string name="concord_invite_failed_incompatible">This invite link can't be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_invalid">This invite link is invalid or can't be opened with this account.</string>
+    <string name="concord_join_not_saved_named">You were not joined to %1$s: your community list could not be updated. Try the invite again in a moment.</string>
+    <string name="concord_home_loading">Loading your communities…</string>
+    <string name="concord_home_joining">Joining the community…</string>
     <string name="concord_invite_failed_not_saved">The invite works, but your community list could not be updated, so you were not joined. Try again in a moment.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_links_action">Invite links…</string>

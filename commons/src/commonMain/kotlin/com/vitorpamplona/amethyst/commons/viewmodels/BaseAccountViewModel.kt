@@ -292,6 +292,13 @@ open class BaseAccountViewModel(
                 notices.notify(ConcordNotice.Kicked(notice.communityName))
             }
         }
+
+        // A join shown at once whose List write failed later: the community was taken back out.
+        viewModelScope.launch {
+            account.concord.concordJoinFailures.collect { name ->
+                notices.notify(ConcordNotice.JoinNotSaved(name))
+            }
+        }
     }
 
     /**

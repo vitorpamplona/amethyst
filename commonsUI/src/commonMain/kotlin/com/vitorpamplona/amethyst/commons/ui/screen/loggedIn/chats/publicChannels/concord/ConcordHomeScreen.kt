@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -68,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_count
 import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_home_joining
+import com.vitorpamplona.amethyst.commons.resources.concord_home_loading
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_member_count
 import com.vitorpamplona.amethyst.commons.resources.concord_show_all_channels
@@ -126,6 +129,10 @@ fun ConcordHomeScreen(
     // does not re-run each time the invites scroll back into view.
     RefreshConcordDirectInvites(accountViewModel)
     val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
+    // Until the List has been fetched, or while an accepted invite is joining, an empty hub means
+    // "not here yet", not "none": say so instead of "you haven't joined any".
+    val listLoaded by account.concordChannelList.loaded.collectAsStateWithLifecycle()
+    val joining by account.concord.joiningConcordDirectInvites.collectAsStateWithLifecycle()
 
     // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
     // new messages) → OPEN (all channels) → CLOSED. Multi-open, so several can be expanded at once.
@@ -173,12 +180,24 @@ fun ConcordHomeScreen(
                 concordPendingDirectInvites(invites, accountViewModel, nav)
                 item(key = "concord-home-empty") {
                     Box(Modifier.fillParentMaxWidth().fillParentMaxHeight(if (invites.isEmpty()) 1f else 0.5f), contentAlignment = Alignment.Center) {
-                        Text(
-                            stringRes(Res.string.concord_home_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 32.dp),
-                        )
+                        if (joining.isNotEmpty() || !listLoaded) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp)
+                                Text(
+                                    stringRes(if (joining.isNotEmpty()) Res.string.concord_home_joining else Res.string.concord_home_loading),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 32.dp),
+                                )
+                            }
+                        } else {
+                            Text(
+                                stringRes(Res.string.concord_home_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 32.dp),
+                            )
+                        }
                     }
                 }
             }
