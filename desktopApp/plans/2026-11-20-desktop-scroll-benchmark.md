@@ -417,7 +417,9 @@ ahead of the frame that shows it, as it does on Android. `ProvideFramePrefetch`
 (`desktopApp/.../platform/FramePrefetchScheduler.kt`, installed by `AppWindow` for every window)
 provides one through `LocalPlatformPrefetchScheduler` (an `InternalComposeUiApi`): after each frame
 has drawn, it runs the requests, high priority first, in the time left before the next frame is
-due. `FramePrefetchSchedulerTest` checks that the default composes nothing ahead (if a Compose
+due. When eight frames in a row finish no request (no frame leaves idle time, or the items
+take longer to compose than the gaps), it drops its queue and stops asking for frames, so a slow
+window is never kept drawing just to prefetch. `FramePrefetchSchedulerTest` checks that the default composes nothing ahead (if a Compose
 update starts to, this scheduler can go) and that this one composes the next row.
 
 Unlike Android's scheduler it runs nothing after a frame that is already late. A first version that

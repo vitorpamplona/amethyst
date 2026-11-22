@@ -173,4 +173,74 @@ class FramePrefetchSchedulerTest {
         }
         assertEquals(emptyList(), ran)
     }
+
+    /**
+     * Where no frame leaves idle time (a large window drawn in software, a running animation), the
+     * queue can't drain: the scheduler must stop asking for frames instead of keeping the window
+     * drawing forever, and drop what it held, as the default scheduler would have.
+     */
+    @Test
+    fun itStopsAskingForFramesWhenNoneLeavesIdleTime() {
+        val ran = mutableListOf<String>()
+        lateinit var scheduler: FramePrefetchScheduler
+        val scene =
+            ImageComposeScene(10, 10, Density(1f), coroutineContext = Dispatchers.Unconfined) {
+                val compositionScope = rememberCoroutineScope()
+                scheduler =
+                    remember(compositionScope) {
+                        FramePrefetchScheduler(compositionScope, frameIntervalNanos = { 0 }, afterFrame = {}).also {
+                            it.scheduleHighPriorityPrefetch(
+                                object : PlatformPrefetchRequest {
+                                    override fun PlatformPrefetchRequestScope.execute(): Boolean {
+                                        ran += "high"
+                                        return false
+                                    }
+                                },
+                            )
+                        }
+                    }
+            }
+        try {
+            var time = 0L
+            repeat(20) { scene.render(time).also { time += 16 * ms } }
+            assertFalse(scene.hasInvalidations(), "the scheduler still asks for frames")
+            assertEquals(0, scheduler.pending)
+            assertEquals(emptyList(), ran)
+        } finally {
+            scene.close()
+        }
+    }
+
+    /** A request that always wants more time than a gap holds must not keep the window drawing either. */
+    @Test
+    fun itStopsAskingForFramesWhenARequestNeverFits() {
+        var tries = 0
+        lateinit var scheduler: FramePrefetchScheduler
+        val scene =
+            ImageComposeScene(10, 10, Density(1f), coroutineContext = Dispatchers.Unconfined) {
+                val compositionScope = rememberCoroutineScope()
+                scheduler =
+                    remember(compositionScope) {
+                        FramePrefetchScheduler(compositionScope, frameIntervalNanos = { 1_000 * ms }, afterFrame = {}).also {
+                            it.scheduleLowPriorityPrefetch(
+                                object : PlatformPrefetchRequest {
+                                    override fun PlatformPrefetchRequestScope.execute(): Boolean {
+                                        tries++
+                                        return true
+                                    }
+                                },
+                            )
+                        }
+                    }
+            }
+        try {
+            var time = 0L
+            repeat(30) { scene.render(time).also { time += 16 * ms } }
+            assertFalse(scene.hasInvalidations(), "the scheduler still asks for frames")
+            assertEquals(0, scheduler.pending)
+            assertTrue(tries in 1..10, "tried $tries times")
+        } finally {
+            scene.close()
+        }
+    }
 }

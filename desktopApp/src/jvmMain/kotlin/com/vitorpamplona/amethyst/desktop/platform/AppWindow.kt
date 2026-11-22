@@ -140,7 +140,7 @@ fun AppWindow(
                     SoftwareDrawing.forget(window)
                 }
             }
-            ProvideFramePrefetch { ProvideDesktopUiScale { scope.content() } }
+            ProvideFramePrefetch(window) { ProvideDesktopUiScale { scope.content() } }
         }
     }
 }
@@ -202,7 +202,7 @@ private fun WaylandWindow(
             // The panel's own window locals (density, window info, focus) win over the parent's.
             val windowLocals = currentCompositionLocalContext
             CompositionLocalProvider(parentLocals) {
-                CompositionLocalProvider(windowLocals) { ProvideFramePrefetch { ProvideDesktopUiScale { currentContent(scope) } } }
+                CompositionLocalProvider(windowLocals) { ProvideFramePrefetch(frame) { ProvideDesktopUiScale { currentContent(scope) } } }
             }
         }
 

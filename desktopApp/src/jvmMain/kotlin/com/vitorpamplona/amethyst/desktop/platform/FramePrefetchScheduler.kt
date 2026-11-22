@@ -34,7 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.awt.DisplayMode
-import java.awt.GraphicsEnvironment
+import java.awt.Window
 import javax.swing.SwingUtilities
 import kotlin.coroutines.resume
 
@@ -49,9 +49,12 @@ import kotlin.coroutines.resume
  */
 @OptIn(InternalComposeUiApi::class)
 @Composable
-fun ProvideFramePrefetch(content: @Composable () -> Unit) {
+fun ProvideFramePrefetch(
+    window: Window,
+    content: @Composable () -> Unit,
+) {
     val scope = rememberCoroutineScope()
-    val scheduler = remember(scope) { FramePrefetchScheduler(scope) }
+    val scheduler = remember(scope, window) { FramePrefetchScheduler(scope, frameIntervalNanos = { frameIntervalNanos(window) }) }
     CompositionLocalProvider(LocalPlatformPrefetchScheduler provides scheduler, content = content)
 }
 
@@ -71,12 +74,15 @@ fun ProvideFramePrefetch(content: @Composable () -> Unit) {
 @OptIn(InternalComposeUiApi::class)
 internal class FramePrefetchScheduler(
     private val scope: CoroutineScope,
-    private val frameIntervalNanos: () -> Long = ::displayFrameIntervalNanos,
+    private val frameIntervalNanos: () -> Long,
     private val afterFrame: suspend () -> Unit = ::afterCurrentEvent,
 ) : PlatformPrefetchScheduler {
     private val high = ArrayDeque<PlatformPrefetchRequest>()
     private val low = ArrayDeque<PlatformPrefetchRequest>()
     private var running = false
+
+    /** Requests waiting for idle time. */
+    internal val pending: Int get() = high.size + low.size
 
     override fun scheduleHighPriorityPrefetch(request: PlatformPrefetchRequest) {
         high.addLast(request)
@@ -93,10 +99,22 @@ internal class FramePrefetchScheduler(
         running = true
         scope.launch {
             try {
+                // Read once a burst (a scroll), not every frame: on X11 it is a display query.
+                val interval = frameIntervalNanos()
+                var framesWithoutProgress = 0
                 while (high.isNotEmpty() || low.isNotEmpty()) {
                     val frameStart = withFrameNanos { System.nanoTime() }
                     afterFrame()
-                    runUntil(frameStart + frameIntervalNanos())
+                    if (runUntil(frameStart + interval)) {
+                        framesWithoutProgress = 0
+                    } else if (++framesWithoutProgress >= MAX_FRAMES_WITHOUT_PROGRESS) {
+                        // No frame leaves enough time (a large window drawn in software, an animation,
+                        // items slower to compose than the gaps between frames): stop asking for frames
+                        // and let the list compose its items when it needs them, as it does with no
+                        // scheduler.
+                        high.clear()
+                        low.clear()
+                    }
                 }
             } finally {
                 running = false
@@ -104,15 +122,22 @@ internal class FramePrefetchScheduler(
         }
     }
 
-    private fun runUntil(deadline: Long) {
+    /**
+     * Runs requests until [deadline]; returns whether one finished. A request declines with "more
+     * work" when the time left is shorter than what its item usually takes to compose.
+     */
+    private fun runUntil(deadline: Long): Boolean {
         val budget = Budget(deadline)
+        var finished = false
         while (budget.availableTimeNanos() > 0) {
             val queue = if (high.isNotEmpty()) high else low
-            if (queue.isEmpty()) return
+            if (queue.isEmpty()) break
             val request = queue.first()
-            if (with(request) { budget.execute() }) return
+            if (with(request) { budget.execute() }) break
             queue.removeFirst()
+            finished = true
         }
+        return finished
     }
 
     private class Budget(
@@ -127,15 +152,20 @@ private suspend fun afterCurrentEvent() = suspendCancellableCoroutine { continua
 
 private const val DEFAULT_REFRESH_HZ = 60
 
-private fun displayFrameIntervalNanos(): Long {
+/**
+ * Frames in a row in which no request finished, after which the scheduler drops its queue and stops
+ * asking for frames. A request split over several frames (a card with a nested list) finishes well
+ * within it.
+ */
+private const val MAX_FRAMES_WITHOUT_PROGRESS = 8
+
+/** The refresh interval of the screen [window] is on; 60 Hz when the screen doesn't say (Xvfb, some Wayland setups). */
+private fun frameIntervalNanos(window: Window): Long {
     val hz =
-        if (GraphicsEnvironment.isHeadless()) {
-            DEFAULT_REFRESH_HZ
-        } else {
-            GraphicsEnvironment
-                .getLocalGraphicsEnvironment()
-                .defaultScreenDevice.displayMode.refreshRate
-                .takeIf { it != DisplayMode.REFRESH_RATE_UNKNOWN && it > 0 } ?: DEFAULT_REFRESH_HZ
-        }
+        window.graphicsConfiguration
+            ?.device
+            ?.displayMode
+            ?.refreshRate
+            ?.takeIf { it != DisplayMode.REFRESH_RATE_UNKNOWN } ?: DEFAULT_REFRESH_HZ
     return 1_000_000_000L / hz
 }
