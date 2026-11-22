@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 
 /**
  * Tracks all Marmot MLS group chatrooms for an account.
@@ -60,6 +63,26 @@ class MarmotGroupList(
     val groupListChanges = _groupListChanges
 
     fun getOrCreateGroup(nostrGroupId: HexKey): MarmotGroupChatroom = rooms.getOrCreate(nostrGroupId) { MarmotGroupChatroom(nostrGroupId) }
+
+    /**
+     * Every group, newest activity first, split into Known and New Requests
+     * ([MarmotGroupChatroom.isKnown]), recomputed on every group change and every change of
+     * [follows]. A reply flips [MarmotGroupChatroom.ownerSentMessage] without changing which
+     * rooms exist, so a screen that cached the split on the room list never moved the group out
+     * of New Requests. [extraGroupIds] adds groups the MLS state holds but no message reached yet.
+     */
+    fun knownSplit(
+        follows: Flow<Set<HexKey>>,
+        extraGroupIds: () -> Collection<HexKey> = { emptyList() },
+    ): Flow<MarmotGroupSplit> =
+        combine(groupListChanges.onStart { emit("") }, follows) { _, following ->
+            val groups = ArrayList<Pair<HexKey, MarmotGroupChatroom>>()
+            rooms.forEach { key, chatroom -> groups.add(key to chatroom) }
+            extraGroupIds().forEach { id -> if (groups.none { it.first == id }) groups.add(id to getOrCreateGroup(id)) }
+            groups.sortByDescending { it.second.newestMessage?.createdAt() ?: 0L }
+            val (known, requests) = groups.partition { it.second.isKnown(following) }
+            MarmotGroupSplit(known, requests)
+        }
 
     fun addMessage(
         nostrGroupId: HexKey,
@@ -212,3 +235,11 @@ class MarmotGroupList(
         return MarmotAppEvent.isTimelineRow(event.kind, event.pubKey, ownerPubKey)
     }
 }
+
+private const val DELETION_KIND = 5
+
+/** [MarmotGroupList.knownSplit]: the groups under Known and under New Requests, newest first. */
+data class MarmotGroupSplit(
+    val known: List<Pair<HexKey, MarmotGroupChatroom>>,
+    val requests: List<Pair<HexKey, MarmotGroupChatroom>>,
+)
