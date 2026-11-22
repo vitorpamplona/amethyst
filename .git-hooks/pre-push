@@ -99,10 +99,10 @@ fi
 # A warning, never a gate: new English strings that look like they count something and should be
 # a <plurals> before any locale translates them (tools/agent-hooks/plural_candidates_check.py).
 # Printed here, after the tests pass or fail, so it does not scroll away behind Gradle's output.
-if command -v python3 >/dev/null 2>&1; then
-    for sha in "${PUSHED_SHAS[@]}"; do
-        python3 tools/agent-hooks/plural_candidates_check.py --head "$sha" </dev/null
-    done
+# .git/hooks is shared by every worktree, so a branch from before the script skips it.
+PLURAL_CHECK=tools/agent-hooks/plural_candidates_check.py
+if [ -f "$PLURAL_CHECK" ] && [ "${#PUSHED_SHAS[@]}" -gt 0 ] && command -v python3 >/dev/null 2>&1; then
+    python3 "$PLURAL_CHECK" "${PUSHED_SHAS[@]/#/--head=}" </dev/null
 fi
 
 if [ "$status" = 0 ] ; then
