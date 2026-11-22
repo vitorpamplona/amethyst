@@ -3919,7 +3919,6 @@
     <string name="concord_create_failed">Nem sikerült létrehozni a közösséget: egyetlen átjátszó sem fogadta el, vagy a közösséglistáját nem sikerült frissíteni. Ellenőrizze az átjátszókat, és próbálja újra.</string>
     <string name="concord_create_relays">Átjátszók</string>
     <string name="concord_create_relays_desc">A közösség titkosított üzeneteit tároló átjátszók. Hagyja üresen a sajátjai használatához.</string>
-    <string name="concord_create_title">Új Concord-csatorna</string>
     <string name="concord_direct_invite_accept">Elfogadás</string>
     <string name="concord_direct_invite_accept_failed">Nem sikerült elérni ezt a közösséget. Próbálja újra egy pillanat múlva.</string>
     <string name="concord_direct_invite_action">Meghívás npub alapján…</string>

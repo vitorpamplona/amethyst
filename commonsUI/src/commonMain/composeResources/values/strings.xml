@@ -4294,7 +4294,6 @@
     <string name="concord_create_failed">The community could not be created: no relay accepted it, or your community list could not be updated. Check the relays and try again.</string>
     <string name="concord_create_relays">Relays</string>
     <string name="concord_create_relays_desc">Relays that store this community's encrypted messages. Leave empty to use your own.</string>
-    <string name="concord_create_title">New Concord Channel</string>
     <string name="concord_direct_invite_accept">Accept</string>
     <string name="concord_direct_invite_accept_failed">Could not reach this community. Try again in a moment.</string>
     <string name="concord_direct_invite_action">Invite by npub…</string>
@@ -4317,6 +4316,7 @@
     <string name="concord_direct_invites_title">Community invites</string>
     <string name="concord_edit_title">Edit community</string>
     <string name="concord_editing_banner">Editing message</string>
+    <string name="concord_create_community_title">New Concord Community</string>
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_invite_action">Invite people</string>
     <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
@@ -7191,6 +7191,7 @@
     <string name="cordn_groups_manage">Coordinators</string>
     <string name="cordn_groups_menu_invitations">Invitations</string>
     <string name="cordn_groups_none">No cordn groups yet</string>
+    <string name="cordn_groups_none_invited_hint">Did someone invite you? Invitations wait until you review them.</string>
     <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
     <string name="cordn_info_add_member">Add someone</string>
     <string name="cordn_info_add_member_none">Nobody found by that name.</string>

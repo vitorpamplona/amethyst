@@ -3895,7 +3895,6 @@
     <string name="concord_create_failed">Não foi possível criar a comunidade: nenhum relay a aceitou ou sua lista de comunidades não pôde ser atualizada. Verifique os relays e tente novamente.</string>
     <string name="concord_create_relays">Relés</string>
     <string name="concord_create_relays_desc">Relays que armazenam as mensagens criptografadas desta comunidade. Deixe em branco para usar os seus.</string>
-    <string name="concord_create_title">Novo canal Concord</string>
     <string name="concord_direct_invite_accept">Aceitar</string>
     <string name="concord_direct_invite_accept_failed">Não foi possível acessar esta comunidade. Tente novamente em instantes.</string>
     <string name="concord_direct_invite_action">Convidar por npub…</string>

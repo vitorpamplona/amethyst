@@ -2545,7 +2545,6 @@
     <string name="concord_create_action">创建</string>
     <string name="concord_create_relays">中继</string>
     <string name="concord_create_relays_desc">存储此社区加密消息的中继。留空以使用您自己的中继。</string>
-    <string name="concord_create_title">新建Concord 频道</string>
     <string name="concord_edit_title">编辑社区</string>
     <string name="concord_home_title">Concord 频道</string>
     <string name="concord_invite_action">邀请其他人</string>

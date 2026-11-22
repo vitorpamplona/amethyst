@@ -75,6 +75,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
@@ -595,28 +598,41 @@ private fun rememberChatPress(
     val hasDoubleTap = onDoubleTap != null
     val clickableModifier =
         remember(hasDoubleTap, indication) {
-            Modifier.combinedClickable(
-                interactionSource = pressInteractionSource,
-                indication = indication,
-                onClick = {
-                    // Only inner-quote bubbles do anything on tap (scroll to the quoted
-                    // message); a normal bubble tap is a no-op.
-                    currentOnClick()
-                },
-                onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    popupExpanded.value = true
-                },
-                onDoubleClick =
-                    if (hasDoubleTap) {
-                        {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            currentOnDoubleTap?.invoke()
+            // A right click opens the same actions a long press does: on a desktop the mouse has
+            // no long press anyone reaches for, and the bubble did nothing for it.
+            Modifier
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                event.changes.forEach { it.consume() }
+                                popupExpanded.value = true
+                            }
                         }
-                    } else {
-                        null
+                    }
+                }.combinedClickable(
+                    interactionSource = pressInteractionSource,
+                    indication = indication,
+                    onClick = {
+                        // Only inner-quote bubbles do anything on tap (scroll to the quoted
+                        // message); a normal bubble tap is a no-op.
+                        currentOnClick()
                     },
-            )
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        popupExpanded.value = true
+                    },
+                    onDoubleClick =
+                        if (hasDoubleTap) {
+                            {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                currentOnDoubleTap?.invoke()
+                            }
+                        } else {
+                            null
+                        },
+                )
         }
 
     return remember(clickableModifier, pressScale) { ChatPressState(clickableModifier, popupExpanded, pressScale) }

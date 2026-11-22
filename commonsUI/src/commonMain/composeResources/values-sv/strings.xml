@@ -3895,7 +3895,6 @@
     <string name="concord_create_failed">Gemenskapen kunde inte skapas: inget relä godtog den, eller så kunde din gemenskapslista inte uppdateras. Kontrollera reläerna och försök igen.</string>
     <string name="concord_create_relays">Reläer</string>
     <string name="concord_create_relays_desc">Reläer som lagrar den här gemenskapens krypterade meddelanden. Lämna tomt för att använda dina egna.</string>
-    <string name="concord_create_title">Ny Concord-kanal</string>
     <string name="concord_direct_invite_accept">Acceptera</string>
     <string name="concord_direct_invite_accept_failed">Kunde inte nå den här gemenskapen. Försök igen om en stund.</string>
     <string name="concord_direct_invite_action">Bjud in via npub…</string>

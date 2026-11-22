@@ -3053,7 +3053,9 @@
     <string name="concord_home_loading">Cargando tus comunidades…</string>
     <string name="concord_home_joining">Uniéndote a la comunidad…</string>
     <string name="concord_private_channel_unnamed">Canal privado</string>
+    <string name="concord_create_community_title">Nueva comunidad Concord</string>
     <string name="marmot_message_deleted">Mensaje eliminado</string>
+    <string name="cordn_groups_none_invited_hint">¿Alguien te invitó? Las invitaciones esperan hasta que las revises.</string>
     <string name="concord_role_editor_title">Roles</string>
     <string name="concord_role_editor_open">Editar roles</string>
     <string name="concord_role_editor_new">Nuevo rol</string>

@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_server_label
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_via_coordinator
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_deleted
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_file
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_photo
@@ -638,10 +639,8 @@ internal fun CordnGroupRoomCompose(
 
     val groupName = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, chatroom.gid.take(8))
 
-    // Who carries this conversation. "cordn" was the same word on every cordn
-    // row and told a reader nothing they could act on; the coordinator is the
-    // one server that sees every message in the group, so naming it is the
-    // thing worth the space.
+    // Who carries this conversation: the coordinator is the one server that sees
+    // every message in the group. Said by the row's icon to a screen reader.
     val coordinators by (
         accountViewModel.account.cordnRuntime?.coordinators
             ?: remember { MutableStateFlow(emptyList<CoordinatorConfig>()) }
@@ -677,13 +676,14 @@ internal fun CordnGroupRoomCompose(
         channelIdHex = chatroom.gid,
         channelPicture = null,
         channelTitle = { modifier ->
+            // The same width rules as a Marmot row: the name takes the row and the kind of room is
+            // an icon. A coordinator name as a text pill left a pane of ordinary width "CordnRefGr…"
+            // beside "Loc…", neither readable; the icon still names the coordinator to a screen reader.
             ChannelTitleWithLabelInfo(
                 channelName = groupName,
                 labelIcon = MaterialSymbols.Dns,
-                labelText = coordinatorName,
+                label = Res.string.cordn_groups_title,
                 modifier = modifier,
-                // The pill no longer says "cordn", so the kind of room has to
-                // reach a screen reader some other way.
                 labelContentDescription = stringRes(Res.string.cordn_group_via_coordinator, coordinatorName),
             )
         },

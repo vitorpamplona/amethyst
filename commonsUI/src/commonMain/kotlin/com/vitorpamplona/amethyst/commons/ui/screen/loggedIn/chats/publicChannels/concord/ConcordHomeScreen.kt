@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_count
-import com.vitorpamplona.amethyst.commons.resources.concord_create_title
+import com.vitorpamplona.amethyst.commons.resources.concord_create_community_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_home_joining
 import com.vitorpamplona.amethyst.commons.resources.concord_home_loading
@@ -167,7 +167,7 @@ fun ConcordHomeScreen(
                 FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
                     SymbolIcon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(Res.string.concord_create_title),
+                        contentDescription = stringRes(Res.string.concord_create_community_title),
                         modifier = Modifier.size(24.dp),
                     )
                 }
