@@ -235,6 +235,12 @@ class DataDir(
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
+    /** Marmot device-group records (`amy marmot devices`), owner-only files. */
+    val deviceGroupDir = File(marmotDir, "device-group")
+
+    /** The device-group switch: device groups run only while this file exists (`amy marmot devices enable`). */
+    val deviceGroupSwitchFile = File(marmotDir, "device-groups.enabled")
+
     /**
      * Unresolved publish obligations. Durable because publish-before-apply is
      * only meaningful across a crash: without this, a commit recorded and then

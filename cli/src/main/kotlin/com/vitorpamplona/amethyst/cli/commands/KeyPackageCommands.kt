@@ -58,6 +58,8 @@ object KeyPackageCommands {
             if (relays.isEmpty()) return Output.error("no_relays", "configure relays first")
 
             val event = ctx.marmot.generateKeyPackageEvent(relays.toList())
+            // A linked device names it in its roster entry first (`device-group.md` "Slot announcements").
+            ctx.marmotDevices?.beforeKeyPackagePublish(event)
             val ack = ctx.publish(event, relays)
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             // Confirmed by a relay: starts the grace period of any bundle this displaced.

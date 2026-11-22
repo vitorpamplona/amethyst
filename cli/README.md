@@ -636,6 +636,11 @@ kind:10040 out-of-band.
 | `amy marmot group promote / demote / remove GID NPUB` | Admin verbs. |
 | `amy marmot group set-retention GID SECS` | Disappearing messages, in seconds (`0` disables). Not retroactive: each message keeps the expiry pinned from the epoch that delivered it. |
 | `amy marmot group leave GID` | Self-remove. |
+| `amy marmot devices enable \| disable` | The device-group switch (off by default): this account's devices link into a hidden device group and are added to each other's chats. |
+| `amy marmot devices list` | This account's linked devices (`this_slot`, `devices[]`, any link in progress, `remaining_chats`, `sign_ins`). |
+| `amy marmot devices link --new \| --existing [--confirm yes\|no\|stdin] [--code-file PATH] [--label L] [--timeout SECS] [--settle SECS]` | Link with the seven-emoji comparison (`features/device-pairing.md`), as the new device or the one approving it. Prints the code on stderr (and to `--code-file` as JSON); `--confirm stdin` reads `yes`/`no` once the user compared. Pairing secrets live only in this run. |
+| `amy marmot devices sync [--timeout SECS]` | One pass: own pairing gift wraps, the group catch-up and the device-group duties (heartbeat, private KeyPackages, adding siblings to chats). |
+| `amy marmot devices remove SLOT` | Remove a linked device from the device group and its leaves from every chat; deletes its KeyPackage slot. |
 | `amy marmot group disband GID --yes` | End the group for every member. Terminal and irreversible — a replacement conversation is a new group with a new id — so `--yes` is required. |
 | `amy marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
 | `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. Default `--limit 50`. Each row carries `edited`, `deleted` and the pinned `expires_at`. |

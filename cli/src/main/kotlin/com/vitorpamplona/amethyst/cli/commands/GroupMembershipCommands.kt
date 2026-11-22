@@ -75,6 +75,8 @@ object GroupMembershipCommands {
 
             // An admin steps down first, handing the role on when no other admin
             // is a member; the manager publishes that commit itself.
+            // The account's other devices leave too: the decline goes out while this one is a member.
+            ctx.marmotDevices?.beforeLeave(gid)
             val departure = ctx.marmot.leave(gid, targets.toList())
             val ack = departure.selfRemove?.let { ctx.publish(it.signedEvent, targets) }
             Output.emit(

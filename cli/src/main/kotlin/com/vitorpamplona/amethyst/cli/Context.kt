@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.sun.management.UnixOperatingSystemMXBean
+import com.vitorpamplona.amethyst.cli.stores.FileDeviceGroupBlobs
 import com.vitorpamplona.amethyst.cli.stores.FileIngestDedupStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
@@ -31,11 +32,14 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotSyncPolicy
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -375,6 +379,25 @@ class Context(
             MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays, untilFirstAccept = true) },
             publishObligationStore,
             ingestDedupStore,
+            deviceGroupConfig =
+                if (deviceGroupsEnabled) DeviceGroupBlobStores(FileDeviceGroupBlobs(dataDir.deviceGroupDir)).config(deviceGroupRelays.map { it.url }) else null,
+        )
+    }
+
+    /** Whether this account's device-group switch is on (`amy marmot devices enable`). */
+    val deviceGroupsEnabled: Boolean get() = !anonymous && dataDir.deviceGroupSwitchFile.exists()
+
+    /** Where a device group this device creates lives; resolved in [prepare], before [marmot] is built. */
+    private var deviceGroupRelays: Set<NormalizedRelayUrl> = emptySet()
+
+    /** Marmot device groups (`amy marmot devices`), or null while the switch is off. */
+    val marmotDevices: MarmotDevices? by lazy {
+        if (!deviceGroupsEnabled) return@lazy null
+        MarmotDevices(
+            manager = marmot,
+            signer = signer,
+            transport = CliMarmotDevicesTransport(this),
+            keyPackageRelays = { keyPackageRelays() },
         )
     }
 
@@ -420,7 +443,9 @@ class Context(
         if (prepared) return
         // Anonymous runs have no account and therefore no marmot state to
         // restore (and touching `marmot` would allocate the per-account stores).
+        if (deviceGroupsEnabled) deviceGroupRelays = outboxRelays()
         if (!anonymous) marmot.restoreAll()
+        marmotDevices?.start(announce = false)
         client.connect()
         // A bunker account must open its NIP-46 response subscription and run
         // the connect handshake before any signing/encryption call.
@@ -970,9 +995,16 @@ class Context(
                     override fun groupRelays(nostrGroupId: HexKey) = marmotGroupRelays(nostrGroupId)
                 },
             drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
-            publish = { event, relayList -> publish(event, relayList) },
+            publish = { event, relayList ->
+                // A rotated KeyPackage of a linked device is announced in its roster entry first.
+                if (event is KeyPackageEvent) marmotDevices?.beforeKeyPackagePublish(event)
+                publish(event, relayList)
+            },
             log = { System.err.println("[cli] $it") },
-            publishAndConfirm = { event, relayList -> publish(event, relayList).values.any { it.accepted } },
+            publishAndConfirm = { event, relayList ->
+                if (event is KeyPackageEvent) marmotDevices?.beforeKeyPackagePublish(event)
+                publish(event, relayList).values.any { it.accepted }
+            },
         )
     }
 
@@ -983,7 +1015,11 @@ class Context(
      * (lookback windows, cursor advancement rules, MIP-00 rotation) lives in
      * the shared [MarmotSyncPolicy]; see its docs for the reasoning.
      */
-    suspend fun syncIncoming(timeoutMs: Long = 8_000) = marmotSyncPolicy.syncIncoming(timeoutMs)
+    suspend fun syncIncoming(timeoutMs: Long = 8_000) {
+        marmotSyncPolicy.syncIncoming(timeoutMs)
+        // What the device group queued while ingesting (hand-offs, small state) leaves before the run ends.
+        marmotDevices?.afterIngest()
+    }
 
     /**
      * Resolve a group identifier given on the CLI to the nostr_group_id that

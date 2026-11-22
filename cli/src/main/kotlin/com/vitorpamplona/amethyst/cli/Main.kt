@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotDevicesCommands
 import com.vitorpamplona.amethyst.cli.commands.MarmotMediaCommands
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
@@ -402,13 +403,14 @@ private suspend fun marmotDispatch(
     route(
         name = "marmot",
         tail = tail,
-        usage = "marmot <key-package|group|message|media|await|reset>",
+        usage = "marmot <key-package|group|message|media|devices|await|reset>",
         routes =
             mapOf(
                 "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
                 "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
                 "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
                 "media" to { rest -> MarmotMediaCommands.dispatch(dataDir, rest) },
+                "devices" to { rest -> MarmotDevicesCommands.dispatch(dataDir, rest) },
                 "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
                 "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
             ),
@@ -973,6 +975,13 @@ private fun printUsage() {
         |  marmot await message GID --match TEXT
         |  marmot await rename GID --name NAME
         |  marmot await epoch GID --min N
+        |
+        |  marmot devices enable|disable              the device-group switch (off by default)
+        |  marmot devices list                        this account's linked devices
+        |  marmot devices sync [--timeout SECS]       pairing + catch-up + device-group duties
+        |  marmot devices link --new|--existing       link with the seven emoji
+        |      [--confirm yes|no|stdin] [--code-file PATH] [--label L] [--timeout SECS] [--settle SECS]
+        |  marmot devices remove SLOT                 remove a linked device
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         |

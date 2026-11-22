@@ -32,7 +32,8 @@ object GroupReadCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             ctx.syncIncoming()
-            val ids = ctx.marmot.activeGroupIds()
+            // The device group is not a chat: `amy marmot devices list` shows it as the roster.
+            val ids = ctx.marmot.activeGroupIds().filterNot { ctx.marmotDevices?.isDeviceGroup(it) == true }
             val items =
                 ids.map { id ->
                     val m = ctx.marmot.groupView(id)

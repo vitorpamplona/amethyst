@@ -315,7 +315,10 @@ contract.
 - **Groups:** `not_member` (you aren't in the group / group unknown),
   `target_not_member` (the *other* user isn't), `needs_history_choice` (a Buzz
   DM add sent with `--history ask` would let the newcomer see the DM's history:
-  send again with `--history include` or `--history exclude`).
+  send again with `--history include` or `--history exclude`),
+  `device_groups_off` (`marmot devices`: run `amy marmot devices enable`
+  first), `link_ended` (a device link ended; the detail is the reason, such as
+  `codes_differ` or `timed_out`).
 - **Chess:** `not_your_turn` (a move by a player out of turn, by a
   spectator, or after the game ended), `illegal_move`, `not_a_player` (you
   hold no seat, and cannot take one, in that game), `no_draw_offer` (nothing

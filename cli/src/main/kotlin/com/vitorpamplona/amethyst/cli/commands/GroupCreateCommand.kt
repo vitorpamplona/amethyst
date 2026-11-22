@@ -94,12 +94,18 @@ object GroupCreateCommand {
                 // KeyPackage carries, while a legacy group asks for `0xF2EE`,
                 // which none of them do. Defaulting to legacy made every
                 // outside member un-addable.
-                ctx.marmot.createCurrentProfileGroup(
-                    nostrGroupId = gid,
-                    relays = outboxUrls,
-                    profile = if (name.isEmpty()) null else GroupProfileV1(name, ""),
-                    retention = disappearingSecs?.let { MessageRetentionV1(it) },
-                )
+                val devices = ctx.marmotDevices
+                if (devices != null && disappearingSecs == null) {
+                    // Device groups on: the chat starts with this account's linked devices in it.
+                    devices.createChat(gid, outboxUrls, if (name.isEmpty()) null else GroupProfileV1(name, ""))
+                } else {
+                    ctx.marmot.createCurrentProfileGroup(
+                        nostrGroupId = gid,
+                        relays = outboxUrls,
+                        profile = if (name.isEmpty()) null else GroupProfileV1(name, ""),
+                        retention = disappearingSecs?.let { MessageRetentionV1(it) },
+                    )
+                }
             }
 
             Output.emit(
