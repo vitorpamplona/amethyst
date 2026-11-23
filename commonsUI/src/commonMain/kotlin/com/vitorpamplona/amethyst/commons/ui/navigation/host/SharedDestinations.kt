@@ -272,6 +272,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Cord
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnKeyPackagesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnLinkScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.marmotDevices.MarmotDeviceLinkScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.marmotDevices.MarmotDevicesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.RoutstrSetupScreen
@@ -524,6 +526,8 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.CordnCoordinators> { CordnCoordinatorsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnHub> { CordnHubScreen(accountViewModel, nav) }
+    composableFromEnd<Route.MarmotDevicesSettings> { MarmotDevicesScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.MarmotDeviceLink> { MarmotDeviceLinkScreen(it.asNewDevice, it.sessionId, accountViewModel, nav) }
     composableFromEnd<Route.CordnMigrate> { CordnMigrateScreen(accountViewModel, nav) }
     composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
     composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }

@@ -110,6 +110,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MarmotGroupChatView(
@@ -130,6 +131,13 @@ fun MarmotGroupChatView(
         )
 
     WatchLifecycleAndUpdateModel(feedViewModel)
+
+    // With device groups on, how far the user read here goes to this account's other devices too.
+    if (accountViewModel.account.marmotDevices != null) {
+        LaunchedEffect(nostrGroupId) {
+            withContext(Dispatchers.IO) { accountViewModel.account.marmot.shareMarmotReadPositions(nostrGroupId) }
+        }
+    }
 
     val chatroom =
         remember(nostrGroupId) {
