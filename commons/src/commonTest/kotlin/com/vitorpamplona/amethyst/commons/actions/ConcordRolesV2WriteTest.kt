@@ -97,13 +97,30 @@ class ConcordRolesV2WriteTest {
                     .any { it.definition.name == "news" },
             )
 
-            // ...and the legacy role, grant and plain private-channel editors are refused, each with a
+            // ...a role goes out as a marked vsk-13 Role, keyed by rank, which the v2 fold honors...
+            val mods = ConcordModeration.defineRole(owner, cp, cid, ByteArray(32) { 9 }, RoleEntity(name = "Mods", position = 1, permissions = "16"), editions, createdAt = 5L, owner = community.ownerPubKey)
+            val modsEdition = ConcordActions.controlEditions(listOf(mods), cp).single()
+            assertEquals(ControlEntityKind.RANKED_ROLE, modsEdition.entityKind)
+            assertTrue(modsEdition.isMarked)
+            add(mods)
+            // ...and a second one asked for position 1 goes above it.
+            add(ConcordModeration.defineRole(owner, cp, cid, ByteArray(32) { 11 }, RoleEntity(name = "Admins", position = 1, permissions = "1"), editions, createdAt = 6L, owner = community.ownerPubKey))
+            val folded = ConcordCommunityState.fold(editions, cid, community.ownerPubKey)
+            assertEquals(
+                listOf("Admins", "Mods"),
+                folded.roles.values
+                    .sortedBy { it.position }
+                    .map { it.name },
+            )
+            assertEquals(
+                "16",
+                folded.roles.values
+                    .single { it.name == "Mods" }
+                    .permissions,
+            )
+
+            // The legacy grant and plain private-channel editors are still refused, each with a
             // notice the app words (not a generic signer failure).
-            val role =
-                assertFailsWith<UserNoticeException> {
-                    ConcordModeration.defineRole(owner, cp, cid, ByteArray(32) { 9 }, RoleEntity(name = "Mods", position = 1), editions, createdAt = 5L, owner = community.ownerPubKey)
-                }
-            assertEquals(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.ROLES), role.notice)
             val grant =
                 assertFailsWith<UserNoticeException> {
                     ConcordModeration.grant(owner, cp, cid, member.pubKey, emptyList(), editions, createdAt = 5L, owner = community.ownerPubKey)
@@ -122,4 +139,18 @@ class ConcordRolesV2WriteTest {
             }
             assertEquals(listOf<UserNotice>(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.GRANTS)), heard)
         }
+
+    @Test
+    fun aRankKeyLandsAtTheAskedPositionButNeverAboveItsWriter() {
+        val others = listOf("a1" to "B", "a2" to "M", "a3" to "T")
+        val top = ConcordModeration.rankKeyFor(1, others, actorKey = null)!!
+        assertTrue(top < "B")
+        val second = ConcordModeration.rankKeyFor(2, others, actorKey = null)!!
+        assertTrue(second > "B" && second < "M")
+        val last = ConcordModeration.rankKeyFor(9, others, actorKey = null)!!
+        assertTrue(last > "T")
+        // A writer holding the "M" role can only place below it, whatever position it asks for.
+        val below = ConcordModeration.rankKeyFor(1, others, actorKey = "M")!!
+        assertTrue(below > "M" && below < "T")
+    }
 }

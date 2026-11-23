@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
@@ -72,7 +73,8 @@ object ConcordModCommands {
             Output.emit(
                 mapOf(
                     "roles" to
-                        state.roles.map { (id, r) ->
+                        // Rank order, as every client lists them (position, then id).
+                        ConcordRoleRules.byRank(state.roles).map { (id, r) ->
                             mapOf("id" to id, "name" to r.name, "position" to r.position, "permissions" to r.permissions)
                         },
                     // The role-holder roster AFTER the authority fixpoint, so a grant that was
@@ -83,7 +85,7 @@ object ConcordModCommands {
                             mapOf(
                                 "member" to member,
                                 "rank" to state.authority.rank(member),
-                                "roles" to state.authority.rolesFor(member).map { it.name },
+                                "roles" to ConcordRoleRules.byRank(state.authority.roles().filterKeys { it in state.authority.rolesOf(member) }).map { it.value.name },
                             )
                         },
                     "banned" to ConcordModeration.currentBanned(editions, sc.communityId.hexToByteArray(), sc.owner).toList(),

@@ -59,7 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
-import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -160,12 +160,12 @@ fun ConcordMembersScreen(
                     .distinct()
             pubkeys
                 .map {
-                    // The member's most-privileged role name (lowest position ranks highest), so the
-                    // roster shows the real "Admin"/"Moderator"/custom label instead of a coarse badge.
+                    // The member's most-privileged role name (lowest position ranks highest, peers by
+                    // id), so the roster shows the real "Admin"/"Moderator"/custom label instead of a
+                    // coarse badge, and the same one on every device.
                     val roleName =
-                        authority
-                            .rolesFor(it)
-                            .minByOrNull { r -> r.position }
+                        ConcordRoleRules
+                            .badgeRole(authority, it)
                             ?.name
                             ?.takeIf { n -> n.isNotBlank() }
                     RosterEntry(it, ConcordMembership.of(authority, it), roleName, authority.rolesOf(it), departed[it]?.action)
@@ -189,11 +189,10 @@ fun ConcordMembersScreen(
         remember(state, myPubKey) {
             val authority = state?.authority ?: return@remember emptyList<AssignableRole>()
             val myRank = authority.rank(myPubKey) ?: return@remember emptyList()
-            authority
-                .roles()
-                .filter { (_, role) -> myRank < role.position }
-                .map { (id, role) -> AssignableRole(id, role.name, role.position) }
-                .sortedBy { it.position }
+            ConcordRoleRules
+                .byRank(authority.roles())
+                .filter { myRank < it.value.position }
+                .map { AssignableRole(it.key, it.value.name, it.value.position) }
         }
 
     var showRoleEditor by remember { mutableStateOf(false) }
@@ -206,16 +205,10 @@ fun ConcordMembersScreen(
         topBar = {
             TopAppBar(
                 actions = {
-                    // Where the roles are defined: create, rename, re-rank or delete one. Roles v2
-                    // can't be written yet, which is said rather than offered and then refused.
+                    // Where the roles are defined: create, rename, re-rank or delete one. On Roles v2
+                    // the same form writes vsk-13 Roles, the position turned into a rank key.
                     if (iCanManageRoles) {
-                        IconButton(onClick = {
-                            if (rolesV2) {
-                                accountViewModel.notices.notify(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.ROLES))
-                            } else {
-                                showRoleEditor = true
-                            }
-                        }) {
+                        IconButton(onClick = { showRoleEditor = true }) {
                             SymbolIcon(symbol = MaterialSymbols.Shield, contentDescription = stringRes(Res.string.concord_role_editor_open))
                         }
                     }
