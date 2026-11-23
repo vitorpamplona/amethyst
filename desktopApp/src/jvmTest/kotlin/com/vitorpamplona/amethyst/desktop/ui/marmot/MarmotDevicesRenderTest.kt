@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.marmot
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
@@ -61,7 +60,7 @@ import kotlin.test.assertTrue
  */
 class MarmotDevicesRenderTest {
     private val now = TimeUtils.now()
-    private val code = listOf(2, 17, 36, 41, 54, 8, 63).map { SasSymbol.of(SasEmoji.TABLE[it]) }
+    private val code = listOf(2, 17, 36, 41, 54, 61, 63).map { SasSymbol.of(SasEmoji.TABLE[it]) }
 
     private val roster =
         listOf(
@@ -91,7 +90,8 @@ class MarmotDevicesRenderTest {
         val scene =
             ImageComposeScene(width = (widthDp * density).toInt(), height = (heightDp * density).toInt(), density = Density(density)) {
                 AmethystPreviewTheme(dark = dark) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                    // A Surface, as the app's Scaffold is: it sets the text colour for the theme.
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
                 }
             }
         return try {

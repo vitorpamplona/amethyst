@@ -193,7 +193,7 @@ fun SasCodeGrid(
 ) {
     FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         code.forEach { SasCell(it) }
@@ -206,10 +206,10 @@ private fun SasCell(symbol: SasSymbol) {
     Column(
         modifier =
             Modifier
-                .width(84.dp)
+                .width(88.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(vertical = 12.dp, horizontal = 4.dp)
+                .padding(vertical = 12.dp, horizontal = 2.dp)
                 .clearAndSetSemantics { contentDescription = name },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
