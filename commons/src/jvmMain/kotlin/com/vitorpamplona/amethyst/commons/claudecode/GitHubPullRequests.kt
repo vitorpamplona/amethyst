@@ -29,6 +29,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import java.io.File
+import java.time.Instant
+import java.time.format.DateTimeParseException
 
 /** A pull request a workspace branch opened. */
 @Immutable
@@ -37,6 +39,8 @@ data class PullRequestInfo(
     /** `OPEN`, `MERGED` or `CLOSED`, as GitHub says. */
     val state: String,
     val isDraft: Boolean,
+    /** When it was opened, when `gh` said. */
+    val createdAt: Long? = null,
 ) {
     val isOpen get() = state == "OPEN"
     val isMerged get() = state == "MERGED"
@@ -44,8 +48,8 @@ data class PullRequestInfo(
 
 /**
  * GitHub pull requests through the user's own `gh` (GitHub CLI), signed in as them. Only the
- * user's click runs these: an agent may neither push nor open a pull request
- * ([ClaudeChat.NO_PUBLISHING]).
+ * user's click runs these. An agent may push its branch and open a pull request itself, but
+ * never merge one ([ClaudeChat.NO_MERGING]).
  */
 object GitHubPullRequests {
     sealed interface Result {
@@ -199,9 +203,9 @@ object GitHubPullRequests {
             val owners = if (knownUrl == null && upstream != null) headOwners(dir, upstream) else null
             val command =
                 when {
-                    knownUrl != null -> listOf(gh.path, "pr", "view", knownUrl, "--json", "url,state,isDraft")
-                    upstream != null -> listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "30", "--json", "url,state,isDraft,headRepositoryOwner")
-                    else -> listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft")
+                    knownUrl != null -> listOf(gh.path, "pr", "view", knownUrl, "--json", "url,state,isDraft,createdAt")
+                    upstream != null -> listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "30", "--json", "url,state,isDraft,createdAt,headRepositoryOwner")
+                    else -> listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft,createdAt")
                 }
             val result = runGh(dir, command, 60)
             if (result.code != 0) null else parseState(result.output, owners)
@@ -267,6 +271,14 @@ object GitHubPullRequests {
                 ?.filterIsInstance<JsonObject>()
                 ?.firstOrNull { pr -> owners == null || headOwnerOf(pr)?.lowercase() in owners } ?: return null
         val url = (obj["url"] as? JsonPrimitive)?.content ?: return null
-        return PullRequestInfo(url, (obj["state"] as? JsonPrimitive)?.content ?: "OPEN", (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false)
+        val createdAt =
+            (obj["createdAt"] as? JsonPrimitive)?.content?.let {
+                try {
+                    Instant.parse(it).toEpochMilli()
+                } catch (e: DateTimeParseException) {
+                    null
+                }
+            }
+        return PullRequestInfo(url, (obj["state"] as? JsonPrimitive)?.content ?: "OPEN", (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false, createdAt)
     }
 }

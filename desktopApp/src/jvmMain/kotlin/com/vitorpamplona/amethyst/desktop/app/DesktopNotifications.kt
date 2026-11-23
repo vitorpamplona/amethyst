@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilt
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_publish
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_open
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
@@ -154,6 +155,7 @@ class DesktopNotifications(
                         when (event.kind) {
                             ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
                             ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
+                            ChatAttention.Kind.REQUESTS_PUBLISH -> Res.string.claude_code_notify_publish
                         },
                         event.agent,
                     )
