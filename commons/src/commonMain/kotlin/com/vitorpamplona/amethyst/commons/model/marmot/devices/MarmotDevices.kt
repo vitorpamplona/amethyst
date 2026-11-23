@@ -598,6 +598,10 @@ class MarmotDevices(
                 .filter { it.request.sessionId in live && (it.state == DeviceLinkPrompt.State.Preparing || it.state == DeviceLinkPrompt.State.CompetingRequests) }
                 .forEach { answer(pairing, it, now) }
         }
+        // A finished prompt stays a while for the screen that shows its outcome, then goes.
+        prompts.entries.removeAll { (_, p) ->
+            (p.state is DeviceLinkPrompt.State.Ended || p.state == DeviceLinkPrompt.State.Linked) && now - p.requestedAt > FINISHED_PROMPT_KEPT_SECS
+        }
         // A link this device waits on that its Welcome never answered.
         groups.trust().pendingLink?.let { pending ->
             if (now >= pending.waitUntil) {
@@ -844,6 +848,9 @@ class MarmotDevices(
         const val RETAG_EVERY_SECS = 6 * 60 * 60L
 
         const val SIGN_IN_CHECK_EVERY_SECS = 15 * 60L
+
+        /** How long a linked or ended request stays in [MarmotDevicesSnapshot.prompts]. */
+        const val FINISHED_PROMPT_KEPT_SECS = 60 * 60L
 
         /** Pairing messages kept for [start] when they arrive before it. */
         const val MAX_EARLY_PAIRING = 64

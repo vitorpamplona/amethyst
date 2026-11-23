@@ -102,6 +102,12 @@ class DeviceLinkScreenTest {
 
         val endedSinceOpening = prompt(DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.CODES_DIFFER), id = "3".repeat(64), at = 950)
         assertEquals(endedSinceOpening, DeviceLinkScreen.followablePrompt(listOf(oldEnded, endedSinceOpening), openedAt = 900))
+
+        // The last link's outcome is not the next link's screen.
+        val oldLinked = prompt(DeviceLinkPrompt.State.Linked, id = "4".repeat(64), at = 600)
+        assertNull(DeviceLinkScreen.followablePrompt(listOf(oldEnded, oldLinked), openedAt = 900))
+        val linkedSinceOpening = prompt(DeviceLinkPrompt.State.Linked, id = "5".repeat(64), at = 960)
+        assertEquals(linkedSinceOpening, DeviceLinkScreen.followablePrompt(listOf(oldLinked, linkedSinceOpening), openedAt = 900))
     }
 
     @Test

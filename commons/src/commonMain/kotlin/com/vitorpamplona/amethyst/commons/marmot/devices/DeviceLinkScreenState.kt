@@ -143,15 +143,19 @@ object DeviceLinkScreen {
 
     /**
      * The request an existing device's link screen, opened at [openedAt] without one, should follow:
-     * the newest that is still live, or that arrived after the screen opened even if it ended since.
+     * the newest that is still in progress, or that arrived after the screen opened even if it ended
+     * since. A link finished before the screen opened (linked or ended) is never followed, so a
+     * second "Link a new device" does not open on the last one's outcome.
      */
     fun followablePrompt(
         prompts: List<DeviceLinkPrompt>,
         openedAt: Long,
     ): DeviceLinkPrompt? =
         prompts
-            .filter { it.state !is DeviceLinkPrompt.State.Ended || it.requestedAt >= openedAt }
+            .filter { it.requestedAt >= openedAt || !it.state.isFinished() }
             .maxByOrNull { it.requestedAt }
+
+    private fun DeviceLinkPrompt.State.isFinished() = this is DeviceLinkPrompt.State.Ended || this == DeviceLinkPrompt.State.Linked
 
     /** Whether [state] is one a user can still cancel. */
     fun isCancellable(state: DeviceLinkScreenState): Boolean =
