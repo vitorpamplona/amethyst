@@ -524,30 +524,11 @@ class FrontPagePrinter(
     @Volatile
     private var keptForAfter: Pair<SavedEdition, String>? = null
 
-    /**
-     * What follows a kept paper, none of which may lose it: the weather for the schedule's place,
-     * kept beside it ([forecast]), then the record and encrypted copy for the account's other
-     * devices ([shareWithDevices]).
-     */
+    /** What follows a kept paper, none of which may lose it: the record and encrypted copy for the account's other devices ([shareWithDevices]). */
     private suspend fun afterKept(
         kept: SavedEdition,
         html: String,
-    ) {
-        val edition =
-            forecast()?.let { weather ->
-                kept.copy(weather = weather).also {
-                    try {
-                        store.save(pubKey, it, html)
-                        refresh()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not keep the weather with the edition", e)
-                    }
-                }
-            } ?: kept
-        shareWithDevices(edition, html)
-    }
+    ) = shareWithDevices(kept, html)
 
     /**
      * Records the paper just kept in the account's schedule, for its other devices: an encrypted copy
@@ -588,7 +569,6 @@ class FrontPagePrinter(
                 key = copy?.key,
                 nonce = copy?.nonce,
                 headline = edition.headline,
-                weather = edition.weather,
             )
         try {
             val outcome = morning.recordEdition(account, record)
@@ -601,8 +581,8 @@ class FrontPagePrinter(
     }
 
     /**
-     * The forecast for the schedule's place ([ObserverWeather.place]), kept beside the paper just
-     * printed; null with no place, or when Open-Meteo doesn't answer in time: the paper is kept anyway.
+     * The forecast for the schedule's place ([ObserverWeather.place]), the paper's Weather desk; null
+     * with no place, or when Open-Meteo doesn't answer in time: the paper prints without it.
      */
     private suspend fun forecast(): WeatherReport? {
         val place = ObserverWeather.place(scheduledTask()) ?: return null
@@ -938,6 +918,12 @@ class FrontPagePrinter(
             recent = recentHeadlines(known, today),
             clock = EditionClock.forReader(scheduledTask()?.tz),
             recentRecipes = recentRecipes(known, today),
+            // Fetched before anything is paid for: a forecast that doesn't come leaves the desk out.
+            weather = forecast(),
+            weatherNamesPlace =
+                !account.observerSchedule.flow.value
+                    .observerPrefs()
+                    .publish,
         )
     }
 

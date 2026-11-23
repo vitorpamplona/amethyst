@@ -66,9 +66,8 @@ data class WeatherDay(
 )
 
 /**
- * The forecast fetched for a paper when it was printed, kept beside it ([SavedEdition.weather]) and
- * never inside its page: the app draws it over the paper it shows ([ObserverWeather.withStrip]), so
- * no copy of the page that leaves the device (the public site, a download) names the reader's city.
+ * The forecast for the schedule's place, fetched when a print starts: the paper's Weather desk
+ * ([ObserverWeather.desk]), which the writer sets like any other.
  */
 @Immutable
 @Serializable
@@ -85,78 +84,7 @@ data class WeatherReport(
     val sunset: String? = null,
 )
 
-/** The kinds of weather the strip names, from the WMO codes Open-Meteo answers with ([ObserverWeather.condition]). */
-enum class WeatherCondition {
-    CLEAR,
-    MAINLY_CLEAR,
-    PARTLY_CLOUDY,
-    OVERCAST,
-    FOG,
-    DRIZZLE,
-    FREEZING_DRIZZLE,
-    RAIN,
-    HEAVY_RAIN,
-    FREEZING_RAIN,
-    SNOW,
-    HEAVY_SNOW,
-    SHOWERS,
-    VIOLENT_SHOWERS,
-    SNOW_SHOWERS,
-    THUNDERSTORM,
-    THUNDERSTORM_HAIL,
-}
-
-/**
- * The strip's words, in the reader's language: commons has no resources, so the screen resolves
- * them from commonsUI's and hands them in. [ENGLISH] is for tests and a platform without them.
- */
-@Immutable
-data class WeatherLabels(
-    val title: String,
-    val today: String,
-    val high: String,
-    val low: String,
-    val rain: String,
-    val sun: String,
-    /** Monday first, seven of them. */
-    val weekdays: List<String>,
-    val conditions: Map<WeatherCondition, String>,
-) {
-    companion object {
-        val ENGLISH =
-            WeatherLabels(
-                title = "Weather",
-                today = "Today",
-                high = "high",
-                low = "low",
-                rain = "rain",
-                sun = "sun",
-                weekdays = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
-                conditions =
-                    mapOf(
-                        WeatherCondition.CLEAR to "Clear",
-                        WeatherCondition.MAINLY_CLEAR to "Mainly clear",
-                        WeatherCondition.PARTLY_CLOUDY to "Partly cloudy",
-                        WeatherCondition.OVERCAST to "Overcast",
-                        WeatherCondition.FOG to "Fog",
-                        WeatherCondition.DRIZZLE to "Drizzle",
-                        WeatherCondition.FREEZING_DRIZZLE to "Freezing drizzle",
-                        WeatherCondition.RAIN to "Rain",
-                        WeatherCondition.HEAVY_RAIN to "Heavy rain",
-                        WeatherCondition.FREEZING_RAIN to "Freezing rain",
-                        WeatherCondition.SNOW to "Snow",
-                        WeatherCondition.HEAVY_SNOW to "Heavy snow",
-                        WeatherCondition.SHOWERS to "Showers",
-                        WeatherCondition.VIOLENT_SHOWERS to "Violent showers",
-                        WeatherCondition.SNOW_SHOWERS to "Snow showers",
-                        WeatherCondition.THUNDERSTORM to "Thunderstorms",
-                        WeatherCondition.THUNDERSTORM_HAIL to "Thunderstorms with hail",
-                    ),
-            )
-    }
-}
-
-/** The Observer's weather: the `place` param, the Open-Meteo requests and readings, and the strip the app draws. */
+/** The Observer's weather: the `place` param, the Open-Meteo requests and readings, and the Weather desk the writer reads. */
 object ObserverWeather {
     const val PARAM = FrontPageParams.PLACE
     private const val US = "us"
@@ -276,174 +204,66 @@ object ObserverWeather {
         )
     }
 
-    /** A kept report as text, for the paper's record; null for none. */
-    fun encode(report: WeatherReport?): String? = report?.let { json.encodeToString(WeatherReport.serializer(), it) }
-
-    /** A kept report from its text; null when it isn't one. */
-    fun decode(text: String?): WeatherReport? =
-        text?.takeIf { it.isNotBlank() }?.let {
-            try {
-                json.decodeFromString(WeatherReport.serializer(), it)
-            } catch (e: IllegalArgumentException) {
-                null
-            }
-        }
-
-    /** WMO weather interpretation codes, as the kinds of weather a newspaper names. */
-    fun condition(code: Int?): WeatherCondition? =
+    /** WMO weather interpretation codes, as a newspaper says them (the writer puts them in the paper's language). */
+    fun words(code: Int?): String? =
         when (code) {
             null -> null
-            0 -> WeatherCondition.CLEAR
-            1 -> WeatherCondition.MAINLY_CLEAR
-            2 -> WeatherCondition.PARTLY_CLOUDY
-            3 -> WeatherCondition.OVERCAST
-            45, 48 -> WeatherCondition.FOG
-            51, 53, 55 -> WeatherCondition.DRIZZLE
-            56, 57 -> WeatherCondition.FREEZING_DRIZZLE
-            61, 63 -> WeatherCondition.RAIN
-            65 -> WeatherCondition.HEAVY_RAIN
-            66, 67 -> WeatherCondition.FREEZING_RAIN
-            71, 73, 77 -> WeatherCondition.SNOW
-            75 -> WeatherCondition.HEAVY_SNOW
-            80, 81 -> WeatherCondition.SHOWERS
-            82 -> WeatherCondition.VIOLENT_SHOWERS
-            85, 86 -> WeatherCondition.SNOW_SHOWERS
-            95 -> WeatherCondition.THUNDERSTORM
-            96, 99 -> WeatherCondition.THUNDERSTORM_HAIL
+            0 -> "clear"
+            1 -> "mainly clear"
+            2 -> "partly cloudy"
+            3 -> "overcast"
+            45, 48 -> "fog"
+            51, 53, 55 -> "drizzle"
+            56, 57 -> "freezing drizzle"
+            61, 63 -> "rain"
+            65 -> "heavy rain"
+            66, 67 -> "freezing rain"
+            71, 73, 77 -> "snow"
+            75 -> "heavy snow"
+            80, 81 -> "showers"
+            82 -> "violent showers"
+            85, 86 -> "snow showers"
+            95 -> "thunderstorms"
+            96, 99 -> "thunderstorms with hail"
             else -> null
         }
 
-    /** [code] in [labels]' words; null when it names no weather [labels] has a word for. */
-    fun words(
-        code: Int?,
-        labels: WeatherLabels = WeatherLabels.ENGLISH,
-    ): String? = condition(code)?.let { labels.conditions[it] }
+    private val WEEKDAYS = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
     /**
-     * The weather as the paper's ear, in [labels]' words (the reader's language, from the app's
-     * resources): a small stacked box beside the nameplate, as newspapers print it. The place, the
-     * temperature now, today's high and low with its rain and sun, a short table of the next days,
-     * and Open-Meteo's credit (CC BY 4.0, kept as written). Every value is escaped; it carries its own
-     * styles, on the house tokens, and nothing that fetches or runs. On a window too narrow for an
-     * ear it sits under the motto instead.
+     * The paper's Weather desk, as the digest gives it to the writer: the forecast, the figures to
+     * set as given, and the credit Open-Meteo asks for (CC BY 4.0). A desk like the others: the
+     * writer decides where it runs, a box of its own, never the lead. [namesPlace] is false while the
+     * paper goes to the reader's public Observer site: then the place isn't given, so the page can't
+     * say where the reader lives.
      */
-    fun strip(
+    fun desk(
         report: WeatherReport,
-        labels: WeatherLabels = WeatherLabels.ENGLISH,
-    ): String {
+        namesPlace: Boolean,
+    ): List<String> {
         val unit = if (report.fahrenheit) "°F" else "°C"
-        val today = report.days.firstOrNull()
-        val later = report.days.drop(1)
-        val out = StringBuilder()
-        out.append("<div class=\"weather-ear\" data-credit=\"weather\">")
-        out.append("<style>")
-        out.append(".weather-ear{font-family:var(--util);font-size:.72rem;line-height:1.4;color:var(--ink-2);text-align:left;max-width:15rem;margin:12px auto 0;padding-top:8px;border-top:1px solid var(--rule-soft)}")
-        out.append(".weather-ear p{margin:0}")
-        out.append(".weather-ear .we-place{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.6rem;color:var(--ink-3)}")
-        out.append(".weather-ear .we-now{margin:2px 0}")
-        out.append(".weather-ear .we-now b{font-family:var(--serif);font-size:1.7rem;line-height:1;color:var(--ink);margin-right:4px}")
-        out.append(".weather-ear table{border-collapse:collapse;width:100%;margin-top:5px}")
-        out.append(".weather-ear td{font-family:var(--util);font-size:.68rem;padding:1px 6px 1px 0;border:0;color:var(--ink-2)}")
-        out.append(".weather-ear td.n{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}")
-        out.append(".weather-ear .we-credit{font-size:.58rem;color:var(--ink-3);margin-top:5px}")
-        out.append("@media (min-width:1260px){.masthead{position:relative}.weather-ear{position:absolute;top:20px;right:0;width:12.5rem;margin:0;padding:0 0 0 12px;border-top:0;border-left:1px solid var(--rule)}}")
-        out.append("</style>")
-        out.append("<p class=\"we-place\">").append(escape("${labels.title} · ${report.place.substringBefore(',').trim()}")).append("</p>")
-        if (report.now != null) {
-            out
-                .append("<p class=\"we-now\"><b>")
-                .append(report.now)
-                .append(unit)
-                .append("</b>")
-            words(report.nowCode, labels)?.let { out.append(escape(it)) }
-            out.append("</p>")
-        }
-        if (today != null) {
-            if (today.high != null && today.low != null) {
-                out.append("<p class=\"we-today\">").append(escape("${labels.today}: ${labels.high} ${today.high}°, ${labels.low} ${today.low}°")).append("</p>")
+        val out = mutableListOf<String>()
+        out +=
+            if (namesPlace) {
+                "For ${report.place}."
+            } else {
+                "The place is not given: this paper is published on the reader's public site. Head the box \"Weather\" and name no place."
             }
-            val more = listOfNotNull(today.rain?.let { "$it% ${labels.rain}" }, if (report.sunrise != null && report.sunset != null) "${labels.sun} ${report.sunrise}–${report.sunset}" else null)
-            if (more.isNotEmpty()) out.append("<p class=\"we-today\">").append(escape(more.joinToString(" · "))).append("</p>")
+        if (report.now != null) out += "Now${report.asOf?.let { " ($it)" }.orEmpty()}: ${report.now}$unit${words(report.nowCode)?.let { ", $it" }.orEmpty()}."
+        report.days.forEachIndexed { i, day ->
+            val name = if (i == 0) "Today" else dayOfWeek(day.date)?.let { WEEKDAYS[it - 1] } ?: day.date
+            val parts =
+                listOfNotNull(
+                    if (day.high != null && day.low != null) "high ${day.high}$unit, low ${day.low}$unit" else null,
+                    words(day.code),
+                    day.rain?.let { "$it% chance of rain" },
+                    if (i == 0 && report.sunrise != null && report.sunset != null) "sunrise ${report.sunrise}, sunset ${report.sunset}" else null,
+                )
+            if (parts.isNotEmpty()) out += "$name (${day.date}): ${parts.joinToString(", ")}."
         }
-        val rows =
-            later.mapNotNull { day ->
-                val name = dayOfWeek(day.date)?.let { labels.weekdays.getOrNull(it - 1) } ?: return@mapNotNull null
-                val temps = if (day.high != null && day.low != null) "${day.high}°/${day.low}°" else ""
-                val rain = day.rain?.let { "$it%" }.orEmpty()
-                "<tr><td>${escape(name)}</td><td class=\"n\">${escape(temps)}</td><td class=\"n\">${escape(rain)}</td></tr>"
-            }
-        if (rows.isNotEmpty()) out.append("<table>").append(rows.joinToString("")).append("</table>")
-        out.append("<p class=\"we-credit\">").append(escape(CREDIT + (report.asOf?.let { " · $it" } ?: ""))).append("</p>")
-        out.append("</div>")
-        return out.toString()
+        out += "Credit it where it runs, as written: \"$CREDIT\". It is not news and not from Nostr: set it as a box of its own (a rail, an ear, a corner), never the lead, the figures as given, nothing added."
+        return out
     }
-
-    /**
-     * [html] with the [report] ear in its masthead, after the motto (else under its dateline, else at
-     * the top of its sheet or body), for the screen only: what is kept, shared and published stays
-     * without it.
-     */
-    fun withStrip(
-        html: String,
-        report: WeatherReport,
-        labels: WeatherLabels = WeatherLabels.ENGLISH,
-    ): String {
-        val strip = strip(report, labels)
-        val at = closeOf(html, "masthead")?.first ?: closeOf(html, "dateline")?.last ?: afterOpening(html, "class=\"sheet\"") ?: afterOpening(html, "<body")
-        return if (at == null) strip + html else html.substring(0, at) + strip + html.substring(at)
-    }
-
-    /**
-     * Where the element whose class list starts with [cls] closes: the range of its own closing tag,
-     * found by counting nested elements of the same name (a dateline with a `<div>` inside), not
-     * the first close after it. Its start is the inside end of the element, its last + 1 right after
-     * it. Null when there is none, or it never closes.
-     */
-    private fun closeOf(
-        html: String,
-        cls: String,
-    ): IntRange? {
-        val attr = Regex("class=\"$cls[\" ]").find(html)?.range?.first ?: return null
-        val open = html.lastIndexOf('<', attr).takeIf { it >= 0 } ?: return null
-        val name =
-            Regex("^<([a-zA-Z][a-zA-Z0-9]*)")
-                .find(html.substring(open, minOf(html.length, open + 20)))
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase() ?: return null
-        val tags = Regex("<(/?)$name\\b[^>]*>", RegexOption.IGNORE_CASE)
-        var depth = 0
-        tags.findAll(html, open).forEach { tag ->
-            depth += if (tag.groupValues[1].isEmpty()) 1 else -1
-            if (depth == 0) return IntRange(tag.range.first, tag.range.last + 1)
-        }
-        return null
-    }
-
-    /** Right after the opening tag that contains [marker]. */
-    private fun afterOpening(
-        html: String,
-        marker: String,
-    ): Int? {
-        val start = html.indexOf(marker)
-        if (start < 0) return null
-        val end = html.indexOf('>', start)
-        return if (end < 0) null else end + 1
-    }
-
-    private fun escape(text: String): String =
-        buildString(text.length) {
-            text.forEach {
-                when (it) {
-                    '&' -> append("&amp;")
-                    '<' -> append("&lt;")
-                    '>' -> append("&gt;")
-                    '"' -> append("&quot;")
-                    '\'' -> append("&#39;")
-                    else -> append(it)
-                }
-            }
-        }
 
     /** Countries that read temperatures in °F. */
     private val FAHRENHEIT_COUNTRIES = setOf("US", "LR", "MM", "BS", "BZ", "KY", "PW", "FM", "MH")

@@ -90,19 +90,19 @@ The paper never leaves the reader's servers unencrypted unless publishing is on.
 (about a kilometre), private like every tag Amethyst writes. Set once per account from the
 Observer screen (Open-Meteo's place search), so every device prints the same city.
 
-- When a paper is kept, the printing device fetches Open-Meteo's forecast for the place (now,
-  today's high, low, rain and sun, three more days; 10 s at most, through the client the reader's
-  network settings pick for public pages) and keeps it **beside** the paper
-  (`SavedEdition.weather`), never in its HTML. The edition record carries it too, so the other
-  devices show the same forecast.
-- The app draws it as a strip under the dateline (`ObserverWeather.withStrip`) only on the copy
-  it shows. What is kept, shared, downloaded and published is the page without it, so the public
-  site never names the reader's city. The strip is code: every value escaped, nothing that
-  fetches, Open-Meteo credited (CC BY 4.0).
-- No place, or no answer in time: the paper is kept without weather. A printer that shows no
+- When a print starts, before anything is paid for, the printing device fetches Open-Meteo's
+  forecast for the place (now, today's high, low, rain and sun, three more days; 10 s at most,
+  through the client the reader's network settings pick for public pages).
+- It is a desk like the others (2026-11-23): the digest gives the writer a "Weather" section,
+  written by the app and placed before the notice that everything below is other people's data,
+  with the figures, the credit Open-Meteo asks for (CC BY 4.0) and how to run it (a box of its own,
+  never the lead, the figures as given). The writer sets it where a paper would, sized like the
+  rest of the page. (A first version drew it over the page at display time, as a strip and then as
+  a masthead ear; it was the wrong shape, and above the news.)
+- While the paper goes to the reader's public Observer site, the desk doesn't give the place and
+  tells the writer to name none, so the public page doesn't say where the reader lives.
+- No place, or no answer in time: the paper prints without the desk. A printer that shows no
   weather (the Assistant) understands the param and prints as before.
-- The writer's brief is pinned to Brainstorm's copy, so the model is never asked to place a
-  weather box; the app places it.
 
 ### Many accounts
 

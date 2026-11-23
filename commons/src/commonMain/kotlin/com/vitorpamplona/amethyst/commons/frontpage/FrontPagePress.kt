@@ -246,7 +246,7 @@ class FrontPagePress(
 
         val corpus = pull(observer, until, onStep, context.recentRecipes)
         log.add(PrintLogKind.READ, numbers = listOf(DESKS.size, corpus.events.size))
-        val digest = digest(corpus, clock = context.clock)
+        val digest = digest(corpus, clock = context.clock, weather = context.weather, weatherNamesPlace = context.weatherNamesPlace)
         val size = DaySize(corpus.events.size, corpus.events.mapTo(HashSet()) { it.pubKey }.size, keptInDigest(corpus))
         // The system brief and this prefix are first, and the same, in every call of the print.
         val prefix = corpusPrefix(digest, editionHeader(readerName, language, context, corpus, size))

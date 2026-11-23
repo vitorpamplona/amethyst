@@ -167,6 +167,10 @@ class EditionContext(
     val clock: EditionClock = EditionClock.UTC,
     /** The Kitchen's recipes recent editions ran ([recipeAddress]): not offered again ([pickRecipe]). */
     val recentRecipes: Set<String> = emptySet(),
+    /** The day's forecast for the schedule's place, the paper's Weather desk; null without a place, or an answer in time. */
+    val weather: WeatherReport? = null,
+    /** Whether the Weather desk may name the place: not while the paper goes to the reader's public site. */
+    val weatherNamesPlace: Boolean = false,
 )
 
 /** The edition number of a print on [today]: one more than the distinct days printed before (or after) it. */
