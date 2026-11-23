@@ -118,7 +118,6 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
-import com.vitorpamplona.amethyst.commons.claudecode.hasOpenWork
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
@@ -127,6 +126,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
 import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
 import com.vitorpamplona.amethyst.commons.claudecode.firstPromptLine
+import com.vitorpamplona.amethyst.commons.claudecode.hasOpenWork
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
