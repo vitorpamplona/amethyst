@@ -212,8 +212,9 @@ object VideoThumbnailCache {
     private fun isPersistable(url: String) = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
 
     // v2: frames from before rotation was applied are on disk sideways; v3: anamorphic ones
-    // from before the pixel ratio was applied are squashed. Leave both behind.
-    private fun diskKey(url: String) = sha1Hex("v3:$url")
+    // from before the pixel ratio was applied are squashed; v4: ones from before the decoder's crop
+    // was applied carry its padding rows (624x640 for a 624x626 video). Leave them all behind.
+    private fun diskKey(url: String) = sha1Hex("v4:$url")
 
     private fun readDisk(url: String): ImageBitmap? {
         if (!isPersistable(url)) return null
@@ -362,7 +363,7 @@ object VideoThumbnailCache {
     }
 
     /** A frame of [mp4], which holds the start of [url]; records the video's pixel ratio on the way. */
-    private fun tryJCodec(
+    internal fun tryJCodec(
         mp4: File,
         url: String,
     ): BufferedImage? =
@@ -370,7 +371,11 @@ object VideoThumbnailCache {
             NIOUtils.readableChannel(mp4).use { ch ->
                 val grab = FrameGrab.createFrameGrab(ch).seekToSecondSloppy(1.0)
                 val frame = grab.nativeFrameWithMetadata ?: return null
-                val native: Picture = frame.picture ?: return null
+                // The decoder hands back whole 16-pixel macroblocks: a 624x626 video decodes to 624x640,
+                // and the stream's crop says which part is the picture. Without it the poster was taller
+                // than the video, so the card took the wrong shape until the video loaded, and the
+                // poster sat between black bars over it.
+                val native: Picture = frame.picture?.cropped() ?: return null
                 val rgb = Picture.create(native.width, native.height, ColorSpace.RGB)
                 ColorUtil.getTransform(native.color, ColorSpace.RGB).transform(native, rgb)
                 val par =
