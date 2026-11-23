@@ -158,6 +158,7 @@ fun ConcordMembersScreen(
                 (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers() + guestbookMembers + observedAuthors)
                     .map { it.lowercase() }
                     .distinct()
+            // By standing, then rank within it (CORD-04 §3: an Admin above a Moderator), peers by key.
             pubkeys
                 .map {
                     // The member's most-privileged role name (lowest position ranks highest, peers by
@@ -169,7 +170,7 @@ fun ConcordMembersScreen(
                             ?.name
                             ?.takeIf { n -> n.isNotBlank() }
                     RosterEntry(it, ConcordMembership.of(authority, it), roleName, authority.rolesOf(it), departed[it]?.action)
-                }.sortedWith(compareBy({ it.sortRank() }, { it.pubkey }))
+                }.sortedWith(compareBy({ it.sortRank() }, { authority.rank(it.pubkey) ?: Long.MAX_VALUE }, { it.pubkey }))
         }
 
     val iAmOwner = state?.authority?.isOwner(myPubKey) == true
