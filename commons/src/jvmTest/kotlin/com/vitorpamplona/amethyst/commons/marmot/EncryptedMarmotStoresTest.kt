@@ -90,6 +90,24 @@ class EncryptedMarmotStoresTest {
             assertNull("and its state is gone", store.load(groupId))
         }
 
+    /** The convergence window comes back after a restart, is not stored in the clear, and goes with the group. */
+    @Test
+    fun theConvergenceWindowRoundTripsEncryptedAndGoesWithTheGroup() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val window = ByteArray(64) { (it * 7).toByte() }
+            val store = EncryptedMlsGroupStateStore(dir, encryption)
+            store.save(groupId, byteArrayOf(1))
+            assertTrue(store.saveConvergenceWindow(groupId, window))
+
+            assertEquals(window.toList(), EncryptedMlsGroupStateStore(dir, encryption).loadConvergenceWindow(groupId)?.toList())
+            val onDisk = File(dir, "mls_groups/$groupId/convergence").readBytes()
+            assertTrue("encrypted at rest", !onDisk.toList().windowed(window.size).contains(window.toList()))
+
+            store.delete(groupId)
+            assertNull(store.loadConvergenceWindow(groupId))
+        }
+
     /** The sender ratchet is stored separately from the group blob; losing it breaks decryption. */
     @Test
     fun theSenderRatchetRoundTripsIndependentlyOfTheGroupState() =

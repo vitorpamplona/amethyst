@@ -62,6 +62,8 @@ class FileMlsGroupStateStore(
 
     private fun ratchetFile(id: String) = File(dir, "$id.ratchet")
 
+    private fun convergenceFile(id: String) = File(dir, "$id.convergence")
+
     override suspend fun save(
         nostrGroupId: String,
         state: ByteArray,
@@ -75,7 +77,20 @@ class FileMlsGroupStateStore(
         stateFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "group state")
         retainedFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "retained epochs")
         ratchetFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "sender ratchet")
+        convergenceFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "convergence window")
     }
+
+    // A fork's other half usually reaches amy in a later command: without the window that later
+    // process cannot tell it from an echo, and the group stays split.
+    override suspend fun saveConvergenceWindow(
+        nostrGroupId: String,
+        window: ByteArray,
+    ): Boolean {
+        SecureFileIO.writeBytesAtomic(convergenceFile(nostrGroupId), window)
+        return true
+    }
+
+    override suspend fun loadConvergenceWindow(nostrGroupId: String): ByteArray? = convergenceFile(nostrGroupId).takeIf { it.exists() }?.readBytes()
 
     // The CLI reopens a fresh context per command, so "restart between two
     // sends" is its normal mode rather than an edge case — it is the caller
