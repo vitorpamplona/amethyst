@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
+import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordAccessDrain
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
@@ -1435,15 +1436,19 @@ class AccountConcordActions(
         val plane = session.currentChannelPlane(channelIdHex) ?: return false
         val channelKey = plane.key
 
+        val parent = replyTo?.event
+        // @-mentions become NIP-27 references and notify who they name (see [tagConcordMentions]);
+        // the reply builders below already credit the parent's author.
+        val (body, mentionTags) = tagConcordMentions(text, setOfNotNull(parent?.pubKey))
+
         // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
         // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
         val emojiTags =
             account.emoji
-                .findEmojiTags(text)
+                .findEmojiTags(body)
                 .map { it.toTagArray() }
-                .toTypedArray()
+                .toTypedArray() + mentionTags
 
-        val parent = replyTo?.event
         // CORD-08 §2: the community timer as folded right now rides inside the signed rumor.
         val timer = session.messageExpirationSecs()
         val wrap =
@@ -1452,13 +1457,13 @@ class AccountConcordActions(
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, imetas, TimeUtils.now(), emojiTags, timer)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, TimeUtils.now(), emojiTags, timer)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, TimeUtils.now(), emojiTags, timer)
                 else ->
-                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, body, TimeUtils.now(), emojiTags, timer)
             }
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
@@ -1482,15 +1487,31 @@ class AccountConcordActions(
         val entry = session.entry
         val plane = session.currentChannelPlane(channelIdHex) ?: return false
         val channelKey = plane.key
+        val (body, mentionTags) = tagConcordMentions(text)
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags =
             account.emoji
-                .findEmojiTags(text)
+                .findEmojiTags(body)
                 .map { it.toTagArray() }
-                .toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
+                .toTypedArray() + mentionTags
+        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, body, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
+    }
+
+    /**
+     * Runs the composer's [NewMessageTagger] over a Concord message: an `@npub` the mention picker
+     * inserted (or a bare `npub`) becomes a NIP-27 `nostr:` reference, and everyone the text cites
+     * gets a `p` tag ([ConcordActions.mentionTags]). Every Concord client (Armada, this app's
+     * Notifications) finds a mention by that `p`, so without it nobody was ever notified.
+     */
+    private suspend fun tagConcordMentions(
+        text: String,
+        alreadyTagged: Set<HexKey> = emptySet(),
+    ): Pair<String, Array<Array<String>>> {
+        val tagger = NewMessageTagger(text, dao = account.cache).also { it.run() }
+        val cited = tagger.pTags.orEmpty().map { it.pubkeyHex }
+        return tagger.message to ConcordActions.mentionTags(cited, account.signer.pubKey, alreadyTagged)
     }
 
     /**
@@ -1605,6 +1626,52 @@ class AccountConcordActions(
         // members at once, but a future member learns of it only through an omitting edition. The
         // author knows their own pins, so when they may write pins they publish it immediately.
         if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
+        return sent
+    }
+
+    /**
+     * True when this account may hide [note], someone else's Concord message, for every member as a
+     * moderator (CORD-03 §3): the fold would honor our hide over its author, so we hold
+     * MANAGE_MESSAGES there (or own the community) and strictly outrank them.
+     */
+    fun canHideConcordMessage(note: Note): Boolean {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        val me = account.signer.pubKey
+        if (target.pubKey == me || !account.isWriteable()) return false
+        val state =
+            account.concordSessions
+                .sessionFor(channel.channelId.communityId)
+                ?.state
+                ?.value ?: return false
+        if (state.dissolved) return false
+        return state.honorsModerationHide(me, target.pubKey, channel.channelId.channelId, AuthorityCitations.forActor(state.authority, me))
+    }
+
+    /**
+     * Hides [notes], other members' messages in [channel], for every member (CORD-03 §3): a sealed
+     * kind 5 on the plane that carried each one, citing the Grant that lets us ([buildChannelModerationHide]).
+     * Only the notes [canHideConcordMessage] allows are named. Returns false when none was sent.
+     */
+    suspend fun hideConcordMessages(
+        channel: ConcordChannel,
+        notes: List<Note>,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(channel.channelId.communityId) ?: return false
+        val authority = session.state.value?.authority ?: return false
+        val channelIdHex = channel.channelId.channelId
+        val targets = notes.filter { canHideConcordMessage(it) }.mapNotNull { it.event }.distinctBy { it.id }
+        if (targets.isEmpty()) return false
+        val citation = AuthorityCitations.forActor(authority, account.signer.pubKey)
+        val current = session.currentChannelPlane(channelIdHex)
+        val byPlane = targets.groupBy { target -> target.tags.concordEpoch()?.let { session.channelPlaneFor(channelIdHex, it) } ?: current }
+        var sent = false
+        for ((plane, onPlane) in byPlane) {
+            if (plane == null) continue
+            val wrap = ConcordActions.buildChannelModerationHide(account.signer, plane.key, channelIdHex, plane.epoch, onPlane, citation, TimeUtils.now())
+            publishConcordWrap(session.entry, wrap)
+            sent = true
+        }
         return sent
     }
 

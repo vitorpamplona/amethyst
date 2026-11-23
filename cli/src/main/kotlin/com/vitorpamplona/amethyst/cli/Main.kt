@@ -988,6 +988,7 @@ private fun printUsage() {
         |  concord create --name NAME [--about T] [--relays wss://a,wss://b]
         |                                             create an encrypted Concord Channel community
         |  concord list                               list joined Concord communities
+        |  concord members COMMUNITY                  the Guestbook: who is in, latest Join/Leave/Kick
         |  concord channels COMMUNITY                 list a community's channels
         |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
