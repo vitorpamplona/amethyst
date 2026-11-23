@@ -233,6 +233,10 @@ data class WorkspaceRepoStatus(
  */
 class AgentWorkspaces(
     val root: File = File(System.getProperty("user.home"), ".amethyst/agents"),
+    /** How [free] moves a clone out of its workstream into the trash; false when it couldn't. Tests fail it on purpose. */
+    private val moveAside: (from: File, to: File) -> Boolean = { from, to -> from.renameTo(to) },
+    /** How [free] empties that trash once the record says freed; false when it couldn't. Tests fail it on purpose. */
+    private val emptyTrashDir: (File) -> Boolean = { removeTree(it) },
 ) {
     val mirrorsDir = File(root, "mirrors")
     val workstreamsDir = File(root, "workstreams")
@@ -581,7 +585,7 @@ class AgentWorkspaces(
             try {
                 clones.forEach { (repo, dir) ->
                     val target = File(trash, repo.name)
-                    if (!dir.renameTo(target)) throw IOException("Could not move $dir aside")
+                    if (!moveAside(dir, target)) throw IOException("Could not move $dir aside")
                     moved.add(dir to target)
                 }
             } catch (e: IOException) {
@@ -593,7 +597,7 @@ class AgentWorkspaces(
                 } catch (e: IOException) {
                     undo(e)
                 }
-            if (!deleteTree(trash)) Log.w(TAG) { "Could not empty $trash; it goes with the next free or delete" }
+            if (!emptyTrashDir(trash)) Log.w(TAG) { "Could not empty $trash; it goes with the next free or delete" }
             freed
         }
 

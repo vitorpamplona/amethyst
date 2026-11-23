@@ -521,6 +521,8 @@ class ClaudeChatTest {
                         }
                     }
                 val started = CopyOnWriteArrayList<ClaudeCodeOptions>()
+                // The scope each start was given: what this is about, whatever git does with it (PushGuardTest).
+                val scopes = CopyOnWriteArrayList<PushScope>()
 
                 fun chat(
                     sessionId: String?,
@@ -547,6 +549,10 @@ class ClaudeChatTest {
                         inspectGit = { null },
                         workstreamOf = { workspace },
                         pushScopes = store,
+                        pushRulesFor = { _, scope ->
+                            scopes.add(scope)
+                            PushGuard.PushRules(emptyMap(), guarded = true, scope = scope)
+                        },
                     )
                 }
 
@@ -576,12 +582,7 @@ class ClaudeChatTest {
                 settle { started.size == 2 }
                 val again = started[1]
                 assertTrue(again.commandGuard != null, "a resumed guarded session started unguarded")
-                val hook =
-                    again.environment.entries
-                        .single { it.value == "hook.${PushGuard.GUARD_NAME}.command" }
-                        .key
-                        .replace("KEY", "VALUE")
-                assertTrue(again.environment.getValue(hook).contains("own='agent/w'"), "the resumed session got a new scope")
+                assertEquals(listOf(first, first), scopes.toList(), "the resumed session got a new scope")
                 assertEquals(first, saved["s-1"])
                 chatScope.cancel()
             } finally {
