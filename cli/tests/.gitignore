@@ -19,3 +19,6 @@ chess/state-chess-ui/
 git/state-git-grasp/
 agents/state-agents-headless/
 buzz/state-buzz-relay-interop/
+relaygroup/state-relaygroup-relay29/
+dm/state-dm-nostr-tools/
+relaygroup/state-relaygroup-zooid/
