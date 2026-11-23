@@ -29,9 +29,11 @@ import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 
 /** What the app shows outside the devices screen: one prompt at a time, the most urgent first. */
@@ -112,12 +114,9 @@ class DeviceGroupAttentionState {
 
     fun linkScreenClosed() = _openLinkScreens.update { (it - 1).coerceAtLeast(0) }
 
-    fun attention(snapshot: MarmotDevicesSnapshot): DeviceGroupAttention =
-        DeviceGroupAttention.of(
-            snapshot,
-            _dismissedRequests.value,
-            _dismissedSignIns.value,
-            _unlinkedDismissed.value,
-            _openLinkScreens.value > 0,
-        )
+    /** What the app should prompt for, as [snapshots] and what was dismissed change. */
+    fun attention(snapshots: Flow<MarmotDevicesSnapshot>): Flow<DeviceGroupAttention> =
+        combine(snapshots, _dismissedRequests, _dismissedSignIns, _unlinkedDismissed, _openLinkScreens) { snapshot, requests, signIns, unlinked, screens ->
+            DeviceGroupAttention.of(snapshot, requests, signIns, unlinked, screens > 0)
+        }
 }

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.marmot.WelcomeDelivery
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
@@ -662,18 +663,7 @@ class AccountMarmotActions(
         }
         // One Welcome per added KeyPackage, each naming the KeyPackage event it consumed.
         for (welcomeDelivery in welcomeDeliveries) {
-            val computed = account.broadcaster.computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
-            val recipientInbox =
-                account.cache
-                    .getOrCreateUser(memberPubKey)
-                    .dmInboxRelays()
-                    .orEmpty()
-            val relayList = computed + account.outboxRelays.flow.value + recipientInbox
-            Log.d("MarmotDbg") {
-                "addMarmotGroupMember: welcome gift wrap relay sources " +
-                    "computeRelayListToBroadcast=${computed.size} myOutbox=${account.outboxRelays.flow.value.size} " +
-                    "recipientInbox=${recipientInbox.size} → union=${relayList.size}"
-            }
+            val relayList = welcomeRelays(welcomeDelivery)
             if (relayList.isEmpty()) {
                 Log.w("MarmotDbg") {
                     "addMarmotGroupMember: NO relays to deliver welcome gift wrap to ${memberPubKey.take(8)}… — welcome will be silently dropped"
@@ -687,6 +677,19 @@ class AccountMarmotActions(
             account.client.publish(welcomeDelivery.giftWrapEvent, relayList)
         }
     }
+
+    /**
+     * Where an invitee's Welcome goes: the NIP-17 DM path ([Account.computeRelayListToBroadcast],
+     * with its kind 10050 → NIP-65 read → hint fallbacks), plus this account's outbox and the
+     * recipient's DM inbox in case the cache has not loaded that contact yet.
+     */
+    fun welcomeRelays(delivery: WelcomeDelivery): Set<NormalizedRelayUrl> =
+        account.broadcaster.computeRelayListToBroadcast(delivery.giftWrapEvent) +
+            account.outboxRelays.flow.value +
+            account.cache
+                .getOrCreateUser(delivery.recipientPubKey)
+                .dmInboxRelays()
+                .orEmpty()
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.

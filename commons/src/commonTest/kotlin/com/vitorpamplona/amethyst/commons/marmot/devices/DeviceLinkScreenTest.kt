@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.NewDeviceLinkStat
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.SasSymbol
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.SignIn
 import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager.SignInClass
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -177,16 +180,18 @@ class DeviceGroupAttentionTest {
     }
 
     @Test
-    fun theStateHolderRemembersWhatWasDismissed() {
-        val holder = DeviceGroupAttentionState()
-        val s = MarmotDevicesSnapshot(prompts = listOf(DeviceLinkPrompt(a, null, 100, DeviceLinkPrompt.State.Preparing)))
-        assertEquals(a, holder.attention(s).linkRequest?.sessionId)
-        holder.linkScreenOpened()
-        assertNull(holder.attention(s).linkRequest)
-        holder.linkScreenClosed()
-        holder.linkScreenClosed()
-        assertEquals(0, holder.openLinkScreens.value)
-        holder.dismissRequest(a)
-        assertNull(holder.attention(s).linkRequest)
-    }
+    fun theStateHolderRemembersWhatWasDismissed() =
+        runTest {
+            val holder = DeviceGroupAttentionState()
+            val s = MarmotDevicesSnapshot(prompts = listOf(DeviceLinkPrompt(a, null, 100, DeviceLinkPrompt.State.Preparing)))
+            val attention = holder.attention(flowOf(s))
+            assertEquals(a, attention.first().linkRequest?.sessionId)
+            holder.linkScreenOpened()
+            assertNull(attention.first().linkRequest)
+            holder.linkScreenClosed()
+            holder.linkScreenClosed()
+            assertEquals(0, holder.openLinkScreens.value)
+            holder.dismissRequest(a)
+            assertNull(attention.first().linkRequest)
+        }
 }

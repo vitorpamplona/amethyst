@@ -52,16 +52,7 @@ class AccountMarmotDevicesTransport(
 
     override suspend fun publishToSelf(wrap: GiftWrapEvent): Boolean = account.client.publishAndConfirm(wrap, ownInbox(), untilFirstAccept = true)
 
-    override suspend fun publishWelcome(delivery: WelcomeDelivery): Boolean {
-        val relays =
-            account.computeRelayListToBroadcast(delivery.giftWrapEvent) +
-                account.outboxRelays.flow.value +
-                account.cache
-                    .getOrCreateUser(delivery.recipientPubKey)
-                    .dmInboxRelays()
-                    .orEmpty()
-        return account.client.publishAndConfirm(delivery.giftWrapEvent, relays, untilFirstAccept = true)
-    }
+    override suspend fun publishWelcome(delivery: WelcomeDelivery): Boolean = account.client.publishAndConfirm(delivery.giftWrapEvent, account.marmot.welcomeRelays(delivery), untilFirstAccept = true)
 
     override suspend fun publishKeyPackage(event: KeyPackageEvent): Boolean {
         account.cache.justConsumeMyOwnEvent(event)

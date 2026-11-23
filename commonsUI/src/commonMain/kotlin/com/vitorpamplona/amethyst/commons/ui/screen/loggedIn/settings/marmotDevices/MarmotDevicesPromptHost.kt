@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.flow.combine
 
 /**
  * The device-group prompts that can show on any screen, one at a time: a sibling's link request
@@ -71,18 +70,7 @@ fun MarmotDevicesPromptHost(
             factory = MarmotDevicesViewModel.Factory(accountViewModel.account),
         )
     val attentionState = accountViewModel.marmotDeviceAttention
-    val attentionFlow =
-        remember(devices, attentionState) {
-            combine(
-                devices.state,
-                attentionState.dismissedRequests,
-                attentionState.dismissedSignIns,
-                attentionState.unlinkedDismissed,
-                attentionState.openLinkScreens,
-            ) { snapshot, requests, signIns, unlinked, screens ->
-                DeviceGroupAttention.of(snapshot, requests, signIns, unlinked, screens > 0)
-            }
-        }
+    val attentionFlow = remember(devices, attentionState) { attentionState.attention(devices.state) }
     val attention by attentionFlow.collectAsStateWithLifecycle(DeviceGroupAttention.NONE)
 
     MarmotDevicesPrompts(
