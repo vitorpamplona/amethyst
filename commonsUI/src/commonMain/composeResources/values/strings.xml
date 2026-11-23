@@ -10416,7 +10416,7 @@
         <item quantity="other">%1$d not used in %2$d days</item>
     </plurals>
     <string name="claude_code_storage_auto">Clean up on its own</string>
-    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, free its clones, unless something in them is not committed. Its commits are kept, and its next message brings the clones back. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, free its clones, unless something in them is not committed. Archiving a workstream’s last conversation frees them too. Its commits are kept, and its next message brings the clones back. Mirrors not used in %1$d days go too. Conversations stay.</string>
     <string name="claude_code_storage_finished">Finished workstreams</string>
     <string name="claude_code_storage_none_finished">None yet: a workstream is finished when every repository’s pull request is merged or closed.</string>
     <string name="claude_code_storage_unsaved">Kept: work not committed</string>

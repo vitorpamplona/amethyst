@@ -437,6 +437,7 @@ class ClaudeCodeServiceTest {
             git(repo, "commit", "--quiet", "-m", "work")
             val session = "33333333-2222-3333-4444-555555555555"
             sessionIn(session, ws.dir)
+            service.setAutoCleanup(true)
             service.refresh()
 
             service.archive(service.rows.value.single { it.sessionId == session }, true)
@@ -522,6 +523,7 @@ class ClaudeCodeServiceTest {
             sessionIn(first, ws.dir)
             sessionIn(second, ws.dir)
             service.refresh()
+            service.setAutoCleanup(true)
             val repo = File(ws.dir, ws.repos.single().name)
 
             service.archive(service.rows.value.single { it.sessionId == first }, true)
