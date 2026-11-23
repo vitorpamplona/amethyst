@@ -152,6 +152,11 @@ abstract class Channel :
         if ((note.createdAt() ?: 0L) > (lastNote?.createdAt() ?: 0L)) {
             lastNote = note
         }
+        // [addNote]'s Addition reached an open channel feed before the event, so the feed sorted the
+        // note as created at 0: a live message landed at the top of the timeline, above every older
+        // one, until the channel was reopened. Announce it again now that it has a timestamp; the
+        // feed merges it by id and re-sorts.
+        changesFlow?.get()?.tryEmit(ListChange.Addition(note))
         flowSet?.notes?.invalidateData()
     }
 

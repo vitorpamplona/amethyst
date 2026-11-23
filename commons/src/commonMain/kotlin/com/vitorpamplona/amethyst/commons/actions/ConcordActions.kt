@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -36,12 +38,14 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
@@ -64,12 +68,15 @@ import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -94,6 +101,12 @@ data class ChannelPlane(
     val channelIdHex: HexKey,
     val epoch: Long,
     val key: GroupKey,
+    /**
+     * Set on a restricted Channel's **writer address** (CORD-03 §1): the writer epoch its rumors must
+     * commit (`wepoch`). The [key] then carries the writer address as its public key and the Channel's
+     * read conversation key, and no secret: this account reads there, it never signs or AUTHs as it.
+     */
+    val writerEpoch: Long? = null,
 )
 
 /** A [ChannelPlane] at a prior epoch (pre-Refounding history). */
@@ -162,7 +175,36 @@ object ConcordActions {
         communityRoot: ByteArray,
         channelId: ByteArray,
         rootEpoch: Long,
-    ): GroupKey = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+    ): GroupKey = memoized(MEMO_PUBLIC, communityRoot, channelId, rootEpoch) { ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch) }
+
+    /** [ConcordChannelKeys.privateChannel], memoized like [publicChannel]. */
+    fun privateChannel(
+        channelKey: ByteArray,
+        channelId: ByteArray,
+        channelEpoch: Long,
+    ): GroupKey = memoized(MEMO_PRIVATE, channelKey, channelId, channelEpoch) { ConcordChannelKeys.privateChannel(channelKey, channelId, channelEpoch) }
+
+    // Every Control refold (one per control wrap) re-derives each Channel's planes, its writer and
+    // access planes, and the key of every sealed Private Channel head; each derivation costs EC ops
+    // (the address and the NIP-44 conversation key). The inputs rarely change, so the keys are held,
+    // bounded, by what they derive from.
+    private const val MEMO_PUBLIC = "p"
+    private const val MEMO_PRIVATE = "k"
+    private const val MEMO_ACCESS = "a"
+    private const val MAX_PLANE_KEYS = 1024
+    private val planeKeys = LruCache<String, GroupKey>(MAX_PLANE_KEYS)
+
+    private inline fun memoized(
+        kind: String,
+        secret: ByteArray,
+        channelId: ByteArray,
+        epoch: Long,
+        derive: () -> GroupKey,
+    ): GroupKey {
+        val key = kind + sha256(secret + channelId).toHexKey() + epoch
+        planeKeys[key]?.let { return it }
+        return derive().also { planeKeys.put(key, it) }
+    }
 
     private val HEX64 = Regex("^[0-9a-fA-F]{64}$")
 
@@ -194,7 +236,7 @@ object ConcordActions {
         val channelId = channelIdHex.hexToByteArray()
         if (isPrivate) {
             val held = heldPrivateChannelKey(entry, channelIdHex) ?: return null
-            return ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
+            return ChannelPlane(channelIdHex, held.epoch, privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
         }
         return ChannelPlane(channelIdHex, entry.rootEpoch, publicChannel(entry.root.hexToByteArray(), channelId, entry.rootEpoch))
     }
@@ -213,6 +255,75 @@ object ConcordActions {
     }
 
     /**
+     * The writer addresses of every restricted Channel of [state] this account can read (CORD-03 §1,
+     * §3): for each live or retired window of each Writers ledger, one plane per read key this
+     * account holds for the Channel, current first. A writer wrap is encrypted under the read key in
+     * force when it was posted and commits that key's `["epoch", n]`, so a window that outlived a
+     * Refounding (a Public Channel's older roots) or a channel rekey (a Private Channel's older keys)
+     * still opens under the key of its own era (Armada `writerStreams`). Several planes share one
+     * address; a reader subscribes each address once and tries its planes in order.
+     */
+    fun writerPlanes(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+    ): List<ChannelPlane> =
+        state.writers.flatMap { (channelIdHex, ledger) ->
+            val def = state.channels[channelIdHex]?.definition ?: return@flatMap emptyList()
+            val current = currentChannelPlane(entry, channelIdHex, def.private) ?: return@flatMap emptyList()
+            val reads = listOf(current) + writerReadEras(entry, channelIdHex, def.private)
+            ledger.windows.flatMap { w ->
+                val address = w.writerPubKey.hexToByteArray()
+                reads.map { read -> ChannelPlane(channelIdHex, read.epoch, GroupKey(ByteArray(0), address, read.key.conversationKey), writerEpoch = w.epoch) }
+            }
+        }
+
+    /**
+     * The older read keys a writer window of [channelIdHex] may have been posted under: a Public
+     * Channel's planes under each held prior root, a Private Channel's under each older channel key
+     * the entry carries. Never a public channel's private-era key, nor the root-derived plane for a
+     * Private Channel, the same split [historicalChannelPlanes] makes.
+     */
+    private fun writerReadEras(
+        entry: ConcordCommunityListEntry,
+        channelIdHex: HexKey,
+        isPrivate: Boolean,
+    ): List<ChannelPlane> {
+        if (!isPrivate) return historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
+        val channelId = channelIdHex.hexToByteArray()
+        return ConcordChannelKeyring.historicalKeys(entry, channelIdHex).map { old ->
+            ChannelPlane(channelIdHex, old.epoch, privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
+        }
+    }
+
+    /**
+     * The access planes (CORD-03 §5) of every live Private Channel of a Roles v2 [state], where a
+     * member the fold entitles collects the keys it lacks. Keyed by address; the value names the channel.
+     */
+    fun accessPlanes(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+    ): Map<HexKey, Pair<HexKey, GroupKey>> {
+        if (!state.isRolesV2) return emptyMap()
+        val root = entry.root.hexToByteArray()
+        return state.privateChannelIds.associate { channelIdHex ->
+            val channelId = channelIdHex.hexToByteArray()
+            val plane = memoized(MEMO_ACCESS, root, channelId, entry.rootEpoch) { ConcordChannelAccess.plane(root, channelId, entry.rootEpoch) }
+            plane.publicKeyHex to (channelIdHex to plane)
+        }
+    }
+
+    /**
+     * The conversation key of [entry]'s held key for a Private Channel at a given epoch, current or
+     * older, so a fold opens the Channel's sealed metadata (CORD-03 §2); null when none is held.
+     */
+    fun channelConversationKeys(entry: ConcordCommunityListEntry): (HexKey, Long) -> ByteArray? =
+        { channelIdHex, epoch ->
+            val held = heldPrivateChannelKey(entry, channelIdHex)?.takeIf { it.epoch == epoch }
+            val key = held?.key ?: ConcordChannelKeyring.historicalKeys(entry, channelIdHex).firstOrNull { it.epoch == epoch }?.key
+            key?.let { privateChannel(it.hexToByteArray(), channelIdHex.hexToByteArray(), epoch).conversationKey }
+        }
+
+    /**
      * The older Chat Planes of a channel this account can still read, beside [currentChannelPlane]:
      *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus every
      *    private-era plane a channel key is held for (a channel that was Private before);
@@ -229,13 +340,13 @@ object ConcordActions {
         val channelId = channelIdHex.hexToByteArray()
         val olderKeys =
             ConcordChannelKeyring.historicalKeys(entry, channelIdHex).map { old ->
-                ChannelPlane(channelIdHex, old.epoch, ConcordChannelKeys.privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
+                ChannelPlane(channelIdHex, old.epoch, privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
             }
         if (isPrivate) return olderKeys
         val rootEras = historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
         val privateEra =
             heldPrivateChannelKey(entry, channelIdHex)?.let { held ->
-                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
+                ChannelPlane(channelIdHex, held.epoch, privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
             }
         return rootEras + listOfNotNull(privateEra) + olderKeys
     }
@@ -428,6 +539,26 @@ object ConcordActions {
         createdAt: Long,
     ): Event = wrapChat(ConcordDisappearing.timerNotice(authorSigner.pubKey, channelId, epoch, timerSecs, createdAt), channel, authorSigner)
 
+    /**
+     * The `p` tags a Concord message carries for the users it [mentioned]: one each, lowercase,
+     * never the [author] and never one [alreadyTagged] (a reply already credits its parent's author).
+     * A mention is found by its `p`, by Armada and by this app's Notifications alike, so a message
+     * that cites someone without one notifies nobody.
+     */
+    fun mentionTags(
+        mentioned: Collection<HexKey>,
+        author: HexKey,
+        alreadyTagged: Set<HexKey> = emptySet(),
+    ): Array<Array<String>> {
+        val skip = alreadyTagged.mapTo(HashSet()) { it.lowercase() } + author.lowercase()
+        return mentioned
+            .map { it.lowercase() }
+            .distinct()
+            .filter { it !in skip }
+            .map { arrayOf("p", it) }
+            .toTypedArray()
+    }
+
     /** Builds an encrypted-seal channel message wrap to publish on the [channel] plane. */
     suspend fun buildChannelMessage(
         authorSigner: NostrSigner,
@@ -558,6 +689,37 @@ object ConcordActions {
         return wrapChat(rumor, channel, authorSigner)
     }
 
+    /**
+     * Builds a moderator's hide of other members' [targets] (CORD-03 §3): the same sealed kind 5 a
+     * member deletes their own message with, plus the `vac` citation of the Grant that gives the
+     * hider MANAGE_MESSAGES (none for the owner, who cites nothing). Readers keep it apart from a
+     * self-delete and honor it only while the hider holds the bit and outranks the author.
+     */
+    suspend fun buildChannelModerationHide(
+        moderatorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        targets: List<Event>,
+        citation: AuthorityCitation?,
+        createdAt: Long,
+    ): Event {
+        val delete = ChannelChat.delete(moderatorSigner.pubKey, channelId, epoch, targets, createdAt)
+        val rumor =
+            if (citation == null) {
+                delete
+            } else {
+                RumorAssembler.assembleRumor<DeletionRequestEvent>(
+                    pubKey = delete.pubKey,
+                    createdAt = delete.createdAt,
+                    kind = delete.kind,
+                    tags = delete.tags + arrayOf(VacTag.assemble(citation)),
+                    content = delete.content,
+                )
+            }
+        return wrapChat(rumor, channel, moderatorSigner)
+    }
+
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
     suspend fun buildChannelReaction(
         authorSigner: NostrSigner,
@@ -649,7 +811,11 @@ object ConcordActions {
         channelId: HexKey,
         epoch: Long,
         kinds: Set<Int> = ChannelChat.CHAT_KINDS,
-    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch, kinds) }
+        writerEpoch: Long? = null,
+    ): Event? =
+        ConcordStreamEnvelope.openOrNull(wrap, channel.publicKeyHex, channel.conversationKey)?.let {
+            if (writerEpoch != null) ChannelChat.acceptWriterOpened(it, channelId, epoch, writerEpoch, kinds) else ChannelChat.acceptOpened(it, channelId, epoch, kinds)
+        }
 
     // ---- invites --------------------------------------------------------------
 
@@ -776,11 +942,17 @@ object ConcordActions {
      * their kind-10050 DM relays, else their NIP-65 read relays, else the stock Concord set every
      * client ships (Armada `inviteDeliveryRelays`). Send and scan share this so both sides meet. The
      * stock set is fallback-only: a curated private inbox is never also fanned out to public relays.
+     *
+     * [fallback] replaces the stock set when the caller runs somewhere the public relays must not
+     * be reached (an offline test, a private deployment).
      */
-    fun directInviteDeliveryRelays(lists: RecipientRelayFetcher.Lists?): Set<NormalizedRelayUrl> {
+    fun directInviteDeliveryRelays(
+        lists: RecipientRelayFetcher.Lists?,
+        fallback: Set<NormalizedRelayUrl>? = null,
+    ): Set<NormalizedRelayUrl> {
         val inbox = lists?.dmInboxOrFallback().orEmpty()
         if (inbox.isNotEmpty()) return inbox.toSet()
-        return InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        return fallback ?: InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
     }
 
     /** Mints a shareable public invite link + bundle event (see [ConcordInviteBundle.mintLink]). */

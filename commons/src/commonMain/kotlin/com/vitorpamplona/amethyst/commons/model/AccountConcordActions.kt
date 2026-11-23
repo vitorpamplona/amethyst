@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
+import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordAccessDrain
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -46,8 +48,11 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
@@ -64,7 +69,10 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteExc
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeException
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelDelivery
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelAccess
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -86,6 +94,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordRootAuthentication
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord06Rekey.ChannelRekeyOutcome
@@ -110,6 +119,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -120,8 +130,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -213,6 +225,15 @@ class AccountConcordActions(
         fetchedWraps: List<Event> = emptyList(),
         readmit: Boolean = false,
     ): Boolean {
+        // The List write below first waits for the List to load: a drain of every stock and outbox
+        // relay that takes ~30 s on a real network. The joiner would stare at an empty hub for all
+        // of it, so a fresh join the List can't take yet is shown at once from the entry we hold,
+        // and made durable in the background. Its own relays were already reached for the bundle
+        // and the Control Plane, so nothing the screen needs waits on the stock relays.
+        if (!readmit && !account.concordChannelList.relaysConfirmed) {
+            joinConcordCommunityOptimistically(entry, inviteCreator, inviteLabel, fetchedWraps)
+            return true
+        }
         // False when the List could not take the membership (not loaded, or every held fragment is
         // full while others are missing, CORD-02 §8). Callers must say so: the community would
         // otherwise look joined now and be gone after a restart.
@@ -233,6 +254,76 @@ class AccountConcordActions(
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
         return true
     }
+
+    /**
+     * [joinConcordCommunity] for a List that has not loaded yet: the community shows (and its
+     * session folds [fetchedWraps]) right away, as a pending join, while the List write and the
+     * Guestbook JOIN wait for the List in the account's scope. If the write fails the community is
+     * taken back out and [concordJoinFailures] says so: it would otherwise look joined now and be
+     * gone after a restart.
+     */
+    private suspend fun joinConcordCommunityOptimistically(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+        fetchedWraps: List<Event>,
+    ) {
+        val list = account.concordChannelList
+        list.addPendingJoin(entry)
+        awaitConcordSession(entry.id)
+        fetchedWraps.forEach { account.concordSessions.ingest(it) }
+        val save =
+            account.scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                savePendingJoin(entry, inviteCreator, inviteLabel)
+            }
+        pendingJoinSaves.merge(entry.id, save) { previous, next -> next.also { previous.cancel() } }
+        save.invokeOnCompletion { pendingJoinSaves.remove(entry.id, save) }
+        save.start()
+    }
+
+    /**
+     * The background half of [joinConcordCommunityOptimistically]. A leave ([leaveConcordCommunity])
+     * cancels it and drops the pending join, and every step that would make the membership real
+     * re-checks that the join is still pending: the List write ([ConcordChannelListState.followPendingJoin]
+     * decides inside the write lock) and the Guestbook JOIN. Without that, a leave during the save
+     * re-joined the community, or announced JOIN after the LEAVE.
+     */
+    private suspend fun savePendingJoin(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ) {
+        val list = account.concordChannelList
+        val persisted =
+            try {
+                writeConcordList { it.followPendingJoin(entry).orEmpty() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("Concord", "Community List write for ${entry.id} failed", e)
+                false
+            }
+        // Left while the List loaded: nothing was written, and nothing is announced or reported.
+        if (!list.isPendingJoin(entry.id)) return
+        if (persisted) {
+            // Hand over to the written entry before letting go of the pending one, or the
+            // community would vanish for a beat and its session be torn down and rebuilt.
+            withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
+            if (!list.isPendingJoin(entry.id)) return
+            list.dropPendingJoin(entry.id)
+            announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+        } else {
+            list.dropPendingJoin(entry.id)
+            _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
+        }
+    }
+
+    /** The background save of each pending join, by community id, so a leave can cancel it. */
+    private val pendingJoinSaves = ConcurrentMap<HexKey, Job>()
+
+    private val _concordJoinFailures = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** Names of communities whose background join (see [joinConcordCommunity]) could not be saved. */
+    val concordJoinFailures: SharedFlow<String> = _concordJoinFailures.asSharedFlow()
 
     /** The community's current name: its folded metadata, else the name it was joined under. */
     private fun currentConcordName(
@@ -498,6 +589,42 @@ class AccountConcordActions(
     }
 
     /**
+     * Retires [links] of [entry]'s community in one pass: a confirmed revocation tombstone at each
+     * link's coordinate (in parallel), then ONE invite-list write recording the tombstones that
+     * landed and ONE registry edit dropping their signers. [entry] is the post-rotation entry, passed
+     * in: re-read from the List right after adopting a new root it is still the old epoch's, or not
+     * there yet, and the registry edit was then skipped. Returns the links retired on the wire.
+     */
+    private suspend fun retireConcordInviteLinks(
+        entry: ConcordCommunityListEntry,
+        relays: Set<NormalizedRelayUrl>,
+        links: List<ConcordInviteListEntry>,
+    ): List<ConcordInviteListEntry> {
+        val now = TimeUtils.now()
+        val retired =
+            coroutineScope {
+                links
+                    .map { link ->
+                        async {
+                            val published =
+                                runCatchingCancellable {
+                                    account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), now), relays)
+                                }.onFailure { Log.w("Concord", "invite revocation failed for ${entry.id}", it) }.getOrDefault(false)
+                            link.takeIf { published }
+                        }
+                    }.awaitAll()
+                    .filterNotNull()
+            }
+        if (retired.isEmpty()) return retired
+        val recorded = publishConcordInviteList(ConcordInviteListDocument(tombstones = retired.map { ConcordInviteListTombstone(token = it.token, communityId = entry.id) }))
+        if (recorded == null) {
+            Log.w("Concord") { "Retired ${retired.size} links of ${entry.id} on the wire but could not tombstone them in the invite list; a later revoke will record them" }
+        }
+        publishConcordInviteRegistry(entry, recorded, retired = retired.map { it.signerPubKeyHex().lowercase() })
+        return retired
+    }
+
+    /**
      * Re-posts every live link this account minted for [entry]'s community at its own coordinate,
      * carrying [entry]'s epoch (CORD-05). The kind-33301 bundle is addressable and authored by the
      * link signer, so this moves the link behind the same URL instead of orphaning it at a dead
@@ -512,7 +639,10 @@ class AccountConcordActions(
      * coordinate whose newest event is a revocation tombstone is left alone: re-posting a live
      * bundle over it would silently un-revoke the link.
      */
-    private suspend fun refreshConcordInviteLinks(entry: ConcordCommunityListEntry): Int {
+    private suspend fun refreshConcordInviteLinks(
+        entry: ConcordCommunityListEntry,
+        severed: Boolean = false,
+    ): Int {
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
         if (relays.isEmpty()) return 0
         val list = readConcordInviteList() ?: return 0
@@ -521,7 +651,20 @@ class AccountConcordActions(
 
         // An elapsed or retired link can no longer be joined; re-posting it would only resurrect a
         // dead URL at a live epoch.
-        val links = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        val live = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        // A Severing Refounding (CORD-06 §3): every link minted under an older epoch is retired, never
+        // refreshed into the new one, so whoever came in through that door can't walk back in.
+        val links =
+            if (severed) {
+                val (cut, kept) = live.partition { it.isSeveredBy(entry.rootEpoch) }
+                if (cut.isNotEmpty()) {
+                    val retired = retireConcordInviteLinks(entry, relays, cut)
+                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired ${retired.size} of ${cut.size} invite links minted under older epochs" }
+                }
+                kept
+            } else {
+                live
+            }
         if (links.isEmpty()) return 0
 
         // One REQ for every link's bundle rather than a round trip each. This runs inside the
@@ -623,7 +766,7 @@ class AccountConcordActions(
                                 communityId = entry.id,
                                 url = minted.url,
                                 createdAt = TimeUtils.now(),
-                            ),
+                            ).withEpoch(entry.rootEpoch),
                         ),
                 ),
             )
@@ -683,6 +826,9 @@ class AccountConcordActions(
     suspend fun revokeConcordInvite(
         communityId: String,
         token: String,
+        // False when the Refounding that makes the community Private has already happened (a
+        // Severing Refounding retiring its links, CORD-06 §3): nothing further rotates.
+        refoundIfPrivatized: Boolean = true,
     ): ConcordRevokeResult {
         if (!account.isWriteable()) return ConcordRevokeResult.FAILED
         val entry =
@@ -723,7 +869,7 @@ class AccountConcordActions(
         }
         publishConcordInviteRegistry(entry, recorded, retired = listOf(signer))
 
-        if (!privatizes) return ConcordRevokeResult.REVOKED
+        if (!privatizes || !refoundIfPrivatized) return ConcordRevokeResult.REVOKED
         // The last live link is gone: the community is Private now, and whoever already fetched a
         // link holds the current root. CORD-05 §2/§5: this is a Refounding (CORD-06 §3, "converting a
         // Public Community to Private"), which re-keys the members and leaves the lurkers behind.
@@ -742,6 +888,10 @@ class AccountConcordActions(
      */
     suspend fun leaveConcordCommunity(communityId: String): Boolean {
         val entry = account.concordSessions.sessionFor(communityId)?.entry
+        // A join still being saved in the background must not land after this leave: stop it, and
+        // drop the pending join first, so a save already inside the List write sees it is gone.
+        pendingJoinSaves.remove(communityId)?.cancel()
+        account.concordChannelList.dropPendingJoin(communityId)
         if (entry != null && account.isWriteable()) {
             val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
             if (relays.isNotEmpty()) {
@@ -910,6 +1060,14 @@ class AccountConcordActions(
         ) { event, _ -> planeWraps.add(event) }
         val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
         if (joinEditions.isEmpty()) return ConcordInviteResult.NotReachable
+        // CORD-05 §1 (genesis anchor): the delivered root must open the owner's genesis metadata (or,
+        // past a Refounding, the Community-bound metadata head plus an owner-signed edition). A bundle
+        // pairing a real Community's identity with a forged root fails here and is refused as invalid.
+        when (ConcordRootAuthentication.verify(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner, bundle.rootEpoch)) {
+            ConcordRootAuthentication.Verdict.AUTHENTIC -> Unit
+            ConcordRootAuthentication.Verdict.DEFER -> return ConcordInviteResult.NotReachable
+            ConcordRootAuthentication.Verdict.REFUSED -> return ConcordInviteResult.InvalidLink
+        }
         if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(account.signer.pubKey)) {
             return ConcordInviteResult.Banned
         }
@@ -970,6 +1128,9 @@ class AccountConcordActions(
      * to say why, so an invite being accepted is hidden. A failed accept puts it back.
      */
     private val acceptingConcordDirectInvites = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /** Wrap ids of the Direct Invites being accepted right now; a hub shows "joining" meanwhile. */
+    val joiningConcordDirectInvites: StateFlow<Set<HexKey>> = acceptingConcordDirectInvites.asStateFlow()
 
     /**
      * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
@@ -1275,15 +1436,19 @@ class AccountConcordActions(
         val plane = session.currentChannelPlane(channelIdHex) ?: return false
         val channelKey = plane.key
 
+        val parent = replyTo?.event
+        // @-mentions become NIP-27 references and notify who they name (see [tagConcordMentions]);
+        // the reply builders below already credit the parent's author.
+        val (body, mentionTags) = tagConcordMentions(text, setOfNotNull(parent?.pubKey))
+
         // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
         // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
         val emojiTags =
             account.emoji
-                .findEmojiTags(text)
+                .findEmojiTags(body)
                 .map { it.toTagArray() }
-                .toTypedArray()
+                .toTypedArray() + mentionTags
 
-        val parent = replyTo?.event
         // CORD-08 §2: the community timer as folded right now rides inside the signed rumor.
         val timer = session.messageExpirationSecs()
         val wrap =
@@ -1292,13 +1457,13 @@ class AccountConcordActions(
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, imetas, TimeUtils.now(), emojiTags, timer)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, TimeUtils.now(), emojiTags, timer)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, body, TimeUtils.now(), emojiTags, timer)
                 else ->
-                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags, timer)
+                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, body, TimeUtils.now(), emojiTags, timer)
             }
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
@@ -1322,15 +1487,31 @@ class AccountConcordActions(
         val entry = session.entry
         val plane = session.currentChannelPlane(channelIdHex) ?: return false
         val channelKey = plane.key
+        val (body, mentionTags) = tagConcordMentions(text)
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags =
             account.emoji
-                .findEmojiTags(text)
+                .findEmojiTags(body)
                 .map { it.toTagArray() }
-                .toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
+                .toTypedArray() + mentionTags
+        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, body, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
+    }
+
+    /**
+     * Runs the composer's [NewMessageTagger] over a Concord message: an `@npub` the mention picker
+     * inserted (or a bare `npub`) becomes a NIP-27 `nostr:` reference, and everyone the text cites
+     * gets a `p` tag ([ConcordActions.mentionTags]). Every Concord client (Armada, this app's
+     * Notifications) finds a mention by that `p`, so without it nobody was ever notified.
+     */
+    private suspend fun tagConcordMentions(
+        text: String,
+        alreadyTagged: Set<HexKey> = emptySet(),
+    ): Pair<String, Array<Array<String>>> {
+        val tagger = NewMessageTagger(text, dao = account.cache).also { it.run() }
+        val cited = tagger.pTags.orEmpty().map { it.pubkeyHex }
+        return tagger.message to ConcordActions.mentionTags(cited, account.signer.pubKey, alreadyTagged)
     }
 
     /**
@@ -1445,6 +1626,52 @@ class AccountConcordActions(
         // members at once, but a future member learns of it only through an omitting edition. The
         // author knows their own pins, so when they may write pins they publish it immediately.
         if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
+        return sent
+    }
+
+    /**
+     * True when this account may hide [note], someone else's Concord message, for every member as a
+     * moderator (CORD-03 §3): the fold would honor our hide over its author, so we hold
+     * MANAGE_MESSAGES there (or own the community) and strictly outrank them.
+     */
+    fun canHideConcordMessage(note: Note): Boolean {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        val me = account.signer.pubKey
+        if (target.pubKey == me || !account.isWriteable()) return false
+        val state =
+            account.concordSessions
+                .sessionFor(channel.channelId.communityId)
+                ?.state
+                ?.value ?: return false
+        if (state.dissolved) return false
+        return state.honorsModerationHide(me, target.pubKey, channel.channelId.channelId, AuthorityCitations.forActor(state.authority, me))
+    }
+
+    /**
+     * Hides [notes], other members' messages in [channel], for every member (CORD-03 §3): a sealed
+     * kind 5 on the plane that carried each one, citing the Grant that lets us ([buildChannelModerationHide]).
+     * Only the notes [canHideConcordMessage] allows are named. Returns false when none was sent.
+     */
+    suspend fun hideConcordMessages(
+        channel: ConcordChannel,
+        notes: List<Note>,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(channel.channelId.communityId) ?: return false
+        val authority = session.state.value?.authority ?: return false
+        val channelIdHex = channel.channelId.channelId
+        val targets = notes.filter { canHideConcordMessage(it) }.mapNotNull { it.event }.distinctBy { it.id }
+        if (targets.isEmpty()) return false
+        val citation = AuthorityCitations.forActor(authority, account.signer.pubKey)
+        val current = session.currentChannelPlane(channelIdHex)
+        val byPlane = targets.groupBy { target -> target.tags.concordEpoch()?.let { session.channelPlaneFor(channelIdHex, it) } ?: current }
+        var sent = false
+        for ((plane, onPlane) in byPlane) {
+            if (plane == null) continue
+            val wrap = ConcordActions.buildChannelModerationHide(account.signer, plane.key, channelIdHex, plane.epoch, onPlane, citation, TimeUtils.now())
+            publishConcordWrap(session.entry, wrap)
+            sent = true
+        }
         return sent
     }
 
@@ -1656,6 +1883,83 @@ class AccountConcordActions(
         // Role-gated channel keys follow the Grant: vend what it opened, rotate what it closed.
         reconcileConcordChannelAccess(communityId, before)
         return true
+    }
+
+    /**
+     * Creates ([roleIdHex] null) or edits a legacy CORD-04 role: [name], [position] (1 and up, lower
+     * ranks higher) and [permissions]. The fold honors a role edition only from a MANAGE_ROLES
+     * holder who strictly outranks both the role's old and new position, and who holds every
+     * permission the role will carry, so anything else is refused here instead of published to be
+     * dropped. Permissions the editor lacks throw [ConcordNotice.RoleBitsNotHeld]; a Roles v2
+     * community refuses it with [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
+     */
+    suspend fun defineConcordRole(
+        communityId: String,
+        roleIdHex: String?,
+        name: String,
+        position: Long,
+        permissions: ConcordPermissions,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || position < 1) return false
+        val state = session.state.value ?: return false
+        val existing = roleIdHex?.let { state.roles[it] ?: return false }
+        if (!canEditConcordRole(state.authority, existing?.position, position)) return false
+        val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
+        val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
+        // The positions passed above, so the fold would drop it only for a bit its author does not hold.
+        if (!state.authority.canWriteRole(account.signer.pubKey, roleIdHex ?: roleId.toHexKey(), role)) {
+            throw UserNoticeException(ConcordNotice.RoleBitsNotHeld)
+        }
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val wrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleId, role, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        // A role's permissions can open or close a role-gated private channel, like a Grant.
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Deletes the legacy role [roleIdHex] (terminal, CORD-04 §2), under [defineConcordRole]'s rules. */
+    suspend fun deleteConcordRole(
+        communityId: String,
+        roleIdHex: String,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val state = session.state.value ?: return false
+        val existing = state.roles[roleIdHex] ?: return false
+        if (!canEditConcordRole(state.authority, existing.position, existing.position)) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
+        val wrap =
+            ConcordModeration.defineRole(
+                account.signer,
+                cp,
+                communityId.hexToByteArray(),
+                roleIdHex.hexToByteArray(),
+                existing.copy(deleted = true),
+                session.controlEditions(),
+                TimeUtils.now(),
+                owner = session.entry.owner,
+            )
+        val before = state.authority
+        publishConcordWrap(session.entry, wrap)
+        reconcileConcordChannelAccess(communityId, before)
+        return true
+    }
+
+    /** Whether this account may move a role from [oldPosition] (null for a new one) to [newPosition]. */
+    private fun canEditConcordRole(
+        authority: AuthorityResolver,
+        oldPosition: Long?,
+        newPosition: Long,
+    ): Boolean {
+        val me = account.signer.pubKey
+        if (!authority.hasPermission(me, ConcordPermissions.MANAGE_ROLES)) return false
+        val myRank = authority.rank(me) ?: return false
+        return ConcordRoleRules.canPlace(myRank, oldPosition, newPosition)
     }
 
     /**
@@ -1888,7 +2192,8 @@ class AccountConcordActions(
         if (session.state.value?.dissolved == true) return false
         val me = account.signer.pubKey
         val authority = session.state.value?.authority
-        if (authority != null && authority.rolesOf(member).isNotEmpty() &&
+        // Roles v2 (CORD-04 §2) has no legacy Grant to strip: the Kick alone departs them there.
+        if (authority != null && !authority.isRolesV2 && authority.rolesOf(member).isNotEmpty() &&
             (authority.isOwner(me) || authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES))
         ) {
             if (!grantConcordRole(communityId, member, emptyList())) {
@@ -2285,10 +2590,11 @@ class AccountConcordActions(
             return false
         }
         // The staff set the new secret goes to: the owner plus everyone holding a
-        // Control-writing bit (CORD-04 §3). They get the 136-byte blob, every other
-        // recipient the 104-byte one carrying the pubkey alone. (The builder mints a
-        // blob per recipient, so staff who aren't recipients are simply never reached.)
-        val staff = authority.staffMembers()
+        // Control-writing bit (CORD-04 §3), every recipient included when `@everyone`
+        // itself carries one. They get the 136-byte blob, every other recipient the
+        // 104-byte one carrying the pubkey alone. (The builder mints a blob per
+        // recipient, so staff who aren't recipients are simply never reached.)
+        val staff = authority.staffMembers(recipients)
         val build =
             try {
                 ConcordActions.buildRefounding(
@@ -2553,7 +2859,7 @@ class AccountConcordActions(
                     // who is merely re-keyed would otherwise leave every link they handed out pointing
                     // at the dead root.
                     adopted?.let { next ->
-                        val moved = refreshConcordInviteLinks(next)
+                        val moved = refreshConcordInviteLinks(next, severed = received.severed)
                         if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
                     }
                     continue
@@ -2733,7 +3039,8 @@ class AccountConcordActions(
      * below 1 (CORD-08 §1): a metadata edition under MANAGE_METADATA, laid over the folded metadata so
      * nothing else changes. Then, as §4 asks, one kind-1740 timer notice goes into every channel whose
      * key this account holds (a Private Channel without one simply gets none). Returns false when
-     * nothing was published (not authorized, no Control write key, or the timer is already [secs]).
+     * nothing was published (not authorized, no Control write key, no metadata folded yet, or the
+     * timer is already [secs]).
      */
     suspend fun setConcordMessageExpiration(
         communityId: String,
@@ -2745,7 +3052,9 @@ class AccountConcordActions(
         val timer = secs?.takeIf { it >= 1 }
         // Same rule as editConcordMetadata: never lay the timer over a head we were not served.
         val folded = session.foldForWrite() ?: return false
-        val standing = folded.metadata ?: MetadataEntity()
+        // The timer rides the metadata edition: over a fold with no metadata it would rename the
+        // community to "" for every reader (CORD-02 §6), so it waits for the metadata to fold.
+        val standing = folded.metadata ?: return false
         if (standing.messageExpirationSecs() == timer) return false
         val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner, floors = session.controlFloors())
         publishConcordWrap(session.entry, wrap)
@@ -3091,6 +3400,93 @@ class AccountConcordActions(
                 }
             }
         }
+    }
+
+    /**
+     * Collects the Private Channel keys delivered on each Channel's access plane (CORD-03 §5, Roles
+     * v2): a delivery whose deliverer the fold trusts, to a recipient it entitles (this account),
+     * at an epoch past the one held and at most 1024 ahead of it, hands us the Channel's key. A
+     * delivery is never a rotation: whatever it omits, it removes nobody (CORD-06 §1).
+     */
+    internal suspend fun drainConcordAccessDeliveries() {
+        if (!account.isWriteable()) return
+        val me = account.signer.pubKey.lowercase()
+        for (session in account.concordSessions.sessions()) {
+            val state = session.state.value ?: continue
+            if (state.dissolved || !state.isRolesV2) continue
+            // Each wrap is opened once by the session, and settled here for good once judged, so a
+            // drain on every structural tick costs nothing for deliveries already seen.
+            val opened = ArrayList<Pair<HexKey, AdoptedAccessKey>>()
+            for (pending in session.pendingAccessDeliveries()) {
+                val channelIdHex = pending.channelIdHex
+                val delivery = pending.delivery
+                val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
+                // Settled only once the key is written or the delivery definitively holds nothing for
+                // us: a signer that could not answer, or a List that could not be written, leaves it
+                // for the next drain (holders read us as served, so none would deliver again). The
+                // keys it opens are written together below, in one List write for the community.
+                var collected = false
+                val settled =
+                    ConcordAccessDrain.drainOne(
+                        delivery = delivery,
+                        channelIdHex = channelIdHex,
+                        signer = account.signer,
+                        heldEpoch = held?.epoch,
+                        trusted = { ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer) },
+                    ) { key ->
+                        collected = true
+                        opened += pending.wrapId to AdoptedAccessKey(channelIdHex, key, delivery)
+                        true
+                    }
+                if (settled && !collected) session.retireAccessWrap(pending.wrapId)
+            }
+            if (opened.isNotEmpty() && adoptAccessKeys(session.entry.id, opened.map { it.second })) {
+                opened.forEach { session.retireAccessWrap(it.first) }
+            }
+        }
+    }
+
+    /** A Channel key an access delivery handed us, waiting for [adoptAccessKeys] to write it. */
+    private class AdoptedAccessKey(
+        val channelIdHex: HexKey,
+        val key: ByteArray,
+        val delivery: ChannelDelivery,
+    )
+
+    /**
+     * Writes the Channel keys a drain collected for [communityId] into the Community List in one
+     * write. True once the List holds them (written now, or already held at that epoch or later);
+     * false when the write failed and they must be collected again.
+     */
+    private suspend fun adoptAccessKeys(
+        communityId: String,
+        keys: List<AdoptedAccessKey>,
+    ): Boolean {
+        val adopted = ArrayList<AdoptedAccessKey>()
+        val written =
+            try {
+                writeConcordList { list ->
+                    adopted.clear()
+                    list.update(communityId) { cur ->
+                        // Oldest epoch first, so a newer delivery of the same Channel lands last.
+                        var next = cur
+                        for (k in keys.sortedBy { it.delivery.newEpoch }) {
+                            ConcordChannelKeyring.withChannelKey(next, PrivateChannelKey(k.channelIdHex.lowercase(), k.key.toHexKey(), k.delivery.newEpoch))?.let {
+                                next = it
+                                adopted += k
+                            }
+                        }
+                        next.takeIf { adopted.isNotEmpty() }
+                    }
+                }
+            } catch (e: SignerExceptions) {
+                Log.w("Concord", "Access deliveries for $communityId: Community List not signed, retrying later", e)
+                false
+            }
+        if (written) {
+            adopted.forEach { k -> Log.i("Concord") { "Access delivery $communityId/${k.channelIdHex}: adopted epoch ${k.delivery.newEpoch} from ${k.delivery.deliverer}" } }
+        }
+        return written
     }
 
     /**

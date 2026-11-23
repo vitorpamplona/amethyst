@@ -24,13 +24,13 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
-import okhttp3.OkHttpClient
 
 /**
  * `amy admin RELAY METHOD [args]` — NIP-86 Relay Management API (nak's
@@ -176,7 +176,7 @@ object AdminCommand {
 
         Context.open(dataDir).use { ctx ->
             val client = Nip86Client(relay, ctx.signer)
-            val http = OkHttpClient.Builder().build()
+            val http = LocalOnly.httpClientBuilder().build()
             val retriever = Nip86Retriever { _ -> http }
             val response = retriever.execute(client, request)
             if (response.error != null) return Output.error("relay_error", response.error)

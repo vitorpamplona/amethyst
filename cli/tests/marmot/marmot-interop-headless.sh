@@ -53,16 +53,6 @@ RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 
-# MDK's reference QUIC broker, for the agent-text-stream tests. Loopback like
-# everything else; the tests skip when the binary was never built.
-BROKER_BIN="$WN_REPO/target/release/marmot-quic-broker"
-BROKER_HOST="${BROKER_HOST:-127.0.0.1}"
-BROKER_PORT="${BROKER_PORT:-4455}"
-BROKER_URI="quic://$BROKER_HOST:$BROKER_PORT"
-BROKER_PID=""
-# SHA-256 of the broker's self-signed leaf, read from its startup JSON.
-BROKER_PIN=""
-
 # A loopback Blossom blob store for the encrypted-media tests. Ciphertext only:
 # the file key comes from each group's MLS exporter and never reaches it.
 BLOSSOM_HOST="${BLOSSOM_HOST:-127.0.0.1}"
@@ -152,6 +142,10 @@ source "$SCRIPT_DIR/tests-extras.sh"
 source "$SCRIPT_DIR/tests-media.sh"
 # shellcheck source=tests-mdk014.sh
 source "$SCRIPT_DIR/tests-mdk014.sh"
+# shellcheck source=tests-mdk018.sh
+source "$SCRIPT_DIR/tests-mdk018.sh"
+# shellcheck source=tests-devices.sh
+source "$SCRIPT_DIR/tests-devices.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,
@@ -161,7 +155,7 @@ cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
   stop_daemons
-  stop_quic_broker
+  stop_device_daemons
   stop_blossom
   stop_local_relay
   print_summary
@@ -175,7 +169,6 @@ trap 'exit 129' HUP
 banner "Marmot headless interop harness ($RUN_TS)"
 preflight
 start_local_relay
-start_quic_broker || true
 start_blossom || true
 start_daemon B "$B_DIR" "$B_SOCKET"
 start_daemon C "$C_DIR" "$C_SOCKET"
@@ -202,8 +195,6 @@ ALL_TESTS=(
   test_14_wn_removes_a
   test_15_wn_member_leaves
   test_16_wn_keypackage_rotation
-  test_18_agent_stream_amy_publishes
-  test_19_agent_stream_wn_publishes
   test_20_avatar_url_amy_to_wn
   test_21_avatar_url_wn_to_amy
   test_22_message_edit_amy_to_wn
@@ -222,6 +213,18 @@ ALL_TESTS=(
   test_35_media_from_an_earlier_epoch_wn_to_amy
   test_36_admin_deletion_amy_to_wn
   test_37_admin_deletion_wn_to_amy
+  test_38_thread_message_wn_to_amy
+  test_40_link_amy_new_to_wn_existing
+  test_41_prelink_chat_reaches_amy
+  test_45_history_reaches_amy
+  test_47_chat_settings_cross
+  test_48_read_position_reaches_amy
+  test_49_renames_cross
+  test_42_link_wn_new_to_amy_existing
+  test_44_amy_adds_wn_device_to_chats
+  test_46_history_reaches_wn
+  test_50_that_was_me_persists
+  test_43_amy_removes_wn_device
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

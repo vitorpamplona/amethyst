@@ -38,13 +38,13 @@ Via Magpie (`gradle/magpie.lock`); `-P<name>Dir=../<repo>` builds a local checko
 | quartz (`quartz`) | Nostr: NIPs (`nipXX`), protocol families (`contextvm/`, `concord/`, …), signers, relay client + accessories, relay-server code, secp256k1, **Marmot's event classes** (`quartz.marmot`) | `quartzDir` |
 | crypto-kmp (`crypto`) | SHA, HMAC, HKDF, AES, ChaCha20-Poly1305, X25519, Ed25519, random. No Nostr | `cryptoKmpDir` |
 | mls-kmp (`mls.kmp`) | The RFC 9420 engine. No Nostr, no binding | `mlsKmpDir` |
-| marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic needing MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, MDK bench | `marmotKmpDir` |
+| marmot-kmp (`marmot`) | Marmot logic needing MLS state, `MarmotManager`, store interfaces, MDK bench | `marmotKmpDir` |
 | cordn-kmp (`cordn`) | cordn specs, `CordnGroupManager`, `CordnSyncLoop`, the registry, store interfaces | `cordnKmpDir` |
 | quic-kmp (`quic`) | QUIC v1/v2 client and server, TLS 1.3, HTTP/3, QPACK, WebTransport (JVM, Android) | `quicKmpDir` |
 | kiko-kmp (`kiko`) | The 128x128 fantasy-console cart runtime (Lua dialect, graphics, sound, `.p8.png`) behind the note cart player. No Nostr, stdlib only | `kikoKmpDir` |
 
 Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
-(never each other); quic-kmp ← `nestsClient`, marmot-quic; kiko-kmp ← `commons` (the cart player).
+(never each other); quic-kmp ← `nestsClient`; kiko-kmp ← `commons` (the cart player).
 Quartz depends on no MLS.
 
 **What goes where.** If another client of that protocol (`amy`, White Noise, a bot) would need the
@@ -68,7 +68,8 @@ it to Quartz).
 
 Don't assert a diagnosis you haven't reproduced. This repo gives you cheap
 verification tools: `./gradlew test`, per-module test suites, and the `amy`
-CLI (built partly to drive `quartz`/`commons` for interop checks). If a
+CLI. Talk to relays only through the repo-built `amy`, never `nak` or a
+script: it runs the app's relay client (`amy-expert`, "Relay checks"). If a
 claim is checkable in under a minute, check it before stating it — write
 the failing case first, watch it fail, then explain.
 

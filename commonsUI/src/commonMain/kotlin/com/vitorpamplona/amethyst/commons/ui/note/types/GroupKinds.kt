@@ -51,7 +51,9 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_community_rules
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_control
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_edit
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_banlist
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_category
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_channel
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_channel_permissions
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_dissolved
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_grant
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invite
@@ -59,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invi
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_invite_revoked
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_metadata
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_role
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_tenure
+import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_entity_writers
 import com.vitorpamplona.amethyst.commons.resources.kc_group_concord_invite_revoked
 import com.vitorpamplona.amethyst.commons.resources.kc_group_create
 import com.vitorpamplona.amethyst.commons.resources.kc_group_create_invite
@@ -115,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
@@ -663,6 +668,31 @@ fun RenderGroupPinned(
     }
 }
 
+/** Buzz NIP-PM kind 30623: the channel's pinned messages, newest pin first, as the relay publishes them. */
+@Composable
+fun RenderBuzzChannelPins(
+    baseNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? ChannelPinsEvent ?: return
+    val pins = remember(event) { event.pinnedMessageIds().map(::EventPin) }
+    val groupId = remember(event) { event.channel() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (pins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size) else null
+
+    KindCard(
+        icon = MaterialSymbols.PushPin,
+        title = stringRes(Res.string.kc_group_pinned),
+        subtitle = groupSubtitle(groupId, channel, count),
+    ) {
+        RelayGroupHeader(channel, accountViewModel, nav)
+        GroupPinsBody(pins, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // NIP-28 public chats
 // ---------------------------------------------------------------------------------------------
@@ -1067,6 +1097,11 @@ private fun concordEntityLabel(kind: ControlEntityKind): String =
             ControlEntityKind.INVITE_REVOKED -> Res.string.kc_group_concord_entity_invite_revoked
             ControlEntityKind.DISSOLVED -> Res.string.kc_group_concord_entity_dissolved
             ControlEntityKind.PIN_LIST -> Res.string.relay_group_pinned_content_description
+            ControlEntityKind.RANKED_ROLE -> Res.string.kc_group_concord_entity_role
+            ControlEntityKind.ACL, ControlEntityKind.SYNC -> Res.string.kc_group_concord_entity_channel_permissions
+            ControlEntityKind.CATEGORY -> Res.string.kc_group_concord_entity_category
+            ControlEntityKind.TENURE -> Res.string.kc_group_concord_entity_tenure
+            ControlEntityKind.WRITERS -> Res.string.kc_group_concord_entity_writers
         },
     )
 

@@ -1,0 +1,1030 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.model.marmot.devices
+
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.marmot.OutboundGroupEvent
+import com.vitorpamplona.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
+import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
+import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrust
+import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
+import com.vitorpamplona.marmot.features.devicePairing.CancelReason
+import com.vitorpamplona.marmot.features.devicePairing.ConfirmedLink
+import com.vitorpamplona.marmot.features.devicePairing.ExistingDevicePairing
+import com.vitorpamplona.marmot.features.devicePairing.MarmotDevicePairingKinds
+import com.vitorpamplona.marmot.features.devicePairing.NewDevicePairing
+import com.vitorpamplona.marmot.features.devicePairing.PairingDelivery
+import com.vitorpamplona.marmot.features.devicePairing.PairingError
+import com.vitorpamplona.marmot.features.devicePairing.PairingException
+import com.vitorpamplona.marmot.features.devicePairing.PairingMessage
+import com.vitorpamplona.marmot.features.devicePairing.PairingMessageException
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageUtils
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.io.encoding.Base64
+
+/**
+ * Marmot device groups for one account on this device (`features/device-group.md`,
+ * `features/device-pairing.md`): the headless runtime every front end drives. It wires
+ * marmot-kmp's [MarmotDeviceGroupManager] and the two pairing state machines to a
+ * [MarmotDevicesTransport], publishes everything they return, runs their timers from [tick],
+ * and exposes what a devices screen shows as [state].
+ *
+ * Exists only while the account's device-group switch is on (`MarmotDeviceGroupSwitch`): the
+ * [manager] must have been built with a `MarmotDeviceGroupConfig`.
+ *
+ * History deliveries (kind 473, `account-sync.md` "History"): the device whose Add brings a
+ * sibling into a chat sends it the chat's earlier messages ([tick]); a newly added device imports
+ * what it is sent and hands it to the app ([afterIngest]).
+ */
+class MarmotDevices(
+    private val manager: MarmotManager,
+    private val signer: NostrSigner,
+    private val transport: MarmotDevicesTransport,
+    /** Where this device publishes its KeyPackage; read when a link starts. */
+    private val keyPackageRelays: suspend () -> Set<NormalizedRelayUrl>,
+    private val clock: () -> Long = { TimeUtils.now() },
+    /**
+     * Where this device keeps the sign-ins its user answered "That was me" ([acceptSignIn]), so a
+     * restart does not ask again (`device-group.md` "Answers"). Null keeps them for this run only.
+     */
+    private val signInAnswers: DeviceGroupBlobs? = null,
+    /**
+     * The account's small state as the device group settled it (`account-sync.md`): read positions
+     * and the pin, mute and archive of each chat, for the app to apply to its own chats. Called after
+     * [start] and after every ingest that moved the device group, outside the lock.
+     */
+    private val onSmallState: (suspend (AccountSyncState) -> Unit)? = null,
+    /**
+     * Earlier messages a sibling delivered to this newly added device (`account-sync.md` "History
+     * deliveries"), already in the message store, for the app to show. Called outside the lock.
+     */
+    private val onHistoryImported: (suspend (List<MarmotDeviceGroupManager.ImportedHistory>) -> Unit)? = null,
+    /**
+     * Chats a sibling added this device to (a sibling Welcome joined them inside the device group,
+     * so no ingest result reported them): the app names, subscribes and lists them. Called outside
+     * the lock.
+     */
+    private val onChatsJoined: (suspend (List<HexKey>) -> Unit)? = null,
+) {
+    val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
+
+    /**
+     * Guards the state below. Never held across a relay round trip it can avoid: what a step wants
+     * published goes to [sends], and [locked] sends it once the lock is released, so the timers,
+     * every ingest and the user's actions do not queue behind one another's publishes.
+     */
+    private val mutex = Mutex()
+    private val sends = ArrayList<suspend () -> Unit>()
+
+    /** Requests whose KeyPackage is being fetched, so a tick does not fetch it again meanwhile. */
+    private val fetching = HashSet<HexKey>()
+    private val _state = MutableStateFlow(MarmotDevicesSnapshot())
+    val state: StateFlow<MarmotDevicesSnapshot> = _state.asStateFlow()
+
+    private var started = false
+
+    /**
+     * Pairing messages that arrived before [start] (the app opens gift wraps while `restoreAll`
+     * still runs, and stores the wrap without its content, so it never comes back): replayed by
+     * [start], oldest first, the newest [MAX_EARLY_PAIRING] kept.
+     */
+    private val earlyPairing = ArrayDeque<Pair<PairingMessage, Long>>()
+
+    // ---- new device ----------------------------------------------------------------------------
+    private var newDevice: NewDevicePairing? = null
+    private var newDeviceState: NewDeviceLinkState? = null
+
+    // ---- existing device -----------------------------------------------------------------------
+    private var existing: ExistingDevicePairing? = null
+
+    private class Prompt(
+        val request: PairingMessage.Request,
+        val requestedAt: Long,
+        var keyPackage: KeyPackageEvent? = null,
+        var label: String = "",
+        var state: DeviceLinkPrompt.State = DeviceLinkPrompt.State.Preparing,
+    )
+
+    private val prompts = LinkedHashMap<HexKey, Prompt>()
+
+    /** Wrap ids already handled this process: relays redeliver every poll. */
+    private val seenWraps = HashSet<HexKey>()
+
+    /** New devices this device sent its chat inventory to. */
+    private val inventorySent = HashSet<HexKey>()
+    private var lastRetag = 0L
+    private var lastSignInCheck = 0L
+
+    /** Whether [nostrGroupId] is this account's hidden device group: no chatroom, no notification. */
+    fun isDeviceGroup(nostrGroupId: HexKey): Boolean = groups.isTrustedDeviceGroup(nostrGroupId)
+
+    /**
+     * Loads trust; with [announce], also broadcasts this device's small state and asks its siblings
+     * for theirs (`account-sync.md` "Broadcasts", on start). Call once after `restoreAll`. A front end
+     * that starts a process per command (`amy`) announces only from the verbs that run the device
+     * group, not on every run.
+     */
+    suspend fun start(announce: Boolean = true) =
+        locked {
+            if (!started) {
+                groups.start()
+                started = true
+                while (earlyPairing.isNotEmpty()) {
+                    val (message, createdAt) = earlyPairing.removeFirst()
+                    runStep("early pairing") { handlePairing(message, createdAt) }
+                }
+            }
+            if (announce) runStep("start broadcast") { publishAll(groups.broadcastDue(clock(), start = true)) }
+            loadSignInAnswers()
+            queueSmallState()
+            knownChats.addAll(manager.activeGroupIds())
+            refreshState()
+        }
+
+    /** The groups this device was in at the last look, so a chat a sibling Welcome joined is noticed. */
+    private val knownChats = HashSet<HexKey>()
+
+    private fun queueJoinedChats() {
+        val joined = manager.activeGroupIds().filter { knownChats.add(it) && !isDeviceGroup(it) }
+        if (joined.isEmpty()) return
+        // The small state already held for these chats was skipped while they were missing.
+        lastSmallState = null
+        onChatsJoined?.let { show -> sends.add { show(joined) } }
+    }
+
+    // =============================================================================================
+    // Inbound
+    // =============================================================================================
+
+    /** A kind 1059 addressed to this account: true when it carried a pairing message. */
+    suspend fun onGiftWrap(wrap: GiftWrapEvent): Boolean {
+        if (!mutex.withLock { seenWraps.add(wrap.id) }) return false
+        val received = PairingDelivery.unwrap(wrap, signer) ?: return false
+        onPairing(received.message, received.createdAt)
+        return true
+    }
+
+    /**
+     * A pairing rumor an app's own gift-wrap pipeline already opened: the seal's author is
+     * [sealAuthor], the rumor is [rumor]. Only a rumor this account sent itself counts
+     * (`transports/nostr.md` "Pairing delivery"). True when it was pairing traffic.
+     */
+    suspend fun onPairingRumor(
+        sealAuthor: HexKey,
+        rumor: Event,
+    ): Boolean {
+        if (!MarmotDevicePairingKinds.isPairingKind(rumor.kind)) return false
+        if (sealAuthor != signer.pubKey || rumor.pubKey != signer.pubKey) return true
+        val message =
+            try {
+                PairingMessage.fromContent(rumor.kind, rumor.content)
+            } catch (e: PairingMessageException) {
+                Log.d(TAG) { "unreadable pairing rumor ${rumor.id.take(8)}: ${e.error}" }
+                return true
+            }
+        onPairing(message, rumor.createdAt)
+        return true
+    }
+
+    private suspend fun onPairing(
+        message: PairingMessage,
+        createdAt: Long,
+    ) = locked {
+        if (!started) {
+            if (earlyPairing.size >= MAX_EARLY_PAIRING) earlyPairing.removeFirst()
+            earlyPairing.addLast(message to createdAt)
+            return@locked
+        }
+        handlePairing(message, createdAt)
+        refreshState()
+    }
+
+    private suspend fun handlePairing(
+        message: PairingMessage,
+        createdAt: Long,
+    ) {
+        val now = clock()
+        val mine = newDevice
+        if (mine != null && message.sessionId == mine.sessionId) {
+            onNewDeviceMessage(mine, message, now)
+        } else if (mine == null || message !is PairingMessage.Request) {
+            // A device linking itself answers no one else's request; everything else may be ours.
+            onExistingDeviceMessage(message, createdAt, now)
+        }
+    }
+
+    /**
+     * After every Marmot ingest (group event or Welcome): publish what the device group queued,
+     * and on a new device that just joined its device group, send the first Commit. With
+     * [nostrGroupId], the group the event was for: a chat's event with nothing queued changes
+     * nothing here, so it costs no device-group work.
+     */
+    suspend fun afterIngest(nostrGroupId: HexKey? = null) =
+        locked {
+            if (!started) return@locked
+            val outbox = groups.drainOutbox()
+            val deviceGroupMoved = nostrGroupId == null || groups.isDeviceGroup(nostrGroupId) || newDeviceState == NewDeviceLinkState.Joining
+            if (outbox.isEmpty() && !deviceGroupMoved) return@locked
+            publishAll(outbox)
+            if (deviceGroupMoved) {
+                runStep("first commit") { firstCommitIfJoined() }
+                queueJoinedChats()
+                queueSmallState()
+            }
+            queueImportedHistory()
+            refreshState()
+        }
+
+    /** Hands the app the history imported since the last call, after the lock is released. */
+    private fun queueImportedHistory() {
+        val imported = groups.drainImportedHistory()
+        if (imported.isEmpty()) return
+        val show = onHistoryImported ?: return
+        sends.add { show(imported) }
+    }
+
+    /** Hands the app the small state after the lock is released, so applying it can take its time. */
+    private suspend fun queueSmallState() {
+        val apply = onSmallState ?: return
+        if (!groups.trust().trustsDeviceGroup) return
+        val state = groups.smallState()
+        if (state.items == lastSmallState) return
+        lastSmallState = state.items
+        sends.add { apply(state) }
+    }
+
+    private var lastSmallState: List<SmallStateItem>? = null
+
+    private suspend fun firstCommitIfJoined() {
+        val t = groups.trust()
+        if (!t.trustsDeviceGroup || t.unlinked) return
+        val own = groups.roster()?.device(t.ownSlot) ?: return
+        if (own.tagSignatureKey != null) {
+            if (newDeviceState == NewDeviceLinkState.Joining) newDeviceState = NewDeviceLinkState.Linked
+            return
+        }
+        Log.d(TAG) { "joined the device group: sending the first Commit" }
+        groups.applyStaged(groups.stageFirstCommit())
+        newDeviceState = NewDeviceLinkState.Linked
+        newDevice = null
+        // Hand the siblings private KeyPackages right away, so they can add this device to chats.
+        publishAll(groups.topUpSiblings(clock()))
+    }
+
+    // =============================================================================================
+    // New device
+    // =============================================================================================
+
+    /**
+     * Starts linking this device to the account's others: publishes a fresh KeyPackage (the one the
+     * existing device will add) and sends the Request. Watch [state]`.newDevice`.
+     */
+    suspend fun startLinkAsNewDevice(): NewDeviceLinkState =
+        locked {
+            check(started) { "start() first" }
+            val t = groups.trust()
+            check(!t.trustsDeviceGroup) { "This device is already linked" }
+            newDevice?.cancel()?.let { publishPairing(it) }
+            val relays = keyPackageRelays()
+            val event = manager.generateKeyPackageEvent(relays.toList())
+            check(transport.publishKeyPackage(event)) { "No relay accepted the KeyPackage" }
+            manager.confirmKeyPackagePublished(event)
+            val ref = KeyPackageUtils.decodeKeyPackage(Base64.decode(event.content)).reference().toHexKey()
+            val session = NewDevicePairing.start(signer.pubKey, event.id, ref, clock())
+            newDevice = session
+            newDeviceState = NewDeviceLinkState.WaitingForAnswer
+            publishPairing(session.requestMessage)
+            refreshState()
+            NewDeviceLinkState.WaitingForAnswer
+        }
+
+    private suspend fun onNewDeviceMessage(
+        session: NewDevicePairing,
+        message: PairingMessage,
+        now: Long,
+    ) {
+        when (val event = session.receive(message, now)) {
+            is NewDevicePairing.Event.Ignored -> Log.d(TAG) { "new device ignored ${message.kind}: ${event.reason}" }
+            is NewDevicePairing.Event.Reveal -> {
+                publishPairing(event.reveal)
+                newDeviceState = session.code(now)?.let { code -> NewDeviceLinkState.Comparing(code.map(SasSymbol::of)) }
+            }
+            NewDevicePairing.Event.PeerConfirmed -> {}
+            is NewDevicePairing.Event.Linked -> {
+                publishPairing(event.confirm)
+                groups.recordLink(event.link, now)
+                newDeviceState = NewDeviceLinkState.Joining
+            }
+            is NewDevicePairing.Event.Ended -> {
+                event.cancel?.let { publishPairing(it) }
+                groups.cancelLink(session.sessionId)
+                newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.of(event.reason))
+                newDevice = null
+            }
+        }
+    }
+
+    /** The user says both screens show the same seven emoji. */
+    suspend fun confirmMatch(): NewDeviceLinkState =
+        locked {
+            val session = checkNotNull(newDevice) { "No link in progress" }
+            val now = clock()
+            when (val c = session.confirmMatch(now)) {
+                NewDevicePairing.Confirmation.Waiting -> newDeviceState = NewDeviceLinkState.WaitingForOtherDevice
+                is NewDevicePairing.Confirmation.Linked -> {
+                    publishPairing(c.confirm)
+                    groups.recordLink(c.link, now)
+                    newDeviceState = NewDeviceLinkState.Joining
+                }
+            }
+            refreshState()
+            checkNotNull(newDeviceState)
+        }
+
+    /** The user says the codes differ. */
+    suspend fun rejectMatch() =
+        locked {
+            val session = newDevice ?: return@locked
+            publishPairing(session.rejectMatch(clock()))
+            newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.CODES_DIFFER)
+            newDevice = null
+            refreshState()
+        }
+
+    /** The user gives up linking this device. */
+    suspend fun cancelLink() =
+        locked {
+            val session = newDevice ?: return@locked
+            session.cancel()?.let { publishPairing(it) }
+            groups.cancelLink(session.sessionId)
+            newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.CANCELLED)
+            newDevice = null
+            refreshState()
+        }
+
+    // =============================================================================================
+    // Existing device
+    // =============================================================================================
+
+    private suspend fun existingPairing(): ExistingDevicePairing = existing ?: ExistingDevicePairing(signer.pubKey, groups.trust().ownSlot).also { existing = it }
+
+    private suspend fun onExistingDeviceMessage(
+        message: PairingMessage,
+        createdAt: Long,
+        now: Long,
+    ) {
+        val t = groups.trust()
+        if (t.unlinked || t.pendingLink != null) return
+        val pairing = existingPairing()
+        when (val event = pairing.receive(message, createdAt, now)) {
+            is ExistingDevicePairing.Event.Ignored -> Log.d(TAG) { "existing device ignored ${message.kind}: ${event.reason}" }
+            is ExistingDevicePairing.Event.Requested -> {
+                val request = message as PairingMessage.Request
+                val prompt = Prompt(request, createdAt)
+                prompts[event.sessionId] = prompt
+                answer(pairing, prompt, now)
+            }
+            is ExistingDevicePairing.Event.CodeReady -> {
+                val prompt = prompts[event.sessionId] ?: return
+                prompt.state = comparingState(pairing, event.sessionId, now) ?: prompt.state
+            }
+            is ExistingDevicePairing.Event.Linked -> {
+                val prompt = prompts[event.link.sessionId] ?: return
+                prompt.state =
+                    try {
+                        approveConfirmedLink(event.link, prompt, now)
+                        DeviceLinkPrompt.State.Linked
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w(TAG, "adding the confirmed device failed", e)
+                        DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.LINK_FAILED)
+                    }
+            }
+            is ExistingDevicePairing.Event.Ended -> {
+                event.cancel?.let { publishPairing(it) }
+                prompts[event.sessionId]?.state = DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.of(event.reason))
+            }
+        }
+    }
+
+    private fun markCompeting(now: Long) {
+        val live =
+            existing
+                ?.liveRequests(now)
+                ?.map { it.sessionId }
+                ?.toSet()
+                .orEmpty()
+        prompts.forEach { (id, p) -> if (id in live && p.state !is DeviceLinkPrompt.State.Ended) p.state = DeviceLinkPrompt.State.CompetingRequests }
+    }
+
+    /** Fetches and checks the KeyPackage the request names, then answers it. */
+    private suspend fun answer(
+        pairing: ExistingDevicePairing,
+        prompt: Prompt,
+        now: Long,
+    ) {
+        val request = prompt.request
+        // This device's own Request (an echo, or one from an earlier run of a per-command front end):
+        // its KeyPackage may be replaced on the relays already, so recognise it by the ref.
+        if (groups.trust().linkedKeyPackageRef == request.keyPackageRef ||
+            manager.keyPackageRotationManager.findBundleByRef(request.keyPackageRef.hexToByteArray()) != null
+        ) {
+            prompts.remove(request.sessionId)
+            pairing.cancel(request.sessionId)
+            return
+        }
+        val known = prompt.keyPackage
+        if (known != null) return answerWith(pairing, prompt, known, now)
+        // Fetched outside the lock; not on our relays yet (the new device may still be publishing
+        // it): a later tick tries again.
+        val sessionId = request.sessionId
+        if (!fetching.add(sessionId)) return
+        sends.add {
+            val fetched = runCatchingCancellable { transport.fetchOwnKeyPackage(request.keyPackageEventId) }.getOrNull()
+            locked {
+                fetching.remove(sessionId)
+                if (fetched != null && existing === pairing && prompts[sessionId] === prompt && prompt.state == DeviceLinkPrompt.State.Preparing) {
+                    answerWith(pairing, prompt, fetched, clock())
+                    refreshState()
+                }
+            }
+        }
+    }
+
+    private suspend fun answerWith(
+        pairing: ExistingDevicePairing,
+        prompt: Prompt,
+        keyPackage: KeyPackageEvent,
+        now: Long,
+    ) {
+        val request = prompt.request
+        val matches =
+            keyPackage.pubKey == signer.pubKey &&
+                runCatching { KeyPackageUtils.decodeKeyPackage(Base64.decode(keyPackage.content)).reference().toHexKey() }.getOrNull() == request.keyPackageRef
+        val ownOrLinked = keyPackage.dTag().let { slot -> slot == groups.trust().ownSlot || groups.roster()?.device(slot) != null }
+        if (matches && ownOrLinked) {
+            // This device's own Request (an echo, or one from an earlier run of a per-command front
+            // end), or a device already in the roster: not a request to answer, and it must not
+            // count as a competing one.
+            prompts.remove(request.sessionId)
+            pairing.cancel(request.sessionId)
+            return
+        }
+        if (!matches) {
+            Log.w(TAG) { "link request ${request.sessionId.take(8)} names a KeyPackage this account cannot find or that does not match" }
+            prompt.state = DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.CANNOT_LINK)
+            pairing.cancel(request.sessionId)
+            return
+        }
+        prompt.keyPackage = keyPackage
+        if (pairing.competingRequests(now)) {
+            markCompeting(now)
+            return
+        }
+        try {
+            publishPairing(pairing.answer(request.sessionId, ExistingDevicePairing.PublishedKeyPackage(keyPackage.id, request.keyPackageRef), now))
+        } catch (e: PairingException) {
+            prompt.state =
+                when (e.error) {
+                    PairingError.COMPETING_REQUESTS -> DeviceLinkPrompt.State.CompetingRequests
+                    PairingError.RATE_LIMITED -> DeviceLinkPrompt.State.RateLimited(e.retryAt ?: now)
+                    PairingError.EXPIRED -> DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.TIMED_OUT)
+                    else -> DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.CANNOT_LINK)
+                }
+        }
+    }
+
+    private fun comparingState(
+        pairing: ExistingDevicePairing,
+        sessionId: HexKey,
+        now: Long,
+    ): DeviceLinkPrompt.State.Comparing? = pairing.code(sessionId, now)?.let { DeviceLinkPrompt.State.Comparing(it.map(SasSymbol::of), pairing.canOfferLink(sessionId, now)) }
+
+    /**
+     * The user compared the codes on both screens and links the new device as [label]. Sends the
+     * Confirm; the device is added once the new device's own Confirm verifies.
+     */
+    suspend fun approveLink(
+        sessionId: HexKey,
+        label: String,
+    ) = locked {
+        val pairing = checkNotNull(existing) { "No link request" }
+        val prompt = checkNotNull(prompts[sessionId]) { "No link request $sessionId" }
+        val now = clock()
+        check(pairing.canOfferLink(sessionId, now)) { "This request cannot be linked now" }
+        val (groupId, key) = groups.confirmTarget()
+        prompt.label = label
+        publishPairing(pairing.confirmLink(sessionId, groupId, key, now))
+        prompt.state = DeviceLinkPrompt.State.Linking
+        refreshState()
+    }
+
+    /** The user says the codes differ, or dismisses the request. */
+    suspend fun rejectLink(sessionId: HexKey) =
+        locked {
+            val pairing = existing ?: return@locked
+            val prompt = prompts[sessionId] ?: return@locked
+            val now = clock()
+            val cancel = if (prompt.state is DeviceLinkPrompt.State.Comparing) pairing.rejectLink(sessionId, now) else pairing.cancel(sessionId)
+            cancel?.let { publishPairing(it) }
+            prompt.state = DeviceLinkPrompt.State.Ended(if (cancel?.reason == CancelReason.MISMATCHED_CODE) DeviceLinkEndReason.CODES_DIFFER else DeviceLinkEndReason.CANCELLED)
+            refreshState()
+        }
+
+    private suspend fun approveConfirmedLink(
+        link: ConfirmedLink,
+        prompt: Prompt,
+        now: Long,
+    ) {
+        val keyPackage = checkNotNull(prompt.keyPackage)
+        val slot = checkNotNull(keyPackage.dTag().takeIf { it.isNotEmpty() }) { "The KeyPackage has no slot" }
+        val applied = groups.applyStaged(groups.approve(link, Base64.decode(keyPackage.content), slot, prompt.label, now))
+        applied.welcome?.let { welcome -> sends.add { transport.publishToSelf(welcome.giftWrapEvent) } }
+        Log.d(TAG) { "approved ${slot.take(8)} into the device group; Welcome ${if (applied.welcome != null) "sent" else "none"}" }
+    }
+
+    // =============================================================================================
+    // Timers
+    // =============================================================================================
+
+    /**
+     * Runs every due device-group duty: call on a timer (about once a minute) and after a sync.
+     * Nothing runs once a sibling unlinked this device (MDK's `maintenance_passes`).
+     */
+    suspend fun tick() =
+        locked {
+            if (!started) return@locked
+            val now = clock()
+            runStep("pairing expiry") { expirePairing(now) }
+            val t = groups.trust()
+            if (!t.unlinked && t.trustsDeviceGroup) {
+                runStep("refresh") { groups.refresh() }
+                runStep("first commit") { firstCommitIfJoined() }
+                runStep("heartbeat") {
+                    groups.heartbeatDue(now)?.let { heartbeat ->
+                        sends.add { if (transport.publishGroupEvent(heartbeat)) mutex.withLock { groups.heartbeatSent(now) } }
+                    }
+                }
+                runStep("deadlines") { groups.checkLinkDeadlines(now)?.let { groups.applyStaged(it) } }
+                runStep("inactivity") { groups.stageInactivity(now)?.let { groups.applyStaged(it) } }
+                runStep("removed records") { groups.expireRemovedRecords(now)?.let { groups.applyStaged(it) } }
+                runStep("departures") {
+                    val gone = groups.pendingDepartures()
+                    gone.forEach { groups.applyStaged(groups.stageRemoveDevice(it, now)) }
+                    if (gone.isNotEmpty()) publishAll(groups.removeGoneDevicesFromChats())
+                }
+                runStep("top up") { publishAll(groups.topUpSiblings(now)) }
+                runStep("new devices") { addNewDeviceToChatsAndReport(now) }
+                runStep("gap fill") {
+                    val fill = groups.fillMissingChats(now)
+                    publishAll(fill.claims)
+                    fill.adds.forEach { publishSiblingAdd(it, now) }
+                }
+                // After the Adds above: each sibling they brought into a chat gets its history.
+                runStep("history") { publishAll(groups.historyDeliveries(now)) }
+                runStep("kept history") {
+                    groups.importKeptHistory(now)
+                    queueImportedHistory()
+                }
+                runStep("own entry") { groups.stageOwnEntryRefresh()?.let { groups.applyStaged(it) } }
+                runStep("sibling welcome repairs") { publishAll(groups.siblingWelcomeRepairs(now)) }
+                runStep("broadcast") { publishAll(groups.broadcastDue(now)) }
+                if (now - lastRetag > RETAG_EVERY_SECS) {
+                    lastRetag = now
+                    runStep("retag") { publishAll(groups.retagOwnLeaves()) }
+                }
+            }
+            if (!t.unlinked && now - lastSignInCheck > SIGN_IN_CHECK_EVERY_SECS) {
+                lastSignInCheck = now
+                queueSignInCheck()
+            }
+            runStep("outbox") { publishAll(groups.drainOutbox()) }
+            refreshState()
+        }
+
+    private suspend fun expirePairing(now: Long) {
+        newDevice?.let { session ->
+            session.expire(now)?.let { cancel ->
+                publishPairing(cancel)
+                groups.cancelLink(session.sessionId)
+                newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.TIMED_OUT)
+                newDevice = null
+            }
+        }
+        existing?.let { pairing ->
+            pairing.expire(now).forEach { cancel ->
+                publishPairing(cancel)
+                prompts[cancel.sessionId]?.state = DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.TIMED_OUT)
+            }
+            prompts.forEach { (id, p) ->
+                if (p.state is DeviceLinkPrompt.State.Comparing) comparingState(pairing, id, now)?.let { p.state = it }
+            }
+            // A request whose KeyPackage was not found yet, or held back while another was live,
+            // is answered once it can be.
+            val live =
+                pairing
+                    .liveRequests(now)
+                    .filter { !it.answered }
+                    .map { it.sessionId }
+                    .toSet()
+            prompts.values
+                .filter { it.request.sessionId in live && (it.state == DeviceLinkPrompt.State.Preparing || it.state == DeviceLinkPrompt.State.CompetingRequests) }
+                .forEach { answer(pairing, it, now) }
+        }
+        // A finished prompt stays a while for the screen that shows its outcome, then goes.
+        prompts.entries.removeAll { (_, p) ->
+            (p.state is DeviceLinkPrompt.State.Ended || p.state == DeviceLinkPrompt.State.Linked) && now - p.requestedAt > FINISHED_PROMPT_KEPT_SECS
+        }
+        // A link this device waits on that its Welcome never answered.
+        groups.trust().pendingLink?.let { pending ->
+            if (now >= pending.waitUntil) {
+                groups.cancelLink(pending.link.sessionId)
+                if (newDeviceState == NewDeviceLinkState.Joining) newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.TIMED_OUT)
+            }
+        }
+    }
+
+    /** For every device this one approved whose link is made: add it to the chats, and report what to expect once. */
+    private suspend fun addNewDeviceToChatsAndReport(now: Long) {
+        val t = groups.trust()
+        for (approval in t.approvals) {
+            if (approval.outcome != DeviceGroupTrust.Outcome.MADE) continue
+            groups.addNewDeviceToChats(approval.slot, now).forEach { publishSiblingAdd(it, now) }
+            if (inventorySent.add(approval.slot)) publishAll(groups.chatInventory(approval.slot, now, now))
+        }
+    }
+
+    /** Fetches this account's KeyPackages outside the lock, then classifies them. */
+    private fun queueSignInCheck() {
+        sends.add {
+            val packages = transport.ownKeyPackages()
+            if (packages != null) {
+                locked {
+                    runStep("sign-ins") { recordSignIns(packages) }
+                    refreshState()
+                }
+            }
+        }
+    }
+
+    private suspend fun recordSignIns(packages: List<KeyPackageEvent>) {
+        val publications = packages.mapNotNull { kp -> kp.dTag().takeIf { it.isNotEmpty() }?.let { MarmotDeviceGroupManager.Publication(it, kp.createdAt) } }
+        groups.recordFirstCheck(publications.map { it.slot })
+        val classes = groups.classifySignIns(publications)
+        val signIns =
+            publications.mapNotNull { pub ->
+                val kind = classes[pub.slot] ?: return@mapNotNull null
+                if (kind == MarmotDeviceGroupManager.SignInClass.OWN || kind == MarmotDeviceGroupManager.SignInClass.LINKED) return@mapNotNull null
+                SignIn(pub.slot, pub.createdAt, kind, confirmed = pub.slot in acceptedSignIns)
+            }
+        lastSignIns = signIns
+    }
+
+    private var lastSignIns: List<SignIn> = emptyList()
+
+    /** Slots whose sign-in this device's user said was theirs ("That was me", the spec's Not now). */
+    private val acceptedSignIns = HashSet<HexKey>()
+
+    private suspend fun loadSignInAnswers() {
+        val bytes =
+            try {
+                signInAnswers?.load(SIGN_IN_ANSWERS)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "could not read the sign-in answers", e)
+                null
+            } ?: return
+        bytes
+            .decodeToString()
+            .split('\n')
+            .filter { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+            .forEach { acceptedSignIns.add(it) }
+    }
+
+    /**
+     * "That was me" for the sign-in in [slot]: it stays listed, marked as this user's, and is never
+     * asked about again on this device, restarts included. Nothing goes to the roster: this answer is
+     * each device's own (`device-group.md` "Answers", Not now). False when it could not be saved.
+     */
+    suspend fun acceptSignIn(slot: HexKey): Boolean =
+        locked {
+            if (!acceptedSignIns.add(slot)) return@locked true
+            lastSignIns = lastSignIns.map { if (it.slot == slot) it.copy(confirmed = true) else it }
+            refreshState()
+            val store = signInAnswers ?: return@locked true
+            try {
+                store.save(SIGN_IN_ANSWERS, acceptedSignIns.sorted().joinToString("\n").encodeToByteArray())
+                true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "could not save the sign-in answers", e)
+                false
+            }
+        }
+
+    // =============================================================================================
+    // Devices
+    // =============================================================================================
+
+    /**
+     * Removes a sibling ([slot]) from the device group, takes its leaves out of every chat, and
+     * deletes its KeyPackage slot (`device-group.md` "Removing a device"). False when no relay
+     * confirmed the removal Commit: nothing changed, and the slot is kept.
+     */
+    suspend fun removeDevice(slot: HexKey): Boolean =
+        locked {
+            val now = clock()
+            require(slot != groups.trust().ownSlot) { "Sign out to remove this device" }
+            val applied = groups.applyStaged(groups.stageRemoveDevice(slot, now))
+            if (applied.event == null) {
+                Log.w(TAG) { "no relay confirmed the removal of ${slot.take(8)}" }
+                refreshState()
+                return@locked false
+            }
+            publishAll(groups.removeGoneDevicesFromChats())
+            sends.add { runStep("slot deletion") { deleteSlot(slot) } }
+            refreshState()
+            true
+        }
+
+    /** The removed device's KeyPackage slot goes too, so inviters stop finding it. */
+    private suspend fun deleteSlot(slot: HexKey) {
+        val published = transport.ownKeyPackages().orEmpty().filter { it.dTag() == slot }
+        if (published.isEmpty()) return
+        val deletion = signer.sign(DeletionRequestEvent.build(published))
+        if (!transport.publishOwnEvent(deletion)) Log.w(TAG) { "no relay accepted the deletion of slot ${slot.take(8)}" }
+    }
+
+    /**
+     * Signs this device out through its siblings: they remove it (`leaving`). False when no relay
+     * confirmed the Commit, so the siblings will not hear of it.
+     */
+    suspend fun signOutThroughSiblings(): Boolean =
+        locked {
+            val applied = groups.applyStaged(groups.stageSignOut())
+            refreshState()
+            applied.event != null
+        }
+
+    /**
+     * Renames the device in [slot], this one included (`device-group.md` "Labels, clients and
+     * platforms"). False when no relay confirmed the Commit; true when the label already was [label].
+     */
+    suspend fun renameDevice(
+        slot: HexKey,
+        label: String,
+    ): Boolean =
+        locked {
+            val staged = groups.stageRename(slot, label.trim()) ?: return@locked true
+            val applied = groups.applyStaged(staged)
+            refreshState()
+            applied.event != null
+        }
+
+    /**
+     * Moves the device group to [relays], the account's relay list as it is now: the Commit goes
+     * out on the relays the siblings listen to, and the group's traffic follows. Null when there was
+     * nothing to move (no device group, or it lists those relays already); false when no relay
+     * confirmed the move.
+     */
+    suspend fun followRelays(relays: List<String>): Boolean? =
+        locked {
+            val t = groups.trust()
+            if (!t.trustsDeviceGroup || t.unlinked) return@locked null
+            val staged = groups.stageRelays(relays) ?: return@locked null
+            val applied = groups.applyStaged(staged)
+            refreshState()
+            applied.event != null
+        }
+
+    /** "This wasn't me" for a sign-in in [slot]: records the rejection in the roster. */
+    suspend fun rejectSignIn(slot: HexKey) =
+        locked {
+            groups.rejectSignIn(slot, clock())?.let { groups.applyStaged(it) }
+            lastSignInCheck = 0
+            refreshState()
+        }
+
+    // =============================================================================================
+    // Chats
+    // =============================================================================================
+
+    /**
+     * Creates a chat that already includes this account's linked devices (their private
+     * KeyPackages) and [invites]. Publishes the invitees' Welcomes and the sibling Welcomes, and asks
+     * siblings it had no KeyPackage for to hand some over.
+     */
+    suspend fun createChat(
+        nostrGroupId: HexKey,
+        relays: List<String>,
+        profile: GroupProfileV1?,
+        invites: List<MarmotManager.MemberInvite> = emptyList(),
+    ): MarmotDeviceGroupManager.SiblingAdd =
+        locked {
+            val now = clock()
+            val add = groups.createChat(nostrGroupId, relays, profile, invites, now)
+            publishSiblingAdd(add, now)
+            refreshState()
+            add
+        }
+
+    private suspend fun publishSiblingAdd(
+        add: MarmotDeviceGroupManager.SiblingAdd,
+        now: Long,
+    ) {
+        add.result.welcomes.forEach { welcome -> sends.add { transport.publishWelcome(welcome) } }
+        publishAll(add.deviceGroupEvents)
+        publishAll(add.missing.map { slot -> groups.requestKeyPackages(slot, REQUESTED_KEY_PACKAGES, now) })
+    }
+
+    /** Before the user's Leave of [nostrGroupId]: the decline that takes siblings out of it too. */
+    suspend fun beforeLeave(nostrGroupId: HexKey) =
+        locked {
+            runStep("record leave") { publishAll(groups.recordLeave(nostrGroupId, clock())) }
+        }
+
+    /** The user read up to [eventId] (of [epoch], sent at [createdAt]) in [nostrGroupId]. */
+    suspend fun markRead(
+        nostrGroupId: HexKey,
+        epoch: Long,
+        createdAt: Long,
+        eventId: HexKey,
+    ) = locked {
+        runStep("mark read") { publishAll(groups.markRead(nostrGroupId, epoch, createdAt, eventId, clock())) }
+    }
+
+    /** Pin, mute or archive [nostrGroupId] on every device of the account. */
+    suspend fun changeSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        value: Boolean,
+    ) = changeSetting(nostrGroupId, setting, value.toString())
+
+    /** [changeSetting] with the small-state token itself: `true`, `false` or a mute time. */
+    suspend fun changeSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        value: String,
+    ) = locked {
+        runStep("setting") {
+            publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value, clock()))
+            lastSmallState = groups.smallState().items
+        }
+    }
+
+    /**
+     * `account-sync.md` "Starting": each setting of this device that differs from the defaults and
+     * that the device group holds no value for yet becomes a value at version 1, so a device's pins
+     * from before it linked reach its siblings. Returns how many it seeded.
+     */
+    suspend fun seedSmallState(local: List<Triple<HexKey, MarmotChatSetting, String>>): Int =
+        locked {
+            if (!groups.trust().trustsDeviceGroup) return@locked 0
+            var seeded = 0
+            for ((nostrGroupId, setting, value) in local) {
+                if (isDeviceGroup(nostrGroupId)) continue
+                val mlsId =
+                    manager.groupManager
+                        .getGroup(nostrGroupId)
+                        ?.groupId
+                        ?.toHexKey() ?: continue
+                if (groups.smallState().held("$mlsId/${setting.wireName}") != null) continue
+                runStep("seed") {
+                    publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value, clock()))
+                    seeded++
+                }
+            }
+            lastSmallState = groups.smallState().items
+            seeded
+        }
+
+    /**
+     * Before publishing [event], a KeyPackage of this device: a linked device names it in its roster
+     * entry first (`device-group.md` "Slot announcements"), so siblings do not read it as a sign-in.
+     */
+    suspend fun beforeKeyPackagePublish(event: KeyPackageEvent) =
+        locked {
+            if (!started || !groups.trust().trustsDeviceGroup) return@locked
+            val ref = KeyPackageUtils.decodeKeyPackage(Base64.decode(event.content)).reference().toHexKey()
+            if (groups.announcementNeeded(ref)) groups.applyStaged(groups.stageAnnouncement(ref))
+        }
+
+    // =============================================================================================
+    // Plumbing
+    // =============================================================================================
+
+    /** Runs [block] under [mutex], then sends what it queued, with the lock released. */
+    private suspend fun <T> locked(block: suspend () -> T): T {
+        val (result, queued) =
+            mutex.withLock {
+                val result = block()
+                result to sends.toList().also { sends.clear() }
+            }
+        queued.forEach { send -> runStep("send") { send() } }
+        return result
+    }
+
+    private fun publishPairing(message: PairingMessage) {
+        sends.add {
+            if (!transport.publishToSelf(PairingDelivery.wrap(message, signer, clock()))) {
+                Log.w(TAG) { "no relay accepted pairing kind ${message.kind}" }
+            }
+        }
+    }
+
+    private fun publishAll(events: List<OutboundGroupEvent>) {
+        events.forEach { event -> sends.add { transport.publishGroupEvent(event) } }
+    }
+
+    private suspend inline fun runStep(
+        name: String,
+        block: () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "device-group step '$name' failed", e)
+        }
+    }
+
+    private suspend fun refreshState() {
+        val t = groups.trust()
+        val roster = if (t.trustsDeviceGroup && !t.unlinked) groups.roster() else null
+        val devices = roster?.devices.orEmpty().map { LinkedDevice.of(it, t.ownSlot, groups.lastActivity(it.slot)) }
+        val now = clock()
+        prompts.forEach { (id, p) ->
+            if (p.state is DeviceLinkPrompt.State.Comparing) existing?.let { comparingState(it, id, now) }?.let { p.state = it }
+        }
+        _state.value =
+            MarmotDevicesSnapshot(
+                ownSlot = t.ownSlot,
+                linked = t.trustsDeviceGroup && !t.unlinked,
+                unlinked = t.unlinked,
+                devices = devices,
+                newDevice = newDeviceState,
+                prompts = prompts.map { (id, p) -> DeviceLinkPrompt(id, p.keyPackage?.dTag(), p.requestedAt, p.state) },
+                remainingChats = if (t.trustsDeviceGroup) groups.remainingExpectedChats() else null,
+                // A sign-in whose device has linked since the last check is one of the devices now.
+                signIns = lastSignIns.filter { signIn -> devices.none { it.slot == signIn.slot } },
+            )
+    }
+
+    companion object {
+        private const val TAG = "MarmotDevices"
+
+        /** How many private KeyPackages to ask a sibling for when a chat had none of its. */
+        const val REQUESTED_KEY_PACKAGES = 10
+
+        /** `retagOwnLeaves` spreads its UpdatePaths out; once every six hours is plenty. */
+        const val RETAG_EVERY_SECS = 6 * 60 * 60L
+
+        const val SIGN_IN_CHECK_EVERY_SECS = 15 * 60L
+
+        /** How long a linked or ended request stays in [MarmotDevicesSnapshot.prompts]. */
+        const val FINISHED_PROMPT_KEPT_SECS = 60 * 60L
+
+        /** The blob that holds the "That was me" answers, one slot per line. */
+        const val SIGN_IN_ANSWERS = "sign_in_answers"
+
+        /** Pairing messages kept for [start] when they arrive before it. */
+        const val MAX_EARLY_PAIRING = 64
+    }
+}

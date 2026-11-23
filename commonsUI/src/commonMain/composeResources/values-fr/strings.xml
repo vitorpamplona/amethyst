@@ -5260,7 +5260,6 @@
     <string name="concord_create_failed">La communauté n'a pas pu être créée : aucun relais ne l'a acceptée, ou votre liste de communautés n'a pas pu être mise à jour. Vérifiez les relais et réessayez.</string>
     <string name="concord_create_relays">Relais</string>
     <string name="concord_create_relays_desc">Relais qui stockent les messages chiffrés de cette communauté. Laissez vide pour utiliser les vôtres.</string>
-    <string name="concord_create_title">Nouveau canal Concord</string>
     <string name="concord_direct_invite_accept">Accepter</string>
     <string name="concord_direct_invite_accept_failed">Impossible de joindre cette communauté. Réessayez dans un instant.</string>
     <string name="concord_direct_invite_action">Inviter par npub…</string>

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -32,6 +33,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,18 +41,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.archived_chats_tab
+import com.vitorpamplona.amethyst.commons.resources.known
 import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.new_requests
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView
@@ -60,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -70,6 +79,30 @@ class MessagesTabItem(
     val feedContentState: FeedContentState,
 )
 
+/**
+ * Known, New Requests and, while any Marmot chat is archived, Archived. The archived feed is kept
+ * current only while its tab is there.
+ */
+@Composable
+fun rememberMessagesTabs(
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+): ImmutableList<MessagesTabItem> {
+    val settings by accountViewModel.marmotChatSettingsFlow().collectAsStateWithLifecycle()
+    val hasArchived = settings.archived.isNotEmpty()
+    val archivedFeed = accountViewModel.feedStates.dmArchived
+    if (hasArchived) WatchLifecycleAndUpdateModel(archivedFeed)
+    return remember(knownFeedContentState, newFeedContentState, hasArchived) {
+        val base =
+            persistentListOf(
+                MessagesTabItem(Res.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
+                MessagesTabItem(Res.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
+            )
+        if (hasArchived) base.add(MessagesTabItem(Res.string.archived_chats_tab, ScrollStateKeys.MESSAGES_ARCHIVED, archivedFeed)) else base
+    }
+}
+
 @Composable
 fun MessagesTabHeader(
     pagerState: PagerState,
@@ -79,6 +112,11 @@ fun MessagesTabHeader(
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    // The Archived tab goes away when the last chat is unarchived, maybe while it is the one shown.
+    val lastTab = tabs.size - 1
+    LaunchedEffect(lastTab) {
+        if (pagerState.currentPage > lastTab) pagerState.scrollToPage(lastTab)
+    }
 
     Box(Modifier.fillMaxWidth()) {
         // A primary row draws its indicator under the label only, not across the whole half of the
@@ -87,8 +125,9 @@ fun MessagesTabHeader(
         PrimaryTabRow(
             containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
-            selectedTabIndex = pagerState.currentPage,
-            modifier = TabRowHeight,
+            selectedTabIndex = pagerState.currentPage.coerceAtMost(lastTab),
+            // A third tab reaches the menu button at the end: keep its label clear of it.
+            modifier = if (tabs.size > 2) TabRowHeight.padding(end = Size40dp) else TabRowHeight,
         ) {
             tabs.forEachIndexed { index, tab ->
                 Tab(
@@ -138,9 +177,10 @@ fun MessagesPager(
         userScrollEnabled = true,
         modifier = modifier.zonedDrawerSwipeIfModal(pagerState, nav),
     ) { page ->
+        val tab = tabs.getOrNull(page) ?: return@HorizontalPager
         ChatroomListFeedView(
-            feedContentState = tabs[page].feedContentState,
-            scrollStateKey = tabs[page].scrollStateKey,
+            feedContentState = tab.feedContentState,
+            scrollStateKey = tab.scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
         )

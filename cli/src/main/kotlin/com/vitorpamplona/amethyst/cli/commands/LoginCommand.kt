@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
-import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -226,7 +226,7 @@ object LoginCommand {
     internal var nip05ClientBuilder: () -> Nip05Client = {
         // Build a throwaway OkHttp client — we don't hold a Context here and
         // login is a one-shot CLI invocation anyway.
-        val http = OkHttpClient.Builder().build()
+        val http = LocalOnly.httpClientBuilder().build()
         Nip05Client(fetcher = OkHttpNip05Fetcher(okHttpClient = { _ -> http }))
     }
 

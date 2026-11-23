@@ -44,8 +44,8 @@ data class PullRequestInfo(
 
 /**
  * GitHub pull requests through the user's own `gh` (GitHub CLI), signed in as them. Only the
- * user's click runs these: an agent may neither push nor open a pull request
- * ([ClaudeChat.NO_PUBLISHING]).
+ * user's click runs these. An agent may push its branch and open a pull request itself, but
+ * never merge one ([ClaudeChat.NO_MERGING]).
  */
 object GitHubPullRequests {
     sealed interface Result {

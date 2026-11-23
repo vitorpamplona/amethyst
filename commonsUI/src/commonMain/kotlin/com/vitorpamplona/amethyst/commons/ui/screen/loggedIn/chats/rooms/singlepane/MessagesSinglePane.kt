@@ -25,19 +25,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.chats.ui.ChannelFabColumn
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.known
-import com.vitorpamplona.amethyst.commons.resources.new_requests
 import com.vitorpamplona.amethyst.commons.resources.route_messages
-import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -48,10 +44,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.rememberMessagesTabs
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun MessagesSinglePane(
@@ -60,22 +55,14 @@ fun MessagesSinglePane(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 2 }
+    val tabs = rememberMessagesTabs(knownFeedContentState, newFeedContentState, accountViewModel)
+    val tabCount by rememberUpdatedState(tabs.size)
+    val pagerState = rememberPagerState { tabCount }
 
     WatchLifecycleAndUpdateModel(knownFeedContentState)
     WatchLifecycleAndUpdateModel(newFeedContentState)
 
     ChatroomListFilterAssemblerSubscription(accountViewModel)
-
-    val tabs by
-        remember(knownFeedContentState) {
-            derivedStateOf {
-                persistentListOf(
-                    MessagesTabItem(Res.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
-                    MessagesTabItem(Res.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
-                )
-            }
-        }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -97,7 +84,7 @@ fun MessagesSinglePane(
         bottomBar = {
             AppBottomBar(Route.Message, nav, accountViewModel) { route ->
                 if (route == Route.Message) {
-                    tabs[pagerState.currentPage].feedContentState.sendToTop()
+                    tabs[pagerState.currentPage.coerceIn(0, tabs.size - 1)].feedContentState.sendToTop()
                 } else {
                     nav.navBottomBar(route)
                 }

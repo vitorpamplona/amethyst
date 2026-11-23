@@ -181,4 +181,14 @@ class ConcordDirectInviteActionsTest {
         assertEquals(stock, ConcordActions.directInviteDeliveryRelays(null))
         assertEquals(stock, ConcordActions.directInviteDeliveryRelays(RecipientRelayFetcher.Lists(emptyList(), emptyList(), null)))
     }
+
+    /** An offline caller's fallback replaces the stock set; a recipient's own inbox still wins. */
+    @Test
+    fun aFallbackReplacesTheStockSetButNotAnInbox() {
+        val local = setOf(RelayUrlNormalizer.normalizeOrNull("ws://127.0.0.1:7777")!!)
+        assertEquals(local, ConcordActions.directInviteDeliveryRelays(null, local))
+        val dm = RelayUrlNormalizer.normalizeOrNull("wss://dm.example")!!
+        val withDm = RecipientRelayFetcher.Lists(dmInbox = listOf(dm), keyPackage = emptyList(), nip65 = null)
+        assertEquals(setOf(dm), ConcordActions.directInviteDeliveryRelays(withDm, local))
+    }
 }

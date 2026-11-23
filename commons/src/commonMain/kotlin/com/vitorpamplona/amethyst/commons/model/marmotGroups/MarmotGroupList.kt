@@ -22,11 +22,19 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Tracks all Marmot MLS group chatrooms for an account.
@@ -59,12 +67,52 @@ class MarmotGroupList(
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
 
-    fun getOrCreateGroup(nostrGroupId: HexKey): MarmotGroupChatroom = rooms.getOrCreate(nostrGroupId) { MarmotGroupChatroom(nostrGroupId) }
+    /**
+     * Groups that are never chats: the account's Marmot device group. They get no room, so no list,
+     * feed, unread count or notification ever reaches them; a caller that asks still gets a detached
+     * room it can write to harmlessly.
+     */
+    var isHidden: (HexKey) -> Boolean = { false }
+
+    fun getOrCreateGroup(nostrGroupId: HexKey): MarmotGroupChatroom =
+        if (isHidden(nostrGroupId)) {
+            MarmotGroupChatroom(nostrGroupId)
+        } else {
+            rooms.getOrCreate(nostrGroupId) { MarmotGroupChatroom(nostrGroupId) }
+        }
+
+    /**
+     * Every group, newest activity first, split into Known and New Requests
+     * ([MarmotGroupChatroom.isKnown]), recomputed on every group change and every change of
+     * [follows]. A reply flips [MarmotGroupChatroom.ownerSentMessage] without changing which
+     * rooms exist, so a screen that cached the split on the room list never moved the group out
+     * of New Requests. [extraGroupIds] adds groups the MLS state holds but no message reached yet,
+     * except hidden ones ([isHidden]: the device group). Computed on [context], off the main thread,
+     * and a burst of messages costs one recomputation.
+     */
+    fun knownSplit(
+        follows: Flow<Set<HexKey>>,
+        extraGroupIds: () -> Collection<HexKey> = { emptyList() },
+        context: CoroutineContext = Dispatchers.Default,
+    ): Flow<MarmotGroupSplit> =
+        combine(groupListChanges.onStart { emit("") }.conflate(), follows) { _, following ->
+            val groups = ArrayList<Pair<HexKey, MarmotGroupChatroom>>()
+            val listed = HashSet<HexKey>()
+            rooms.forEach { key, chatroom ->
+                groups.add(key to chatroom)
+                listed.add(key)
+            }
+            extraGroupIds().forEach { id -> if (!isHidden(id) && listed.add(id)) groups.add(id to getOrCreateGroup(id)) }
+            groups.sortByDescending { it.second.newestMessage?.createdAt() ?: 0L }
+            val (known, requests) = groups.partition { it.second.isKnown(following) }
+            MarmotGroupSplit(known, requests)
+        }.conflate().flowOn(context)
 
     fun addMessage(
         nostrGroupId: HexKey,
         msg: Note,
     ) {
+        if (isHidden(nostrGroupId)) return
         if (!isDisplayableFeedMessage(msg)) return
         // An admin deletion applies to chat messages only (`features/content-moderation.md`).
         if (msg.event?.kind == ChatEvent.KIND && isAdminRemoved(nostrGroupId, msg.idHex)) return
@@ -79,6 +127,41 @@ class MarmotGroupList(
     }
 
     fun groupIdForNote(noteId: HexKey): HexKey? = noteToGroupIndex.get(noteId)
+
+    /**
+     * The messages of [nostrGroupId] that [deletion] (a kind:5 inner event) takes down: the ones
+     * this group shows and its sender wrote. Read before the deletion is applied, while they are
+     * still here; hand the result to [leaveDeletedPlaceholders] afterwards.
+     */
+    fun messagesDeletedBy(
+        nostrGroupId: HexKey,
+        deletion: Event,
+    ): List<Note> {
+        if (deletion.kind != DELETION_KIND) return emptyList()
+        val room = rooms.get(nostrGroupId) ?: return emptyList()
+        val targets = deletion.tags.mapNotNullTo(HashSet()) { if (it.size > 1 && it[0] == "e") it[1] else null }
+        if (targets.isEmpty()) return emptyList()
+        return room.messages.filter { it.idHex in targets && it.author?.pubkeyHex == deletion.pubKey && it.event != null }
+    }
+
+    /**
+     * Puts a [MarmotDeletedMessageNote] where each of [deleted] stood, once the deletion took it
+     * out of [nostrGroupId]. One that is still there (the cache refused the deletion) is left alone.
+     */
+    fun leaveDeletedPlaceholders(
+        nostrGroupId: HexKey,
+        deleted: List<Note>,
+    ) {
+        if (deleted.isEmpty()) return
+        val room = getOrCreateGroup(nostrGroupId)
+        var changed = false
+        deleted.forEach { gone ->
+            if (gone in room.messages) return@forEach
+            val createdAt = gone.event?.createdAt ?: gone.createdAt() ?: return@forEach
+            if (room.addMessageSync(MarmotDeletedMessageNote(gone.idHex, gone.author, createdAt))) changed = true
+        }
+        if (changed) _groupListChanges.tryEmit(nostrGroupId)
+    }
 
     /** True when [note] is one of [nostrGroupId]'s messages. */
     fun isInGroup(
@@ -212,3 +295,11 @@ class MarmotGroupList(
         return MarmotAppEvent.isTimelineRow(event.kind, event.pubKey, ownerPubKey)
     }
 }
+
+private const val DELETION_KIND = 5
+
+/** [MarmotGroupList.knownSplit]: the groups under Known and under New Requests, newest first. */
+data class MarmotGroupSplit(
+    val known: List<Pair<HexKey, MarmotGroupChatroom>>,
+    val requests: List<Pair<HexKey, MarmotGroupChatroom>>,
+)

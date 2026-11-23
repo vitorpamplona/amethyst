@@ -129,8 +129,6 @@ there is little to gain beyond that:
   one; it duplicates `savedPositions` in `GlobalMediaPlayer.kt:207`);
 - `service/cast/{CastMediaSummary,CastRoutePlan}`;
 - `service/resourceusage/MeteringNostrSigner`;
-- `model/accountsCache/MarmotStreamTransport.kt`, which `DesktopAppModules.kt:436-437` repeats
-  inline: give `:marmotQuic` a default instead;
 - the host-agnostic browser chrome state in `ui/screen/loggedIn/embed/` (`ConsoleBridge`,
   `FindBridge`, `SelectionUiState`, `EmbeddedLoadStatus`, `EmbeddedAutoRecovery`,
   `EmbeddedTabChrome`, …).

@@ -163,7 +163,7 @@ object NappletCommands {
             val manifest =
                 (event as? NappletManifest)?.takeIf { it.isValid() }
                     ?: return Output.error("invalid_manifest", "Invalid current NIP-5D manifest")
-            return StaticSiteServe.serve(listOfNotNull(manifest.artifactFile()), (manifest.servers() + extraServers).distinct(), port)
+            return StaticSiteServe.serve(listOfNotNull(manifest.artifactFile()), (manifest.servers() + extraServers).distinct(), port, ctx.blossom)
         }
     }
 
@@ -261,6 +261,7 @@ object NappletCommands {
                     ),
                 outFile = outFile,
                 maxInlineBytes = maxInlineBytes,
+                blossom = ctx.blossom,
             )
         }
     }

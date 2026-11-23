@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilt
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
@@ -103,7 +102,6 @@ class NotificationFeedFilterModeOverrideTest {
                 marmotNotifier = { MarmotGroupNotifier.None },
                 nip46Consent = Nip46ConsentPrompter.Unanswered,
                 geohashIdentityStore = InMemoryGeohashIdentityStore(),
-                marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
             )
     }
 

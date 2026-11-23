@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupModerationCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupModerationCommands.PinListRead
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_EOSE
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -81,5 +82,19 @@ class RelayGroupPinReadTest {
     fun aForgedListAloneIsNotAnAnswerWithoutEose() {
         val read = RelayGroupModerationCommands.readPinList(FetchAllResult(listOf(relay to pinned(stranger, 200)), emptyMap(), setOf(relay)), relay, relayKey)
         assertEquals("timeout", assertIs<PinListRead.Failed>(read).code)
+    }
+
+    /** Buzz (NIP-PM): the relay-signed 30623, `d` and `h` the channel, pins newest first. */
+    @Test
+    fun aBuzzListReadsInDisplayOrderAndOnlyFromTheRelay() {
+        val newer = "ff".repeat(32)
+
+        fun buzzList(
+            author: String,
+            createdAt: Long,
+        ) = ChannelPinsEvent("dd".repeat(32), author, createdAt, arrayOf(arrayOf("d", "gid"), arrayOf("h", "gid"), arrayOf("e", newer), arrayOf("e", pinnedId)), "", "ee".repeat(64))
+        val events = listOf(relay to buzzList(stranger, 300), relay to buzzList(relayKey, 100))
+        val read = RelayGroupModerationCommands.readPinList(FetchAllResult(events, mapOf(relay to DONE_REASON_EOSE), emptySet()), relay, relayKey)
+        assertEquals(listOf(newer, pinnedId), assertIs<PinListRead.Found>(read).pins.map { it.ref })
     }
 }

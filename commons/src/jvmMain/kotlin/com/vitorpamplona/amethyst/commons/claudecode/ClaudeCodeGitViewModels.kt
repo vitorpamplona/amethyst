@@ -505,8 +505,10 @@ class ClaudeCodeProposeViewModel(
                             ProcessBuilder("bash", script.absolutePath)
                                 .directory(root)
                                 .redirectErrorStream(true)
-                                .apply { environment()["PREPUSH_KMP_METADATA"] = "1" }
-                                .start()
+                                .apply {
+                                    environment().putAll(AndroidSdk.environment())
+                                    environment()["PREPUSH_KMP_METADATA"] = "1"
+                                }.start()
                         gateProcess = process
                         // A pre-push hook reads the pushed refs on stdin; there are none.
                         process.outputStream.close()

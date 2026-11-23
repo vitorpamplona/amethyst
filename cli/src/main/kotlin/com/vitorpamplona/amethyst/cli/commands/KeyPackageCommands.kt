@@ -58,6 +58,8 @@ object KeyPackageCommands {
             if (relays.isEmpty()) return Output.error("no_relays", "configure relays first")
 
             val event = ctx.marmot.generateKeyPackageEvent(relays.toList())
+            // A linked device names it in its roster entry first (`device-group.md` "Slot announcements").
+            ctx.marmotDevices?.beforeKeyPackagePublish(event)
             val ack = ctx.publish(event, relays)
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             // Confirmed by a relay: starts the grace period of any bundle this displaced.
@@ -91,8 +93,8 @@ object KeyPackageCommands {
             val recipient =
                 ctx.cachedRelayListsOf(targetHex)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
-            // The one `group add` would invite with: newest valid kind:30443,
-            // else newest valid legacy kind:443.
+            // The ones `group add` would invite with: valid kind:30443 slots
+            // only (a legacy kind:443 alone no longer counts).
             val lookup =
                 KeyPackageFetcher.fetchForInvite(
                     client = ctx.client,

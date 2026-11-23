@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
@@ -30,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
 import com.vitorpamplona.cordn.appMultiDevice.CordnMigration
 import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationException
-import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
@@ -141,7 +141,7 @@ internal object CordnMigrateCommands {
      * client per call costs nothing that matters.
      */
     private fun blobStore(servers: List<String>): BlossomCordnBlobStore {
-        val http = OkHttpClient.Builder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
+        val http = LocalOnly.httpClientBuilder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
         return BlossomCordnBlobStore(servers) { BlossomClient(http) }
     }
 

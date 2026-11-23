@@ -80,18 +80,22 @@ preflight() {
   # compatible with tip"; testing against this answers "are we compatible with
   # what users are running", which is the question the harness exists to answer.
   #
-  # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
-  # As of 2026-10-24 android is on the MDK nightly `d274dd22` (2026-10-22,
-  # marmotkit-v0.14.0-nightly.20261023) and ios on the 0.13.0 release
-  # (`891ab349`), an ancestor of it. Both are ancestors of the v0.14.0 release
-  # (`3fb4b475`, 13 commits after android's nightly), which is pinned here: it
-  # is the release White Noise is about to ship, so it is where new validation
-  # lands first, and a client that satisfies it satisfies both apps.
+  # As of 2026-11-22 this pins the MDK v0.19.0 release (marmotkit-v0.19.0,
+  # `3fce9546`), one release ahead of the apps: whitenoise-android master
+  # (`7a1e558`) names `mdk-sha=34646a57`, MarmotKit 0.18.0. 0.19.0 retires the
+  # agent text stream over QUIC (spec marmot#513): new groups stop including
+  # `0x8006`, the `send`/`fanout` roles stop being advertised, kind 1200 is no
+  # longer sent, and the QUIC broker binary is gone. Amethyst follows the same
+  # retirement, so the harness tests the release the apps move to next rather
+  # than one whose groups we no longer create the same way. Between them 0.18
+  # and 0.19 carry the NIP-22 thread messages (mdk#3581) and device-group
+  # maintenance; v0.15.0 was the last wire change before (account-devices
+  # `0x800d` in KeyPackages, leaves and new groups).
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
-  # If they agree again, that is the value; if they disagree, take the newer
-  # and say so here.
-  MDK_PIN="${MDK_PIN:-3fb4b4759ac676b0c21c4c3527074866c9fa4c89}"
+  # If they agree, that is the value; if they disagree, take the newer and say
+  # so here.
+  MDK_PIN="${MDK_PIN:-3fce95465cdea1edc8456dbd1c6691d1c8dc1f2e}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"
@@ -164,52 +168,6 @@ preflight() {
   # ../headless/helpers.sh. Nothing to clone or build beyond amy itself.
 }
 
-# --- local QUIC broker -------------------------------------------------------
-# MDK's own `marmot-quic-broker`, the reference implementation of the other
-# side of `transports/quic.md`. Agent text stream previews are the only tests
-# that need it, and they are the only way to know our binding is right — the
-# ALPN, the control envelope, the frame prefix and the record key schedule all
-# have to agree with an implementation that is not ours.
-#
-# `--replay-ttl-secs` is what lets a subscriber that connects after the
-# records were pushed still see them; with the default 0 a test would have to
-# race the publisher.
-start_quic_broker() {
-  if [[ ! -x "$BROKER_BIN" ]]; then
-    info "marmot-quic-broker not built — agent text stream tests will skip"
-    return 1
-  fi
-  step "starting QUIC broker on $BROKER_HOST:$BROKER_PORT"
-  mkdir -p "$STATE_DIR/broker"
-  nohup "$BROKER_BIN" --bind "$BROKER_HOST:$BROKER_PORT" --replay-ttl-secs 60 --json \
-    >"$STATE_DIR/broker/stdout.log" 2>"$STATE_DIR/broker/stderr.log" &
-  BROKER_PID=$!
-  local deadline=$(( $(date +%s) + 15 ))
-  while [[ $(date +%s) -lt $deadline ]]; do
-    if grep -q '"local_addr"' "$STATE_DIR/broker/stdout.log" 2>/dev/null; then
-      # The broker generates a self-signed certificate and prints its
-      # fingerprint. `amy` pins that exact leaf rather than trusting a chain —
-      # there is no CA in this picture, and without the pin every stream test
-      # fails inside TLS before a single frame is written.
-      BROKER_PIN=$(sed -n 's/.*"server_cert_sha256_fingerprint":"\([0-9a-f]*\)".*/\1/p' \
-        "$STATE_DIR/broker/stdout.log" | head -1)
-      if [[ -z "$BROKER_PIN" ]]; then
-        fail_msg "broker printed no server_cert_sha256_fingerprint — cannot pin it"
-        BROKER_PID=""
-        return 1
-      fi
-      info "broker pid $BROKER_PID ready (cert ${BROKER_PIN:0:16}…)"
-      return 0
-    fi
-    if ! kill -0 "$BROKER_PID" 2>/dev/null; then break; fi
-    sleep 1
-  done
-  fail_msg "broker never came up (see $STATE_DIR/broker/stderr.log)"
-  tail -n 20 "$STATE_DIR/broker/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
-  BROKER_PID=""
-  return 1
-}
-
 # --- blossom blob store ------------------------------------------------------
 # A loopback Blossom server for the encrypted-media tests. Both implementations
 # upload ciphertext to it and fetch each other's back; it never sees a key.
@@ -244,13 +202,6 @@ stop_blossom() {
   step "stopping blossom pid $BLOSSOM_PID"
   kill "$BLOSSOM_PID" 2>/dev/null || true
   BLOSSOM_PID=""
-}
-
-stop_quic_broker() {
-  [[ -n "${BROKER_PID:-}" ]] || return 0
-  step "stopping broker pid $BROKER_PID"
-  kill "$BROKER_PID" 2>/dev/null || true
-  BROKER_PID=""
 }
 
 # --- local relay -------------------------------------------------------------

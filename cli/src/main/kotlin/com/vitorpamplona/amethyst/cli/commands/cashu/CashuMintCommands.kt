@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.cli.commands.cashu
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import okhttp3.OkHttpClient
 
 /**
  * `amy cashu mint <ping|info> URL` — stateless NIP-60 mint /v1/info probes.
@@ -54,7 +54,7 @@ object CashuMintCommands {
                 ),
         )
 
-    private val okhttp = OkHttpClient.Builder().build()
+    private val okhttp = LocalOnly.httpClientBuilder().build()
 
     private suspend fun ping(rest: Array<String>): Int {
         val args = Args(rest)

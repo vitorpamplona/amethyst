@@ -145,7 +145,6 @@ import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
-import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
@@ -1020,7 +1019,6 @@ class AppModules(
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
             externalSignerFactory = { pubKey, packageName -> NostrSignerExternal(pubKey, packageName, appContext.contentResolver) },
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
             cordnBlobCipher = { KeyStoreCordnBlobCipher() },
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,

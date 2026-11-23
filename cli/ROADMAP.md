@@ -49,6 +49,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | MLS KeyPackage publish + fetch | ✅ | marmot-kmp's `MarmotManager` |
 | Marmot group create / add / rename / promote / demote / remove / leave | ✅ | `commons/marmot/` |
 | Marmot message send / list | ✅ | `commons/marmot/` |
+| Marmot device groups (`amy marmot devices`: link with seven emoji, list, sync, remove) | ✅ | commons `MarmotDevices` over marmot-kmp, behind `devices enable`. Live against `wn devices link` (both roles, chats, removal): `cli/tests/marmot/tests-devices.sh`. History deliveries (473) not yet. |
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |
 | NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
 | NIP-13 proof of work (`amy notes post --pow N`, `amy pow check/mine/bench`) | ✅ | `PostCommand` + `PowCommands` — mines pre-signature via quartz `PoWMiner`; `pow mine --pubkey` covers delegated PoW; `pow check` applies the commitment cap. |

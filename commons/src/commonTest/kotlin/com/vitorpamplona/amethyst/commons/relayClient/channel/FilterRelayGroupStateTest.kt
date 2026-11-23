@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.channel
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
@@ -53,7 +54,7 @@ class FilterRelayGroupStateTest {
             GroupMembersEvent.KIND,
             GroupRolesEvent.KIND,
         )
-    private val pinKinds = listOf(GroupPinnedEvent.KIND)
+    private val pinKinds = listOf(GroupPinnedEvent.KIND, ChannelPinsEvent.KIND)
 
     @Test
     fun `with no pins it is host d-scoped state filters and no message window`() {

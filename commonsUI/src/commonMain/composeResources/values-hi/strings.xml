@@ -3915,7 +3915,6 @@
     <string name="concord_create_failed">समुदाय बनाया नहीं जा सका। कोई पुनःप्रसारक ने उसे स्वीकारा नहीं। अथवा आपकी समुदाय सूची का अद्यतन असफल। पुनःप्रसारकों की जाँच करें तथा पुनःप्रयास करें।</string>
     <string name="concord_create_relays">पुनःप्रसारक</string>
     <string name="concord_create_relays_desc">पुनःप्रसारक जो इस समुदाय के रहस्यीकृत सन्देशों को रखते हैं। रिक्त छोड दें अपने ही पुनःप्रसारकों का उपयोग करने के लिए।</string>
-    <string name="concord_create_title">नयी कोंकोर्ड प्रणाली</string>
     <string name="concord_direct_invite_accept">स्वीकार</string>
     <string name="concord_direct_invite_accept_failed">यह समुदाय अभिगम्य नहीं। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="concord_direct_invite_action">आमन्त्रणकर्ता npub…</string>

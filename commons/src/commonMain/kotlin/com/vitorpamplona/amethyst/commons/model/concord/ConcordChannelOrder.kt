@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.model.concord
+
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordChannel as FoldedChannel
+
+/**
+ * The order a community's channel list shows its Channels in. CORD-03 gives a Channel no ordering
+ * field; the reference client sorts by its optional `armada.order` position and then by name, so a
+ * community that never orders anything (all of ours) reads alphabetically, and a new channel lands
+ * where its name puts it. We don't read positions yet, so: name, case-insensitive, then id for a
+ * stable order between equal names. Without this the list followed the fold's map order, which put
+ * `#general` below channels created after it.
+ */
+object ConcordChannelOrder {
+    val comparator: Comparator<Map.Entry<String, FoldedChannel>> =
+        compareBy<Map.Entry<String, FoldedChannel>> {
+            it.value.definition.name
+                .lowercase()
+        }.thenBy { it.value.definition.name }
+            .thenBy { it.key }
+
+    fun <T : Map.Entry<String, FoldedChannel>> sorted(channels: Collection<T>): List<T> = channels.sortedWith(comparator)
+}

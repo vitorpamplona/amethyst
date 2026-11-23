@@ -51,9 +51,9 @@ data class BlossomPreflightResult(
 /**
  * Blossom HTTP client for JVM consumers (desktop + CLI + Android's
  * shared logic). Owns no global state — pass a configured [OkHttpClient] (e.g.
- * desktop's per-URL role-based client) for proxying /
- * connection pooling. The default constructor uses a fresh OkHttpClient — fine
- * for one-shot uses such as the CLI.
+ * desktop's per-URL role-based client, the CLI's local-only guarded one) for
+ * proxying / connection pooling. There is no default: a fresh OkHttpClient would
+ * skip the app's Tor routing and the CLI's AMY_LOCAL_ONLY guard.
  *
  * Covers BUD-01 (download), BUD-02 (upload/list/delete), BUD-04 (mirror),
  * BUD-05 (media), BUD-06 (preflight), BUD-07 (402), and BUD-09 (report). Every
@@ -61,7 +61,7 @@ data class BlossomPreflightResult(
  * varying capability.
  */
 open class BlossomClient(
-    private val okHttpClient: OkHttpClient = OkHttpClient(),
+    private val okHttpClient: OkHttpClient,
 ) : BlossomBlobClient {
     /** [onProgress] follows the bytes sent, restarting from zero if OkHttp retries the request. */
     open suspend fun upload(

@@ -496,9 +496,14 @@ class NotificationFeedFilter(
 
         // Include marmot group messages as notifications (like DMs)
         val loggedInUserHex = account.userProfile().pubkeyHex
+        val marmotSettings = account.marmotChatSettings.state.value
         val marmotMessages =
             account.marmotGroupList.rooms.mapFlatten { _, chatroom ->
-                chatroom.messages.filter { it.author?.pubkeyHex != loggedInUserHex }
+                if (marmotSettings.isMuted(chatroom.nostrGroupId)) {
+                    emptyList()
+                } else {
+                    chatroom.messages.filter { it.author?.pubkeyHex != loggedInUserHex }
+                }
             }
 
         // Concord Direct Invites waiting on an answer. Like a "you were added to a channel" (44100) they
@@ -618,6 +623,9 @@ class NotificationFeedFilter(
                     account.marmotGroupList.rooms.get(room.nostrGroupId) === room
                 }
             if (!inCurrentAccount) return false
+            // A chat muted on this device (or on a linked one, through the device group) stays quiet.
+            val settings = account.marmotChatSettings.state.value
+            if (marmotGatherers.all { room -> settings.isMuted(room.nostrGroupId) }) return false
             return it.author?.pubkeyHex != loggedInUserHex
         }
 

@@ -98,9 +98,9 @@ object AwaitCommands {
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 // Waits for what `group add` would actually invite with: a
-                // valid kind:30443, else a valid legacy kind:443. Settling on
-                // any 30443, valid or not, let the wait succeed and the add
-                // then fail, and never saw a 443-only peer at all.
+                // valid kind:30443 (a legacy kind:443 alone no longer counts).
+                // Settling on any 30443, valid or not, let the wait succeed
+                // and the add then fail.
                 val lookup =
                     KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,

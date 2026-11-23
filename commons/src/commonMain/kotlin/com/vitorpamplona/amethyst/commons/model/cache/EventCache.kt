@@ -118,6 +118,9 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
 import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
@@ -161,6 +164,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
+import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -259,6 +263,9 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenListEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRemovalEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -2634,6 +2641,23 @@ open class EventCache :
     }
 
     /**
+     * Buzz NIP-PM relay-signed pin list (kind 30623) → the channel's pins. Its `d` and `h` both name
+     * the channel; a list not signed by the relay's NIP-11 `self` key is stored but never folded.
+     */
+    fun consume(
+        event: ChannelPinsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? ChannelPinsEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.channel(), relay)).updateBuzzPins(it) }
+        }
+        return new
+    }
+
+    /**
      * A Kanban card (kind 30302) is stored like any addressable event and also counted as a reply
      * of its board ([computeReplyTo] links the board), which [consumeBaseReplaceable] alone does
      * not do: the board card reads its column counts from those replies. A newer version of the
@@ -4060,6 +4084,7 @@ open class EventCache :
                 is GroupMembersEvent -> consume(event, relay, wasVerified)
                 is GroupAdminsEvent -> consume(event, relay, wasVerified)
                 is GroupPinnedEvent -> consume(event, relay, wasVerified)
+                is ChannelPinsEvent -> consume(event, relay, wasVerified)
 
                 // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
                 // route it onto the channel so a moderation UI can offer the relay's role set.
@@ -4177,6 +4202,8 @@ open class EventCache :
                 is ForumCommentEvent,
                 is ForumVoteEvent,
                 is StreamMessagePinnedEvent,
+                is PinMessageEvent,
+                is UnpinMessageEvent,
                 is StreamMessageBookmarkedEvent,
                 is StreamMessageScheduledEvent,
                 is StreamReminderEvent,
@@ -4656,6 +4683,11 @@ open class EventCache :
                         } else {
                             consumeRegularEvent(event, relay, wasVerified)
                         }
+                    } else if (event.kind in KINDS_HANDLED_ELSEWHERE) {
+                        // Known kinds whose meaning is applied where they arrive, never stored:
+                        // Marmot push gossip by the group's push coordinator, ContextVM messages
+                        // (cordn's coordinator traffic) by their transport. Not news, so no warning.
+                        Log.d("EventCache") { "Kind ${event.kind} is handled outside the cache; not stored" }.let { false }
                     } else {
                         Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
                     }
@@ -4724,3 +4756,6 @@ class LocalCacheFlow {
         }
     }
 }
+
+/** Kinds [EventCache] leaves unstored on purpose: see the branch that reads it. */
+private val KINDS_HANDLED_ELSEWHERE = setOf(TokenRequestEvent.KIND, TokenListEvent.KIND, TokenRemovalEvent.KIND, CvmMessageEvent.KIND)

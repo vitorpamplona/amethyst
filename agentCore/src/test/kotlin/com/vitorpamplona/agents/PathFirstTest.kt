@@ -18,20 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.accountsCache
+package com.vitorpamplona.agents
 
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
-import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
-import kotlinx.coroutines.CoroutineScope
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-/**
- * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
- * Preview brokers are commonly self-signed and the binding expects that; the platform trust
- * store is still the default answer, and a deployment that pins does it here.
- */
-fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
-    QuicAgentTextStreamTransport(
-        parentScope = scope,
-        certificateValidator = JdkCertificateValidator(),
-    )
+class PathFirstTest {
+    @Test
+    fun foldersGoFirstOnceAndTheRestKeepsItsOrder() {
+        val env = mutableMapOf("PATH" to listOf("/usr/bin", "/opt/git/bin", "/bin").joinToString(File.pathSeparator))
+        env.putPathFirst(listOf(File("/opt/git/bin")))
+        assertEquals(listOf("/opt/git/bin", "/usr/bin", "/bin"), env.getValue("PATH").split(File.pathSeparator))
+    }
+
+    @Test
+    fun aMissingPathIsCreated() {
+        val env = mutableMapOf<String, String>()
+        env.putPathFirst(listOf(File("/opt/git/bin")))
+        assertEquals("/opt/git/bin", env["PATH"])
+    }
+
+    @Test
+    fun nothingToAddChangesNothing() {
+        val env = mutableMapOf("PATH" to "/usr/bin")
+        env.putPathFirst(emptyList())
+        assertEquals(mapOf("PATH" to "/usr/bin"), env)
+    }
+}

@@ -67,16 +67,24 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_someone
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_already_added
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_not_a_key
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_open_failed
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_opening
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_pick_workspace
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_recipients
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_remove
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_start
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_thats_you
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_too_many_people
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_workspace
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -105,7 +113,7 @@ fun BuzzNewDmScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
 
-    var inputError by remember { mutableStateOf<String?>(null) }
+    var inputError by remember { mutableStateOf<BuzzNewDmViewModel.Problem?>(null) }
 
     val sending = status is BuzzNewDmViewModel.Status.Sending
 
@@ -158,7 +166,7 @@ fun BuzzNewDmScreen(
                 leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 singleLine = true,
                 isError = inputError != null,
-                supportingText = inputError?.let { { Text(it) } },
+                supportingText = inputError?.let { { Text(problemText(it)) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions =
                     KeyboardActions(
@@ -173,7 +181,7 @@ fun BuzzNewDmScreen(
             )
 
             (status as? BuzzNewDmViewModel.Status.Error)?.let {
-                Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                Text(problemText(it.problem), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
 
             // Search results — workspace members first — fill the space above the pinned Start button.
@@ -259,3 +267,20 @@ private fun ParticipantChip(
         },
     )
 }
+
+/** The words for a [BuzzNewDmViewModel.Problem]. */
+@Composable
+private fun problemText(problem: BuzzNewDmViewModel.Problem): String =
+    when (problem) {
+        BuzzNewDmViewModel.Problem.NotAKey -> stringRes(Res.string.buzz_dm_not_a_key)
+        BuzzNewDmViewModel.Problem.ThatsYou -> stringRes(Res.string.buzz_dm_thats_you)
+        BuzzNewDmViewModel.Problem.AlreadyAdded -> stringRes(Res.string.buzz_dm_already_added)
+        is BuzzNewDmViewModel.Problem.TooManyPeople -> pluralStringRes(Res.plurals.buzz_dm_too_many_people, problem.maxOthers, problem.maxOthers)
+        BuzzNewDmViewModel.Problem.NoRelay -> stringRes(Res.string.buzz_dm_pick_workspace)
+        BuzzNewDmViewModel.Problem.NoParticipants -> stringRes(Res.string.buzz_dm_add_someone)
+        is BuzzNewDmViewModel.Problem.OpenFailed -> {
+            // The cause comes from the signer or the relay, untranslated: shown under our own words.
+            val base = stringRes(Res.string.buzz_dm_open_failed)
+            problem.detail?.let { "$base\n$it" } ?: base
+        }
+    }

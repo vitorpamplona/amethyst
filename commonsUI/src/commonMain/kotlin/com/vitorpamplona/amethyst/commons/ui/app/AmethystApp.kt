@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppManifestPreloader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.marmotDevices.MarmotDevicesPromptHost
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
@@ -401,6 +402,8 @@ private fun AppNavigation(
 
         DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
         DisplayNotifyMessages(accountViewModel, nav)
+        // Marmot device groups: a sibling's link request, an unknown sign-in, this device unlinked.
+        MarmotDevicesPromptHost(accountViewModel, nav)
         DisplayCrashMessages(accountViewModel, nav)
         // Background work, a front page printing elsewhere included: one popup for all of it.
         DisplayBroadcastProgress(accountViewModel, nav)
