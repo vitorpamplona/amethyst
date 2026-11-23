@@ -350,6 +350,10 @@ compose.desktop {
         }
 
         jvmArgs += "-Xmx2g"
+        // Skiko's FrameWatcher calls System.gc() every 30 s while frames draw; with G1 that is a
+        // stop-the-world full collection, measured at 117-373 ms on the UI thread, sometimes
+        // inside a scroll. This makes the explicit call start a concurrent cycle instead.
+        jvmArgs += "-XX:+ExplicitGCInvokesConcurrent"
 
         // JDK 24 and later warn at every start, and will refuse in a later release, when a class
         // path library loads native code (JNA, secp256k1, Skiko, SQLite) or calls sun.misc.Unsafe's
