@@ -138,6 +138,7 @@ import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
@@ -547,6 +548,20 @@ private fun CordnGroupChat(
                                                         content = CordnPolls.describe(definition, optionIds),
                                                         kind = CordnMessageKinds.POLL_RESPONSE,
                                                         tags = CordnPolls.voteTags(message.target(), optionIds),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        // Any member answers; the newest RSVP per account counts (calendar-events.md §7).
+                                        // A cancelled event offers no answer (CordnCalendarCard).
+                                        onRsvp = { status ->
+                                            scope.launch {
+                                                trySend {
+                                                    it.send(
+                                                        gid = room.gid,
+                                                        content = CordnCalendar.rsvpLabel(status),
+                                                        kind = CordnMessageKinds.CALENDAR_RSVP,
+                                                        tags = CordnCalendar.rsvpTags(message.envelope, status),
                                                     )
                                                 }
                                             }
