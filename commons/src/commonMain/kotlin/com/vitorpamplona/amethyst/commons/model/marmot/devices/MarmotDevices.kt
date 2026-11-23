@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -80,7 +81,16 @@ class MarmotDevices(
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
+    /**
+     * Guards the state below. Never held across a relay round trip it can avoid: what a step wants
+     * published goes to [sends], and [locked] sends it once the lock is released, so the timers,
+     * every ingest and the user's actions do not queue behind one another's publishes.
+     */
     private val mutex = Mutex()
+    private val sends = ArrayList<suspend () -> Unit>()
+
+    /** Requests whose KeyPackage is being fetched, so a tick does not fetch it again meanwhile. */
+    private val fetching = HashSet<HexKey>()
     private val _state = MutableStateFlow(MarmotDevicesSnapshot())
     val state: StateFlow<MarmotDevicesSnapshot> = _state.asStateFlow()
 
@@ -128,7 +138,7 @@ class MarmotDevices(
      * group, not on every run.
      */
     suspend fun start(announce: Boolean = true) =
-        mutex.withLock {
+        locked {
             if (!started) {
                 groups.start()
                 started = true
@@ -178,11 +188,11 @@ class MarmotDevices(
     private suspend fun onPairing(
         message: PairingMessage,
         createdAt: Long,
-    ) = mutex.withLock {
+    ) = locked {
         if (!started) {
             if (earlyPairing.size >= MAX_EARLY_PAIRING) earlyPairing.removeFirst()
             earlyPairing.addLast(message to createdAt)
-            return@withLock
+            return@locked
         }
         handlePairing(message, createdAt)
         refreshState()
@@ -204,13 +214,18 @@ class MarmotDevices(
 
     /**
      * After every Marmot ingest (group event or Welcome): publish what the device group queued,
-     * and on a new device that just joined its device group, send the first Commit.
+     * and on a new device that just joined its device group, send the first Commit. With
+     * [nostrGroupId], the group the event was for: a chat's event with nothing queued changes
+     * nothing here, so it costs no device-group work.
      */
-    suspend fun afterIngest() =
-        mutex.withLock {
-            if (!started) return@withLock
-            runStep("outbox") { publishAll(groups.drainOutbox()) }
-            runStep("first commit") { firstCommitIfJoined() }
+    suspend fun afterIngest(nostrGroupId: HexKey? = null) =
+        locked {
+            if (!started) return@locked
+            val outbox = groups.drainOutbox()
+            val deviceGroupMoved = nostrGroupId == null || groups.isDeviceGroup(nostrGroupId) || newDeviceState == NewDeviceLinkState.Joining
+            if (outbox.isEmpty() && !deviceGroupMoved) return@locked
+            publishAll(outbox)
+            if (deviceGroupMoved) runStep("first commit") { firstCommitIfJoined() }
             refreshState()
         }
 
@@ -239,7 +254,7 @@ class MarmotDevices(
      * existing device will add) and sends the Request. Watch [state]`.newDevice`.
      */
     suspend fun startLinkAsNewDevice(): NewDeviceLinkState =
-        mutex.withLock {
+        locked {
             check(started) { "start() first" }
             val t = groups.trust()
             check(!t.trustsDeviceGroup) { "This device is already linked" }
@@ -285,7 +300,7 @@ class MarmotDevices(
 
     /** The user says both screens show the same seven emoji. */
     suspend fun confirmMatch(): NewDeviceLinkState =
-        mutex.withLock {
+        locked {
             val session = checkNotNull(newDevice) { "No link in progress" }
             val now = clock()
             when (val c = session.confirmMatch(now)) {
@@ -302,8 +317,8 @@ class MarmotDevices(
 
     /** The user says the codes differ. */
     suspend fun rejectMatch() =
-        mutex.withLock {
-            val session = newDevice ?: return@withLock
+        locked {
+            val session = newDevice ?: return@locked
             publishPairing(session.rejectMatch(clock()))
             newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.CODES_DIFFER)
             newDevice = null
@@ -312,8 +327,8 @@ class MarmotDevices(
 
     /** The user gives up linking this device. */
     suspend fun cancelLink() =
-        mutex.withLock {
-            val session = newDevice ?: return@withLock
+        locked {
+            val session = newDevice ?: return@locked
             session.cancel()?.let { publishPairing(it) }
             groups.cancelLink(session.sessionId)
             newDeviceState = NewDeviceLinkState.Ended(DeviceLinkEndReason.CANCELLED)
@@ -392,8 +407,31 @@ class MarmotDevices(
             pairing.cancel(request.sessionId)
             return
         }
-        // Not on our relays yet (the new device may still be publishing it): try again on a later tick.
-        val keyPackage = transport.fetchOwnKeyPackage(request.keyPackageEventId) ?: return
+        val known = prompt.keyPackage
+        if (known != null) return answerWith(pairing, prompt, known, now)
+        // Fetched outside the lock; not on our relays yet (the new device may still be publishing
+        // it): a later tick tries again.
+        val sessionId = request.sessionId
+        if (!fetching.add(sessionId)) return
+        sends.add {
+            val fetched = runCatchingCancellable { transport.fetchOwnKeyPackage(request.keyPackageEventId) }.getOrNull()
+            locked {
+                fetching.remove(sessionId)
+                if (fetched != null && existing === pairing && prompts[sessionId] === prompt && prompt.state == DeviceLinkPrompt.State.Preparing) {
+                    answerWith(pairing, prompt, fetched, clock())
+                    refreshState()
+                }
+            }
+        }
+    }
+
+    private suspend fun answerWith(
+        pairing: ExistingDevicePairing,
+        prompt: Prompt,
+        keyPackage: KeyPackageEvent,
+        now: Long,
+    ) {
+        val request = prompt.request
         val matches =
             keyPackage.pubKey == signer.pubKey &&
                 runCatching { KeyPackageUtils.decodeKeyPackage(Base64.decode(keyPackage.content)).reference().toHexKey() }.getOrNull() == request.keyPackageRef
@@ -443,7 +481,7 @@ class MarmotDevices(
     suspend fun approveLink(
         sessionId: HexKey,
         label: String,
-    ) = mutex.withLock {
+    ) = locked {
         val pairing = checkNotNull(existing) { "No link request" }
         val prompt = checkNotNull(prompts[sessionId]) { "No link request $sessionId" }
         val now = clock()
@@ -457,9 +495,9 @@ class MarmotDevices(
 
     /** The user says the codes differ, or dismisses the request. */
     suspend fun rejectLink(sessionId: HexKey) =
-        mutex.withLock {
-            val pairing = existing ?: return@withLock
-            val prompt = prompts[sessionId] ?: return@withLock
+        locked {
+            val pairing = existing ?: return@locked
+            val prompt = prompts[sessionId] ?: return@locked
             val now = clock()
             val cancel = if (prompt.state is DeviceLinkPrompt.State.Comparing) pairing.rejectLink(sessionId, now) else pairing.cancel(sessionId)
             cancel?.let { publishPairing(it) }
@@ -475,7 +513,7 @@ class MarmotDevices(
         val keyPackage = checkNotNull(prompt.keyPackage)
         val slot = checkNotNull(keyPackage.dTag().takeIf { it.isNotEmpty() }) { "The KeyPackage has no slot" }
         val applied = groups.applyStaged(groups.approve(link, Base64.decode(keyPackage.content), slot, prompt.label, now))
-        applied.welcome?.let { transport.publishToSelf(it.giftWrapEvent) }
+        applied.welcome?.let { welcome -> sends.add { transport.publishToSelf(welcome.giftWrapEvent) } }
         Log.d(TAG) { "approved ${slot.take(8)} into the device group; Welcome ${if (applied.welcome != null) "sent" else "none"}" }
     }
 
@@ -488,8 +526,8 @@ class MarmotDevices(
      * Nothing runs once a sibling unlinked this device (MDK's `maintenance_passes`).
      */
     suspend fun tick() =
-        mutex.withLock {
-            if (!started) return@withLock
+        locked {
+            if (!started) return@locked
             val now = clock()
             runStep("pairing expiry") { expirePairing(now) }
             val t = groups.trust()
@@ -497,7 +535,9 @@ class MarmotDevices(
                 runStep("refresh") { groups.refresh() }
                 runStep("first commit") { firstCommitIfJoined() }
                 runStep("heartbeat") {
-                    groups.heartbeatDue(now)?.let { if (transport.publishGroupEvent(it)) groups.heartbeatSent(now) }
+                    groups.heartbeatDue(now)?.let { heartbeat ->
+                        sends.add { if (transport.publishGroupEvent(heartbeat)) mutex.withLock { groups.heartbeatSent(now) } }
+                    }
                 }
                 runStep("deadlines") { groups.checkLinkDeadlines(now)?.let { groups.applyStaged(it) } }
                 runStep("inactivity") { groups.stageInactivity(now)?.let { groups.applyStaged(it) } }
@@ -523,7 +563,7 @@ class MarmotDevices(
             }
             if (!t.unlinked && now - lastSignInCheck > SIGN_IN_CHECK_EVERY_SECS) {
                 lastSignInCheck = now
-                runStep("sign-ins") { checkSignIns() }
+                queueSignInCheck()
             }
             runStep("outbox") { publishAll(groups.drainOutbox()) }
             refreshState()
@@ -578,8 +618,20 @@ class MarmotDevices(
         }
     }
 
-    private suspend fun checkSignIns() {
-        val packages = transport.ownKeyPackages() ?: return
+    /** Fetches this account's KeyPackages outside the lock, then classifies them. */
+    private fun queueSignInCheck() {
+        sends.add {
+            val packages = transport.ownKeyPackages()
+            if (packages != null) {
+                locked {
+                    runStep("sign-ins") { recordSignIns(packages) }
+                    refreshState()
+                }
+            }
+        }
+    }
+
+    private suspend fun recordSignIns(packages: List<KeyPackageEvent>) {
         val publications = packages.mapNotNull { kp -> kp.dTag().takeIf { it.isNotEmpty() }?.let { MarmotDeviceGroupManager.Publication(it, kp.createdAt) } }
         groups.recordFirstCheck(publications.map { it.slot })
         val classes = groups.classifySignIns(publications)
@@ -589,7 +641,6 @@ class MarmotDevices(
                 if (kind == MarmotDeviceGroupManager.SignInClass.OWN || kind == MarmotDeviceGroupManager.SignInClass.LINKED) return@mapNotNull null
                 SignIn(pub.slot, pub.createdAt, kind)
             }
-        _state.value = _state.value.copy(signIns = signIns)
         lastSignIns = signIns
     }
 
@@ -605,17 +656,17 @@ class MarmotDevices(
      * confirmed the removal Commit: nothing changed, and the slot is kept.
      */
     suspend fun removeDevice(slot: HexKey): Boolean =
-        mutex.withLock {
+        locked {
             val now = clock()
             require(slot != groups.trust().ownSlot) { "Sign out to remove this device" }
             val applied = groups.applyStaged(groups.stageRemoveDevice(slot, now))
             if (applied.event == null) {
                 Log.w(TAG) { "no relay confirmed the removal of ${slot.take(8)}" }
                 refreshState()
-                return@withLock false
+                return@locked false
             }
             publishAll(groups.removeGoneDevicesFromChats())
-            runStep("slot deletion") { deleteSlot(slot) }
+            sends.add { runStep("slot deletion") { deleteSlot(slot) } }
             refreshState()
             true
         }
@@ -633,7 +684,7 @@ class MarmotDevices(
      * confirmed the Commit, so the siblings will not hear of it.
      */
     suspend fun signOutThroughSiblings(): Boolean =
-        mutex.withLock {
+        locked {
             val applied = groups.applyStaged(groups.stageSignOut())
             refreshState()
             applied.event != null
@@ -641,7 +692,7 @@ class MarmotDevices(
 
     /** "This wasn't me" for a sign-in in [slot]: records the rejection in the roster. */
     suspend fun rejectSignIn(slot: HexKey) =
-        mutex.withLock {
+        locked {
             groups.rejectSignIn(slot, clock())?.let { groups.applyStaged(it) }
             lastSignInCheck = 0
             refreshState()
@@ -662,7 +713,7 @@ class MarmotDevices(
         profile: GroupProfileV1?,
         invites: List<MarmotManager.MemberInvite> = emptyList(),
     ): MarmotDeviceGroupManager.SiblingAdd =
-        mutex.withLock {
+        locked {
             val now = clock()
             val add = groups.createChat(nostrGroupId, relays, profile, invites, now)
             publishSiblingAdd(add, now)
@@ -674,14 +725,14 @@ class MarmotDevices(
         add: MarmotDeviceGroupManager.SiblingAdd,
         now: Long,
     ) {
-        add.result.welcomes.forEach { transport.publishWelcome(it) }
+        add.result.welcomes.forEach { welcome -> sends.add { transport.publishWelcome(welcome) } }
         publishAll(add.deviceGroupEvents)
-        add.missing.forEach { slot -> transport.publishGroupEvent(groups.requestKeyPackages(slot, REQUESTED_KEY_PACKAGES, now)) }
+        publishAll(add.missing.map { slot -> groups.requestKeyPackages(slot, REQUESTED_KEY_PACKAGES, now) })
     }
 
     /** Before the user's Leave of [nostrGroupId]: the decline that takes siblings out of it too. */
     suspend fun beforeLeave(nostrGroupId: HexKey) =
-        mutex.withLock {
+        locked {
             runStep("record leave") { publishAll(groups.recordLeave(nostrGroupId, clock())) }
         }
 
@@ -691,7 +742,7 @@ class MarmotDevices(
         epoch: Long,
         createdAt: Long,
         eventId: HexKey,
-    ) = mutex.withLock {
+    ) = locked {
         runStep("mark read") { publishAll(groups.markRead(nostrGroupId, epoch, createdAt, eventId, clock())) }
     }
 
@@ -700,7 +751,7 @@ class MarmotDevices(
         nostrGroupId: HexKey,
         setting: ChatSetting,
         value: Boolean,
-    ) = mutex.withLock {
+    ) = locked {
         runStep("setting") { publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value.toString(), clock())) }
     }
 
@@ -717,8 +768,8 @@ class MarmotDevices(
      * entry first (`device-group.md` "Slot announcements"), so siblings do not read it as a sign-in.
      */
     suspend fun beforeKeyPackagePublish(event: KeyPackageEvent) =
-        mutex.withLock {
-            if (!started || !groups.trust().trustsDeviceGroup) return@withLock
+        locked {
+            if (!started || !groups.trust().trustsDeviceGroup) return@locked
             val ref = KeyPackageUtils.decodeKeyPackage(Base64.decode(event.content)).reference().toHexKey()
             if (groups.announcementNeeded(ref)) groups.applyStaged(groups.stageAnnouncement(ref))
         }
@@ -727,14 +778,27 @@ class MarmotDevices(
     // Plumbing
     // =============================================================================================
 
-    private suspend fun publishPairing(message: PairingMessage) {
-        if (!transport.publishToSelf(PairingDelivery.wrap(message, signer, clock()))) {
-            Log.w(TAG) { "no relay accepted pairing kind ${message.kind}" }
+    /** Runs [block] under [mutex], then sends what it queued, with the lock released. */
+    private suspend fun <T> locked(block: suspend () -> T): T {
+        val (result, queued) =
+            mutex.withLock {
+                val result = block()
+                result to sends.toList().also { sends.clear() }
+            }
+        queued.forEach { send -> runStep("send") { send() } }
+        return result
+    }
+
+    private fun publishPairing(message: PairingMessage) {
+        sends.add {
+            if (!transport.publishToSelf(PairingDelivery.wrap(message, signer, clock()))) {
+                Log.w(TAG) { "no relay accepted pairing kind ${message.kind}" }
+            }
         }
     }
 
-    private suspend fun publishAll(events: List<OutboundGroupEvent>) {
-        events.forEach { transport.publishGroupEvent(it) }
+    private fun publishAll(events: List<OutboundGroupEvent>) {
+        events.forEach { event -> sends.add { transport.publishGroupEvent(event) } }
     }
 
     private suspend inline fun runStep(

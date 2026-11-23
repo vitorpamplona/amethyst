@@ -783,7 +783,7 @@ class GroupEventHandler(
         try {
             receiver.receive(event)
             // Device-group answers queued by this event (hand-offs, small state) go out now.
-            account.marmotDevices?.afterIngest()
+            account.marmotDevices?.afterIngest(groupId)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MarmotDbg", "GroupEventHandler.add: exception processing kind:445", e)

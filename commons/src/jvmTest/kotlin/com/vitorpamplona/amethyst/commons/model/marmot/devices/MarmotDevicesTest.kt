@@ -36,7 +36,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -70,6 +74,10 @@ class MarmotDevicesTest {
 
         /** False: no relay confirms this device's group Commits. */
         var relaysUp = true
+
+        /** Set: group-event publishes wait on it, as on a slow relay. */
+        var slowRelay: CompletableDeferred<Unit>? = null
+        var publishesWaiting = 0
         val ownEvents = ArrayList<Event>()
         val stores = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key"))))
         val manager =
@@ -88,6 +96,10 @@ class MarmotDevicesTest {
         val transport =
             object : MarmotDevicesTransport {
                 override suspend fun publishGroupEvent(event: OutboundGroupEvent): Boolean {
+                    slowRelay?.let {
+                        publishesWaiting++
+                        it.await()
+                    }
                     mailbox.addLast(peer to { event.signedEvent })
                     return true
                 }
@@ -185,6 +197,22 @@ class MarmotDevicesTest {
                 existing.devices.state.value.devices
                     .any { it.slot == slot },
             )
+        }
+
+    @Test
+    fun aSlowPublishDoesNotHoldTheDeviceLock() =
+        runBlocking<Unit> {
+            val (existing, _) = linked()
+            val gate = CompletableDeferred<Unit>()
+            existing.slowRelay = gate
+            // A day later: heartbeat and broadcasts are due.
+            clock += 24 * 60 * 60
+            val tick = launch { existing.devices.tick() }
+            withTimeout(5_000) { while (existing.publishesWaiting == 0) delay(10) }
+            // Another chat's event meanwhile: handled without waiting for the tick's publishes.
+            withTimeout(2_000) { existing.devices.afterIngest("ef".repeat(32)) }
+            gate.complete(Unit)
+            tick.join()
         }
 
     @Test
