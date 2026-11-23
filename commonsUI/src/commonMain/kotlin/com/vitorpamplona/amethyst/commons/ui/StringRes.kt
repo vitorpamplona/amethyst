@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.commons.ui
 
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.ResourceEnvironment
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -52,14 +54,43 @@ import org.jetbrains.compose.resources.stringResource
  */
 private fun Array<out Any?>.orEmptyStrings(): Array<Any> = Array(size) { this[it] ?: "" }
 
+/**
+ * Each string read once per resource environment (language, region, theme, density), for the
+ * process. compose-resources' `stringResource` resolves a string the first time each call site
+ * composes, through `rememberResourceState`, which on the JVM and Android is a `runBlocking` on a
+ * load it starts on `Dispatchers.Default`: every card a feed composes paid that again for every
+ * string in it, and a load waiting behind busy Default workers parked the UI thread 20-175 ms
+ * (desktop scroll benchmark, JFR). Here a string the process has read returns at once.
+ *
+ * Read and written only from composition, which runs on the UI thread on every platform here (all
+ * desktop windows share the AWT event thread), so it takes no lock.
+ */
+private val templates = HashMap<ResourceEnvironment, HashMap<StringResource, String>>()
+
 @Composable
-fun stringRes(id: StringResource): String = stringResource(id)
+private fun template(id: StringResource): String {
+    val known = templates.getOrPut(rememberResourceEnvironment()) { HashMap() }
+    known[id]?.let { return it }
+    // A platform that resolves strings asynchronously would show "" first: cache only a value.
+    return stringResource(id).also { if (it.isNotEmpty()) known[id] = it }
+}
+
+@Composable
+fun stringRes(id: StringResource): String = template(id)
+
+/**
+ * stringResource(id, *args)'s formatting, which compose-resources keeps internal: each positional
+ * `%1$s` / `%1$d` becomes that argument's text. StringResTest checks it against the library's.
+ */
+private val positionalArg = Regex("""%(\d+)\$[ds]""")
+
+internal fun String.withArgs(args: List<String>): String = positionalArg.replace(this) { args[it.groupValues[1].toInt() - 1] }
 
 @Composable
 fun stringRes(
     id: StringResource,
     vararg args: Any?,
-): String = stringResource(id, *args.orEmptyStrings())
+): String = template(id).withArgs(args.map { it?.toString() ?: "" })
 
 @Composable
 fun pluralStringRes(

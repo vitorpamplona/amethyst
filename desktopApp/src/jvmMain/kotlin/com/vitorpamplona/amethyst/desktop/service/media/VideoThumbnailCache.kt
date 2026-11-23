@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
@@ -49,6 +50,8 @@ import org.jcodec.common.model.ColorSpace
 import org.jcodec.common.model.Picture
 import org.jcodec.scale.AWTUtil
 import org.jcodec.scale.ColorUtil
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Image
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -223,14 +226,25 @@ object VideoThumbnailCache {
         if (diskFile.length() <= 0) return null
         // The pixel ratio of an anamorphic video, beside its poster: the player needs it too.
         val parFile = File(diskDir, "$key$PAR_SUFFIX")
-        val image = runCatching { ImageIO.read(diskFile) }.getOrNull() ?: return null
+        val poster = runCatching { decodePoster(diskFile.readBytes()) }.getOrNull() ?: return null
         // The poster is already at the video's display shape.
-        recordShape(url, image)
+        if (poster.width > 0 && poster.height > 0) MediaAspectRatioCache.addMeasured(url, poster.width, poster.height)
         if (parFile.exists()) {
-            runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, image.width.toFloat() / image.height) }
+            runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, poster.width.toFloat() / poster.height) }
         }
-        return image.toComposeImageBitmap()
+        return poster
     }
+
+    /**
+     * A stored poster's JPEG [bytes], decoded by Skia straight into the bitmap the card draws. ImageIO
+     * decoded it into Java arrays that toComposeImageBitmap then copied into Skia's, which on a first
+     * scroll down a feed took 5% of every thread's CPU (posters come from disk on every launch).
+     */
+    internal fun decodePoster(bytes: ByteArray): ImageBitmap? =
+        Image.makeFromEncoded(bytes).use { image ->
+            if (image.width <= 0 || image.height <= 0) return null
+            Bitmap.makeFromImage(image).asComposeImageBitmap()
+        }
 
     private suspend fun load(url: String): ImageBitmap? {
         readDisk(url)?.let { return it }
