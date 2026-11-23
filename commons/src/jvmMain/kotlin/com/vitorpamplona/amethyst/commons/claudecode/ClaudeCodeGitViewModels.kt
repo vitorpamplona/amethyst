@@ -597,7 +597,10 @@ class ClaudeCodeProposeViewModel(
             viewModelScope.launch(start = CoroutineStart.LAZY) {
                 try {
                     val prompt = draftPrompt(dir, info)
-                    val draft = service.askAside(key, prompt)?.let(::parseDraftAnswer)
+                    val answer = service.askAside(key, prompt)
+                    val draft = answer?.let(::parseDraftAnswer)
+                    // No answer is logged where it failed; an answer without the JSON, here.
+                    if (answer != null && draft == null) Log.w(TAG) { "The draft answer had no {title, description}: ${answer.take(DRAFT_LOG_CHARS)}" }
                     if (draft != null) _draft.value = draft else _draftFailed.value = true
                 } finally {
                     // A newer draft took over: it says when it is done.
@@ -708,6 +711,7 @@ class ClaudeCodeProposeViewModel(
         private const val GATE_SHOW_MS = 100L
         private const val DRAFT_DIFF_CHARS = 60_000
         private const val TEMPLATE_CHARS = 20_000
+        private const val DRAFT_LOG_CHARS = 500
 
         fun draftFromCommits(info: GitWorkInfo): ProposalDraft {
             val first = info.commits.lastOrNull()
