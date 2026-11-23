@@ -37,7 +37,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 RUN_HEADLESS="$REPO_ROOT/tools/desktop-run/run-headless.sh"
 SUMMARY="$REPO_ROOT/tools/desktop-run/scroll_bench_summary.py"
 RUN_DIR="${AMETHYST_RUN_DIR:-/tmp/amethyst-desktop-run}"
-APP_PATTERN='^[^ ]*java .*AmethystDesktopKt'
+# The app run-headless.sh started for this run dir (its profile is on the command line), not another one.
+APP_PATTERN="^[^ ]*java .*-Damethyst\\.dataDir=$RUN_DIR/profile .*AmethystDesktopKt"
 
 runs=3
 warmup=1

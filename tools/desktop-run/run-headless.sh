@@ -40,8 +40,10 @@ mkdir -p "$RUN_DIR"
 export DISPLAY="$DISPLAY_NUM"
 # Xvfb has no GL: start on the software renderer instead of failing over from OpenGL.
 export SKIKO_RENDER_API="${SKIKO_RENDER_API:-SOFTWARE}"
-# Anchored on the java binary so pgrep/pkill never match a shell whose command line mentions the class.
-APP_PATTERN='^[^ ]*java .*AmethystDesktopKt'
+# Anchored on the java binary so pgrep/pkill never match a shell whose command line mentions the class,
+# and on this run's profile so `stop` and `start` leave alone an app another run dir started (two
+# agents, or a benchmark beside a manual session, each on its own AMETHYST_DISPLAY/AMETHYST_RUN_DIR).
+APP_PATTERN="^[^ ]*java .*-Damethyst\\.dataDir=$DATA_DIR .*AmethystDesktopKt"
 
 drive() { java "$DRIVE" "$@" 2>&1 | grep -v '^Picked up JAVA_TOOL_OPTIONS'; }
 
