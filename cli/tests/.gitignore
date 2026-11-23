@@ -19,3 +19,4 @@ chess/state-chess-ui/
 git/state-git-grasp/
 agents/state-agents-headless/
 buzz/state-buzz-relay-interop/
+concord/state-concord-headless/

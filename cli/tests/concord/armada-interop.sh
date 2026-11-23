@@ -21,7 +21,7 @@
 #
 # Scenarios (each line in the summary is one pass/fail/gap with evidence):
 #   a  Armada creates → Direct Invite + link → amy accepts / joins → same channels+metadata
-#   b  messages both ways; Armada edits/reactions (amy has no verb for either)
+#   b  messages both ways; edits, reactions and deletes both ways, read through each fold
 #   c  amy creates → Direct Invite + link → Armada accepts / joins → messages both ways
 #   d  roles: Armada (v2) role+grant read by amy; amy (legacy) role+grant read by Armada;
 #      authority exercised across clients
@@ -287,7 +287,7 @@ scenario_b() {
   out=$(arm Y read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"b3 link joiner speaks\",\"b1 hello from armada\"]}"); rc=$?
   check $rc b3-link-joiner-to-armada-member "Armada Y (non-owner) reads amy Q and Armada X" "Armada Y read: $(printf '%s' "$out" | head -c 300)"
 
-  # Edits / reactions: Armada sends both; amy has no verb to send or render them.
+  # Edits / reactions / deletes, both ways: each client's verbs, read through the other's fold.
   out=$(arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"b2 hello from amy\"]}")
   local target; target=$(msg_id "$out" "b2 hello from amy")
   local own; own=$(msg_id "$out" "b1 hello from armada")
@@ -295,9 +295,38 @@ scenario_b() {
   arm X edit "{\"cid\":\"$A\",\"ch\":\"general\",\"target\":\"$own\",\"text\":\"b1 hello from armada (edited)\"}" >/dev/null
   out=$(arm Y read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"(edited)\"]}"); rc=$?
   check $rc b4-armada-edit-armada-reader "Armada Y sees the edit (control: Armada↔Armada)" "$(printf '%s' "$out" | head -c 300)"
-  out=$(amy_as P concord read "$A" general)
-  local amy_shows; amy_shows=$(printf '%s' "$out" | jq -r '[.messages[].content] | map(select(test("b1 hello"))) | .[0]')
-  result b5-edit-reaction-to-amy gap "amy concord read lists kind-9 rumors only (ConcordActions.channelMessages filters ChatEvent.KIND), so it shows '$amy_shows'; amy has no edit/react verb either"
+  out=$(amy_until P "[.messages[] | select(.event_id == \"$own\")][0] | .content == \"b1 hello from armada (edited)\" and .edited" 10 concord read "$A" general); rc=$?
+  check $rc b5-armada-edit-to-amy "amy P reads $(printf '%s' "$out" | jq -c --arg own "$own" '[.messages[] | select(.event_id == $own) | {content, edited}][0]' 2>/dev/null)" "amy read: $(printf '%s' "$out" | jq -c '[.messages[] | {content, edited}]' 2>/dev/null)"
+  local tally; tally=$(printf '%s' "$out" | jq -c --arg t "$target" '[.messages[] | select(.event_id == $t) | .reactions][0]' 2>/dev/null)
+  [[ "$(printf '%s' "$tally" | jq -r '.["👍"] // 0')" == "1" ]]
+  check $? b6-armada-reaction-to-amy "amy P tallies $tally on its own message" "amy tallies '$tally'"
+
+  amy_as P concord edit "$A" general "$target" "b2 hello from amy (edited)" >/dev/null
+  out=$(arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"b2 hello from amy (edited)\"]}"); rc=$?
+  [[ $rc -eq 0 && "$(printf '%s' "$out" | jq -r --arg t "$target" '[.messages[] | select(.id == $t) | .edited][0]')" == "true" ]]
+  check $? b7-amy-edit-to-armada "Armada X reads amy's edit, marked edited" "$(printf '%s' "$out" | jq -c '[.messages[] | {content, edited}]' 2>/dev/null)"
+  local react; react=$(amy_as P concord react "$A" general "$own" "🤙" | jq -r '.rumor_id // empty')
+  out=$(arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"settleMs\":6000}")
+  tally=$(printf '%s' "$out" | jq -c --arg o "$own" '[.messages[] | select(.id == $o) | .reactions][0]' 2>/dev/null)
+  [[ -n "$react" && "$(printf '%s' "$tally" | jq -r '.["🤙"] // 0')" == "1" ]]
+  check $? b8-amy-reaction-to-armada "Armada X tallies $tally on its message" "react ${react:-failed}: Armada tallies '$tally'"
+  amy_as P concord delete "$A" general "$react" >/dev/null
+  out=$(arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"settleMs\":6000}")
+  tally=$(printf '%s' "$out" | jq -c --arg o "$own" '[.messages[] | select(.id == $o) | .reactions][0]' 2>/dev/null)
+  [[ "$(printf '%s' "$tally" | jq -r '.["🤙"] // 0')" == "0" ]]
+  check $? b9-amy-unreact-to-armada "Armada X drops the withdrawn 🤙: $tally" "Armada still tallies '$tally'"
+  local doomed; doomed=$(amy_as P concord send "$A" general "b10 about to delete" | jq -r '.rumor_id // empty')
+  arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"b10 about to delete\"]}" >/dev/null
+  amy_as P concord delete "$A" general "$doomed" >/dev/null
+  out=$(arm X read "{\"cid\":\"$A\",\"ch\":\"general\",\"absent\":[\"b10 about to delete\"],\"settleMs\":6000}")
+  [[ -n "$doomed" && "$(printf '%s' "$out" | jq -r '.leaked | length')" == "0" ]]
+  check $? b10-amy-delete-to-armada "Armada X no longer shows amy's deleted message" "Armada still shows: $(printf '%s' "$out" | jq -c .leaked)"
+  arm Y send "{\"cid\":\"$A\",\"ch\":\"general\",\"text\":\"b11 armada deletes this\"}" >/dev/null
+  out=$(amy_until P '.messages | map(.content) | index("b11 armada deletes this")' 10 concord read "$A" general)
+  local gone; gone=$(arm Y read "{\"cid\":\"$A\",\"ch\":\"general\",\"wait\":[\"b11 armada deletes this\"]}" | jq -r '[.messages[] | select(.content == "b11 armada deletes this") | .id][0] // empty')
+  arm Y delete "{\"cid\":\"$A\",\"ch\":\"general\",\"target\":\"$gone\"}" >/dev/null
+  out=$(amy_until P '.messages | map(.content) | index("b11 armada deletes this") | not' 10 concord read "$A" general); rc=$?
+  check $rc b11-armada-delete-to-amy "amy P drops Armada Y's deleted message" "amy still reads it: $(printf '%s' "$out" | jq -c '[.messages[].content]' 2>/dev/null)"
 }
 
 # =============================================================================
@@ -346,6 +375,12 @@ scenario_c() {
   arm X send "{\"cid\":\"$B\",\"ch\":\"general\",\"text\":\"c10 hello from armada link joiner\"}" >/dev/null
   out=$(amy_until P '(.messages|map(.content)) as $m | ($m|index("c10 hello from armada guest")) and ($m|index("c10 hello from armada link joiner"))' 10 concord read "$B" general); rc=$?
   check $rc c10-armada-to-amy "amy P reads both Armada members" "amy read: $(printf '%s' "$out" | jq -c '[.messages[].content]' 2>/dev/null)"
+  # A moderator hide (CORD-03 §3) from amy, the owner: every reader drops the Armada member's message.
+  local guest; guest=$(printf '%s' "$out" | jq -r '[.messages[] | select(.content == "c10 hello from armada guest") | .event_id][0] // empty')
+  amy_as P concord hide "$B" general "$guest" >/dev/null; rc=$?
+  out=$(arm X read "{\"cid\":\"$B\",\"ch\":\"general\",\"absent\":[\"c10 hello from armada guest\"],\"wait\":[\"c10 hello from armada link joiner\"]}")
+  [[ $rc -eq 0 && -n "$guest" && "$(printf '%s' "$out" | jq -r '.leaked | length')" == "0" ]]
+  check $? c10b-amy-owner-hide-to-armada "Armada X drops the hidden message, keeps the other" "hide rc=$rc ($(err_of)); Armada X still shows: $(printf '%s' "$out" | jq -c '.leaked' 2>/dev/null)"
   out=$(amy_as P concord roles "$B")
   info "amy B roster: $(printf '%s' "$out" | jq -c . | head -c 400)"
 
@@ -381,8 +416,8 @@ scenario_d() {
   banner "d. roles (Roles v2 on A, legacy on B)"
   local out rc
   if [[ -n "$A" ]]; then
-    # Armada (v2): a ranked Role with KICK+BAN+PIN, granted to amy P.
-    out=$(arm X create-role "{\"cid\":\"$A\",\"name\":\"Mods\",\"perms\":[\"KICK\",\"BAN\",\"PIN_MESSAGES\",\"MANAGE_MESSAGES\"],\"grant\":\"${HEX[P]}\"}"); rc=$?
+    # Armada (v2): a ranked Role with KICK+BAN+PIN (+ MANAGE_ROLES, so amy can place one under it), granted to amy P.
+    out=$(arm X create-role "{\"cid\":\"$A\",\"name\":\"Mods\",\"perms\":[\"KICK\",\"BAN\",\"PIN_MESSAGES\",\"MANAGE_MESSAGES\",\"MANAGE_ROLES\"],\"grant\":\"${HEX[P]}\"}"); rc=$?
     ROLE_MODS=$(printf '%s' "$out" | jq -r '.role_id // empty')
     check $rc d1-armada-v2-role-and-grant "role Mods ${ROLE_MODS:0:12} granted to amy P" "$(printf '%s' "$out" | head -c 300)"
     local av pv
@@ -403,10 +438,18 @@ scenario_d() {
     arank=$(printf '%s' "$av" | jq -r "[.grants[]|select(.member==\"${HEX[P]}\")|.position][0]")
     prank=$(printf '%s' "$pv" | jq -r "[.grants[]|select(.member==\"${HEX[P]}\")|.rank][0]")
     info "P's rank: Armada position=$arank, amy rank=$prank"
-    # amy has no verb to define a Roles v2 Role: its `role` writes vsk 1, refused on v2.
+    # amy defines a Roles v2 Role (vsk 13, keyed by rank under P's own Mods): Armada folds it.
     out=$(amy_as P concord role "$A" Probe 2 KICK); rc=$?
-    if [[ $rc -ne 0 ]]; then result d4-amy-defines-v2-role gap "amy concord role writes a legacy vsk-1 Role; on Roles v2 it refuses: $(err_of)"
-    else result d4-amy-defines-v2-role fail "amy published a vsk-1 Role into a Roles v2 community: $out"; fi
+    local seen=""
+    if [[ $rc -eq 0 ]]; then
+      for _ in $(seq 10); do
+        seen=$(arm X roles "{\"cid\":\"$A\"}" | jq -c '[.roles[] | select(.name == "Probe") | {permissions, rank}][0] // empty')
+        [[ -n "$seen" ]] && break
+        sleep 2
+      done
+    fi
+    [[ $rc -eq 0 && -n "$seen" ]]
+    check $? d4-amy-defines-v2-role "Armada folds amy's Probe role $seen" "amy role rc=$rc ($(err_of)); Armada roles: $(arm X roles "{\"cid\":\"$A\"}" | jq -c '[.roles[].name]' 2>/dev/null)"
     # Armada judges amy P's authority the way amy does.
     out=$(arm X authorized "{\"cid\":\"$A\",\"who\":\"${HEX[P]}\",\"perm\":\"BAN\"}")
     [[ "$(printf '%s' "$out" | jq -r .authorized)" == "true" ]]

@@ -30,7 +30,10 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatFold
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatRules
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** `amy concord channels|send|read` — the per-channel chat verbs. */
@@ -57,8 +60,9 @@ object ConcordChannelCommands {
                     "dissolved" to state.dissolved,
                     "icon" to state.metadata?.icon?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "banner" to state.metadata?.banner?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
+                    // Sidebar order (CORD-03 §2): position, Armada's legacy order, name, id.
                     "channels" to
-                        state.channels.values.map {
+                        state.orderedChannels.map {
                             mapOf(
                                 "id" to it.channelIdHex,
                                 "name" to it.definition.name,
@@ -172,18 +176,42 @@ object ConcordChannelCommands {
             // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-            // A banned member's messages are hidden, as every client shows the channel (CORD-04 §4);
-            // the count of what was hidden stays in the output so interop checks can see it arrived.
-            val (banned, visible) = ConcordActions.channelMessages(wraps, channel, channelId, epoch).partition { state.authority.isBanned(it.author) }
-            val msgs = visible.takeLast(limit)
+            // The channel as every client shows it, through Quartz's chat fold: edits from the author
+            // only, deleted and moderator-hidden rows gone, reactions tallied once per reactor, and a
+            // banned member's rows left out (CORD-04 §4). What the fold dropped is counted, so interop
+            // checks can see it arrived.
+            val rumors = ConcordActions.channelRumors(wraps, channel, channelId, epoch).distinctBy { it.id }
+            val fold = ConcordChatFold(channelId).also { it.addAll(rumors, state) }
+            val rows = rumors.filter { ConcordChatRules.isRow(it) }
+            val banned = rows.count { state.authority.isBanned(it.pubKey) }
+            val removed = rows.count { !state.authority.isBanned(it.pubKey) && fold.isRemoved(it, state) }
+            val msgs = fold.timeline(state).takeLast(limit)
             Output.emit(
                 mapOf(
                     "channel" to channelId,
                     "epoch" to epoch,
                     "plane" to channel.publicKeyHex,
                     "count" to msgs.size,
-                    "hidden_banned" to banned.size,
-                    "messages" to msgs.map { mapOf("event_id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
+                    "hidden_banned" to banned,
+                    "removed" to removed,
+                    "messages" to
+                        msgs.map { row ->
+                            mapOf(
+                                "event_id" to row.rumor.id,
+                                "author" to row.rumor.pubKey,
+                                "kind" to row.rumor.kind,
+                                "content" to row.content,
+                                "created_at" to row.rumor.createdAt,
+                                "edited" to row.edited,
+                                "thread_root" to (row.rumor as? CommentEvent)?.rootEventIds()?.firstOrNull(),
+                                "reactions" to row.reactions.associate { it.key to it.count },
+                                "reaction_images" to
+                                    row.reactions
+                                        .mapNotNull { t -> t.url?.let { t.key to it } }
+                                        .toMap()
+                                        .ifEmpty { null },
+                            ).filterValues { it != null }
+                        },
                 ),
             )
             return 0

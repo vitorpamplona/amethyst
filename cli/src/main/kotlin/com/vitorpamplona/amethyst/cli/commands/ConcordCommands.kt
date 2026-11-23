@@ -93,8 +93,9 @@ object ConcordCommands {
         |  concord channel rekey COMMUNITY CHANNEL     rotate a Private channel's key to exactly the
         |                                               members its Roles entitle today (CORD-06)
         |  concord send COMMUNITY CHANNEL TEXT         post a message (CHANNEL = general|name|id)
-        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
-        |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
+        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel as every client shows it (default
+        |          [--epoch N] [--root HEX]             50): edits, deletes, moderator hides, reactions;
+        |                                               --epoch/--root read a prior epoch's plane
         |  concord edit COMMUNITY CHANNEL ID TEXT      edit one of your messages (kind 3302)
         |  concord delete COMMUNITY CHANNEL ID[,ID…]   delete your own messages or reactions (kind 5)
         |  concord react COMMUNITY CHANNEL ID [EMOJI]  react to a message (default +)

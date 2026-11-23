@@ -42,6 +42,9 @@ cli/tests/
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
 │   │                               #   media v2, retention, disband)
+├── concord/               # Concord: amy's chat verbs vs amy (concord-headless.sh, tests 01-12:
+│   ├── concord-headless.sh #   edit, delete, react, moderator hide, leave) vs embedded `amy serve`;
+│   └── armada-interop.sh   #   amy vs Armada (ARMADA_DIR), both on one loopback geode
 ├── emoji/                 # NIP-30 emoji packs: create/add/import (folder, zip,
 │   └── emoji-headless.sh  #   list) vs embedded `amy serve` + a throwaway Blossom server
 ├── notes/                 # social loop (post/show/feed/reply/react/repost/quote/
