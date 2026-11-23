@@ -653,13 +653,16 @@ fun MarmotChatSettingsMenuItems(
     val pinned = settings.isPinned(nostrGroupId)
     val muted = settings.isMuted(nostrGroupId)
     val archived = settings.isArchived(nostrGroupId)
-    DropdownMenuItem(
-        text = { Text(stringRes(if (pinned) Res.string.unpin_conversation else Res.string.pin_conversation)) },
-        onClick = {
-            accountViewModel.setMarmotChatSetting(nostrGroupId, MarmotChatSetting.PIN, !pinned)
-            onDone()
-        },
-    )
+    // An archived chat is never pinned (archiving unpins it): no Pin until it is unarchived.
+    if (!archived) {
+        DropdownMenuItem(
+            text = { Text(stringRes(if (pinned) Res.string.unpin_conversation else Res.string.pin_conversation)) },
+            onClick = {
+                accountViewModel.setMarmotChatSetting(nostrGroupId, MarmotChatSetting.PIN, !pinned)
+                onDone()
+            },
+        )
+    }
     DropdownMenuItem(
         text = { Text(stringRes(if (muted) Res.string.unmute_notifications else Res.string.mute_notifications)) },
         onClick = {

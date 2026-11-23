@@ -74,4 +74,42 @@ class MarmotChatSettingsTest {
             second.forget(a)
             assertFalse(second.state.value.isPinned(a))
         }
+
+    @Test
+    fun archivingUnpinsAndAnArchivedChatIsNeverPinned() =
+        runBlocking {
+            val settings = MarmotChatSettings(MemoryBlobs())
+            settings.load()
+            settings.set(a, MarmotChatSetting.PIN, true)
+            // Archiving unpins: both changes come back, for the linked devices.
+            assertEquals(
+                listOf(MarmotChatSetting.ARCHIVE to "true", MarmotChatSetting.PIN to "false"),
+                settings.setAll(a, MarmotChatSetting.ARCHIVE, true),
+            )
+            assertFalse(settings.state.value.isPinned(a))
+            assertTrue(settings.state.value.isArchived(a))
+            // Pinning an archived chat changes nothing.
+            assertTrue(settings.setAll(a, MarmotChatSetting.PIN, true).isEmpty())
+            assertFalse(settings.state.value.isPinned(a))
+            settings.set(a, MarmotChatSetting.ARCHIVE, false)
+            assertTrue(settings.set(a, MarmotChatSetting.PIN, true))
+        }
+
+    @Test
+    fun aSiblingsArchiveUnpinsHereAndThatUnpinIsThisDevicesChange() =
+        runBlocking {
+            val settings = MarmotChatSettings(MemoryBlobs())
+            settings.load()
+            settings.set(b, MarmotChatSetting.PIN, true)
+            // The archive is the sibling's; the unpin it brings is this device's own, to send on.
+            assertEquals(listOf(MarmotChatSetting.PIN to "false"), settings.applyRemote(b, MarmotChatSetting.ARCHIVE, "true"))
+            assertFalse(settings.state.value.isPinned(b))
+            // A pin settled while the chat stays archived waits.
+            assertTrue(settings.applyRemote(b, MarmotChatSetting.PIN, "true").isEmpty())
+            assertFalse(settings.state.value.isPinned(b))
+            // Once unarchived, the same settled pin applies.
+            settings.applyRemote(b, MarmotChatSetting.ARCHIVE, "false")
+            settings.applyRemote(b, MarmotChatSetting.PIN, "true")
+            assertTrue(settings.state.value.isPinned(b))
+        }
 }

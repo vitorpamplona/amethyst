@@ -282,11 +282,28 @@ object MarmotDevicesCommands {
             ctx.prepare()
             val id = ctx.resolveGroupId(group)
             if (!ctx.marmot.isMember(id) || ctx.marmotDevices?.isDeviceGroup(id) == true) return@use Output.error("not_member", "not a member of $group")
-            ctx.marmotChatSettings.set(id, setting, on)
+            // An archived chat is never pinned (MDK): unarchive it first.
+            if (setting == MarmotChatSetting.PIN && on &&
+                ctx.marmotChatSettings.state.value
+                    .isArchived(id)
+            ) {
+                return@use Output.error("archived", "an archived chat cannot be pinned; unarchive it first")
+            }
+            // Archiving also unpins: every change goes to the linked devices.
+            val changes = ctx.marmotChatSettings.setAll(id, setting, on)
             val devices = ctx.marmotDevices
             val shared = devices != null && devices.state.value.linked
-            if (devices != null && shared) devices.changeSetting(id, setting, on)
-            Output.emit(mapOf("group_id" to id, setting.wireName to on, "shared_with_devices" to shared))
+            if (devices != null && shared) changes.forEach { (changed, value) -> devices.changeSetting(id, changed, value) }
+            val settings = ctx.marmotChatSettings.state.value
+            Output.emit(
+                mapOf(
+                    "group_id" to id,
+                    setting.wireName to on,
+                    "pinned" to settings.isPinned(id),
+                    "archived" to settings.isArchived(id),
+                    "shared_with_devices" to shared,
+                ),
+            )
             0
         }
     }

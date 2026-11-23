@@ -1298,17 +1298,20 @@ class AccountMarmotActions(
     /**
      * The user pins, mutes or archives [nostrGroupId] on this device (or undoes it). With device
      * groups on and this device linked, the change also goes to the account's other devices
-     * (`account-sync.md` "Small state"), which apply it to their copy of the chat.
+     * (`account-sync.md` "Small state"), which apply it to their copy of the chat. Archiving unpins
+     * (both changes go to the siblings); unarchiving lets a pin a sibling settled on meanwhile apply.
      */
     suspend fun setMarmotChatSetting(
         nostrGroupId: HexKey,
         setting: MarmotChatSetting,
         on: Boolean,
     ) {
-        if (!account.marmotChatSettings.set(nostrGroupId, setting, on)) return
+        val changes = account.marmotChatSettings.setAll(nostrGroupId, setting, on)
+        if (changes.isEmpty()) return
         val devices = account.marmotDevices ?: return
         if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
-        devices.changeSetting(nostrGroupId, setting, on)
+        changes.forEach { (changed, value) -> devices.changeSetting(nostrGroupId, changed, value) }
+        if (setting == MarmotChatSetting.ARCHIVE && !on) applyMarmotSmallState(devices.groups.smallState())
     }
 
     /**
@@ -1323,6 +1326,8 @@ class AccountMarmotActions(
             state,
             manager,
             skip = { id -> account.marmotDevices?.isDeviceGroup(id) == true },
+            // The unpin a sibling's archive brought here is this device's change: the siblings hear it.
+            onLocalChange = { nostrId, setting, value -> account.marmotDevices?.changeSetting(nostrId, setting, value) },
         ) { nostrId, read ->
             val route = marmotGroupLastReadRoute(nostrId)
             if (read.at > account.loadLastRead(route)) account.markAsRead(route, read.at)

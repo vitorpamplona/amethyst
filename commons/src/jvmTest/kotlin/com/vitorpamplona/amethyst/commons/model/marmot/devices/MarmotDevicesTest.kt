@@ -147,7 +147,7 @@ class MarmotDevicesTest {
                     return true
                 }
             }
-        val devices =
+        val devices: MarmotDevices =
             MarmotDevices(
                 manager,
                 signer,
@@ -155,7 +155,9 @@ class MarmotDevicesTest {
                 { emptySet() },
                 { clock },
                 signInAnswers = stores.blobs,
-                onSmallState = { state -> chatSettings.applySmallState(state, manager) },
+                onSmallState = { state ->
+                    chatSettings.applySmallState(state, manager, onLocalChange = { id, setting, value -> this@Device.devices.changeSetting(id, setting, value) })
+                },
             )
 
         suspend fun receive(event: Event) {
@@ -294,15 +296,29 @@ class MarmotDevicesTest {
             assertTrue("the sibling joined the chat", fresh.manager.groupManager.isMember(chat))
 
             existing.devices.changeSetting(chat, MarmotChatSetting.PIN, true)
-            existing.devices.changeSetting(chat, MarmotChatSetting.ARCHIVE, true)
             pump()
             assertTrue(
+                fresh.chatSettings.state.value
+                    .isPinned(chat),
+            )
+            // An archive from the sibling unpins here (as in White Noise), and that unpin goes back.
+            existing.devices.changeSetting(chat, MarmotChatSetting.ARCHIVE, true)
+            pump()
+            assertFalse(
                 fresh.chatSettings.state.value
                     .isPinned(chat),
             )
             assertTrue(
                 fresh.chatSettings.state.value
                     .isArchived(chat),
+            )
+            assertEquals(
+                "false",
+                (
+                    existing.devices.groups
+                        .smallState()
+                        .held("${existing.manager.mlsGroupIdHex(chat)}/pin") as SmallStateItem.Versioned
+                ).value,
             )
 
             fresh.devices.changeSetting(chat, MarmotChatSetting.MUTE, true)
