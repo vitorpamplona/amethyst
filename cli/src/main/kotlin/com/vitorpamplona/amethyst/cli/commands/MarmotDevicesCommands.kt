@@ -66,7 +66,7 @@ object MarmotDevicesCommands {
             routes =
                 mapOf(
                     "enable" to { _ -> setSwitch(dataDir, true) },
-                    "disable" to { _ -> setSwitch(dataDir, false) },
+                    "disable" to { _ -> disable(dataDir) },
                     "list" to { rest -> list(dataDir, rest) },
                     "sync" to { rest -> sync(dataDir, rest) },
                     "link" to { rest -> link(dataDir, rest) },
@@ -87,6 +87,22 @@ object MarmotDevicesCommands {
         }
         Output.emit(mapOf("device_groups" to on))
         return 0
+    }
+
+    /**
+     * Off only while this device is not linked: with the switch off, the next run would treat the
+     * device group as a chat and the siblings would keep this device.
+     */
+    private suspend fun disable(dataDir: DataDir): Int {
+        if (dataDir.deviceGroupSwitchFile.exists()) {
+            val linked =
+                withDevices(dataDir) { _, devices ->
+                    devices.start(announce = false)
+                    devices.state.value.linked
+                }
+            if (linked == true) return Output.error("linked", "this device is linked: remove it from another device first")
+        }
+        return setSwitch(dataDir, false)
     }
 
     private suspend fun <T> withDevices(

@@ -10512,6 +10512,7 @@
     <string name="marmot_devices_unlinked_body">Another of your devices removed this one from your linked devices. It no longer gets your chats through them.</string>
     <string name="marmot_devices_failed_switch">Could not change the setting.</string>
     <string name="marmot_devices_failed_action">That did not work. Try again.</string>
+    <string name="marmot_devices_switch_off_while_linked">This device is linked to your other devices, so this stays on. To unlink it, remove it from one of your other devices, or log out of this account here.</string>
     <string name="marmot_link_title_new">Link this device</string>
     <string name="marmot_link_title_existing">Link a new device</string>
     <string name="marmot_link_starting">Sending the link request…</string>

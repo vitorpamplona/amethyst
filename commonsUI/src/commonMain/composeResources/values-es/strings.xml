@@ -3124,6 +3124,7 @@
     <string name="marmot_devices_unlinked_body">Otro de tus dispositivos eliminó este de tus dispositivos vinculados. Ya no recibe tus chats a través de ellos.</string>
     <string name="marmot_devices_failed_switch">No se pudo cambiar el ajuste.</string>
     <string name="marmot_devices_failed_action">Eso no funcionó. Inténtalo de nuevo.</string>
+    <string name="marmot_devices_switch_off_while_linked">Este dispositivo está vinculado a tus otros dispositivos, así que esto sigue activado. Para desvincularlo, quítalo desde uno de tus otros dispositivos o cierra la sesión de esta cuenta aquí.</string>
     <string name="marmot_link_title_new">Vincular este dispositivo</string>
     <string name="marmot_link_title_existing">Vincular un dispositivo nuevo</string>
     <string name="marmot_link_starting">Enviando la solicitud de vinculación…</string>

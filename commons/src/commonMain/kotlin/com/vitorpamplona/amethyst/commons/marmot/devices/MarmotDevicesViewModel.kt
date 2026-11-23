@@ -41,6 +41,12 @@ import kotlin.reflect.KClass
 /** A device-group action that failed, for a notice the UI words. */
 enum class DeviceActionFailure {
     SWITCH,
+
+    /**
+     * The switch cannot go off while this device is linked: the next launch would show the device
+     * group as a chat and the siblings would keep this device. It signs out (logs out) first.
+     */
+    SWITCH_WHILE_LINKED,
     REMOVE,
     SIGN_IN,
     LINK,
@@ -88,6 +94,10 @@ class MarmotDevicesViewModel(
 
     fun setSwitch(enabled: Boolean) {
         val target = switch ?: return
+        if (!enabled && snapshot.value.linked) {
+            _failure.value = DeviceActionFailure.SWITCH_WHILE_LINKED
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 target.setEnabled(enabled)

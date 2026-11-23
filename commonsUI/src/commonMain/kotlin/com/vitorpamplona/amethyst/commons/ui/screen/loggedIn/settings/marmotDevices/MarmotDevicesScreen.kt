@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_devices_status_inacti
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_status_leaving
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_status_moved
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_switch_desc
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_switch_off_while_linked
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_switch_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_this_device
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
@@ -157,7 +158,17 @@ fun MarmotDevicesScreen(
     failure?.let {
         AlertDialog(
             onDismissRequest = viewModel::clearFailure,
-            text = { Text(stringRes(if (it == DeviceActionFailure.SWITCH) Res.string.marmot_devices_failed_switch else Res.string.marmot_devices_failed_action)) },
+            text = {
+                Text(
+                    stringRes(
+                        when (it) {
+                            DeviceActionFailure.SWITCH -> Res.string.marmot_devices_failed_switch
+                            DeviceActionFailure.SWITCH_WHILE_LINKED -> Res.string.marmot_devices_switch_off_while_linked
+                            else -> Res.string.marmot_devices_failed_action
+                        },
+                    ),
+                )
+            },
             confirmButton = { TextButton(onClick = viewModel::clearFailure) { Text(stringRes(Res.string.cancel)) } },
         )
     }
