@@ -141,6 +141,8 @@ class ConcordPendingJoinTest {
             state.cache.getOrCreateAddressableNote(fragment.address()).loadEvent(fragment, author, emptyList())
 
             withTimeout(5000) { while (state.entries().isEmpty()) yield() }
+            // liveCommunities folds the document on Dispatchers.IO, so it can trail entries(): wait for it too.
+            withTimeout(5000) { while (state.liveCommunities.value.none { it.id == alpha }) yield() }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id })
 
             state.dropPendingJoin(alpha)
