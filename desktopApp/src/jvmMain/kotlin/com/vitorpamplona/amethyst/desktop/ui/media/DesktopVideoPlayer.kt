@@ -369,6 +369,23 @@ fun DesktopVideoPlayer(
     // per URL, so a video scrolled back to (whose engine still holds its frame) shows it at once.
     var pictureShown by remember(url) { mutableStateOf(false) }
     if (!pictureShown && isActiveVideo && (videoState?.currentTime ?: 0L) > 0L) pictureShown = true
+
+    // Whether this video played to its end: then the poster covers the engine's last frame, which
+    // is often black (phone recordings can end on one). Held until a replay moves the clock off the
+    // end, so pressing play doesn't show that frame while the engine starts over.
+    var ended by remember(url) { mutableStateOf(false) }
+    videoState?.let { state ->
+        if (state.position < GlobalMediaPlayer.ENDED_POSITION) {
+            ended = false
+        } else if (!state.isPlaying && state.duration > 0L) {
+            ended = true
+        }
+    }
+    LaunchedEffect(ended) {
+        // A card that drew its own engine made no poster (see above): the whole video is on disk
+        // by now, so its first frame is cheap to read.
+        if (ended && thumbnail == null && poster == null) VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
+    }
     // The card's own engine, playing or paused where it stopped, except in full screen, where the
     // overlay draws the playing one; without one, the shared engine when this card draws it.
     val ownPlayer = cardPlayer
@@ -457,7 +474,7 @@ fun DesktopVideoPlayer(
                 val thumbnailAlpha by animateFloatAsState(
                     // A "video" a frame or two long is a still: the engine shows nothing for it, so
                     // its poster stays instead of fading into black.
-                    targetValue = if (pictureShown && (videoState?.duration ?: 0L) !in 1L until STILL_VIDEO_MILLIS) 0f else 1f,
+                    targetValue = if (pictureShown && !ended && (videoState?.duration ?: 0L) !in 1L until STILL_VIDEO_MILLIS) 0f else 1f,
                     animationSpec = tween(durationMillis = 150),
                     label = "thumbnailOverVideo",
                 )
