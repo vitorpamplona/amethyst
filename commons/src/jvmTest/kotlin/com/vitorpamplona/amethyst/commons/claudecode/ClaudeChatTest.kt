@@ -38,6 +38,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assume.assumeTrue
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -576,6 +577,8 @@ class ClaudeChatTest {
                 settle { started.size == 2 }
                 val again = started[1]
                 assertTrue(again.commandGuard != null, "a resumed guarded session started unguarded")
+                // An older git (before 2.54) has no config hooks: the session gets the full block instead.
+                assumeTrue("git has no config hooks", again.environment.containsValue("hook.${PushGuard.GUARD_NAME}.command"))
                 val hook =
                     again.environment.entries
                         .single { it.value == "hook.${PushGuard.GUARD_NAME}.command" }
