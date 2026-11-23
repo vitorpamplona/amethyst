@@ -21,9 +21,11 @@
 package com.vitorpamplona.claudecode.process
 
 import com.vitorpamplona.agents.AgentNotInstalledException
+import com.vitorpamplona.agents.CommandGuard
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.ProcessTransport
+import com.vitorpamplona.agents.putPathFirst
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
 import kotlinx.coroutines.CoroutineScope
 import java.io.File
@@ -51,10 +53,14 @@ data class ClaudeCodeOptions(
     val addDirs: List<File> = emptyList(),
     /** Tool rules the session may never use, e.g. `Bash(git push:*)`; nothing can approve them. */
     val disallowedTools: List<String> = emptyList(),
+    /** Asked about every Bash command before it runs, through a PreToolUse hook the host answers. */
+    val commandGuard: CommandGuard? = null,
     /** Any other CLI flags, appended last. */
     val extraArgs: List<String> = emptyList(),
     /** Variables added to the process's environment, which every command it runs inherits. */
     val environment: Map<String, String> = emptyMap(),
+    /** Folders put first on the process's PATH, after [environment] is applied. */
+    val pathFirst: List<File> = emptyList(),
     /** Tools the host runs itself, over the session's own pipe ([HostToolServer]). */
     val sdkMcpServers: List<HostToolServer> = emptyList(),
     /** Only these MCP servers: none from the user's own config. */
@@ -157,13 +163,18 @@ class ClaudeCodeLauncher(
                 .directory(options.cwd)
                 .apply {
                     environment().clear()
-                    environment().putAll(childEnvironment(exe))
-                    environment().putAll(options.environment)
+                    environment().putAll(processEnvironment(exe, options))
                 }.start()
-        val connection = ClaudeCodeConnection(ProcessTransport(process), scope, options.sdkMcpServers)
+        val connection = ClaudeCodeConnection(ProcessTransport(process), scope, options.sdkMcpServers, options.commandGuard)
         connection.initialize()
         return connection
     }
+
+    /** What the process for [options] runs with: [childEnvironment], then the options' variables and PATH folders. */
+    fun processEnvironment(
+        exe: File,
+        options: ClaudeCodeOptions,
+    ): Map<String, String> = (childEnvironment(exe) + options.environment).toMutableMap().apply { putPathFirst(options.pathFirst) }
 
     /**
      * The parent's environment with the folders Claude Code and its tools usually live in added

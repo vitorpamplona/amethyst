@@ -151,6 +151,24 @@ interface AgentConnection {
     fun stderrTail(): String
 }
 
+/** Puts [dirs] first on this environment's PATH, keeping the rest in order without repeats. */
+fun MutableMap<String, String>.putPathFirst(dirs: List<File>) {
+    if (dirs.isEmpty()) return
+    val key = keys.firstOrNull { it.equals("PATH", ignoreCase = true) } ?: "PATH"
+    val first = dirs.map { it.path }
+    val rest = this[key].orEmpty().split(File.pathSeparator).filter { it.isNotBlank() && it !in first }
+    this[key] = (first.distinct() + rest).joinToString(File.pathSeparator)
+}
+
+/**
+ * Checks a shell command an agent is about to run. A pure function of the command line, called
+ * on the agent's I/O thread: it must not block.
+ */
+fun interface CommandGuard {
+    /** Why [command] may not run, told to the agent; null to let it go on to the usual permission checks. */
+    fun refusal(command: String): String?
+}
+
 /** How to start an agent for a chat. Each backend maps these to its own flags or requests. */
 data class AgentStartOptions(
     val cwd: File,
@@ -163,6 +181,8 @@ data class AgentStartOptions(
     val permissionMode: PermissionMode = PermissionMode.DEFAULT,
     /** Extra environment for the process and the commands it runs. */
     val environment: Map<String, String> = emptyMap(),
+    /** Folders put first on the PATH of the process and the commands it runs, ahead of [environment]'s. */
+    val pathFirst: List<File> = emptyList(),
     /** Tools the host app runs itself. */
     val hostTools: List<HostToolServer> = emptyList(),
     /** Only [hostTools]: no files, shell or web, and none of the user's own tool servers. */
@@ -173,6 +193,11 @@ data class AgentStartOptions(
     val instructions: String? = null,
     /** Shell commands (by prefix, e.g. `git push`) the agent may never run. */
     val blockedCommands: List<String> = emptyList(),
+    /**
+     * Looks at each shell command before it runs, in any permission mode, and refuses the ones it
+     * names a reason for; finer than [blockedCommands] (a flag anywhere, a reordered call).
+     */
+    val commandGuard: CommandGuard? = null,
     /** Only to learn the agent's commands and models: start no session. */
     val probeOnly: Boolean = false,
     /**

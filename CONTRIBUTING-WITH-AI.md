@@ -25,6 +25,16 @@ they did it.
 
 PRs that skip these steps will be closed.
 
+Amethyst's own agent sessions (the desktop app's Claude Code and Codex
+screens) enforce part of this: they refuse merging, tags, deleting
+branches, pushes to the default branch or to a `nostr://` remote, and
+pushes outside the session's own branches and remotes. Opening a
+proposal or posting stays allowed: `ngit send`, `amy git pr` and
+`amy post` sign with the user's key. Those checks run
+in the agent's own shell, so they stop accidents, not an agent set on
+getting around them. Following these rules is still on you and your
+agent.
+
 ## Before writing code
 
 - **Check the issue is still wanted.** Make sure it is still open, not
