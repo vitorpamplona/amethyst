@@ -295,7 +295,10 @@ class ClaudeSessionStore(
         if (!user && !line.contains("\"type\":\"assistant\"")) return state
         return state.copy(
             hasMessages = true,
-            cwd = stringField(line, CWD_KEY) ?: state.cwd,
+            // Where the session started: its project folder and `--resume` are keyed by it. Later
+            // messages carry the shell's folder, which an agent's `cd` moves (into one of a
+            // workstream's repositories), and taking that put the session in the wrong place.
+            cwd = state.cwd ?: stringField(line, CWD_KEY),
             gitBranch = stringField(line, BRANCH_KEY) ?: state.gitBranch,
             createdAt = state.createdAt ?: stringField(line, TIMESTAMP_KEY)?.let(::parseInstant),
             firstPrompt = state.firstPrompt ?: if (user) parseObject(line)?.let(::promptText) else null,
