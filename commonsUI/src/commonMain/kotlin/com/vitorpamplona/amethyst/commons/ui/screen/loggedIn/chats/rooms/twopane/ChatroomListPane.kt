@@ -23,22 +23,16 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.twopan
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.known
-import com.vitorpamplona.amethyst.commons.resources.new_requests
-import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.rememberMessagesTabs
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun ChatroomList(
@@ -47,22 +41,14 @@ fun ChatroomList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 2 }
+    val tabs = rememberMessagesTabs(knownFeedContentState, newFeedContentState, accountViewModel)
+    val tabCount by rememberUpdatedState(tabs.size)
+    val pagerState = rememberPagerState { tabCount }
 
     WatchLifecycleAndUpdateModel(knownFeedContentState)
     WatchLifecycleAndUpdateModel(newFeedContentState)
 
     ChatroomListFilterAssemblerSubscription(accountViewModel)
-
-    val tabs by
-        remember(knownFeedContentState) {
-            derivedStateOf {
-                persistentListOf(
-                    MessagesTabItem(Res.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
-                    MessagesTabItem(Res.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
-                )
-            }
-        }
 
     Column {
         MessagesTabHeader(

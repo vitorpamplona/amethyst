@@ -197,6 +197,8 @@ data class SignIn(
     val slot: HexKey,
     val publishedAt: Long,
     val kind: MarmotDeviceGroupManager.SignInClass,
+    /** This device's user said it was theirs ("That was me"): listed, never asked about again. */
+    val confirmed: Boolean = false,
 )
 
 /** Everything the devices screen, the sign-in prompt and the "unlinked" notice read. */

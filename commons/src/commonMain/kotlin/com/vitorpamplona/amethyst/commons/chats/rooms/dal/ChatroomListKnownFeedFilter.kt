@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.publicChatChannelIdOf
@@ -197,8 +198,10 @@ class ChatroomListKnownFeedFilter(
             if (!isEnabled(ChatFeedType.MARMOT)) {
                 emptyList()
             } else {
+                val marmotArchived = account.marmotChatSettings.state.value.archived
                 account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                    if (chatroom.isKnown(followingKeySet)) {
+                    // An archived chat lives in the Archived tab, not here.
+                    if (chatroom.isKnown(followingKeySet) && chatroom.nostrGroupId !in marmotArchived) {
                         chatroom.newestMessage ?: chatroom.placeholderNote()
                     } else {
                         null
@@ -703,19 +706,29 @@ class ChatroomListKnownFeedFilter(
 
     override fun sort(items: Set<Note>): List<Note> {
         val pinned = pinnedRooms()
-        if (pinned.isEmpty()) return items.sortedByDefaultFeedOrder()
+        val marmotPinned = if (isEnabled(ChatFeedType.MARMOT)) account.marmotChatSettings.state.value.pinned else emptySet()
+        if (pinned.isEmpty() && marmotPinned.isEmpty()) return items.sortedByDefaultFeedOrder()
 
         val me = account.userProfile().pubkeyHex
         // Snapshots isPinned + createdAt once per note so the comparator stays consistent
         // even if another thread swaps a Note's event mid-sort. Avoids TimSort's
         // "Comparison method violates its general contract!" IllegalArgumentException.
         return items
-            .map { Triple(it, isPinned(it, me, pinned), it.createdAt() ?: 0L) }
+            .map { Triple(it, isPinned(it, me, pinned) || isMarmotPinned(it, marmotPinned), it.createdAt() ?: 0L) }
             .sortedWith(
                 compareByDescending<Triple<Note, Boolean, Long>> { it.second }
                     .thenByDescending { it.third }
                     .thenBy { it.first.idHex },
             ).map { it.first }
+    }
+
+    private fun isMarmotPinned(
+        note: Note,
+        pinned: Set<HexKey>,
+    ): Boolean {
+        if (pinned.isEmpty()) return false
+        val gatherers = note.inGatherers ?: return false
+        return gatherers.any { it is MarmotGroupChatroom && it.nostrGroupId in pinned }
     }
 
     private fun isPinned(

@@ -30,6 +30,9 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevicesSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.NewDeviceLinkState
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.SasSymbol
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -45,13 +48,17 @@ import java.io.File
  */
 object MarmotDevicesCommands {
     private const val USAGE =
-        "marmot devices <enable|disable|list|sync|link|remove>\n" +
+        "marmot devices <enable|disable|list|sync|link|remove|chats|read|pin|mute|archive|sign-in>\n" +
             "  enable | disable                          the device-group switch (off by default)\n" +
             "  list                                      this account's devices and any link in progress\n" +
             "  sync [--timeout SECS]                     one pass: pairing, group catch-up, device-group duties\n" +
             "  link --new [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
             "  link --existing [--label L] [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
-            "  remove SLOT                               remove a linked device"
+            "  remove SLOT                               remove a linked device\n" +
+            "  chats                                     each Marmot chat's pin, mute, archive and synced read position\n" +
+            "  read GROUP                                share that this account read GROUP up to its newest message\n" +
+            "  pin|mute|archive GROUP [on|off]           change one, on every linked device\n" +
+            "  sign-in SLOT mine|not-me                  answer a sign-in: That was me, or This wasn't me"
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -69,6 +76,12 @@ object MarmotDevicesCommands {
                     "sync" to { rest -> sync(dataDir, rest) },
                     "link" to { rest -> link(dataDir, rest) },
                     "remove" to { rest -> remove(dataDir, rest) },
+                    "chats" to { rest -> chats(dataDir, rest) },
+                    "read" to { rest -> markRead(dataDir, rest) },
+                    "pin" to { rest -> chatSetting(dataDir, MarmotChatSetting.PIN, rest) },
+                    "mute" to { rest -> chatSetting(dataDir, MarmotChatSetting.MUTE, rest) },
+                    "archive" to { rest -> chatSetting(dataDir, MarmotChatSetting.ARCHIVE, rest) },
+                    "sign-in" to { rest -> signIn(dataDir, rest) },
                 ),
         )
 
@@ -159,6 +172,117 @@ object MarmotDevicesCommands {
                 return@withDevices Output.error("not_confirmed", "no relay confirmed the removal of $slot")
             }
             Output.emit(render(devices.state.value) + mapOf("removed" to slot))
+            0
+        } ?: disabled()
+    }
+
+    /** Each chat this account is in, with its settings and the read position the device group holds. */
+    private suspend fun chats(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        Args(rest).rejectUnknown()
+        return Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            Output.emit(mapOf("chats" to chatRows(ctx)))
+            0
+        }
+    }
+
+    private suspend fun chatRows(ctx: Context): List<Map<String, Any?>> {
+        val devices = ctx.marmotDevices
+        val settings = ctx.marmotChatSettings.state.value
+        val small = devices?.groups?.takeIf { it.trust().trustsDeviceGroup }?.smallState()
+        return ctx.marmot
+            .activeGroupIds()
+            .filter { devices?.isDeviceGroup(it) != true }
+            .sorted()
+            .map { id ->
+                val read = ctx.marmot.mlsGroupIdHex(id)?.let { mls -> small?.held("$mls/read") as? SmallStateItem.Read }
+                mapOf(
+                    "group_id" to id,
+                    "pinned" to settings.isPinned(id),
+                    "muted" to settings.isMuted(id),
+                    "archived" to settings.isArchived(id),
+                    "read_at" to read?.at,
+                    "read_id" to read?.id,
+                )
+            }
+    }
+
+    /** `read GROUP`: the read position of the newest message this device holds, sent to the linked devices. */
+    private suspend fun markRead(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val group = args.positionalOrNull(0) ?: return Output.error("bad_args", "marmot devices read GROUP")
+        args.rejectUnknown()
+        return withDevices(dataDir) { ctx, devices ->
+            ctx.syncIncoming(4_000)
+            val id = ctx.resolveGroupId(group)
+            if (!ctx.marmot.isMember(id)) return@withDevices Output.error("not_member", "not a member of $group")
+            val epochs = ctx.marmot.storedEpochs(id)
+            // An edit names no read position (`account-sync.md` "Read positions").
+            val newest =
+                ctx.marmot
+                    .loadStoredMessages(id)
+                    .mapNotNull { Event.fromJsonOrNull(it) }
+                    .filter { it.kind != 1009 }
+                    .mapNotNull { e -> epochs[e.id]?.let { Triple(it, e.createdAt, e.id) } }
+                    .maxWithOrNull(compareBy<Triple<Long, Long, String>> { it.first }.thenBy { it.second }.thenBy { it.third })
+                    ?: return@withDevices Output.error("no_messages", "no message of $group to mark read")
+            devices.markRead(id, newest.first, newest.second, newest.third)
+            Output.emit(mapOf("group_id" to id, "epoch" to newest.first, "read_at" to newest.second, "read_id" to newest.third))
+            0
+        } ?: disabled()
+    }
+
+    /** `pin|mute|archive GROUP [on|off]`: here, and on the account's linked devices when this one is linked. */
+    private suspend fun chatSetting(
+        dataDir: DataDir,
+        setting: MarmotChatSetting,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val group = args.positionalOrNull(0) ?: return Output.error("bad_args", "marmot devices ${setting.wireName} GROUP [on|off]")
+        val on =
+            when (args.positionalOrNull(1) ?: "on") {
+                "on", "yes", "true" -> true
+                "off", "no", "false" -> false
+                else -> return Output.error("bad_args", "the value is on or off")
+            }
+        args.rejectUnknown()
+        return Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val id = ctx.resolveGroupId(group)
+            if (!ctx.marmot.isMember(id) || ctx.marmotDevices?.isDeviceGroup(id) == true) return@use Output.error("not_member", "not a member of $group")
+            ctx.marmotChatSettings.set(id, setting, on)
+            val devices = ctx.marmotDevices
+            val shared = devices != null && devices.state.value.linked
+            if (devices != null && shared) devices.changeSetting(id, setting, on)
+            Output.emit(mapOf("group_id" to id, setting.wireName to on, "shared_with_devices" to shared))
+            0
+        }
+    }
+
+    /** `sign-in SLOT mine|not-me`: "That was me" is kept on this device; "This wasn't me" goes to the roster. */
+    private suspend fun signIn(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val slot = args.positionalOrNull(0) ?: return Output.error("bad_args", "marmot devices sign-in SLOT mine|not-me")
+        val answer = args.positionalOrNull(1)
+        args.rejectUnknown()
+        if (answer != "mine" && answer != "not-me") return Output.error("bad_args", "the answer is mine or not-me")
+        return withDevices(dataDir) { _, devices ->
+            if (answer == "mine") {
+                if (!devices.acceptSignIn(slot)) return@withDevices Output.error("io", "could not save the answer")
+            } else {
+                devices.rejectSignIn(slot)
+            }
+            Output.emit(render(devices.state.value) + mapOf("answered" to slot))
             0
         } ?: disabled()
     }
@@ -327,7 +451,7 @@ object MarmotDevicesCommands {
             "new_device" to s.newDevice?.let(::stateName),
             "prompts" to s.prompts.map { mapOf("session_id" to it.sessionId, "slot" to it.slot, "state" to it.state::class.simpleName?.lowercase()) },
             "remaining_chats" to s.remainingChats,
-            "sign_ins" to s.signIns.map { mapOf("slot" to it.slot, "published_at" to it.publishedAt, "kind" to it.kind.name.lowercase()) },
+            "sign_ins" to s.signIns.map { mapOf("slot" to it.slot, "published_at" to it.publishedAt, "kind" to it.kind.name.lowercase(), "confirmed" to it.confirmed) },
         )
 
     private fun stateName(s: NewDeviceLinkState): String =

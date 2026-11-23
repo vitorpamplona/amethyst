@@ -83,6 +83,7 @@ object ScrollStateKeys {
     const val HOME_EVERYTHING = "HomeFollowsEverythingFeed"
     const val MESSAGES_KNOWN = "MessagesKnown"
     const val MESSAGES_NEW = "MessagesNew"
+    const val MESSAGES_ARCHIVED = "MessagesArchived"
     const val PROFILE_GALLERY = "ProfileGalleryFeed"
 
     const val DRAFTS = "DraftsFeed"

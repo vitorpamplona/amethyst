@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_devices_section_link
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_section_roster
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_section_sign_ins
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_section_switch
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_sign_in_confirmed
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_sign_in_earlier
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_sign_in_new
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_sign_in_rejected
@@ -98,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_devices_unavailable
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_unlinked_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_unlinked_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_unnamed
+import com.vitorpamplona.amethyst.commons.resources.marmot_sign_in_mine
 import com.vitorpamplona.amethyst.commons.resources.marmot_sign_in_not_me
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -151,6 +153,7 @@ fun MarmotDevicesScreen(
             onLinkThisDevice = { nav.nav(Route.MarmotDeviceLink(asNewDevice = true)) },
             onRemove = { viewModel.removeDevice(it.slot) },
             onRejectSignIn = { viewModel.rejectSignIn(it.slot) },
+            onAcceptSignIn = { viewModel.acceptSignIn(it.slot) },
             modifier = Modifier.padding(padding),
         )
     }
@@ -183,6 +186,7 @@ fun MarmotDevicesContent(
     onRemove: (LinkedDevice) -> Unit,
     onRejectSignIn: (SignIn) -> Unit,
     modifier: Modifier = Modifier,
+    onAcceptSignIn: (SignIn) -> Unit = {},
 ) {
     var removing by remember { mutableStateOf<LinkedDevice?>(null) }
     val snapshot = model.snapshot
@@ -269,7 +273,7 @@ fun MarmotDevicesContent(
             SettingsSection(Res.string.marmot_devices_section_sign_ins) {
                 snapshot.signIns.sortedByDescending { it.publishedAt }.forEachIndexed { index, signIn ->
                     if (index > 0) SettingsDivider()
-                    SignInRow(signIn, onRejectSignIn)
+                    SignInRow(signIn, onRejectSignIn, onAcceptSignIn)
                 }
             }
         }
@@ -367,6 +371,7 @@ private fun statusLabel(status: DeviceStatusV1): StringResource? =
 private fun SignInRow(
     signIn: SignIn,
     onReject: (SignIn) -> Unit,
+    onAccept: (SignIn) -> Unit,
 ) {
     val time = timeAgoNoDot(signIn.publishedAt)
     val text =
@@ -384,9 +389,13 @@ private fun SignInRow(
         IconBox(MaterialSymbols.Security, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
         Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp)) {
             Text(text, style = MaterialTheme.typography.bodyMedium)
-            Text(signIn.slot.take(12), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val detail = if (signIn.confirmed) stringRes(Res.string.marmot_devices_sign_in_confirmed, signIn.slot.take(12)) else signIn.slot.take(12)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (askable) {
+            if (!signIn.confirmed && signIn.kind == MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN) {
+                TextButton(onClick = { onAccept(signIn) }) { Text(stringRes(Res.string.marmot_sign_in_mine)) }
+            }
             TextButton(onClick = { onReject(signIn) }) { Text(stringRes(Res.string.marmot_sign_in_not_me), color = MaterialTheme.colorScheme.error) }
         }
     }

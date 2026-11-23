@@ -448,9 +448,10 @@ class AccountCacheState(
         // Marmot device groups stay off unless this account's switch file exists; their records hold
         // the device tag's signing seed and private KeyPackages, so they are encrypted at rest.
         val marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir)
+        val marmotLocalBlobs = EncryptedDeviceGroupBlobs(accountDir)
         val marmotDeviceGroupStores =
             if (marmotDeviceGroupSwitch.isEnabled()) {
-                DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(accountDir))
+                DeviceGroupBlobStores(marmotLocalBlobs)
             } else {
                 null
             }
@@ -503,6 +504,7 @@ class AccountCacheState(
             marmotPushStateStore = marmotPushStateStore,
             marmotDeviceGroupStores = marmotDeviceGroupStores,
             marmotDeviceGroupSwitch = marmotDeviceGroupSwitch,
+            marmotLocalBlobs = marmotLocalBlobs,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
             signerPermissionStore = signerPermissionStore,

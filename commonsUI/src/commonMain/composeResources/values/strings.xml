@@ -10623,4 +10623,9 @@
         <item quantity="one">%1$d chat is still on its way</item>
         <item quantity="other">%1$d chats are still on their way</item>
     </plurals>
+    <string name="marmot_devices_sign_in_confirmed">%1$s · You said this was you</string>
+    <string name="archive_conversation">Archive</string>
+    <string name="unarchive_conversation">Unarchive</string>
+    <string name="archived_chats_tab">Archived</string>
+    <string name="archived_chat_content_description">Archived chat</string>
 </resources>

@@ -69,8 +69,10 @@ import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
@@ -525,6 +527,12 @@ class Account(
      * change applies on the next launch.
      */
     val marmotDeviceGroupSwitch: DeviceGroupSwitch? = null,
+    /**
+     * This account's own Marmot records that are not protocol state, kept with or without device
+     * groups: the chats' pin, mute and archive ([marmotChatSettings]) and the sign-ins the user said
+     * were theirs. Encrypted at rest by the app; null keeps them in memory only.
+     */
+    val marmotLocalBlobs: DeviceGroupBlobs? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -1306,6 +1314,9 @@ class Account(
             )
         }
 
+    /** Pin, mute and archive of this account's Marmot chats, shared with its linked devices when device groups are on. */
+    val marmotChatSettings = MarmotChatSettings(marmotLocalBlobs)
+
     /**
      * Device groups for this account (linking its devices, the hidden device group, adding
      * siblings to chats), or null while the switch is off. See [MarmotDevices].
@@ -1317,6 +1328,9 @@ class Account(
                 signer = signer,
                 transport = AccountMarmotDevicesTransport(this),
                 keyPackageRelays = { marmot.keyPackagePublishRelays() },
+                signInAnswers = marmotLocalBlobs,
+                onSmallState = { state -> marmot.applyMarmotSmallState(state) },
+                onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
             )
         }
 
@@ -4584,11 +4598,21 @@ class Account(
             marmotGroupList.isHidden = { id -> marmotDevices?.isDeviceGroup(id) == true }
 
             scope.launch(Dispatchers.IO) {
+                marmotChatSettings.load()
                 marmotManager.restoreAll()
 
                 // Device groups (behind their switch): load trust, announce this device, run the timers.
                 marmotDevices?.let { devices ->
                     runCatchingCancellable { devices.start() }.onFailure { Log.w("Account", "Marmot device groups failed to start", it) }
+                    // Each time this device comes to trust a device group (at start, or once a link
+                    // joins), its own pins, mutes and archives go to the siblings that hold none.
+                    scope.launch(Dispatchers.IO) {
+                        devices.state
+                            .map { it.linked }
+                            .distinctUntilChanged()
+                            .filter { it }
+                            .collect { runCatchingCancellable { marmot.seedMarmotSmallState() }.onFailure { e -> Log.w("Account", "seeding the Marmot small state failed", e) } }
+                    }
                     scope.launch(Dispatchers.IO) {
                         while (isActive) {
                             delay(MARMOT_DEVICE_GROUP_TICK_MS)

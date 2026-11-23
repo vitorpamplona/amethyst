@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.commons.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.amethyst.commons.calendars.dal.CalendarCollectionsFeedFilter
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.dal.RelayGroupDiscoveryFeedFilter
+import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListArchivedFeedFilter
 import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.commons.communities.list.dal.CommunitiesFeedFilter
@@ -151,6 +152,9 @@ class AccountFeedContentStates(
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache, lazy = true)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache, lazy = true)
+
+    /** The Marmot chats this account archived, on this device or on a linked one. */
+    val dmArchived = FeedContentState(ChatroomListArchivedFeedFilter(account), scope, LocalCache, lazy = true)
 
     // A full cache walk per rebuild, like Home. It also reads follows and the report settings
     // (Account.isAcceptable), and reports, which arrive as their own events: see updateFeedsWith.
@@ -377,7 +381,20 @@ class AccountFeedContentStates(
             account.marmotGroupList.groupListChanges.collect {
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
+                dmArchived.invalidateData()
             }
+        }
+
+        // Pinning, muting or archiving a Marmot chat (here or on a linked device) moves its row
+        // between the lists and reorders them, and none of it flows through LocalCache.
+        scope.launch(Dispatchers.IO) {
+            account.marmotChatSettings.state
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                    dmNew.invalidateData()
+                    dmArchived.invalidateData()
+                }
         }
 
         // Same for cordn, and more so: a cordn message is an MLS envelope that
@@ -673,6 +690,7 @@ class AccountFeedContentStates(
             homeEverything,
             dmKnown,
             dmNew,
+            dmArchived,
             videoFeed,
             discoverMarketplace,
             discoverFollowSets,

@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -123,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_this_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_unknown_error
 import com.vitorpamplona.amethyst.commons.resources.marmot_user_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.members
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
@@ -140,6 +142,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.MarmotChatSettingsMenuItems
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
@@ -245,6 +248,17 @@ fun MarmotGroupInfoScreen(
                                 contentDescription = stringRes(Res.string.marmot_disband_group),
                                 tint = MaterialTheme.colorScheme.error,
                             )
+                        }
+                    }
+                    // Pin, mute and archive, the same three the chat list's long press offers.
+                    Box {
+                        var settingsMenu by remember { mutableStateOf(false) }
+                        val chatSettings by accountViewModel.marmotChatSettingsFlow().collectAsStateWithLifecycle()
+                        IconButton(onClick = { settingsMenu = true }) {
+                            Icon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
+                        }
+                        DropdownMenu(expanded = settingsMenu, onDismissRequest = { settingsMenu = false }) {
+                            MarmotChatSettingsMenuItems(nostrGroupId, chatSettings, accountViewModel) { settingsMenu = false }
                         }
                     }
                     IconButton(
