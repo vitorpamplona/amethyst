@@ -523,6 +523,9 @@ relay subscription planning (`MapOfSetBuilder`, `toHexSet`, `CursorPlanner`, `Fi
 top-nav filters) and the trust network rebuild. The UI thread is a quarter of it, spread over
 Compose's own machinery. GC runs 2 to 3 young collections a second while the feed loads, 8 to 18 ms
 each. The thumbnail pipeline, which Skia could decode and encode natively, is the clearest target.
+Stored posters, which every launch reads back, now decode through Skia (`decodePoster`):
+1.7 ms a 640x360 poster against 6.6 ms for ImageIO plus `toComposeImageBitmap`, and no Java-heap
+pixel arrays. Writing a new poster still goes through ImageIO's JPEG writer, once per video.
 
 ## The cache window on more feeds: held
 
