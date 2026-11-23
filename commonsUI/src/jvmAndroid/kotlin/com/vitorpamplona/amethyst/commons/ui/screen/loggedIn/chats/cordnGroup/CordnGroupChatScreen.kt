@@ -140,7 +140,9 @@ import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
+import com.vitorpamplona.cordn.spec02Envelopes.CordnPolls
 import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -533,6 +535,21 @@ private fun CordnGroupChat(
                                             // A custom emoji goes as `:name:` plus its `emoji` tag, as cordn-web reads it.
                                             val reaction = CordnReactionOutbound.of(emoji, message.target())
                                             scope.launch { trySend { it.send(room.gid, reaction.content, reaction.kind, reaction.tags) } }
+                                        },
+                                        onVote = { optionIds ->
+                                            // A vote is the whole selection, built by CordnPolls as cordn-web
+                                            // builds it, with the "Voted: …" text a client without polls shows.
+                                            val definition = CordnPolls.definition(message.envelope.kind, message.envelope.content, message.envelope.tags)
+                                            scope.launch {
+                                                trySend {
+                                                    it.send(
+                                                        gid = room.gid,
+                                                        content = CordnPolls.describe(definition, optionIds),
+                                                        kind = CordnMessageKinds.POLL_RESPONSE,
+                                                        tags = CordnPolls.voteTags(message.target(), optionIds),
+                                                    )
+                                                }
+                                            }
                                         },
                                     )
                                 }

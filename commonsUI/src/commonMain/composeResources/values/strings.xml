@@ -7297,6 +7297,21 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_calendar_event">Event: %1$s</string>
     <string name="cordn_calendar_event_cancelled">Cancelled event: %1$s</string>
+    <string name="cordn_calendar_cancelled">Cancelled</string>
+    <plurals name="cordn_calendar_going">
+        <item quantity="one">%1$d going</item>
+        <item quantity="other">%1$d going</item>
+    </plurals>
+    <plurals name="cordn_calendar_maybe">
+        <item quantity="one">%1$d maybe</item>
+        <item quantity="other">%1$d maybe</item>
+    </plurals>
+    <plurals name="cordn_calendar_declined">
+        <item quantity="one">%1$d can't go</item>
+        <item quantity="other">%1$d can't go</item>
+    </plurals>
+    <string name="cordn_poll_closes">Closes %1$s</string>
+    <string name="cordn_poll_closed">Closed</string>
     <string name="cordn_call_started">Call started</string>
     <string name="cordn_call_started_titled">Call started · %1$s</string>
     <string name="cordn_call_ended">Call ended</string>

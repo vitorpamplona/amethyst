@@ -71,6 +71,45 @@ class CordnGroupChatroomTest {
     )
 
     @Test
+    fun `a calendar event's RSVPs fold onto it and are not rows of their own`() {
+        val room = room()
+        val event =
+            message(
+                "e1",
+                at = 100,
+                cursor = 1,
+                content = "",
+                kind = CordnMessageKinds.CALENDAR_TIME,
+                tags = arrayOf(arrayOf("d", "standup"), arrayOf("title", "Standup"), arrayOf("start", "1767312000")),
+            )
+
+        fun rsvp(
+            id: String,
+            cursor: Long,
+            author: HexKey,
+            status: String,
+        ) = message(
+            id,
+            at = 100 + cursor,
+            cursor = cursor,
+            author = author,
+            content = "",
+            kind = CordnMessageKinds.CALENDAR_RSVP,
+            tags = arrayOf(arrayOf("a", "${CordnMessageKinds.CALENDAR_TIME}:$alice:standup"), arrayOf("status", status)),
+        )
+
+        room.addAll(listOf(event, rsvp("r1", 2, bob, "accepted"), rsvp("r2", 3, alice, "tentative"), rsvp("r3", 4, bob, "declined")))
+
+        assertEquals(listOf(event.envelope.id), room.messages.value.map { it.envelope.id })
+        val attendees =
+            room.calendar.value.attendees
+                .getValue(event.envelope.id)
+        assertEquals(emptyList(), attendees.going)
+        assertEquals(listOf(alice), attendees.maybe)
+        assertEquals(listOf(bob), attendees.declined)
+    }
+
+    @Test
     fun `messages are keyed by envelope id, so a re-sync does not duplicate them`() {
         // spec/02.md §7: the envelope id is the identity, the cursor is a
         // delivery primitive. A catch_up after a restart re-walks the stream

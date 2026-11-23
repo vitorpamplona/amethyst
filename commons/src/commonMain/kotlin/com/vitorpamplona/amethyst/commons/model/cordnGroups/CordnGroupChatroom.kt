@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.cordn.groups.CordnCredential
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
@@ -116,6 +117,14 @@ class CordnGroupChatroom(
 
     /** Reactions, edits, deletions and pins folded onto their targets. */
     val annotations: StateFlow<CordnAnnotationIndex> = _annotations.asStateFlow()
+
+    private val _calendar = MutableStateFlow(CordnCalendar.fold(emptyList()))
+
+    /**
+     * The group's calendar, folded (`calendar-events.md` §5-§7): who answered each event's
+     * current revision, in [CordnCalendar.Fold.attendees]. A calendar card reads its RSVPs here.
+     */
+    val calendar: StateFlow<CordnCalendar.Fold> = _calendar.asStateFlow()
 
     private val _name = MutableStateFlow<String?>(null)
     private val _description = MutableStateFlow<String?>(null)
@@ -286,6 +295,7 @@ class CordnGroupChatroom(
         val everything = byId.values.toList()
         val index = CordnAnnotationIndex.of(everything)
         _annotations.value = index
+        _calendar.value = CordnCalendar.fold(everything)
 
         // Not only annotations: poll votes and RSVPs are their poll's and
         // event's aggregate, and a calendar revision replaces the one before
