@@ -26,7 +26,7 @@ import com.vitorpamplona.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -79,9 +79,11 @@ class AccountMarmotDevicesTransport(
         val relays = keyPackageRelays()
         if (relays.isEmpty()) return null
         val filter = Filter(authors = listOf(account.signer.pubKey), kinds = listOf(KeyPackageEvent.KIND))
-        return account.client
-            .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = FETCH_IDLE_MS)
-            .filterIsInstance<KeyPackageEvent>()
+        val result = account.client.fetchAllWithHooks(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = FETCH_IDLE_MS) { _, _ -> true }
+        // Nobody answered: unknown, not "none" (an empty list would be recorded as the first check).
+        if (!result.anyRelayServed) return null
+        return result.events
+            .mapNotNull { it.second as? KeyPackageEvent }
             .groupBy { it.dTag() }
             .mapNotNull { (_, versions) -> versions.maxByOrNull { it.createdAt } }
     }

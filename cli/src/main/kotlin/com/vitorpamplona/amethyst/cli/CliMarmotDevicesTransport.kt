@@ -63,8 +63,10 @@ class CliMarmotDevicesTransport(
 
     override suspend fun ownKeyPackages(): List<KeyPackageEvent>? {
         val filter = Filter(authors = listOf(ctx.identity.pubKeyHex), kinds = listOf(KeyPackageEvent.KIND))
-        return ctx
-            .drain(ctx.keyPackageRelays().associateWith { listOf(filter) })
+        val result = ctx.drainResult(ctx.keyPackageRelays().associateWith { listOf(filter) })
+        // Nobody answered: unknown, not "none" (an empty list would be recorded as the first check).
+        if (!result.anyRelayServed) return null
+        return result.events
             .mapNotNull { it.second as? KeyPackageEvent }
             .groupBy { it.dTag() }
             .mapNotNull { (_, versions) -> versions.maxByOrNull { it.createdAt } }
