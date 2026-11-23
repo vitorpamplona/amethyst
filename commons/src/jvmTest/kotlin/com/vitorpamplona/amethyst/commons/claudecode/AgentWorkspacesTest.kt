@@ -50,6 +50,9 @@ class AgentWorkspacesTest {
     private lateinit var appUrl: String
     private lateinit var libUrl: String
 
+    /** A checked-out file's text with Windows line endings (git's autocrlf there) read as `\n`. */
+    private fun checkedOut(file: File) = file.readText().replace("\r\n", "\n")
+
     private fun git(
         dir: File,
         vararg args: String,
@@ -449,7 +452,7 @@ class AgentWorkspacesTest {
             assertNotNull(restored.restoredAt)
             assertFalse(workspaces.list().single().isFreed)
             assertEquals("agent/x", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
-            assertEquals("fixed\n", File(app, "fix.txt").readText())
+            assertEquals("fixed\n", checkedOut(File(app, "fix.txt")))
             assertEquals("", git(app, "status", "--porcelain"))
             assertEquals(listOf("e1", "e2"), git(app, "config", "--get-all", "branch.agent/x.amethyst-reviewed").lines().filter { it.isNotBlank() })
             assertEquals(appUrl, git(app, "remote", "get-url", "origin").trim())
@@ -509,7 +512,7 @@ class AgentWorkspacesTest {
             git(seed, "commit", "--quiet", "-am", "other 2")
             git(bare, "fetch", "--quiet", seed.absolutePath, "other:other")
             workspaces.restore(freed)
-            assertEquals("mine\n", File(app, "mine.txt").readText())
+            assertEquals("mine\n", checkedOut(File(app, "mine.txt")))
             assertEquals(git(bare, "rev-parse", "other").trim(), git(app, "rev-parse", "origin/other").trim())
         }
 
@@ -871,7 +874,7 @@ class AgentWorkspacesTest {
             }
             // Not freed, on disk as in the record: the clone is whole, and nothing was kept for it.
             assertFalse(workspaces.list().single().isFreed)
-            assertEquals("k\n", File(app, "k.txt").readText())
+            assertEquals("k\n", checkedOut(File(app, "k.txt")))
             assertEquals("", git(app, "status", "--porcelain"))
             assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
         }
@@ -900,7 +903,7 @@ class AgentWorkspacesTest {
                 tmp.walkTopDown().filter { it.isDirectory }.forEach { chmod(it, "rwxr-xr-x") }
             }
             workspaces.restore(workspaces.list().single())
-            assertEquals("l\n", File(app, "l.txt").readText())
+            assertEquals("l\n", checkedOut(File(app, "l.txt")))
         }
 
     @Test
@@ -924,7 +927,7 @@ class AgentWorkspacesTest {
 
             workspaces.restore(freed)
             assertEquals(mine, git(app, "rev-parse", "HEAD").trim())
-            assertEquals("b\n", File(app, "b.txt").readText())
+            assertEquals("b\n", checkedOut(File(app, "b.txt")))
             assertEquals("agent/b", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
         }
 

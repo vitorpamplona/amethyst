@@ -374,6 +374,9 @@ class ClaudeCodeServiceTest {
         return fileUrl(remote)
     }
 
+    /** A checked-out file's text with Windows line endings (git's autocrlf there) read as `\n`. */
+    private fun checkedOut(file: File) = file.readText().replace("\r\n", "\n")
+
     private fun git(
         dir: File,
         vararg args: String,
@@ -455,7 +458,7 @@ class ClaudeCodeServiceTest {
             assertEquals(true, back.workspace?.isFreed)
             assertFalse(repo.exists())
             service.restoreWorkspace(assertNotNull(back.workspace))
-            assertEquals("done\n", File(repo, "work.txt").readText())
+            assertEquals("done\n", checkedOut(File(repo, "work.txt")))
         }
 
     @Test
@@ -505,7 +508,7 @@ class ClaudeCodeServiceTest {
             val freed = service.cleanUp(listOf(ws)).single()
             val both = listOf(async(Dispatchers.Default) { service.restoreWorkspace(freed) }, async(Dispatchers.Default) { service.restoreWorkspace(freed) }).awaitAll()
             assertTrue(both.none { it.isFreed })
-            assertEquals("done\n", File(repo, "work.txt").readText())
+            assertEquals("done\n", checkedOut(File(repo, "work.txt")))
             assertFalse(
                 service.agentWorkspaces
                     .list()
