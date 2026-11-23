@@ -784,6 +784,22 @@ class ClaudeCodeService(
             ?.takeIf { it in backendOf(sessionId).capabilities.modes }
             ?: PermissionMode.DEFAULT
 
+    /**
+     * Each guarded session's push scope, kept with the preferences so a restart doesn't capture it
+     * again. Read from the file, not [_preferences], which may not be loaded yet. Called off the main thread.
+     */
+    private val pushScopeStore =
+        object : PushScopeStore {
+            override fun load(sessionId: String): PushScope? = agentWorkspaces.preferences().pushScopes[sessionId]
+
+            override fun save(
+                sessionId: String,
+                scope: PushScope,
+            ) {
+                _preferences.value = agentWorkspaces.updatePreferences { it.copy(pushScopes = it.pushScopes + (sessionId to scope)) }
+            }
+        }
+
     /** Keeps the mode [sessionId] is in, so it reopens in it after a restart ([savedModeOf]). */
     private suspend fun rememberMode(
         sessionId: String,
@@ -847,7 +863,8 @@ class ClaudeCodeService(
                     },
                 kind = kind,
                 forkBefore = forkBefore,
-                publishingIsTheUsers = { agentWorkspaces.of(it) != null },
+                workstreamOf = { agentWorkspaces.of(it) },
+                pushScopes = pushScopeStore,
                 restoreFolder = ::restoreBeforeStart,
                 folderBrief = { dir -> agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it } },
                 folderKnown = folderKnown,
@@ -1095,6 +1112,11 @@ class ClaudeCodeService(
         if (sessionId != null) {
             withContext(Dispatchers.IO) { backendOf(sessionId).delete(sessionId) }
             rememberMode(sessionId, PermissionMode.DEFAULT)
+            withContext(Dispatchers.IO) {
+                if (sessionId in agentWorkspaces.preferences().pushScopes) {
+                    _preferences.value = agentWorkspaces.updatePreferences { it.copy(pushScopes = it.pushScopes - sessionId) }
+                }
+            }
         }
         refresh()
     }
