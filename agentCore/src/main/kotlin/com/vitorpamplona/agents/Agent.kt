@@ -86,6 +86,14 @@ sealed interface AgentEvent {
         val running: Boolean,
     ) : AgentEvent
 
+    /**
+     * The plan the agent keeps for itself, whole each time: [steps] replace the last ones. For an
+     * agent that reports its plan apart from its tool calls (Codex's `turn/plan/updated`).
+     */
+    data class PlanUpdated(
+        val steps: List<PlanStep>,
+    ) : AgentEvent
+
     /** The turn is over. [failure] says why one that failed did; [interrupted] when the user stopped it. */
     data class TurnEnded(
         val interrupted: Boolean,
@@ -167,6 +175,11 @@ data class AgentStartOptions(
     val blockedCommands: List<String> = emptyList(),
     /** Only to learn the agent's commands and models: start no session. */
     val probeOnly: Boolean = false,
+    /**
+     * False: the session is never saved, so it can't be resumed or listed. Agents that can't
+     * run a session unsaved ignore it and save it as usual.
+     */
+    val persist: Boolean = true,
 )
 
 /** A saved session, as the session list shows it. */
@@ -260,4 +273,12 @@ interface AgentBackend {
 
     /** Sessions other processes have open now, by id. */
     fun liveSessions(): Map<String, AgentLiveSession> = emptyMap()
+}
+
+/** One step of an agent's plan for its work. */
+data class PlanStep(
+    val text: String,
+    val status: Status,
+) {
+    enum class Status { PENDING, IN_PROGRESS, COMPLETED }
 }

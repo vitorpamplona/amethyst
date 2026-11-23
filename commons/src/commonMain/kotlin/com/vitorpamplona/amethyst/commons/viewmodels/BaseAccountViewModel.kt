@@ -2349,6 +2349,12 @@ open class BaseAccountViewModel(
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
             .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
+    /** Whether an event created at [createdAt] is newer than what [routeForLastRead] has read, without marking it. */
+    fun isUnread(
+        routeForLastRead: String,
+        createdAt: Long?,
+    ): Boolean = createdAt != null && createdAt > account.loadLastRead(routeForLastRead)
+
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,

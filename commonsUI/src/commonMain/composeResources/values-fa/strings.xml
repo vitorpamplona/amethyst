@@ -1512,7 +1512,6 @@
     <string name="event_sync_start_anyway">در هر صورت شروع کن (داده موبایل)</string>
     <string name="event_sync_cancel">لغو</string>
     <string name="event_sync_relays_progress">relay ها: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">رویدادهای توزیع‌مجدد: %1$d جدید از %2$d ارسال‌شده و %3$d دریافت‌شده</string>
     <string name="event_sync_done_title">همگام‌سازی کامل شد</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%1$d رویداد از %2$d دریافت‌شده به relay های مقصد ارسال شد.</item>
@@ -3036,4 +3035,5 @@
     <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="browser_address_hint">جستجو یا وارد کردن آدرس</string>
     <string name="napplet_untitled">nApplet بی‌عنوان</string>
+    <string name="event_sync_events_sent">رویدادهای توزیع‌مجدد · جدید: %1$d · ارسال‌شده: %2$d · دریافت‌شده: %3$d</string>
 </resources>

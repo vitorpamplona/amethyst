@@ -309,12 +309,13 @@ private fun AudienceListRow(
                 color = MaterialTheme.colorScheme.warningColor,
             )
         }
+        val privateCount = list.privateMembers.size
         Text(
             text =
-                if (list.privateMembers.isEmpty()) {
+                if (privateCount == 0) {
                     list.memberCount.toString()
                 } else {
-                    stringRes(Res.string.audience_count_with_private, list.memberCount, list.privateMembers.size)
+                    pluralStringRes(Res.plurals.audience_count_with_private, privateCount, list.memberCount, privateCount)
                 },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.placeholderText,

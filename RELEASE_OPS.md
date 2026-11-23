@@ -70,17 +70,15 @@ already be on Nostr when you tag.
    then add their npub or an alias so future releases pick them up. Pass
    `--from`/`--to` to rebuild an older release's list.
 
-   For the `## Translations` section, credit the people whose translation PRs
-   landed since the last `v*` tag (translations no longer go through Crowdin):
+   For the `## Translations` section, run the same script over the locale files:
    ```bash
-   git log --format='%an' "$(git describe --tags --abbrev=0 --match 'v*')"..HEAD -- \
+   scripts/contributors.sh --title Translations -- \
      'commonsUI/src/commonMain/composeResources/values-*/strings.xml' \
-     'amethyst/src/main/res/values-*/strings.xml' | sort | uniq -c | sort -rn
+     'amethyst/src/main/res/values-*/strings.xml'
    ```
-   `docs/changelog/translators.json` keeps the npubs of past Crowdin translators
-   under `mappings`. `scripts/translators.sh` still prints a block from that file,
-   but its `sinceLastTag` list was last filled by the Crowdin sync and no longer
-   refreshes (its `--seed` mode needs the retired Crowdin project).
+   Add each person's languages by hand, and drop commits that only moved or
+   removed keys. Someone who translated through Crowdin, before it was retired,
+   may have their npub in `docs/changelog/translators.json` (by Crowdin username).
 
 3. **Publish the release-notes note on Nostr** — *minor releases only.* In
    practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,
@@ -277,9 +275,22 @@ workflow classifies tags) goes out on the `beta` channel, which none of the read
 `--only android`, `--only flatpak` or `--only desktop` publishes one app.
 
 `zsp publish` still works for the APK if `amy` is unavailable: it reads the same `zapstore.yaml`,
-with the relays in the `RELAY_URLS` env var. It needs zsp 0.4.8 or later: older versions put the
-platform only on the asset, and relay.zapstore.dev refuses their release ("platform must include
-android-arm64-v8a").
+takes the one APK its `match` names from the GitHub Release, and publishes to the relays in the
+`RELAYS` env var (`RELAY_URLS` before zsp 2). Use zsp 2.x: it is the one Zapstore maintains, and
+0.4.x put the `variants` key in `zapstore.yaml` that 2.x refuses to parse.
+
+**One flavor only.** Zapstore installs a single APK per app id: of the assets whose platform and
+SDK fit the phone, it keeps the highest `version_code` and ignores the `variant` tag. Our two
+flavors share the package name, the `versionCode` and the signing key, so a release naming both
+would hand each phone whichever asset event has the higher id, and Android would install it over
+the other flavor without asking. Publish googleplay only (the default) until Zapstore picks
+assets by variant. Listing the F-Droid flavor separately would need its own package name.
+
+**The certificate proof.** Zapstore checks the APK's signing certificate against a NIP-C1 proof
+(kind 30509, `d` = `apk_certificate_hash`) signed by the publishing key, and zsp 2 refuses to
+publish without an active one. Amethyst's was made on 2026-03-23 and **expires on 2027-03-23**.
+`amy` neither checks nor renews it, so renew it before then by running `zsp` (the wizard) by hand:
+it needs the release keystore, so never run it through an agent.
 
 ### Orchard
 Orchard (0.2.0 and later) downloads the bundle from the asset's URL, checks it against the signed
@@ -483,7 +494,8 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Accrescent: the `.apks` upload passed the console's checks.
-- [ ] Zapstore: release event visible.
+- [ ] Zapstore: release event visible, and the certificate proof is not about to expire
+      (2027-03-23 for the current one; § Nostr releases).
 - [ ] Orchard: the Amethyst row shows the new version, and its repository link
       wears the check (the `orchard.txt` proof).
 - [ ] F-Droid: new version detected (may lag days).

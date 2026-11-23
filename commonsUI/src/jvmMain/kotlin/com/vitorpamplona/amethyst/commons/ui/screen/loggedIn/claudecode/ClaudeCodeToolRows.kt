@@ -262,6 +262,7 @@ internal fun ToolKind.symbol(): MaterialSymbol =
         ToolKind.WEB -> MaterialSymbols.Language
         ToolKind.AGENT -> MaterialSymbols.Assistant
         ToolKind.SETTINGS -> MaterialSymbols.Settings
+        ToolKind.PLAN -> MaterialSymbols.Checklist
         ToolKind.OTHER -> MaterialSymbols.Apps
     }
 
@@ -272,6 +273,8 @@ internal fun ToolLine(
     running: Boolean,
     error: Boolean,
     expanded: Boolean,
+    /** Said after [text] in the error's color: how many of a group's calls failed. */
+    errorSuffix: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -302,6 +305,9 @@ internal fun ToolLine(
             // Not filling: the chevron follows the label instead of sitting at the far edge.
             modifier = Modifier.weight(1f, fill = false),
         )
+        errorSuffix?.let {
+            Text(" · $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
+        }
         Spacer(Modifier.width(4.dp))
         Icon(
             if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,

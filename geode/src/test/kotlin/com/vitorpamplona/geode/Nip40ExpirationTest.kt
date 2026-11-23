@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -116,25 +117,23 @@ class Nip40ExpirationTest {
             val signer = NostrSignerSync(KeyPair())
             val now = TimeUtils.now()
 
-            // Two events: one expires in the past, one in the future.
-            // We set the past one to be in the past relative to NOW, but
-            // not so far that the original `insertEvent` rejects on
-            // arrival. The trick: use a createdAt slightly in the past
-            // and an expiration also slightly in the past, both still
-            // recent enough that the relay accepts the event but
-            // `deleteExpiredEvents()` will sweep it.
+            // `insertEvent` rejects an event once `expiration <= now()`, so an
+            // already-expired event can't be stored to test the sweep. Instead
+            // publish a long-lived event and a short-lived one, wait out the
+            // short one on the clock, then sweep.
             //
-            // Actually `insertEvent` rejects on `isExpired()` —
-            // [past] timestamps fail at insert. So instead we publish a
-            // non-expired event (long-lived) and a barely-non-expired
-            // one (1s out), then sleep 2s and call sweep.
+            // The short-lived one needs a few seconds of margin: `now()` is
+            // whole seconds, so with `now + 1` the second could tick over
+            // before the publish reaches the store (anywhere from 0 to 1 s
+            // later) and the relay would reject it on arrival.
+            val shortExpiration = now + SHORT_LIVED_SECS
             val longLived =
                 signer.sign(TextNoteEvent.build("keep-me") { expiration(now + 3600) })
             val shortLived =
-                signer.sign(TextNoteEvent.build("sweep-me") { expiration(now + 1) })
+                signer.sign(TextNoteEvent.build("sweep-me") { expiration(shortExpiration) })
 
-            client.publishAndConfirm(longLived, setOf(relayUrl))
-            client.publishAndConfirm(shortLived, setOf(relayUrl))
+            assertEquals(true, client.publishAndConfirm(longLived, setOf(relayUrl)), "long-lived event must be accepted")
+            assertEquals(true, client.publishAndConfirm(shortLived, setOf(relayUrl)), "short-lived event must be accepted before it expires")
 
             // Both currently in the store.
             assertNotNull(
@@ -144,11 +143,10 @@ class Nip40ExpirationTest {
                 client.fetchFirst(relay = relayUrl, filter = Filter(ids = listOf(shortLived.id))),
             )
 
-            // Wait until shortLived is past its expiration, then sweep.
-            // SQLite's unixepoch() is integer seconds, so we need a full
-            // second's gap from the (now + 1) expiration; bump to 2.5s
-            // to absorb thread-scheduling jitter on busy CI runners.
-            kotlinx.coroutines.delay(2500)
+            // The sweep deletes `expiration < unixepoch()` (whole seconds), so
+            // wait on the clock until now() is past the expiration rather
+            // than for a fixed time that a slow runner could fall short of.
+            while (TimeUtils.now() <= shortExpiration) delay(100)
             hub.getOrCreate(relayUrl).store.deleteExpiredEvents()
 
             // Long-lived survives.
@@ -162,4 +160,9 @@ class Nip40ExpirationTest {
                 "deleteExpiredEvents() must purge the short-lived event",
             )
         }
+
+    private companion object {
+        /** How far out the swept event expires: room for a slow publish, short enough to keep the test quick. */
+        const val SHORT_LIVED_SECS = 3L
+    }
 }

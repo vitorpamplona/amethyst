@@ -10,8 +10,14 @@ plugins {
     application
 }
 
+// Built by the JDK Gradle runs on (JDK 25), as Java 21 bytecode, like the other modules: no
+// separate JDK 21 toolchain to install.
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 kotlin {
-    jvmToolchain(21)
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
     }
@@ -228,7 +234,7 @@ val rpmVersion: String = appVersion.replace("-", "~")
 val mainJarName: String = "cli-$appVersion.jar"
 val mainClassName: String = "com.vitorpamplona.amethyst.cli.MainKt"
 
-// Minimal JDK 21 module set for amy. Keep this tight — every module adds
+// Minimal JDK module set for amy. Keep this tight — every module adds
 // megabytes to the bundle. jlink does NOT notice a missing module: amy's jars
 // are not modular, so a class from an absent module only fails at run time
 // (NoClassDefFoundError). `verifyAmyRuntimeModules` below runs jdeps over the
@@ -263,7 +269,8 @@ val jlinkModules: String = listOf(
 
 fun javaToolBin(name: String): Provider<String> =
     javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        // The JDK Gradle runs on (JDK 25): its runtime is the one the image bundles.
+        languageVersion.set(JavaLanguageVersion.current())
     }.map {
         val exe = if (OperatingSystem.current().isWindows) "$name.exe" else name
         it.metadata.installationPath.file("bin/$exe").asFile.absolutePath

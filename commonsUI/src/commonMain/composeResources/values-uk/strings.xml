@@ -1528,7 +1528,6 @@
     <string name="event_sync_start_anyway">Почати все одно (мобільні дані)</string>
     <string name="event_sync_cancel">Скасувати</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Перерозподілено подій: %1$d нових із %2$d надісланих і %3$d отриманих</string>
     <string name="event_sync_done_title">Синхронізацію завершено</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">Переслано %1$d подію до цільових relay із %2$d отриманих.</item>
@@ -3150,4 +3149,5 @@
     <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Пошук або введіть адресу</string>
     <string name="napplet_untitled">NApplet без назви</string>
+    <string name="event_sync_events_sent">Перерозподілені події · Нові: %1$d · Надіслані: %2$d · Отримані: %3$d</string>
 </resources>

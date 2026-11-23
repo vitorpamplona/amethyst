@@ -31,7 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_number
 import com.vitorpamplona.amethyst.commons.resources.podcast_season
 import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.PodcastEpisodeAudioPlayer
@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
-private val PLAYER_SHAPE = Modifier.clip(RoundedCornerShape(12.dp))
+private val PLAYER_SHAPE = Modifier.mediaClip(RoundedCornerShape(12.dp))
 
 /**
  * One episode as a compact "show list" row inside a podcast's screen: publish date, title,

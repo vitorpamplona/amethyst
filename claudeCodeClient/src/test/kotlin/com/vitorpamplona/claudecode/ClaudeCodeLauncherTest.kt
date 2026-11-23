@@ -26,6 +26,7 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ClaudeCodeLauncherTest {
@@ -63,6 +64,13 @@ class ClaudeCodeLauncherTest {
             )
         val tail = args.drop(8)
         assertEquals(listOf("--resume", "abc", "--fork-session", "--model", "sonnet", "--permission-mode", "acceptEdits"), tail)
+    }
+
+    @Test
+    fun anUnsavedSessionAsksClaudeCodeToWriteNothing() {
+        val unsaved = ClaudeCodeLauncher().arguments(ClaudeCodeOptions(cwd = File("/work"), resumeSessionId = "abc", forkSession = true, persistSession = false))
+        assertTrue("--no-session-persistence" in unsaved)
+        assertFalse("--no-session-persistence" in ClaudeCodeLauncher().arguments(ClaudeCodeOptions(cwd = File("/work"))))
     }
 
     @Test

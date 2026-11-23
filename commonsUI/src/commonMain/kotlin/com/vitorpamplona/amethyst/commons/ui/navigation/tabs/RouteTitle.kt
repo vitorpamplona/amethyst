@@ -40,7 +40,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
@@ -137,6 +139,9 @@ fun routeTitle(
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
+        // Short enough for a tab: "Agentic Coding changes" was cut to "Agentic Coding chan…".
+        is Route.ClaudeCodeChanges -> return stringRes(Res.string.claude_code_changes)
+        is Route.ClaudeCodePullRequests -> return stringRes(Res.string.claude_code_pull_requests)
         // The screen's own title; spelled out, its name read "Nip46 connected apps".
         is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
         // The screens' own titles; spelled out, they read "Marmot devices settings".
@@ -147,7 +152,7 @@ fun routeTitle(
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }
     if (section != null && route !is Route.Profile) return stringRes(section.labelRes)
     val name = route::class.simpleName.orEmpty()
-    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "AI Code changes".
+    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "Agentic Coding changes".
     if (name.startsWith(AGENT_ROUTE_PREFIX)) return stringRes(Res.string.ai_code_title) + " " + spellOut(name.removePrefix(AGENT_ROUTE_PREFIX)).lowercase()
     return spellOut(name)
 }

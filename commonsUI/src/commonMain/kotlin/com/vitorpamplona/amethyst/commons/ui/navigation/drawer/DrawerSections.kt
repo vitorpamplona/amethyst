@@ -98,6 +98,8 @@ private val DrawerYouItems: List<NavBarItem> =
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,
         NavBarItem.NOSTR_SIGNER,
+        // Desktop only: hidden wherever the route has no screen.
+        NavBarItem.CLAUDE_CODE,
     )
 
 private val DrawerFeedsItems: List<NavBarItem> =
@@ -117,8 +119,6 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.GEOCACHE_HUNTS,
         NavBarItem.WORKOUTS,
         NavBarItem.GIT_REPOSITORIES,
-        // Desktop only: hidden wherever the route has no screen.
-        NavBarItem.CLAUDE_CODE,
         NavBarItem.NIPS,
         NavBarItem.HIGHLIGHTS,
         NavBarItem.LIVE_STREAMS,

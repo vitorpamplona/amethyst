@@ -7,7 +7,9 @@ NO_COLOR='\033[0m'
 # this repository, and the tests below inherit them. A test that runs `git init` or `git commit`
 # in a temp directory then works on this repository instead: a push from a worktree once set
 # core.bare=true in the shared config (breaking every checkout) and replaced the worktree's index.
-# The hook itself runs no git after this point, so drop them all, as git's own scripts do.
+# Drop them all, as git's own scripts do. The only git the hook runs after this point is the
+# plural check at the end, from the repository's own directory, where git finds the repository
+# (a worktree's too) without them.
 unset $(git rev-parse --local-env-vars)
 
 echo "*********************************************************"
@@ -55,10 +57,15 @@ TASKS=(
 #   PREPUSH_KMP_METADATA=1 git push
 # A push to main turns them on by itself: git names the target refs on stdin (the timeout keeps a
 # hand-run `bash .git-hooks/pre-push`, which has no such input, from waiting on the terminal).
-while read -r -t 5 _local_ref _local_sha remote_ref _remote_sha; do
+# The pushed commits are kept for the plural check at the end; a deleted ref sends all zeros.
+PUSHED_SHAS=()
+while read -r -t 5 _local_ref local_sha remote_ref _remote_sha; do
     if [ "$remote_ref" = "refs/heads/main" ]; then
         PREPUSH_KMP_METADATA=1
     fi
+    case "$local_sha" in
+        *[!0]*) PUSHED_SHAS+=("$local_sha") ;;
+    esac
 done
 # Keep this list in sync with the lint job in .github/workflows/build.yml.
 if [ "${PREPUSH_KMP_METADATA:-}" = "1" ]; then
@@ -87,6 +94,15 @@ if [ "$status" = 0 ] ; then
     echo "Running Android lint... "
     ./gradlew :amethyst:lintPlayDebug --quiet
     status=$?
+fi
+
+# A warning, never a gate: new English strings that look like they count something and should be
+# a <plurals> before any locale translates them (tools/agent-hooks/plural_candidates_check.py).
+# Printed here, after the tests pass or fail, so it does not scroll away behind Gradle's output.
+# .git/hooks is shared by every worktree, so a branch from before the script skips it.
+PLURAL_CHECK=tools/agent-hooks/plural_candidates_check.py
+if [ -f "$PLURAL_CHECK" ] && [ "${#PUSHED_SHAS[@]}" -gt 0 ] && command -v python3 >/dev/null 2>&1; then
+    python3 "$PLURAL_CHECK" "${PUSHED_SHAS[@]/#/--head=}" </dev/null
 fi
 
 if [ "$status" = 0 ] ; then

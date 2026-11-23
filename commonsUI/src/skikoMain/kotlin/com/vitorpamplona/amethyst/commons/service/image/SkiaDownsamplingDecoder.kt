@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.service.image
 
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DecodeResult
 import coil3.decode.DecodeUtils
 import coil3.decode.Decoder
@@ -35,15 +34,10 @@ import coil3.size.Scale
 import coil3.size.isOriginal
 import okio.use
 import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
-import org.jetbrains.skia.Color
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.EncodedOrigin
-import org.jetbrains.skia.FilterMipmap
-import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.Image
-import org.jetbrains.skia.MipmapMode
 import org.jetbrains.skia.impl.use // with okio.use: skia and okio types are AutoCloseable only on JVM, so kotlin.use breaks iOS
 import kotlin.math.roundToInt
 
@@ -108,7 +102,7 @@ internal fun downsample(
         }
 
     return DecodeResult(
-        image = bitmap.asImage(),
+        image = PixelExactImage(bitmap),
         isSampled = width < srcWidth || height < srcHeight,
     )
 }
@@ -142,7 +136,7 @@ internal fun shrinkJpeg(
                 codec.readPixels(scaled, 0)
                 scaled.setImmutable()
                 Image.makeFromBitmap(scaled).use { image ->
-                    DecodeResult(image = drawScaled(image, width, height, origin).asImage(), isSampled = true)
+                    DecodeResult(image = PixelExactImage(drawScaled(image, width, height, origin)), isSampled = true)
                 }
             } catch (e: Exception) {
                 // A JPEG Skia can't decode at that scale (a broken or exotic file): the usual path.
@@ -153,7 +147,7 @@ internal fun shrinkJpeg(
         }
     }
 
-/** [image] filtered through mipmaps into a [width] x [height] bitmap, turned upright from [origin]. */
+/** [image] filtered into a [width] x [height] bitmap ([scaleInto]), turned upright from [origin]. */
 private fun drawScaled(
     image: Image,
     width: Int,
@@ -162,28 +156,15 @@ private fun drawScaled(
 ): Bitmap {
     val bitmap = Bitmap()
     bitmap.allocN32Pixels(width, height)
-    Canvas(bitmap).use { canvas ->
-        // Drawn over what is there, so a transparent picture needs a clear start.
-        canvas.clear(Color.TRANSPARENT)
-        if (origin != EncodedOrigin.TOP_LEFT) canvas.concat(origin.toMatrix(width, height))
-        // Under a rotation the picture is drawn as stored, sideways, and the matrix stands it up.
-        val drawWidth = if (origin.swapsWidthHeight()) height else width
-        val drawHeight = if (origin.swapsWidthHeight()) width else height
-        canvas.drawImageRect(
-            image,
-            0f,
-            0f,
-            image.width.toFloat(),
-            image.height.toFloat(),
-            0f,
-            0f,
-            drawWidth.toFloat(),
-            drawHeight.toFloat(),
-            MIPMAP_SAMPLING,
-            null,
-            true,
-        )
-    }
+    // Under a rotation the picture is drawn as stored, sideways, and the matrix stands it up.
+    val swaps = origin.swapsWidthHeight()
+    scaleInto(
+        bitmap,
+        image,
+        if (swaps) height else width,
+        if (swaps) width else height,
+        transform = if (origin != EncodedOrigin.TOP_LEFT) origin.toMatrix(width, height) else null,
+    )
     bitmap.setImmutable()
     return bitmap
 }
@@ -230,9 +211,6 @@ internal fun decodedSize(
     val height = (multiplier * srcHeight).roundToInt().coerceAtLeast(1)
     return width to height
 }
-
-/** Trilinear: bilinear inside the two nearest mip levels, blended. */
-private val MIPMAP_SAMPLING = FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR)
 
 /** An undefined side doesn't limit the size: it loses to the other side under either [Scale]. */
 private fun Dimension.toPx(scale: Scale): Int =

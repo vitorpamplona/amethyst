@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
 
 val Shapes =
@@ -410,8 +411,8 @@ val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.d
 val SettingsCategoryFirstWithHorzBorderModifier = Modifier.padding(bottom = 8.dp, start = 10.dp, end = 10.dp)
 val SettingsCategorySpacingWithHorzBorderModifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp)
 
-val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
-val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
+val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).mediaClip(QuoteBorder)
+val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().mediaClip(QuoteBorder)
 
 val MediumRelayIconModifier =
     Modifier
@@ -426,13 +427,13 @@ val LargeRelayIconModifier =
 val FollowSetImageModifier =
     Modifier
         .fillMaxWidth()
-        .clip(QuoteBorder)
+        .mediaClip(QuoteBorder)
         .aspectRatio(ratio = 21f / 9f)
 
 val SimpleImage75Modifier = Modifier.size(Size75dp).clip(QuoteBorder)
 val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
 
-val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
+val SimpleImageBorder = Modifier.fillMaxSize().mediaClip(QuoteBorder)
 
 val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
 

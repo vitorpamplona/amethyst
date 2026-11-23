@@ -541,7 +541,7 @@ fun main(args: Array<String>) {
                 ) {
                     windows.MainWindowEffects(window)
                     // `-Damethyst.scrollBench=<dir>`: scrolls the feed, writes frame timings, exits.
-                    ScrollBenchmark.Run(window)
+                    ScrollBenchmark.Run(window, root.navigator)
 
                     // The screens see the window stopped while it is hidden (the tray, a print), as
                     // Android's do in the background: their feeds let go of the relays after the
@@ -691,7 +691,16 @@ fun main(args: Array<String>) {
                                     DesktopNappletWindows(nappletHost)
 
                                     // A NIP-46 app asking this desktop's bunker, in a window of its own.
-                                    Nip46ConsentWindows(modules.nip46Consent, onQuestion = { windows.showMainWindow() })
+                                    // The main window comes back (from the tray or the Dock) without
+                                    // raising itself: the question's window raises it, then takes the
+                                    // focus, so the focus lands on the question.
+                                    Nip46ConsentWindows(
+                                        modules.nip46Consent,
+                                        onQuestion = {
+                                            windowState.isMinimized = false
+                                            windows.showMainWindow(raise = false)
+                                        },
+                                    )
                                 }
                             }
                         }

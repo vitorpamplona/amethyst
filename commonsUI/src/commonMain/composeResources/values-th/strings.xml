@@ -1468,7 +1468,6 @@
     <string name="event_sync_start_anyway">เริ่มต่อไป (ข้อมูลมือถือ)</string>
     <string name="event_sync_cancel">ยกเลิก</string>
     <string name="event_sync_relays_progress">Relay: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Event ที่กระจายซ้ำ: %1$d รายการใหม่จาก %2$d ที่ส่งและ %3$d ที่ได้รับ</string>
     <string name="event_sync_done_title">ซิงค์เสร็จสมบูรณ์</string>
     <plurals name="event_sync_done_sent">
         <item quantity="other">ส่งต่อ %1$d event ไปยัง relay ปลายทางจาก %2$d ที่ได้รับ</item>
@@ -2979,4 +2978,5 @@
     <string name="wallet_connect">Wallet Connect</string>
     <string name="browser_address_hint">ค้นหาหรือป้อนที่อยู่</string>
     <string name="napplet_untitled">nApplet ไม่มีชื่อ</string>
+    <string name="event_sync_events_sent">Event ที่กระจายซ้ำ · ใหม่: %1$d · ส่งแล้ว: %2$d · ได้รับ: %3$d</string>
 </resources>

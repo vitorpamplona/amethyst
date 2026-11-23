@@ -21,16 +21,20 @@
 package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.collection.LruCache
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.staticCompositionLocalOf
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -62,8 +66,33 @@ internal fun <T : Any> sameProcessSaver(
         restore = { if (it[0] == thisProcess) create(it[1] as Int, it[2] as Int) else create(0, 0) },
     )
 
-private val SameProcessLazyListSaver =
-    sameProcessSaver<LazyListState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> LazyListState(i, o) }
+/**
+ * How far ahead of the viewport a feed that asks for it (`rememberForeverLazyListState(cacheAhead =
+ * true)`) keeps its items composed, filled in idle time. Null, the default, keeps Compose's own
+ * prefetch of the next item. Only a platform whose prefetch scheduler runs between frames provides
+ * one (Android; the desktop app through `ProvideFramePrefetch`): with no such scheduler the window
+ * would be composed inside the frames that scroll.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+val LocalLazyListCacheWindow = staticCompositionLocalOf<LazyLayoutCacheWindow?> { null }
+
+/**
+ * A screen of items composed ahead of the viewport, none kept behind it: an item that leaves the
+ * screen is disposed as before, so nothing that tracks what is on screen (a playing video) is left
+ * thinking it still shows.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+val FeedCacheWindow = LazyLayoutCacheWindow(aheadFraction = 1f, behindFraction = 0f)
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun newLazyListState(
+    cacheWindow: LazyLayoutCacheWindow?,
+    index: Int,
+    offset: Int,
+): LazyListState = if (cacheWindow != null) LazyListState(cacheWindow, index, offset) else LazyListState(index, offset)
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun sameProcessLazyListSaver(cacheWindow: LazyLayoutCacheWindow?) = sameProcessSaver<LazyListState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> newLazyListState(cacheWindow, i, o) }
 
 private val SameProcessLazyGridSaver =
     sameProcessSaver<LazyGridState>({ it.firstVisibleItemIndex }, { it.firstVisibleItemScrollOffset }) { i, o -> LazyGridState(i, o) }
@@ -195,22 +224,28 @@ fun rememberForeverLazyStaggeredGridState(
     return scrollState
 }
 
+/**
+ * A list position kept across visits. [cacheAhead] composes a screen of items ahead of the viewport
+ * where the platform provides a window ([LocalLazyListCacheWindow]); a list asks for it only when
+ * its items run nothing at composition that should wait until they are seen: each one inside a
+ * [FirstShownItem], which marking read and the "new" highlight wait for.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun rememberForeverLazyListState(
     key: String,
     initialFirstVisibleItemIndex: Int = 0,
     initialFirstVisibleItemScrollOffset: Int = 0,
+    cacheAhead: Boolean = false,
 ): LazyListState {
+    val cacheWindow = if (cacheAhead) LocalLazyListCacheWindow.current else null
     val scrollState =
-        rememberSaveable(saver = SameProcessLazyListSaver) {
+        rememberSaveable(saver = remember(cacheWindow) { sameProcessLazyListSaver(cacheWindow) }) {
             val savedValue = savedScrollStates[key]
             val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
             val savedOffset =
                 savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
-            LazyListState(
-                savedIndex,
-                savedOffset.roundToInt(),
-            )
+            newLazyListState(cacheWindow, savedIndex, savedOffset.roundToInt())
         }
     DisposableEffect(scrollState) {
         onDispose {

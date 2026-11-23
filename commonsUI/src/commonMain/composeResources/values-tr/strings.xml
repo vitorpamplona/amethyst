@@ -1505,7 +1505,6 @@
     <string name="event_sync_start_anyway">Yine de Başlat (mobil veri)</string>
     <string name="event_sync_cancel">İptal</string>
     <string name="event_sync_relays_progress">Relay'ler: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Yeniden dağıtılan etkinlikler: %2$d gönderilenden ve %3$d alınandan %1$d yeni</string>
     <string name="event_sync_done_title">Senkronizasyon tamamlandı</string>
     <plurals name="event_sync_done_sent">
         <item quantity="one">%2$d alınan etkinlikten %1$d tanesi hedef relay'lere iletildi.</item>
@@ -3036,4 +3035,5 @@
     <string name="zap_description">Zap</string>
     <string name="browser_address_hint">Ara veya adres gir</string>
     <string name="napplet_untitled">Başlıksız nApplet</string>
+    <string name="event_sync_events_sent">Yeniden dağıtılan etkinlikler · Yeni: %1$d · Gönderilen: %2$d · Alınan: %3$d</string>
 </resources>

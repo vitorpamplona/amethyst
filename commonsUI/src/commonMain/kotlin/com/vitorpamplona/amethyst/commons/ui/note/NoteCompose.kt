@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.feeds.LocalFirstShown
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
@@ -1205,9 +1206,17 @@ fun calculateBackgroundColor(
         return parentBackgroundColor
     }
 
+    // In a list item that knows when it is shown (a cache window composes items a screen ahead),
+    // only check here: marking it read, dismissing its notification and the highlight's countdown
+    // wait until the user sees it.
+    val firstShown = LocalFirstShown.current
     val isNew =
         remember(createdAt, routeForLastRead) {
-            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
+            when {
+                routeForLastRead == null -> false
+                firstShown == null -> accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
+                else -> accountViewModel.isUnread(routeForLastRead, createdAt)
+            }
         }
 
     val bgColor =
@@ -1223,6 +1232,10 @@ fun calculateBackgroundColor(
 
     if (isNew) {
         LaunchedEffect(createdAt) {
+            if (firstShown != null && routeForLastRead != null) {
+                firstShown.await()
+                accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
+            }
             delay(5000)
             bgColor.value = parentBackgroundColor?.value ?: Color.Transparent
         }
@@ -1470,6 +1483,8 @@ fun InnerNoteWithReactions(
             addPadding = !isBoostedNote,
             showAuthorColumn = notBoostedNorQuote,
             fullWidth = fullWidth,
+            mediaBleed = mediaBleed,
+            reportsMediaGutter = notBoostedNorQuote,
             showSecondRow = showSecondRow,
             // Under a repost's header the boosted body takes the header's spacer, not one of its own.
             showContentSpacer = (isNotRepost && !boostedFrame.headerShown) || repostedNote != null,

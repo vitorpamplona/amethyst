@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -96,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.resources.font_size
 import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
+import com.vitorpamplona.amethyst.commons.resources.language_system_default
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout_deck
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout_description
@@ -209,8 +209,12 @@ fun SettingsScreen(
         }
 
         SettingsSection(Res.string.settings_section_general) {
-            LanguageTile(sharedPrefs)
-            SettingsDivider()
+            // Empty where the platform has no language list (desktop): no row rather than a blank one.
+            val languageEntries = LocalAppPlatform.current.rememberAppLanguages()
+            if (languageEntries.isNotEmpty()) {
+                LanguageTile(sharedPrefs, languageEntries)
+                SettingsDivider()
+            }
             UiModeTile(sharedPrefs)
             SettingsDivider()
             NoteLayoutTile(sharedPrefs)
@@ -514,14 +518,21 @@ private fun XWaylandTile(choice: DisplayServerChoice) {
 // Language can't be a segmented row (50+ locales), so it reads as a disclosure row — icon + title +
 // the current language on the right + a chevron — and tapping anywhere opens the picker dialog. That
 // matches the app's other "opens a picker" rows instead of leaving a lone text-field dropdown here.
+//
+// The first option, "System default", stores null: the app then follows the phone's language.
 @Composable
-private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
-    val languageEntries = LocalAppPlatform.current.rememberAppLanguages()
-    val languageList = remember { languageEntries.keys.map { TitleExplainer(it) }.toImmutableList() }
+private fun LanguageTile(
+    sharedPrefs: UiSettingsFlow,
+    languageEntries: ImmutableMap<String, String>,
+) {
+    val systemDefault = stringRes(Res.string.language_system_default)
+    // (label, tag) per dialog row; the tag is what a pick stores.
+    val options: List<Pair<String, String?>> =
+        remember(languageEntries, systemDefault) { listOf(systemDefault to null) + languageEntries.toList() }
+    val languageList = remember(options) { options.map { TitleExplainer(it.first) }.toImmutableList() }
 
     val language by sharedPrefs.preferredLanguage.collectAsState()
-    val languageIndex = getLanguageIndex(languageEntries, language)
-    val currentLabel = languageList.getOrNull(languageIndex)?.title ?: ""
+    val currentLabel = languageLabel(languageEntries, language) ?: systemDefault
 
     var showPicker by remember { mutableStateOf(false) }
 
@@ -555,25 +566,27 @@ private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
             onDismiss = { showPicker = false },
         ) { index ->
             showPicker = false
-            sharedPrefs.preferredLanguage.tryEmit(languageEntries[languageList[index].title])
+            sharedPrefs.preferredLanguage.tryEmit(options[index].second)
         }
     }
 }
 
-fun getLanguageIndex(
-    languageEntries: ImmutableMap<String, String>,
+/**
+ * The display name for the stored [language] tag, or null when the app follows the system.
+ * Exact tag first, then its language subtag ("de-AT" → "Deutsch"), else the tag itself. A
+ * per-app list of several locales ("fr,de", only settable through adb) is named by its first.
+ *
+ * [entries] maps display name to tag, as [com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform.rememberAppLanguages]
+ * returns it. The system locale is deliberately not consulted: with no stored tag the row says
+ * "System default", whatever language that currently resolves to.
+ */
+fun languageLabel(
+    entries: Map<String, String>,
     language: String?,
-): Int {
-    var languageIndex: Int
-    languageIndex =
-        if (language != null) {
-            languageEntries.values.toTypedArray().indexOf(language)
-        } else {
-            languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
-        }
-    if (languageIndex == -1) {
-        languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
-    }
-    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
-    return languageIndex
+): String? {
+    if (language == null) return null
+    val first = language.substringBefore(',')
+    val subtag = first.substringBefore('-')
+    val match = entries.entries.firstOrNull { it.value == first } ?: entries.entries.firstOrNull { it.value == subtag }
+    return match?.key ?: language
 }

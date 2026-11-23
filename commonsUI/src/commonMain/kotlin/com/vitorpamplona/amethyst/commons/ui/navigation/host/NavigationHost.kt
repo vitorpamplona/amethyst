@@ -27,6 +27,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalNavBackdrop
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
@@ -164,15 +166,19 @@ private fun Display(
     onBack: () -> Unit,
     modifier: Modifier,
 ) {
-    NavDisplay(
-        entries = entries,
-        modifier = modifier.background(MaterialTheme.colorScheme.background),
-        transitionSpec = { if (animated) destinations.pushTransition(this) else NoTransition },
-        popTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
-        // A back gesture runs the same motion as a back press, scrubbed by the finger.
-        predictivePopTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
-        onBack = onBack,
-    )
+    // The display paints the theme background under every screen, so a screen that stands still
+    // can leave that fill to it (LocalNavBackdrop, CappedScreenContent).
+    CompositionLocalProvider(LocalNavBackdrop provides true) {
+        NavDisplay(
+            entries = entries,
+            modifier = modifier.background(MaterialTheme.colorScheme.background),
+            transitionSpec = { if (animated) destinations.pushTransition(this) else NoTransition },
+            popTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
+            // A back gesture runs the same motion as a back press, scrubbed by the finger.
+            predictivePopTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
+            onBack = onBack,
+        )
+    }
 }
 
 private val NoTransition: ContentTransform = EnterTransition.None togetherWith ExitTransition.None

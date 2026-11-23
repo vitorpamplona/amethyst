@@ -165,4 +165,61 @@
     <string name="play">Lecture</string>
     <string name="pause">Pause</string>
     <string name="nest_notification_channel">Nests</string>
+    <string name="always_on_notif_tile_label">Service de notifications</string>
+    <string name="share_target_as_highlight">Nouveau surlignage</string>
+    <string name="share_target_as_picture">Nouvelle image</string>
+    <string name="share_target_as_short_video">Nouvelle vidéo courte</string>
+    <string name="share_target_as_video">Nouvelle vidéo</string>
+    <string name="share_target_scan_qr">Scanner un QR code</string>
+    <string name="shortcut_scan_qr_short">Scanner un QR</string>
+    <string name="shortcut_scan_qr_long">Scanner un QR code</string>
+    <string name="always_on_notif_hide_details">Masquer les détails</string>
+    <string name="always_on_notif_show_details">Afficher les détails</string>
+    <string name="always_on_notif_tile_subtitle_off">Désactivé</string>
+    <string name="always_on_notif_tile_subtitle_on">Activé</string>
+    <string name="blossom_sync_cancel">Annuler</string>
+    <string name="blossom_sync_channel_description">Affiche la progression pendant la copie de vos fichiers entre vos serveurs Blossom.</string>
+    <string name="blossom_sync_channel_name">Synchronisation Blossom</string>
+    <string name="pow_notification_channel_description">Affiche les publications qui minent encore leur preuve de travail NIP-13, pour qu’elles puissent se terminer après que vous avez quitté l’application.</string>
+    <string name="pow_notification_channel_name">Minage de preuve de travail</string>
+    <string name="pow_notification_send_without_pow">Envoyer maintenant</string>
+    <string name="blossom_syncing">Copie de vos fichiers entre les serveurs…</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • minage à %2$d bit</item>
+        <item quantity="other">%1$s • minage à %2$d bits</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Minage de la preuve de travail… (%1$d publication en attente)</item>
+        <item quantity="other">Minage de la preuve de travail… (%1$d publications en attente)</item>
+    </plurals>
+    <string name="pow_mining_title">Minage de la preuve de travail</string>
+    <string name="pow_notification_sending">Envoi aux relais…</string>
+    <string name="pow_notification_cancel_all">Annuler</string>
+    <string name="front_page_print_channel_name">The Observer, impression</string>
+    <string name="front_page_print_channel_description">Affiche The Observer pendant son impression, pour qu’elle puisse se terminer après que vous avez quitté l’application.</string>
+    <string name="front_page_print_cancel">Annuler</string>
+    <string name="front_page_print_title">Impression de The Observer</string>
+    <string name="front_page_print_step_probe">Vérification de votre classement</string>
+    <string name="front_page_print_step_pull">Lecture des rubriques · %1$d sur %2$d</string>
+    <string name="front_page_print_step_write">Rédaction</string>
+    <string name="front_page_print_step_fix">Correction de la page</string>
+    <string name="front_page_print_step_check">Vérification des citations, images et liens</string>
+    <string name="front_page_print_step_publish">Publication de votre Observer</string>
+    <string name="pow_time_left">≈ %1$s restant</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d seconde</item>
+        <item quantity="other">%1$d secondes</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <string name="health_connect_rationale_activity_label">Health Connect et Amethyst</string>
+    <string name="pow_kind_chat_message">Message de discussion</string>
+    <string name="napplet_cap_signer">Chiffrement</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Fichiers</string>
+    <string name="napplet_cap_common">Actions sociales</string>
+    <string name="napplet_cap_intent">Ouvrir d’autres applications</string>
 </resources>

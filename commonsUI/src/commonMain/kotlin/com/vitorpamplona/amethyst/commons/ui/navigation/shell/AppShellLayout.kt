@@ -388,7 +388,8 @@ private fun MultiPaneShell(
                         // Folding slides the panel out to its strip and unfolding slides it back: the size
                         // animates (clipped, the content pinned to its leading edge, so the panel reveals
                         // from the left like a drawer) while the strip and the panel cross-fade over the
-                        // theme background, not the window's, which shows through a half-faded pane.
+                        // theme background, not the window's, which shows through a half-faded pane. That
+                        // background is the panel's only fill: the panel and the strip paint none of their own.
                         AnimatedContent(
                             targetState = panelFolded,
                             modifier =

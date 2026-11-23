@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.Mute
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_about_topic
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayAuthorBanner
@@ -156,7 +156,7 @@ fun RenderPublicChatChannelThumb(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .clip(QuoteBorder),
+                            .mediaClip(QuoteBorder),
                     onState = {
                         if (it is AsyncImagePainter.State.Error) {
                             cover = null

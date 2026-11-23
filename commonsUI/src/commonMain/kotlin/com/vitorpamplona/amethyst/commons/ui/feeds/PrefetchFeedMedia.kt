@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.PlatformContext
@@ -119,8 +120,14 @@ fun PrefetchFeedMedia(
     notes: ImmutableList<Note>,
     accountViewModel: AccountViewModel,
     radius: Int = PREFETCH_RADIUS,
+    // Whether the list's items are note cards (NoteCompose), whose media sits in the note's content
+    // column ([FeedMediaGutter]). Off, images are decoded at the list's width: cards that draw
+    // media across the whole card (pictures, videos, a thread's main post) need that.
+    mediaAtNoteWidth: Boolean = false,
 ) {
-    val visibleEnds = remember(listState) { listState.visibleEnds() }
+    // A card draws a single image no taller than its platform's cap: decoded to fit it, it draws 1:1.
+    val maxMediaHeight = LocalNotePlatform.current.maxInlineMediaHeight?.let { with(LocalDensity.current) { it.roundToPx() } }
+    val visibleEnds = remember(listState, mediaAtNoteWidth, maxMediaHeight) { listState.visibleEnds(mediaAtNoteWidth, maxMediaHeight) }
     PrefetchVisibleMedia(listState, visibleEnds, notes, accountViewModel, radius, prefetchVideoHeads = true)
 }
 
@@ -224,9 +231,11 @@ fun PrefetchLoadedFeedMedia(
     loaded: FeedState.Loaded,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
+    // See [PrefetchFeedMedia]: only for a list whose items are note cards.
+    mediaAtNoteWidth: Boolean = false,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    PrefetchFeedMedia(listState, items.list, accountViewModel)
+    PrefetchFeedMedia(listState, items.list, accountViewModel, mediaAtNoteWidth = mediaAtNoteWidth)
 }
 
 /** Grid variant of [PrefetchLoadedFeedMedia] for [LazyGridState]-backed feeds. */
@@ -250,24 +259,32 @@ private data class FeedVideo(
  * The keys (note `idHex`) of the first and last visible feed items, the size of the list's
  * viewport, which bounds every image a card in it draws, and for a grid the size of its cells.
  */
-private data class VisibleEnds(
+internal data class VisibleEnds(
     val firstKey: String?,
     val lastKey: String?,
     val viewport: IntSize,
     val cell: IntSize? = null,
+    // The list's items are note cards, whose media is narrower than the list (see PrefetchFeedMedia).
+    val mediaAtNoteWidth: Boolean = false,
+    // The tallest a card draws a single image (NotePlatform.maxInlineMediaHeight), in pixels.
+    val maxMediaHeight: Int? = null,
 ) {
     /**
      * What a note's images are decoded to. A grid cell crops its image, so it is covered. A note
      * with several images draws them as an `ImageGallery` of cropped cells, each at most as wide
-     * as the list, so they cover a square that wide. A single image is drawn across the card's
-     * width, never larger than the list, so it fits the viewport.
+     * as the card's media, so they cover a square that wide. A single image is drawn across the
+     * card's media width, never taller than the list, so it fits that width and the viewport's
+     * height. The media width is the list's, or in a list of note cards the note's content column
+     * ([FeedMediaGutter]: the list's width until a card has laid out).
      */
-    fun boxFor(imageCount: Int): PrefetchBox =
-        when {
+    fun boxFor(imageCount: Int): PrefetchBox {
+        val media = if (mediaAtNoteWidth) FeedMediaGutter.mediaWidth(viewport.width) else viewport.width
+        return when {
             cell != null -> PrefetchBox(cell.width, cell.height, fill = true)
-            imageCount > 1 -> PrefetchBox(viewport.width, viewport.width, fill = true)
-            else -> PrefetchBox(viewport.width, viewport.height, fill = false)
+            imageCount > 1 -> PrefetchBox(media, media, fill = true)
+            else -> PrefetchBox(media, maxMediaHeight?.let { minOf(it, viewport.height) } ?: viewport.height, fill = false)
         }
+    }
 }
 
 /** A new visible range: only the keys count, so resizing the window doesn't warm again on every frame. */
@@ -277,10 +294,13 @@ private fun sameRange(
 ) = old.firstKey == new.firstKey && old.lastKey == new.lastKey
 
 /** Emits the visible range ends, once per change. */
-private fun LazyListState.visibleEnds(): Flow<VisibleEnds> =
+private fun LazyListState.visibleEnds(
+    mediaAtNoteWidth: Boolean,
+    maxMediaHeight: Int?,
+): Flow<VisibleEnds> =
     snapshotFlow {
         val visible = layoutInfo.visibleItemsInfo
-        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize)
+        VisibleEnds(visible.firstOrNull()?.key as? String, visible.lastOrNull()?.key as? String, layoutInfo.viewportSize, mediaAtNoteWidth = mediaAtNoteWidth, maxMediaHeight = maxMediaHeight)
     }.distinctUntilChanged(::sameRange)
 
 /** Grid equivalent of [visibleEnds]. */

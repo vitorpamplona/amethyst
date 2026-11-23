@@ -25,6 +25,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.desktop.app.DesktopNavigator
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.AWTEvent
 import java.awt.Component
 import java.awt.EventQueue
@@ -56,8 +60,10 @@ import kotlin.system.exitProcess
 /**
  * A scroll benchmark of the running app: `-Damethyst.scrollBench=<dir>` waits for the home feed
  * to load, scrolls it with the mouse wheel at a fixed pace (down, back up, down again), records
- * every frame, writes a report to `<dir>` and exits. Off unless the property is set; only the dev
- * `run` forwards it (desktopApp/build.gradle.kts), and `tools/desktop-run/scroll-bench.sh` drives it.
+ * every frame, writes a report to `<dir>` and exits. Off unless the property is set. The dev `run`
+ * forwards it (desktopApp/build.gradle.kts), `tools/desktop-run/scroll-bench.sh` drives it on the dev
+ * `run` or a packaged image, and `trainReleaseAotCache` scrolls with it while it records the release
+ * image's AOT cache, so the cache covers the scroll path too.
  *
  * The wheel events are posted to the window as AWT would deliver them, so they go through Compose's
  * own wheel handling and smooth scrolling, as a user's do; nothing reaches into the feed's state.
@@ -76,7 +82,7 @@ import kotlin.system.exitProcess
 object ScrollBenchmark {
     private const val TAG = "ScrollBenchmark"
 
-    // Read with its `.waitSeconds`, `.notches`, `.intervalMs` and `.at` settings. The dev `run`
+    // Read with its `.waitSeconds`, `.notches`, `.intervalMs`, `.at`, `.measure` and `.screen` settings. The dev `run`
     // forwards only the properties desktopApp/build.gradle.kts lists: add a new one there too.
     const val PROPERTY = "amethyst.scrollBench"
 
@@ -90,6 +96,13 @@ object ScrollBenchmark {
         // Where in the window to scroll, as fractions of its width and height: the feed's column.
         val atX: Double,
         val atY: Double,
+        // False: scroll only, with none of the measuring (the timing event queue, the image-load
+        // listener, the frame recorder, screenshots). The release's AOT training scrolls this way, so
+        // the cache it ships profiles the app as users run it, not the benchmark's instruments.
+        val measure: Boolean = true,
+        // A drawer entry (a NavBarItem name, e.g. PICTURES) to open first, as its drawer row opens
+        // it; null scrolls the screen the app starts on (the home feed).
+        val screen: NavBarItem? = null,
     )
 
     fun config(): Config? {
@@ -107,20 +120,29 @@ object ScrollBenchmark {
             intervalMs = System.getProperty("$PROPERTY.intervalMs")?.toLongOrNull() ?: 16,
             atX = at[0],
             atY = at[1],
+            measure = System.getProperty("$PROPERTY.measure")?.toBooleanStrictOrNull() ?: true,
+            screen =
+                System.getProperty("$PROPERTY.screen")?.takeIf { it.isNotBlank() }?.let { name ->
+                    requireNotNull(NavBarItem.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }) { "No drawer entry named $name" }
+                },
         )
     }
 
     private val configured: Config? by lazy { config() }
 
-    /** Whether this run is a benchmark: the image loader then reports to [ImageLoadStats]. */
-    val enabled: Boolean get() = configured != null
+    /** Whether this run measures: the image loader then reports to [ImageLoadStats]. */
+    val measuring: Boolean get() = configured?.measure == true
 
     /** Runs the benchmark in [window] when the property asks for it; nothing otherwise. */
     @Composable
-    fun Run(window: JFrame) {
+    fun Run(
+        window: JFrame,
+        navigator: DesktopNavigator,
+    ) {
         val config = configured ?: return
         LaunchedEffect(Unit) {
             try {
+                config.screen?.let { open(navigator, it) }
                 run(window, config)
             } catch (e: CancellationException) {
                 // The window's composition went away (a crash rebuilt the window): not a result, and
@@ -142,23 +164,66 @@ object ScrollBenchmark {
         UP(-1),
     }
 
+    private val PASSES = listOf("down" to Direction.DOWN, "up" to Direction.UP, "down-again" to Direction.DOWN)
+
+    /** Written last when the passes are done, in either mode. */
+    const val DONE_FILE = "done.txt"
+
+    /** Opens the drawer entry [item] once an account is logged in, the way its drawer row does. */
+    private suspend fun open(
+        navigator: DesktopNavigator,
+        item: NavBarItem,
+    ) {
+        val def = requireNotNull(NavBarCatalog[item]) { "$item has no drawer row" }
+        val accountViewModel =
+            withTimeoutOrNull(60_000) {
+                while (navigator.nav == null || navigator.accountViewModel == null) delay(200)
+                navigator.accountViewModel
+            } ?: error("No logged-in account after 60 s to open $item in")
+        val route = def.resolveRoute(accountViewModel)
+        require(navigator.destinations?.has(route) != false) { "$item opens ${route::class.simpleName}, which this desktop has no screen for" }
+        navigator.goDrawer { route }
+        Log.i(TAG) { "Scroll benchmark: opened $item" }
+    }
+
     private suspend fun run(
         window: JFrame,
         config: Config,
     ) {
         Log.i(TAG) { "Scroll benchmark: starting in ${config.waitSeconds} s, ${config.notches} notches every ${config.intervalMs} ms" }
         delay(config.waitSeconds * 1000)
+        if (config.measure) measure(window, config) else scrollOnly(window, config)
+        // Written last, in both modes: the run is done (the AOT training waits for it).
+        writeFile(File(config.outDir, DONE_FILE), PASSES.joinToString(" ") { it.first } + "\n")
+    }
 
+    /** The three passes, with no instruments: what the AOT training records. */
+    private suspend fun scrollOnly(
+        window: JFrame,
+        config: Config,
+    ) {
+        for ((name, direction) in PASSES) {
+            delay(2_000)
+            val (target, at) = wheelTarget(window, config)
+            withContext(Dispatchers.IO) { scroll(target, at, config, direction) }
+            delay(500)
+            Log.i(TAG) { "Pass $name scrolled" }
+        }
+    }
+
+    private suspend fun measure(
+        window: JFrame,
+        config: Config,
+    ) {
         val queue = TimingEventQueue()
         Toolkit.getDefaultToolkit().systemEventQueue.push(queue)
 
-        val passes = listOf("down" to Direction.DOWN, "up" to Direction.UP, "down-again" to Direction.DOWN)
         val stats = mutableListOf<PassStats>()
         val frames = StringBuilder("pass\tframe\tstart_ms\tinterval_ms\tbusy_ms\n")
         // The image memory cache after each pass: how full it is, and what it holds.
         val cacheLog = StringBuilder("pass\tsize_bytes\tmax_bytes\tentries\n")
         cacheLog.append("start\t").append(memoryCacheState()).append('\n')
-        for ((name, direction) in passes) {
+        for ((name, direction) in PASSES) {
             // Lets what the last pass started (image loads, a feed page) settle before the next.
             delay(2_000)
             val pass = measurePass(window, config, name, direction, queue)
@@ -185,7 +250,7 @@ object ScrollBenchmark {
         writeFile(File(config.outDir, "frames.tsv"), frames.toString())
         writeFile(File(config.outDir, "images.tsv"), ImageLoadStats.log())
         writeFile(File(config.outDir, "memory-cache.tsv"), cacheLog.toString())
-        // Written last: the script takes its presence as the run being done.
+        // Written last of the reports: scroll-bench.sh takes its presence as the run being done.
         writeFile(File(config.outDir, "summary.tsv"), summary.toString())
         Log.i(TAG) { "Scroll benchmark written to ${config.outDir}" }
     }
@@ -218,12 +283,7 @@ object ScrollBenchmark {
                     }
                 }
 
-            // Found here, on the UI thread, where Swing's component tree may be read.
-            val content = window.contentPane
-            val x = (content.width * config.atX).toInt()
-            val y = (content.height * config.atY).toInt()
-            val target = SwingUtilities.getDeepestComponentAt(content, x, y) ?: content
-            val at = SwingUtilities.convertPoint(content, x, y, target)
+            val (target, at) = wheelTarget(window, config)
             withContext(Dispatchers.IO) { scroll(target, at, config, direction) }
             // The smooth scroll's last animation frames.
             delay(500)
@@ -241,6 +301,18 @@ object ScrollBenchmark {
                 images = ImageLoadStats.snapshot(),
             )
         }
+
+    /** The component under the scroll point and the point in it; read on the UI thread, as Swing's tree must be. */
+    private fun wheelTarget(
+        window: JFrame,
+        config: Config,
+    ): Pair<Component, Point> {
+        val content = window.contentPane
+        val x = (content.width * config.atX).toInt()
+        val y = (content.height * config.atY).toInt()
+        val target = SwingUtilities.getDeepestComponentAt(content, x, y) ?: content
+        return target to SwingUtilities.convertPoint(content, x, y, target)
+    }
 
     /** Posts [Config.notches] wheel events at [at] in [target], one every [Config.intervalMs], on schedule. */
     private fun scroll(
@@ -297,13 +369,25 @@ object ScrollBenchmark {
             "max_heap_mb" to (Runtime.getRuntime().maxMemory() / 1024 / 1024).toString(),
             "render_api" to (System.getProperty("skiko.renderApi") ?: System.getenv("SKIKO_RENDER_API") ?: "default"),
             "headless" to GraphicsEnvironment.isHeadless().toString(),
+            // The class archive or AOT cache the JVM started with: what the first pass's JIT time depends on.
+            "startup_cache" to startupCache(),
             "refresh_hz" to (refresh?.toString() ?: "unknown"),
             "window" to "${window.width}x${window.height}",
+            "screen" to (config.screen?.name ?: "HOME"),
             "notches" to config.notches.toString(),
             "interval_ms" to config.intervalMs.toString(),
             "wait_s" to config.waitSeconds.toString(),
         )
     }
+
+    private fun startupCache(): String =
+        ManagementFactory
+            .getRuntimeMXBean()
+            .inputArguments
+            .filter { it.startsWith("-XX:AOTCache=") || it.startsWith("-XX:SharedArchiveFile=") || it.startsWith("-XX:AOTMode=") || it.startsWith("-Xshare:") }
+            .joinToString(" ")
+            // No flag: the JDK's own class archive, which the JVM maps by default.
+            .ifEmpty { "default CDS archive" }
 
     private fun memoryCacheState(): String {
         val cache = SingletonImageLoader.get(PlatformContext.INSTANCE).memoryCache ?: return "none"

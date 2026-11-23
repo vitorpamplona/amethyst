@@ -623,6 +623,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
                 NavBarItem.EMOJI_PACKS,
                 NavBarItem.WALLET,
                 NavBarItem.NOSTR_SIGNER,
+                NavBarItem.CLAUDE_CODE,
             ),
         ),
         NavBarCategory(
@@ -661,7 +662,6 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
             MaterialSymbols.Apps,
             listOf(
                 NavBarItem.BROWSER,
-                NavBarItem.CLAUDE_CODE,
                 NavBarItem.FAVORITE_APPS,
                 NavBarItem.SOFTWARE_APPS,
                 NavBarItem.NAPPLETS,

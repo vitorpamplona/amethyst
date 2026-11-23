@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
@@ -29,10 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 
 /** How the app shell presents its top-level navigation for the current window size. */
 enum class NavigationStyle {
@@ -208,17 +210,31 @@ fun decideNavigationStyle(
 fun hasRoomForNotificationPanel(windowWidthDp: Int): Boolean = windowWidthDp >= NOTIFICATION_PANEL_MIN_WINDOW_DP
 
 /**
+ * True inside a navigation host's display, which paints the theme background under every screen
+ * it shows (`NavigationHost`). A screen there can leave that fill to the display while it stands
+ * still and paint its own only while it moves.
+ */
+val LocalNavBackdrop = staticCompositionLocalOf { false }
+
+/**
  * Centers a destination's content at [FeedContentMaxWidth]. The outer box paints the theme
  * background so the gutters match the screens' own surfaces; on Compact windows the cap is
  * wider than the pane and this is a visual no-op. A wheel over the gutters scrolls the column.
+ *
+ * Under a navigation host ([LocalNavBackdrop]) that fill only matters while the screen fades,
+ * slides or scales over the one below it: at rest the host has already painted the same color
+ * over the same area, and drawing it again costs a full-pane fill per frame where Skia draws in
+ * software. So there it paints only while its transition runs.
  */
 @Composable
 fun CappedScreenContent(content: @Composable () -> Unit) {
+    val color = MaterialTheme.colorScheme.background
+    val paints = if (LocalNavBackdrop.current) navTransitionRunning() else AlwaysPaint
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .drawBehind { if (paints()) drawRect(color) }
                 .gutterWheelScrollsColumn(FeedContentMaxWidth),
         contentAlignment = Alignment.TopCenter,
     ) {
@@ -230,6 +246,18 @@ fun CappedScreenContent(content: @Composable () -> Unit) {
             content()
         }
     }
+}
+
+private val AlwaysPaint: () -> Boolean = { true }
+
+/**
+ * Whether this navigation entry is entering or leaving, read as a lambda so a draw block that
+ * calls it redraws when the transition starts and stops, without recomposing the screen.
+ */
+@Composable
+private fun navTransitionRunning(): () -> Boolean {
+    val transition = LocalNavAnimatedContentScope.current.transition
+    return remember(transition) { { transition.currentState != transition.targetState } }
 }
 
 /**

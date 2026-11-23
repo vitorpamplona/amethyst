@@ -90,7 +90,14 @@ data class ClaudeSessionRow(
     val userArchived: Boolean = false,
     /** The disk its workspace's clones use, once measured. */
     val workspaceSize: Long? = null,
-)
+    /** Its last turn here ended while the user wasn't looking: the agent waits for them. */
+    val unseenFinish: Boolean = false,
+    /** Its last turn here ended in an error. */
+    val lastTurnFailed: Boolean = false,
+) {
+    /** The agent waits on the user: for an approval, or to read how its turn ended. */
+    val needsYou: Boolean get() = needsUser(appStatus, unseenFinish)
+}
 
 /** A chat that wants the user: it waits on an approval, or its turn ended. */
 @Immutable
@@ -181,7 +188,7 @@ class ClaudeCodeService(
 
     private val _needsYou = MutableStateFlow(0)
 
-    /** How many chats wait on an approval right now. */
+    /** How many chats wait on the user right now: on an approval, or with a turn they haven't seen end. */
     val needsYou: StateFlow<Int> = _needsYou.asStateFlow()
 
     private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: folderProject(File(it)) } ?: ""
@@ -691,9 +698,12 @@ class ClaudeCodeService(
                 // The list only shows these; streamed text must not rebuild it.
                 launch {
                     chat.state
-                        .map { Triple(it.sessionId, it.title, it.status) to it.items.firstPromptLine() }
+                        .map { listOf(it.sessionId, it.title, it.status, it.unseenFinish, it.lastTurnFailed) to it.items.firstPromptLine() }
                         .distinctUntilChanged()
-                        .collect { if (chats.value[key] === chat) rebuildRows() }
+                        .collect {
+                            if (chats.value[key] === chat) rebuildRows()
+                            recountNeedsYou()
+                        }
                 }
                 var last: ChatStatus? = null
                 chat.state
@@ -714,7 +724,7 @@ class ClaudeCodeService(
     }
 
     private fun recountNeedsYou() {
-        _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }
+        _needsYou.value = chats.value.values.count { it.state.value.needsUser }
     }
 
     /**
@@ -799,10 +809,18 @@ class ClaudeCodeService(
     }
 
     /**
+     * The copies [askAside] made, never listed: an agent that can't run one unsaved (Codex) saves
+     * it from its first message until it is deleted, minutes later for a long answer. Kept after the delete, as a refresh
+     * that read the disk before it would otherwise list the copy again until the next one.
+     */
+    private val asideCopies: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
      * Asks [key]'s agent [prompt] on a copy of its session, so the answer knows the conversation,
      * and gives the reply's text, or null when the agent can't start or says nothing. The copy
-     * has no tools, runs read-only, is refused every approval, and is deleted afterwards, so it
-     * never shows in the list. Cancelling stops the agent; the copy is deleted all the same.
+     * has no tools, runs read-only and is refused every approval. Claude Code never saves it; an
+     * agent that must save it has it deleted afterwards, and the list never shows it, even while
+     * it runs ([asideCopies]). Cancelling stops the agent; the copy is deleted all the same.
      */
     suspend fun askAside(
         key: String,
@@ -821,6 +839,8 @@ class ClaudeCodeService(
                 model = state.modelChoice,
                 permissionMode = if (PermissionMode.PLAN in agent.capabilities.modes) PermissionMode.PLAN else PermissionMode.DEFAULT,
                 onlyHostTools = true,
+                // Claude Code then writes no copy at all; Codex saves it, and it is deleted below.
+                persist = false,
             )
         val connection =
             try {
@@ -840,7 +860,12 @@ class ClaudeCodeService(
                                 .takeWhile { it !is AgentEvent.TurnEnded }
                                 .collect { event ->
                                     when (event) {
-                                        is AgentEvent.SessionStarted -> if (event.sessionId != state.sessionId) copyId = event.sessionId
+                                        is AgentEvent.SessionStarted ->
+                                            if (event.sessionId != state.sessionId) {
+                                                copyId = event.sessionId
+                                                // Saved while the agent writes: a refresh meanwhile would list it.
+                                                if (asideCopies.add(event.sessionId)) rebuildRows()
+                                            }
                                         is AgentEvent.Reply ->
                                             event.content
                                                 .filterIsInstance<ContentBlock.Text>()
@@ -863,7 +888,8 @@ class ClaudeCodeService(
         } finally {
             withContext(NonCancellable + Dispatchers.IO) {
                 connection.kill()
-                copyId?.let { id -> if (!agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
+                // An unsaved copy has nothing to delete.
+                copyId?.let { id -> if (agent.session(id) != null && !agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
             }
         }
         return answer
@@ -988,7 +1014,7 @@ class ClaudeCodeService(
         }
 
         val fromDisk =
-            saved.value.map { info ->
+            saved.value.filter { it.sessionId !in asideCopies }.map { info ->
                 val chat = openBySession[info.sessionId]
                 ClaudeSessionRow(
                     key = chat?.key ?: info.sessionId,
@@ -999,6 +1025,8 @@ class ClaudeCodeService(
                     gitBranch = info.gitBranch,
                     lastModified = info.lastModified,
                     appStatus = chat?.state?.value?.status,
+                    unseenFinish = chat?.state?.value?.unseenFinish == true,
+                    lastTurnFailed = chat?.state?.value?.lastTurnFailed == true,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
@@ -1030,6 +1058,8 @@ class ClaudeCodeService(
                         gitBranch = state.git?.branch,
                         lastModified = System.currentTimeMillis(),
                         appStatus = state.status,
+                        unseenFinish = state.unseenFinish,
+                        lastTurnFailed = state.lastTurnFailed,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),

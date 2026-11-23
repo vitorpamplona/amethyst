@@ -118,12 +118,13 @@ fun RenderFeedState(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String?,
-    onLoaded: @Composable (FeedState.Loaded) -> Unit = {
-        FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
-    },
+    // Null draws the feed as note cards (FeedLoaded).
+    onLoaded: (@Composable (FeedState.Loaded) -> Unit)? = null,
     onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
     onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },
     onLoading: @Composable () -> Unit = { LoadingFeed() },
+    // The prefetch decodes at the note's content width: right for note cards, the default renderer.
+    prefetchAtNoteWidth: Boolean = onLoaded == null,
 ) {
     val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
@@ -135,8 +136,8 @@ fun RenderFeedState(
             is FeedState.Empty -> onEmpty()
             is FeedState.FeedError -> onError(state.errorMessage)
             is FeedState.Loaded -> {
-                PrefetchLoadedFeedMedia(state, listState, accountViewModel)
-                onLoaded(state)
+                PrefetchLoadedFeedMedia(state, listState, accountViewModel, mediaAtNoteWidth = prefetchAtNoteWidth)
+                if (onLoaded != null) onLoaded(state) else FeedLoaded(state, listState, routeForLastRead, accountViewModel, nav)
             }
             is FeedState.Loading -> onLoading()
         }

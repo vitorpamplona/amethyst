@@ -177,6 +177,29 @@ python3 tools/desktop-run/scroll_bench_summary.py /tmp/bench-before /tmp/bench-a
 Images load and decode off the UI thread, so a cache miss shows up as an image appearing late
 (the `img_*` columns), not as a slow frame.
 
+`--app <image>` benchmarks a packaged image instead of the dev `run`, through its own launcher:
+`desktopApp/build/compose/binaries/main-release/app/Amethyst` after `createReleaseDistributable`
+(and `trainReleaseAotCache` for its AOT cache). Arguments after `--` then reach its JVM through
+`_JAVA_OPTIONS`; `-- -XX:AOTMode=on` makes a boot fail rather than run without the image's AOT
+cache. Each report's `startup_cache` line names the archive or cache the JVM started with
+(`default CDS archive` when no flag chose one).
+
+`-Damethyst.scrollBench.measure=false` scrolls the same three passes with none of the measuring
+(no timing event queue, image listener, frame recorder or screenshots) and writes only `done.txt`.
+The release's AOT training scrolls this way, so the shipped cache profiles the app as users run it.
+
+`-Damethyst.scrollBench.screen=<NavBarItem>` (e.g. `PICTURES`, `DISCOVER`, `NOTIFICATIONS`) opens
+that drawer entry first, the way its drawer row does, then waits and scrolls it instead of the home
+feed; each report's `screen` line names it. A screen with nothing to scroll for the login (an
+`npub` has no DMs or drafts) still reports frames: check the `after-*.png` screenshots moved.
+
+`tools/desktop-run/screen-survey.sh [--profile] [--runs N] [SCREEN ...]` runs that on many screens in
+a row (every drawer feed screen when none is named) and prints a table per screen: warm fps, UI work
+a frame, images, whether the content moved, and with `--profile` (JDK 25's `jcmd` and `jfr` on
+`PATH`) how the UI thread's CPU time splits between Skia's rasterizing, composition, layout, recording
+the draw and input, then each screen's heaviest app frames. `screen_survey_report.py <dir>` prints it
+again from the folder. Single boots swing by a few fps with a live feed: confirm with `--runs 2`.
+
 Each boot's folder holds `summary.tsv`, every frame in `frames.tsv`, every image load in
 `images.tsv` (pass, source, decoded size, bytes, cache key, requested size, requester), the memory
 cache's fill after each pass in `memory-cache.tsv`, and `after-<pass>.png`: look at

@@ -43,7 +43,7 @@ def is_bare(text: str) -> bool:
 
 
 def element_pattern(key: str) -> re.Pattern:
-    # `name` is not always the first attribute (Crowdin emits e.g.
+    # `name` is not always the first attribute (Crowdin's exports left e.g.
     # `<string xmlns:ns0="..." name="key" ns0:ignore="Typos">`), so allow
     # any attributes before it.
     return re.compile(
