@@ -608,7 +608,8 @@ class ClaudeChat internal constructor(
                     // As on Claude Code on the web: the agent pushes branches and opens pull requests when asked;
                     // merging, tags, deleting branches and moving the default branch stay the user's.
                     blockedCommands = if (nostrCheckout) NO_MERGING else emptyList(),
-                    environment = pushRules?.environment.orEmpty(),
+                    // The SDK too, so a Gradle build the agent runs finds it as a terminal's would.
+                    environment = AndroidSdk.environment() + pushRules?.environment.orEmpty(),
                     hostTools = mcpServers,
                     instructions = listOfNotNull(folderBrief(workDir), pushRules?.note).joinToString("\n\n").ifEmpty { null },
                 ).let(launchOptions)
