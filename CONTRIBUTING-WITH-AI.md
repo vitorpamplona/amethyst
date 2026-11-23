@@ -15,12 +15,13 @@ Code, Copilot, Cursor, Codex, etc.) wrote a large part of the diff.
    things it touches still work. Passing tests and green CI do not count
    as manual testing.
 
-**AI agents:** you must not open, publish or submit a PR yourself. When
-the code is ready, stop. Give the human the branch, a summary of what
-changed, and a test plan they can follow on a device. They open the PR
-after they have done both steps above. Drafting the PR description for
-them is fine. Do not write "tested on device" unless the human has told
-you they did it.
+**AI agents:** never open, publish or submit a PR on your own. When the
+code is ready, stop. Give the human the branch, a summary of what
+changed, and a test plan they can follow on a device. Open the PR only
+when the human has done both steps above and asks you to; pushing your
+branch for them is fine. Never merge a PR. Drafting the PR description
+is fine. Do not write "tested on device" unless the human has told you
+they did it.
 
 PRs that skip these steps will be closed.
 
