@@ -9754,6 +9754,7 @@
     <string name="claude_code_fork_hint">A copy of the session. Your first message starts it as a session of its own; the original stays as it is.</string>
     <string name="claude_code_notify_needs_you">%1$s needs your approval</string>
     <string name="claude_code_notify_finished">%1$s finished</string>
+    <string name="claude_code_notify_publish">%1$s asks you to open a pull request</string>
     <string name="claude_code_section_needs_you">Needs you</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archived · %1$d session</item>
@@ -10430,17 +10431,17 @@
         <item quantity="other">%1$d not used in %2$d days</item>
     </plurals>
     <string name="claude_code_storage_auto">Clean up on its own</string>
-    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, free its clones, unless something in them is not committed. Archiving a workstream’s last conversation frees them too. Its commits are kept, and its next message brings the clones back. Mirrors not used in %1$d days go too. Conversations stay.</string>
     <string name="claude_code_storage_finished">Finished workstreams</string>
     <string name="claude_code_storage_none_finished">None yet: a workstream is finished when every repository’s pull request is merged or closed.</string>
-    <string name="claude_code_storage_unsaved">Kept: work not pushed</string>
+    <string name="claude_code_storage_unsaved">Kept: work not committed</string>
     <plurals name="claude_code_storage_clean_up">
         <item quantity="one">Clean up %1$d · frees %2$s</item>
         <item quantity="other">Clean up %1$d · frees %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_cleaned">
-        <item quantity="one">Removed %1$d workstream, freed %2$s</item>
-        <item quantity="other">Removed %1$d workstreams, freed %2$s</item>
+        <item quantity="one">Freed the clones of %1$d workstream, %2$s</item>
+        <item quantity="other">Freed the clones of %1$d workstreams, %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_tidied">
         <item quantity="one">Tidied the mirrors and removed %1$d unused one, freed %2$s</item>
@@ -10526,6 +10527,12 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
+    <string name="claude_code_workspace_freed">space freed</string>
+    <string name="claude_code_pr_restoring">Bringing the workstream’s clones back…</string>
+    <string name="claude_code_pr_requested">The agent asks you to open this pull request. Review it, then open it.</string>
+    <string name="claude_code_pr_requested_draft">The agent asks you to open this as a draft pull request. Review it, then open it.</string>
+    <string name="claude_code_pr_request_dismiss">Dismiss</string>
+    <string name="claude_code_pr_badge_requested">PR requested</string>
     <string name="relay_group_pin_refused_title">The relay did not pin the message</string>
     <string name="relay_group_unpin_refused_title">The relay did not unpin the message</string>
     <string name="kc_buzz_unpinned">Unpinned a message</string>
