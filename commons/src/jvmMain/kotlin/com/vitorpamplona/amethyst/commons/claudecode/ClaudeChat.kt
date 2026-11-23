@@ -52,6 +52,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 enum class ChatStatus {
     /** A saved session shown from its file; no process yet. It starts on the first message. */
@@ -148,6 +150,12 @@ data class ClaudeChatState(
     val modelChoice: String? = null,
     /** How many repositories a new workstream is still cloning; a message sent meanwhile waits for them. */
     val cloning: Int? = null,
+    /** When the last turn run here ended: from then on the agent waits for the user. */
+    val turnEndedAt: Long? = null,
+    /** How long that turn ran, when it was timed. */
+    val lastTurnMillis: Long? = null,
+    /** That turn ended while no screen showed the chat: the user hasn't seen how it ended. */
+    val unseenFinish: Boolean = false,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -209,6 +217,9 @@ class ClaudeChat internal constructor(
     private var model: String? = model
     private val transcript = ChatTranscript()
     private val lock = Mutex()
+
+    /** How many screens show the chat now: a turn that ends while one does is seen. */
+    private val viewers = AtomicInteger(0)
     private var connection: AgentConnection? = null
 
     /** Until the CLI names the copy's own session, the process starts with `--fork-session`. */
@@ -292,6 +303,20 @@ class ClaudeChat internal constructor(
     }
 
     /**
+     * A screen shows the chat until the returned function runs. What the agent finished before is
+     * seen now; what it finishes meanwhile is seen as it happens.
+     */
+    fun viewing(): () -> Unit {
+        viewers.incrementAndGet()
+        _state.update { if (it.unseenFinish) it.copy(unseenFinish = false) else it }
+        val released = AtomicBoolean(false)
+        return { if (released.compareAndSet(false, true)) viewers.decrementAndGet() }
+    }
+
+    /** The user hasn't seen how a turn ended unless a screen showed the chat as it did. */
+    private fun unseen(): Boolean = viewers.get() == 0
+
+    /**
      * Makes the chat wait for [cloning] before the agent starts: the workstream's [repositories] are
      * cloning into its folder. A failure ends the chat with git's words.
      */
@@ -347,7 +372,7 @@ class ClaudeChat internal constructor(
             }
             lock.withLock {
                 transcript.addPrompt(trimmed, sent)
-                publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
+                publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis(), unseenFinish = false) }
             }
             // A workstream still cloning: the prompt shows now, and goes out once its folder is ready.
             try {
@@ -553,7 +578,21 @@ class ClaudeChat internal constructor(
             val wasBusy = _state.value.isBusy
             val error = if (code != null && code != 0 && wasBusy) ChatError.Exited(code, c.stderrTail().takeLast(STDERR_SHOWN)) else null
             if (wasBusy) transcript.addNotice(NoticeKind.PROCESS_ENDED)
-            publish { it.copy(status = ChatStatus.ENDED, pendingPermissions = emptyList(), streamingText = "", activity = null, turnStartedAt = null, error = error ?: it.error) }
+            val now = System.currentTimeMillis()
+            publish {
+                it.copy(
+                    status = ChatStatus.ENDED,
+                    pendingPermissions = emptyList(),
+                    streamingText = "",
+                    activity = null,
+                    turnStartedAt = null,
+                    error = error ?: it.error,
+                    // A turn the process's end cut short is over too: the user has to look.
+                    turnEndedAt = if (wasBusy) now else it.turnEndedAt,
+                    lastTurnMillis = if (wasBusy) it.turnStartedAt?.let { start -> now - start } else it.lastTurnMillis,
+                    unseenFinish = it.unseenFinish || (wasBusy && unseen()),
+                )
+            }
         }
         onSessionChanged()
     }
@@ -635,6 +674,10 @@ class ClaudeChat internal constructor(
             }
             is AgentEvent.Activity -> publish { it.copy(activity = event.text) }
             is AgentEvent.ContextUsage -> publish { it.copy(contextTokens = event.tokens ?: it.contextTokens, contextWindow = event.window ?: it.contextWindow) }
+            is AgentEvent.PlanUpdated -> {
+                transcript.setPlan(event.steps)
+                publish { it }
+            }
             is AgentEvent.SubagentRunning -> {
                 transcript.setSubagentRunning(event.toolUseId, event.running)
                 publish { it }
@@ -644,11 +687,16 @@ class ClaudeChat internal constructor(
                     event.interrupted -> transcript.addNotice(NoticeKind.INTERRUPTED)
                     event.failure != null -> transcript.addNotice(NoticeKind.TURN_FAILED, event.failure)
                 }
+                val now = System.currentTimeMillis()
                 publish {
                     it.copy(
                         status = ChatStatus.READY,
                         activity = null,
                         turnStartedAt = null,
+                        turnEndedAt = now,
+                        lastTurnMillis = it.turnStartedAt?.let { start -> now - start },
+                        // A turn the user stopped needs no telling.
+                        unseenFinish = !event.interrupted && unseen(),
                         streamingText = "",
                         pendingPermissions = emptyList(),
                         costUsd = event.costUsd ?: it.costUsd,

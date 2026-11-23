@@ -90,7 +90,12 @@ data class ClaudeSessionRow(
     val userArchived: Boolean = false,
     /** The disk its workspace's clones use, once measured. */
     val workspaceSize: Long? = null,
-)
+    /** Its last turn here ended while the user wasn't looking: the agent waits for them. */
+    val unseenFinish: Boolean = false,
+) {
+    /** The agent waits on the user: for an approval, or to read how its turn ended. */
+    val needsYou: Boolean get() = appStatus == ChatStatus.NEEDS_APPROVAL || (unseenFinish && appStatus != ChatStatus.WORKING && appStatus != ChatStatus.STARTING)
+}
 
 /** A chat that wants the user: it waits on an approval, or its turn ended. */
 @Immutable
@@ -181,7 +186,7 @@ class ClaudeCodeService(
 
     private val _needsYou = MutableStateFlow(0)
 
-    /** How many chats wait on an approval right now. */
+    /** How many chats wait on the user right now: on an approval, or with a turn they haven't seen end. */
     val needsYou: StateFlow<Int> = _needsYou.asStateFlow()
 
     private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: folderProject(File(it)) } ?: ""
@@ -691,9 +696,12 @@ class ClaudeCodeService(
                 // The list only shows these; streamed text must not rebuild it.
                 launch {
                     chat.state
-                        .map { Triple(it.sessionId, it.title, it.status) to it.items.firstPromptLine() }
+                        .map { listOf(it.sessionId, it.title, it.status, it.unseenFinish) to it.items.firstPromptLine() }
                         .distinctUntilChanged()
-                        .collect { if (chats.value[key] === chat) rebuildRows() }
+                        .collect {
+                            if (chats.value[key] === chat) rebuildRows()
+                            recountNeedsYou()
+                        }
                 }
                 var last: ChatStatus? = null
                 chat.state
@@ -714,7 +722,11 @@ class ClaudeCodeService(
     }
 
     private fun recountNeedsYou() {
-        _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }
+        _needsYou.value =
+            chats.value.values.count {
+                val state = it.state.value
+                state.status == ChatStatus.NEEDS_APPROVAL || (state.unseenFinish && !state.isBusy)
+            }
     }
 
     /**
@@ -1015,6 +1027,7 @@ class ClaudeCodeService(
                     gitBranch = info.gitBranch,
                     lastModified = info.lastModified,
                     appStatus = chat?.state?.value?.status,
+                    unseenFinish = chat?.state?.value?.unseenFinish == true,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
@@ -1046,6 +1059,7 @@ class ClaudeCodeService(
                         gitBranch = state.git?.branch,
                         lastModified = System.currentTimeMillis(),
                         appStatus = state.status,
+                        unseenFinish = state.unseenFinish,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),

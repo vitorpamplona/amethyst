@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PlanStep
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
@@ -92,5 +93,16 @@ class AgentTasksTest {
         transcript.run("t2", "TaskUpdate", """{"taskId":"1","status":"completed"}""", "The user declined", isError = true)
         transcript.run("t3", "Bash", """{"command":"ls"}""", "a.txt")
         assertEquals(AgentTask.Status.PENDING, transcript.tasks().single().status)
+    }
+
+    @Test
+    fun aReportedPlanStandsInForTaskTools() {
+        val transcript = ChatTranscript()
+        transcript.run("t1", "TaskCreate", """{"subject":"From a tool","description":"d"}""", "Task #1 created successfully: From a tool")
+        transcript.setPlan(listOf(PlanStep("Read", PlanStep.Status.COMPLETED), PlanStep("Fix", PlanStep.Status.IN_PROGRESS)))
+        transcript.setPlan(listOf(PlanStep("Read", PlanStep.Status.COMPLETED), PlanStep("Fix", PlanStep.Status.COMPLETED)))
+        val tasks = transcript.tasks()
+        assertEquals(listOf("Read", "Fix"), tasks.map { it.subject })
+        assertFalse(tasks.hasOpenWork)
     }
 }

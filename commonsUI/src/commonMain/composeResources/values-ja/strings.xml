@@ -9036,7 +9036,6 @@
     <string name="claude_code_status_starting">起動中</string>
     <string name="claude_code_status_working">作業中</string>
     <string name="claude_code_status_needs_approval">承認が必要</string>
-    <string name="claude_code_status_ready">準備完了</string>
     <string name="claude_code_open_elsewhere_warning">このセッションは現在別の Claude Code で開かれています。ここで同時に続けると履歴が混ざる可能性があります。</string>
     <string name="claude_code_delete">削除</string>
     <string name="claude_code_delete_title">このセッションを削除しますか？</string>

@@ -70,6 +70,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -221,6 +222,9 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_settings
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
+import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done
+import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done_after
+import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done_terminal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
@@ -295,11 +299,18 @@ fun ClaudeCodeChatScreen(
     val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
     val rows by ClaudeCodeService.shared.rows.collectAsStateWithLifecycle()
     // A fork still carries its source's id until it starts, but it is not that session.
-    val openElsewhere = !state.forking && rows.any { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }
+    // The terminal that has the session open, if one does: what it is doing shows at the chat's end.
+    val terminal = if (state.forking) null else rows.firstOrNull { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }?.openElsewhere
+    val openElsewhere = terminal != null
     val canRunApp = remember(state.cwd) { viewModel.canRunApp() }
     val folderGone = remember(state.cwd, state.status) { !File(state.cwd).isDirectory }
 
     LaunchedEffect(Unit) { chat.refreshGit() }
+    // On screen, how a turn ends is seen: the list doesn't flag it as waiting to be read.
+    DisposableEffect(chat) {
+        val release = chat.viewing()
+        onDispose { release() }
+    }
     // Whether a terminal holds the session decides the read-only bar: kept current while shown.
     LaunchedEffect(Unit) {
         while (true) {
@@ -457,6 +468,7 @@ fun ClaudeCodeChatScreen(
                         chatKey = chat.key,
                         state = state,
                         readOnly = openElsewhere || folderGone,
+                        terminalStatus = terminal?.status,
                         nav = nav,
                         modifier = Modifier.weight(1f),
                         onEditFrom =
@@ -614,6 +626,8 @@ private fun Messages(
     chatKey: String,
     state: ClaudeChatState,
     readOnly: Boolean,
+    /** What a terminal that has the session open says it is doing (`idle`, `busy`, `waiting`). */
+    terminalStatus: String?,
     nav: INav,
     modifier: Modifier,
     onEditFrom: ((ChatItem.UserText) -> Unit)?,
@@ -625,12 +639,21 @@ private fun Messages(
     val busy = state.isBusy
     val showIntro = state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()
     val showResume = state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly
+    // The agent answered and stopped: it waits for the next message. Not after a note that says
+    // how the turn ended (stopped, failed), and not while a terminal still works on it.
+    val showDone =
+        state.historyLoaded &&
+            !busy &&
+            state.streamingText.isEmpty() &&
+            state.items.lastOrNull().let { it is ChatItem.AssistantText || it is ChatItem.ToolCall } &&
+            (terminalStatus == null || terminalStatus == TERMINAL_IDLE)
     // Every item the list below emits, in the same order, so the last index is the list's own.
     val itemCount =
         (if (!state.historyLoaded || showIntro) 1 else 0) +
             rows.size +
             (if (state.streamingText.isNotEmpty()) 1 else 0) +
             (if (busy) 1 else 0) +
+            (if (showDone) 1 else 0) +
             (if (showResume) 1 else 0)
     // Opening a chat lands on its newest message: the history arrives after the first frame,
     // when the only row in view is the loading note at the top. Only the first time: coming
@@ -701,6 +724,9 @@ private fun Messages(
             }
             if (busy) {
                 item(key = "status") { LiveStatus(state) }
+            }
+            if (showDone) {
+                item(key = "done") { TurnDone(state, inTerminal = terminalStatus != null) }
             }
             if (showResume) {
                 // A fork looks like its source until it starts: say what the first message does.
@@ -880,6 +906,29 @@ private fun LiveStatus(state: ClaudeChatState) {
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** The end of a chat whose agent answered and now waits for the user's next message. */
+@Composable
+private fun TurnDone(
+    state: ClaudeChatState,
+    inTerminal: Boolean,
+) {
+    val agent = LocalAgentName.current
+    val took = state.lastTurnMillis?.takeIf { !inTerminal && state.turnEndedAt != null }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+        Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, filled = true, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(
+            when {
+                inTerminal -> stringRes(Res.string.claude_code_turn_done_terminal, agent)
+                took != null -> stringRes(Res.string.claude_code_turn_done_after, agent, elapsed(took / 1000))
+                else -> stringRes(Res.string.claude_code_turn_done, agent)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
         )
     }
 }

@@ -10442,7 +10442,6 @@
     <string name="claude_code_status_starting">Spouští se</string>
     <string name="claude_code_status_working">Pracuje</string>
     <string name="claude_code_status_needs_approval">Potřebuje vaše schválení</string>
-    <string name="claude_code_status_ready">Připraveno</string>
     <string name="claude_code_open_elsewhere_warning">Tato relace je právě otevřená v jiném Claude Code. Když v ní budete současně pokračovat i tady, může se její historie promíchat.</string>
     <string name="claude_code_delete">Smazat</string>
     <string name="claude_code_delete_title">Smazat tuto relaci?</string>

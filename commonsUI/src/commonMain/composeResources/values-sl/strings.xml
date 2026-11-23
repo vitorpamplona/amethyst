@@ -9987,7 +9987,6 @@
     <string name="claude_code_status_starting">Zaganjanje</string>
     <string name="claude_code_status_working">Dela</string>
     <string name="claude_code_status_needs_approval">Potrebuje tvojo odobritev</string>
-    <string name="claude_code_status_ready">Pripravljeno</string>
     <string name="claude_code_open_elsewhere_warning">Ta seja je trenutno odprta v drugem Claude Code. Če jo hkrati nadaljuješ tukaj, se lahko njena zgodovina pomeša.</string>
     <string name="claude_code_delete">Izbriši</string>
     <string name="claude_code_delete_title">Izbrišem to sejo?</string>

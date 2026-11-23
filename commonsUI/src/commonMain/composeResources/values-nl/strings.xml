@@ -9323,7 +9323,6 @@
     <string name="claude_code_status_starting">Starten</string>
     <string name="claude_code_status_working">Bezig</string>
     <string name="claude_code_status_needs_approval">Wacht op je goedkeuring</string>
-    <string name="claude_code_status_ready">Klaar</string>
     <string name="claude_code_open_elsewhere_warning">Deze sessie is nu open in een andere Claude Code. Hem hier tegelijk voortzetten kan de geschiedenis door elkaar halen.</string>
     <string name="claude_code_delete">Verwijderen</string>
     <string name="claude_code_delete_title">Deze sessie verwijderen?</string>

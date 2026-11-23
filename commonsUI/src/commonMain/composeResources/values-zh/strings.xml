@@ -9073,7 +9073,6 @@
     <string name="claude_code_status_starting">正在启动</string>
     <string name="claude_code_status_working">工作中</string>
     <string name="claude_code_status_needs_approval">需要您批准</string>
-    <string name="claude_code_status_ready">就绪</string>
     <string name="claude_code_open_elsewhere_warning">此会话当前在另一个 Claude Code 中打开。同时在此继续可能会混淆其历史记录。</string>
     <string name="claude_code_delete">删除</string>
     <string name="claude_code_delete_title">删除此会话？</string>

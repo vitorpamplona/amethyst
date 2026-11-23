@@ -10035,7 +10035,6 @@
     <string name="claude_code_status_starting">Запуск</string>
     <string name="claude_code_status_working">Работает</string>
     <string name="claude_code_status_needs_approval">Нужно ваше одобрение</string>
-    <string name="claude_code_status_ready">Готово</string>
     <string name="claude_code_open_elsewhere_warning">Эта сессия сейчас открыта в другом Claude Code. Если продолжать её здесь одновременно, история может перепутаться.</string>
     <string name="claude_code_delete">Удалить</string>
     <string name="claude_code_delete_title">Удалить эту сессию?</string>

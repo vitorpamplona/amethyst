@@ -9323,7 +9323,6 @@
     <string name="claude_code_status_starting">Indul</string>
     <string name="claude_code_status_working">Dolgozik</string>
     <string name="claude_code_status_needs_approval">Jóváhagyásra vár</string>
-    <string name="claude_code_status_ready">Kész</string>
     <string name="claude_code_open_elsewhere_warning">Ez a munkamenet jelenleg egy másik Claude Code-ban is nyitva van. Ha egyszerre itt is folytatja, összekeveredhetnek az előzményei.</string>
     <string name="claude_code_delete">Törlés</string>
     <string name="claude_code_delete_title">Törli ezt a munkamenetet?</string>

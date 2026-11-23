@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PlanStep
 import com.vitorpamplona.agents.TranscriptEntry
 
 /** One row of a Claude Code conversation as the chat screen shows it. */
@@ -108,9 +109,16 @@ class ChatTranscript {
     // Read back from the rows only when they changed, not on every streamed delta.
     private var cachedTasks: Pair<List<ChatItem>, List<AgentTask>>? = null
 
-    /** The agent's task list as its task tool calls in [snapshot] leave it. */
+    /** The plan an agent reported on its own ([setPlan]), which stands in for its task tool calls. */
+    private var reportedPlan: List<AgentTask>? = null
+
+    /**
+     * The agent's task list: the plan it last reported, for an agent that reports one (Codex),
+     * else what its task tool calls in [snapshot] leave (Claude Code).
+     */
     @Synchronized
     fun tasks(): List<AgentTask> {
+        reportedPlan?.let { return it }
         val rows = snapshot()
         cachedTasks?.let { (from, tasks) -> if (from === rows) return tasks }
         return rows.agentTasks().also { cachedTasks = rows to it }
@@ -139,6 +147,21 @@ class ChatTranscript {
                 }
             }
         }
+    }
+
+    /** The agent's whole plan, as it just reported it: replaces the last one. */
+    @Synchronized
+    fun setPlan(steps: List<PlanStep>) {
+        reportedPlan =
+            steps.mapIndexed { index, step ->
+                val status =
+                    when (step.status) {
+                        PlanStep.Status.PENDING -> AgentTask.Status.PENDING
+                        PlanStep.Status.IN_PROGRESS -> AgentTask.Status.IN_PROGRESS
+                        PlanStep.Status.COMPLETED -> AgentTask.Status.COMPLETED
+                    }
+                AgentTask("plan-$index", step.text, activeForm = null, status = status)
+            }
     }
 
     /** A message a subagent wrote, live or saved: it goes inside the call that started it. */

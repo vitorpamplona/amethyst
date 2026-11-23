@@ -9748,7 +9748,6 @@
     <string name="claude_code_status_starting">Startet</string>
     <string name="claude_code_status_working">Arbeitet</string>
     <string name="claude_code_status_needs_approval">Braucht deine Freigabe</string>
-    <string name="claude_code_status_ready">Bereit</string>
     <string name="claude_code_open_elsewhere_warning">Diese Sitzung ist gerade in einem anderen Claude Code geöffnet. Wenn du sie gleichzeitig hier fortsetzt, kann ihr Verlauf durcheinandergeraten.</string>
     <string name="claude_code_delete">Löschen</string>
     <string name="claude_code_delete_title">Diese Sitzung löschen?</string>

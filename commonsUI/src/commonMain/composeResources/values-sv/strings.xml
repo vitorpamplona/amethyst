@@ -9746,7 +9746,6 @@
     <string name="claude_code_status_starting">Startar</string>
     <string name="claude_code_status_working">Arbetar</string>
     <string name="claude_code_status_needs_approval">Behöver ditt godkännande</string>
-    <string name="claude_code_status_ready">Redo</string>
     <string name="claude_code_open_elsewhere_warning">Den här sessionen är öppen i en annan Claude Code just nu. Om du fortsätter den här samtidigt kan dess historik blandas ihop.</string>
     <string name="claude_code_delete">Ta bort</string>
     <string name="claude_code_delete_title">Ta bort den här sessionen?</string>

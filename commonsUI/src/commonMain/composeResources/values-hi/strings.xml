@@ -9323,7 +9323,6 @@
     <string name="claude_code_status_starting">आरम्भ हो रहा है</string>
     <string name="claude_code_status_working">कार्य मध्य</string>
     <string name="claude_code_status_needs_approval">आपकी अनुमति आवश्यक</string>
-    <string name="claude_code_status_ready">तत्पर</string>
     <string name="claude_code_open_elsewhere_warning">यह सत्र अभी एक अन्य Claude Code में खुला है। इसे यहाँ भी साथ ही आगे बढाने से इसका इतिहास मिश्रित हो सकता है।</string>
     <string name="claude_code_delete">मिटाएँ</string>
     <string name="claude_code_delete_title">क्या यह सत्र मिटा दें।</string>

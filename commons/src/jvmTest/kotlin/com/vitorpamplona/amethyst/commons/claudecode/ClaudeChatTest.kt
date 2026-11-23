@@ -43,6 +43,7 @@ import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -166,6 +167,57 @@ class ClaudeChatTest {
 
             // The approval went back for the request the CLI asked.
             assertNotNull(cli.written.firstOrNull { it.contains("\"request_id\":\"p1\"") && it.contains("\"behavior\":\"allow\"") })
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aTurnThatEndsUnwatchedWaitsToBeSeen() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli)
+
+            // Nobody looks while the turn runs: its end waits for the user.
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            val ended = chat.state.value
+            assertEquals(ChatStatus.READY, ended.status)
+            assertTrue(ended.unseenFinish)
+            assertNotNull(ended.turnEndedAt)
+            assertNotNull(ended.lastTurnMillis)
+
+            // Opening the chat sees it.
+            val release = chat.viewing()
+            assertFalse(chat.state.value.unseenFinish)
+
+            // A turn that ends on screen needs no flag; one after the screen closed does.
+            chat.send("Again")
+            advanceUntilIdle()
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            assertFalse(chat.state.value.unseenFinish)
+
+            release()
+            release() // twice is once
+            chat.send("Once more")
+            advanceUntilIdle()
+            assertFalse(chat.state.value.unseenFinish, "a turn still running has not finished")
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            assertTrue(chat.state.value.unseenFinish)
             chatScope.cancel()
         }
 

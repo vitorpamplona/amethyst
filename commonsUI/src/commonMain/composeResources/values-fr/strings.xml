@@ -9369,7 +9369,6 @@
     <string name="claude_code_status_starting">Démarrage</string>
     <string name="claude_code_status_working">En cours</string>
     <string name="claude_code_status_needs_approval">Attend votre approbation</string>
-    <string name="claude_code_status_ready">Prêt</string>
     <string name="claude_code_open_elsewhere_warning">Cette session est ouverte dans un autre Claude Code en ce moment. La poursuivre ici en même temps peut mélanger son historique.</string>
     <string name="claude_code_delete">Supprimer</string>
     <string name="claude_code_delete_title">Supprimer cette session ?</string>

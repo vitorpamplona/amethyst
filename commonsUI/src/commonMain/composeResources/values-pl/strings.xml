@@ -9987,7 +9987,6 @@
     <string name="claude_code_status_starting">Uruchamianie</string>
     <string name="claude_code_status_working">Pracuje</string>
     <string name="claude_code_status_needs_approval">Wymaga Twojej zgody</string>
-    <string name="claude_code_status_ready">Gotowe</string>
     <string name="claude_code_open_elsewhere_warning">Ta sesja jest teraz otwarta w innym Claude Code. Kontynuowanie jej tutaj w tym samym czasie może pomieszać jej historię.</string>
     <string name="claude_code_delete">Usuń</string>
     <string name="claude_code_delete_title">Usunąć tę sesję?</string>

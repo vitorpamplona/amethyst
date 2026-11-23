@@ -9486,7 +9486,11 @@
     <string name="claude_code_status_starting">Starting</string>
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
-    <string name="claude_code_status_ready">Ready</string>
+    <string name="claude_code_status_your_turn">Your turn</string>
+    <string name="claude_code_status_finished">Finished, your turn</string>
+    <string name="claude_code_status_terminal_busy">working in a terminal</string>
+    <string name="claude_code_status_terminal_idle">your turn, in a terminal</string>
+    <string name="claude_code_status_terminal_waiting">needs you in a terminal</string>
     <string name="claude_code_open_elsewhere_warning">This session is open in another Claude Code right now. Continuing it here at the same time can mix up its history.</string>
     <string name="claude_code_delete">Delete</string>
     <string name="claude_code_delete_title">Delete this session?</string>
@@ -9642,6 +9646,9 @@
     <string name="claude_code_tool_from_line">from line %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Waiting for your approval</string>
+    <string name="claude_code_turn_done">%1$s is waiting for your next message</string>
+    <string name="claude_code_turn_done_after">%1$s finished after %2$s and is waiting for your next message</string>
+    <string name="claude_code_turn_done_terminal">%1$s is waiting for your next message in the terminal</string>
     <string name="claude_code_tasks">Tasks</string>
     <string name="claude_code_tasks_progress">%1$d of %2$d done</string>
     <string name="claude_code_tasks_expand">Show tasks</string>
