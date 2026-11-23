@@ -71,6 +71,11 @@ object CreateCommand {
         val args = Args(rest)
         val name = args.flag("name")
         args.rejectUnknown()
+        // An offline harness names its relays in AMY_BOOTSTRAP_RELAYS: the new account then
+        // advertises those, and only those, in every list it publishes. Read (and refused when it
+        // names no valid relay) before anything is written.
+        val override = Context.bootstrapOverride()
+        val publishTo = Context.fallbackRelays(DefaultNIP65RelaySet)
 
         // 1. Mint identity.
         val identity = Identity.create()
@@ -78,9 +83,6 @@ object CreateCommand {
 
         // 2. Build the nine signed bootstrap events via the shared helper.
         val signer = NostrSignerSync(identity.keyPair())
-        // An offline harness names its relays in AMY_BOOTSTRAP_RELAYS: the new account then
-        // advertises those, and only those, in every list it publishes.
-        val override = Context.bootstrapOverride()
         val bootstrap = bootstrapAccountEvents(signer, name, override)
 
         // 3. Open a Context so we reuse publishAndConfirmDetailed + the
@@ -93,7 +95,7 @@ object CreateCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             for (event in bootstrap.all()) {
-                val ack = ctx.publish(event, override ?: DefaultNIP65RelaySet)
+                val ack = ctx.publish(event, publishTo)
                 accepted[event.kind.toString()] =
                     ack.filterValues { it.accepted }.keys.map { it.url }
             }
@@ -111,7 +113,7 @@ object CreateCommand {
                     mapOf(
                         "nip65" to (override?.map { it.url } ?: DefaultNIP65List.map { it.relayUrl.url }),
                         "inbox" to (override?.map { it.url } ?: DefaultDMRelayList.map { it.url }),
-                        "key_package" to (override ?: DefaultNIP65RelaySet).map { it.url },
+                        "key_package" to publishTo.map { it.url },
                     ),
             ),
         )

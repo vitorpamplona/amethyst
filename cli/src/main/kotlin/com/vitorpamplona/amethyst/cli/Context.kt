@@ -649,13 +649,6 @@ class Context(
     }
 
     /**
-     * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
-     * relays to use instead. Every place amy would fall back to a public default set asks this, so
-     * an offline harness's accounts stay on its own relays even when nobody advertised a list.
-     */
-    fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
-
-    /**
      * The relays of [relays] this run may dial: under AMY_LOCAL_ONLY a refused one would only fail,
      * and the pool would wait out its timeout. Every relay funnel here (publish, the drains, the page
      * walks, request/response, the Marmot publisher) filters through it.
@@ -1105,13 +1098,26 @@ class Context(
     }
 
     companion object {
-        /** The relays [BOOTSTRAP_ENV] names, or null when it is unset. */
-        fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
-            System
-                .getenv(BOOTSTRAP_ENV)
-                ?.split(',')
-                ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-                ?.toSet()
+        /**
+         * The relays [BOOTSTRAP_ENV] names, or null when it is unset or blank. Throws
+         * [IllegalArgumentException] (exit 2, `bad_args`) when it is set but names no valid relay:
+         * `amy create` would otherwise sign relay lists that list nothing and exit 0.
+         */
+        fun bootstrapOverride(): Set<NormalizedRelayUrl>? = parseBootstrapOverride(System.getenv(BOOTSTRAP_ENV))
+
+        internal fun parseBootstrapOverride(raw: String?): Set<NormalizedRelayUrl>? {
+            if (raw.isNullOrBlank()) return null
+            val relays = raw.split(',').mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+            require(relays.isNotEmpty()) { "$BOOTSTRAP_ENV is set but names no valid relay: $raw" }
+            return relays
+        }
+
+        /**
+         * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
+         * relays to use instead. Every place amy would fall back to a public default set asks this, so
+         * an offline harness's accounts stay on its own relays even when nobody advertised a list.
+         */
+        fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
 
         /** Replaces [bootstrapRelays]' seed set, comma-separated. */
         const val BOOTSTRAP_ENV = "AMY_BOOTSTRAP_RELAYS"

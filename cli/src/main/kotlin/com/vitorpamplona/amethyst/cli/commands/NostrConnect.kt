@@ -78,7 +78,7 @@ object NostrConnect {
         if (dataDir.identityExists()) {
             return Output.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
         }
-        val relays = RawEventSupport.relayFlag(args).ifEmpty { Context.bootstrapOverride() ?: DefaultNIP65RelaySet }
+        val relays = RawEventSupport.relayFlag(args).ifEmpty { Context.fallbackRelays(DefaultNIP65RelaySet) }
         if (relays.isEmpty()) return Output.error("bad_args", "no relays; pass --relay URL[,URL…]")
         val timeoutMs = args.timeoutMs(120)
         val name = args.flag("name")
