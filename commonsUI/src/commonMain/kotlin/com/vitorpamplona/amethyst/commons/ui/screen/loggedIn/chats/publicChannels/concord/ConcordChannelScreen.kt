@@ -47,6 +47,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -81,9 +83,11 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberEnterSendsMessage
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.sendOnEnter
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
@@ -546,11 +550,34 @@ private fun ConcordMessageComposer(
         )
     }
 
-    // Edit mode: a banner reminding the user the next send replaces this message (a kind-1010
+    // Edit mode: a banner reminding the user the next send replaces this message (a kind-3302
     // edit on the channel plane), with an X to abandon the edit and clear the field.
     newMessageModel.editingMessage.value?.let {
         EditingMessageBanner(onCancel = { newMessageModel.cancelEdit() })
     }
+
+    // Choosing Edit (or Reply) puts the caret in the composer, so the user can type at once.
+    val composerFocus = remember { FocusRequester() }
+    val editing = newMessageModel.editingMessage.value
+    val replying = newMessageModel.replyTo.value
+    LaunchedEffect(editing, replying) {
+        if (editing != null || replying != null) composerFocus.requestFocus()
+    }
+
+    val send: () -> Unit = {
+        scope.launch(Dispatchers.IO) {
+            try {
+                newMessageModel.sendPost()
+                onMessageSent()
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                launch(Dispatchers.Main) {
+                    shortNotice.show("Failed to send message: ${e.message}")
+                }
+            }
+        }
+    }
+    val enterSends = rememberEnterSendsMessage()
 
     Column(modifier = EditFieldModifier) {
         newMessageModel.userSuggestions?.let {
@@ -592,7 +619,11 @@ private fun ConcordMessageComposer(
             inputTransformation = MentionPreservingInputTransformation,
             spellCheck = true,
             outputTransformation = rememberUrlUserTagOutputTransformation(),
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .focusRequester(composerFocus)
+                    .sendOnEnter(enabled = enterSends, isActive = { newMessageModel.canPost() }, onSend = send),
             shape = EditFieldBorder,
             placeholder = {
                 Text(
@@ -622,19 +653,8 @@ private fun ConcordMessageComposer(
                 ThinSendButton(
                     isActive = canPost,
                     modifier = EditFieldTrailingIconModifier,
-                ) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            newMessageModel.sendPost()
-                            onMessageSent()
-                        } catch (e: Exception) {
-                            currentCoroutineContext().ensureActive()
-                            launch(Dispatchers.Main) {
-                                shortNotice.show("Failed to send message: ${e.message}")
-                            }
-                        }
-                    }
-                }
+                    onClick = send,
+                )
             },
             colors =
                 TextFieldDefaults.colors(

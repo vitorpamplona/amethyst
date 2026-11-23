@@ -52,7 +52,7 @@ fun Modifier.submitOnCtrlEnter(
     val currentOnSubmit = rememberUpdatedState(onSubmit)
     val latch = remember { SubmitLatch() }
     return onPreviewKeyEvent { event ->
-        latch.handle(event, { currentIsActive.value() }, { currentOnSubmit.value() })
+        latch.handle(event, { it.isSubmitChord() }, { currentIsActive.value() }, { currentOnSubmit.value() })
     }
 }
 
@@ -61,6 +61,7 @@ private class SubmitLatch {
 
     fun handle(
         event: KeyEvent,
+        isChord: (KeyEvent) -> Boolean,
         isActive: () -> Boolean,
         onSubmit: () -> Unit,
     ): Boolean {
@@ -68,7 +69,7 @@ private class SubmitLatch {
         if (event.type == KeyEventType.KeyUp) {
             armed = true
         }
-        if (!event.isSubmitChord()) return false
+        if (!isChord(event)) return false
         if (event.type == KeyEventType.KeyDown && armed) {
             armed = false
             if (isActive()) onSubmit()
@@ -80,3 +81,32 @@ private class SubmitLatch {
 }
 
 private fun KeyEvent.isSubmitChord(): Boolean = (isCtrlPressed || isMetaPressed) && !isAltPressed && !isShiftPressed
+
+/**
+ * A chat composer's Enter: when [enabled] (see [rememberEnterSendsMessage]), a plain Enter runs
+ * [onSend] when [isActive] says the Send button is enabled, and is swallowed either way so it never
+ * becomes a line break; Shift+Enter still starts a new line. Ctrl/Cmd+Enter sends too, as in the
+ * other composers ([submitOnCtrlEnter]). Put it on the composer's text field: it sees the key in the
+ * preview pass, before the field does. Held keys fire once.
+ */
+@Composable
+fun Modifier.sendOnEnter(
+    enabled: Boolean,
+    isActive: () -> Boolean,
+    onSend: () -> Unit,
+): Modifier {
+    val currentIsActive = rememberUpdatedState(isActive)
+    val currentOnSend = rememberUpdatedState(onSend)
+    val latch = remember { SubmitLatch() }
+    val currentEnabled = rememberUpdatedState(enabled)
+    return onPreviewKeyEvent { event ->
+        latch.handle(
+            event,
+            isChord = { it.isSubmitChord() || (currentEnabled.value && it.isPlainEnter()) },
+            isActive = { currentIsActive.value() },
+            onSubmit = { currentOnSend.value() },
+        )
+    }
+}
+
+private fun KeyEvent.isPlainEnter(): Boolean = !isShiftPressed && !isCtrlPressed && !isMetaPressed && !isAltPressed
