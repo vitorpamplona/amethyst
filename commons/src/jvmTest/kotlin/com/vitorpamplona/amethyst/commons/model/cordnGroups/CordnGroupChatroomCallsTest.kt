@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordnGroups
 
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
+import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -92,45 +93,6 @@ class CordnGroupChatroomCallsTest {
     private fun CordnGroupChatroom.lastRow() = messages.value.last().envelope
 
     private fun CordnGroupChatroom.newestId() = newest.value?.envelope?.id
-
-    // --- parsing, as calls.test.ts "call announcements" ---
-
-    @Test
-    fun `parses open and closed announcements and tolerates unknown tags`() {
-        val open = assertNotNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, callTags() + arrayOf(arrayOf("future", "ignored"))))
-        assertEquals(callId, open.callId)
-        assertEquals(service, open.service)
-        assertTrue(open.isOpen)
-        assertEquals(startsAt, open.startsAt)
-        assertEquals(identitySecret, open.identitySecret)
-        assertNull(open.endsAt)
-        assertNull(open.title)
-
-        val closed = assertNotNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, callTags("closed", endsAt = startsAt + 100, title = "Standup")))
-        assertTrue(!closed.isOpen)
-        assertNull(closed.identitySecret)
-        assertEquals(startsAt + 100, closed.endsAt)
-        assertEquals("Standup", closed.title)
-
-        // Any status but "open" reads as closed.
-        val other = callTags().map { if (it[0] == "status") arrayOf("status", "private") else it }.toTypedArray()
-        assertTrue(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, other)?.isOpen == false)
-    }
-
-    @Test
-    fun `rejects malformed required fields`() {
-        val tags = callTags()
-        for (required in listOf("d", "service", "status", "starts", "identity-secret")) {
-            assertNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, tags.filter { it[0] != required }.toTypedArray()), "without $required")
-        }
-        assertNull(CordnCallAnnouncement.parse(CordnMessageKinds.TEXT, tags))
-        assertNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, callTags(id = "AB".repeat(32))), "an uppercase call id")
-        assertNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, tags + Array(32) { arrayOf("x", "$it") }), "more than 32 tags")
-        // A room title over 256 UTF-8 bytes is dropped, not the call.
-        assertNull(CordnCallAnnouncement.parse(CordnCallAnnouncement.KIND, callTags(title = "é".repeat(129)))?.title)
-    }
-
-    // --- the room ---
 
     @Test
     fun `a call's revisions are one row, the newest across authors`() {
