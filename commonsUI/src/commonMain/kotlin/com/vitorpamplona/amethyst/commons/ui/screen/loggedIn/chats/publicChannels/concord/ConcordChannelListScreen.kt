@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.concord.ui.ConcordUnreadBadge
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelOrder
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
@@ -544,6 +545,7 @@ fun ConcordChannelListScreen(
                     ?.channels
                     ?.entries
                     ?.filter { (key, ch) -> canManageChannels || !ch.definition.private || key in heldKeys }
+                    ?.let(ConcordChannelOrder::sorted)
                     .orEmpty()
             }
         if (channels.isEmpty()) {
