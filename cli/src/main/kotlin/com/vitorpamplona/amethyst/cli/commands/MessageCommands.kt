@@ -25,10 +25,11 @@ import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotMentionTags
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPollRumors
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageReferences
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 object MessageCommands {
     val USAGE: String =
@@ -80,7 +81,8 @@ object MessageCommands {
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
-            val bundle = ctx.marmot.buildTextMessage(gid, text)
+            // Each mentioned member gets its `p`, as MDK's sender (and the app's composer) adds one.
+            val bundle = ctx.marmot.buildTextMessage(gid, text, mentions = MarmotMentionTags.of(text))
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
             RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
@@ -153,7 +155,7 @@ object MessageCommands {
                                 "created_at" to obj["created_at"],
                             ) +
                                 listOfNotNull(
-                                    event?.let(::replyTarget)?.let { "reply_to" to it },
+                                    event?.let(MarmotMessageReferences::replyTarget)?.let { "reply_to" to it },
                                     poll?.let { "poll" to pollFields(it) },
                                 )
                         } catch (_: Exception) {
@@ -317,7 +319,8 @@ object MessageCommands {
             val target =
                 findStoredInnerEvent(ctx, gid, targetId)
                     ?: return Output.error("not_found", "no stored message $targetId in group $gid")
-            val bundle = ctx.marmot.buildTextMessage(gid, text, replyToEventId = target.id, replyToAuthorPubKey = target.pubKey)
+            val bundle =
+                ctx.marmot.buildTextMessage(gid, text, replyToEventId = target.id, replyToAuthorPubKey = target.pubKey, mentions = MarmotMentionTags.of(text))
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
             RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
@@ -451,15 +454,6 @@ object MessageCommands {
             "ends_at" to poll.endsAt,
             "options" to poll.options.map { mapOf("id" to it.id, "label" to it.label) },
         )
-
-    /**
-     * The message [event] replies to, as the app reads it: [ChatEvent.replyingTo] (the last `q`
-     * that quotes an event, never an address), else White Noise's NIP-10 `e`.
-     */
-    private fun replyTarget(event: Event): String? {
-        val chat = event as? ChatEvent ?: return null
-        return chat.replyingTo() ?: chat.replyTargetIds().firstOrNull()
-    }
 
     /**
      * Scan the group's persisted inner-message log for an event matching

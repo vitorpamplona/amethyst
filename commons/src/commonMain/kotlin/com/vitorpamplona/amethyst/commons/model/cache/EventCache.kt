@@ -1584,6 +1584,22 @@ open class EventCache :
         return false
     }
 
+    /**
+     * Points [note]'s reply links at [targets] alone, unlinking it from every other note it was
+     * counted as replying to. For a protocol whose rule for what a message replies to is narrower
+     * than its kind's generic one in [computeReplyTo].
+     */
+    fun relinkReplyTo(
+        note: Note,
+        targets: List<Note>,
+    ) {
+        val current = note.replyTo.orEmpty()
+        if (current == targets) return
+        current.forEach { if (it !in targets) it.removeReply(note) }
+        note.replyTo = targets
+        targets.forEach { it.addReply(note) }
+    }
+
     @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
@@ -1810,10 +1826,11 @@ open class EventCache :
 
             is ChatEvent -> {
                 // Amethyst's own kind:9 replies carry the parent as a NIP-18
-                // `q` tag (see ChatEvent.replyingTo), but the broader Marmot
-                // ecosystem — WhiteNoise in particular — threads kind:9 chats
-                // with a plain NIP-10 `e` tag. Accept both so inbound replies
-                // from either client show their quote bubble in the feed.
+                // `q` tag (see ChatEvent.replyingTo), but other clients thread
+                // kind:9 chats with a plain NIP-10 `e` tag. Accept both so
+                // inbound replies from either client show their quote bubble.
+                // A Marmot group message is then re-pointed at the one message
+                // MDK reads as its reply (AccountMarmotActions.indexMarmotInnerEvent).
                 event.replyTargetIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
