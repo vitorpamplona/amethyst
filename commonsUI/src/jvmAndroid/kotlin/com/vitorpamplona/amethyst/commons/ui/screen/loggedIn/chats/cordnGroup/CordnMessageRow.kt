@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuth
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameWeight
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatTimestamp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChipReactionGlyph
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.MoreActionsToggle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChipView
@@ -123,6 +124,7 @@ import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnMentions
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCustomEmoji
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -176,17 +178,19 @@ fun CordnMessageRow(
 ) {
     val isMine = message.envelope.pubKey == me
     val isPinned = annotations.isPinned(message.envelope.id)
-    val reactions = annotations.reactions[message.envelope.id].orEmpty()
+    // reactionsOf drops a deleted message's chips with its text, as cordn-web's row fold does.
+    val reactions = annotations.reactionsOf(message.envelope.id)
+    val reactionEmoji = annotations.customEmojiOf(message.envelope.id)
 
     // A deleted message keeps its place in the conversation but stops accepting
     // annotations: replying to, editing or reacting to a withdrawal is meaningless,
     // and the manager would refuse most of it anyway.
     val isLive = text != null
 
-    // A mention is the one reason to pick a message out of a wall of them. Read from
-    // the content rather than from a `p` tag: a tag is a claim the sender makes about
-    // who they addressed, while the text is what everyone in the room actually sees.
-    val mentionsMe = remember(text, me) { text != null && me in CordnMentions.mentioned(text) }
+    // A mention is the one reason to pick a message out of a wall of them. Decided by its `p`
+    // tags, as cordn-web decides it (CordnMentions.attentionTarget): a mention, or a reply to one
+    // of your messages, from someone else. A deleted message no longer calls for you.
+    val mentionsMe = remember(message, me, isLive) { isLive && CordnMentions.attentionTarget(message.envelope, me) == message.envelope.id }
     // The compact layout keeps emoji inline, as RenderRegularTextNote does for every other chat:
     // a 48sp emoji tripled the height of a one-line-per-message layout. Decided here, before
     // ChatBubbleLayout draws the row, so it reads the setting rather than the layout's local.
@@ -248,7 +252,7 @@ fun CordnMessageRow(
                 if (reactions.isEmpty()) {
                     null
                 } else {
-                    { CordnReactionChips(reactions, me, accountViewModel, nav, onReact) }
+                    { CordnReactionChips(reactions, reactionEmoji, me, accountViewModel, nav, onReact) }
                 },
             // Mirrors chatFooterHasMeta: the footer earns its row on the last message
             // of a burst (for the time) or on any message carrying a marker of its own.
@@ -414,15 +418,16 @@ private fun CordnAuthorLine(
 @Composable
 private fun CordnReactionChips(
     reactions: Map<String, Set<HexKey>>,
+    customEmoji: Map<String, CordnCustomEmoji>,
     me: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
     onReact: (String) -> Unit,
 ) {
     val chips =
-        remember(reactions, me) {
+        remember(reactions, customEmoji, me) {
             reactions
-                .map { (emoji, who) -> ReactionChip(emoji, who.size, me in who) }
+                .map { (emoji, who) -> ReactionChip(emoji, who.size, me in who, reactionGlyph(emoji, customEmoji)) }
                 .sortedByDescending { it.count }
         }
 
@@ -431,6 +436,7 @@ private fun CordnReactionChips(
     if (showWho) {
         CordnReactionDetailSheet(
             reactions = reactions,
+            customEmoji = customEmoji,
             accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = { showWho = false },
@@ -441,13 +447,26 @@ private fun CordnReactionChips(
         chips.forEach { chip ->
             ReactionChipView(
                 chip = chip,
-                onClick = { onReact(chip.type) },
+                // The glyph, not the key: a custom emoji's `:name:url` is what the send path needs
+                // to send the same picture again.
+                onClick = { onReact(chip.glyph) },
                 // Long press opens who reacted, as the DM strip does.
                 onLongClick = { showWho = true },
             )
         }
     }
 }
+
+/**
+ * What a reaction chip draws for [reaction]: a custom emoji (`:name:` content with an `emoji` tag,
+ * CordnAnnotationIndex.customEmojiOf) as the app's `:name:url` form, which the chip renders as the
+ * picture; anything else as itself. An `emoji-media` picture is encrypted into the group and has
+ * no public URL, so it stays the `:name:` text.
+ */
+private fun reactionGlyph(
+    reaction: String,
+    customEmoji: Map<String, CordnCustomEmoji>,
+): String = customEmoji[reaction]?.url?.let { ":${customEmoji.getValue(reaction).name}:$it" } ?: reaction
 
 /**
  * Who reacted, and with what.
@@ -460,6 +479,7 @@ private fun CordnReactionChips(
 @Composable
 private fun CordnReactionDetailSheet(
     reactions: Map<String, Set<HexKey>>,
+    customEmoji: Map<String, CordnCustomEmoji>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
@@ -484,7 +504,7 @@ private fun CordnReactionDetailSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(text = emoji, style = MaterialTheme.typography.titleMedium)
+                    ChipReactionGlyph(reactionGlyph(emoji, customEmoji))
                     Text(
                         text = who.size.toString(),
                         style = MaterialTheme.typography.labelMedium,

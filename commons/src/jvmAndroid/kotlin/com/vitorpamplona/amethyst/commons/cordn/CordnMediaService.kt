@@ -88,13 +88,15 @@ class CordnMediaService(
          * they are the spec's "passed through unchanged" fields, so they cost
          * nothing to omit and are worth a great deal to include — without
          * [dimensions] the bubble has no aspect ratio to reserve and the list
-         * jumps when the picture lands, and without [waveform] a voice note the
-         * recorder already measured comes back as bare bars.
+         * jumps when the picture lands, and without [waveform] (peaks from 0 to 1)
+         * a voice note the recorder already measured comes back as bare bars.
+         * [durationMs] is a voice note's length, shown until the audio loads.
          */
         dimensions: String? = null,
         blurhash: String? = null,
         alt: String? = null,
         waveform: List<Float>? = null,
+        durationMs: Long? = null,
     ): Array<String>? =
         withContext(Dispatchers.IO) {
             val server = serverBaseUrl.ifBlank { return@withContext null }
@@ -109,6 +111,7 @@ class CordnMediaService(
                 blurhash = blurhash,
                 alt = alt,
                 waveform = waveform,
+                durationMs = durationMs,
             )
         }
 
