@@ -3,7 +3,9 @@
 Shell-based end-to-end harnesses that drive the `amy` CLI binary — against an
 embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
 public servers, or no relay at all, depending on the suite. Apart from
-`buzz/buzz-relay-interop.sh`, which runs upstream Buzz's own relay, no suite depends on
+`buzz/buzz-relay-interop.sh`, which runs upstream Buzz's own relay, and the two
+second-implementation suites (`relaygroup/relaygroup-relay29.sh` against fiatjaf/relay29,
+`relaygroup/relaygroup-zooid.sh` against zooid, `dm/dm-nostr-tools.sh` against nostr-tools), no suite depends on
 an external relay binary or a Rust toolchain for its relay: every relay-backed
 harness boots geode from the `amy` binary it already built, so the relay under
 test is the same server code that runs in production. Twelve directories:
@@ -29,6 +31,8 @@ cli/tests/
 │   └── clink-headless.sh
 ├── dm/                    # NIP-17 DM interop (amy ↔ amy) vs embedded `amy serve`
 │   ├── dm-interop-headless.sh
+│   ├── dm-nostr-tools.sh           # amy ↔ nostr-tools (a second NIP-17 client)
+│   ├── nostr-tools-peer/           #   the nostr-tools client it drives (Node)
 │   ├── setup.sh                    # preflight + identities
 │   └── tests-dm.sh
 ├── git/                   # NIP-34 git collaboration vs embedded `amy serve`
@@ -57,7 +61,10 @@ cli/tests/
 ├── buzz/                  # Buzz agent jobs/workflows vs `amy serve`, plus
 │   └── buzz-relay-interop.sh #  amy's Buzz + NIP-29 verbs vs a REAL block/buzz relay
 ├── relaygroup/            # NIP-29 round-trip vs embedded `amy serve` (geode)
-│   └── relaygroup-headless.sh
+│   ├── relaygroup-headless.sh
+│   ├── relaygroup-relay29.sh       # amy vs fiatjaf/relay29, a second NIP-29 relay
+│   ├── relay29-runner/             #   the relay29 build it boots (Go, pinned)
+│   └── relaygroup-zooid.sh         # amy vs zooid (invite codes, hidden groups)
 └── sync/                  # NIP-77 deletion propagation vs `amy serve`
     └── sync-deletions-headless.sh
 ```
@@ -129,6 +136,21 @@ Suite notes:
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
   emptiness is a relay capability, not a client bug.
+- **`relaygroup/relaygroup-relay29.sh`** runs the same verbs and the moderation
+  ones against **fiatjaf/relay29** (MIT; khatru29, the NIP author's relay library,
+  pinned in `relay29-runner/go.mod`, built with `go build`, or `--relay29-bin`), which
+  signs 39000-39003 and enforces roles: create, browse, join (relay-issued 9000),
+  members-only writes, put-user with a role, remove-user by a moderator, edit-metadata
+  (admin only), delete-event, private + closed (reads refused to outsiders), invite
+  codes (relay29 has no kind 9009: refused), back to public/open, leave (relay-issued
+  9001) and delete-group. `rg-12` needs quartz > 2.24.0 (an edit that lifts `private`
+  also sends relay29's legacy `public`).
+- **`relaygroup/relaygroup-zooid.sh`** runs them against **zooid** (coracle, MIT; the
+  relay behind Flotilla's spaces; `--zooid-bin`, or `--zooid-src` to `go build` a
+  checkout of gitea.coracle.social/coracle/zooid) on a throwaway Postgres container:
+  what relay29 lacks — invite codes (9009 + a 9021 `code`) and `hidden` groups — plus
+  create, relay-signed state, joins, managers-only moderation, private/closed and back,
+  leave, delete-event and delete-group. zooid's group admins are the relay's managers.
 - **`buzz/buzz-relay-interop.sh`** is the one harness that runs an external relay:
   upstream block/buzz's `buzz-relay` (a checkout via `--buzz-src`, built with
   `cargo build --profile ci -j2 -p buzz-relay`, or `--relay-bin`) on Postgres, Redis
@@ -201,6 +223,11 @@ A third, slimmer harness covers the NIP-17 DM surface:
 - **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and
   Identity D) exchange NIP-17 DMs through the embedded `amy serve` relay.
   No MDK, no Rust — only `amy`.
+- **`dm/dm-nostr-tools.sh`** — amy against a second NIP-17 client,
+  `dm/nostr-tools-peer/peer.mjs` on nostr-tools 2.26.1 (Unlicense; `npm ci` from its
+  lock file), both ways: text routed by kind 10050, replies, subjects, wrapped
+  reactions, kind-15 file messages, group rooms and nostr-tools' unwrap checks.
+  Needs node and a routable relay address, like the harness above.
 
 A harness covers Blossom blob storage (BUD-01/02/04/09) against **live**
 public servers rather than a loopback relay:
