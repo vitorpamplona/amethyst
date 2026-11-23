@@ -1088,16 +1088,30 @@ private fun UserBubble(
     onLink: (String) -> Unit,
     onEdit: (() -> Unit)?,
 ) {
-    if (images.isNotEmpty()) {
-        Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
-            SentImageRow(images)
+    // One column: the caller may place this in a Box, which would stack the images and the
+    // text on top of each other.
+    Column(Modifier.fillMaxWidth()) {
+        if (images.isNotEmpty()) {
+            Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+                SentImageRow(images)
+            }
         }
+        if (text.isNotEmpty()) UserTextBubble(text, images.isNotEmpty(), textStyle, onLink, onEdit)
     }
-    if (text.isEmpty()) return
+}
+
+@Composable
+private fun UserTextBubble(
+    text: String,
+    belowImages: Boolean,
+    textStyle: TextStyle,
+    onLink: (String) -> Unit,
+    onEdit: (() -> Unit)?,
+) {
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     Row(
-        Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 0.dp else 4.dp).hoverable(hover),
+        Modifier.fillMaxWidth().padding(top = if (belowImages) 4.dp else 0.dp).hoverable(hover),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {

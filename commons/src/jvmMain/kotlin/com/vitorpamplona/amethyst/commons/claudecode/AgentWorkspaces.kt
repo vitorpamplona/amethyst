@@ -73,14 +73,17 @@ data class AgentWorkspace(
 ) {
     /**
      * What the agent is told about the workstream: its folder holds one clone per repository and is not
-     * a repository itself, so git runs inside them; and the push is the user's.
+     * a repository itself, so git runs inside them; and what it may publish.
      */
     val brief: String
         get() =
             buildString {
                 appendLine("This folder is a workstream with one clone per repository; it is not a git repository itself. Run git inside the clones:")
                 repos.forEach { appendLine("- ${it.name}/: ${it.url}, on branch ${it.branch} (from ${it.baseBranch})") }
-                append("Commit your work on those branches. Pushing and opening pull requests are the user's to do from the app; they are blocked here.")
+                append(
+                    "Commit your work on those branches. You may push them and open a pull request when the user asks. " +
+                        "Merging, tags, deleting branches and anything on the default branch are the user's.",
+                )
             }
 
     /** The repositories, as the user knows them: `owner/name` from each URL. */
@@ -127,6 +130,8 @@ data class AgentPreferences(
      * it reopens in it after a restart. Sessions in the default mode have no entry.
      */
     val sessionModes: Map<String, String> = emptyMap(),
+    /** What each guarded session may push ([PushScope]), by session id, as it first started: later starts reuse it. */
+    val pushScopes: Map<String, PushScope> = emptyMap(),
 )
 
 /** How often workspaces cloned a repository, and when last: what the repository picker leads with. */

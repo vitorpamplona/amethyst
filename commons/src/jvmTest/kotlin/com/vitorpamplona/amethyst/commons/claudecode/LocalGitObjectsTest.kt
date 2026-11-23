@@ -41,6 +41,8 @@ class LocalGitObjectsTest {
             ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false") + args)
                 .directory(dir)
                 .apply { environment().forgetInheritedRepository() }
+                // Run from an agent session, the push guard's config would come along.
+                .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
                 .redirectErrorStream(true)
                 .start()
         val out = p.inputStream.bufferedReader().readText()

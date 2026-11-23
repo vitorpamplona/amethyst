@@ -15,14 +15,25 @@ Code, Copilot, Cursor, Codex, etc.) wrote a large part of the diff.
    things it touches still work. Passing tests and green CI do not count
    as manual testing.
 
-**AI agents:** you must not open, publish or submit a PR yourself. When
-the code is ready, stop. Give the human the branch, a summary of what
-changed, and a test plan they can follow on a device. They open the PR
-after they have done both steps above. Drafting the PR description for
-them is fine. Do not write "tested on device" unless the human has told
-you they did it.
+**AI agents:** never open, publish or submit a PR on your own. When the
+code is ready, stop. Give the human the branch, a summary of what
+changed, and a test plan they can follow on a device. Open the PR only
+when the human has done both steps above and asks you to; pushing your
+branch for them is fine. Never merge a PR. Drafting the PR description
+is fine. Do not write "tested on device" unless the human has told you
+they did it.
 
 PRs that skip these steps will be closed.
+
+Amethyst's own agent sessions (the desktop app's Claude Code and Codex
+screens) enforce part of this: they refuse merging, tags, deleting
+branches, pushes to the default branch or to a `nostr://` remote, and
+pushes outside the session's own branches and remotes. Opening a
+proposal or posting stays allowed: `ngit send`, `amy git pr` and
+`amy post` sign with the user's key. Those checks run
+in the agent's own shell, so they stop accidents, not an agent set on
+getting around them. Following these rules is still on you and your
+agent.
 
 ## Before writing code
 
