@@ -55,6 +55,7 @@ import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageReferences
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
@@ -1957,6 +1958,14 @@ class AccountMarmotActions(
                 // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
                 // message's, and only loadEvent sets it.
                 innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
+            }
+
+            // What a group message replies to is MDK's reading (first `q`, else first `e`), not the
+            // every-`e`-and-`q` of a generic kind 9: White Noise and Amethyst then quote the same
+            // parent when a message's `e` and `q` differ, the `e` being only a reference.
+            if (innerEvent.kind == ChatEvent.KIND && innerNote.event?.id == innerEvent.id) {
+                val target = MarmotMessageReferences.replyTarget(innerEvent)?.let { cache.checkGetOrCreateNote(it) }
+                cache.relinkReplyTo(innerNote, listOfNotNull(target))
             }
 
             // The overlay's rules (author-only, latest wins) are applied at render time by

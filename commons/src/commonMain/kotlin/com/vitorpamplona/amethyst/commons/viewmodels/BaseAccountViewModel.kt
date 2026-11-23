@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotMentionTags
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
@@ -2674,8 +2675,12 @@ open class BaseAccountViewModel(
         /** The epoch [reference] was encrypted in ([marmotMediaUploadKey]). */
         sourceEpoch: Long? = null,
     ) {
+        // The caption's mentions, as a text message's: @npub rewritten to nostr: and each one
+        // p-tagged, which buildMediaRumor does not do.
+        val tagger = NewMessageTagger(caption, null, null, this)
+        tagger.run()
         val manager = account.marmotManager ?: return
-        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption), sourceEpoch)
+        deliverMarmotGroupMessage(nostrGroupId, MarmotMentionTags.added(manager.buildMediaRumor(reference, tagger.message)), sourceEpoch)
     }
 
     /**
