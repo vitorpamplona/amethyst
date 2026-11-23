@@ -551,6 +551,37 @@ p90 51% worse, and Home's (with the docked notification panel opted in) was inco
 suspect, unconfirmed: the profile's tabs sit in a pager, so more than one list composes a screen
 ahead, and cards kept composed recompose as their data streams in during the first pass.
 
+## HiDPI, and native Wayland at scale 2
+
+The same Home scroll at `-Dsun.java2d.uiScale=2` on a 3200x2000 Xvfb screen (the same 1600x1000 dp
+window, four times the pixels):
+
+| Path | warm fps | busy ms (median) |
+|---|---|---|
+| X11, scale 1 | 56.8 | 13.8 |
+| X11, scale 2 | 32.7 | 27.9 |
+| native Wayland (WLToolkit), scale 2 | 13-20 | 47-65 |
+
+Wayland ran under Weston's x11 backend inside Xvfb (the headless backend has no `wl_seat`), with
+Weston compositing in software on the same four cores, so its absolute numbers are pessimistic; the
+split of the UI thread is what carries over. There, about 39% of the UI thread is presenting the
+frame rather than drawing it, through Skiko's `SoftwareSwingPainter`: `Surface.readPixels` into a
+bitmap, a copy of that into a `BufferedImage` (`memmove`, 11.6%), then `Graphics.drawImage` with
+SrcOver (`IntArgbPreToIntRgbSrcOverMaskBlit`, 18.1%, plus the format conversion, 6.3%). On X11 the
+software path draws straight to the window and skips all of it.
+
+- Swing painted the content pane's background under every frame, 5% of the UI thread with
+  `AnyIntSetParallelogram`. The opaque Wayland window's pane now paints nothing
+  (`OpaqueComposeHost`): libawt 29.2% to 24.4%. The fps change is inside this setup's noise.
+- Drawing the frame with `AlphaComposite.Src` instead of SrcOver: worse. Java2D has no fast loop for
+  it here and took the generic `IntArgbPreToIntRgbAlphaMaskBlit`, 29% of the thread.
+- Turning off Swing's double buffering for the window: the blit becomes ArgbPre to ArgbPre (libawt
+  17%) but the frame rate does not move (19.7 fps, busy 44 ms). Not kept.
+
+What is left of the present path is Skiko's and the JBR's: one copy (readPixels straight into the
+`BufferedImage`'s raster) and a blit the compositor could skip (a `wl_shm` buffer Skia draws into
+directly). Our own share at scale 2 is the fills and text Skia rasterises, four times larger.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what
@@ -563,7 +594,9 @@ ahead, and cards kept composed recompose as their data streams in during the fir
 4. **Train the installers too.** The `.deb`, `.rpm`, `.dmg` and `.msi` carry the per-user archive
    (classes only, no profiles), so they keep the slow first scroll the "no AOT cache" row shows.
    Training them needs their packaging rebuilt around a trained image (startup plan, "Next").
-5. **HiDPI.** Measure the image fixes at 2x scale, where every pixel cost is four times larger.
+5. **The Wayland present path upstream.** Skiko's `SoftwareSwingPainter` copies each frame twice
+   before Java2D blends it (see "HiDPI"); a path that draws into the window's buffer would remove
+   the 39% at scale 2. That is a Skiko/JBR change, worth an issue there with these profiles.
 6. **GPU drawing.** Run the benchmark where Skia draws on the GPU (macOS, Windows, X11) for the
    numbers users there see; the software-only paths stay off there.
 7. Frame timing in CI is out of reach (shared runners, software drawing); the image columns and
