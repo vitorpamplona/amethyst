@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.runBlocking
+import okhttp3.Dns
 import java.net.InetAddress
+import java.net.UnknownHostException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -49,4 +54,32 @@ class LocalOnlyTest {
         assertEquals("host", LocalOnly.hostOf("ws://user@host:1"))
         assertEquals(null, LocalOnly.hostOf(""))
     }
+
+    // A resolver that answers from a table, as SurgeDns answers from its persisted cache.
+    private fun resolver(vararg answers: Pair<String, String>): Dns {
+        val table = answers.toMap()
+        return Dns { host -> listOf(ip(table[host] ?: throw UnknownHostException(host))) }
+    }
+
+    @Test
+    fun theGuardedResolverRefusesAPublicAddressItServes() {
+        val dns = LocalOnly.dns(resolver("stale.example" to "1.1.1.1", "lan.example" to "192.168.1.9"), guarded = true)
+        assertFailsWith<UnknownHostException> { dns.lookup("stale.example") }
+        assertEquals(listOf(ip("192.168.1.9")), dns.lookup("lan.example"))
+    }
+
+    @Test
+    fun anUnguardedResolverIsLeftAlone() {
+        val inner = resolver("stale.example" to "1.1.1.1")
+        assertEquals(inner, LocalOnly.dns(inner, guarded = false))
+    }
+
+    @Test
+    fun dialableKeepsOnlyLocalRelays() =
+        runBlocking {
+            val local = RelayUrlNormalizer.normalizeOrNull("ws://127.0.0.1:7777")!!
+            val public = RelayUrlNormalizer.normalizeOrNull("wss://1.1.1.1")!!
+            assertEquals(setOf(local), LocalOnly.dialable(listOf(local, public), guarded = true))
+            assertEquals(setOf(local, public), LocalOnly.dialable(listOf(local, public), guarded = false))
+        }
 }
