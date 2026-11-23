@@ -86,6 +86,13 @@ class MarmotDevices(
 
     private var started = false
 
+    /**
+     * Pairing messages that arrived before [start] (the app opens gift wraps while `restoreAll`
+     * still runs, and stores the wrap without its content, so it never comes back): replayed by
+     * [start], oldest first, the newest [MAX_EARLY_PAIRING] kept.
+     */
+    private val earlyPairing = ArrayDeque<Pair<PairingMessage, Long>>()
+
     // ---- new device ----------------------------------------------------------------------------
     private var newDevice: NewDevicePairing? = null
     private var newDeviceState: NewDeviceLinkState? = null
@@ -125,6 +132,10 @@ class MarmotDevices(
             if (!started) {
                 groups.start()
                 started = true
+                while (earlyPairing.isNotEmpty()) {
+                    val (message, createdAt) = earlyPairing.removeFirst()
+                    runStep("early pairing") { handlePairing(message, createdAt) }
+                }
             }
             if (announce) runStep("start broadcast") { publishAll(groups.broadcastDue(clock(), start = true)) }
             refreshState()
@@ -168,7 +179,19 @@ class MarmotDevices(
         message: PairingMessage,
         createdAt: Long,
     ) = mutex.withLock {
-        if (!started) return@withLock
+        if (!started) {
+            if (earlyPairing.size >= MAX_EARLY_PAIRING) earlyPairing.removeFirst()
+            earlyPairing.addLast(message to createdAt)
+            return@withLock
+        }
+        handlePairing(message, createdAt)
+        refreshState()
+    }
+
+    private suspend fun handlePairing(
+        message: PairingMessage,
+        createdAt: Long,
+    ) {
         val now = clock()
         val mine = newDevice
         if (mine != null && message.sessionId == mine.sessionId) {
@@ -177,7 +200,6 @@ class MarmotDevices(
             // A device linking itself answers no one else's request; everything else may be ours.
             onExistingDeviceMessage(message, createdAt, now)
         }
-        refreshState()
     }
 
     /**
@@ -579,16 +601,23 @@ class MarmotDevices(
 
     /**
      * Removes a sibling ([slot]) from the device group, takes its leaves out of every chat, and
-     * deletes its KeyPackage slot (`device-group.md` "Removing a device").
+     * deletes its KeyPackage slot (`device-group.md` "Removing a device"). False when no relay
+     * confirmed the removal Commit: nothing changed, and the slot is kept.
      */
-    suspend fun removeDevice(slot: HexKey) =
+    suspend fun removeDevice(slot: HexKey): Boolean =
         mutex.withLock {
             val now = clock()
             require(slot != groups.trust().ownSlot) { "Sign out to remove this device" }
-            groups.applyStaged(groups.stageRemoveDevice(slot, now))
+            val applied = groups.applyStaged(groups.stageRemoveDevice(slot, now))
+            if (applied.event == null) {
+                Log.w(TAG) { "no relay confirmed the removal of ${slot.take(8)}" }
+                refreshState()
+                return@withLock false
+            }
             publishAll(groups.removeGoneDevicesFromChats())
             runStep("slot deletion") { deleteSlot(slot) }
             refreshState()
+            true
         }
 
     /** The removed device's KeyPackage slot goes too, so inviters stop finding it. */
@@ -599,11 +628,15 @@ class MarmotDevices(
         if (!transport.publishOwnEvent(deletion)) Log.w(TAG) { "no relay accepted the deletion of slot ${slot.take(8)}" }
     }
 
-    /** Signs this device out through its siblings: they remove it (`leaving`). */
-    suspend fun signOutThroughSiblings() =
+    /**
+     * Signs this device out through its siblings: they remove it (`leaving`). False when no relay
+     * confirmed the Commit, so the siblings will not hear of it.
+     */
+    suspend fun signOutThroughSiblings(): Boolean =
         mutex.withLock {
-            groups.applyStaged(groups.stageSignOut())
+            val applied = groups.applyStaged(groups.stageSignOut())
             refreshState()
+            applied.event != null
         }
 
     /** "This wasn't me" for a sign-in in [slot]: records the rejection in the roster. */
@@ -747,5 +780,8 @@ class MarmotDevices(
         const val RETAG_EVERY_SECS = 6 * 60 * 60L
 
         const val SIGN_IN_CHECK_EVERY_SECS = 15 * 60L
+
+        /** Pairing messages kept for [start] when they arrive before it. */
+        const val MAX_EARLY_PAIRING = 64
     }
 }

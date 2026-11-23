@@ -645,7 +645,10 @@ class AccountSessionManager(
         val devices = accountsCache.loadedAccount(hex)?.marmotDevices ?: return
         if (!devices.state.value.linked) return
         try {
-            withTimeout(DEVICE_GROUP_SIGN_OUT_TIMEOUT_MS) { devices.signOutThroughSiblings() }
+            val confirmed = withTimeout(DEVICE_GROUP_SIGN_OUT_TIMEOUT_MS) { devices.signOutThroughSiblings() }
+            // The account's files go next anyway: the other devices keep listing this one until
+            // the user removes it there (or it goes inactive).
+            if (!confirmed) Log.w("AccountSessionManager") { "No relay confirmed the device-group sign-out" }
         } catch (e: Exception) {
             if (e is CancellationException && e !is TimeoutCancellationException) throw e
             Log.w("AccountSessionManager", "Could not sign out through the account's other devices", e)

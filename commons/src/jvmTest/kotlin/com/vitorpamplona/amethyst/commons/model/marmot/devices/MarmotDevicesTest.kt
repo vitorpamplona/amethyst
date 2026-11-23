@@ -67,6 +67,10 @@ class MarmotDevicesTest {
         val signer = NostrSignerInternal(keys)
         lateinit var peer: Device
         val keyPackages = HashMap<HexKey, KeyPackageEvent>()
+
+        /** False: no relay confirms this device's group Commits. */
+        var relaysUp = true
+        val ownEvents = ArrayList<Event>()
         val stores = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key"))))
         val manager =
             MarmotManager(
@@ -76,8 +80,8 @@ class MarmotDevicesTest {
                 null,
                 // The manager publishes commits itself (publish-before-apply): onto the same relay.
                 MarmotPublisher { event, _ ->
-                    mailbox.addLast(peer to { event })
-                    true
+                    if (relaysUp) mailbox.addLast(peer to { event })
+                    relaysUp
                 },
                 deviceGroupConfig = stores.config(listOf("wss://relay.invalid")),
             )
@@ -106,7 +110,10 @@ class MarmotDevicesTest {
 
                 override suspend fun ownKeyPackages() = keyPackages.values.toList()
 
-                override suspend fun publishOwnEvent(event: Event) = true
+                override suspend fun publishOwnEvent(event: Event): Boolean {
+                    ownEvents.add(event)
+                    return true
+                }
             }
         val devices = MarmotDevices(manager, signer, transport, { emptySet() }, { clock })
 
@@ -125,7 +132,7 @@ class MarmotDevicesTest {
         }
     }
 
-    private suspend fun pair(): Pair<Device, Device> {
+    private suspend fun pair(startExisting: Boolean = true): Pair<Device, Device> {
         val keys = KeyPair()
         val existing = Device(keys, folder.newFolder())
         val fresh = Device(keys, folder.newFolder())
@@ -133,11 +140,82 @@ class MarmotDevicesTest {
         fresh.peer = existing
         existing.manager.restoreAll()
         fresh.manager.restoreAll()
-        existing.devices.start()
+        if (startExisting) existing.devices.start()
         fresh.devices.start()
         pump()
         return existing to fresh
     }
+
+    /** Two devices of one account, linked and agreeing on the roster. */
+    private suspend fun linked(): Pair<Device, Device> {
+        val (existing, fresh) = pair()
+        fresh.devices.startLinkAsNewDevice()
+        pump()
+        val prompt =
+            existing.devices.state.value.prompts
+                .single()
+        fresh.devices.confirmMatch()
+        existing.devices.approveLink(prompt.sessionId, "phone")
+        pump()
+        existing.devices.tick()
+        pump()
+        fresh.devices.tick()
+        pump()
+        assertTrue(existing.devices.state.value.linked && fresh.devices.state.value.linked)
+        return existing to fresh
+    }
+
+    @Test
+    fun aRemovalNoRelayConfirmedKeepsTheDeviceAndItsSlot() =
+        runBlocking<Unit> {
+            val (existing, fresh) = linked()
+            val slot = checkNotNull(fresh.devices.state.value.ownSlot)
+            existing.relaysUp = false
+
+            assertFalse(existing.devices.removeDevice(slot))
+            assertTrue("no KeyPackage deletion went out", existing.ownEvents.isEmpty())
+            assertTrue(
+                existing.devices.state.value.devices
+                    .any { it.slot == slot },
+            )
+
+            existing.relaysUp = true
+            assertTrue(existing.devices.removeDevice(slot))
+            assertFalse(
+                existing.devices.state.value.devices
+                    .any { it.slot == slot },
+            )
+        }
+
+    @Test
+    fun aSignOutNoRelayConfirmedSaysSo() =
+        runBlocking<Unit> {
+            val (_, fresh) = linked()
+            fresh.relaysUp = false
+            assertFalse(fresh.devices.signOutThroughSiblings())
+        }
+
+    @Test
+    fun aLinkRequestThatArrivesBeforeStartIsAnsweredOnceStarted() =
+        runBlocking<Unit> {
+            // The app opens gift wraps while restoreAll still runs, and never sees the wrap again.
+            val (existing, fresh) = pair(startExisting = false)
+            fresh.devices.startLinkAsNewDevice()
+            pump()
+            assertTrue(
+                existing.devices.state.value.prompts
+                    .isEmpty(),
+            )
+
+            existing.devices.start()
+            pump()
+
+            val prompt =
+                existing.devices.state.value.prompts
+                    .single()
+            assertTrue(prompt.state is DeviceLinkPrompt.State.Comparing)
+            assertTrue(fresh.devices.state.value.newDevice is NewDeviceLinkState.Comparing)
+        }
 
     @Test
     fun twoDevicesPairWithTheSameSevenEmojiAndAgreeOnTheRoster() =

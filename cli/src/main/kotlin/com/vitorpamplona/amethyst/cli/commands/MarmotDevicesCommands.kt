@@ -141,7 +141,9 @@ object MarmotDevicesCommands {
             ) {
                 return@withDevices Output.error("not_found", "no linked device in slot $slot")
             }
-            devices.removeDevice(slot)
+            if (!devices.removeDevice(slot)) {
+                return@withDevices Output.error("not_confirmed", "no relay confirmed the removal of $slot")
+            }
             Output.emit(render(devices.state.value) + mapOf("removed" to slot))
             0
         } ?: disabled()
