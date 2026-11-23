@@ -213,6 +213,79 @@ class PushGuardTest {
     }
 
     @Test
+    fun aStartingBranchTheRemoteHasOnlyMovesForward() {
+        git("checkout", "-q", "-b", "release/1.x")
+        git("push", "-q", "origin", "release/1.x")
+        val rules = rules()
+        assertEquals(setOf("release/1.x"), rules.scope?.forwardBranches)
+        assertTrue("release/1.x" !in rules.scope!!.ownBranches)
+        commit("ahead")
+        assertEquals(0, asTheSession(rules.environment, "git push -q origin release/1.x"), "a forward push of the starting branch must go")
+        val pushed = originHas("refs/heads/release/1.x")
+        git("reset", "-q", "--hard", "HEAD~1")
+        commit("rewritten")
+        assertTrue(asTheSession(rules.environment, "git push -q -f origin release/1.x") != 0, "rewrote a branch the remote already had")
+        assertEquals(pushed, originHas("refs/heads/release/1.x"))
+    }
+
+    @Test
+    fun aStartingBranchNewToTheRemotesIsTheSessions() {
+        git("checkout", "-q", "-b", "fix/x")
+        val rules = rules()
+        assertEquals(setOf("fix/x"), rules.scope?.ownBranches)
+        commit("work")
+        assertEquals(0, asTheSession(rules.environment, "git push -q origin fix/x"))
+        git("commit", "-q", "--amend", "-m", "amended")
+        assertEquals(0, asTheSession(rules.environment, "git push -q -f origin fix/x"), "the session's new branch may be rewritten")
+    }
+
+    @Test
+    fun aRespawnKeepsTheScopeTheSessionStartedWith() {
+        val saved = HashMap<String, PushScope>()
+        val store =
+            object : PushScopeStore {
+                override fun load(sessionId: String) = saved[sessionId]
+
+                override fun save(
+                    sessionId: String,
+                    scope: PushScope,
+                ) {
+                    saved[sessionId] = scope
+                }
+            }
+        val first = PushGuard.scopeFor(null, "s-1", store) { PushGuard.capture(listOf(dir)) }
+        assertEquals(setOf("agent/w"), first.ownBranches)
+        // The session moves to a release branch the remote has; then the app restarts and resumes it.
+        commit("release work")
+        git("push", "-q", "origin", "HEAD:refs/heads/release/1.x")
+        git("checkout", "-q", "-b", "release/1.x")
+        assertEquals(first, PushGuard.scopeFor(first, "s-1", store) { error("captured again on a respawn") })
+        val again = PushGuard.scopeFor(null, "s-1", store) { error("captured again after a restart") }
+        assertEquals(first, again)
+        val rules = PushGuard.environment(emptyMap(), listOf(dir), again)
+        assumeTrue("git has no config hooks", rules.guarded)
+        commit("more")
+        assertTrue(asTheSession(rules.environment, "git push -q origin release/1.x") != 0, "pushed a branch outside the scope the session started with")
+        git("commit", "-q", "--amend", "-m", "amended")
+        assertTrue(asTheSession(rules.environment, "git push -q -f origin release/1.x") != 0, "rewrote a branch outside the scope")
+    }
+
+    @Test
+    fun theGitTheGuardWasCheckedWithComesFirstOnThePath() {
+        val rules = rules()
+        val git = assertNotNull(PushGuard.gitOnPath(System.getenv("PATH")))
+        assertEquals(listOf(git.parentFile), rules.pathFirst)
+        val a = File(root, "a").apply { mkdirs() }
+        val b = File(root, "b").apply { mkdirs() }
+        File(b, "git").apply {
+            writeText("#!/bin/sh\n")
+            check(setExecutable(true))
+        }
+        assertEquals(File(b, "git"), PushGuard.gitOnPath(listOf(a, b).joinToString(File.pathSeparator)))
+        assertEquals(null, PushGuard.gitOnPath(a.path))
+    }
+
+    @Test
     fun theGuardFallsBackToNoPushWithoutARepositoryToAsk() {
         val rules = PushGuard.environment(emptyMap(), emptyList(), PushScope(emptySet(), emptySet(), emptySet()))
         assertEquals(false, rules.guarded)

@@ -99,6 +99,7 @@ class ClaudeBackend(
                 disallowedTools = options.blockedCommands.map { "Bash($it:*)" },
                 commandGuard = options.commandGuard,
                 environment = options.environment,
+                pathFirst = options.pathFirst,
                 sdkMcpServers = options.hostTools,
                 strictMcpConfig = options.onlyHostTools,
                 tools = if (options.onlyHostTools) emptyList() else null,

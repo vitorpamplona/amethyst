@@ -130,6 +130,8 @@ data class AgentPreferences(
      * it reopens in it after a restart. Sessions in the default mode have no entry.
      */
     val sessionModes: Map<String, String> = emptyMap(),
+    /** What each guarded session may push ([PushScope]), by session id, as it first started: later starts reuse it. */
+    val pushScopes: Map<String, PushScope> = emptyMap(),
 )
 
 /** How often workspaces cloned a repository, and when last: what the repository picker leads with. */

@@ -194,6 +194,8 @@ class ClaudeChat internal constructor(
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
     /** The agent workstream [File] is in, if any: its pushes are guarded, to the branches made for it. */
     private val workstreamOf: (File) -> AgentWorkspace? = { null },
+    /** The push scope each session first started with, kept across app restarts. */
+    private val pushScopes: PushScopeStore = PushScopeStore.NONE,
     /** What to tell the agent about the folder it works in (a workstream's clones), if anything. */
     private val folderBrief: (File) -> String? = { null },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
@@ -253,6 +255,10 @@ class ClaudeChat internal constructor(
     /** Set by [kill]: a process that finishes starting afterwards is stopped at once. */
     @Volatile
     private var killed = false
+
+    /** What the session may push ([PushGuard]), fixed at its first start and reused by every later one. */
+    @Volatile
+    private var pushScope: PushScope? = null
 
     /** Set while a new workstream's repositories clone ([waitFor]): the agent starts in the folder once they are in. */
     @Volatile
@@ -593,13 +599,17 @@ class ClaudeChat internal constructor(
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
             // A nostr checkout, or an agent workstream: its pushes go through the guard, merging is the user's.
+            // A session once guarded stays so, with the scope it first started with, whatever the folder has become.
             val workstream = workstreamOf(workDir)
-            val nostrCheckout = workstream != null || (current.git ?: inspectGit(workDir))?.repo != null
+            val known = pushScope ?: current.sessionId?.let { id -> withContext(Dispatchers.IO) { pushScopes.load(id) } }
+            val nostrCheckout = known != null || workstream != null || (current.git ?: inspectGit(workDir))?.repo != null
             val pushRules =
                 if (nostrCheckout) {
                     withContext(Dispatchers.IO) {
                         val repos = repos(workDir)
-                        PushGuard.environment(repos = repos, scope = PushGuard.capture(repos, workstream))
+                        val scope = PushGuard.scopeFor(known, current.sessionId, pushScopes) { PushGuard.capture(repos, workstream) }
+                        pushScope = scope
+                        PushGuard.environment(repos = repos, scope = scope)
                     }
                 } else {
                     null
@@ -619,6 +629,8 @@ class ClaudeChat internal constructor(
                     commandGuard = if (nostrCheckout) SessionCommandGuard else null,
                     // The SDK too, so a Gradle build the agent runs finds it as a terminal's would.
                     environment = AndroidSdk.environment() + pushRules?.environment.orEmpty(),
+                    // The git the guard was checked with, ahead of an older one the agent's PATH may find first.
+                    pathFirst = pushRules?.pathFirst.orEmpty(),
                     hostTools = mcpServers,
                     instructions = listOfNotNull(folderBrief(workDir), pushRules?.note).joinToString("\n\n").ifEmpty { null },
                 ).let(launchOptions)
@@ -673,6 +685,8 @@ class ClaudeChat internal constructor(
                 val isNewSession = _state.value.sessionId != event.sessionId
                 // The copy has its own session now: later starts resume it, not the source.
                 if (isNewSession) forkOnStart = false
+                // The new session (or the copy) keeps the push scope it started with, for its later starts.
+                if (isNewSession) pushScope?.let { kept -> scope.launch(Dispatchers.IO) { pushScopes.save(event.sessionId, kept) } }
                 publish {
                     // A turn the agent started by itself (a background subagent reported back).
                     val ownTurn = it.status == ChatStatus.READY

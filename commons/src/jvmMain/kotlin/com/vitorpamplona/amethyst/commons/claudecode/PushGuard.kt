@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
- * What an agent session may push, fixed by the app when the session starts and never read
+ * What an agent session may push, fixed by the app when the session first starts and never read
  * from the repository at push time, where the session could change it.
  */
+@Serializable
 data class PushScope(
     /** The URLs of the remotes the repositories had when the session started, push URLs as git rewrites them. */
     val urls: Set<String>,
@@ -33,7 +35,32 @@ data class PushScope(
     val ownBranches: Set<String>,
     /** Branches no push may touch: each remote's default branch, `main` and `master`. */
     val protectedBranches: Set<String>,
+    /** Branches the session started on that a remote already had: they only move forward. */
+    val forwardBranches: Set<String> = emptySet(),
 )
+
+/** Where the scope each session first started with is kept, by session id, so its later starts reuse it. */
+interface PushScopeStore {
+    fun load(sessionId: String): PushScope?
+
+    fun save(
+        sessionId: String,
+        scope: PushScope,
+    )
+
+    companion object {
+        /** Keeps nothing: every start captures again. */
+        val NONE =
+            object : PushScopeStore {
+                override fun load(sessionId: String): PushScope? = null
+
+                override fun save(
+                    sessionId: String,
+                    scope: PushScope,
+                ) {}
+            }
+    }
+}
 
 /**
  * The guard on an agent session's pushes: a pre-push hook that git runs from config passed in
@@ -42,7 +69,8 @@ data class PushScope(
  * A push goes only to a URL in [PushScope.urls], never to a `nostr://` remote (git-remote-nostr
  * signs and publishes the repository's state, or a proposal, with the user's key). Of what it
  * pushes, only branches pass: the session's own ([PushScope.ownBranches]) in any way but
- * deletion, and new branches named [AGENT_BRANCH_PREFIXES] only forward. Tags, deletions, other
+ * deletion, the branch it started on that a remote already had ([PushScope.forwardBranches])
+ * and branches named [AGENT_BRANCH_PREFIXES] only forward. Tags, deletions, other
  * refs, other branches and the protected ones are refused.
  *
  * The script is the hook's command itself, with the scope written into it: there is no file
@@ -63,6 +91,8 @@ object PushGuard {
         /** False when git couldn't run the guard and every push is blocked ([ClaudeChat.noPushEnvironment]). */
         val guarded: Boolean,
         val scope: PushScope? = null,
+        /** Folders to put first on the session's PATH: the git the guard was checked with. */
+        val pathFirst: List<File> = emptyList(),
     ) {
         /** Appended to the session's instructions, so the agent knows what it may push before it tries. */
         val note: String
@@ -72,9 +102,11 @@ object PushGuard {
                         "Leave the push to the user; don't work around it."
                 } else {
                     val own = scope?.ownBranches.orEmpty()
+                    val forward = scope?.forwardBranches.orEmpty()
                     buildString {
                         append("Pushes in this session go through Amethyst's push guard. ")
                         if (own.isNotEmpty()) append("You may push your branch (${own.joinToString(", ")}), force included, ")
+                        if (forward.isNotEmpty()) append("push ${forward.joinToString(", ")} forward only, ")
                         append("or a new branch named ${AGENT_BRANCH_PREFIXES.joinToString(" or ") { "$it…" }} (forward only), ")
                         append("to the remotes this session started with. ")
                         append("Tags, deleting branches, the default branch, other branches and nostr:// remotes are the user's; don't work around the guard.")
@@ -83,12 +115,38 @@ object PushGuard {
     }
 
     /**
+     * The scope of the session [sessionId]: the one this chat already started it with
+     * ([remembered]), else the one [store] kept from its first start, else a new [capture], kept
+     * for its later starts. A respawn (resume, crash, idle close, app restart) never captures
+     * again, so a branch the session moved to after it started never becomes its own.
+     */
+    fun scopeFor(
+        remembered: PushScope?,
+        sessionId: String?,
+        store: PushScopeStore,
+        capture: () -> PushScope,
+    ): PushScope {
+        if (remembered != null) return remembered
+        sessionId?.let { store.load(it) }?.let { return it }
+        return capture().also { scope -> sessionId?.let { store.save(it, scope) } }
+    }
+
+    /** The `git` a process started with [path] runs: the first one on it, as the app's own git calls find it. */
+    fun gitOnPath(path: String?): File? =
+        path
+            .orEmpty()
+            .split(File.pathSeparator)
+            .filter { it.isNotBlank() }
+            .firstNotNullOfOrNull { dir -> listOf("git", "git.exe").map { File(dir, it) }.firstOrNull { it.isFile && it.canExecute() } }
+
+    /**
      * What [repos] may push to now: their remotes' URLs, and their branches. In a workstream
-     * ([workspace]) the branches are the ones the app made for it; elsewhere, each repository's
-     * branch as the session starts on it, unless it is a default branch. A branch not named like
-     * an agent's is checked with the remotes themselves (`ls-remote --symref`), not their copy
-     * in the clone, which a past session could have repointed; when no remote answers, it is not
-     * the session's. Blocks on git, and on the network for that check: call it off the main thread.
+     * ([workspace]) the branches are the ones the app made for it, new to the remotes. Elsewhere,
+     * each repository's branch as the session starts on it, unless it is a default branch: the
+     * session's own when no remote has it yet, else it only moves forward. The remotes are asked
+     * themselves (`ls-remote --symref`), not their copy in the clone, which a past session could
+     * have repointed; when none answers, the branch only moves forward. Blocks on git, and on the
+     * network for that check: call it off the main thread, once per session ([scopeFor]).
      */
     fun capture(
         repos: List<File>,
@@ -111,40 +169,59 @@ object PushGuard {
                 lines(GitWorkspace.git(repo, "symbolic-ref", "-q", "--short", "refs/remotes/$remote/HEAD")).forEach { protected += it.removePrefix("$remote/") }
             }
         }
-        val own =
-            if (workspace != null) {
-                workspace.repos.map { it.branch }.filter { it !in protected }
-            } else {
-                repos.mapNotNull { repo ->
-                    val branch = lines(GitWorkspace.git(repo, "branch", "--show-current")).firstOrNull() ?: return@mapNotNull null
-                    if (branch in protected) return@mapNotNull null
-                    if (AGENT_BRANCH_PREFIXES.any { branch.startsWith(it) }) return@mapNotNull branch
-                    val defaults = remoteDefaults(repo, remoteUrls[repo].orEmpty()) ?: return@mapNotNull null
-                    protected += defaults
-                    branch.takeIf { it !in defaults }
-                }
+        if (workspace != null) {
+            return PushScope(
+                urls,
+                workspace.repos
+                    .map { it.branch }
+                    .filter { it !in protected }
+                    .toSet(),
+                protected,
+            )
+        }
+        val own = LinkedHashSet<String>()
+        val forward = LinkedHashSet<String>()
+        for (repo in repos) {
+            val branch = lines(GitWorkspace.git(repo, "branch", "--show-current")).firstOrNull() ?: continue
+            if (branch in protected) continue
+            val seen = askRemotes(repo, remoteUrls[repo].orEmpty(), branch)
+            if (seen != null) protected += seen.defaults
+            when {
+                branch in protected -> {}
+                seen != null && !seen.hasBranch -> own += branch
+                else -> forward += branch
             }
-        return PushScope(urls, own.toSet(), protected)
+        }
+        return PushScope(urls, own, protected, forward - own)
     }
 
-    /** The default branch each git server among [urls] names, or null when none answered. */
-    private fun remoteDefaults(
+    /** What the git servers said: their default branches, and whether any has the branch asked about. */
+    private class RemoteAnswer(
+        val defaults: Set<String>,
+        val hasBranch: Boolean,
+    )
+
+    /** Asks each git server among [urls] for its default branch and for [branch]; null when none answered. */
+    private fun askRemotes(
         repo: File,
         urls: List<String>,
-    ): Set<String>? {
+        branch: String,
+    ): RemoteAnswer? {
         // A nostr remote's helper would go to relays; its pushes are refused anyway.
         val servers = urls.filter { !it.startsWith("nostr:") }
         var answered = false
+        var hasBranch = false
         val defaults = HashSet<String>()
         for (url in servers) {
-            val result = GitWorkspace.run(repo, listOf("git", "ls-remote", "--symref", "--", url, "HEAD"), timeoutSeconds = 20, noLoginWindow = true)
+            val result = GitWorkspace.run(repo, listOf("git", "ls-remote", "--symref", "--", url, "HEAD", "refs/heads/$branch"), timeoutSeconds = 20, noLoginWindow = true)
             if (result.code != 0) continue
             answered = true
             result.output.lines().forEach { line ->
                 SYMREF_HEAD.matchEntire(line.trim())?.let { defaults += it.groupValues[1] }
+                if (line.substringAfter('\t', "").trim() == "refs/heads/$branch") hasBranch = true
             }
         }
-        return if (answered) defaults else null
+        return if (answered) RemoteAnswer(defaults, hasBranch) else null
     }
 
     private val SYMREF_HEAD = Regex("ref: refs/heads/(\\S+)\\s+HEAD")
@@ -186,7 +263,7 @@ object PushGuard {
                     put("GIT_CONFIG_VALUE_${n + i}", value)
                 }
             }
-        return PushRules(environment, guarded = true, scope = scope)
+        return PushRules(environment, guarded = true, scope = scope, pathFirst = listOfNotNull(gitOnPath(System.getenv("PATH"))?.parentFile))
     }
 
     const val GUARD_NAME = "amethyst-push-guard"
@@ -220,6 +297,7 @@ object PushGuard {
         |# Amethyst's guard on an agent session's pushes (PushGuard): what it may push was fixed when it started.
         |urls=${shellList(scope.urls)}
         |own=${shellList(scope.ownBranches)}
+        |forward=${shellList(scope.forwardBranches)}
         |protected=${shellList(scope.protectedBranches)}
         |url="${'$'}2"
         |listed() { printf '%s\n' "${'$'}2" | grep -Fxq -- "${'$'}1"; }
@@ -251,6 +329,10 @@ object PushGuard {
         |        refuse "${'$'}branch: the default branch only moves by the user's hand"
         |    elif listed "${'$'}branch" "${'$'}own"; then
         |        :
+        |    elif listed "${'$'}branch" "${'$'}forward"; then
+        |        if [ "${'$'}remote_oid" != "${'$'}zero" ] && ! git merge-base --is-ancestor "${'$'}remote_oid" "${'$'}local_oid" 2>/dev/null; then
+        |            refuse "${'$'}branch: the remote had it before this session started, so it only moves forward"
+        |        fi
         |    else
         |        case "${'$'}branch" in
         |        ${AGENT_BRANCH_PREFIXES.joinToString(" | ") { "$it*" }})

@@ -151,6 +151,15 @@ interface AgentConnection {
     fun stderrTail(): String
 }
 
+/** Puts [dirs] first on this environment's PATH, keeping the rest in order without repeats. */
+fun MutableMap<String, String>.putPathFirst(dirs: List<File>) {
+    if (dirs.isEmpty()) return
+    val key = keys.firstOrNull { it.equals("PATH", ignoreCase = true) } ?: "PATH"
+    val first = dirs.map { it.path }
+    val rest = this[key].orEmpty().split(File.pathSeparator).filter { it.isNotBlank() && it !in first }
+    this[key] = (first.distinct() + rest).joinToString(File.pathSeparator)
+}
+
 /**
  * Checks a shell command an agent is about to run. A pure function of the command line, called
  * on the agent's I/O thread: it must not block.
@@ -172,6 +181,8 @@ data class AgentStartOptions(
     val permissionMode: PermissionMode = PermissionMode.DEFAULT,
     /** Extra environment for the process and the commands it runs. */
     val environment: Map<String, String> = emptyMap(),
+    /** Folders put first on the PATH of the process and the commands it runs, ahead of [environment]'s. */
+    val pathFirst: List<File> = emptyList(),
     /** Tools the host app runs itself. */
     val hostTools: List<HostToolServer> = emptyList(),
     /** Only [hostTools]: no files, shell or web, and none of the user's own tool servers. */
