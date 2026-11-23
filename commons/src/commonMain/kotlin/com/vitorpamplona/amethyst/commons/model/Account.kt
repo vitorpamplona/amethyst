@@ -4592,7 +4592,8 @@ class Account(
                     scope.launch(Dispatchers.IO) {
                         while (isActive) {
                             delay(MARMOT_DEVICE_GROUP_TICK_MS)
-                            devices.tick()
+                            // One failed tick (a store read, the trust record) must not stop the timers.
+                            runCatchingCancellable { devices.tick() }.onFailure { Log.w("Account", "Marmot device-group tick failed", it) }
                         }
                     }
                 }
