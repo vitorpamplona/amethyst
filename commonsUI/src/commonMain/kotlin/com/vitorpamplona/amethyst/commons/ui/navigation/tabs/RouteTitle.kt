@@ -42,6 +42,9 @@ import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
+import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_new
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
@@ -131,6 +134,9 @@ fun routeTitle(
         is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
         // The screen's own title; spelled out, its name read "Nip46 connected apps".
         is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
+        // The screens' own titles; spelled out, they read "Marmot devices settings".
+        is Route.MarmotDevicesSettings -> return stringRes(Res.string.marmot_devices_title)
+        is Route.MarmotDeviceLink -> return stringRes(if (route.asNewDevice) Res.string.marmot_link_title_new else Res.string.marmot_link_title_existing)
         else -> {}
     }
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }
