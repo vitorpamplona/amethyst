@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.NewDeviceLinkStat
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.SasSymbol
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -47,7 +48,7 @@ import java.io.File
  */
 object MarmotDevicesCommands {
     private const val USAGE =
-        "marmot devices <enable|disable|list|sync|link|remove|chats|pin|mute|archive|sign-in>\n" +
+        "marmot devices <enable|disable|list|sync|link|remove|chats|read|pin|mute|archive|sign-in>\n" +
             "  enable | disable                          the device-group switch (off by default)\n" +
             "  list                                      this account's devices and any link in progress\n" +
             "  sync [--timeout SECS]                     one pass: pairing, group catch-up, device-group duties\n" +
@@ -55,6 +56,7 @@ object MarmotDevicesCommands {
             "  link --existing [--label L] [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
             "  remove SLOT                               remove a linked device\n" +
             "  chats                                     each Marmot chat's pin, mute, archive and synced read position\n" +
+            "  read GROUP                                share that this account read GROUP up to its newest message\n" +
             "  pin|mute|archive GROUP [on|off]           change one, on every linked device\n" +
             "  sign-in SLOT mine|not-me                  answer a sign-in: That was me, or This wasn't me"
 
@@ -75,6 +77,7 @@ object MarmotDevicesCommands {
                     "link" to { rest -> link(dataDir, rest) },
                     "remove" to { rest -> remove(dataDir, rest) },
                     "chats" to { rest -> chats(dataDir, rest) },
+                    "read" to { rest -> markRead(dataDir, rest) },
                     "pin" to { rest -> chatSetting(dataDir, MarmotChatSetting.PIN, rest) },
                     "mute" to { rest -> chatSetting(dataDir, MarmotChatSetting.MUTE, rest) },
                     "archive" to { rest -> chatSetting(dataDir, MarmotChatSetting.ARCHIVE, rest) },
@@ -205,6 +208,34 @@ object MarmotDevicesCommands {
                     "read_id" to read?.id,
                 )
             }
+    }
+
+    /** `read GROUP`: the read position of the newest message this device holds, sent to the linked devices. */
+    private suspend fun markRead(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val group = args.positionalOrNull(0) ?: return Output.error("bad_args", "marmot devices read GROUP")
+        args.rejectUnknown()
+        return withDevices(dataDir) { ctx, devices ->
+            ctx.syncIncoming(4_000)
+            val id = ctx.resolveGroupId(group)
+            if (!ctx.marmot.isMember(id)) return@withDevices Output.error("not_member", "not a member of $group")
+            val epochs = ctx.marmot.storedEpochs(id)
+            // An edit names no read position (`account-sync.md` "Read positions").
+            val newest =
+                ctx.marmot
+                    .loadStoredMessages(id)
+                    .mapNotNull { Event.fromJsonOrNull(it) }
+                    .filter { it.kind != 1009 }
+                    .mapNotNull { e -> epochs[e.id]?.let { Triple(it, e.createdAt, e.id) } }
+                    .maxWithOrNull(compareBy<Triple<Long, Long, String>> { it.first }.thenBy { it.second }.thenBy { it.third })
+                    ?: return@withDevices Output.error("no_messages", "no message of $group to mark read")
+            devices.markRead(id, newest.first, newest.second, newest.third)
+            Output.emit(mapOf("group_id" to id, "epoch" to newest.first, "read_at" to newest.second, "read_id" to newest.third))
+            0
+        } ?: disabled()
     }
 
     /** `pin|mute|archive GROUP [on|off]`: here, and on the account's linked devices when this one is linked. */

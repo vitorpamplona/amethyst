@@ -165,6 +165,19 @@ class DeviceGroupAttentionTest {
         val s = MarmotDevicesSnapshot(signIns = listOf(new, earlier, rejected))
         assertEquals(new, attention(s).signIn)
         assertNull(attention(s, signIns = setOf(a)).signIn)
+        // "That was me" earlier: never asked again.
+        assertNull(attention(s.copy(signIns = listOf(new.copy(confirmed = true)))).signIn)
+    }
+
+    @Test
+    fun aDeviceAskingToLinkIsNotAlsoASignInToAskAbout() {
+        val new = SignIn(a, 200, SignInClass.NEW_SIGN_IN)
+        val linking = MarmotDevicesSnapshot(prompts = listOf(DeviceLinkPrompt("1".repeat(32), a, 100, DeviceLinkPrompt.State.Linking)), signIns = listOf(new))
+        assertNull(attention(linking).signIn)
+        assertNull(attention(MarmotDevicesSnapshot(signIns = listOf(new)), linkScreenOpen = true).signIn)
+        // Once that request ended, the sign-in is asked about after all.
+        val ended = linking.copy(prompts = listOf(DeviceLinkPrompt("1".repeat(32), a, 100, DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.CANCELLED))))
+        assertEquals(new, attention(ended).signIn)
     }
 
     @Test

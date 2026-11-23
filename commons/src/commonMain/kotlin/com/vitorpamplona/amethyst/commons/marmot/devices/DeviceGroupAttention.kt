@@ -49,6 +49,9 @@ data class DeviceGroupAttention(
     companion object {
         val NONE = DeviceGroupAttention()
 
+        /** A request that ended, or whose device is linked now. */
+        fun isFinished(state: DeviceLinkPrompt.State): Boolean = state is DeviceLinkPrompt.State.Ended
+
         /** The prompt states that still need this user; the rest are done or in hand. */
         fun needsAnswer(state: DeviceLinkPrompt.State): Boolean =
             state is DeviceLinkPrompt.State.Preparing ||
@@ -74,10 +77,17 @@ data class DeviceGroupAttention(
                         .filter { it.sessionId !in dismissedRequests && needsAnswer(it.state) }
                         .maxByOrNull { it.requestedAt }
                 }
+            // A device asking to link signed in too: while a link screen is open or its request is
+            // pending, it is that request, not a sign-in to ask about.
+            val linking = snapshot.prompts.mapNotNullTo(HashSet()) { p -> p.slot.takeIf { !DeviceGroupAttention.isFinished(p.state) } }
             val signIn =
-                snapshot.signIns
-                    .filter { it.kind == MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN && !it.confirmed && it.slot !in dismissedSignIns }
-                    .maxByOrNull { it.publishedAt }
+                if (linkScreenOpen) {
+                    null
+                } else {
+                    snapshot.signIns
+                        .filter { it.kind == MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN && !it.confirmed && it.slot !in dismissedSignIns && it.slot !in linking }
+                        .maxByOrNull { it.publishedAt }
+                }
             return DeviceGroupAttention(linkRequest = request, signIn = signIn)
         }
     }

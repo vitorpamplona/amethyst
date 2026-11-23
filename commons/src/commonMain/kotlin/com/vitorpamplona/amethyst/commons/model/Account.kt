@@ -1330,6 +1330,7 @@ class Account(
                 keyPackageRelays = { marmot.keyPackagePublishRelays() },
                 signInAnswers = marmotLocalBlobs,
                 onSmallState = { state -> marmot.applyMarmotSmallState(state) },
+                onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
             )
         }
 

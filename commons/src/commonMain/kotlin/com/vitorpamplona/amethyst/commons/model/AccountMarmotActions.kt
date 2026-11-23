@@ -91,7 +91,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -727,6 +729,17 @@ class AccountMarmotActions(
             account.localRelayList.flow,
             account.broadcastRelayList.flow,
         ) { _, _, _, _, _ -> keyPackageRelayChoice() }.distinctUntilChanged()
+
+    /**
+     * Chats a sibling added this device to: the account accepted them on that device, so they are
+     * Known here too; each gets its name and members and its subscription, as a Welcome's would.
+     */
+    fun onMarmotChatsJoinedBySibling(chats: List<HexKey>) {
+        chats.forEach { id ->
+            account.marmotGroupList.markAsKnown(id)
+            syncAndNotify(id)
+        }
+    }
 
     /** Each KeyPackage this session published and the relays that accepted it (see [MarmotKeyPackageReach]). */
     private val keyPackageReach = MarmotKeyPackageReach()

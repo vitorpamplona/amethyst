@@ -92,6 +92,12 @@ class MarmotDevices(
      * [start] and after every ingest that moved the device group, outside the lock.
      */
     private val onSmallState: (suspend (AccountSyncState) -> Unit)? = null,
+    /**
+     * Chats a sibling added this device to (a sibling Welcome joined them inside the device group,
+     * so no ingest result reported them): the app names, subscribes and lists them. Called outside
+     * the lock.
+     */
+    private val onChatsJoined: (suspend (List<HexKey>) -> Unit)? = null,
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
@@ -164,8 +170,20 @@ class MarmotDevices(
             if (announce) runStep("start broadcast") { publishAll(groups.broadcastDue(clock(), start = true)) }
             loadSignInAnswers()
             queueSmallState()
+            knownChats.addAll(manager.activeGroupIds())
             refreshState()
         }
+
+    /** The groups this device was in at the last look, so a chat a sibling Welcome joined is noticed. */
+    private val knownChats = HashSet<HexKey>()
+
+    private fun queueJoinedChats() {
+        val joined = manager.activeGroupIds().filter { knownChats.add(it) && !isDeviceGroup(it) }
+        if (joined.isEmpty()) return
+        // The small state already held for these chats was skipped while they were missing.
+        lastSmallState = null
+        onChatsJoined?.let { show -> sends.add { show(joined) } }
+    }
 
     // =============================================================================================
     // Inbound
@@ -243,6 +261,7 @@ class MarmotDevices(
             publishAll(outbox)
             if (deviceGroupMoved) {
                 runStep("first commit") { firstCommitIfJoined() }
+                queueJoinedChats()
                 queueSmallState()
             }
             refreshState()
@@ -933,7 +952,8 @@ class MarmotDevices(
                 newDevice = newDeviceState,
                 prompts = prompts.map { (id, p) -> DeviceLinkPrompt(id, p.keyPackage?.dTag(), p.requestedAt, p.state) },
                 remainingChats = if (t.trustsDeviceGroup) groups.remainingExpectedChats() else null,
-                signIns = lastSignIns,
+                // A sign-in whose device has linked since the last check is one of the devices now.
+                signIns = lastSignIns.filter { signIn -> devices.none { it.slot == signIn.slot } },
             )
     }
 

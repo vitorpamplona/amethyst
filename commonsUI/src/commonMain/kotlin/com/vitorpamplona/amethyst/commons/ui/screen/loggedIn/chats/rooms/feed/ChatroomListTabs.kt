@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -32,6 +33,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,6 +112,11 @@ fun MessagesTabHeader(
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    // The Archived tab goes away when the last chat is unarchived, maybe while it is the one shown.
+    val lastTab = tabs.size - 1
+    LaunchedEffect(lastTab) {
+        if (pagerState.currentPage > lastTab) pagerState.scrollToPage(lastTab)
+    }
 
     Box(Modifier.fillMaxWidth()) {
         // A primary row draws its indicator under the label only, not across the whole half of the
@@ -118,8 +125,9 @@ fun MessagesTabHeader(
         PrimaryTabRow(
             containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
-            selectedTabIndex = pagerState.currentPage,
-            modifier = TabRowHeight,
+            selectedTabIndex = pagerState.currentPage.coerceAtMost(lastTab),
+            // A third tab reaches the menu button at the end: keep its label clear of it.
+            modifier = if (tabs.size > 2) TabRowHeight.padding(end = Size40dp) else TabRowHeight,
         ) {
             tabs.forEachIndexed { index, tab ->
                 Tab(
@@ -169,9 +177,10 @@ fun MessagesPager(
         userScrollEnabled = true,
         modifier = modifier.zonedDrawerSwipeIfModal(pagerState, nav),
     ) { page ->
+        val tab = tabs.getOrNull(page) ?: return@HorizontalPager
         ChatroomListFeedView(
-            feedContentState = tabs[page].feedContentState,
-            scrollStateKey = tabs[page].scrollStateKey,
+            feedContentState = tab.feedContentState,
+            scrollStateKey = tab.scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
         )
