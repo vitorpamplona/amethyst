@@ -199,7 +199,14 @@ class MarmotChatSettings(
     private suspend fun save() {
         val target = blobs ?: return
         val s = _state.value
-        val stored = Stored(s.pinned.sorted(), s.muted.toSortedMap(), s.archived.sorted())
+        val stored =
+            Stored(
+                s.pinned.sorted(),
+                s.muted.entries
+                    .sortedBy { it.key }
+                    .associate { it.key to it.value },
+                s.archived.sorted(),
+            )
         try {
             mutex.withLock { target.save(RECORD, json.encodeToString(Stored.serializer(), stored).encodeToByteArray()) }
         } catch (e: Exception) {
