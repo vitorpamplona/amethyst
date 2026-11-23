@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -233,8 +232,8 @@ private fun SubagentBody(
     cwd: String,
     running: Boolean,
 ) {
-    val uriHandler = LocalUriHandler.current
-    val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
+    // No navigation down here: a PR number still opens on GitHub, a word hashtag does nothing.
+    val onLink = rememberChatLinks(nav = null)
     val style = rememberChatMarkdownStyle()
     val codeChips = rememberChatCodeChips()
     call.subagent.forEach { item ->

@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.GitHubPullRequests
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
@@ -595,6 +596,41 @@ fun ClaudeCodeChatScreen(
     }
 }
 
+/** How a hashtag link reaches the chat from the Markdown renderer. */
+private const val HASHTAG_LINK = "nostr:hashtag?id="
+
+/**
+ * Where a link in the chat goes. The Markdown renderer makes every `#word` a Nostr hashtag link,
+ * which the system can't open: in an agent's reply, `#4888` is the repository's pull request or
+ * issue, opened on GitHub when the workstream has one GitHub repository; any other hashtag opens
+ * its feed in the app, where there is [nav] to go to it.
+ */
+@Composable
+internal fun rememberChatLinks(nav: INav?): (String) -> Unit {
+    val uriHandler = LocalUriHandler.current
+    val workspace = LocalWorkspace.current
+    return remember(uriHandler, nav, workspace) {
+        { url: String ->
+            if (!url.startsWith(HASHTAG_LINK)) {
+                uriHandler.openUri(url)
+            } else {
+                val tag = url.removePrefix(HASHTAG_LINK)
+                val gitHub =
+                    workspace
+                        ?.repos
+                        ?.mapNotNull { GitHubPullRequests.gitHubRepo(it.url) }
+                        ?.distinct()
+                        ?.singleOrNull()
+                when {
+                    // GitHub sends /issues/N on to the pull request when N is one.
+                    gitHub != null && tag.isNotEmpty() && tag.all { it.isDigit() } -> uriHandler.openUri("https://github.com/$gitHub/issues/$tag")
+                    nav != null -> nav.nav(Route.Hashtag(tag))
+                }
+            }
+        }
+    }
+}
+
 /** The workspace the chat works in, for the parts of the screen that name where it works. */
 internal val LocalWorkspace = staticCompositionLocalOf<AgentWorkspace?> { null }
 
@@ -757,8 +793,7 @@ private fun Messages(
                 ?.index
         if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last, TO_ITS_END)
     }
-    val uriHandler = LocalUriHandler.current
-    val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
+    val onLink = rememberChatLinks(nav)
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
     val replyBlocks = rememberChatBlocks()
