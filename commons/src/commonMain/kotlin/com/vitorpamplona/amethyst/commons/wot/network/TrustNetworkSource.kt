@@ -26,14 +26,12 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkC
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkNews
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkPartial
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.catchUpTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.trustNetworkNewer
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
 
 /**
  * Where a sync gets the provider's cards. The apps use [RelayTrustNetworkSource]; tests pass a
@@ -46,12 +44,6 @@ interface TrustNetworkSource {
 
 /** One sync's connection to the [ServiceProviderTag]'s relay. See `TrustNetworkSync.kt`. */
 interface TrustNetworkConnection {
-    /** Whether the provider published anything since [header]'s cursor (one small REQ). */
-    suspend fun news(
-        provider: ServiceProviderTag,
-        header: TrustNetworkHeader,
-    ): TrustNetworkNews
-
     /** A cold download, resumed from [resumeFrom] when given; [checkpoint] saves its progress. */
     suspend fun download(
         provider: ServiceProviderTag,
@@ -60,14 +52,17 @@ interface TrustNetworkConnection {
         resumeFrom: TrustNetworkPartial? = null,
     ): TrustNetworkSyncResult
 
-    suspend fun update(
+    /**
+     * The hourly catch-up: a REQ for what is newer than [header]'s cursor. Null when nothing is;
+     * [ids] (the id column, MBs) is read only when something is.
+     */
+    suspend fun catchUp(
         provider: ServiceProviderTag,
         header: TrustNetworkHeader,
         index: TrustNetworkIndex,
-        ids: TrustNetworkIds,
-        news: TrustNetworkNews?,
         progress: TrustNetworkProgress,
-    ): TrustNetworkSyncResult
+        ids: suspend () -> TrustNetworkIds,
+    ): TrustNetworkSyncResult?
 
     /** Null when the relay cannot reconcile (no NIP-77). */
     suspend fun reconcile(
@@ -99,11 +94,6 @@ class RelayTrustNetworkSource(
     private class RelayConnection(
         val client: INostrClient,
     ) : TrustNetworkConnection {
-        override suspend fun news(
-            provider: ServiceProviderTag,
-            header: TrustNetworkHeader,
-        ) = client.trustNetworkNewer(header, provider.relayUrl)
-
         override suspend fun download(
             provider: ServiceProviderTag,
             progress: TrustNetworkProgress,
@@ -111,14 +101,13 @@ class RelayTrustNetworkSource(
             resumeFrom: TrustNetworkPartial?,
         ) = client.downloadTrustNetwork(provider.pubkey, provider.relayUrl, resumeFrom = resumeFrom, checkpoint = checkpoint, progress = progress)
 
-        override suspend fun update(
+        override suspend fun catchUp(
             provider: ServiceProviderTag,
             header: TrustNetworkHeader,
             index: TrustNetworkIndex,
-            ids: TrustNetworkIds,
-            news: TrustNetworkNews?,
             progress: TrustNetworkProgress,
-        ) = client.updateTrustNetwork(header, index, ids, provider.relayUrl, progress, knownNews = news)
+            ids: suspend () -> TrustNetworkIds,
+        ) = client.catchUpTrustNetwork(header, index, provider.relayUrl, progress, ids)
 
         override suspend fun reconcile(
             provider: ServiceProviderTag,

@@ -77,7 +77,6 @@ class TrustNetworkSyncTest {
     @Test
     fun updatesOnlyFetchWhatChanged() =
         runBlocking {
-            // Recent, as a run still reaching the relay is: younger than TRUST_NETWORK_SETTLE_SECS.
             val batchTime = TimeUtils.now() - 2 * 3600
             val subjects = List(300) { hex() }
             val batch = subjects.mapIndexed { i, s -> card(s, 1 + i % 90, batchTime) }
@@ -99,16 +98,18 @@ class TrustNetworkSyncTest {
                 assertEquals(200, cold.index.size)
                 assertEquals(batchTime, cold.header.syncCursor)
 
-                // The rest of the batch lands with the same created_at as the cursor.
+                // The rest of the batch lands with the same created_at as the cursor: no REQ past
+                // the cursor sees it, so the update finds nothing and the weekly reconcile gets it.
                 publish(batch.drop(200))
-                val caughtUp = client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay)
+                assertTrue(client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay).unchanged)
+                val caughtUp = assertNotNull(client.reconcileTrustNetwork(cold.header, cold.index, cold.ids, relay))
                 assertTrue(caughtUp.complete)
                 assertEquals(300, caughtUp.index.size)
                 assertEquals(100, caughtUp.received, "only the missing part of the batch is fetched")
                 assertEquals(300, caughtUp.header.heldAtCursor, "the whole batch shares the cursor's second")
                 assertFalse(client.trustNetworkNews(caughtUp.header, relay).any, "the header alone answers 'anything new?'")
 
-                // Nothing new: the REQ and the hour's count end the update without downloading.
+                // Nothing new: one REQ ends the update without reading anything else.
                 val idle = client.updateTrustNetwork(caughtUp.header, caughtUp.index, caughtUp.ids, relay)
                 assertTrue(idle.unchanged, idle.detail)
                 assertEquals(0, idle.received)
@@ -129,20 +130,23 @@ class TrustNetworkSyncTest {
                 assertNull(changed.index.rankOf(subjects[1]))
                 assertNull(changed.index.rankOf(subjects[2]))
                 assertEquals(298, changed.index.size, "one re-ranked, one tombstoned, one deleted")
-                assertEquals(1, changed.ids.tombstones, "the rank-0 card is kept as a tombstone")
+                // The rank-0 card is a tombstone, and so is the deleted card: the relay applied the
+                // kind 5, but only the weekly reconcile learns it no longer serves the card.
+                assertEquals(2, changed.ids.tombstones, "the rank-0 card and the deleted one")
                 assertEquals(later, changed.header.syncCursor)
                 // The update window reaches an hour before the cursor: the earlier batch is in it too.
-                assertEquals(299, changed.header.heldAtCursor, "every card held in the update window")
+                assertEquals(300, changed.header.heldAtCursor, "every card held in the update window")
                 assertEquals(0, changed.header.heldAfterCursor, "the re-rank and the rank-0 card are at the cursor, none after it")
 
                 // The tombstone keeps the pre-check exact: nothing new again.
                 val idleAgain = client.updateTrustNetwork(changed.header, changed.index, changed.ids, relay)
                 assertTrue(idleAgain.unchanged)
 
-                // The full check agrees with the relay and fetches nothing (rank-0 cards included).
+                // The full check fetches nothing (rank-0 cards included) and drops the deleted card.
                 val full = assertNotNull(client.reconcileTrustNetwork(idleAgain.header, idleAgain.index, idleAgain.ids, relay))
                 assertTrue(full.complete)
-                assertEquals(0, full.received, "nothing to fetch, nothing gone: ${full.detail}")
+                assertEquals("need 0, gone 1", full.detail)
+                assertEquals(1, full.ids.tombstones)
                 assertEquals(298, full.index.size)
 
                 // The counts said something changed, but the REQ finds nothing and the counts then
@@ -188,12 +192,11 @@ class TrustNetworkSyncTest {
 
     /**
      * What a provider publishing new cards costs an update: REQs for what is newer than the
-     * cursor and one COUNT of the cursor's hour, no negentropy. Only a card the REQ cannot see
-     * (one that reached the relay late, at the cursor's own second) makes the count disagree and
-     * a reconcile of that hour run.
+     * cursor, no COUNT and no negentropy. A card no REQ past the cursor can see (one that reached
+     * the relay late, at the cursor's own second) is the weekly reconcile's.
      */
     @Test
-    fun newCardsArriveByReqAndOnlyALateCardReconciles() =
+    fun newCardsArriveByReqAndALateCardWaitsForTheWeeklyCheck() =
         runBlocking {
             val batchTime = TimeUtils.now() - 2 * 3600
             val subjects = List(300) { hex() }
@@ -237,16 +240,22 @@ class TrustNetworkSyncTest {
                 assertEquals(0, negOpens.get(), "a REQ caught up, no reconcile: ${updated.detail}")
                 assertTrue(client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay).unchanged, "the counts agree afterwards")
 
-                // A card signed at the cursor's second that reaches the relay only now: no REQ
-                // past the cursor sees it, the counts do, and the reconcile fetches it.
-                val late = hex()
-                publish(listOf(card(late, 30, later)))
+                // An on-demand provider's next card: one more REQ, still no negentropy.
                 negOpens.set(0)
-                val caught = client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay)
-                assertTrue(caught.complete, caught.detail)
-                assertEquals(30, caught.index.rankOf(late), caught.detail)
-                assertTrue(negOpens.get() > 0, "the counts disagreed after the REQ: ${caught.detail}")
-                assertTrue(caught.detail!!.endsWith("need 1, gone 0"), caught.detail)
+                val single = hex()
+                publish(listOf(card(single, 60, later + 300)))
+                val next = client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay)
+                assertEquals(60, next.index.rankOf(single), next.detail)
+                assertEquals(0, negOpens.get(), next.detail)
+
+                // A card signed at the cursor's second that reaches the relay only now: no REQ
+                // past the cursor sees it, so it waits for the weekly reconcile.
+                val late = hex()
+                publish(listOf(card(late, 30, later + 300)))
+                assertTrue(client.updateTrustNetwork(next.header, next.index, next.ids, relay).unchanged)
+                val weekly = assertNotNull(client.reconcileTrustNetwork(next.header, next.index, next.ids, relay))
+                assertEquals(30, weekly.index.rankOf(late), weekly.detail)
+                assertEquals("need 1, gone 0", weekly.detail)
             } finally {
                 client.close()
                 server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)

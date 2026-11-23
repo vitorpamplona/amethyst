@@ -124,7 +124,7 @@ class TrustNetworkSchedulingTest {
         /** Thrown by the download, as a phone's OutOfMemoryError was. */
         var downloadError: Throwable? = null
 
-        /** The update finds nothing new but learns the held counts (a version 3 file lacks one). */
+        /** The catch-up finds nothing new but learns the held counts (a version 3 file lacks one). */
         var updateLearnsCounts = false
 
         /** Cards each download was asked to resume from (0 = from scratch). */
@@ -133,15 +133,6 @@ class TrustNetworkSchedulingTest {
         override suspend fun <T> connect(block: suspend (TrustNetworkConnection) -> T): T =
             block(
                 object : TrustNetworkConnection {
-                    override suspend fun news(
-                        provider: ServiceProviderTag,
-                        header: TrustNetworkHeader,
-                    ): TrustNetworkNews {
-                        calls.add("news")
-                        newsGate?.await()
-                        return news
-                    }
-
                     override suspend fun download(
                         provider: ServiceProviderTag,
                         progress: TrustNetworkProgress,
@@ -162,17 +153,20 @@ class TrustNetworkSchedulingTest {
                         }
                     }
 
-                    override suspend fun update(
+                    override suspend fun catchUp(
                         provider: ServiceProviderTag,
                         header: TrustNetworkHeader,
                         index: TrustNetworkIndex,
-                        ids: TrustNetworkIds,
-                        news: TrustNetworkNews?,
                         progress: TrustNetworkProgress,
-                    ): TrustNetworkSyncResult {
+                        ids: suspend () -> TrustNetworkIds,
+                    ): TrustNetworkSyncResult? {
                         calls.add("update")
+                        newsGate?.await()
+                        if (!news.any) return null
+                        val held = ids()
+                        calls.add("ids")
                         if (updateLearnsCounts) {
-                            return TrustNetworkSyncResult(header.copy(lastUpdate = now, heldAfterCursor = 0), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+                            return TrustNetworkSyncResult(header.copy(lastUpdate = now, heldAfterCursor = 0), index, held, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
                         }
                         return result(provider)
                     }
@@ -342,7 +336,7 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
-    fun nothingNewAnswersFromTheCountsAlone() =
+    fun nothingNewAnswersFromTheReqAlone() =
         runBlocking {
             writeIndex(providerA)
             val before = store.readIndex()!!.index
@@ -353,7 +347,7 @@ class TrustNetworkSchedulingTest {
 
             val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
             assertIs<TrustNetworkOutcome.Unchanged>(run.outcome)
-            assertEquals(listOf("news"), source.calls.toList(), "no update, no ids read")
+            assertEquals(listOf("update"), source.calls.toList(), "the REQ found nothing: no ids read")
             assertSame(loaded, wot.network.value!!.index, "the same index: feeds keyed on it do not rebuild")
             assertEquals(
                 now,
@@ -364,7 +358,7 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
-    fun newsRunsTheUpdateWithoutCountingAgain() =
+    fun aCatchUpThatBringsCardsReadsTheIds() =
         runBlocking {
             writeIndex(providerA)
             val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
@@ -372,7 +366,7 @@ class TrustNetworkSchedulingTest {
             wot.awaitReady()
             val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
             assertIs<TrustNetworkOutcome.Applied>(run.outcome)
-            assertEquals(listOf("news", "update"), source.calls.toList())
+            assertEquals(listOf("update", "ids"), source.calls.toList())
         }
 
     @Test
@@ -445,7 +439,7 @@ class TrustNetworkSchedulingTest {
             metered = false
             wot.syncIfStale()
             withTimeout(5_000) { while ("update" !in source.calls) delay(10) }
-            assertEquals(listOf("news", "update"), source.calls.toList())
+            assertEquals(listOf("update", "ids"), source.calls.toList())
         }
 
     @Test
@@ -485,7 +479,7 @@ class TrustNetworkSchedulingTest {
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), first)
             wot.awaitReady()
             wot.awaitIdle()
-            assertEquals(listOf("news"), first.calls.toList(), "one REQ, nothing new")
+            assertEquals(listOf("update"), first.calls.toList(), "one REQ, nothing new")
             assertEquals(now, store.readIndex()?.header?.lastUpdate, "the time is on disk, the index untouched")
 
             // A new process: the hourly gate holds, nothing runs.
@@ -617,7 +611,7 @@ class TrustNetworkSchedulingTest {
             val run = scope.async { wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE) }
             withTimeout(5_000) { while (source.calls.isEmpty()) delay(10) }
 
-            // The user removes the provider while the counts are on their way.
+            // The user removes the provider while the REQ is on its way.
             rankProvider.value = ResolvedProvider(null)
             withTimeout(5_000) { wot.network.first { it == null } }
             gate.complete(Unit)

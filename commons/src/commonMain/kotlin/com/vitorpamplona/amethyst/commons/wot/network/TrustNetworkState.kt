@@ -489,24 +489,38 @@ class TrustNetworkState(
         mayDownload: Boolean,
         allowMetered: Boolean,
     ): TrustNetworkRun {
-        // The common case: nothing changed. One REQ answers it before the ids file (12 MB at
-        // 300k) is read, and only its time is written (see TrustNetworkStore.UPDATE_FILE).
-        val news = if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null) relay.news(provider, current.header) else null
-        if (current != null && news != null && !news.any) {
-            return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
-        }
+        val progress = TrustNetworkProgress { verified, expected -> _status.update { it.copy(verified = verified, expected = expected) } }
 
-        // An update or full check needs the id column saved with this index; without it,
-        // download again.
-        val ids = if (current != null) withContext(Dispatchers.IO) { store.readIds(current.header) }?.takeIf { it.size == current.index.size } else null
-        val kind = if (current == null || ids == null) TrustNetworkSyncStatus.Kind.DOWNLOAD else requested
+        // The hourly catch-up: a REQ for what is newer than the cursor. The common case is that
+        // nothing is: then the ids file (12 MB at 300k) is never read, and only the update's time
+        // is written (see TrustNetworkStore.UPDATE_FILE).
+        val caughtUp =
+            if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null) {
+                try {
+                    relay.catchUp(provider, current.header, current.index, progress) { readIds(store, current) ?: throw IdsMissing() }
+                        ?: return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
+                } catch (e: IdsMissing) {
+                    null
+                }
+            } else {
+                null
+            }
+
+        // A full check needs the id column saved with this index; without it (or when the
+        // catch-up found it gone), download again.
+        val ids = if (current != null && requested == TrustNetworkSyncStatus.Kind.FULL_CHECK) readIds(store, current) else null
+        val kind =
+            when {
+                caughtUp != null -> requested
+                current == null || ids == null -> TrustNetworkSyncStatus.Kind.DOWNLOAD
+                else -> requested
+            }
         if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && !mayDownload) return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
 
         _status.value = TrustNetworkSyncStatus(running = kind)
-        val progress = TrustNetworkProgress { verified, expected -> _status.update { it.copy(verified = verified, expected = expected) } }
 
         val result =
-            when (kind) {
+            caughtUp ?: when (kind) {
                 TrustNetworkSyncStatus.Kind.DOWNLOAD -> {
                     // A download cut off earlier (the process killed, the relay gone) resumes from
                     // its last checkpoint: at a phone's pace, the whole download is minutes.
@@ -516,9 +530,8 @@ class TrustNetworkState(
                     if (allowMetered) download() else unlessMetered(download) ?: return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
                 }
 
-                TrustNetworkSyncStatus.Kind.UPDATE -> {
-                    relay.update(provider, current!!.header, current.index, ids!!, news, progress)
-                }
+                // Reached only with the catch-up's result in hand.
+                TrustNetworkSyncStatus.Kind.UPDATE -> error("the catch-up returned no result")
 
                 TrustNetworkSyncStatus.Kind.FULL_CHECK -> {
                     fullCheck(relay, provider, current!!, ids!!, mayDownload, progress)
@@ -637,6 +650,15 @@ class TrustNetworkState(
             TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
 
+    /** The id column saved with [current]'s index, or null when it is not on disk (any more). */
+    private suspend fun readIds(
+        store: TrustNetworkStore,
+        current: TrustNetwork,
+    ): TrustNetworkIds? = withContext(Dispatchers.IO) { store.readIds(current.header) }?.takeIf { it.size == current.index.size }
+
+    /** The catch-up needed the id column and it was gone: the sync downloads instead. */
+    private class IdsMissing : Exception()
+
     /** Losing this only costs one more update after the next process start. */
     private suspend fun saveLastUpdate(header: TrustNetworkHeader) {
         try {
@@ -683,7 +705,7 @@ class TrustNetworkState(
         }
         // Keep current with a cheap update, and try the check again in a day rather than on
         // every app open (a relay that ignores NIP-77 makes each attempt wait out a timeout).
-        val updated = relay.update(provider, current.header, current.index, ids, null, progress)
+        val updated = relay.catchUp(provider, current.header, current.index, progress) { ids } ?: TrustNetworkSyncResult(current.header.copy(lastUpdate = clock()), current.index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new", unchanged = true)
         val retryAt = clock() - FULL_CHECK_EVERY_SECS + FULL_CHECK_RETRY_SECS
         return TrustNetworkSyncResult(
             header = updated.header.copy(lastFullCheck = maxOf(updated.header.lastFullCheck, retryAt)),
