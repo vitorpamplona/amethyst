@@ -157,9 +157,9 @@ data class SavedPullRequest(
 data class AgentPreferences(
     /**
      * Gives disk back on its own: frees a workspace's clones a day after its pull requests are all
-     * merged or closed, and when its last session is archived. Off until the user turns it on.
+     * merged or closed, and when its last session is archived.
      */
-    val autoCleanup: Boolean = false,
+    val autoCleanup: Boolean = true,
     /** Sessions archived by the user, for agents that keep no archive of their own. */
     val archivedSessions: Set<String> = emptySet(),
     /**

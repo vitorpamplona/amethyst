@@ -704,11 +704,10 @@ class AgentWorkspacesTest {
 
     @Test
     fun preferencesAreKept() {
-        // Off until the user turns it on: it deletes clones.
-        assertFalse(workspaces.preferences().autoCleanup)
-        workspaces.updatePreferences { it.copy(autoCleanup = true, archivedSessions = setOf("s1")) }
+        assertTrue(workspaces.preferences().autoCleanup)
+        workspaces.updatePreferences { it.copy(autoCleanup = false, archivedSessions = setOf("s1")) }
         val reread = AgentWorkspaces(File(tmp, "agents")).preferences()
-        assertTrue(reread.autoCleanup)
+        assertFalse(reread.autoCleanup)
         assertEquals(setOf("s1"), reread.archivedSessions)
     }
 
