@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
@@ -216,6 +217,37 @@ class ConcordModerationHideTest {
             // Delivered again (a backfill page, a re-projection): still hidden.
             session.ingest(wrap(target, general(c), member))
             assertNull(cache.getNoteIfExists(target.id)?.event)
+        }
+
+    /**
+     * The hide this app sends as a moderator ([ConcordActions.buildChannelModerationHide], behind
+     * "Delete for everyone"): before it, a MANAGE_MESSAGES holder in Amethyst had no way to hide
+     * anyone's message, only to honor other clients' hides.
+     */
+    @Test
+    fun theAppsOwnModeratorHideIsHonored() =
+        runTest {
+            val cache = EventCache()
+            val c = ConcordCommunityFactory.create(owner, "Guild", createdAt = 1L, relays = listOf("wss://r.example"))
+            val session = sessionInto(cache, c)
+            val controlWraps = c.genesisWraps.toMutableList()
+            val roleId = ByteArray(32) { 7 }
+            val role = RoleEntity(name = "Mod", position = 5, permissions = ConcordPermissions.of(ConcordPermissions.MANAGE_MESSAGES).toWire())
+            controlWraps += ConcordModeration.defineRole(owner, c.controlPlane, c.communityId, roleId, role, ConcordActions.controlEditions(controlWraps, c.controlPlane), 2L, owner = c.ownerPubKey)
+            controlWraps += ConcordModeration.grant(owner, c.controlPlane, c.communityId, mod.pubKey, listOf(roleId.toHexKey()), ConcordActions.controlEditions(controlWraps, c.controlPlane), 3L, owner = c.ownerPubKey)
+            controlWraps.forEach { session.ingest(it) }
+            val state = assertNotNull(session.state.value)
+            val citation = AuthorityCitations.forActor(state.authority, mod.pubKey)
+            assertTrue(state.honorsModerationHide(mod.pubKey, member.pubKey, c.generalChannelIdHex, citation), "what canHideConcordMessage asks")
+            assertFalse(state.honorsModerationHide(member.pubKey, mod.pubKey, c.generalChannelIdHex, AuthorityCitations.forActor(state.authority, member.pubKey)))
+
+            val target = message(c, "rude", 10L)
+            session.ingest(wrap(target, general(c), member))
+            assertTrue(inChannel(cache, c, target.id))
+
+            session.ingest(ConcordActions.buildChannelModerationHide(mod, general(c), c.generalChannelIdHex, c.rootEpoch, listOf(target), citation, 20L))
+            assertTrue(session.isHiddenByModeration(c.generalChannelIdHex, target.id, member.pubKey))
+            assertFalse(inChannel(cache, c, target.id))
         }
 
     @Test

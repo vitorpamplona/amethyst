@@ -1630,6 +1630,52 @@ class AccountConcordActions(
     }
 
     /**
+     * True when this account may hide [note], someone else's Concord message, for every member as a
+     * moderator (CORD-03 §3): the fold would honor our hide over its author, so we hold
+     * MANAGE_MESSAGES there (or own the community) and strictly outrank them.
+     */
+    fun canHideConcordMessage(note: Note): Boolean {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        val me = account.signer.pubKey
+        if (target.pubKey == me || !account.isWriteable()) return false
+        val state =
+            account.concordSessions
+                .sessionFor(channel.channelId.communityId)
+                ?.state
+                ?.value ?: return false
+        if (state.dissolved) return false
+        return state.honorsModerationHide(me, target.pubKey, channel.channelId.channelId, AuthorityCitations.forActor(state.authority, me))
+    }
+
+    /**
+     * Hides [notes], other members' messages in [channel], for every member (CORD-03 §3): a sealed
+     * kind 5 on the plane that carried each one, citing the Grant that lets us ([buildChannelModerationHide]).
+     * Only the notes [canHideConcordMessage] allows are named. Returns false when none was sent.
+     */
+    suspend fun hideConcordMessages(
+        channel: ConcordChannel,
+        notes: List<Note>,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(channel.channelId.communityId) ?: return false
+        val authority = session.state.value?.authority ?: return false
+        val channelIdHex = channel.channelId.channelId
+        val targets = notes.filter { canHideConcordMessage(it) }.mapNotNull { it.event }.distinctBy { it.id }
+        if (targets.isEmpty()) return false
+        val citation = AuthorityCitations.forActor(authority, account.signer.pubKey)
+        val current = session.currentChannelPlane(channelIdHex)
+        val byPlane = targets.groupBy { target -> target.tags.concordEpoch()?.let { session.channelPlaneFor(channelIdHex, it) } ?: current }
+        var sent = false
+        for ((plane, onPlane) in byPlane) {
+            if (plane == null) continue
+            val wrap = ConcordActions.buildChannelModerationHide(account.signer, plane.key, channelIdHex, plane.epoch, onPlane, citation, TimeUtils.now())
+            publishConcordWrap(session.entry, wrap)
+            sent = true
+        }
+        return sent
+    }
+
+    /**
      * Publish a typing heartbeat (kind-23311, ephemeral 21059) to a Concord channel — call at
      * most every few seconds while composing. Not folded locally (we never show our own typing);
      * ephemeral, so relays broadcast but never store it.
