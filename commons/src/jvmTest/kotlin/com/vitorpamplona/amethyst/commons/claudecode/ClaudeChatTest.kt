@@ -58,11 +58,18 @@ class ClaudeChatTest {
         val written = CopyOnWriteArrayList<String>()
         override val lines: Flow<String> = out.receiveAsFlow()
 
+        /** Turns end in an API error, the way Claude Code reports one (a success subtype, is_error). */
+        @Volatile var failTurns = false
+
         override suspend fun write(line: String) {
             written.add(line)
             when {
                 line.contains("\"subtype\":\"initialize\"") -> reply(line, "{}")
                 line.contains("\"subtype\":\"rename_session\"") -> reply(line, "{}")
+                line.contains("\"type\":\"user\"") && failTurns -> {
+                    emit("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-1","model":"claude-haiku-5-5","permissionMode":"default","tools":["Write"]}""")
+                    emit("""{"type":"result","subtype":"success","is_error":true,"result":"API Error: 529 Overloaded","session_id":"s-1"}""")
+                }
                 line.contains("\"type\":\"user\"") -> {
                     emit("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-1","model":"claude-haiku-5-5","permissionMode":"default","tools":["Write"]}""")
                     emit("""{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Writ"}},"session_id":"s-1","parent_tool_use_id":null}""")
@@ -218,6 +225,31 @@ class ClaudeChatTest {
             )
             advanceUntilIdle()
             assertTrue(chat.state.value.unseenFinish)
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aFailedTurnSaysSoAndTryAgainSendsTheMessageAgain() =
+        runTest {
+            val cli = ScriptedCli().apply { failTurns = true }
+            val chat = newChat(cli)
+
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            val failed = chat.state.value
+            assertEquals(ChatStatus.READY, failed.status)
+            assertTrue(failed.lastTurnFailed)
+            val notice = failed.items.last() as ChatItem.Notice
+            assertEquals(NoticeKind.TURN_FAILED, notice.kind)
+            assertEquals("API Error: 529 Overloaded", notice.detail)
+
+            cli.failTurns = false
+            chat.retry()
+            advanceUntilIdle()
+            val again = chat.state.value
+            assertFalse(again.lastTurnFailed)
+            assertEquals(ChatStatus.NEEDS_APPROVAL, again.status)
+            assertEquals(listOf("Create hello.txt", "Create hello.txt"), again.items.filterIsInstance<ChatItem.UserText>().map { it.text })
             chatScope.cancel()
         }
 

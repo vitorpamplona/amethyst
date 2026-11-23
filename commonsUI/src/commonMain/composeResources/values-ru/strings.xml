@@ -10214,8 +10214,6 @@
     <string name="claude_code_tool_from_line">со строки %1$d</string>
     <string name="claude_code_tool_search_in">%1$s в %2$s</string>
     <string name="claude_code_waiting_approval">Ожидает вашего одобрения</string>
-    <string name="claude_code_permission_edit">%1$s хочет изменить %2$s</string>
-    <string name="claude_code_permission_create">%1$s хочет создать %2$s</string>
     <string name="claude_code_permission_run">%1$s хочет выполнить команду</string>
     <string name="claude_code_permission_keys">Enter — разрешить · Esc — отклонить</string>
     <string name="claude_code_permission_keys_deny">Enter или Esc — отклонить</string>
@@ -10235,7 +10233,6 @@
         <item quantity="other">Архив · %1$d сессии</item>
     </plurals>
     <string name="claude_code_status_in_terminal">открыта в терминале</string>
-    <string name="claude_code_intro_title">Новая сессия в %1$s</string>
     <string name="claude_code_starter_explain">Объясни, как устроен этот репозиторий</string>
     <string name="claude_code_starter_tests">Запусти тесты и исправь то, что падает</string>
     <string name="claude_code_starter_review_branch">Проведи ревью изменений этой ветки относительно %1$s</string>
@@ -10923,7 +10920,6 @@
     <string name="claude_code_workstream_name">Название</string>
     <string name="claude_code_workstream_name_hint">Для чего оно</string>
     <string name="claude_code_workstream_name_desc">Даёт имя папке и ветке направления работы.</string>
-    <string name="claude_code_workstream_go">Начать</string>
     <string name="claude_code_advanced">Дополнительно</string>
     <string name="claude_code_where">Где</string>
     <string name="claude_code_where_clones">Свежие клоны</string>

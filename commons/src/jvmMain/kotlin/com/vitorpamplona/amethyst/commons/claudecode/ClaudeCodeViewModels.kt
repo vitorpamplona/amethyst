@@ -374,6 +374,9 @@ class ClaudeCodeChatViewModel(
 
     fun send(text: String) = chat?.send(text)
 
+    /** Sends the last message again, after a turn that failed. */
+    fun retry() = chat?.retry()
+
     /** Sends [text] with images already read for sending, and the files they came from. */
     fun send(
         text: String,

@@ -105,4 +105,17 @@ class AgentTasksTest {
         assertEquals(listOf("Read", "Fix"), tasks.map { it.subject })
         assertFalse(tasks.hasOpenWork)
     }
+
+    @Test
+    fun taskToolCallsStayOutOfTheChatRows() {
+        val transcript = ChatTranscript()
+        transcript.run("b1", "Bash", """{"command":"ls"}""", "a.txt")
+        transcript.run("t1", "TaskCreate", """{"subject":"Plan","description":"d"}""", "Task #1 created successfully: Plan")
+        transcript.run("b2", "Bash", """{"command":"pwd"}""", "/w")
+        transcript.run("t2", "TaskUpdate", """{"taskId":"1","status":"completed"}""", "Updated task #1 status")
+        val rows = transcript.snapshot().toChatRows()
+        // The two commands fold into one group, with nothing of the plan between or in it.
+        val group = rows.single() as ChatRow.ToolGroup
+        assertEquals(listOf("b1", "b2"), group.calls.map { it.toolUseId })
+    }
 }

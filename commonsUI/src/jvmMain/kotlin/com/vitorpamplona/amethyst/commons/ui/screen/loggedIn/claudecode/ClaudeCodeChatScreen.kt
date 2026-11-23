@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
@@ -138,6 +139,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
+import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_dirs
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_mode
@@ -160,7 +162,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_fail
 import com.vitorpamplona.amethyst.commons.resources.claude_code_folder_gone
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork_hint
-import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_question
 import com.vitorpamplona.amethyst.commons.resources.claude_code_loading_history
 import com.vitorpamplona.amethyst.commons.resources.claude_code_message_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_accept_edits
@@ -177,8 +179,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_interrupt
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_process_ended
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_turn_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_readonly
-import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create
-import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_edit
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_change_this
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_this
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
@@ -225,6 +227,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
 import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done
 import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done_after
 import com.vitorpamplona.amethyst.commons.resources.claude_code_turn_done_terminal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_files
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
@@ -233,6 +236,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtitle
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_cloning
 import com.vitorpamplona.amethyst.commons.resources.rename
+import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -405,14 +409,17 @@ fun ClaudeCodeChatScreen(
                     }
                     val git = state.git
                     if (git != null && git.hasChanges) {
-                        // A narrow window keeps the title readable: the counts alone stand for the button.
+                        // A narrow window keeps the title readable: an icon stands for the word. The
+                        // counts are the whole branch's, so the tooltip says what they compare with.
                         val wide = LocalScreenLayout.current.isLargeScreen
-                        HoverTooltip(stringRes(Res.string.claude_code_changes)) {
+                        HoverTooltip(changesTooltip(git)) {
                             TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
                                 if (wide) {
                                     Text(stringRes(Res.string.claude_code_changes))
-                                    Spacer(Modifier.width(6.dp))
+                                } else {
+                                    Icon(MaterialSymbols.Commit, contentDescription = stringRes(Res.string.claude_code_changes), modifier = Modifier.size(18.dp))
                                 }
+                                Spacer(Modifier.width(6.dp))
                                 DiffStat(git.insertions, git.deletions)
                             }
                         }
@@ -481,6 +488,7 @@ fun ClaudeCodeChatScreen(
                             composerText.setTextAndPlaceCursorAtEnd(it)
                             composerFocus.requestFocus()
                         },
+                        onRetry = if (openElsewhere || folderGone) null else ({ viewModel.retry() }),
                     )
 
                     state.pendingPermissions.firstOrNull()?.let { request ->
@@ -495,7 +503,9 @@ fun ClaudeCodeChatScreen(
                     }
 
                     // The agent's plan stays in view while there is work left in it.
-                    if (state.tasks.hasOpenWork) AgentTaskList(state.tasks, working = state.isBusy, chatKey = chat.key)
+                    if (state.tasks.hasOpenWork) {
+                        AgentTaskList(state.tasks, working = state.isBusy, approvalPending = state.pendingPermissions.isNotEmpty(), chatKey = chat.key)
+                    }
 
                     if (folderGone && !state.isBusy) {
                         // A removed worktree: its history reads, but there is nowhere to continue it.
@@ -606,6 +616,15 @@ internal fun ChatTopBar(
     )
 }
 
+/** What the header's counts cover: "Changes · 3 commits ahead of origin/main · 2 files not committed". */
+@Composable
+private fun changesTooltip(git: GitWorkInfo): String =
+    listOfNotNull(
+        stringRes(Res.string.claude_code_changes),
+        git.base?.takeIf { git.ahead > 0 }?.let { pluralStringRes(Res.plurals.claude_code_ahead_of, git.ahead, git.ahead, it) },
+        git.uncommitted.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_uncommitted_files, it, it) },
+    ).joinToString(" · ")
+
 @Composable
 internal fun DiffStat(
     insertions: Int,
@@ -632,6 +651,8 @@ private fun Messages(
     modifier: Modifier,
     onEditFrom: ((ChatItem.UserText) -> Unit)?,
     onStarter: (String) -> Unit,
+    /** Sends the last message again; offered on a failure that ends the chat. */
+    onRetry: (() -> Unit)?,
 ) {
     // Kept per chat while the app runs: leaving the chat and coming back finds the same place.
     val listState = rememberForeverLazyListState("ClaudeCodeChat-$chatKey")
@@ -679,7 +700,7 @@ private fun Messages(
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
-    val codeChips = rememberChatCodeChips()
+    val replyBlocks = rememberChatBlocks()
     // One selection for the whole chat: any part of any message, or a run across several, copies.
     SelectionContainer(modifier.fillMaxWidth()) {
         LazyColumn(
@@ -707,14 +728,14 @@ private fun Messages(
                                 Box(Modifier.padding(top = GroupGap - PartGap)) {
                                     UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
                                 }
-                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = codeChips)
+                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = replyBlocks)
                             is ChatItem.ToolCall ->
                                 if (ToolKind.of(item.name) == ToolKind.EDIT) {
                                     FileChangeRow(item, state.cwd, turnRunning)
                                 } else {
                                     ToolCallRow(item, state.cwd, turnRunning)
                                 }
-                            is ChatItem.Notice -> NoticeRow(item)
+                            is ChatItem.Notice -> NoticeRow(item, onRetry = onRetry?.takeIf { !busy && item === state.items.lastOrNull() })
                         }
                 }
             }
@@ -954,13 +975,16 @@ private fun EmptyChatIntro(
             Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
         }
         val workspace = LocalWorkspace.current
-        Text(stringRes(Res.string.claude_code_intro_title, workspace?.title ?: subtitle(state, null)), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        // The header already names the repository and branch: the intro asks, and says where.
+        Text(stringRes(Res.string.claude_code_intro_question, LocalAgentName.current), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
             listOf(ToolViews.relative(state.cwd, File(System.getProperty("user.home"))).let { if (it != state.cwd) "~/$it" else it }, modeLabel(state.permissionMode)).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.grayText,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.size(4.dp))
         val starters =
@@ -1101,14 +1125,15 @@ private fun ToolGroupRow(
                     ToolKind.WEB -> Res.plurals.claude_code_tool_group_web
                     ToolKind.AGENT -> Res.plurals.claude_code_tool_group_agent
                     ToolKind.SETTINGS -> Res.plurals.claude_code_tool_group_settings
-                    ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
+                    // Left out of the rows (the task card shows them); counted as other tools if one slips in.
+                    ToolKind.PLAN, ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
                 },
                 n,
                 n,
             )
         }
     val failed = group.failed.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_tool_group_failed, it, it) }
-    val summary = (parts + listOfNotNull(failed)).joinToString(" · ").replaceFirstChar { it.uppercase() }
+    val summary = parts.joinToString(" · ").replaceFirstChar { it.uppercase() }
     Column {
         ToolLine(
             symbol = ToolKind.of(group.calls.first().name).symbol(),
@@ -1116,6 +1141,8 @@ private fun ToolGroupRow(
             running = turnRunning && group.running != null,
             error = false,
             expanded = expanded,
+            // In red, so a failure folded into the line still shows.
+            errorSuffix = failed,
             onClick = { expanded = !expanded },
         )
         group.running?.takeIf { turnRunning && !expanded }?.let { running ->
@@ -1157,15 +1184,28 @@ internal fun CodeBlock(
 }
 
 @Composable
-private fun NoticeRow(notice: ChatItem.Notice) {
-    val text =
-        when (notice.kind) {
-            NoticeKind.INTERRUPTED -> stringRes(Res.string.claude_code_notice_interrupted)
-            NoticeKind.TURN_FAILED -> stringRes(Res.string.claude_code_notice_turn_failed) + (notice.detail?.let { ": $it" } ?: "")
-            NoticeKind.PROCESS_ENDED -> stringRes(Res.string.claude_code_notice_process_ended, LocalAgentName.current)
-            NoticeKind.CLI_NOTE -> notice.detail ?: ""
-        }
-    CenterNote(text)
+private fun NoticeRow(
+    notice: ChatItem.Notice,
+    /** Offered on the failure that ends the chat: sends the last message again. */
+    onRetry: (() -> Unit)?,
+) {
+    when (notice.kind) {
+        NoticeKind.INTERRUPTED -> CenterNote(stringRes(Res.string.claude_code_notice_interrupted))
+        NoticeKind.CLI_NOTE -> CenterNote(notice.detail ?: "")
+        // An error is not a stop the user chose: it says so in the error's colors, and offers a retry.
+        NoticeKind.TURN_FAILED, NoticeKind.PROCESS_ENDED ->
+            Banner(
+                text =
+                    if (notice.kind == NoticeKind.TURN_FAILED) {
+                        stringRes(Res.string.claude_code_notice_turn_failed) + (notice.detail?.let { ": $it" } ?: "")
+                    } else {
+                        stringRes(Res.string.claude_code_notice_process_ended, LocalAgentName.current)
+                    },
+                action = onRetry?.let { stringRes(Res.string.try_again) },
+                modifier = Modifier,
+                onAction = { onRetry?.invoke() },
+            )
+    }
 }
 
 @Composable
@@ -1249,7 +1289,8 @@ private fun PermissionCard(
                     when {
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
                         view is ToolView.FileChange ->
-                            stringRes(if (view.newFile) Res.string.claude_code_permission_create else Res.string.claude_code_permission_edit, LocalAgentName.current, view.path)
+                            // The diff below names the file: the question needn't say it again.
+                            stringRes(if (view.newFile) Res.string.claude_code_permission_create_this else Res.string.claude_code_permission_change_this, LocalAgentName.current)
                         view is ToolView.Command -> stringRes(Res.string.claude_code_permission_run, LocalAgentName.current)
                         else -> stringRes(Res.string.claude_code_permission_title, LocalAgentName.current, request.displayName ?: request.toolName)
                     },

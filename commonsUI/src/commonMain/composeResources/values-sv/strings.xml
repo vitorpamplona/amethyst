@@ -9847,8 +9847,6 @@
     <string name="claude_code_tool_from_line">från rad %1$d</string>
     <string name="claude_code_tool_search_in">%1$s i %2$s</string>
     <string name="claude_code_waiting_approval">Väntar på ditt godkännande</string>
-    <string name="claude_code_permission_edit">%1$s vill ändra %2$s</string>
-    <string name="claude_code_permission_create">%1$s vill skapa %2$s</string>
     <string name="claude_code_permission_run">%1$s vill köra ett kommando</string>
     <string name="claude_code_permission_keys">Enter tillåter · Esc nekar</string>
     <string name="claude_code_permission_keys_deny">Enter eller Esc nekar</string>
@@ -9862,7 +9860,6 @@
     <string name="claude_code_notify_finished">%1$s är klar</string>
     <string name="claude_code_section_needs_you">Behöver dig</string>
     <string name="claude_code_status_in_terminal">öppen i en terminal</string>
-    <string name="claude_code_intro_title">Ny session i %1$s</string>
     <string name="claude_code_starter_explain">Förklara hur det här repositoryt är organiserat</string>
     <string name="claude_code_starter_tests">Kör testerna och åtgärda det som misslyckas</string>
     <string name="claude_code_starter_review_branch">Granska den här grenens ändringar mot %1$s</string>
@@ -9962,7 +9959,6 @@
     <string name="claude_code_workstream_name">Namn</string>
     <string name="claude_code_workstream_name_hint">Vad det är till för</string>
     <string name="claude_code_workstream_name_desc">Namnger arbetsspårets mapp och gren.</string>
-    <string name="claude_code_workstream_go">Starta</string>
     <string name="claude_code_advanced">Avancerat</string>
     <string name="claude_code_where">Var</string>
     <string name="claude_code_where_clones">Nya kloner</string>

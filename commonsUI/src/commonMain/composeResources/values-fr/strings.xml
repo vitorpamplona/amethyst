@@ -9524,8 +9524,6 @@
     <string name="claude_code_tool_from_line">à partir de la ligne %1$d</string>
     <string name="claude_code_tool_search_in">%1$s dans %2$s</string>
     <string name="claude_code_waiting_approval">En attente de votre approbation</string>
-    <string name="claude_code_permission_edit">%1$s veut modifier %2$s</string>
-    <string name="claude_code_permission_create">%1$s veut créer %2$s</string>
     <string name="claude_code_permission_run">%1$s veut exécuter une commande</string>
     <string name="claude_code_permission_keys">Entrée autorise · Échap refuse</string>
     <string name="claude_code_permission_keys_deny">Entrée ou Échap refuse</string>
@@ -9543,7 +9541,6 @@
         <item quantity="other">Archivées · %1$d sessions</item>
     </plurals>
     <string name="claude_code_status_in_terminal">ouverte dans un terminal</string>
-    <string name="claude_code_intro_title">Nouvelle session dans %1$s</string>
     <string name="claude_code_starter_explain">Explique comment ce dépôt est organisé</string>
     <string name="claude_code_starter_tests">Lance les tests et corrige ce qui échoue</string>
     <string name="claude_code_starter_review_branch">Relis les modifications de cette branche par rapport à %1$s</string>
@@ -10179,7 +10176,6 @@
     <string name="claude_code_workstream_name">Nom</string>
     <string name="claude_code_workstream_name_hint">À quoi il sert</string>
     <string name="claude_code_workstream_name_desc">Donne son nom au dossier et à la branche du chantier.</string>
-    <string name="claude_code_workstream_go">Démarrer</string>
     <string name="claude_code_advanced">Avancé</string>
     <string name="claude_code_where">Où</string>
     <string name="claude_code_where_clones">Nouveaux clones</string>

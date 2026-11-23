@@ -9216,8 +9216,6 @@
     <string name="claude_code_tool_from_line">从第 %1$d 行起</string>
     <string name="claude_code_tool_search_in">在 %2$s 中搜索 %1$s</string>
     <string name="claude_code_waiting_approval">正在等待您的批准</string>
-    <string name="claude_code_permission_edit">%1$s 想要更改 %2$s</string>
-    <string name="claude_code_permission_create">%1$s 想要创建 %2$s</string>
     <string name="claude_code_permission_run">%1$s 想要运行一条命令</string>
     <string name="claude_code_permission_keys">Enter 允许 · Esc 拒绝</string>
     <string name="claude_code_permission_keys_deny">Enter 或 Esc 拒绝</string>
@@ -9234,7 +9232,6 @@
         <item quantity="other">已归档 · %1$d 个会话</item>
     </plurals>
     <string name="claude_code_status_in_terminal">在终端中打开</string>
-    <string name="claude_code_intro_title">在 %1$s 中新建会话</string>
     <string name="claude_code_starter_explain">解释此仓库的组织结构</string>
     <string name="claude_code_starter_tests">运行测试并修复失败项</string>
     <string name="claude_code_starter_review_branch">审查此分支相对于 %1$s 的更改</string>
@@ -9844,7 +9841,6 @@
     <string name="claude_code_workstream_name">名称</string>
     <string name="claude_code_workstream_name_hint">用途</string>
     <string name="claude_code_workstream_name_desc">用于命名工作流的文件夹和分支。</string>
-    <string name="claude_code_workstream_go">开始</string>
     <string name="claude_code_advanced">高级</string>
     <string name="claude_code_where">位置</string>
     <string name="claude_code_where_clones">全新克隆</string>

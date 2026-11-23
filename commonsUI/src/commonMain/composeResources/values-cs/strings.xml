@@ -10543,8 +10543,6 @@
     <string name="claude_code_tool_from_line">od řádku %1$d</string>
     <string name="claude_code_tool_search_in">%1$s v %2$s</string>
     <string name="claude_code_waiting_approval">Čeká na vaše schválení</string>
-    <string name="claude_code_permission_edit">%1$s chce změnit %2$s</string>
-    <string name="claude_code_permission_create">%1$s chce vytvořit %2$s</string>
     <string name="claude_code_permission_run">%1$s chce spustit příkaz</string>
     <string name="claude_code_permission_keys">Enter povolí · Esc zamítne</string>
     <string name="claude_code_permission_keys_deny">Enter nebo Esc zamítne</string>
@@ -10558,7 +10556,6 @@
     <string name="claude_code_notify_finished">Hotovo: %1$s</string>
     <string name="claude_code_section_needs_you">Čeká na vás</string>
     <string name="claude_code_status_in_terminal">otevřeno v terminálu</string>
-    <string name="claude_code_intro_title">Nová relace v %1$s</string>
     <string name="claude_code_starter_explain">Vysvětlete, jak je tento repozitář uspořádaný</string>
     <string name="claude_code_starter_tests">Spusťte testy a opravte, co selže</string>
     <string name="claude_code_starter_review_branch">Zrevidujte změny této větve oproti %1$s</string>
@@ -10658,7 +10655,6 @@
     <string name="claude_code_workstream_name">Název</string>
     <string name="claude_code_workstream_name_hint">K čemu slouží</string>
     <string name="claude_code_workstream_name_desc">Pojmenuje složku a větev pracovního proudu.</string>
-    <string name="claude_code_workstream_go">Začít</string>
     <string name="claude_code_advanced">Pokročilé</string>
     <string name="claude_code_where">Kde</string>
     <string name="claude_code_where_clones">Čerstvé klony</string>

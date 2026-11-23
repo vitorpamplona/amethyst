@@ -156,6 +156,8 @@ data class ClaudeChatState(
     val lastTurnMillis: Long? = null,
     /** That turn ended while no screen showed the chat: the user hasn't seen how it ended. */
     val unseenFinish: Boolean = false,
+    /** That turn ended in an error (the agent's, or its process dying), not with an answer. */
+    val lastTurnFailed: Boolean = false,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -313,6 +315,25 @@ class ClaudeChat internal constructor(
         return { if (released.compareAndSet(false, true)) viewers.decrementAndGet() }
     }
 
+    /**
+     * Sends the user's last message again, with the images that went with it while their files
+     * are still there: for a turn that ended in an error.
+     */
+    fun retry() {
+        val last = _state.value.items.lastOrNull { it is ChatItem.UserText } as? ChatItem.UserText ?: return
+        val files = last.images.mapNotNull { image -> image.file?.let(::File)?.takeIf { it.isFile } }
+        val images =
+            files.mapNotNull { file ->
+                try {
+                    ImageInput.fromFile(file)
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not read ${file.name} again", e)
+                    null
+                }
+            }
+        send(last.text, images, files.take(images.size))
+    }
+
     /** The user hasn't seen how a turn ended unless a screen showed the chat as it did. */
     private fun unseen(): Boolean = viewers.get() == 0
 
@@ -372,7 +393,16 @@ class ClaudeChat internal constructor(
             }
             lock.withLock {
                 transcript.addPrompt(trimmed, sent)
-                publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis(), unseenFinish = false) }
+                publish {
+                    it.copy(
+                        status = ChatStatus.WORKING,
+                        error = null,
+                        activity = null,
+                        turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis(),
+                        unseenFinish = false,
+                        lastTurnFailed = false,
+                    )
+                }
             }
             // A workstream still cloning: the prompt shows now, and goes out once its folder is ready.
             try {
@@ -591,6 +621,7 @@ class ClaudeChat internal constructor(
                     turnEndedAt = if (wasBusy) now else it.turnEndedAt,
                     lastTurnMillis = if (wasBusy) it.turnStartedAt?.let { start -> now - start } else it.lastTurnMillis,
                     unseenFinish = it.unseenFinish || (wasBusy && unseen()),
+                    lastTurnFailed = it.lastTurnFailed || wasBusy,
                 )
             }
         }
@@ -697,6 +728,7 @@ class ClaudeChat internal constructor(
                         lastTurnMillis = it.turnStartedAt?.let { start -> now - start },
                         // A turn the user stopped needs no telling.
                         unseenFinish = !event.interrupted && unseen(),
+                        lastTurnFailed = event.failure != null,
                         streamingText = "",
                         pendingPermissions = emptyList(),
                         costUsd = event.costUsd ?: it.costUsd,

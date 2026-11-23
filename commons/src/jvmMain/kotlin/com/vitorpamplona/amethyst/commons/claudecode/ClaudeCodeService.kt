@@ -92,6 +92,8 @@ data class ClaudeSessionRow(
     val workspaceSize: Long? = null,
     /** Its last turn here ended while the user wasn't looking: the agent waits for them. */
     val unseenFinish: Boolean = false,
+    /** Its last turn here ended in an error. */
+    val lastTurnFailed: Boolean = false,
 ) {
     /** The agent waits on the user: for an approval, or to read how its turn ended. */
     val needsYou: Boolean get() = appStatus == ChatStatus.NEEDS_APPROVAL || (unseenFinish && appStatus != ChatStatus.WORKING && appStatus != ChatStatus.STARTING)
@@ -696,7 +698,7 @@ class ClaudeCodeService(
                 // The list only shows these; streamed text must not rebuild it.
                 launch {
                     chat.state
-                        .map { listOf(it.sessionId, it.title, it.status, it.unseenFinish) to it.items.firstPromptLine() }
+                        .map { listOf(it.sessionId, it.title, it.status, it.unseenFinish, it.lastTurnFailed) to it.items.firstPromptLine() }
                         .distinctUntilChanged()
                         .collect {
                             if (chats.value[key] === chat) rebuildRows()
@@ -1028,6 +1030,7 @@ class ClaudeCodeService(
                     lastModified = info.lastModified,
                     appStatus = chat?.state?.value?.status,
                     unseenFinish = chat?.state?.value?.unseenFinish == true,
+                    lastTurnFailed = chat?.state?.value?.lastTurnFailed == true,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
@@ -1060,6 +1063,7 @@ class ClaudeCodeService(
                         lastModified = System.currentTimeMillis(),
                         appStatus = state.status,
                         unseenFinish = state.unseenFinish,
+                        lastTurnFailed = state.lastTurnFailed,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),

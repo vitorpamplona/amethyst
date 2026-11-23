@@ -358,6 +358,9 @@ enum class ToolKind {
 
     /** Looking up the app's own settings (the settings assistant). */
     SETTINGS,
+
+    /** Keeping the agent's own task list: shown as the task card, not as rows of the chat. */
+    PLAN,
     OTHER,
     ;
 
@@ -381,6 +384,7 @@ enum class ToolKind {
                 "Grep", "Glob", "LS", "ToolSearch" -> SEARCH
                 "WebFetch", "WebSearch" -> WEB
                 "Task", "Agent", "Workflow" -> AGENT
+                "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TodoWrite" -> PLAN
                 else -> OTHER
             }
     }
@@ -389,7 +393,8 @@ enum class ToolKind {
 /**
  * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
  * its own row, so a turn that runs one command still shows it. Edits are never folded: what a
- * turn changed is what the user reads it for, so each edit keeps its own row.
+ * turn changed is what the user reads it for, so each edit keeps its own row. Calls that keep the
+ * agent's task list are left out: the task card shows what they did.
  */
 fun List<ChatItem>.toChatRows(): List<ChatRow> {
     val rows = ArrayList<ChatRow>()
@@ -404,6 +409,7 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
         run.clear()
     }
     forEach { item ->
+        if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
         if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.EDIT) {
             flush()
             rows.add(ChatRow.Single(item))

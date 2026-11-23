@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,17 +60,24 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 
 /**
  * The plan the agent keeps with its task tools, above the composer: what is done, what it is on
- * now, what is left. Folds to its header line so it doesn't crowd a short window.
+ * now, what is left. Open while the agent works; folded to its header line (which still names the
+ * current step) when the turn ends or an approval needs the room. A click opens or folds it.
  */
 @Composable
 internal fun AgentTaskList(
     tasks: List<AgentTask>,
-    /** Whether a turn runs: the task in progress spins only while the agent works on it. */
+    /** Whether a turn runs: the task in progress spins, and says what it is doing, only then. */
     working: Boolean,
+    /** A tool call waits for the user: its card gets the room. */
+    approvalPending: Boolean,
     chatKey: String,
 ) {
-    var expanded by rememberSaveable(chatKey) { mutableStateOf(true) }
+    val openByDefault = working && !approvalPending
+    var expanded by rememberSaveable(chatKey) { mutableStateOf(openByDefault) }
+    // Follows the turn; the user's own click holds until the turn changes state again.
+    LaunchedEffect(openByDefault) { expanded = openByDefault }
     val done = tasks.count { it.status == AgentTask.Status.COMPLETED }
+    val current = tasks.firstOrNull { it.status == AgentTask.Status.IN_PROGRESS }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(16.dp),
@@ -91,6 +99,15 @@ internal fun AgentTaskList(
                     stringRes(Res.string.claude_code_tasks_progress, done, tasks.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                )
+                // Folded, the line still says which step the plan is on.
+                Text(
+                    current?.takeIf { !expanded }?.let { " · " + (it.activeForm?.takeIf { working } ?: it.subject) }.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
@@ -128,7 +145,8 @@ private fun TaskRow(
             when {
                 completed -> Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, filled = true, modifier = Modifier.size(18.dp))
                 inProgress && working -> CircularProgressIndicator(Modifier.padding(2.dp).size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                inProgress -> Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                // Where the agent stopped: marked, but not in the color of something running.
+                inProgress -> Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                 else -> Icon(MaterialSymbols.RadioButtonUnchecked, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
             }
         }
@@ -141,8 +159,8 @@ private fun TaskRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            // What it is doing right now, when that says more than the subject.
-            task.activeForm?.takeIf { inProgress && it != task.subject }?.let {
+            // What it is doing right now, when that says more than the subject: only while it does.
+            task.activeForm?.takeIf { inProgress && working && it != task.subject }?.let {
                 Text(
                     it,
                     style = MaterialTheme.typography.bodySmall,
