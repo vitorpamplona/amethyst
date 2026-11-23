@@ -497,7 +497,32 @@ Two smaller UI-thread stalls from the same investigation: Skiko's `FrameWatcher`
 every 30 s, a 117-373 ms stop-the-world full GC under G1, now concurrent with
 `-XX:+ExplicitGCInvokesConcurrent`; and compose-resources string loads block the UI thread in
 `runBlocking` on a cache miss (20-175 ms measured, longer while `Dispatchers.Default` is busy),
-not addressed yet.
+fixed below.
+
+### Strings read once
+
+compose-resources resolves a string the first time each `stringResource` call site composes: on
+the JVM and Android a `runBlocking` on a load it starts on `Dispatchers.Default`, and a load that
+misses its cache opens the locale's packed strings file and skips to the string, inflating up to
+650 KB of the deflated file. Every card a feed composed paid that for each string in it.
+`stringRes` now keeps every string it has read per resource environment (formatting arguments the
+way the library does), and `AmethystApp` provides `CachingStringsReader`, which reads each strings
+file once and slices every string from it (`StringResTest` checks both against the library). UI-thread
+parks under string loads over a boot (JFR, parks over 1 ms, 2 boots each): 76 and 72 parks, 221 and
+357 ms, longest 22.5 ms before; 57 and 67, 134 and 136 ms, longest 15.7 ms after. What is left is
+each string's first use, about 2 ms each, which only the library could take off the UI thread.
+
+### Who allocates
+
+A whole-process JFR allocation profile of the Home scroll (2 boots, sites ranked by sample count,
+since JFR weights a sample by everything its thread allocated since the last one and a few samples
+can carry most of the weight): network reads (okio segments), event JSON (quartz `KiteReader`),
+desktop video thumbnails (`VideoThumbnailCache`: frames decoded in Java by jcodec, written and read
+as JPEG through ImageIO, converted pixel by pixel with `toComposeImageBitmap`), Coil's decoders,
+relay subscription planning (`MapOfSetBuilder`, `toHexSet`, `CursorPlanner`, `FilterShape`, the
+top-nav filters) and the trust network rebuild. The UI thread is a quarter of it, spread over
+Compose's own machinery. GC runs 2 to 3 young collections a second while the feed loads, 8 to 18 ms
+each. The thumbnail pipeline, which Skia could decode and encode natively, is the clearest target.
 
 ## The cache window on more feeds: held
 
