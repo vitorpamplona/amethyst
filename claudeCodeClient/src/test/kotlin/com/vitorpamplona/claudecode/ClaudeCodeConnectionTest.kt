@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.agents.CommandGuard
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
@@ -29,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -129,6 +131,68 @@ class ClaudeCodeConnectionTest {
             val answer = obj(transport.written.single())["response"]!!.jsonObject
             assertEquals("error", answer["subtype"]!!.jsonPrimitive.content)
             assertEquals("h1", answer["request_id"]!!.jsonPrimitive.content)
+        }
+
+    @Test
+    fun theCommandGuardIsAPreToolUseHookTheHostAnswers() =
+        runTest {
+            val transport = FakeTransport()
+            transport.onWrite = { line ->
+                val request = obj(line)
+                if (request["type"]!!.jsonPrimitive.content == "control_request") {
+                    val id = request["request_id"]!!.jsonPrimitive.content
+                    transport.emit("""{"type":"control_response","response":{"subtype":"success","request_id":"$id","response":{}}}""")
+                }
+            }
+            val guard = CommandGuard { command -> if (command.startsWith("gh pr merge")) "not here" else null }
+            val connection = ClaudeCodeConnection(transport, backgroundScope, commandGuard = guard)
+            connection.initialize()
+
+            // The handshake registers the hook on Bash, failing closed.
+            val hook =
+                obj(transport.written.single())["request"]!!
+                    .jsonObject["hooks"]!!
+                    .jsonObject["PreToolUse"]!!
+                    .jsonArray
+                    .single()
+                    .jsonObject
+            assertEquals("Bash", hook["matcher"]!!.jsonPrimitive.content)
+            assertEquals(
+                ClaudeCodeConnection.GUARD_HOOK_ID,
+                hook["hookCallbackIds"]!!
+                    .jsonArray
+                    .single()
+                    .jsonPrimitive.content,
+            )
+            assertEquals("block", hook["onFailure"]!!.jsonPrimitive.content)
+
+            fun callback(
+                id: String,
+                command: String,
+            ) = """{"type":"control_request","request_id":"$id","request":{"subtype":"hook_callback","callback_id":"${ClaudeCodeConnection.GUARD_HOOK_ID}","input":{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"$command"}},"tool_use_id":"t"}}"""
+            transport.emit(callback("h1", "gh pr merge 1"))
+            transport.emit(callback("h2", "gh pr view 1"))
+            transport.end()
+            connection.messages.toList()
+
+            val answers = transport.written.drop(1).map { obj(it)["response"]!!.jsonObject }
+            assertEquals(listOf("h1", "h2"), answers.map { it["request_id"]!!.jsonPrimitive.content })
+            val denied = answers[0]["response"]!!.jsonObject["hookSpecificOutput"]!!.jsonObject
+            assertEquals("PreToolUse", denied["hookEventName"]!!.jsonPrimitive.content)
+            assertEquals("deny", denied["permissionDecision"]!!.jsonPrimitive.content)
+            assertEquals("not here", denied["permissionDecisionReason"]!!.jsonPrimitive.content)
+            // Nothing to say about the other: the usual permission checks decide.
+            assertEquals(JsonObject(emptyMap()), answers[1]["response"]!!.jsonObject)
+        }
+
+    @Test
+    fun withoutAGuardTheHandshakeRegistersNoHook() =
+        runTest {
+            val transport = FakeTransport()
+            transport.onWrite = { transport.end() }
+            val connection = ClaudeCodeConnection(transport, backgroundScope)
+            connection.initialize()
+            assertEquals(null, obj(transport.written.single())["request"]!!.jsonObject["hooks"])
         }
 
     @Test

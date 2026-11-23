@@ -21,6 +21,7 @@
 package com.vitorpamplona.claudecode.process
 
 import com.vitorpamplona.agents.AgentNotInstalledException
+import com.vitorpamplona.agents.CommandGuard
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.ProcessTransport
@@ -51,6 +52,8 @@ data class ClaudeCodeOptions(
     val addDirs: List<File> = emptyList(),
     /** Tool rules the session may never use, e.g. `Bash(git push:*)`; nothing can approve them. */
     val disallowedTools: List<String> = emptyList(),
+    /** Asked about every Bash command before it runs, through a PreToolUse hook the host answers. */
+    val commandGuard: CommandGuard? = null,
     /** Any other CLI flags, appended last. */
     val extraArgs: List<String> = emptyList(),
     /** Variables added to the process's environment, which every command it runs inherits. */
@@ -160,7 +163,7 @@ class ClaudeCodeLauncher(
                     environment().putAll(childEnvironment(exe))
                     environment().putAll(options.environment)
                 }.start()
-        val connection = ClaudeCodeConnection(ProcessTransport(process), scope, options.sdkMcpServers)
+        val connection = ClaudeCodeConnection(ProcessTransport(process), scope, options.sdkMcpServers, options.commandGuard)
         connection.initialize()
         return connection
     }

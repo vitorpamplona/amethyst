@@ -24,6 +24,7 @@ import com.vitorpamplona.agents.AgentConnection
 import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentInfo
 import com.vitorpamplona.agents.AgentStartOptions
+import com.vitorpamplona.agents.CommandGuard
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.agents.LineTransport
@@ -153,6 +154,10 @@ class CodexConnection(
     @Volatile
     private var blocked: List<String> = emptyList()
 
+    /** [AgentStartOptions.commandGuard]: asked about each command Codex asks to run, before the user is. */
+    @Volatile
+    private var guard: CommandGuard? = null
+
     /** Approvals waiting on the user: Codex's request id, by the id the chat knows. */
     private val openApprovals = ConcurrentHashMap<String, JsonElement>()
 
@@ -191,6 +196,7 @@ class CodexConnection(
         // Asked only for the models: no thread, nothing saved.
         if (options.probeOnly) return
         blocked = options.blockedCommands
+        guard = options.commandGuard
         val mode = options.permissionMode
         val common =
             buildMap<String, JsonElement> {
@@ -292,7 +298,7 @@ class CodexConnection(
             when (request.method) {
                 "item/commandExecution/requestApproval" -> {
                     val command = params.text("command") ?: items[itemId]?.text("command").orEmpty()
-                    if (CodexModes.runsBlocked(command, blocked)) {
+                    if (CodexModes.runsBlocked(command, blocked) || guard?.refusal(command) != null) {
                         // Publishing is the user's step here: Codex hears no, the user isn't asked.
                         rpc.reply(request.id, buildJsonObject { put("decision", "decline") })
                         return

@@ -97,6 +97,7 @@ class ClaudeBackend(
                 model = options.model,
                 permissionMode = options.permissionMode,
                 disallowedTools = options.blockedCommands.map { "Bash($it:*)" },
+                commandGuard = options.commandGuard,
                 environment = options.environment,
                 sdkMcpServers = options.hostTools,
                 strictMcpConfig = options.onlyHostTools,

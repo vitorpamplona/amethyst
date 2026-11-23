@@ -151,6 +151,15 @@ interface AgentConnection {
     fun stderrTail(): String
 }
 
+/**
+ * Checks a shell command an agent is about to run. A pure function of the command line, called
+ * on the agent's I/O thread: it must not block.
+ */
+fun interface CommandGuard {
+    /** Why [command] may not run, told to the agent; null to let it go on to the usual permission checks. */
+    fun refusal(command: String): String?
+}
+
 /** How to start an agent for a chat. Each backend maps these to its own flags or requests. */
 data class AgentStartOptions(
     val cwd: File,
@@ -173,6 +182,11 @@ data class AgentStartOptions(
     val instructions: String? = null,
     /** Shell commands (by prefix, e.g. `git push`) the agent may never run. */
     val blockedCommands: List<String> = emptyList(),
+    /**
+     * Looks at each shell command before it runs, in any permission mode, and refuses the ones it
+     * names a reason for; finer than [blockedCommands] (a flag anywhere, a reordered call).
+     */
+    val commandGuard: CommandGuard? = null,
     /** Only to learn the agent's commands and models: start no session. */
     val probeOnly: Boolean = false,
     /**

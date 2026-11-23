@@ -615,6 +615,8 @@ class ClaudeChat internal constructor(
                     // As on Claude Code on the web: the agent pushes branches and opens pull requests when asked;
                     // merging, tags, deleting branches and moving the default branch stay the user's.
                     blockedCommands = if (nostrCheckout) NO_MERGING else emptyList(),
+                    // The same, read finer and in every permission mode: gh api writes, flags anywhere, the guard's own config.
+                    commandGuard = if (nostrCheckout) SessionCommandGuard else null,
                     // The SDK too, so a Gradle build the agent runs finds it as a terminal's would.
                     environment = AndroidSdk.environment() + pushRules?.environment.orEmpty(),
                     hostTools = mcpServers,
@@ -826,20 +828,33 @@ class ClaudeChat internal constructor(
          * opening a pull request or proposal are allowed, as on Claude Code on the web.
          *
          * Prefixes catch a slip, not an agent set on getting around them: a reordered
-         * `gh api … -X PUT …/merge` or a script still gets through; only the permission prompts
-         * stand in the way of that.
+         * `gh api … -X PUT …/merge` gets past them, which [SessionCommandGuard] catches; a script
+         * the agent wrote gets past both.
          */
         val NO_MERGING =
             listOf(
                 "gh pr merge",
+                "gh pr review",
+                "gh pr close",
                 "gh release",
                 "gh repo sync",
+                "gh repo edit",
+                "gh repo delete",
+                "gh repo rename",
+                "gh repo archive",
                 "gh api -X PUT",
                 "gh api -XPUT",
                 "gh api --method PUT",
                 "git push --no-verify",
                 "ngit pr merge",
+                "ngit merge",
+                "ngit pr close",
+                "ngit pr applied",
                 "ngit sync",
+                "ngit init",
+                "ngit repo",
+                "ngit release",
+                "ngit account export",
                 "amy git init",
                 "amy git announce",
                 "amy git state",
