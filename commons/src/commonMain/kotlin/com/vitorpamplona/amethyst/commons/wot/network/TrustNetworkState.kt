@@ -415,6 +415,9 @@ class TrustNetworkState(
         val allowMetered = force || clock() < forceDownloadUntil
         val current = _network.value?.takeIf { it.isFrom(provider) }
         val kind = requested ?: dueSync(current, clock(), allowMetered) ?: return null
+        // The hourly catch-up waits for an unmetered network, like a download; the network
+        // change that brings Wi-Fi back triggers it. Asked for (force), it runs anyway.
+        if (kind == TrustNetworkSyncStatus.Kind.UPDATE && !allowMetered && !canDownloadLarge()) return null
         if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD) {
             if (!allowMetered && !canDownloadLarge()) {
                 _status.update { it.copy(waitingForUnmetered = true) }
@@ -486,10 +489,9 @@ class TrustNetworkState(
         mayDownload: Boolean,
         allowMetered: Boolean,
     ): TrustNetworkRun {
-        // The common case: nothing changed. Two COUNTs answer it before the ids file (12 MB at
-        // 300k) is read, and nothing is written: the files keep an older lastUpdate, which only
-        // means the next process start asks again.
-        val news = if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current?.header?.heldAtCursor != null) relay.news(provider, current.header) else null
+        // The common case: nothing changed. One REQ answers it before the ids file (12 MB at
+        // 300k) is read, and only its time is written (see TrustNetworkStore.UPDATE_FILE).
+        val news = if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null) relay.news(provider, current.header) else null
         if (current != null && news != null && !news.any) {
             return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
         }
@@ -626,11 +628,23 @@ class TrustNetworkState(
                 } else {
                     null
                 }
-            _network.value = TrustNetwork(saved ?: header.copy(generation = current.header.generation), current.index)
+            val published = saved ?: header.copy(generation = current.header.generation)
+            // Nothing written: keep its time, or every process start would update again.
+            if (saved == null && published.lastUpdate != current.header.lastUpdate) saveLastUpdate(published)
+            _network.value = TrustNetwork(published, current.index)
             // Cards seen between syncs at or before the new cursor are the index's to answer now.
             if (cursorMoved) pruneOverlay(header.syncCursor)
             TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
+
+    /** Losing this only costs one more update after the next process start. */
+    private suspend fun saveLastUpdate(header: TrustNetworkHeader) {
+        try {
+            withContext(Dispatchers.IO) { store?.writeLastUpdate(header) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not save the trust network's update time", e)
+        }
+    }
 
     /** Drops the cards seen between syncs that the index now holds (at or before [cursor]). */
     private fun pruneOverlay(cursor: Long) {
@@ -687,10 +701,11 @@ class TrustNetworkState(
         private const val TAG = "TrustNetworkState"
 
         /**
-         * Some providers recompute on demand, and checking costs two COUNTs of a few bytes when
-         * nothing changed (see `updateTrustNetwork`), so every app open after 15 minutes asks.
+         * How often the catch-up runs: one small REQ for anything newer than the cursor (see
+         * `updateTrustNetwork`), on an unmetered network. Cards for the profiles on screen arrive
+         * meanwhile through their own REQs, into [overlay].
          */
-        const val UPDATE_EVERY_SECS = 15 * 60L
+        const val UPDATE_EVERY_SECS = 60 * 60L
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
         const val MAX_FAILED_FULL_CHECKS = 3
@@ -699,7 +714,7 @@ class TrustNetworkState(
 
         /**
          * Which sync is due for [current] at [now]: a download when there is no index, a full
-         * check once a week, an update every 15 minutes (or now, when [force]d), else none.
+         * check once a week, an update every hour (or now, when [force]d), else none.
          */
         fun dueSync(
             current: TrustNetwork?,

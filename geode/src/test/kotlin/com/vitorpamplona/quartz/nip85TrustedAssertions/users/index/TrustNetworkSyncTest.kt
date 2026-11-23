@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.util.concurrent.atomic.AtomicInteger
@@ -76,6 +77,8 @@ class TrustNetworkSyncTest {
     @Test
     fun updatesOnlyFetchWhatChanged() =
         runBlocking {
+            // Recent, as a run still reaching the relay is: younger than TRUST_NETWORK_SETTLE_SECS.
+            val batchTime = TimeUtils.now() - 2 * 3600
             val subjects = List(300) { hex() }
             val batch = subjects.mapIndexed { i, s -> card(s, 1 + i % 90, batchTime) }
 
@@ -105,9 +108,9 @@ class TrustNetworkSyncTest {
                 assertEquals(300, caughtUp.header.heldAtCursor, "the whole batch shares the cursor's second")
                 assertFalse(client.trustNetworkNews(caughtUp.header, relay).any, "the header alone answers 'anything new?'")
 
-                // Nothing new: the COUNT pre-check ends the update without downloading.
+                // Nothing new: the REQ and the hour's count end the update without downloading.
                 val idle = client.updateTrustNetwork(caughtUp.header, caughtUp.index, caughtUp.ids, relay)
-                assertTrue(idle.unchanged, "the COUNT pre-check ends the update")
+                assertTrue(idle.unchanged, idle.detail)
                 assertEquals(0, idle.received)
 
                 // The provider re-ranks one person, removes another with a rank-0 card (its
@@ -149,10 +152,10 @@ class TrustNetworkSyncTest {
                 assertSame(full.index, noNews.index)
 
                 // The cursor moves far past the batch, then the relay drops a batch card (a kind 5
-                // signed at the cursor's second, so no "newer than the cursor" count sees it, and
-                // the card sits far below the update window). Only the total count notices, and
-                // the reconcile drops the card the relay stopped serving: no kind 5 is downloaded.
-                val far = batchTime + 10 * TRUST_NETWORK_UPDATE_OVERLAP_SECS
+                // signed at the cursor's second, so no REQ past the cursor sees it, and the card
+                // sits below the hour an update counts). The update leaves it to the weekly
+                // reconcile, which drops the card the relay stopped serving: no kind 5 downloaded.
+                val far = TimeUtils.now() - 60
                 publish(listOf(card(subjects[3], 50, far)))
                 val moved = client.updateTrustNetwork(full.header, full.index, full.ids, relay)
                 assertEquals(far, moved.header.syncCursor)
@@ -161,12 +164,14 @@ class TrustNetworkSyncTest {
 
                 publish(listOf(deletion(far, subjects[4])))
                 assertTrue(client.trustNetworkNews(moved.header, relay).any, "the total count sees a card gone below the window")
-                val dropped = client.updateTrustNetwork(moved.header, moved.index, moved.ids, relay)
+                val missed = client.updateTrustNetwork(moved.header, moved.index, moved.ids, relay)
+                assertNotNull(missed.index.rankOf(subjects[4]), "below the hour an update counts: ${missed.detail}")
+                val dropped = assertNotNull(client.reconcileTrustNetwork(missed.header, missed.index, missed.ids, relay))
                 assertTrue(dropped.complete)
                 assertNull(dropped.index.rankOf(subjects[4]), dropped.detail)
                 assertEquals(297, dropped.index.size)
-                assertTrue(dropped.detail!!.endsWith("need 0, gone 1"), dropped.detail)
-                assertTrue(client.updateTrustNetwork(dropped.header, dropped.index, dropped.ids, relay).unchanged, "and the counts agree again")
+                assertEquals("need 0, gone 1", dropped.detail)
+                assertFalse(client.trustNetworkNews(dropped.header, relay).any, "and the counts agree again")
 
                 // The ids file round-trips with the tombstone.
                 val decoded = assertNotNull(TrustNetworkCodec.decodeIds(TrustNetworkCodec.encodeIds(full.ids)))
@@ -182,13 +187,15 @@ class TrustNetworkSyncTest {
         }
 
     /**
-     * What a provider publishing new cards costs an update: a REQ for what is newer than the
-     * cursor and the COUNTs, no negentropy. Only a card the REQ cannot see (one that reached the
-     * relay late, at the cursor's own second) makes the counts disagree and the reconcile run.
+     * What a provider publishing new cards costs an update: REQs for what is newer than the
+     * cursor and one COUNT of the cursor's hour, no negentropy. Only a card the REQ cannot see
+     * (one that reached the relay late, at the cursor's own second) makes the count disagree and
+     * a reconcile of that hour run.
      */
     @Test
     fun newCardsArriveByReqAndOnlyALateCardReconciles() =
         runBlocking {
+            val batchTime = TimeUtils.now() - 2 * 3600
             val subjects = List(300) { hex() }
             val batch = subjects.map { card(it, 50, batchTime) }
 

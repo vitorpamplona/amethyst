@@ -41,6 +41,9 @@ import kotlin.random.Random
  *  - [IDS_FILE]: event ids and tombstones, read only by syncs.
  *  - [PARTIAL_INDEX_FILE] and [PARTIAL_IDS_FILE]: what a cold download that has not finished
  *    collected so far, so it resumes. Never read as the network.
+ *  - [UPDATE_FILE]: when the last update that changed nothing ran, for the index of one
+ *    generation. An update that finds nothing writes these few bytes instead of the index (MBs),
+ *    so its time survives a process restart and the hourly gate holds across app opens.
  *
  * Files are written to a temp file and moved into place, so a crash leaves the old file or the
  * new one, never half. A file that cannot be read (wrong version, truncated) reads as missing.
@@ -54,7 +57,27 @@ class TrustNetworkStore(
 
     fun readIndex(): TrustNetwork? {
         deleteLegacyFiles()
-        return read(INDEX_FILE) { bytes -> TrustNetworkCodec.decodeIndex(bytes)?.let { (header, index) -> TrustNetwork(header, index) } }
+        val network = read(INDEX_FILE) { bytes -> TrustNetworkCodec.decodeIndex(bytes)?.let { (header, index) -> TrustNetwork(header, index) } } ?: return null
+        val lastUpdate = readLastUpdate(network.header) ?: return network
+        return if (lastUpdate > network.header.lastUpdate) TrustNetwork(network.header.copy(lastUpdate = lastUpdate), network.index) else network
+    }
+
+    /** When an update last found nothing for the index whose header is [header], or null when none is saved. */
+    private fun readLastUpdate(header: TrustNetworkHeader): Long? =
+        read(UPDATE_FILE) { bytes ->
+            val (generation, at) =
+                bytes
+                    .decodeToString()
+                    .trim()
+                    .split(' ')
+                    .takeIf { it.size == 2 } ?: return@read null
+            at.toLongOrNull()?.takeIf { generation.toLongOrNull() == header.generation }
+        }
+
+    /** Saves [header]'s lastUpdate beside its index, which stays as it is (see [UPDATE_FILE]). */
+    fun writeLastUpdate(header: TrustNetworkHeader) {
+        fileSystem.createDirectories(directory)
+        atomicWrite(directory / UPDATE_FILE, "${header.generation} ${header.lastUpdate}".encodeToByteArray())
     }
 
     /** The ids saved with the index whose header is [header], or null when they are not (any more) on disk. */
@@ -85,7 +108,7 @@ class TrustNetworkStore(
 
     fun deletePartial() = deleteFiles(PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
 
-    fun delete() = deleteFiles(INDEX_FILE, IDS_FILE, PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
+    fun delete() = deleteFiles(INDEX_FILE, IDS_FILE, PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE, UPDATE_FILE)
 
     private fun writePair(
         indexFile: String,
@@ -153,6 +176,7 @@ class TrustNetworkStore(
         const val IDS_FILE = "network-ids-v2.bin"
         const val PARTIAL_INDEX_FILE = "partial-network-v2.bin"
         const val PARTIAL_IDS_FILE = "partial-network-ids-v2.bin"
+        const val UPDATE_FILE = "network-last-update.txt"
         private val LEGACY_FILES = listOf("network-v1.bin", "network-ids-v1.bin")
     }
 }

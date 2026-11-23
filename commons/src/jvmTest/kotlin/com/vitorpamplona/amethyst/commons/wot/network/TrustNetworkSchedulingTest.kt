@@ -56,6 +56,7 @@ import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -426,16 +427,73 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
+    fun theHourlyCatchUpWaitsForAnUnmeteredNetwork() =
+        runBlocking {
+            writeIndex(providerA, updatedAgo = TrustNetworkState.UPDATE_EVERY_SECS)
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
+            var metered = true
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, isMetered = { metered })
+            wot.awaitReady()
+            wot.awaitIdle()
+            wot.syncIfStale()
+            delay(200)
+            wot.awaitIdle()
+            assertTrue(source.calls.isEmpty(), "not even the REQ on mobile data: ${source.calls}")
+            assertFalse(wot.status.value.waitingForUnmetered, "the Wi-Fi notice is for downloads, not this check")
+
+            // Wi-Fi comes back (the network change triggers syncIfStale).
+            metered = false
+            wot.syncIfStale()
+            withTimeout(5_000) { while ("update" !in source.calls) delay(10) }
+            assertEquals(listOf("news", "update"), source.calls.toList())
+        }
+
+    @Test
+    fun anUpdateAskedForRunsOnMobileData() =
+        runBlocking {
+            writeIndex(providerA, updatedAgo = 60)
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, metered = true)
+            wot.awaitReady()
+            wot.awaitIdle()
+            wot.syncIfStale(force = true)
+            withTimeout(5_000) { while ("update" !in source.calls) delay(10) }
+        }
+
+    @Test
     fun aFallbackDownloadWaitsForAnUnmeteredNetwork() =
         runBlocking {
             // The ids file is gone, so an update would have to download everything.
             writeIndex(providerA, updatedAgo = TrustNetworkState.UPDATE_EVERY_SECS, withIds = false)
             val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
-            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, metered = true)
+            var metered = true
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, isMetered = { metered })
             wot.awaitReady()
             wot.awaitIdle()
-            withTimeout(5_000) { wot.status.first { it.waitingForUnmetered } }
-            assertTrue(source.calls.none { it.startsWith("download") }, "calls: ${source.calls}")
+            assertTrue(source.calls.isEmpty(), "nothing on mobile data: ${source.calls}")
+
+            metered = false
+            wot.syncIfStale()
+            withTimeout(5_000) { while (source.calls.none { it.startsWith("download") }) delay(10) }
+        }
+
+    @Test
+    fun anUpdateThatFindsNothingKeepsItsTimeAcrossARestart() =
+        runBlocking {
+            writeIndex(providerA, updatedAgo = TrustNetworkState.UPDATE_EVERY_SECS)
+            val first = FakeSource()
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), first)
+            wot.awaitReady()
+            wot.awaitIdle()
+            assertEquals(listOf("news"), first.calls.toList(), "one REQ, nothing new")
+            assertEquals(now, store.readIndex()?.header?.lastUpdate, "the time is on disk, the index untouched")
+
+            // A new process: the hourly gate holds, nothing runs.
+            val second = FakeSource()
+            val again = state(MutableStateFlow(ResolvedProvider(providerA)), second)
+            again.awaitReady()
+            again.awaitIdle()
+            assertTrue(second.calls.isEmpty(), "calls: ${second.calls}")
         }
 
     @Test

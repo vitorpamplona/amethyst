@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkP
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.trustNetworkNews
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.trustNetworkNewer
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
 
 /**
@@ -46,6 +46,7 @@ interface TrustNetworkSource {
 
 /** One sync's connection to the [ServiceProviderTag]'s relay. See `TrustNetworkSync.kt`. */
 interface TrustNetworkConnection {
+    /** Whether the provider published anything since [header]'s cursor (one small REQ). */
     suspend fun news(
         provider: ServiceProviderTag,
         header: TrustNetworkHeader,
@@ -101,7 +102,7 @@ class RelayTrustNetworkSource(
         override suspend fun news(
             provider: ServiceProviderTag,
             header: TrustNetworkHeader,
-        ) = client.trustNetworkNews(header, provider.relayUrl)
+        ) = client.trustNetworkNewer(header, provider.relayUrl)
 
         override suspend fun download(
             provider: ServiceProviderTag,
