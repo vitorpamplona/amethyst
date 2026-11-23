@@ -72,21 +72,27 @@ the way an ngit contributor's does and shows up on gitworkshop like any other pr
    any checkout of it, knows what it is.
 3. **The agent pushes branches, never merges.** As on Claude Code on the web, a session on a
    nostr repository or in a workstream may push its branch and open a PR (or a proposal with
-   `ngit send`) when asked. What it may push is fixed when it starts (`PushGuard.capture`): the
-   remotes' URLs, its own branches (the workstream's, or the branch it starts on when the remotes
-   say it is not their default) and the default branches. A pre-push guard passed as a git config
-   hook, its whole script in the hook's command so there is no file to rewrite
-   (`PushGuard.environment`), lets through only those URLs, never a `nostr://` remote (that push
-   signs and publishes repository state), the session's branches (force included), and new
+   `ngit send`) when asked. What it may push is fixed at the session's first start
+   (`PushGuard.capture`) and kept by session id in the agent preferences, so a resume, crash or
+   restart reuses it (`PushGuard.scopeFor`): the remotes' URLs, its own branches (the
+   workstream's, or the branch it starts on when no remote has it yet; one a remote already had
+   only moves forward) and the default branches. A session once guarded stays guarded. A
+   pre-push guard passed as a git config hook, its whole script in the hook's command so there
+   is no file to rewrite (`PushGuard.environment`; the git it was checked with goes first on the
+   session's PATH), lets through only those URLs, never a `nostr://` remote (that push signs and
+   publishes repository state), the session's branches (force included), and new
    `agent/…` / `claude/…` branches forward only; no tags, deletions or default branch. Each shell
    command is also checked before it runs (`SessionCommandGuard`, a PreToolUse hook for Claude
    Code in every permission mode, the approval path for Codex): merging, closing, approving or
    retargeting a PR or proposal, `gh api` writes, repository edits, releases, repository state,
    and turning the push guard off (`GIT_CONFIG_*`, `-c hook.…`, `--no-verify`) are refused, with
    the common prefixes also `--disallowedTools` (`ClaudeChat.NO_MERGING`): CONTRIBUTING-WITH-AI.md.
+   `ngit send`, `amy git pr` and `amy post` stay allowed, and sign with the user's key.
    **Limit:** both run in the agent's own shell and read what it types, so they prevent
    accidents, not a determined agent: a script it writes, a program of its own or the user's
-   token used directly gets past them. Pushes are not put to the user for approval: that would
+   token used directly gets past them. Claude Code also rebuilds PATH from the user's shell
+   profile, so an older git (before 2.54, no config hooks) that the profile puts first would push
+   unguarded. Pushes are not put to the user for approval: that would
    undo the point (pushing as on the web) and a script gets past a prompt just as well.
 4. **Changes** (`Route.ClaudeCodeChanges`): commits ahead of the base and the diff, uncommitted
    work included, through the git dashboard's `GitDiffView`.
