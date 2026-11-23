@@ -54,10 +54,12 @@ import androidx.compose.ui.window.WindowState
 import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
 import com.vitorpamplona.quartz.utils.Log
 import org.jetbrains.skiko.GraphicsApi
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dialog
 import java.awt.EventQueue
 import java.awt.Frame
+import java.awt.Graphics
 import java.awt.GraphicsDevice
 import java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT
 import java.awt.GraphicsEnvironment
@@ -69,6 +71,7 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.JDialog
 import javax.swing.JFrame
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.WindowConstants
 import kotlin.math.roundToInt
@@ -213,7 +216,11 @@ private fun WaylandWindow(
             panel.background = Color(0, 0, 0, 0)
         }
         icon?.let { frame.iconImage = it.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(ICON_SIZE, ICON_SIZE)) }
-        frame.contentPane.add(panel)
+        if (transparent) {
+            frame.contentPane.add(panel)
+        } else {
+            frame.contentPane = OpaqueComposeHost(panel)
+        }
 
         frame.applySize(state.size)
         when (val position = state.position) {
@@ -387,3 +394,25 @@ private const val DEFAULT_WIDTH = 800
 private const val DEFAULT_HEIGHT = 600
 
 private fun GraphicsApi.isSoftware() = this == GraphicsApi.SOFTWARE_FAST || this == GraphicsApi.SOFTWARE_COMPAT
+
+/**
+ * The content pane of an opaque Wayland window, holding its [ComposePanel].
+ *
+ * Swing paints a component's opaque ancestor before the component, so every frame Skiko's Swing
+ * painter drew began with this pane filling its background, at scale 2 5% of the UI thread. The
+ * frame is opaque and covers the whole pane, so the pane paints nothing of its own.
+ *
+ * Not drawing the frame with `AlphaComposite.Src` instead of the default blend: Java2D has no fast
+ * loop for it here and took the generic one, 29% of the UI thread against the blend's 18%.
+ */
+private class OpaqueComposeHost(
+    panel: ComposePanel,
+) : JPanel(BorderLayout()) {
+    init {
+        add(panel)
+    }
+
+    override fun paintComponent(g: Graphics) {
+        // Nothing: the panel covers the pane.
+    }
+}
