@@ -62,7 +62,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -734,6 +734,27 @@ class AccountMarmotActions(
     private val publishedKeyPackages = HashMap<String, Pair<KeyPackageEvent, Set<NormalizedRelayUrl>>>()
     private val publishedKeyPackagesLock = KmpLock()
 
+    /**
+     * Publishes [event] to [relays] and returns the relays that accepted it: a KeyPackage is
+     * recorded as reaching only those, so the watcher retries the ones that refused or stayed
+     * silent (`publishAndConfirm` is true when any one relay accepted).
+     */
+    private suspend fun publishKeyPackageTo(
+        event: KeyPackageEvent,
+        relays: Set<NormalizedRelayUrl>,
+    ): Set<NormalizedRelayUrl> =
+        account.client
+            .publishAndCollectResults(event, relays)
+            .filterValues { it.accepted }
+            .keys
+
+    private fun forgetKeyPackage(event: KeyPackageEvent) {
+        val slot = event.dTag()
+        publishedKeyPackagesLock.withLock {
+            if (publishedKeyPackages[slot]?.first?.id == event.id) publishedKeyPackages.remove(slot)
+        }
+    }
+
     private fun recordKeyPackageReach(
         event: KeyPackageEvent,
         relays: Set<NormalizedRelayUrl>,
@@ -778,9 +799,16 @@ class AccountMarmotActions(
                     held.forEach { (event, reached) ->
                         val missing = MarmotKeyPackageRelays.missing(choice.relays, reached)
                         if (missing.isEmpty()) return@forEach
+                        // A KeyPackage a Welcome consumed (its replacement not out yet) is not handed
+                        // to more relays: an invite through it could not be opened here.
+                        if (!manager.ownsKeyPackage(event)) {
+                            forgetKeyPackage(event)
+                            return@forEach
+                        }
                         Log.d("MarmotDbg") { "KeyPackage ${event.id.take(8)}… → ${missing.size} newly chosen relay(s): ${missing.map { it.url }}" }
                         // Not a new KeyPackage, so no replacement clock to start: only its reach grows.
-                        if (account.client.publishAndConfirm(event, missing)) recordKeyPackageReach(event, missing)
+                        val reached = publishKeyPackageTo(event, missing)
+                        if (reached.isNotEmpty()) recordKeyPackageReach(event, reached)
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
@@ -866,8 +894,9 @@ class AccountMarmotActions(
             if (e is CancellationException) throw e
             Log.w("MarmotDbg", "could not announce KeyPackage ${event.id.take(8)}… in the device group", e)
         }
-        if (account.client.publishAndConfirm(event, relays)) {
-            recordKeyPackageReach(event, relays)
+        val reached = publishKeyPackageTo(event, relays)
+        if (reached.isNotEmpty()) {
+            recordKeyPackageReach(event, reached)
             manager.confirmKeyPackagePublished(event)
             return
         }
@@ -880,8 +909,9 @@ class AccountMarmotActions(
                 // Recomputed each time: the relay lists may have loaded since the first attempt,
                 // and retrying the app's defaults would keep missing the relays inviters read.
                 val now = keyPackagePublishRelays().ifEmpty { relays }
-                if (account.client.publishAndConfirm(event, now)) {
-                    recordKeyPackageReach(event, now)
+                val reached = publishKeyPackageTo(event, now)
+                if (reached.isNotEmpty()) {
+                    recordKeyPackageReach(event, reached)
                     manager.confirmKeyPackagePublished(event)
                     return@launch
                 }
@@ -1093,8 +1123,9 @@ class AccountMarmotActions(
 
         val event = manager.generateKeyPackageEvent(relays.toList())
         account.cache.justConsumeMyOwnEvent(event)
-        val accepted = account.client.publishAndConfirm(event, relays)
-        if (accepted) recordKeyPackageReach(event, relays)
+        val reached = publishKeyPackageTo(event, relays)
+        val accepted = reached.isNotEmpty()
+        if (accepted) recordKeyPackageReach(event, reached)
         Log.d("MarmotDbg") {
             "republishKeyPackageConfirmed: id=${event.id.take(8)}… accepted=$accepted on ${relays.size} relay(s)"
         }
