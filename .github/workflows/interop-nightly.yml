@@ -1,0 +1,172 @@
+name: Interop nightly
+
+# amy (the quartz + commons code the app runs) against other implementations, every night.
+#
+# The suites, their counterparts and how each is fetched live in tools/interop-ci/
+# (suites.json is the registry, suites/<id>.sh the drivers); adding a suite there adds
+# it here. Each suite runs twice:
+#
+#   pinned  the counterpart at the version this repo pins. Blocking: a red job is a
+#           regression on our side (or a pin someone has to move deliberately).
+#   latest  the counterpart's default branch. continue-on-error: an early warning that
+#           the other side moved, never a red run.
+#
+# Every run is fully local. A suite either runs inside a network namespace with only
+# loopback (tools/interop-ci/netns-run.sh, which checks the cut before it starts the
+# suite) or, when it needs Docker-published ports, on the host with AMY_LOCAL_ONLY=1
+# and every service on 127.0.0.1. Nothing reaches a public relay.
+#
+# Licences: White Noise's daemons (MDK, MIT) and Armada (AGPL-3.0) are fetched and run
+# as separate programs at a commit; nothing of theirs is vendored or shipped. The cordn
+# reference coordinator has no licence and is not run here at all (see suites.json).
+#
+# Results: cli/tests/lib.sh writes one JSON line per scenario; each job turns its own
+# into JUnit annotations and a job summary, and the `report` job folds every suite into
+# one feature x counterpart x direction matrix (job summary + `interop-matrix` artifact).
+
+on:
+  schedule:
+    # 03:17 UTC: off the hour, outside the busiest runner window.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: Comma-separated suite ids from tools/interop-ci/suites.json (empty = every enabled suite)
+        required: false
+        default: ''
+      channels:
+        description: Which counterpart versions to test
+        type: choice
+        options: [both, pinned, latest]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pinned: ${{ steps.matrix.outputs.pinned }}
+      latest: ${{ steps.matrix.outputs.latest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build the matrices from tools/interop-ci/suites.json
+        id: matrix
+        env:
+          ONLY: ${{ inputs.suites }}
+          CHANNELS: ${{ inputs.channels || 'both' }}
+        run: |
+          for ch in pinned latest; do
+            if [[ "$CHANNELS" != both && "$CHANNELS" != "$ch" ]]; then
+              echo "$ch=[]" >>"$GITHUB_OUTPUT"; continue
+            fi
+            m=$(jq -c --arg ch "$ch" --arg only "$ONLY" '
+              ($only | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))) as $o
+              | [ .suites[]
+                  | .id as $id
+                  | select(.enabled and ((.channels // []) | index($ch)) != null)
+                  | select(($o | length) == 0 or ($o | index($id)) != null)
+                  | { id, name,
+                      toolchains: ((.toolchains // []) | join(" ")),
+                      timeout: (.timeout // 30),
+                      job_timeout: ((.timeout // 30) + 75),
+                      cache: ((.cache // []) | join("\n")),
+                      logs: ((.logs // []) | join("\n")) } ]' tools/interop-ci/suites.json)
+            echo "$ch=$m" >>"$GITHUB_OUTPUT"
+            echo "$ch: $(jq -r 'map(.id) | join(", ")' <<<"$m")"
+          done
+
+  pinned:
+    name: ${{ matrix.name }} (pinned)
+    needs: plan
+    if: needs.plan.outputs.pinned != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.job_timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.pinned) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Run ${{ matrix.id }}
+        uses: ./.github/actions/interop-suite
+        with:
+          suite: ${{ matrix.id }}
+          channel: pinned
+          toolchains: ${{ matrix.toolchains }}
+          timeout: ${{ matrix.timeout }}
+          cache: ${{ matrix.cache }}
+          logs: ${{ matrix.logs }}
+
+  latest:
+    name: ${{ matrix.name }} (latest, non-blocking)
+    needs: plan
+    if: needs.plan.outputs.latest != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.job_timeout }}
+    # An early warning, never a red run: the counterpart's main may be broken itself.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.latest) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Run ${{ matrix.id }}
+        uses: ./.github/actions/interop-suite
+        with:
+          suite: ${{ matrix.id }}
+          channel: latest
+          toolchains: ${{ matrix.toolchains }}
+          timeout: ${{ matrix.timeout }}
+          cache: ${{ matrix.cache }}
+          logs: ${{ matrix.logs }}
+
+  report:
+    name: Interop matrix
+    needs: [plan, pinned, latest]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download every suite's results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: interop-*
+          path: artifacts
+
+      - name: Build the feature x counterpart x direction matrix
+        run: |
+          # Each artifact keeps its paths below the deepest common directory, so a
+          # suite's results sit at …/pinned/<suite>.jsonl at some depth: gather them.
+          mkdir -p merged/pinned merged/latest
+          for ch in pinned latest; do
+            find artifacts -type f -path "*/$ch/*" \( -name '*.jsonl' -o -name '*.meta.json' \) \
+              | while read -r f; do
+                  [[ "$(basename "$(dirname "$f")")" == "$ch" ]] && cp "$f" "merged/$ch/"
+                done
+          done
+          python3 tools/interop-ci/results_matrix.py --results merged --markdown interop-matrix.md --junit-dir merged/junit
+          cat interop-matrix.md >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the matrix
+        uses: actions/upload-artifact@v7
+        with:
+          name: interop-matrix
+          path: |
+            interop-matrix.md
+            merged
+          retention-days: 90
