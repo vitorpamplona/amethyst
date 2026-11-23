@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.model.BuzzDmAddResult
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
 import com.vitorpamplona.amethyst.commons.model.buzzDmAddRefusedHistoryTag
 import com.vitorpamplona.amethyst.commons.model.buzzDmAddResult
-import com.vitorpamplona.amethyst.commons.model.buzzDmCreatedFromOk
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
@@ -336,7 +335,7 @@ object BuzzCommands {
                     "published" to ack.values.any { it.accepted },
                     "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
                     // false, not null, for an OK that doesn't say: the key's shape before the parser.
-                    "created" to (buzzDmCreatedFromOk(okMessage) ?: okMessage?.let { false }),
+                    "created" to (BuzzDmRules.createdFromOk(okMessage) ?: okMessage?.let { false }),
                     "relay_message" to okMessage,
                 ),
             )

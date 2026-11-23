@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
-import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -40,18 +39,5 @@ class ConcordRoleRulesTest {
         assertTrue(ConcordRoleRules.canPlace(myRank = 2, oldPosition = null, newPosition = 3))
         assertFalse(ConcordRoleRules.canPlace(myRank = 2, oldPosition = 1, newPosition = 5), "a role above us stays out of reach")
         assertEquals(3, ConcordRoleRules.highestPlaceable(2))
-    }
-
-    @Test
-    fun aRoleMayOnlyCarryBitsTheEditorHolds() {
-        val mine = ConcordPermissions.of(ConcordPermissions.MANAGE_ROLES, ConcordPermissions.KICK)
-        assertTrue(ConcordRoleRules.canGive(mine, ConcordPermissions.of(ConcordPermissions.KICK)))
-        assertFalse(ConcordRoleRules.canGive(mine, ConcordPermissions.of(ConcordPermissions.KICK, ConcordPermissions.BAN)), "BAN is not ours to hand out")
-        assertTrue(ConcordRoleRules.canGive(ConcordPermissions.ALL, ConcordPermissions.of(ConcordPermissions.BAN)), "the owner holds every bit")
-        assertFalse(
-            ConcordRoleRules.canWrite(myRank = 2, myBits = mine, oldPosition = 3, newPosition = 3, roleBits = ConcordPermissions.of(ConcordPermissions.BAN)),
-            "a role beneath us still can't carry a bit we lack",
-        )
-        assertTrue(ConcordRoleRules.canWrite(myRank = 2, myBits = mine, oldPosition = 3, newPosition = 4, roleBits = ConcordPermissions.of(ConcordPermissions.KICK)))
     }
 }

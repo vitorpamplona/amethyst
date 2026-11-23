@@ -115,7 +115,6 @@ fun ConcordRoleEditorDialog(
         }
     // The permissions a role may be given here: the ones this viewer holds.
     val offeredBits = remember(authority, me) { ConcordRoleRules.EDITABLE_BITS.filter { authority.hasPermission(me, it) } }
-    val myBits = remember(authority, me) { authority.effectivePermissions(me) }
 
     var draft by remember { mutableStateOf<RoleDraft?>(null) }
     var toDelete by remember { mutableStateOf<Pair<String, RoleEntity>?>(null) }
@@ -166,7 +165,7 @@ fun ConcordRoleEditorDialog(
                     val editable = ConcordRoleRules.canPlace(myRank, role.position, role.position)
                     // The draft starts from the role's bits, but only the viewer's own are offered:
                     // a role holding one the viewer lacks can't be saved (every reader drops it).
-                    val bitsHeld = ConcordRoleRules.canGive(myBits, role.permissionBits())
+                    val bitsHeld = authority.canWriteRole(me, id, role)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,

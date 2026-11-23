@@ -20,26 +20,20 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** How we read a relay's answer to a group command (a create, an edit, a Buzz DM add), and a Buzz group state's shape. */
+/** How we read a relay's answer to a group command (a create, an edit, a Buzz DM add). */
 class RelayGroupCommandResultsTest {
     private val relay = RelayUrlNormalizer.normalize("wss://buzz.example.com")
     private val dm = "11111111-1111-4111-8111-111111111111"
     private val other = "22222222-2222-4222-8222-222222222222"
-
-    private fun metadata(vararg tags: Array<String>): Event = EventFactory.create("00".repeat(32), "aa".repeat(32), 100, GroupMetadataEvent.KIND, arrayOf(*tags), "", "22".repeat(64))
 
     @Test
     fun aRefusedCommandReportsTheRelaysReason() {
@@ -87,30 +81,9 @@ class RelayGroupCommandResultsTest {
     }
 
     @Test
-    fun aDmCommandsOkSaysWhetherItMadeANewDm() {
-        assertEquals(true, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\",\"created\":true}"))
-        assertEquals(true, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\", \"created\": true}"))
-        assertEquals(false, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\",\"created\":false}"))
-        assertNull(buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\"}"))
-        assertNull(buzzDmCreatedFromOk(null))
-    }
-
-    @Test
     fun anAgentsHistoryTagRefusalAsksForAnUntaggedAdd() {
         assertTrue(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, ONLY_PEOPLE_SHARE_HISTORY))))
         assertFalse(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, "forbidden: not a member"))))
         assertFalse(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(true, "response:{}"))))
-    }
-
-    @Test
-    fun recognisesBuzzGroupStateWithAndWithoutTheCreatorTag() {
-        // NIP-CL relay: channel type first, then the creator.
-        assertTrue(BuzzRelayDialect.looksLikeBuzzGroupState(metadata(arrayOf("d", dm), arrayOf("t", "stream"), arrayOf("P", "bb".repeat(32)))))
-        // Before buzz `8bb49a1b6`: the channel type alone, on a UUID-named channel.
-        assertTrue(BuzzRelayDialect.looksLikeBuzzGroupState(metadata(arrayOf("d", dm), arrayOf("name", "general"), arrayOf("t", "forum"))))
-        // NIP-29: topics, or a `#stream` topic on a group with a short id.
-        assertFalse(BuzzRelayDialect.looksLikeBuzzGroupState(metadata(arrayOf("d", "pizza"), arrayOf("t", "stream"))))
-        assertFalse(BuzzRelayDialect.looksLikeBuzzGroupState(metadata(arrayOf("d", dm), arrayOf("t", "bitcoin"), arrayOf("t", "stream"))))
-        assertFalse(BuzzRelayDialect.looksLikeBuzzGroupState(null))
     }
 }

@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.buzz
 
-import com.vitorpamplona.quartz.buzz.workspace.BuzzChannelLabels
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.fastFirstOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,28 +63,6 @@ object BuzzRelayDialect {
             if (buzzRelays.compareAndSet(current, current + relay)) return true
         }
     }
-
-    /**
-     * Whether [event] (a 39000/39001/39002) has the shape of a Buzz relay's group state, for a
-     * client that has not otherwise learnt the relay's dialect (the `amy` CLI); the app goes by
-     * [isBuzz].
-     *
-     * A current Buzz relay stamps the channel type as the first `t` tag and the creator as `P`
-     * ([BuzzChannelLabels.looksLikeBuzzGroupState]). One from before that (buzz `8bb49a1b6`) has the
-     * channel-type `t` alone, so that shape counts too when the group's `d` is a UUID, which every
-     * Buzz channel id is and NIP-29 group ids rarely are: a NIP-29 hashtag `#stream` on a group named
-     * by a short id stays a NIP-29 group.
-     */
-    fun looksLikeBuzzGroupState(event: Event?): Boolean {
-        if (event == null) return false
-        if (BuzzChannelLabels.looksLikeBuzzGroupState(event)) return true
-        val firstTopic = event.tags.fastFirstOrNull { it.size > 1 && it[0] == "t" }?.get(1) ?: return false
-        if (firstTopic !in BuzzChannelLabels.RESERVED) return false
-        val groupId = event.tags.fastFirstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: return false
-        return UUID.matches(groupId)
-    }
-
-    private val UUID = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
     /**
      * Whether [info] is a Buzz relay's NIP-11 document: Buzz names its repository as `software`

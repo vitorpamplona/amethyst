@@ -1907,13 +1907,13 @@ class AccountConcordActions(
         val state = session.state.value ?: return false
         val existing = roleIdHex?.let { state.roles[it] ?: return false }
         if (!canEditConcordRole(state.authority, existing?.position, position)) return false
-        // The fold drops a role edition that hands out a bit its author does not hold.
-        if (!ConcordRoleRules.canGive(state.authority.effectivePermissions(account.signer.pubKey), permissions)) {
+        val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
+        val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
+        // The positions passed above, so the fold would drop it only for a bit its author does not hold.
+        if (!state.authority.canWriteRole(account.signer.pubKey, roleIdHex ?: roleId.toHexKey(), role)) {
             throw UserNoticeException(ConcordNotice.RoleBitsNotHeld)
         }
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
-        val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
-        val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
         val wrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleId, role, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         val before = state.authority
         publishConcordWrap(session.entry, wrap)

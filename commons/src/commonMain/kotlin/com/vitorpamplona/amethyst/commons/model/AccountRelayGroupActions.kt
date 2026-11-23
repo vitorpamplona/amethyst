@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
+import com.vitorpamplona.quartz.buzz.workspace.BuzzChannelLabels
 import com.vitorpamplona.quartz.buzz.workspace.buzzRoleFor
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
@@ -61,7 +62,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
@@ -540,11 +540,8 @@ class AccountRelayGroupActions(
             .getRelayGroupChannelsOnRelay(relay)
             .firstOrNull { channel ->
                 val event = channel.event ?: return@firstOrNull false
-                val type = event.buzzChannelType()
                 channel.groupId != except &&
-                    !channel.isPrivate() &&
-                    (type == null || type == BUZZ_CHANNEL_TYPE_STREAM || type == BUZZ_CHANNEL_TYPE_FORUM) &&
-                    !event.tags.fastAny { it.isNotEmpty() && it[0] == "unlisted" } &&
+                    BuzzChannelLabels.isListed(event) &&
                     !RelayGroupDeletions.isDeleted(channel.groupId) &&
                     event.name()?.let { canonicalBuzzChannelName(it).equals(wanted, ignoreCase = true) } == true
             }?.event
@@ -993,19 +990,6 @@ internal fun PublishResult.isNotYetAnswered(): Boolean =
             MachineReadablePrefix.RATE_LIMITED -> retryAfterMs != null
             else -> false
         }
-
-/**
- * Whether the relay says a DM command made a new DM (`response:{…,"created":true}`), or null when the
- * OK does not say. Shared by the app and `amy buzz dm add-member`.
- */
-fun buzzDmCreatedFromOk(message: String?): Boolean? =
-    message
-        ?.let { CREATED_FIELD.find(it) }
-        ?.groupValues
-        ?.get(1)
-        ?.toBooleanStrict()
-
-private val CREATED_FIELD = Regex("\"created\"\\s*:\\s*(true|false)")
 
 /** The relay's refusal of a history tag from an agent (buzz `handle_dm_add_member`, `ONLY_PEOPLE_SHARE_HISTORY`). */
 const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's history"

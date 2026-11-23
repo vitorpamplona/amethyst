@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
 import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLES
+import com.vitorpamplona.quartz.buzz.workspace.BuzzChannelLabels
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -114,7 +115,7 @@ object RelayGroupModerationCommands {
                 GroupEditMetadataEvent.buildEdit(
                     groupId,
                     currentMetadata = meta,
-                    isBuzz = BuzzRelayDialect.looksLikeBuzzGroupState(meta),
+                    isBuzz = BuzzChannelLabels.looksLikeBuzzGroupStateOfAnyVersion(meta),
                     name = args.flag("name") ?: meta?.name(),
                     about = args.flag("about") ?: meta?.about(),
                     picture = args.flag("picture") ?: meta?.picture(),
