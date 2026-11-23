@@ -1391,6 +1391,11 @@ class ConcordCommunitySession(
     // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
     private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
 
+    // Channel id -> the held hides (by deletion id, oldest first) whose hider could not moderate the
+    // channel when it was held: a member's own deletes, mostly. Evicted before any other, so a flood
+    // of them can't push out a moderator's hide.
+    private val unprivilegedHides = HashMap<HexKey, LinkedHashSet<HexKey>>()
+
     private val _moderationHideRevision = MutableStateFlow(0L)
 
     /** Bumps whenever a new moderation hide is held, so a store re-applies the hides it covers. */
@@ -1419,17 +1424,46 @@ class ConcordCommunitySession(
         held[hide.deletionId] = hide
         val byTarget = hidesByTarget.getOrPut(hide.channelIdHex) { HashMap() }
         hide.targets.forEach { byTarget.getOrPut(it) { ArrayList(1) }.add(hide) }
-        // Bounded like the wrap buffer: any member can post deletes, so the oldest go first.
+        val unprivileged = unprivilegedHides.getOrPut(hide.channelIdHex) { LinkedHashSet() }
+        if (!mayModerate(hide)) unprivileged.add(hide.deletionId)
+        // Bounded like the wrap buffer: any member can post deletes. The oldest of those whose hider
+        // can't moderate here go first, so only moderators' own hides ever push each other out.
         while (held.size > MAX_MODERATION_HIDES_PER_CHANNEL) {
-            val oldest = held.remove(held.keys.first()) ?: break
-            oldest.targets.forEach { target ->
+            val victim = nextEvictionLocked(held, unprivileged) ?: break
+            held.remove(victim.deletionId)
+            unprivileged.remove(victim.deletionId)
+            victim.targets.forEach { target ->
                 val list = byTarget[target] ?: return@forEach
-                list.remove(oldest)
+                list.remove(victim)
                 if (list.isEmpty()) byTarget.remove(target)
             }
         }
         return true
     }
+
+    /**
+     * The hide to evict from [held]: the oldest of [unprivileged] whose hider still can't moderate
+     * (one granted the bit since it was held, or held before the first fold, is promoted out of
+     * [unprivileged] here), else the oldest of all. Caller holds [lock].
+     */
+    private fun nextEvictionLocked(
+        held: LinkedHashMap<HexKey, ConcordModerationHide>,
+        unprivileged: LinkedHashSet<HexKey>,
+    ): ConcordModerationHide? {
+        while (unprivileged.isNotEmpty()) {
+            val id = unprivileged.first()
+            unprivileged.remove(id)
+            val hide = held[id] ?: continue
+            if (!mayModerate(hide)) return hide
+        }
+        return held.values.firstOrNull()
+    }
+
+    /**
+     * Whether the current fold would honor [hide]'s hider over a member who holds no role: they may
+     * moderate the channel at all. False before the Control Plane folds.
+     */
+    private fun mayModerate(hide: ConcordModerationHide): Boolean = _state.value?.honorsModerationHide(hide.hider, ROLELESS_MEMBER, hide.channelIdHex, hide.citation) == true
 
     /**
      * True when a held moderation hide on [channelIdHex] names [rumorId], written by [author], and
@@ -1604,6 +1638,10 @@ class ConcordCommunitySession(
 
         /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
         const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
+
+        // A key no member holds: never the owner, never ranked, so a hide over it is honored exactly
+        // when its hider may moderate the channel.
+        private const val ROLELESS_MEMBER = ""
 
         /** How many hidden rumors per channel a session re-judges on each fold. */
         const val MAX_HIDDEN_RUMORS_PER_CHANNEL = 4000

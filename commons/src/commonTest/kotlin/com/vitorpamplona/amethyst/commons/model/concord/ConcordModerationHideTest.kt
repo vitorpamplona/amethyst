@@ -283,4 +283,24 @@ class ConcordModerationHideTest {
             assertTrue(inChannel(cache, c, before.id), "a hide by someone stripped of the bit comes undone")
             assertTrue(inChannel(cache, c, after.id), "also for a target that arrived after the hide")
         }
+
+    @Test
+    fun aFloodOfSelfDeletesDoesNotEvictAModeratorsHide() =
+        runTest {
+            val cache = EventCache()
+            val c = ConcordCommunityFactory.create(owner, "Guild", createdAt = 1L, relays = listOf("wss://r.example"))
+            val session = sessionInto(cache, c)
+            c.genesisWraps.forEach { session.ingest(it) }
+
+            val spam = message(c, "spam", 10L)
+            session.ingest(hide(c, owner, listOf(spam.id), 20L))
+            // Any member can post kind 5s: past the per-channel cap, they must not push the owner's
+            // hide out, or the spam comes back on the next delivery.
+            repeat(ConcordCommunitySession.MAX_MODERATION_HIDES_PER_CHANNEL + 1) { i ->
+                session.ingest(hide(c, member, listOf(i.toString().padStart(64, '0')), 30L + i))
+            }
+            session.ingest(wrap(spam, general(c), member))
+            assertNull(cache.getNoteIfExists(spam.id)?.event, "the owner's hide still holds")
+            assertTrue(session.heldModerationHides().size <= ConcordCommunitySession.MAX_MODERATION_HIDES_PER_CHANNEL)
+        }
 }
