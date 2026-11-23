@@ -4578,6 +4578,20 @@ class Account(
 
         nwcBackup.start()
 
+        // A Marmot chat muted here or on a linked device leaves nothing in the system shade.
+        scope.launch(Dispatchers.IO) {
+            var mutedBefore: Set<HexKey>? = null
+            marmotChatSettings.state.collect { settings ->
+                val muted = settings.muted.keys.filterTo(HashSet()) { settings.isMuted(it) }
+                val newly = mutedBefore?.let { before -> muted - before }.orEmpty()
+                mutedBefore = muted
+                newly.forEach { id ->
+                    runCatchingCancellable { marmotNotifier().clearGroupNotifications(id, this@Account) }
+                        .onFailure { Log.w("Account", "could not clear the notifications of a muted chat", it) }
+                }
+            }
+        }
+
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
             // Derived kind:1210 rows go straight into the conversation. Only

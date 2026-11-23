@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelMarmotGroup
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.notificationAccountFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
@@ -91,11 +92,18 @@ object GroupMessageNotification {
             notes = emptyList(),
             isComplete = { sender.metadataOrNull()?.bestName() != null },
         ) {
+            // Muted while this was being built or enriched: the chat stays quiet.
+            if (account.marmotChatSettings.state.value
+                    .isMuted(nostrGroupId)
+            ) {
+                return@enrichAndPost
+            }
             nm.postConversation(
                 category = NotificationCategory.DIRECT_MESSAGE,
                 forAccount = notificationAccountFor(account),
                 id = innerEvent.id,
                 senderName = groupName,
+                marmotGroupId = nostrGroupId,
                 pictureUrl = sender.profilePicture(),
                 messageBody = "${sender.toBestDisplayName()}: $fallbackBody",
                 time = innerEvent.createdAt,
@@ -116,6 +124,14 @@ object GroupMessageNotification {
                     },
             )
         }
+    }
+
+    /** The user muted [nostrGroupId]: its notifications already in the shade go. */
+    fun clearGroup(
+        context: Context,
+        nostrGroupId: String,
+    ) {
+        context.notificationManager().cancelMarmotGroup(nostrGroupId)
     }
 
     suspend fun notifyWelcome(

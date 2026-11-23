@@ -397,6 +397,20 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Muting a Marmot chat takes the entries it already put in Notifications out (the feed is
+        // additive, so its filter alone only keeps new ones out); unmuting brings them back.
+        scope.launch(Dispatchers.IO) {
+            account.marmotChatSettings.state
+                .map { it.muted.keys }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    notifications.invalidateData()
+                    notificationsFollowing.invalidateData()
+                    notificationsEveryone.invalidateData()
+                }
+        }
+
         // Same for cordn, and more so: a cordn message is an MLS envelope that
         // never enters LocalCache at all (§3.3 of
         // amethyst/plans/2026-09-19-cordn-ui.md), so nothing about a cordn room
