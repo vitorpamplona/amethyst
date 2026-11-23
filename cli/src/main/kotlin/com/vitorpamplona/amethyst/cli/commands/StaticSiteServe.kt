@@ -46,10 +46,10 @@ internal object StaticSiteServe {
         paths: List<PathTag>,
         servers: List<String>,
         port: Int,
+        blossom: BlossomClient,
     ): Int {
         if (servers.isEmpty()) return Output.error("no_servers", "manifest lists no Blossom servers; pass --server URL")
 
-        val blossom = BlossomClient()
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
         server.createContext("/") { exchange -> handle(exchange, paths, servers, blossom) }
         server.executor = null // default per-request executor — fine for a single-user dev server

@@ -24,9 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDeletedMessageNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_message_deleted
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_label
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_preview
@@ -69,6 +71,7 @@ fun marmotGroupPreviewText(
     val previewBody =
         when {
             newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
+            newestMessage is MarmotDeletedMessageNote -> stringRes(Res.string.marmot_message_deleted)
             previewEvent == null -> stringRes(Res.string.marmot_preview_no_text)
             previewEvent.kind == MarmotAppEvent.KIND_SYSTEM -> stringRes(Res.string.marmot_preview_group_updated)
             // A poll's question alone reads like a plain message; MDK shows a poll label.
@@ -95,8 +98,7 @@ fun marmotGroupPreviewText(
     // metadata REQ behind every row of a list that is mostly strangers' names
     // the reader never asked for — a preview line is not worth that.
     val senderUser =
-        previewEvent
-            ?.pubKey
+        (previewEvent?.pubKey ?: (newestMessage as? MarmotDeletedMessageNote)?.author?.pubkeyHex)
             ?.takeIf { it != myPubKey }
             ?.let { LocalCache.getUserIfExists(it) }
     val senderName =

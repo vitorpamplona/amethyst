@@ -52,7 +52,7 @@ data class EncryptedUploadResult(
 )
 
 class UploadOrchestrator(
-    private val client: BlossomClient = BlossomClient(),
+    private val client: BlossomClient,
     /**
      * Reads the hash, size, dimensions and preview hashes of the bytes that will be sent. The
      * default reads what ImageIO decodes; a platform with more decoders (Skia on desktop, ffprobe

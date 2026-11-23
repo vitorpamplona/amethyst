@@ -4071,7 +4071,6 @@
     <string name="concord_create_failed">Skupnosti ni bilo mogoče ustvariti: noben rele je ni sprejel ali pa seznama skupnosti ni bilo mogoče posodobiti. Preveri releje in poskusi znova.</string>
     <string name="concord_create_relays">Releji</string>
     <string name="concord_create_relays_desc">Releji, ki shranjujejo šifrirana sporočila te skupnosti. Pustite prazno, če želite uporabiti svoje.</string>
-    <string name="concord_create_title">Nov kanal Concord</string>
     <string name="concord_direct_invite_accept">Sprejmi</string>
     <string name="concord_direct_invite_accept_failed">Te skupnosti ni bilo mogoče doseči. Poskusi znova čez trenutek.</string>
     <string name="concord_direct_invite_action">Povabi z npub…</string>

@@ -119,6 +119,41 @@ class EncryptedMarmotStoresTest {
         }
 
     /**
+     * Disappearing-message expiries are kept in memory per group once read; that copy must agree
+     * with the file through every write: first write wins, a reopen sees the same map, and removing
+     * a message forgets its expiry in both.
+     */
+    @Test
+    fun expiriesKeepTheirFirstValueSurviveAReopenAndAreForgottenWithTheirMessage() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val one = "1".repeat(64)
+            val two = "2".repeat(64)
+
+            assertEquals(emptyMap<String, Long>(), store.loadExpiries(groupId))
+            store.recordExpiry(groupId, one, 100L)
+            store.recordExpiry(groupId, one, 999L)
+            store.recordExpiry(groupId, two, 200L)
+            store.recordExpiry(otherGroupId, one, 300L)
+
+            val expected = mapOf(one to 100L, two to 200L)
+            assertEquals("first write wins", expected, store.loadExpiries(groupId))
+            assertEquals("a reopen reads the same", expected, EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+
+            store.removeMessages(groupId, setOf(one))
+            assertEquals(mapOf(two to 200L), store.loadExpiries(groupId))
+            assertEquals(mapOf(two to 200L), EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+            assertEquals("another group is untouched", mapOf(one to 300L), store.loadExpiries(otherGroupId))
+
+            store.recordExpiry(groupId, one, 400L)
+            assertEquals(mapOf(two to 200L, one to 400L), EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+
+            store.delete(groupId)
+            assertEquals(emptyMap<String, Long>(), store.loadExpiries(groupId))
+        }
+
+    /**
      * Media keys, epoch admins and moderation verdicts decide what a restart shows: an
      * attachment that opens, a deleted message that stays deleted. Each is first-write-wins.
      */

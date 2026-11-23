@@ -127,7 +127,6 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
 import com.vitorpamplona.amethyst.desktop.update.InstallChannel
-import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -149,7 +148,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -601,9 +599,6 @@ class DesktopAppModules(
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
             // NIP-55 signer apps are Android's: an account that used one is read-only here.
             externalSignerFactory = { _, _ -> null },
-            marmotStreamTransportFactory = { scope ->
-                QuicAgentTextStreamTransport(parentScope = scope, certificateValidator = JdkCertificateValidator())
-            },
             cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,

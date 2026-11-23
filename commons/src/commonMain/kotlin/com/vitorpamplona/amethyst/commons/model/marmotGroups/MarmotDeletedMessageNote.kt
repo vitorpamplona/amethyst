@@ -18,20 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.accountsCache
+package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
-import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
-import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
- * Preview brokers are commonly self-signed and the binding expects that; the platform trust
- * store is still the default answer, and a deployment that pins does it here.
+ * Where a Marmot group message stood before its author deleted it (kind:5). White Noise keeps a
+ * "message deleted" row in the conversation instead of letting the message vanish, so a reply
+ * to it, or the gap it leaves, still makes sense. The row has no event: only who wrote the
+ * message and when, never what it said.
  */
-fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
-    QuicAgentTextStreamTransport(
-        parentScope = scope,
-        certificateValidator = JdkCertificateValidator(),
-    )
+@Stable
+class MarmotDeletedMessageNote(
+    val deletedId: HexKey,
+    deletedAuthor: User?,
+    private val deletedAt: Long,
+) : Note(idFor(deletedId)) {
+    init {
+        author = deletedAuthor
+    }
+
+    override fun createdAt(): Long = deletedAt
+
+    companion object {
+        fun idFor(deletedId: HexKey): String = "marmot-deleted-$deletedId"
+    }
+}

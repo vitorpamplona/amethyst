@@ -408,7 +408,14 @@ object ConcordPinning {
         rumorId: HexKey,
     ): ConcordPinSource? {
         val opened = ConcordStreamEnvelope.openOrNull(wrap, plane.key) ?: return null
-        val rumor = ChannelChat.acceptOpened(opened, plane.channelIdHex, plane.epoch) ?: return null
+        // A writer-address post commits its writer epoch (`wepoch`, CORD-03 §1), which the read
+        // address's gate refuses; it is judged on its own plane's.
+        val rumor =
+            if (plane.writerEpoch != null) {
+                ChannelChat.acceptWriterOpened(opened, plane.channelIdHex, plane.epoch, plane.writerEpoch)
+            } else {
+                ChannelChat.acceptOpened(opened, plane.channelIdHex, plane.epoch)
+            } ?: return null
         if (rumor.id != rumorId) return null
         return ConcordPinSource(opened, wrap.id, plane.key.conversationKey)
     }
@@ -419,10 +426,11 @@ object ConcordPinning {
         planes: Collection<ChannelPlane>,
         rumorId: HexKey,
     ): ConcordPinSource? {
-        val byAddress = planes.associateBy { it.key.publicKeyHex }
+        // A writer address is read under several keys (CORD-03 §1), so several planes share it.
+        val byAddress = planes.groupBy { it.key.publicKeyHex }
         for (wrap in wraps) {
-            val plane = byAddress[wrap.pubKey] ?: continue
-            sourceOf(wrap, plane, rumorId)?.let { return it }
+            val candidates = byAddress[wrap.pubKey] ?: continue
+            candidates.firstNotNullOfOrNull { sourceOf(wrap, it, rumorId) }?.let { return it }
         }
         return null
     }

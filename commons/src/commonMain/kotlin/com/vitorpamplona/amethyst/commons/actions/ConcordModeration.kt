@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
@@ -35,6 +37,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.RankedRoster
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
@@ -119,8 +122,22 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val (version, prevHash) = versioning(head)
+        // Roles v2 (CORD-04 §1, §2): every edition of a switched Community is marked. The legacy role
+        // and grant editors, and plain private-channel metadata, write shapes a v2 reader drops, so
+        // they are refused there until the Roles v2 editors land rather than published wrong.
+        val binding = RankedRoster.bindingForWrite(current, communityId, owner, kind)
+        if (binding != null) {
+            val refused =
+                when {
+                    kind == ControlEntityKind.ROLE -> ConcordNotice.RolesV2Editor.ROLES
+                    kind == ControlEntityKind.GRANT -> ConcordNotice.RolesV2Editor.GRANTS
+                    kind == ControlEntityKind.CHANNEL && ConcordJson.decodeOrNull<ChannelEntity>(content)?.private == true -> ConcordNotice.RolesV2Editor.PRIVATE_CHANNEL
+                    else -> null
+                }
+            if (refused != null) throw UserNoticeException(ConcordNotice.RolesV2Unsupported(refused))
+        }
         val vac = citation ?: AuthorityCitations.forActor(current, communityId, owner, actor.pubKey)
-        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac)
+        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac, binding)
         return ConcordStreamEnvelope.wrap(rumor, controlPlane, actor, encrypted = false, createdAt = createdAt)
     }
 

@@ -55,12 +55,12 @@ internal object StaticSiteFetch {
         manifestFields: Map<String, Any?>,
         outFile: String?,
         maxInlineBytes: Long,
+        blossom: BlossomClient,
     ): Int {
         if (servers.isEmpty()) {
             return Output.error("no_servers", "manifest lists no Blossom servers; pass --server URL")
         }
 
-        val blossom = BlossomClient()
         val resolution =
             StaticSiteResolver.resolve(
                 requestPath = requestPath,

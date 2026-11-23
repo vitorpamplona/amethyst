@@ -102,7 +102,6 @@ providers.gradleProperty("marmotKmpDir").orNull?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("com.vitorpamplona.marmot:marmot")).using(project(":marmot"))
-            substitute(module("com.vitorpamplona.marmot:marmot-quic")).using(project(":marmot-quic"))
         }
     }
 }
@@ -128,7 +127,7 @@ providers.gradleProperty("cryptoKmpDir").orNull?.let { dir ->
 }
 
 // quic lives in its own repo (vitorpamplona/quic-kmp) and comes through Magpie. To change
-// it alongside nestsClient or marmot-quic, point Gradle at a local checkout and it builds that
+// it alongside nestsClient, point Gradle at a local checkout and it builds that
 // checkout instead of the published artifact:
 //   ./gradlew -PquicKmpDir=../quic-kmp :nestsClient:jvmTest
 providers.gradleProperty("quicKmpDir").orNull?.let { dir ->

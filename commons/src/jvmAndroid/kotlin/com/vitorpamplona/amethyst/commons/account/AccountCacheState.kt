@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.commons.account
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedDeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
+import com.vitorpamplona.amethyst.commons.marmot.MarmotDeviceGroupSwitch
+import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
 import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -36,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
@@ -44,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermission
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.cordn.client.CordnBlobCipher
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -92,8 +95,6 @@ class AccountCacheState(
      * Android's NIP-55 apps. Returns null where the platform has none, which leaves such an account read-only.
      */
     val externalSignerFactory: (pubKey: HexKey, packageName: String) -> NostrSigner?,
-    /** Builds the raw-QUIC transport for Marmot agent text stream previews. */
-    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Encrypts the Cordn group files kept in each account's directory. Null where the platform has no
      * key store for it yet, which keeps Cordn's state in memory only.
@@ -362,7 +363,10 @@ class AccountCacheState(
                 disabled = { !accountSettings.syncedSettings.security.addClientTag.value },
             )
 
-        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }
+        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}")
+        // An account this install never held: device groups start on for it (MarmotDeviceGroupSwitch).
+        val newAccount = !accountDir.exists()
+        accountDir.mkdirs()
 
         val mlsStore =
             try {
@@ -445,6 +449,17 @@ class AccountCacheState(
                 null
             }
 
+        // Marmot device groups stay off unless this account's switch file exists; their records hold
+        // the device tag's signing seed and private KeyPackages, so they are encrypted at rest.
+        val marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir, newAccount)
+        val marmotLocalBlobs = EncryptedDeviceGroupBlobs(accountDir)
+        val marmotDeviceGroupStores =
+            if (marmotDeviceGroupSwitch.isEnabled()) {
+                DeviceGroupBlobStores(marmotLocalBlobs)
+            } else {
+                null
+            }
+
         // Per-account NIP-42 ALLOW/DENY overrides live in this account's own dir, so a DENY for one
         // account never leaks into another (the store used to be a single app-wide file).
         val relayAuthPermissionStore =
@@ -468,7 +483,6 @@ class AccountCacheState(
             marmotNotifier = marmotNotifier,
             nip46Consent = nip46Consent,
             geohashIdentityStore = geohashIdentityStore(signer.pubKey),
-            marmotStreamTransportFactory = marmotStreamTransportFactory,
             cordnBlobCipher = cordnBlobCipher,
             scope =
                 CoroutineScope(
@@ -492,6 +506,10 @@ class AccountCacheState(
             marmotPublishObligationStore = marmotPublishObligationStore,
             marmotIngestDedupStore = marmotIngestDedupStore,
             marmotPushStateStore = marmotPushStateStore,
+            marmotDeviceGroupStores = marmotDeviceGroupStores,
+            marmotDeviceGroupSwitch = marmotDeviceGroupSwitch,
+            marmotLocalBlobs = marmotLocalBlobs,
+            marmotDevicePlatform = MarmotDevicePlatform.name(),
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
             signerPermissionStore = signerPermissionStore,

@@ -49,6 +49,9 @@ rm -rf "$STATE_DIR"
 mkdir -p "$LOG_DIR"
 : >"$RESULTS_FILE"
 
+# --live is the one mode meant to reach the internet (github.com, relay.ngit.dev); every other run
+# stays local. lib.sh keeps an AMY_LOCAL_ONLY already set, so this must come before it.
+[[ "$LIVE" -eq 1 ]] && export AMY_LOCAL_ONLY=0
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
 

@@ -21,11 +21,16 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageReach
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPollRumors
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
@@ -34,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.marmot.WelcomeDelivery
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
@@ -44,6 +50,8 @@ import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
+import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
@@ -58,7 +66,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -71,14 +79,26 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -92,6 +112,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * hour after the network comes back.
  */
 private const val NONE_MAX_AGE_SECONDS = 60L
+
+/** How long a chat's last-read time must hold still before its position goes to the other devices. */
+private const val READ_POSITION_SETTLE_MS = 3_000L
 
 /**
  * Which install owns the newest KeyPackage currently on the account's relays.
@@ -199,7 +222,7 @@ class AccountMarmotActions(
         // LocalCache does not dispatch (push-token lists 447-449, edits, stream starts), which
         // left our own copy an EVENTLESS note in the conversation: an "Event is loading or can't
         // be found" row for every push-token answer we sent.
-        val innerNote = indexMarmotInnerEvent(innerEvent).note
+        val innerNote = indexMarmotGroupInnerEvent(nostrGroupId, innerEvent).note
         account.marmotGroupList.addMessage(nostrGroupId, innerNote)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before the relay round-trip so the UI
@@ -322,6 +345,7 @@ class AccountMarmotActions(
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
         manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson(), outbound.epoch)
+        outbound.epoch?.let { account.marmotGroupList.getOrCreateGroup(nostrGroupId).recordEpoch(innerEvent.id, it) }
         // Our own removal or dismissal takes effect now, not when the relay echoes it back.
         applyMarmotModeration(nostrGroupId, innerEvent)
     }
@@ -338,6 +362,21 @@ class AccountMarmotActions(
      * cache but its note, so it is attached directly.
      */
     fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
+
+    /**
+     * [indexMarmotInnerEvent] for an inner event of [nostrGroupId]: a kind:5 that takes down one of
+     * the group's messages leaves a "message deleted" row where it stood, as White Noise does,
+     * instead of the message just vanishing.
+     */
+    fun indexMarmotGroupInnerEvent(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ): IndexedInnerEvent {
+        val deleted = account.marmotGroupList.messagesDeletedBy(nostrGroupId, innerEvent)
+        val indexed = indexMarmotInnerEvent(innerEvent)
+        account.marmotGroupList.leaveDeletedPlaceholders(nostrGroupId, deleted)
+        return indexed
+    }
 
     /**
      * Apply an admin's moderation, when its author was an admin of the group in the epoch it was
@@ -504,10 +543,12 @@ class AccountMarmotActions(
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        // Both kinds: White Noise's MDK still publishes legacy kind:443, some
-        // of its users nothing else. The newest valid 30443 wins; a valid 443
-        // is the fallback (MIP-00 migration rules). A package that comes back
-        // is valid, so it has content.
+        // Every device of the account: one KeyPackage per publication slot,
+        // fresh (30 days), at most 20, none a kind-5 slot deletion withdrew and
+        // none the group could not take (foundation/key-packages.md). Only the
+        // current kind:30443 counts: a member who publishes legacy kind:443 alone
+        // has to republish before they can be invited. Every package that comes
+        // back is valid, so it has content.
         val lookup =
             KeyPackageFetcher.fetchForInvite(
                 client = account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS),
@@ -515,10 +556,11 @@ class AccountMarmotActions(
                 targetOutbox = memberOutbox,
                 myOutbox = myOutbox,
                 targetKeyPackageRelays = memberKeyPackageRelays,
+                compatible = manager.inviteCompatibility(nostrGroupId),
             )
-        val event = lookup.keyPackage
+        val keyPackages = lookup.keyPackages
 
-        if (event == null) {
+        if (keyPackages.isEmpty()) {
             Log.w("MarmotDbg") {
                 "fetchKeyPackageAndAddMember: NO valid KeyPackage found for ${memberPubKey.take(8)}… on any of ${lookup.relays.size} relay(s) " +
                     "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${lookup.relays.map { it.url }}"
@@ -527,7 +569,8 @@ class AccountMarmotActions(
         }
 
         Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
+            "fetchKeyPackageAndAddMember: got ${keyPackages.size} KeyPackage(s) " +
+                "${keyPackages.map { "id=${it.id.take(8)}… kind=${it.kind}" }} authored=${memberPubKey.take(8)}…"
         }
 
         // The commit goes to the GROUP's relays (its routing component), where
@@ -540,9 +583,9 @@ class AccountMarmotActions(
             "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
         }
 
-        addMarmotGroupMember(
+        addMarmotGroupMembers(
             nostrGroupId = nostrGroupId,
-            keyPackageEvent = event,
+            keyPackageEvents = keyPackages,
             groupRelays = groupRelays,
         )
 
@@ -557,19 +600,30 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         keyPackageEvent: PublishedKeyPackage,
         groupRelays: List<NormalizedRelayUrl>,
+    ) = addMarmotGroupMembers(nostrGroupId, listOf(keyPackageEvent), groupRelays)
+
+    /**
+     * Add one account's devices — one leaf per KeyPackage in [keyPackageEvents]
+     * — to a Marmot MLS group in ONE commit, then send each device its Welcome.
+     */
+    suspend fun addMarmotGroupMembers(
+        nostrGroupId: HexKey,
+        keyPackageEvents: List<PublishedKeyPackage>,
+        groupRelays: List<NormalizedRelayUrl>,
     ) {
-        val memberPubKey = keyPackageEvent.pubKey
+        if (keyPackageEvents.isEmpty()) return
+        val memberPubKey = keyPackageEvents.first().pubKey
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
-                "groupRelays=${groupRelays.size}"
+                "devices=${keyPackageEvents.size} groupRelays=${groupRelays.size}"
         }
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val (commitEvent, welcomeDelivery) =
-            manager.addMember(
+        val (commitEvent, welcomeDeliveries) =
+            manager.addMembers(
                 nostrGroupId = nostrGroupId,
-                keyPackageEvent = keyPackageEvent,
+                keyPackageEvents = keyPackageEvents,
                 relays = groupRelays,
             )
 
@@ -584,8 +638,7 @@ class AccountMarmotActions(
             val commit =
                 commitEvent?.let { "kind=${it.signedEvent.kind} id=${it.signedEvent.id.take(8)}…" }
                     ?: "none (founding add, merged locally)"
-            "addMarmotGroupMember: built commit $commit " +
-                "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
+            "addMarmotGroupMember: built commit $commit welcomeDeliveries=${welcomeDeliveries.size}"
         }
 
         // Nothing to publish here either way. A normal commit was already
@@ -609,19 +662,14 @@ class AccountMarmotActions(
         // with our own outbox + the recipient's dmInboxRelays() as a
         // belt-and-braces measure in case the cache hasn't been hydrated
         // yet for this contact.
-        if (welcomeDelivery != null) {
-            val computed = account.broadcaster.computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
-            val recipientInbox =
-                account.cache
-                    .getOrCreateUser(memberPubKey)
-                    .dmInboxRelays()
-                    .orEmpty()
-            val relayList = computed + account.outboxRelays.flow.value + recipientInbox
-            Log.d("MarmotDbg") {
-                "addMarmotGroupMember: welcome gift wrap relay sources " +
-                    "computeRelayListToBroadcast=${computed.size} myOutbox=${account.outboxRelays.flow.value.size} " +
-                    "recipientInbox=${recipientInbox.size} → union=${relayList.size}"
+        if (welcomeDeliveries.isEmpty()) {
+            Log.w("MarmotDbg") {
+                "addMarmotGroupMember: no Welcome — invitee ${memberPubKey.take(8)}… will receive nothing!"
             }
+        }
+        // One Welcome per added KeyPackage, each naming the KeyPackage event it consumed.
+        for (welcomeDelivery in welcomeDeliveries) {
+            val relayList = welcomeRelays(welcomeDelivery)
             if (relayList.isEmpty()) {
                 Log.w("MarmotDbg") {
                     "addMarmotGroupMember: NO relays to deliver welcome gift wrap to ${memberPubKey.take(8)}… — welcome will be silently dropped"
@@ -633,12 +681,21 @@ class AccountMarmotActions(
                 }
             }
             account.client.publish(welcomeDelivery.giftWrapEvent, relayList)
-        } else {
-            Log.w("MarmotDbg") {
-                "addMarmotGroupMember: welcomeDelivery is NULL — invitee ${memberPubKey.take(8)}… will receive nothing!"
-            }
         }
     }
+
+    /**
+     * Where an invitee's Welcome goes: the NIP-17 DM path ([Account.computeRelayListToBroadcast],
+     * with its kind 10050 → NIP-65 read → hint fallbacks), plus this account's outbox and the
+     * recipient's DM inbox in case the cache has not loaded that contact yet.
+     */
+    fun welcomeRelays(delivery: WelcomeDelivery): Set<NormalizedRelayUrl> =
+        account.broadcaster.computeRelayListToBroadcast(delivery.giftWrapEvent) +
+            account.outboxRelays.flow.value +
+            account.cache
+                .getOrCreateUser(delivery.recipientPubKey)
+                .dmInboxRelays()
+                .orEmpty()
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.
@@ -647,11 +704,176 @@ class AccountMarmotActions(
      * dedicated kind:10051 KeyPackage relay list. The account's own 10051 is
      * still unioned in so peers that have not migrated keep finding us.
      */
-    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
-        KeyPackageFetcher.publishRelaysFor(
-            myOutbox = account.outboxRelays.flow.value,
-            legacyKeyPackageRelayList = account.keyPackageRelayList.flow.value,
+    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> = keyPackageRelayChoice().relays
+
+    /**
+     * [keyPackagePublishRelays] and whether it is only the app's defaults standing in for relay
+     * lists that have not loaded yet ([MarmotKeyPackageRelays]).
+     */
+    fun keyPackageRelayChoice(): MarmotKeyPackageRelays.Choice =
+        MarmotKeyPackageRelays.choose(
+            nip65Write =
+                account.nip65RelayList
+                    .nip65Event(account.nip65RelayList.nip65ListNote)
+                    ?.let { it.allWriteRelaysNorm()?.toSet() ?: emptySet() },
+            otherChosen = account.privateStorageRelayList.flow.value + account.localRelayList.flow.value + account.broadcastRelayList.flow.value,
+            defaults = Constants.eventFinderRelays,
+            keyPackageList = account.keyPackageRelayList.normalizeKeyPackageRelayListWithBackup(account.keyPackageRelayList.keyPackageListNote),
         )
+
+    // Re-read from the notes on every change of any input, so no two inputs come from different moments.
+    private fun keyPackageRelayChoices(): Flow<MarmotKeyPackageRelays.Choice> =
+        combine(
+            account.nip65RelayList.getNIP65RelayListFlow(),
+            account.keyPackageRelayList.getKeyPackageRelayListFlow(),
+            account.privateStorageRelayList.flow,
+            account.localRelayList.flow,
+            account.broadcastRelayList.flow,
+        ) { _, _, _, _, _ -> keyPackageRelayChoice() }.distinctUntilChanged()
+
+    /**
+     * Where this account's device group lives: the write relays of its kind:10002, the list every
+     * device of the account reads, or null while none has loaded (a first login's outbox is the
+     * app's defaults, which its other devices may not read).
+     */
+    fun deviceGroupRelays(): Set<NormalizedRelayUrl>? =
+        account.nip65RelayList
+            .nip65Event(account.nip65RelayList.nip65ListNote)
+            ?.allWriteRelaysNorm()
+            ?.toSet()
+            ?.takeIf { it.isNotEmpty() }
+
+    /**
+     * Moves the device group to [deviceGroupRelays] whenever the account's relay list loads or
+     * changes, so its traffic stays on the relays the account's devices share. Runs until
+     * [account]'s scope is cancelled.
+     */
+    suspend fun runMarmotDeviceGroupRelayWatcher() {
+        val devices = account.marmotDevices ?: return
+        combine(account.nip65RelayList.getNIP65RelayListFlow(), devices.state.map { it.linked }) { _, linked -> if (linked) deviceGroupRelays() else null }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { relays ->
+                try {
+                    when (devices.followRelays(relays.map { it.url })) {
+                        true -> Log.d("MarmotDbg") { "moved the device group to ${relays.map { it.url }}" }
+                        false -> Log.w("MarmotDbg") { "no relay confirmed moving the device group to ${relays.size} relay(s)" }
+                        null -> {}
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "could not move the device group to the account's relays", e)
+                }
+            }
+    }
+
+    /**
+     * Chats a sibling added this device to: the account accepted them on that device, so they are
+     * Known here too; each gets its name and members and its subscription, as a Welcome's would.
+     */
+    fun onMarmotChatsJoinedBySibling(chats: List<HexKey>) {
+        chats.forEach { id ->
+            account.marmotGroupList.markAsKnown(id)
+            syncAndNotify(id)
+        }
+    }
+
+    /**
+     * History a linked sibling delivered (`account-sync.md` "History deliveries"): already in the
+     * message store, indexed here like a restored message. Importing is not reading, so it moves no
+     * read position, but it is not news either: the chat's local last-read time moves past it, so
+     * the earlier messages do not show as unread.
+     */
+    suspend fun indexImportedMarmotHistory(imports: List<MarmotDeviceGroupManager.ImportedHistory>) {
+        for (history in imports) {
+            val groupId = history.nostrGroupId
+            val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+            for (event in history.events) {
+                try {
+                    val note = indexMarmotGroupInnerEvent(groupId, event).note
+                    account.marmotGroupList.addMessage(groupId, note)
+                    history.epochs[event.id]?.let { chatroom.recordEpoch(event.id, it) }
+                    applyMarmotModeration(groupId, event)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "could not index an imported message of $groupId", e)
+                }
+            }
+            val newest = history.events.maxOfOrNull { it.createdAt } ?: continue
+            val route = marmotGroupLastReadRoute(groupId)
+            if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
+            account.marmotGroupList.notifyGroupChanged(groupId)
+        }
+    }
+
+    /** Each KeyPackage this session published and the relays that accepted it (see [MarmotKeyPackageReach]). */
+    private val keyPackageReach = MarmotKeyPackageReach()
+
+    private suspend fun publishKeyPackageTo(
+        event: KeyPackageEvent,
+        relays: Set<NormalizedRelayUrl>,
+    ): Set<NormalizedRelayUrl> =
+        keyPackageReach.publish(event, relays) { e, targets ->
+            account.client.publishAndCollectResults(e, targets).mapValues { it.value.accepted }
+        }
+
+    /**
+     * Keeps this account's KeyPackages on the relays it currently chose: whenever that set
+     * changes and is not just the app's defaults, every KeyPackage held is published to the relays
+     * it has not reached. A KeyPackage left by an earlier session (this one published none yet)
+     * is found on the relays first. Runs until [account]'s scope is cancelled.
+     */
+    suspend fun runMarmotKeyPackageRelayWatcher() {
+        var lookedUpEarlier = false
+        keyPackageRelayChoices()
+            .filter { !it.provisional && it.relays.isNotEmpty() }
+            .collect { choice ->
+                val manager = account.marmotManager ?: return@collect
+                if (!account.isWriteable()) return@collect
+                try {
+                    if (!lookedUpEarlier && keyPackageReach.isEmpty()) {
+                        lookedUpEarlier = true
+                        if (manager.hasActiveKeyPackages()) {
+                            val searchOn = choice.relays + account.outboxRelays.flow.value
+                            KeyPackageFetcher
+                                .fetchKeyPackage(account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS), account.signer.pubKey, searchOn)
+                                ?.takeIf { manager.ownsKeyPackage(it) }
+                                ?.let { keyPackageReach.record(it, emptySet()) }
+                        }
+                    }
+                    val held = keyPackageReach.held()
+                    held.forEach { (event, reached) ->
+                        val missing = MarmotKeyPackageRelays.missing(choice.relays, reached)
+                        if (missing.isEmpty()) return@forEach
+                        // A KeyPackage a Welcome consumed (its replacement not out yet) is not handed
+                        // to more relays: an invite through it could not be opened here.
+                        if (!manager.ownsKeyPackage(event)) {
+                            keyPackageReach.forget(event)
+                            return@forEach
+                        }
+                        Log.d("MarmotDbg") { "KeyPackage ${event.id.take(8)}… → ${missing.size} newly chosen relay(s): ${missing.map { it.url }}" }
+                        // Not a new KeyPackage, so no replacement clock to start: only its reach grows.
+                        publishKeyPackageTo(event, missing)
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "KeyPackage relay sync failed", e)
+                }
+            }
+    }
+
+    /**
+     * The relays to publish a first KeyPackage on. On a first login the account's relay lists
+     * are still loading and the choice is only the app's defaults: wait a little for them, so the
+     * KeyPackage goes where inviters look, then take whatever is known (the watcher moves it later).
+     */
+    private suspend fun awaitKeyPackageRelays(): Set<NormalizedRelayUrl> {
+        val now = keyPackageRelayChoice()
+        if (!now.provisional) return now.relays
+        return withTimeoutOrNull(KEY_PACKAGE_LIST_WAIT_MS) {
+            keyPackageRelayChoices().first { !it.provisional }.relays
+        } ?: keyPackagePublishRelays()
+    }
 
     /**
      * Publish or rotate KeyPackage events.
@@ -709,7 +931,16 @@ class AccountMarmotActions(
         event: KeyPackageEvent,
         relays: Set<NormalizedRelayUrl>,
     ) {
-        if (account.client.publishAndConfirm(event, relays)) {
+        // A linked device names the KeyPackage in its roster entry before publishing it, so its
+        // siblings do not read it as a new sign-in (`device-group.md` "Slot announcements").
+        try {
+            account.marmotDevices?.beforeKeyPackagePublish(event)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "could not announce KeyPackage ${event.id.take(8)}… in the device group", e)
+        }
+        val reached = publishKeyPackageTo(event, relays)
+        if (reached.isNotEmpty()) {
             manager.confirmKeyPackagePublished(event)
             return
         }
@@ -719,7 +950,11 @@ class AccountMarmotActions(
             repeat(KEY_PACKAGE_RETRIES) {
                 delay(wait)
                 wait *= 4
-                if (account.client.publishAndConfirm(event, relays)) {
+                // Recomputed each time: the relay lists may have loaded since the first attempt,
+                // and retrying the app's defaults would keep missing the relays inviters read.
+                val now = keyPackagePublishRelays().ifEmpty { relays }
+                val reached = publishKeyPackageTo(event, now)
+                if (reached.isNotEmpty()) {
                     manager.confirmKeyPackagePublished(event)
                     return@launch
                 }
@@ -735,7 +970,7 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val relays = keyPackagePublishRelays()
+        val relays = awaitKeyPackageRelays()
         Log.d("MarmotDbg") {
             "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
         }
@@ -931,7 +1166,8 @@ class AccountMarmotActions(
 
         val event = manager.generateKeyPackageEvent(relays.toList())
         account.cache.justConsumeMyOwnEvent(event)
-        val accepted = account.client.publishAndConfirm(event, relays)
+        val reached = publishKeyPackageTo(event, relays)
+        val accepted = reached.isNotEmpty()
         Log.d("MarmotDbg") {
             "republishKeyPackageConfirmed: id=${event.id.take(8)}… accepted=$accepted on ${relays.size} relay(s)"
         }
@@ -967,14 +1203,23 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
-        manager.createCurrentProfileGroup(
-            nostrGroupId = nostrGroupId,
-            relays =
-                account.outboxRelays.flow.value
-                    .map { it.url },
-            profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description),
-            retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
-        )
+        val relays =
+            account.outboxRelays.flow.value
+                .map { it.url }
+        val profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description)
+        val devices = account.marmotDevices
+        if (devices != null && disappearingMessageSecs == null) {
+            // With device groups on, the chat starts with this account's linked devices in it.
+            devices.createChat(nostrGroupId, relays, profile)
+        } else {
+            // A retention chat starts alone; linked devices join it through a later gap fill.
+            manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = relays,
+                profile = profile,
+                retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
+            )
+        }
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
@@ -993,6 +1238,110 @@ class AccountMarmotActions(
     }
 
     /**
+     * While a chat is open: shares each settled change of its last-read time with this account's
+     * other devices ([shareMarmotReadPosition]). Returns at once while device groups are off. When
+     * the chat closes before the last change settled, that change is shared from the account's
+     * scope, so a quick look at a chat still moves the other devices' read position.
+     */
+    @OptIn(FlowPreview::class)
+    suspend fun shareMarmotReadPositions(nostrGroupId: HexKey) {
+        if (account.marmotDevices == null) return
+        val latest = MutableStateFlow<Long?>(null)
+        val shared = MutableStateFlow<Long?>(null)
+        try {
+            account
+                .loadLastReadFlow(marmotGroupLastReadRoute(nostrGroupId))
+                .onEach { latest.value = it }
+                .debounce(READ_POSITION_SETTLE_MS)
+                .collect { readUpTo ->
+                    shared.value = readUpTo
+                    shareMarmotReadPositionQuietly(nostrGroupId, readUpTo)
+                }
+        } finally {
+            val unsent = latest.value
+            if (unsent != null && unsent != shared.value) {
+                account.scope.launch(Dispatchers.IO) { shareMarmotReadPositionQuietly(nostrGroupId, unsent) }
+            }
+        }
+    }
+
+    private suspend fun shareMarmotReadPositionQuietly(
+        nostrGroupId: HexKey,
+        readUpTo: Long,
+    ) {
+        try {
+            shareMarmotReadPosition(nostrGroupId, readUpTo)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "could not share the read position of ${nostrGroupId.take(8)}", e)
+        }
+    }
+
+    /**
+     * With device groups on and this device linked: tells the account's other devices that the user
+     * read [nostrGroupId] up to [readUpTo] (the chat's last-read time), as the furthest message at or
+     * before it whose epoch this run saw. Positions only move forward, so a repeat sends nothing.
+     */
+    suspend fun shareMarmotReadPosition(
+        nostrGroupId: HexKey,
+        readUpTo: Long,
+    ) {
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
+        val position =
+            account.marmotGroupList.rooms
+                .get(nostrGroupId)
+                ?.readPositionAt(readUpTo) ?: return
+        devices.markRead(nostrGroupId, position.epoch, position.createdAt, position.eventId)
+    }
+
+    /**
+     * The user pins, mutes or archives [nostrGroupId] on this device (or undoes it). With device
+     * groups on and this device linked, the change also goes to the account's other devices
+     * (`account-sync.md` "Small state"), which apply it to their copy of the chat.
+     */
+    suspend fun setMarmotChatSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        on: Boolean,
+    ) {
+        if (!account.marmotChatSettings.set(nostrGroupId, setting, on)) return
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
+        devices.changeSetting(nostrGroupId, setting, on)
+    }
+
+    /**
+     * Applies the account's small state, as the device group settled it, to this device's chats:
+     * each read position marks its chat read up to that message (`Read positions`: only forward),
+     * and each pin, mute and archive value becomes this chat's. Chats this device does not hold are
+     * skipped; their items wait in the device group's state until they arrive.
+     */
+    suspend fun applyMarmotSmallState(state: AccountSyncState) {
+        val manager = account.marmotManager ?: return
+        account.marmotChatSettings.applySmallState(
+            state,
+            manager,
+            skip = { id -> account.marmotDevices?.isDeviceGroup(id) == true },
+        ) { nostrId, read ->
+            val route = marmotGroupLastReadRoute(nostrId)
+            if (read.at > account.loadLastRead(route)) account.markAsRead(route, read.at)
+        }
+    }
+
+    /** `Starting`: this device's own pins, mutes and archives, given to the device group it now trusts. */
+    suspend fun seedMarmotSmallState() {
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked) return
+        val seeded =
+            devices.seedSmallState(
+                account.marmotChatSettings.state.value
+                    .nonDefault(),
+            )
+        if (seeded > 0) Log.d("MarmotDbg") { "seeded $seeded chat setting(s) into the device group" }
+    }
+
+    /**
      * Leave a Marmot MLS group: step down if an admin (naming an heir when no
      * other admin is a member, see [MarmotManager.leave]), publish the
      * SelfRemove proposal and drop the chatroom.
@@ -1004,6 +1353,8 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
+        // The decline that takes this account's other devices out too, sent while still a member.
+        account.marmotDevices?.beforeLeave(nostrGroupId)
         val departure = manager.leave(nostrGroupId, groupRelays.toList())
         // manager.leave already wiped MLS state, relay subscriptions and
         // the persisted message log. Drop the in-memory chatroom too — that
@@ -1011,6 +1362,7 @@ class AccountMarmotActions(
         // (which holds them weakly) can GC them, and the Notification feed
         // (which iterates account.marmotGroupList.rooms) stops surfacing the group.
         account.marmotGroupList.removeGroup(nostrGroupId)
+        account.marmotChatSettings.forget(nostrGroupId)
         emojiUploads.forget(nostrGroupId)
         departure.selfRemove?.let { account.client.publish(it.signedEvent, groupRelays) }
     }
@@ -1040,16 +1392,19 @@ class AccountMarmotActions(
     }
 
     /**
-     * Remove a member from a Marmot MLS group.
+     * Remove a member — an ACCOUNT — from a Marmot MLS group: every leaf it
+     * holds, one per device, in one commit, and its admin seat with them
+     * (`protocol-core/member-departure.md`). Removing one leaf would leave the
+     * account a member through its other devices.
      * Publishes the commit GroupEvent to group relays.
      */
     suspend fun removeMarmotGroupMember(
         nostrGroupId: HexKey,
-        targetLeafIndex: Int,
+        targetPubKey: HexKey,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
         Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
+            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… target=${targetPubKey.take(8)}… " +
                 "groupRelays=${groupRelays.size}"
         }
         val manager =
@@ -1062,7 +1417,7 @@ class AccountMarmotActions(
             return
         }
 
-        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex, groupRelays.toList())
+        val outbound = manager.removeAccount(nostrGroupId, targetPubKey, groupRelays.toList())
         Log.d("MarmotDbg") {
             "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
@@ -1247,7 +1602,7 @@ class AccountMarmotActions(
 
         val view = manager.groupView(nostrGroupId) ?: return
         if (!view.adminPubkeys.contains(targetPubKey)) return
-        val members = manager.memberPubkeys(nostrGroupId).map { it.pubkey }
+        val members = manager.memberAccounts(nostrGroupId).map { it.pubkey }
         check(MarmotGroupPermissions.canDemote(view.adminPubkeys, members, account.signer.pubKey, targetPubKey)) {
             "Cannot revoke the last admin among the members of a Marmot group (MIP-03)"
         }
@@ -1471,16 +1826,7 @@ class AccountMarmotActions(
         endsAt: Long?,
         /** The accounts the question and options mention, `p`-tagged as a message tags them. */
         mentions: List<PTag> = emptyList(),
-    ): Event? {
-        val createdAt = TimeUtils.now()
-        val tags = MarmotPolls.pollTags(createdAt, question, options, type, endsAt) ?: return null
-        // MDK ignores tags a poll does not define, within MAX_TAGS in all. A mention past that
-        // still reads as a link in the text; it just notifies no one.
-        val room = (MarmotPolls.MAX_TAGS - tags.size).coerceAtLeast(0)
-        val pTags = mentions.distinctBy { it.pubKey }.take(room).map { it.toTagArray() }
-        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL, tags + pTags, question)
-        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
-    }
+    ): Event? = MarmotPollRumors.poll(account.signer.pubKey, question, options, type, endsAt, mentions)
 
     /**
      * Build a vote (kind 1018) on [poll] choosing [optionIds], or null when the
@@ -1490,14 +1836,7 @@ class AccountMarmotActions(
     suspend fun buildMarmotPollVote(
         poll: Event,
         optionIds: List<String>,
-    ): Event? {
-        val definition = MarmotPolls.parsePoll(poll) ?: return null
-        val createdAt = TimeUtils.now()
-        if (!MarmotPolls.isValidResponse(definition, createdAt, optionIds)) return null
-        val tags = MarmotPolls.responseTags(poll.id, optionIds) ?: return null
-        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL_RESPONSE, tags, "")
-        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
-    }
+    ): Event? = MarmotPollRumors.vote(account.signer.pubKey, poll, optionIds)
 
     /**
      * Report [target], a message in [nostrGroupId], to the group's members for [type] (a kind
@@ -1545,13 +1884,7 @@ class AccountMarmotActions(
         poll: Event,
         optionIds: Set<String>,
     ): Boolean {
-        val ordered =
-            MarmotPolls
-                .parsePoll(poll)
-                ?.options
-                ?.map { it.id }
-                ?.filter { it in optionIds } ?: return false
-        val vote = buildMarmotPollVote(poll, ordered) ?: return false
+        val vote = buildMarmotPollVote(poll, optionIds.toList()) ?: return false
         sendMarmotGroupMessage(nostrGroupId, vote, marmotGroupRelays(nostrGroupId))
         return true
     }
@@ -1601,6 +1934,9 @@ class AccountMarmotActions(
         // Retries of an unconfirmed KeyPackage publish: after 30 s, 2 min, 8 min and 32 min.
         private const val KEY_PACKAGE_RETRY_FIRST_MS = 30_000L
         private const val KEY_PACKAGE_RETRIES = 4
+
+        // How long a first KeyPackage waits for the account's relay lists before taking the defaults.
+        private const val KEY_PACKAGE_LIST_WAIT_MS = 20_000L
 
         fun indexMarmotInnerEvent(
             cache: EventCache,

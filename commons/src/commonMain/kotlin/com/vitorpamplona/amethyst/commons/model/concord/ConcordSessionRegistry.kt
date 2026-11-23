@@ -78,8 +78,15 @@ class ConcordSessionRegistry(
                 if (existing == null || existing.entry.root != entry.root || existing.entry.rootEpoch != entry.rootEpoch) {
                     // CORD-08 §3: the disappearing messages the old session tracked are already in the
                     // store, and the new session never sees their wraps again — carry their deadlines
-                    // over, or nothing would ever purge them.
-                    sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor = onRumor).also { fresh -> existing?.let { fresh.carryExpiring(it.trackedExpiring()) } }
+                    // over, or nothing would ever purge them. Moderation hides likewise (CORD-03 §3):
+                    // a re-projection of the old planes' history must not bring a hidden message back.
+                    sessions[id] =
+                        ConcordCommunitySession(entry, myPubKey, onRumor = onRumor).also { fresh ->
+                            existing?.let {
+                                fresh.carryExpiring(it.trackedExpiring())
+                                fresh.carryModerationHides(it.heldModerationHides())
+                            }
+                        }
                     created += id
                 } else {
                     // Same epoch, but the Control Plane write key may have just arrived — a

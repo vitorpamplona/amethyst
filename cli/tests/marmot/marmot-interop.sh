@@ -107,6 +107,8 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
+# --public-relays is the one mode meant to reach the internet; every other run stays local.
+[[ "$USE_PUBLIC_RELAYS" -eq 1 ]] && export AMY_LOCAL_ONLY=0
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
 # shellcheck source=../headless/helpers.sh — start_local_relay / stop_local_relay (embedded amy serve)

@@ -97,8 +97,9 @@ object ConcordCommands {
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
         |  concord invite COMMUNITY --to USER          send a Direct Invite (CORD-05 §6): the bundle
-        |          [--expires-in SECS]                  giftwrapped to USER (npub|hex|nprofile|nip05),
-        |                                               to their 10050 / NIP-65 read / stock relays,
+        |          [--expires-in SECS] [--relay URL,…]  giftwrapped to USER (npub|hex|nprofile|nip05),
+        |                                               to --relay, else their 10050 / NIP-65 read
+        |                                               relays, else AMY_BOOTSTRAP_RELAYS or stock,
         |                                               with only the private channels their roles grant
         |  concord invites                             list Direct Invites waiting for you (never joins)
         |  concord accept WRAP-ID                      accept a Direct Invite: join (or, for a community
@@ -117,6 +118,8 @@ object ConcordCommands {
         |                                               --rejoin re-accepts that link (a bundle never
         |                                               moves the base on its own, CORD-06 §2);
         |                                               refuses if that epoch banned us
+        |  concord members COMMUNITY                   the Guestbook (CORD-02 §5): who is in, and each
+        |                                               npub's latest Join, Leave or Kick
         |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04),
         |                                               and public: true/false + live invite links
         |                                               from the folded registries (CORD-05 §5)
@@ -152,13 +155,14 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|members|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
                     "create" to { rest -> create(dataDir, rest) },
                     "list" to { rest -> list(dataDir, rest) },
                     "import" to { rest -> import(dataDir, rest) },
+                    "members" to { rest -> members(dataDir, rest) },
                     "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
                     "channel" to { rest -> ConcordPrivateChannelCommands.channel(dataDir, rest) },
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
@@ -185,6 +189,33 @@ object ConcordCommands {
                     "timer" to { rest -> ConcordModCommands.timer(dataDir, rest) },
                 ),
         )
+
+    /** The Guestbook as a member sees it: its coalesced motions (Kicks honored against the fold) and who is in. */
+    private suspend fun members(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        args.rejectUnknown()
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val state = ConcordChannelCommands.foldState(ctx, sc)
+            val coalesced = Guestbook.coalesce(guestbookEntriesOf(ctx, sc), TimeUtils.nowMillis(), state.authority)
+            Output.emit(
+                mapOf(
+                    "community_id" to sc.communityId,
+                    "members" to ConcordActions.joinedMembers(coalesced).sorted(),
+                    "guestbook" to
+                        coalesced.values.sortedBy { it.ms }.map {
+                            mapOf("member" to it.member, "action" to it.action.name.lowercase(), "created_at" to it.createdAt, "by" to it.author)
+                        },
+                ),
+            )
+            return 0
+        }
+    }
 
     private suspend fun create(
         dataDir: DataDir,
@@ -342,11 +373,13 @@ object ConcordCommands {
         val base = args.flag("base", "https://vector.chat")!!
         val to = args.flag("to")
         val expiresInSecs = args.flag("expires-in")?.let { it.toLongOrNull()?.takeIf { secs -> secs > 0 } ?: throw IllegalArgumentException("--expires-in expects a positive number of seconds, got '$it'") }
+        val deliverTo = RawEventSupport.relayFlag(args)
         args.rejectUnknown()
 
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
-        if (to != null) return directInvite(dataDir, sc, to, expiresInSecs)
+        if (to != null) return directInvite(dataDir, sc, to, expiresInSecs, deliverTo)
         if (expiresInSecs != null) return Output.error("bad_args", "--expires-in applies to a Direct Invite (--to)").let { 2 }
+        if (deliverTo.isNotEmpty()) return Output.error("bad_args", "--relay applies to a Direct Invite (--to)").let { 2 }
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             // The joiner cannot derive the Control Plane address, so the invite carries it
@@ -617,6 +650,7 @@ object ConcordCommands {
         sc: StoredCommunity,
         to: String,
         expiresInSecs: Long?,
+        deliverTo: Set<NormalizedRelayUrl>,
     ): Int {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -639,9 +673,13 @@ object ConcordCommands {
                         }
                 }
             val wrap = ConcordActions.buildDirectInvite(ctx.signer, recipient, invite)
-            // Their kind-10050 DM relays, else NIP-65 read relays, else the stock set (CORD-05 §6).
-            val lists = ctx.cachedRelayListsOf(recipient) ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, ctx.bootstrapRelays())
-            val relays = ConcordActions.directInviteDeliveryRelays(lists)
+            // --relay, else their kind-10050 DM relays, else NIP-65 read relays, else the stock set
+            // (CORD-05 §6) — or AMY_BOOTSTRAP_RELAYS, so an offline run never reaches the stock set.
+            val relays =
+                deliverTo.ifEmpty {
+                    val lists = ctx.cachedRelayListsOf(recipient) ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, ctx.bootstrapRelays())
+                    ConcordActions.directInviteDeliveryRelays(lists, Context.bootstrapOverride())
+                }
             val ack = ctx.publish(wrap, relays)
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(
@@ -670,7 +708,7 @@ object ConcordCommands {
         val inbox = ConcordDirectInviteInbox(ctx.signer)
         inbox.restoreDeclined(ConcordInviteInboxStore(dataDir.concordInvitesFile).declined())
         val me = ctx.signer.pubKey
-        val relays = ConcordActions.directInviteDeliveryRelays(ctx.cachedRelayListsOf(me)) + ctx.inboxRelays()
+        val relays = ConcordActions.directInviteDeliveryRelays(ctx.cachedRelayListsOf(me), Context.bootstrapOverride()) + ctx.inboxRelays()
         val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.directInvitesFilter(me)) }).map { it.second }
         wraps.distinctBy { it.id }.forEach { inbox.offer(it) }
         return inbox

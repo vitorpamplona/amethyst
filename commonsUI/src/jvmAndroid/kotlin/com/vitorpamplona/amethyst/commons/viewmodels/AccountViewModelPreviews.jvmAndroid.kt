@@ -115,7 +115,6 @@ actual fun mockAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = { error("Previews do not stream") },
         )
 
     return AccountViewModel(
@@ -176,7 +175,6 @@ actual fun mockVitorAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = { error("Previews do not stream") },
         )
 
     return AccountViewModel(

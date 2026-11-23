@@ -127,7 +127,7 @@ object StaticSitePublish {
 
             val result =
                 try {
-                    StaticSitePublisher().uploadTree(source, servers.first(), ctx.signer)
+                    StaticSitePublisher(ctx.blossom).uploadTree(source, servers.first(), ctx.signer)
                 } catch (e: Exception) {
                     return Output.error("upload_failed", e.message ?: "upload failed")
                 }

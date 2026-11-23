@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -433,10 +434,11 @@ fun ChatMessageActionSheet(
 }
 
 /**
- * NIP-29 moderator-only tile that pins/unpins this message in its relay group.
- * Observes the group's live roster + pin list, so it shows the right verb and
- * hides itself entirely for members who can't moderate. Pinning replaces the whole
- * kind-9010 list; the relay republishes the kind-39005 pins the bar reads.
+ * Tile that pins/unpins this message in its relay group. Observes the group's live roster + pin
+ * list, so it shows the right verb and hides itself for whoever may not pin
+ * ([RelayGroupChannel.canPin]): NIP-29 moderators, who replace the whole kind-9010 list (the relay
+ * republishes 39005); on Buzz anyone who may post, through a NIP-PM 40010/40011 command (the relay
+ * republishes 30623), and only on the message kinds Buzz pins.
  */
 @Composable
 private fun RelayGroupPinTile(
@@ -448,8 +450,8 @@ private fun RelayGroupPinTile(
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
 
-    val canModerate = channel.membershipOf(accountViewModel.userProfile().pubkeyHex).canModerate()
-    if (!canModerate) return
+    if (!channel.canPin(accountViewModel.userProfile().pubkeyHex)) return
+    if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) && note.event?.kind?.let { ChannelPinsEvent.isPinnable(it) } != true) return
 
     val pinned = channel.isPinned(note.idHex)
 

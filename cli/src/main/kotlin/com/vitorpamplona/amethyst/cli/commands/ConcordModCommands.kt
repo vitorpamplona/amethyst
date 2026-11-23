@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
-import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
@@ -289,9 +288,12 @@ object ConcordModCommands {
             if (!state.authority.hasPermission(ctx.signer.pubKey, ConcordPermissions.MANAGE_METADATA)) {
                 return Output.error("forbidden", "setting the timer takes MANAGE_METADATA in '$handle' (CORD-08 §1)")
             }
+            // The timer rides the metadata edition, so it is laid over the folded one: over nothing it
+            // would write the community's name as "" (CORD-02 §6), for every reader.
+            val standing = state.metadata ?: return Output.error("no_metadata", "no metadata folded for '$handle' yet: the timer is written over the community's metadata (CORD-02 §6)")
             val timer = secs.takeIf { it >= 1 }
             val relays = ConcordCommands.relaysFor(ctx, sc)
-            val wrap = ConcordModeration.setMessageExpiration(ctx.signer, loaded.keys, cid, state.metadata ?: MetadataEntity(), timer, loaded.editions, TimeUtils.now(), owner = sc.owner)
+            val wrap = ConcordModeration.setMessageExpiration(ctx.signer, loaded.keys, cid, standing, timer, loaded.editions, TimeUtils.now(), owner = sc.owner)
             val ack = ctx.publish(wrap, relays)
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
 
@@ -359,7 +361,8 @@ object ConcordModCommands {
             // Strip first, so the target's rank is gone before the departure lands.
             var chain = editions
             var access: Map<String, Any?> = emptyMap()
-            val strip = authority.rolesOf(member).isNotEmpty() && cp.canWrite && authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES)
+            // Roles v2 (CORD-04 §2) has no legacy Grant to strip: the Kick alone departs them there.
+            val strip = !authority.isRolesV2 && authority.rolesOf(member).isNotEmpty() && cp.canWrite && authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES)
             if (strip) {
                 val stripWrap = ConcordModeration.grant(ctx.signer, cp, cid, member, emptyList(), editions, TimeUtils.now(), owner = sc.owner)
                 if (ctx.publish(stripWrap, relays).values.any { it.accepted }) {
@@ -586,7 +589,7 @@ object ConcordModCommands {
                         priorControlWraps = controlWraps,
                         priorControlKeys = cp,
                         recipientsXOnly = recipients,
-                        staffXOnly = authority.staffMembers(),
+                        staffXOnly = authority.staffMembers(recipients),
                         createdAt = TimeUtils.now(),
                         ownerPubKey = sc.owner,
                         authority = citation,

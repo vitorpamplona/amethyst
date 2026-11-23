@@ -5437,7 +5437,6 @@
     <string name="concord_create_failed">Не удалось создать сообщество: ни один relay его не принял, или не удалось обновить ваш список сообществ. Проверьте relay и попробуйте снова.</string>
     <string name="concord_create_relays">Relay</string>
     <string name="concord_create_relays_desc">Relay, хранящие зашифрованные сообщения сообщества. Оставьте пустым, чтобы использовать свои.</string>
-    <string name="concord_create_title">Новый канал Concord</string>
     <string name="concord_direct_invite_accept">Принять</string>
     <string name="concord_direct_invite_accept_failed">Не удалось связаться с сообществом. Попробуйте чуть позже.</string>
     <string name="concord_direct_invite_action">Пригласить по npub…</string>

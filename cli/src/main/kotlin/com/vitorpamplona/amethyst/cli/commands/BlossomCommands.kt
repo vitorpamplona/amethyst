@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -112,8 +111,8 @@ object BlossomCommands {
         args.rejectUnknown()
 
         // Read-only HEAD probe — no auth, so it runs anonymously without an account.
-        Context.openOrAnonymous(dataDir).use { _ ->
-            val client = BlossomClient()
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            val client = ctx.blossom
             val results =
                 hashes.map { hash ->
                     val found = client.has(hash, server)
@@ -152,7 +151,7 @@ object BlossomCommands {
             ctx.prepare()
             val auth = BlossomAuth.createUploadAuth(hash, 0, "Mirror $hash", ctx.signer, servers = listOf(server))
             return withPayment(server) {
-                val node = BlossomClient().mirror(sourceUrl, server, auth)
+                val node = ctx.blossom.mirror(sourceUrl, server, auth)
                 Output.emit(mapOf("server" to server, "sha256" to hash, "blob" to node))
                 0
             }
@@ -178,7 +177,7 @@ object BlossomCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val client = BlossomClient()
+            val client = ctx.blossom
             val auth =
                 if (media) {
                     BlossomAuth.createMediaAuth(hash, file.length(), "Optimize ${file.name}", ctx.signer, servers = listOf(server))
@@ -215,9 +214,9 @@ object BlossomCommands {
         val url = if (server != null && !target.startsWith("http")) BlossomServerUrl.blob(server, target) else target
 
         // Public download — no auth, so it runs anonymously without an account.
-        Context.openOrAnonymous(dataDir).use { _ ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             val bytes =
-                BlossomClient().download(url)
+                ctx.blossom.download(url)
                     ?: return Output.error("not_found", "server returned no blob for $url")
             if (out != null) {
                 File(out).writeBytes(bytes)
@@ -246,7 +245,7 @@ object BlossomCommands {
             ctx.prepare()
             val pubkey = args.positionalOrNull(0)?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             val auth = BlossomAuth.createListAuth("List blobs", ctx.signer, servers = listOf(server))
-            val blobs = BlossomClient().list(server, pubkey, auth)
+            val blobs = ctx.blossom.list(server, pubkey, auth)
             Output.emit(mapOf("server" to server, "pubkey" to pubkey, "count" to blobs.size, "blobs" to blobs))
             return 0
         }
@@ -264,7 +263,7 @@ object BlossomCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val auth = BlossomAuth.createDeleteAuth(hash, "Delete blob", ctx.signer, servers = listOf(server))
-            val deleted = BlossomClient().delete(hash, server, auth)
+            val deleted = ctx.blossom.delete(hash, server, auth)
             Output.emit(mapOf("sha256" to hash, "server" to server, "deleted" to deleted))
             return if (deleted) 0 else 1
         }
@@ -295,7 +294,7 @@ object BlossomCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val event = ctx.signer.sign(BlossomReport.build(hash, type, uploader, comment))
-            val ok = BlossomClient().report(server, event.toJson())
+            val ok = ctx.blossom.report(server, event.toJson())
             Output.emit(mapOf("server" to server, "sha256" to hash, "type" to type.code, "reported" to ok))
             return if (ok) 0 else 1
         }

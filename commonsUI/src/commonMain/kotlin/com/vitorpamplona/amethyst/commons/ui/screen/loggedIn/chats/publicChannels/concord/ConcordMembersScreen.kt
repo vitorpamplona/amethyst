@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_unban
 import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_open
 import com.vitorpamplona.amethyst.commons.resources.concord_role_kicked
 import com.vitorpamplona.amethyst.commons.resources.concord_role_left
 import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
@@ -176,6 +178,7 @@ fun ConcordMembersScreen(
     // which IS ban-aware — a thin margin for the escalation in docs/concord-soft-ban-audit.md.
     val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.BAN) } == true
     val iCanManageRoles = state?.authority?.hasPermission(myPubKey, ConcordPermissions.MANAGE_ROLES) == true
+    val rolesV2 = state?.isRolesV2 == true
     val iCanKick = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.KICK) } == true
 
     // The roles this viewer may actually hand out. The fold drops a grant whose granter does
@@ -193,9 +196,30 @@ fun ConcordMembersScreen(
                 .sortedBy { it.position }
         }
 
+    var showRoleEditor by remember { mutableStateOf(false) }
+    val editorAuthority = state?.authority
+    if (showRoleEditor && editorAuthority != null) {
+        ConcordRoleEditorDialog(communityId, editorAuthority, accountViewModel, onDismiss = { showRoleEditor = false })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = {
+                    // Where the roles are defined: create, rename, re-rank or delete one. Roles v2
+                    // can't be written yet, which is said rather than offered and then refused.
+                    if (iCanManageRoles) {
+                        IconButton(onClick = {
+                            if (rolesV2) {
+                                accountViewModel.notices.notify(ConcordNotice.RolesV2Unsupported(ConcordNotice.RolesV2Editor.ROLES))
+                            } else {
+                                showRoleEditor = true
+                            }
+                        }) {
+                            SymbolIcon(symbol = MaterialSymbols.Shield, contentDescription = stringRes(Res.string.concord_role_editor_open))
+                        }
+                    }
+                },
                 title = {
                     Column {
                         Text(stringRes(Res.string.concord_members_title), maxLines = 1)
@@ -231,6 +255,9 @@ fun ConcordMembersScreen(
                         communityId = communityId,
                         isSelf = entry.pubkey.equals(myPubKey, ignoreCase = true),
                         viewerIsOwner = iAmOwner,
+                        // Roles v2 (CORD-04 §2): its ranked roles and grants are a shape this client
+                        // can't write yet, so neither "Make admin" nor "Roles…" is offered there.
+                        rolesV2 = rolesV2,
                         viewerCanBan = iCanBan,
                         // Ban/Remove are rank-gated the same way Roles… is. The owner short-circuits
                         // because canActOn begins at hasPermission, which is false while banned, and
@@ -244,7 +271,7 @@ fun ConcordMembersScreen(
                         // In a Private community a ban also Refounds (CORD-05 §5), so the dialog must not
                         // promise they keep reading.
                         banRotatesKeys = state?.banRequiresRefounding(listOf(entry.pubkey)) == true,
-                        viewerCanManageRoles = iCanManageRoles,
+                        viewerCanManageRoles = iCanManageRoles && !rolesV2,
                         // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
                         // banned, the target isn't the owner (unremovable), and we strictly outrank
                         // them — which also rules out acting on ourselves (equal cannot act on equal).
@@ -266,6 +293,7 @@ private fun ConcordMemberRow(
     communityId: String,
     isSelf: Boolean,
     viewerIsOwner: Boolean,
+    rolesV2: Boolean,
     viewerCanBan: Boolean,
     canBanTarget: Boolean,
     canKickTarget: Boolean,
@@ -284,7 +312,7 @@ private fun ConcordMemberRow(
     // Owner can promote/demote anyone but the owner; ban is available to owner + BAN holders that
     // strictly outrank the target, never against the owner or yourself. A banned user only offers
     // "unban" — and unban is rank-gated too, so whoever cannot ban you cannot lift your ban either.
-    val canToggleAdmin = viewerIsOwner && !isOwnerTarget && !isBanned && !isSelf
+    val canToggleAdmin = viewerIsOwner && !rolesV2 && !isOwnerTarget && !isBanned && !isSelf
     val canBan = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
     // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
     val canRemove = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf

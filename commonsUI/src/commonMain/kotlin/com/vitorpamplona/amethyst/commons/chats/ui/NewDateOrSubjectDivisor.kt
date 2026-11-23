@@ -89,11 +89,11 @@ fun NewDateDivisor(
     val today = stringRes(Res.string.today)
     val yesterday = stringRes(Res.string.yesterday)
 
-    val prevDay = remember(previous) { previous?.event?.createdAt?.let { chatDayKey(it) } }
-    val day = remember(note) { note.event?.createdAt?.let { chatDayKey(it) } } ?: return
+    val prevDay = remember(previous) { previous?.chatDayTime()?.let { chatDayKey(it) } }
+    val day = remember(note) { note.chatDayTime()?.let { chatDayKey(it) } } ?: return
 
     if (prevDay != day) {
-        val label = remember(note, today, yesterday) { chatDayLabelWith(note.event?.createdAt ?: 0L, TimeUtils.nowMillis(), today, yesterday) }
+        val label = remember(note, today, yesterday) { chatDayLabelWith(note.chatDayTime() ?: 0L, TimeUtils.nowMillis(), today, yesterday) }
         ChatDivisor(label)
     }
 }
@@ -113,3 +113,9 @@ fun subjectChangeOf(
     val subject = newer?.subject()?.trim()?.ifBlank { null } ?: return null
     return if (older?.subject()?.trim() == subject) null else subject
 }
+
+/**
+ * The time a row is dated by: its event's, or for a row with no event (a Marmot "message deleted"
+ * placeholder) the time the row stands for, so it does not open a new day of its own.
+ */
+private fun Note.chatDayTime(): Long? = event?.createdAt ?: createdAt()

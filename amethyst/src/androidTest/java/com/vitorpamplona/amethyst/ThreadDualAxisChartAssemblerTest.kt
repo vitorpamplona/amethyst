@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirect
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
-import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -93,7 +92,6 @@ class ThreadDualAxisChartAssemblerTest {
                 marmotNotifier = { MarmotGroupNotifier.None },
                 nip46Consent = Nip46ConsentPrompter.Unanswered,
                 geohashIdentityStore = InMemoryGeohashIdentityStore(),
-                marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
             )
 
         val db =

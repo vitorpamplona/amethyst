@@ -209,9 +209,15 @@ class CordnRuntime(
                     it.loop.stop()
                 }
 
+                // The same sink for what a Commit reads on its way to its own
+                // echo (CordnGroupManager.deliveryListener), or the messages it
+                // passes are stored but not shown until the room reloads.
+                session.manager.deliveryListener = { file(config.pubKey, it) }
+                // A catch-up's messages are filed in batches: one at a time, each
+                // re-sorted and re-folded the whole room, quadratic over a history.
                 val loop =
                     CordnSyncLoop(
-                        source = session.manager,
+                        source = BatchingCordnSyncSource(session.manager, fileMessages = { gid, messages -> fileMessages(config.pubKey, gid, messages) }),
                         onDelivery = { file(config.pubKey, it) },
                     )
                 loop.start(scope)
@@ -903,12 +909,10 @@ class CordnRuntime(
         delivery: CordnGroupManager.Delivery,
     ) {
         when (delivery) {
+            // `delivered` carries the media key of the message's own epoch,
+            // which is what opens its attachments after the next Commit.
             is CordnGroupManager.Delivery.Message ->
-                groups.add(
-                    coordinatorPubKey,
-                    delivery.gid,
-                    CordnDeliveredMessage(delivery.received.envelope, delivery.cursor),
-                )
+                groups.add(coordinatorPubKey, delivery.gid, delivery.delivered)
 
             // The rest still get a room. A group whose history we cannot
             // read, or that only moved an epoch, is a group we are in —
@@ -918,13 +922,37 @@ class CordnRuntime(
             is CordnGroupManager.Delivery.EpochAdvanced,
             is CordnGroupManager.Delivery.Echo,
             -> groups.getOrCreate(coordinatorPubKey, delivery.gid)
+
+            // A change of ours settled after the call that made it returned
+            // (its post or confirmation failed, and the screen already said
+            // so). cordn-kmp reports each lost Commit once: here, or as the
+            // COMMIT_LOST a call still waiting throws, never both, so this
+            // only logs. The room re-reads the winner's state below.
+            is CordnGroupManager.Delivery.CommitLost -> {
+                Log.w(TAG) { "a change to ${delivery.gid} lost to another commit at ${delivery.cursor}" }
+                groups.getOrCreate(coordinatorPubKey, delivery.gid)
+            }
         }
 
-        // After every delivery, not only after an EpochAdvanced: a Commit that
-        // renames the group or changes its membership arrives as an ordinary
-        // ingestion, and the room's name and member list are read off MLS
-        // state rather than stored, so they are only correct if re-read.
-        sessionOrNull(coordinatorPubKey)?.let { refresh(it, delivery.gid) }
+        // The room's name and member list are read off MLS state rather than
+        // stored, so they are only correct if re-read after a change. Every
+        // delivery but an application message re-reads; an application message
+        // changes no group state, so it re-reads only when the room is behind
+        // the group's epoch (or has never read it): reading the ratchet tree
+        // per message of a catch-up was the other half of its cost.
+        sessionOrNull(coordinatorPubKey)?.let {
+            if (delivery is CordnGroupManager.Delivery.Message) refreshIfStale(it, delivery.gid) else refresh(it, delivery.gid)
+        }
+    }
+
+    /** Files a batch of one group's application messages: [file] for many at once. */
+    private fun fileMessages(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        messages: List<CordnDeliveredMessage>,
+    ) {
+        groups.getOrCreate(coordinatorPubKey, gid).addAll(messages)
+        sessionOrNull(coordinatorPubKey)?.let { refreshIfStale(it, gid) }
     }
 
     /** One coordinator's encrypted stores on disk, for [CordnLocalState]. */
@@ -940,6 +968,15 @@ class CordnRuntime(
     ) {
         val room = groups.getOrCreate(session.coordinatorPubKey, gid)
         session.manager.group(gid)?.let { room.refreshFrom(it) }
+    }
+
+    /** [refresh], skipped when the room already reflects the group's current epoch. */
+    private fun refreshIfStale(
+        session: CordnSession,
+        gid: String,
+    ) {
+        val room = groups.getOrCreate(session.coordinatorPubKey, gid)
+        session.manager.group(gid)?.let { if (room.isStale(it)) room.refreshFrom(it) }
     }
 
     /**

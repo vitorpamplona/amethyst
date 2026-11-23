@@ -62,9 +62,7 @@ dependencies {
     implementation(libs.marmot)
     implementation(libs.cordn)
     implementation(project(":commons"))
-    // Agent text stream previews: the raw-QUIC binding, and the QUIC
-    // stack under it for the certificate validator the transport requires.
-    implementation(libs.marmot.quic)
+    // quic-kmp's QuicLog, which the app routes into Quartz's Log (QuicLogBridge).
     implementation(libs.quic)
     // `amy serve` embeds geode (the standalone Ktor relay built on quartz's
     // relay-server code). geode depends only on quartz, never on :amethyst.

@@ -60,6 +60,8 @@ mkdir -p "$STATE_DIR" "$LOG_DIR"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
+# Talks to a live public Blossom server on purpose (see the header).
+export AMY_LOCAL_ONLY=0
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
 

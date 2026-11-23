@@ -333,6 +333,59 @@ class CordnGroupChatroomTest {
         assertEquals(1, room.unreadCount.value, "only the message past the saved cursor")
     }
 
+    @Test
+    fun `a room reads its group once per epoch`() {
+        // An application message changes no group state, so the sync path skips the ratchet-tree
+        // read for it unless the room is behind; a room that never read its group always is.
+        val room = room()
+        val group = groupOf(alice, CordnGroupMetadata(name = "Stage B"))
+
+        assertTrue(room.isStale(group), "never read")
+        room.refreshFrom(group)
+        assertFalse(room.isStale(group), "read at this epoch")
+    }
+
+    @Test
+    fun `filing a history in batches ends where filing it one by one does`() {
+        // A catch-up is filed a batch at a time (CordnDeliveryBatcher); the room it leaves must be
+        // the room one add per delivery leaves: rows, folded annotations, preview and unread.
+        val history =
+            (1..250).flatMap { i ->
+                // Zero-padded: `message` pads ids to 64 chars, so "m1" and "m10" would collide.
+                val id = "m" + i.toString().padStart(4, '0')
+                val text = message(id, at = 1_000L - i, cursor = i * 2L, author = if (i % 3 == 0) alice else bob)
+                if (i % 10 == 0) {
+                    val reaction =
+                        message(
+                            "r" + i.toString().padStart(4, '0'),
+                            at = 2_000L + i,
+                            cursor = i * 2L + 1,
+                            author = alice,
+                            kind = CordnMessageKinds.REACTION,
+                            content = "+",
+                            tags = CordnMessageReferences.reactionTags(target(id, text.envelope.pubKey)),
+                        )
+                    listOf(text, reaction)
+                } else {
+                    listOf(text)
+                }
+            }
+        // Arrival order is not cursor order, as after a re-sync.
+        val arrival = history.reversed()
+
+        val oneByOne = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        arrival.forEach { oneByOne.add(it) }
+
+        val batched = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        arrival.chunked(100).forEach { batched.addAll(it) }
+
+        assertEquals(oneByOne.messages.value, batched.messages.value)
+        assertEquals(oneByOne.newest.value, batched.newest.value)
+        assertEquals(oneByOne.unreadCount.value, batched.unreadCount.value)
+        assertEquals(oneByOne.annotations.value.reactions, batched.annotations.value.reactions)
+        assertEquals(250, batched.messages.value.size)
+    }
+
     /** A real cordn group, created the way [CordnGroupManager.createGroup] does. */
     private fun groupOf(
         creator: HexKey,
@@ -343,4 +396,60 @@ class CordnGroupChatroomTest {
         initialExtensions = listOf(metadata.toExtension()),
         groupId = "gid-1".encodeToByteArray(),
     )
+
+    @Test
+    fun `a poll vote is never a row, nor the room's preview`() {
+        // cordn-web 0.6.0 sends NIP-88 votes as kind 1018 with content
+        // "Voted: …" for clients without polls. Rendering that content would
+        // put words in the voter's mouth and make it the room's last message.
+        val room = room()
+        room.add(message("1", at = 10, cursor = 1, content = "Lunch?", kind = CordnMessageKinds.POLL))
+        room.add(
+            message(
+                "2",
+                at = 11,
+                cursor = 2,
+                author = bob,
+                content = "Voted: Pizza",
+                kind = CordnMessageKinds.POLL_RESPONSE,
+                tags = arrayOf(arrayOf("e", "1".padEnd(64, '0')), arrayOf("response", "a")),
+            ),
+        )
+
+        assertEquals(listOf("Lunch?"), room.messages.value.map { it.envelope.content })
+        assertEquals(
+            "Lunch?",
+            room.newest.value
+                ?.envelope
+                ?.content,
+        )
+    }
+
+    @Test
+    fun `an RSVP is never a row`() {
+        val room = room()
+        room.add(message("1", at = 10, cursor = 1, content = "hi"))
+        room.add(message("2", at = 11, cursor = 2, author = bob, content = "Going", kind = CordnMessageKinds.CALENDAR_RSVP))
+
+        assertEquals(listOf("hi"), room.messages.value.map { it.envelope.content })
+        assertEquals(
+            "hi",
+            room.newest.value
+                ?.envelope
+                ?.content,
+        )
+    }
+
+    @Test
+    fun `only the latest revision of a calendar event is a row`() {
+        // calendar-events.md §5: a revision replaces the event in place.
+        val room = room()
+        val tags = arrayOf(arrayOf("d", "standup"), arrayOf("title", "Standup"), arrayOf("start", "1757000000"))
+        room.add(message("1", at = 10, cursor = 1, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))
+        room.add(message("2", at = 20, cursor = 2, content = "hello"))
+        room.add(message("3", at = 30, cursor = 3, content = "", kind = CordnMessageKinds.CALENDAR_TIME, tags = tags))
+
+        assertEquals(listOf("2", "3").map { it.padEnd(64, '0') }, room.messages.value.map { it.envelope.id })
+        assertTrue(room.annotations.value.isRevised("3".padEnd(64, '0')))
+    }
 }

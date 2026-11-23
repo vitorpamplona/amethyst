@@ -115,13 +115,38 @@ sealed interface ConcordNotice : UserNotice {
 
     data object DissolveFailed : ConcordNotice
 
+    /**
+     * A join that was shown at once could not be saved to the Community List once it loaded, so
+     * the community was taken back out ([communityName] when known).
+     */
+    data class JoinNotSaved(
+        val communityName: String?,
+    ) : ConcordNotice
+
     data object ChannelKeyRotated : ConcordNotice
 
     data object ChannelKeyRotationFailed : ConcordNotice
 
     data object RolesUpdateFailed : ConcordNotice
 
+    /**
+     * A role edit that would give a permission the editor does not hold itself: every reader drops
+     * such an edition (CORD-04 role gate), so it was refused rather than published.
+     */
+    data object RoleBitsNotHeld : ConcordNotice
+
     data object KickFailed : ConcordNotice
+
+    /**
+     * A write this client can't make yet on a Community that switched to Roles v2 (CORD-04 §1,
+     * §2): the legacy [editor]'s editions are a shape a v2 reader drops, so it was refused rather
+     * than published wrong.
+     */
+    data class RolesV2Unsupported(
+        val editor: RolesV2Editor,
+    ) : ConcordNotice
+
+    enum class RolesV2Editor { ROLES, GRANTS, PRIVATE_CHANNEL }
 }
 
 /** A plain BOLT12 offer payment over NWC (not a zap). */
@@ -188,4 +213,25 @@ sealed interface CashuRedeemNotice : UserNotice {
     data class NoLightningAddress(
         val userName: String,
     ) : CashuRedeemNotice
+}
+
+/** A NIP-29 or Buzz group create that went out but did not fully settle. */
+sealed interface RelayGroupCreateNotice : UserNotice {
+    /**
+     * The relay has not confirmed the create yet (no answer in time, or it is waiting on the
+     * sign-in or a back-off). The group is in the list and shows up once the relay takes it.
+     */
+    data object Unconfirmed : RelayGroupCreateNotice
+
+    /** The group was created, but the signer did not sign the list that remembers it. */
+    data object NotFollowed : RelayGroupCreateNotice
+}
+
+/** A relay-group command the relay refused. */
+sealed interface RelayGroupNotice : UserNotice {
+    /** The relay refused a pin or an unpin, with its [reason] (a Buzz guest, an archived channel, the pin limit, a banned key). */
+    data class PinRefused(
+        val unpin: Boolean,
+        val reason: String,
+    ) : RelayGroupNotice
 }

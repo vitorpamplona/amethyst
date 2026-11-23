@@ -71,6 +71,9 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.cordn_admin_action_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_behind
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_commit_lost
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_commit_unconfirmed
 import com.vitorpamplona.amethyst.commons.resources.cordn_admin_coordinator_silent
 import com.vitorpamplona.amethyst.commons.resources.cordn_admin_no_key_package
 import com.vitorpamplona.amethyst.commons.resources.cordn_admin_no_self_remove
@@ -307,7 +310,7 @@ private fun CordnGroupInfo(
                 // Not e.message. Those are written for a log and name pubkeys
                 // and gids in full, so the screen that had just shown a face
                 // answered with 64 hex characters.
-                Log.w("CordnGroupInfo", "admin action failed in ${room.gid}: ${e.message}", e)
+                Log.w("CordnGroupInfo", "admin action failed", e)
                 adminError = adminFailureText(e, who, failed)
             } finally {
                 busy = false
@@ -706,6 +709,9 @@ private suspend fun adminFailureText(
                 CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER -> loadStringRes(Res.string.cordn_admin_wrong_key_package, name)
                 CordnGroupException.Reason.NO_WELCOME -> loadStringRes(Res.string.cordn_admin_no_welcome, name)
                 CordnGroupException.Reason.NOT_A_MEMBER -> loadStringRes(Res.string.cordn_admin_not_a_member, name)
+                CordnGroupException.Reason.COMMIT_LOST -> loadStringRes(Res.string.cordn_admin_commit_lost)
+                CordnGroupException.Reason.COMMIT_UNCONFIRMED -> loadStringRes(Res.string.cordn_admin_commit_unconfirmed)
+                CordnGroupException.Reason.BEHIND -> loadStringRes(Res.string.cordn_admin_behind)
                 CordnGroupException.Reason.OTHER -> e.message ?: fallback
             }
 
@@ -946,7 +952,10 @@ private fun JoinRequests(
                             runtime.acceptJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
                             currentCoroutineContext().ensureActive()
-                            error = e.message ?: failed
+                            Log.w("CordnGroupInfo", "accepting a join request failed", e)
+                            // Accepting is an Add commit, so it can lose a race
+                            // or wait on the coordinator like any other change.
+                            error = adminFailureText(e, null, failed)
                         }
                         reload()
                     }

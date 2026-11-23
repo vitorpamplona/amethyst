@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -167,6 +168,78 @@ class NotificationDispatcher(
                 // Unwrapped from EphemeralGiftWrap
                 CallOfferEvent.KIND,
             )
+
+        /**
+         * The observer predicate: whether [event], just inserted into [LocalCache], is a
+         * notification for one of [pubkeys]. Each check is cheap and short-circuits so a kind
+         * mismatch (by far the most common case) rejects before any allocation.
+         *
+         * - kind in [NOTIFICATION_KINDS]: channel-relevant types
+         * - createdAt >= [dispatcherSince]: `limit: 0` semantics, drops re-broadcasts from
+         *   before this session
+         * - createdAt >= fifteenMinutesAgo: rolling freshness, matches the downstream
+         *   per-channel policy. Calls use a stricter 20s check in notifyIncomingCall so they
+         *   still pass through.
+         * - WakeUpEvent bypasses recipient matching: its [Event.notifies] is `true`
+         *   unconditionally, meaning "wake every signed-in account" (p-tags on a WakeUp name
+         *   referenced-event authors, not recipients).
+         * - Everything else uses isTaggedUser + tagsAnEventByUser, the same pair the in-app
+         *   Notifications feed uses, so push and feed agree on what counts as a mention, reply,
+         *   citation, fork, or community moderation. NIP-22 CommentEvents where the user is only
+         *   the root author (uppercase `P`) don't match, like the feed, which gates on lowercase
+         *   `p` only.
+         * - and then only a signed event ([PrivateRumorGate]): a private rumor (a Marmot group's
+         *   kind-1111 thread message, a Concord rumor, a gift-wrapped reaction) that tags me must
+         *   not reach the public reply/mention renderers. The NIP-17 DM and call rumors are the
+         *   exceptions; their renderers are private.
+         */
+        internal fun isNotificationCandidate(
+            event: Event,
+            pubkeys: Set<HexKey>,
+            dispatcherSince: Long,
+        ): Boolean {
+            if (event.kind !in NOTIFICATION_KINDS) return false
+            if (event.createdAt < dispatcherSince) return false
+            if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return false
+            if (event is WakeUpEvent) return true
+
+            // getNoteIfExists(event), not (event.id), so AddressableEvent kinds (LongFormContent,
+            // WikiArticle, LiveChess*, AddressableNormalVideo/AddressableShortVideo) resolve to
+            // their address-keyed replaceable note. The id-keyed version note has its replyTo moved
+            // away during insertion (LocalCache.consumeBaseReplaceable), so tagsAnEventByUser's
+            // replyTo check would otherwise always miss for replies into addressable posts.
+            val note = LocalCache.getNoteIfExists(event) ?: return false
+
+            // Buzz DM messages (kind 40002 / kind 9 in a `t=dm` relay-group channel) are
+            // participant-routed, not p-tagged. Gate them EXCLUSIVELY on Buzz-DM membership so
+            // ordinary kind-9 chats (Concord / NIP-C7) don't fall through the generic gate below.
+            if (event is StreamMessageV2Event || event is ChatEvent) {
+                return pubkeys.any { pubkey ->
+                    BuzzDmNotification.buzzDmChannelForMe(note, pubkey) != null
+                }
+            }
+
+            // Reactions/reposts are routed by tagsAnEventByUser (the reacted note's author == me),
+            // not by a `p` tag, so a Buzz-style bare `["e", id]` like, which carries no `p` tag,
+            // still notifies. tagsAnEventByUser below keeps it scoped to reactions on MY note.
+            val isReactionOrRepost =
+                event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent
+            val forMe =
+                pubkeys.any { pubkey ->
+                    // Public chat replies into my own messages often omit the `p` tag; relax the
+                    // gate for them (the tagsAnEventByUser check still scopes it to messages
+                    // actually replying to me).
+                    (
+                        event.isTaggedUser(pubkey) ||
+                            isReactionOrRepost ||
+                            NotificationFeedFilter.isNotifiablePublicChatReply(note, pubkey)
+                    ) &&
+                        NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
+                }
+
+            // Last, because it hashes and verifies: only the few events that are for me pay for it.
+            return forMe && PrivateRumorGate.mayNotifyPublicly(event)
+        }
     }
 
     private val consumer = EventNotificationConsumer(context, onWakeLockHeld)
@@ -206,76 +279,7 @@ class NotificationDispatcher(
 
                         Log.d(TAG) { "Observing notifications for ${pubkeys.size} account(s)." }
 
-                        // Single observer predicate. Each check is cheap and
-                        // short-circuits so kind mismatch (by far the most
-                        // common case) rejects before any allocation.
-                        //
-                        // - kind ∈ NOTIFICATION_KINDS    — channel-relevant types
-                        // - createdAt ≥ dispatcherSince  — `limit: 0` semantics,
-                        //   drops re-broadcasts from before this session
-                        // - createdAt ≥ fifteenMinutesAgo — rolling freshness,
-                        //   matches the downstream per-channel policy. Calls
-                        //   use a stricter 20s check in notifyIncomingCall so
-                        //   they still pass through.
-                        // - WakeUpEvent bypasses recipient matching: its
-                        //   [Event.notifies] is `true` unconditionally, meaning
-                        //   "wake every signed-in account" (p-tags on a WakeUp
-                        //   name referenced-event authors, not recipients).
-                        // - Everything else uses isTaggedUser + tagsAnEventByUser
-                        //   — same pair the in-app Notifications feed uses, so
-                        //   push and feed agree on what counts as a mention,
-                        //   reply, citation, fork, or community moderation.
-                        //   Note: NIP-22 CommentEvents where the user is only
-                        //   the root author (uppercase `P`) no longer match —
-                        //   intentional alignment with the feed, which gates
-                        //   on lowercase `p` only.
-                        val predicate = predicate@{ event: Event ->
-                            if (event.kind !in NOTIFICATION_KINDS) return@predicate false
-                            if (event.createdAt < dispatcherSince) return@predicate false
-                            if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@predicate false
-                            if (event is WakeUpEvent) return@predicate true
-
-                            // getNoteIfExists(event) — not (event.id) — so
-                            // AddressableEvent kinds (LongFormContent, WikiArticle,
-                            // LiveChess*, AddressableNormalVideo/AddressableShortVideo) resolve to
-                            // their address-keyed replaceable note. The id-keyed
-                            // version note has its replyTo moved away during
-                            // insertion (LocalCache.consumeBaseReplaceable), so
-                            // tagsAnEventByUser's replyTo check would otherwise
-                            // always miss for replies into addressable posts.
-                            val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
-
-                            // Buzz DM messages (kind 40002 / kind 9 in a `t=dm`
-                            // relay-group channel) are participant-routed, not
-                            // p-tagged. Gate them EXCLUSIVELY on Buzz-DM
-                            // membership so ordinary kind-9 chats (Concord /
-                            // NIP-C7) don't fall through the generic gate below.
-                            if (event is StreamMessageV2Event || event is ChatEvent) {
-                                return@predicate pubkeys.any { pubkey ->
-                                    BuzzDmNotification.buzzDmChannelForMe(note, pubkey) != null
-                                }
-                            }
-
-                            // Reactions/reposts are routed by tagsAnEventByUser
-                            // (the reacted note's author == me), not by a `p`
-                            // tag — so a Buzz-style bare `["e", id]` like, which
-                            // carries no `p` tag, still notifies. tagsAnEventByUser
-                            // below keeps it scoped to reactions on MY note.
-                            val isReactionOrRepost =
-                                event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent
-                            pubkeys.any { pubkey ->
-                                // Public chat replies into my own messages often
-                                // omit the `p` tag; relax the gate for them (the
-                                // tagsAnEventByUser check still scopes it to
-                                // messages actually replying to me).
-                                (
-                                    event.isTaggedUser(pubkey) ||
-                                        isReactionOrRepost ||
-                                        NotificationFeedFilter.isNotifiablePublicChatReply(note, pubkey)
-                                ) &&
-                                    NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
-                            }
-                        }
+                        val predicate = { event: Event -> isNotificationCandidate(event, pubkeys, dispatcherSince) }
 
                         LocalCache
                             .observeNewEvents<Event>(predicate)
@@ -327,7 +331,7 @@ class NotificationDispatcher(
      * once the MLS-decrypted inner event has been parsed and indexed.
      */
     override suspend fun notifyGroupMessage(
-        innerEvent: ChatEvent,
+        innerEvent: Event,
         nostrGroupId: String,
         account: Account,
     ) {

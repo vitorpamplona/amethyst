@@ -72,9 +72,7 @@ dependencies {
     // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
-
-    // Marmot's raw-QUIC transport for agent text stream previews, as on Android
-    implementation(libs.marmot.quic)
+    // quic-kmp's QuicLog, which the app routes into Quartz's Log (QuicLogBridge).
     implementation(libs.quic)
 
     // The shared preference files (DataStore), as commons opens them
@@ -170,6 +168,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp)
+    // The device-group screens' tests build roster and sign-in states out of marmot-kmp's types,
+    // already on the runtime classpath through commons.
+    testImplementation(libs.marmot)
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
     testImplementation(libs.jetbrains.compose.ui.test.junit4)

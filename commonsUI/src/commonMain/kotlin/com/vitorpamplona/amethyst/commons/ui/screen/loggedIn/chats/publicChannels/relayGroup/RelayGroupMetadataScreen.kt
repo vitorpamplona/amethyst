@@ -41,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -293,6 +294,11 @@ private fun RelayGroupMetadataScaffold(
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
+                // The create waits for the relay's answer before it sends the rest: show it working.
+                if (viewModel.isWorking) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(12.dp))
+                }
                 if (nip29Support == false && !viewModel.isBuzzRelay) {
                     NoNip29Warning()
                     Spacer(Modifier.height(16.dp))

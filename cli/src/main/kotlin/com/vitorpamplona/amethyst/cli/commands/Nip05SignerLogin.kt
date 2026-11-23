@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.domain.nip46.Nip05SignerLoginUseCase
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketF
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05RemoteSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
-import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -48,7 +48,7 @@ object Nip05SignerLogin {
         timeoutMs: Long,
     ): Int {
         val transport = KeyPair()
-        val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
+        val okhttp = LocalOnly.httpClientBuilder().socketFactory(TcpNoDelaySocketFactory).build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
         System.err.println("[nip46] $address has a remote signer; asking it to log you in (up to ${timeoutMs / 1000}s)")
         try {

@@ -23,7 +23,7 @@
 set -uo pipefail
 
 WORK="${WORK:-$(mktemp -d)}"
-CONTAINER="cordn-migrate"
+CONTAINER="${CONTAINER:-cordn-migrate}"
 # shellcheck source=stack.sh
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/stack.sh"
 
@@ -67,7 +67,7 @@ blob_up() {
   tail -3 "$WORK/blob.log" 2>/dev/null
   exit 2
 } <<'PYEOF'
-import hashlib, os, sys
+import hashlib, os, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 port, root = int(sys.argv[1]), sys.argv[2]
@@ -80,7 +80,10 @@ class H(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(('{"sha256":"%s","size":%d}' % (digest, len(body))).encode())
+        # A BUD-02 descriptor: `url` is required, and the client treats a reply without one
+        # as a failed upload.
+        self.wfile.write(('{"url":"http://127.0.0.1:%d/%s","sha256":"%s","size":%d,"type":"%s","uploaded":%d}' % (
+            port, digest, digest, len(body), self.headers.get("Content-Type", "application/octet-stream"), int(time.time()))).encode())
 
     def do_GET(self):
         path = os.path.join(root, self.path.lstrip("/"))

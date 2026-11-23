@@ -5092,7 +5092,6 @@
     <string name="concord_create_failed">コミュニティを作成できませんでした。どの relay にも受け付けられなかったか、コミュニティリストを更新できませんでした。relay を確認して再試行してください。</string>
     <string name="concord_create_relays">Relay</string>
     <string name="concord_create_relays_desc">このコミュニティの暗号化メッセージを保存する relay です。空欄にすると自分の relay を使用します。</string>
-    <string name="concord_create_title">新しい Concord チャンネル</string>
     <string name="concord_direct_invite_accept">承諾</string>
     <string name="concord_direct_invite_accept_failed">このコミュニティに接続できませんでした。しばらくしてから再試行してください。</string>
     <string name="concord_direct_invite_action">npub で招待…</string>

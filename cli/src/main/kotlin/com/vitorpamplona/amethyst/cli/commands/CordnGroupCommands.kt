@@ -676,6 +676,9 @@ internal object CordnGroupCommands {
 
             is CordnGroupManager.Delivery.Echo -> echoes += mapOf("gid" to gid, "cursor" to cursor)
 
+            // Our own Commit's echo, after another member's Commit won its epoch.
+            is CordnGroupManager.Delivery.CommitLost -> echoes += mapOf("gid" to gid, "cursor" to cursor, "commit_lost" to true)
+
             is CordnGroupManager.Delivery.Undecryptable ->
                 undecryptable += mapOf("gid" to gid, "cursor" to cursor, "reason" to reason)
         }

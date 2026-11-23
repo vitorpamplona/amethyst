@@ -178,7 +178,7 @@ object DmCommands {
         val cipher =
             com.vitorpamplona.crypto.aes
                 .AESGCM()
-        val orchestrator = UploadOrchestrator()
+        val orchestrator = UploadOrchestrator(ctx.blossom)
         val uploaded = orchestrator.uploadEncrypted(file, cipher, server, ctx.signer)
         val uploadedUrl =
             uploaded.blossom.url ?: run {

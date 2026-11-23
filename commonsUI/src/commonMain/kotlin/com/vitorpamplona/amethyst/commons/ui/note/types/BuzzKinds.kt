@@ -129,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.resources.kc_buzz_thread_summary
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_timeout
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_topic
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_unarchive_request
+import com.vitorpamplona.amethyst.commons.resources.kc_buzz_unpinned
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_until
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_untimeout
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_workspace_icon_cleared
@@ -186,6 +187,8 @@ import com.vitorpamplona.quartz.buzz.moderation.tags.ActionTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.CategoryTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.StatusTag
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.PinMessageEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.UnpinMessageEvent
 import com.vitorpamplona.quartz.buzz.presence.PresenceStatus
 import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
@@ -392,6 +395,33 @@ fun RenderBuzzMessagePinned(
     val target = remember(event) { event.pinnedMessage() }
     val channelId = remember(event) { event.channel() }
     KindCard(icon = MaterialSymbols.PushPin, title = stringRes(Res.string.kc_buzz_pinned)) {
+        if (target != null) {
+            KindCardQuoteEvent(target, quotesLeft, backgroundColor, accountViewModel, nav)
+        } else {
+            BuzzChannel(baseNote, channelId, accountViewModel, nav)
+        }
+    }
+}
+
+/** Buzz NIP-PM kinds 40010 / 40011: a member pins or unpins one message of its channel. */
+@Composable
+fun RenderBuzzPinCommand(
+    baseNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event
+    val (target, channelId, unpin) =
+        remember(event) {
+            when (event) {
+                is PinMessageEvent -> Triple(event.target(), event.channel(), false)
+                is UnpinMessageEvent -> Triple(event.target(), event.channel(), true)
+                else -> null
+            }
+        } ?: return
+    KindCard(icon = MaterialSymbols.PushPin, title = stringRes(if (unpin) Res.string.kc_buzz_unpinned else Res.string.kc_buzz_pinned)) {
         if (target != null) {
             KindCardQuoteEvent(target, quotesLeft, backgroundColor, accountViewModel, nav)
         } else {

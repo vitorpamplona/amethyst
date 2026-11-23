@@ -63,8 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_groups_manage
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_menu_invitations
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none_invited_hint
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_link
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_entry_action
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -154,9 +156,13 @@ fun CordnGroupListScreen(
             }
 
         if (sections.isEmpty()) {
+            // An invitation is the usual way into a first group, and it waits on its own screen
+            // (only fetched when that screen opens), so the empty list points there.
             EmptyState(
                 title = stringRes(Res.string.cordn_groups_none),
-                description = stringRes(Res.string.cordn_groups_none_detail),
+                description = stringRes(Res.string.cordn_groups_none_detail) + "\n\n" + stringRes(Res.string.cordn_groups_none_invited_hint),
+                onRefresh = { nav.nav(Route.CordnInvitations) },
+                refreshLabel = stringRes(Res.string.cordn_invitations_entry_action),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
