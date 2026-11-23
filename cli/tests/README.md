@@ -431,9 +431,51 @@ Pick `p`, `f`, or `s`.
   prompt, with the exact `wn` stdout that was parsed.
 - **`state/results-<timestamp>.tsv`** — tab-separated `test_id \t status \t
   note` lines. Easy to grep.
+- **`state/results-<timestamp>.jsonl`** — the same results, one JSON object
+  per scenario (`suite`, `counterpart`, `id`, `status`, `note`, `section`,
+  `feature`, `direction`, `ts`, `elapsed_s`). Every harness that records
+  through `lib.sh`'s `record_result` writes one next to its TSV (the `.tsv`
+  suffix swapped for `.jsonl`, or `.jsonl` appended), and also appends to
+  `$INTEROP_RESULTS_DIR/$INTEROP_SUITE.jsonl` when that variable is set.
 - **`state/run.env`** — persistent key/value state (npubs, group ids) so you
   can kill and resume the harness mid-run without losing context.
 - **Final summary table on stdout** — colored per-test status and totals.
+
+## Nightly CI
+
+`.github/workflows/interop-nightly.yml` runs the counterparty suites every night
+and on demand (Actions → "Interop nightly" → Run workflow, optionally naming
+suites and the channel). Everything it needs is in `tools/interop-ci/`:
+
+- `suites.json` — the registry: one entry per suite with its counterpart, the
+  channels it runs on (`pinned` blocks, `latest` only warns), its isolation, the
+  toolchains, caches and logs its job needs, and the rules that file each
+  scenario under a feature and a direction for the matrix. A suite that must not
+  run in CI stays listed with `enabled: false` and a `reason` (cordn's reference
+  coordinator, for one: it has no licence).
+- `suites/<id>.sh` — the driver, sourced by `run-suite.sh`: `suite_resolve`
+  (which commit `pinned` and `latest` mean; the pin lives here, or for Marmot in
+  `marmot/setup.sh`), `suite_prepare` (fetch and build it, network allowed, cached
+  per commit) and `suite_run` (start the harness).
+- `run-suite.sh resolve|prepare|run <suite> <pinned|latest>` — what each job
+  runs, and what you run to reproduce a night locally after
+  `./gradlew :cli:installDist`. `run` starts the harness inside `netns-run.sh` (a
+  network namespace with only loopback, plus any address the suite lists, checked
+  to be cut off before the harness starts; needs `iproute2` and root or
+  passwordless sudo) or, for a suite that needs Docker-published ports, on the
+  host with `AMY_LOCAL_ONLY=1`. Results go to `build/interop-ci/<channel>/<suite>.jsonl`;
+  a harness that dies before recording anything is filed as a failed `harness`
+  scenario, so it cannot pass by saying nothing.
+- `results_matrix.py --results build/interop-ci [--markdown m.md] [--junit-dir d]`
+  — turns those files into the feature × counterpart × direction matrix (per
+  channel: an overview, the matrix, failures, known gaps, suites not run) and
+  JUnit XML. A test can name its own feature and direction by setting
+  `RESULT_FEATURE` / `RESULT_DIRECTION` before `record_result`.
+
+Adding a suite: write the harness so it records through `lib.sh`, add
+`suites/<id>.sh` and an entry in `suites.json`; the workflow needs no change.
+Counterparts under a copyleft licence (White Noise, Armada) are fetched at a
+commit and run as separate programs, never copied into this repository.
 
 ## State cleanup
 
@@ -466,7 +508,8 @@ for B/C if this matters to you.
 
 - `marmot-interop.sh` — main entry point; orchestrates preflight, daemons,
   identities, relays, and runs the 13 tests in sequence.
-- `lib.sh` — helpers (logging, prompts, polling, jq wrappers, result table).
+- `lib.sh` — helpers (logging, prompts, polling, jq wrappers, result table and
+  its JSON-lines twin).
 - `state/` — runtime directory, gitignored. Contains the `mdk/` source
   checkout, per-daemon data/log dirs, the session `run.env`, logs, and
   results TSVs.
