@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.runInterruptible
+import org.junit.Assume.assumeTrue
 import java.io.File
 import java.net.URI
 import java.nio.file.FileSystems
@@ -868,6 +869,8 @@ class AgentWorkspacesTest {
             // Nothing in the workstream's folder can be renamed or removed.
             chmod(File(ws.dir), "r-xr-xr-x")
             try {
+                // Root ignores the mode bits, so the folder stays writable and the move succeeds.
+                assumeTrue("permissions don't bind this user (root)", !File(ws.dir).canWrite())
                 assertTrue(runCatching { workspaces.free(ws) }.isFailure)
             } finally {
                 chmod(File(ws.dir), "rwxr-xr-x")
