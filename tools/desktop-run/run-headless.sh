@@ -148,10 +148,20 @@ case "${1:-}" in
       # The app inherits the environment from Gradle; --offline keeps Gradle off the network too.
       # The hosts of AMETHYST_LOCAL_RELAYS get through too, so a test relay on another local address
       # (named through -Djdk.net.hosts.file, which this keeps) is reachable as well.
+      # Both the name and its address: the app resolves names itself, so the proxy check can see
+      # either. The address comes from -Djdk.net.hosts.file when the caller passes one, else DNS.
+      hosts_file="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -nE 's/.*-Djdk\.net\.hosts\.file=([^ ]*).*/\1/p')"
       local_hosts=""
       for relay in ${AMETHYST_LOCAL_RELAYS//,/ }; do
         host="${relay#*://}"; host="${host%%/*}"; host="${host%:*}"
-        [ -n "$host" ] && local_hosts="$local_hosts|$host"
+        [ -n "$host" ] || continue
+        local_hosts="$local_hosts|$host"
+        if [ -n "$hosts_file" ] && [ -r "$hosts_file" ]; then
+          ip="$(awk -v h="$host" '$0 !~ /^#/ { for (i = 2; i <= NF; i++) if ($i == h) { print $1; exit } }' "$hosts_file")"
+        else
+          ip="$(getent hosts "$host" 2> /dev/null | awk '{ print $1; exit }')"
+        fi
+        [ -n "$ip" ] && [ "$ip" != "$host" ] && local_hosts="$local_hosts|$ip"
       done
       export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.(proxyHost|proxyPort|nonProxyHosts)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 -Dhttp.nonProxyHosts=localhost|127.*|[::1]$local_hosts"
       run_args="$run_args --offline"
