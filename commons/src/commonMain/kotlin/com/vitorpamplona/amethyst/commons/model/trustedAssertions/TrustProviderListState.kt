@@ -57,6 +57,8 @@ class TrustProviderListState(
     val decryptionCache: TrustProviderListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
+    /** How long a list that is neither loaded nor backed up stays unknown before it reads as "none". */
+    private val listWaitMs: Long = LIST_WAIT_MS,
 ) : ITrustProviderListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val trustProviderListNote = cache.getOrCreateAddressableNote(getTrustProviderListAddress())
@@ -135,6 +137,12 @@ class TrustProviderListState(
      * process woken by a push still resolves once the user opens the app.
      */
     private suspend fun FlowCollector<Set<ServiceProviderTag>?>.emitResolved(note: Note) {
+        // Neither the list nor its backup (a transient login keeps no settings): it hasn't come from
+        // the relays yet, or the user has none. Read as "none" at once, it made TrustNetworkState
+        // delete the network on disk, which a second later, when the list arrived, was downloaded
+        // and verified again (157k cards). It stays unknown for a while instead; a list that arrives
+        // meanwhile restarts this (transformLatest) and resolves at once.
+        if (note.event !is TrustProviderListEvent && settings.backupTrustProviderList == null) delay(listWaitMs)
         var pauseMs = 15_000L
         while (true) {
             val resolved = resolvedProviders(note)
@@ -208,5 +216,10 @@ class TrustProviderListState(
                 }
             }
         }
+    }
+
+    companion object {
+        /** Relays answer for the user's own list in a second or two; Tor and slow relays take longer. */
+        const val LIST_WAIT_MS = 30_000L
     }
 }

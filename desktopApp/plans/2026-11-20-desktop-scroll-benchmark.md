@@ -527,6 +527,21 @@ Stored posters, which every launch reads back, now decode through Skia (`decodeP
 1.7 ms a 640x360 poster against 6.6 ms for ImageIO plus `toComposeImageBitmap`, and no Java-heap
 pixel arrays. Writing a new poster still goes through ImageIO's JPEG writer, once per video.
 
+### Where the CPU goes, and a trust network downloaded on every launch
+
+CPU-time samples of every thread from launch through the passes (2 boots): the UI thread 63-67%,
+`Dispatchers.Default` 27-30%. The largest background cost, 10-11% of all CPU, was Schnorr
+verification in `ParallelEventVerifier`, which only the trust network sync uses: 157k cards
+downloaded and verified in the first 15-20 s of every boot, ahead of the passes. The network was on
+disk; it was deleted at each start. A transient login (`AMETHYST_LOGIN`: every benchmark boot, agent
+and test run) keeps no settings, so no backup of the kind 10040 either, and until the list came from
+the relays `TrustProviderListState` resolved it as "no providers", which makes `TrustNetworkState`
+delete its files; the list arrived 1.4 s later and the download began. It now stays unknown for
+`LIST_WAIT_MS` (30 s) when there is neither a list nor a backup, and a list that arrives meanwhile
+resolves at once (`TrustProviderListWaitTest`). A saved account resolved from its backup and was not
+affected. Next after that: relay message parsing 3.5-5%, image decoding 3-4%; the outbox relay map,
+rebuilt whole for every relay list that arrives, is 1.3%.
+
 ## The cache window on more feeds: held
 
 Extending Home's window to notifications, the default note feeds, hashtag, the profile's Notes tab,
