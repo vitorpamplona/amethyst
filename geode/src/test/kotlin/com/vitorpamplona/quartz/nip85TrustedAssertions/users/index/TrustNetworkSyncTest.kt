@@ -27,6 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
@@ -34,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -138,8 +142,8 @@ class TrustNetworkSyncTest {
                 assertEquals(0, full.received, "nothing to fetch, nothing gone: ${full.detail}")
                 assertEquals(298, full.index.size)
 
-                // The counts say something changed (a relay without NIP-45 always does), but the
-                // reconcile finds nothing: the same index comes back, so nothing is rewritten.
+                // The counts said something changed, but the REQ finds nothing and the counts then
+                // agree: the same index comes back, so nothing is rewritten.
                 val noNews = client.updateTrustNetwork(full.header, full.index, full.ids, relay, knownNews = TrustNetworkNews(cards = true))
                 assertTrue(noNews.unchanged)
                 assertSame(full.index, noNews.index)
@@ -161,7 +165,7 @@ class TrustNetworkSyncTest {
                 assertTrue(dropped.complete)
                 assertNull(dropped.index.rankOf(subjects[4]), dropped.detail)
                 assertEquals(297, dropped.index.size)
-                assertEquals("need 0, gone 1", dropped.detail)
+                assertTrue(dropped.detail!!.endsWith("need 0, gone 1"), dropped.detail)
                 assertTrue(client.updateTrustNetwork(dropped.header, dropped.index, dropped.ids, relay).unchanged, "and the counts agree again")
 
                 // The ids file round-trips with the tombstone.
@@ -170,6 +174,72 @@ class TrustNetworkSyncTest {
                 assertEquals(full.ids.countSince(later), decoded.countSince(later))
                 assertNotEquals(0, decoded.countSince(batchTime))
                 assertFalse(decoded.entriesSince(later).isEmpty())
+            } finally {
+                client.close()
+                server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
+                engine.close()
+            }
+        }
+
+    /**
+     * What a provider publishing new cards costs an update: a REQ for what is newer than the
+     * cursor and the COUNTs, no negentropy. Only a card the REQ cannot see (one that reached the
+     * relay late, at the cursor's own second) makes the counts disagree and the reconcile run.
+     */
+    @Test
+    fun newCardsArriveByReqAndOnlyALateCardReconciles() =
+        runBlocking {
+            val subjects = List(300) { hex() }
+            val batch = subjects.map { card(it, 50, batchTime) }
+
+            val engine = RelayEngine(url = "ws://127.0.0.1:7774/".normalizeRelayUrl())
+            engine.store.batchInsert(batch)
+            val server = KtorRelay(engine, port = 0).start()
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
+            val relay = server.url.normalizeRelayUrl()
+            val negOpens = AtomicInteger()
+            client.addConnectionListener(
+                object : RelayConnectionListener {
+                    override fun onSent(
+                        relay: IRelayClient,
+                        cmdStr: String,
+                        cmd: Command,
+                        success: Boolean,
+                    ) {
+                        if (cmdStr.startsWith("[\"NEG-OPEN\"")) negOpens.incrementAndGet()
+                    }
+                },
+            )
+
+            suspend fun publish(events: List<Event>) = events.forEach { assertTrue(client.publishAndConfirm(it, setOf(relay)), "relay refused ${it.id}") }
+
+            try {
+                val cold = client.downloadTrustNetwork(provider.pubKey, relay)
+                assertEquals(300, cold.index.size)
+
+                // A recompute: five new people and one re-ranked, all newer than the cursor.
+                val later = batchTime + 600
+                val newcomers = List(5) { hex() }
+                publish(newcomers.map { card(it, 40, later) } + card(subjects[0], 90, later))
+                negOpens.set(0)
+                val updated = client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay)
+                assertTrue(updated.complete, updated.detail)
+                assertEquals(305, updated.index.size)
+                assertEquals(90, updated.index.rankOf(subjects[0]))
+                assertEquals(40, updated.index.rankOf(newcomers[0]))
+                assertEquals(0, negOpens.get(), "a REQ caught up, no reconcile: ${updated.detail}")
+                assertTrue(client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay).unchanged, "the counts agree afterwards")
+
+                // A card signed at the cursor's second that reaches the relay only now: no REQ
+                // past the cursor sees it, the counts do, and the reconcile fetches it.
+                val late = hex()
+                publish(listOf(card(late, 30, later)))
+                negOpens.set(0)
+                val caught = client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay)
+                assertTrue(caught.complete, caught.detail)
+                assertEquals(30, caught.index.rankOf(late), caught.detail)
+                assertTrue(negOpens.get() > 0, "the counts disagreed after the REQ: ${caught.detail}")
+                assertTrue(caught.detail!!.endsWith("need 1, gone 0"), caught.detail)
             } finally {
                 client.close()
                 server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
