@@ -115,7 +115,9 @@ object ConcordChannelCommands {
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val ack = ctx.publish(wrap, relays)
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            Output.emit(mapOf("event_id" to wrap.id, "channel" to channelId) + RawEventSupport.ackFields(ack))
+            // The rumor's id is what readers, edits, deletes and hides name; the wrap's is only the relay's.
+            val rumorId = ConcordActions.openChannelRumorAnyExpiry(wrap, channel, channelId, plane.epoch)?.id
+            Output.emit(mapOf("event_id" to wrap.id, "rumor_id" to rumorId, "channel" to channelId) + RawEventSupport.ackFields(ack))
             return 0
         }
     }
