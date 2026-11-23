@@ -65,6 +65,16 @@ class AndroidSdkTest {
     }
 
     @Test
+    fun aStaleSdkRootFollowsTheSdkFound() {
+        // AGP 9.5 skips a variable naming no folder; older ones, in other repositories, compare the two.
+        val mac = sdk("Library/Android/sdk")
+        assertEquals(
+            mapOf("ANDROID_HOME" to mac.path, "ANDROID_SDK_ROOT" to mac.path),
+            AndroidSdk.environment(mapOf("ANDROID_SDK_ROOT" to "/nowhere"), home.path, "Mac OS X"),
+        )
+    }
+
+    @Test
     fun setsNothingWithoutAnSdk() {
         assertEquals(emptyMap(), AndroidSdk.environment(emptyMap(), home.path, "Mac OS X"))
     }
