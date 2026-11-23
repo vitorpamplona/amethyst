@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPollRumors
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 object MessageCommands {
     val USAGE: String =
@@ -451,11 +452,13 @@ object MessageCommands {
             "options" to poll.options.map { mapOf("id" to it.id, "label" to it.label) },
         )
 
-    /** The message [event] replies to: its first `q` tag, or White Noise's `e` on a chat message. */
+    /**
+     * The message [event] replies to, as the app reads it: [ChatEvent.replyingTo] (the last `q`
+     * that quotes an event, never an address), else White Noise's NIP-10 `e`.
+     */
     private fun replyTarget(event: Event): String? {
-        if (event.kind != 9) return null
-        return event.tags.firstOrNull { it.size > 1 && it[0] == "q" }?.get(1)
-            ?: event.tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+        val chat = event as? ChatEvent ?: return null
+        return chat.replyingTo() ?: chat.replyTargetIds().firstOrNull()
     }
 
     /**
