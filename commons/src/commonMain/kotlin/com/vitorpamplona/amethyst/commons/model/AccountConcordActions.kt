@@ -588,6 +588,42 @@ class AccountConcordActions(
     }
 
     /**
+     * Retires [links] of [entry]'s community in one pass: a confirmed revocation tombstone at each
+     * link's coordinate (in parallel), then ONE invite-list write recording the tombstones that
+     * landed and ONE registry edit dropping their signers. [entry] is the post-rotation entry, passed
+     * in: re-read from the List right after adopting a new root it is still the old epoch's, or not
+     * there yet, and the registry edit was then skipped. Returns the links retired on the wire.
+     */
+    private suspend fun retireConcordInviteLinks(
+        entry: ConcordCommunityListEntry,
+        relays: Set<NormalizedRelayUrl>,
+        links: List<ConcordInviteListEntry>,
+    ): List<ConcordInviteListEntry> {
+        val now = TimeUtils.now()
+        val retired =
+            coroutineScope {
+                links
+                    .map { link ->
+                        async {
+                            val published =
+                                runCatchingCancellable {
+                                    account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), now), relays)
+                                }.onFailure { Log.w("Concord", "invite revocation failed for ${entry.id}", it) }.getOrDefault(false)
+                            link.takeIf { published }
+                        }
+                    }.awaitAll()
+                    .filterNotNull()
+            }
+        if (retired.isEmpty()) return retired
+        val recorded = publishConcordInviteList(ConcordInviteListDocument(tombstones = retired.map { ConcordInviteListTombstone(token = it.token, communityId = entry.id) }))
+        if (recorded == null) {
+            Log.w("Concord") { "Retired ${retired.size} links of ${entry.id} on the wire but could not tombstone them in the invite list; a later revoke will record them" }
+        }
+        publishConcordInviteRegistry(entry, recorded, retired = retired.map { it.signerPubKeyHex().lowercase() })
+        return retired
+    }
+
+    /**
      * Re-posts every live link this account minted for [entry]'s community at its own coordinate,
      * carrying [entry]'s epoch (CORD-05). The kind-33301 bundle is addressable and authored by the
      * link signer, so this moves the link behind the same URL instead of orphaning it at a dead
@@ -620,9 +656,9 @@ class AccountConcordActions(
         val links =
             if (severed) {
                 val (cut, kept) = live.partition { it.isSeveredBy(entry.rootEpoch) }
-                for (link in cut) {
-                    val revoked = revokeConcordInvite(entry.id, link.token, refoundIfPrivatized = false)
-                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired an invite link minted at epoch ${link.epoch()}: $revoked" }
+                if (cut.isNotEmpty()) {
+                    val retired = retireConcordInviteLinks(entry, relays, cut)
+                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired ${retired.size} of ${cut.size} invite links minted under older epochs" }
                 }
                 kept
             } else {
