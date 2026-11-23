@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmot.newestNotificationNews
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
@@ -403,7 +404,9 @@ open class BaseAccountViewModel(
                             } else {
                                 MutableStateFlow(null)
                             }
-                        }.map { it?.list?.firstOrNull()?.createdAt() },
+                            // Marmot messages the chat already read (imported history among them) stay
+                            // listed but are no news, so they light no badge.
+                        }.map { it?.list?.let { cards -> account.newestNotificationNews(cards) }?.createdAt() },
                 ) { lastRead, newestItemCreatedAt ->
                     emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
                 }
@@ -417,10 +420,7 @@ open class BaseAccountViewModel(
                 val lastRead = account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).value
                 val cards = source.feedContent.value
                 if (cards is CardFeedState.Loaded) {
-                    val newestItemCreatedAt =
-                        cards.feed.value.list
-                            .firstOrNull()
-                            ?.createdAt()
+                    val newestItemCreatedAt = account.newestNotificationNews(cards.feed.value.list)?.createdAt()
                     emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
                 }
             }

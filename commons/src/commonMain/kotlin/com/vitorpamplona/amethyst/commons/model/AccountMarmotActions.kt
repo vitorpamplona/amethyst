@@ -24,8 +24,10 @@ import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageReach
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
+import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
@@ -781,13 +783,20 @@ class AccountMarmotActions(
     /**
      * History a linked sibling delivered (`account-sync.md` "History deliveries"): already in the
      * message store, indexed here like a restored message. Importing is not reading, so it moves no
-     * read position, but it is not news either: the chat's local last-read time moves past it, so
-     * the earlier messages do not show as unread.
+     * read position, but it is not news either: the chat's local last-read time moves past it
+     * before the messages are indexed, so they show as neither unread in the chat list nor new in
+     * Notifications (where they are listed by their own dates, [isReadMarmotMessage]), and raise no
+     * system notification: they never pass through the [MarmotGroupNotifier].
      */
     suspend fun indexImportedMarmotHistory(imports: List<MarmotDeviceGroupManager.ImportedHistory>) {
         for (history in imports) {
             val groupId = history.nostrGroupId
             val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+            // Read before indexing: a cache observer that sees the notes sees them as read already.
+            history.events.maxOfOrNull { it.createdAt }?.let { newest ->
+                val route = marmotGroupLastReadRoute(groupId)
+                if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
+            }
             for (event in history.events) {
                 try {
                     val note = indexMarmotGroupInnerEvent(groupId, event).note
@@ -799,9 +808,6 @@ class AccountMarmotActions(
                     Log.w("MarmotDbg", "could not index an imported message of $groupId", e)
                 }
             }
-            val newest = history.events.maxOfOrNull { it.createdAt } ?: continue
-            val route = marmotGroupLastReadRoute(groupId)
-            if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
             account.marmotGroupList.notifyGroupChanged(groupId)
         }
     }
