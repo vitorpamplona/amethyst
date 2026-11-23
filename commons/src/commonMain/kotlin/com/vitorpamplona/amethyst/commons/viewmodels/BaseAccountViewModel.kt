@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
@@ -2158,6 +2160,17 @@ open class BaseAccountViewModel(
         }
 
     fun mutedPublicChatsFlow(): StateFlow<Set<String>> = account.settings.mutedPublicChats
+
+    /** Pin, mute and archive of this account's Marmot chats. */
+    fun marmotChatSettingsFlow(): StateFlow<MarmotChatSettingsSnapshot> = account.marmotChatSettings.state
+
+    fun setMarmotChatSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        on: Boolean,
+    ) = launchSigner {
+        account.marmot.setMarmotChatSetting(nostrGroupId, setting, on)
+    }
 
     fun toggleMutedPublicChat(channelId: String) =
         launchSigner {

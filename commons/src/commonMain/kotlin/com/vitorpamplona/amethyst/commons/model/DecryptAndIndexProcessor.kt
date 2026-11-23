@@ -970,7 +970,11 @@ class GroupEventHandler(
             // so reactions, deletions, and control messages stay
             // silent. A message an admin removed before it
             // landed is never shown, so it never notifies either.
-            if (MarmotGroupNotifier.notifies(innerEvent) && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
+            if (MarmotGroupNotifier.notifies(innerEvent) &&
+                !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id) &&
+                !account.marmotChatSettings.state.value
+                    .isMuted(result.groupId)
+            ) {
                 account.marmotNotifier().notifyGroupMessage(
                     innerEvent,
                     result.groupId,

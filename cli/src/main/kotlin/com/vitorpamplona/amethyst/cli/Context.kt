@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.marmot.RecipientRelayFetcher
@@ -388,7 +389,7 @@ class Context(
             publishObligationStore,
             ingestDedupStore,
             deviceGroupConfig =
-                if (deviceGroupsEnabled) DeviceGroupBlobStores(FileDeviceGroupBlobs(dataDir.deviceGroupDir)).config(deviceGroupRelays.map { it.url }) else null,
+                if (deviceGroupsEnabled) DeviceGroupBlobStores(deviceGroupBlobs).config(deviceGroupRelays.map { it.url }) else null,
         )
     }
 
@@ -406,8 +407,16 @@ class Context(
             signer = signer,
             transport = CliMarmotDevicesTransport(this),
             keyPackageRelays = { keyPackageRelays() },
+            signInAnswers = deviceGroupBlobs,
+            onSmallState = { state -> marmotChatSettings.applySmallState(state, marmot, skip = { id -> marmotDevices?.isDeviceGroup(id) == true }) },
         )
     }
+
+    /** This account's own device-group records and chat settings, owner-only files. */
+    private val deviceGroupBlobs by lazy { FileDeviceGroupBlobs(dataDir.deviceGroupDir) }
+
+    /** Pin, mute and archive of this account's Marmot chats (`amy marmot devices chats|pin|mute|archive`). */
+    val marmotChatSettings: MarmotChatSettings by lazy { MarmotChatSettings(deviceGroupBlobs) }
 
     // ------------------------------------------------------------------
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
@@ -453,6 +462,7 @@ class Context(
         // restore (and touching `marmot` would allocate the per-account stores).
         if (deviceGroupsEnabled) deviceGroupRelays = outboxRelays()
         if (!anonymous) marmot.restoreAll()
+        if (!anonymous) marmotChatSettings.load()
         marmotDevices?.start(announce = false)
         client.connect()
         // A bunker account must open its NIP-46 response subscription and run

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageReach
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
@@ -49,6 +50,7 @@ import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
@@ -1216,6 +1218,52 @@ class AccountMarmotActions(
     }
 
     /**
+     * The user pins, mutes or archives [nostrGroupId] on this device (or undoes it). With device
+     * groups on and this device linked, the change also goes to the account's other devices
+     * (`account-sync.md` "Small state"), which apply it to their copy of the chat.
+     */
+    suspend fun setMarmotChatSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        on: Boolean,
+    ) {
+        if (!account.marmotChatSettings.set(nostrGroupId, setting, on)) return
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
+        devices.changeSetting(nostrGroupId, setting, on)
+    }
+
+    /**
+     * Applies the account's small state, as the device group settled it, to this device's chats:
+     * each read position marks its chat read up to that message (`Read positions`: only forward),
+     * and each pin, mute and archive value becomes this chat's. Chats this device does not hold are
+     * skipped; their items wait in the device group's state until they arrive.
+     */
+    suspend fun applyMarmotSmallState(state: AccountSyncState) {
+        val manager = account.marmotManager ?: return
+        account.marmotChatSettings.applySmallState(
+            state,
+            manager,
+            skip = { id -> account.marmotDevices?.isDeviceGroup(id) == true },
+        ) { nostrId, read ->
+            val route = marmotGroupLastReadRoute(nostrId)
+            if (read.at > account.loadLastRead(route)) account.markAsRead(route, read.at)
+        }
+    }
+
+    /** `Starting`: this device's own pins, mutes and archives, given to the device group it now trusts. */
+    suspend fun seedMarmotSmallState() {
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked) return
+        val seeded =
+            devices.seedSmallState(
+                account.marmotChatSettings.state.value
+                    .nonDefault(),
+            )
+        if (seeded > 0) Log.d("MarmotDbg") { "seeded $seeded chat setting(s) into the device group" }
+    }
+
+    /**
      * Leave a Marmot MLS group: step down if an admin (naming an heir when no
      * other admin is a member, see [MarmotManager.leave]), publish the
      * SelfRemove proposal and drop the chatroom.
@@ -1236,6 +1284,7 @@ class AccountMarmotActions(
         // (which holds them weakly) can GC them, and the Notification feed
         // (which iterates account.marmotGroupList.rooms) stops surfacing the group.
         account.marmotGroupList.removeGroup(nostrGroupId)
+        account.marmotChatSettings.forget(nostrGroupId)
         emojiUploads.forget(nostrGroupId)
         departure.selfRemove?.let { account.client.publish(it.signedEvent, groupRelays) }
     }

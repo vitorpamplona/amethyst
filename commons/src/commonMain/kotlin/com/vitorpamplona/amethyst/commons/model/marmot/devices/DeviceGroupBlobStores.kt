@@ -46,7 +46,7 @@ interface DeviceGroupBlobs {
 
 /** marmot-kmp's three device-group stores over [blobs], one blob each. */
 class DeviceGroupBlobStores(
-    private val blobs: DeviceGroupBlobs,
+    val blobs: DeviceGroupBlobs,
 ) {
     val trust: DeviceGroupTrustStore =
         object : DeviceGroupTrustStore {

@@ -76,7 +76,7 @@ data class DeviceGroupAttention(
                 }
             val signIn =
                 snapshot.signIns
-                    .filter { it.kind == MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN && it.slot !in dismissedSignIns }
+                    .filter { it.kind == MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN && !it.confirmed && it.slot !in dismissedSignIns }
                     .maxByOrNull { it.publishedAt }
             return DeviceGroupAttention(linkRequest = request, signIn = signIn)
         }

@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot.devices
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.marmot.OutboundGroupEvent
 import com.vitorpamplona.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
+import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
 import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrust
 import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.marmot.features.devicePairing.CancelReason
@@ -78,6 +81,17 @@ class MarmotDevices(
     /** Where this device publishes its KeyPackage; read when a link starts. */
     private val keyPackageRelays: suspend () -> Set<NormalizedRelayUrl>,
     private val clock: () -> Long = { TimeUtils.now() },
+    /**
+     * Where this device keeps the sign-ins its user answered "That was me" ([acceptSignIn]), so a
+     * restart does not ask again (`device-group.md` "Answers"). Null keeps them for this run only.
+     */
+    private val signInAnswers: DeviceGroupBlobs? = null,
+    /**
+     * The account's small state as the device group settled it (`account-sync.md`): read positions
+     * and the pin, mute and archive of each chat, for the app to apply to its own chats. Called after
+     * [start] and after every ingest that moved the device group, outside the lock.
+     */
+    private val onSmallState: (suspend (AccountSyncState) -> Unit)? = null,
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
@@ -148,6 +162,8 @@ class MarmotDevices(
                 }
             }
             if (announce) runStep("start broadcast") { publishAll(groups.broadcastDue(clock(), start = true)) }
+            loadSignInAnswers()
+            queueSmallState()
             refreshState()
         }
 
@@ -225,9 +241,24 @@ class MarmotDevices(
             val deviceGroupMoved = nostrGroupId == null || groups.isDeviceGroup(nostrGroupId) || newDeviceState == NewDeviceLinkState.Joining
             if (outbox.isEmpty() && !deviceGroupMoved) return@locked
             publishAll(outbox)
-            if (deviceGroupMoved) runStep("first commit") { firstCommitIfJoined() }
+            if (deviceGroupMoved) {
+                runStep("first commit") { firstCommitIfJoined() }
+                queueSmallState()
+            }
             refreshState()
         }
+
+    /** Hands the app the small state after the lock is released, so applying it can take its time. */
+    private suspend fun queueSmallState() {
+        val apply = onSmallState ?: return
+        if (!groups.trust().trustsDeviceGroup) return
+        val state = groups.smallState()
+        if (state.items == lastSmallState) return
+        lastSmallState = state.items
+        sends.add { apply(state) }
+    }
+
+    private var lastSmallState: List<SmallStateItem>? = null
 
     private suspend fun firstCommitIfJoined() {
         val t = groups.trust()
@@ -643,12 +674,52 @@ class MarmotDevices(
             publications.mapNotNull { pub ->
                 val kind = classes[pub.slot] ?: return@mapNotNull null
                 if (kind == MarmotDeviceGroupManager.SignInClass.OWN || kind == MarmotDeviceGroupManager.SignInClass.LINKED) return@mapNotNull null
-                SignIn(pub.slot, pub.createdAt, kind)
+                SignIn(pub.slot, pub.createdAt, kind, confirmed = pub.slot in acceptedSignIns)
             }
         lastSignIns = signIns
     }
 
     private var lastSignIns: List<SignIn> = emptyList()
+
+    /** Slots whose sign-in this device's user said was theirs ("That was me", the spec's Not now). */
+    private val acceptedSignIns = HashSet<HexKey>()
+
+    private suspend fun loadSignInAnswers() {
+        val bytes =
+            try {
+                signInAnswers?.load(SIGN_IN_ANSWERS)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "could not read the sign-in answers", e)
+                null
+            } ?: return
+        bytes
+            .decodeToString()
+            .split('\n')
+            .filter { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+            .forEach { acceptedSignIns.add(it) }
+    }
+
+    /**
+     * "That was me" for the sign-in in [slot]: it stays listed, marked as this user's, and is never
+     * asked about again on this device, restarts included. Nothing goes to the roster: this answer is
+     * each device's own (`device-group.md` "Answers", Not now). False when it could not be saved.
+     */
+    suspend fun acceptSignIn(slot: HexKey): Boolean =
+        locked {
+            if (!acceptedSignIns.add(slot)) return@locked true
+            lastSignIns = lastSignIns.map { if (it.slot == slot) it.copy(confirmed = true) else it }
+            refreshState()
+            val store = signInAnswers ?: return@locked true
+            try {
+                store.save(SIGN_IN_ANSWERS, acceptedSignIns.sorted().joinToString("\n").encodeToByteArray())
+                true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "could not save the sign-in answers", e)
+                false
+            }
+        }
 
     // =============================================================================================
     // Devices
@@ -753,19 +824,47 @@ class MarmotDevices(
     /** Pin, mute or archive [nostrGroupId] on every device of the account. */
     suspend fun changeSetting(
         nostrGroupId: HexKey,
-        setting: ChatSetting,
+        setting: MarmotChatSetting,
         value: Boolean,
+    ) = changeSetting(nostrGroupId, setting, value.toString())
+
+    /** [changeSetting] with the small-state token itself: `true`, `false` or a mute time. */
+    suspend fun changeSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        value: String,
     ) = locked {
-        runStep("setting") { publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value.toString(), clock())) }
+        runStep("setting") {
+            publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value, clock()))
+            lastSmallState = groups.smallState().items
+        }
     }
 
-    enum class ChatSetting(
-        val wireName: String,
-    ) {
-        PIN("pin"),
-        MUTE("mute"),
-        ARCHIVE("archive"),
-    }
+    /**
+     * `account-sync.md` "Starting": each setting of this device that differs from the defaults and
+     * that the device group holds no value for yet becomes a value at version 1, so a device's pins
+     * from before it linked reach its siblings. Returns how many it seeded.
+     */
+    suspend fun seedSmallState(local: List<Triple<HexKey, MarmotChatSetting, String>>): Int =
+        locked {
+            if (!groups.trust().trustsDeviceGroup) return@locked 0
+            var seeded = 0
+            for ((nostrGroupId, setting, value) in local) {
+                if (isDeviceGroup(nostrGroupId)) continue
+                val mlsId =
+                    manager.groupManager
+                        .getGroup(nostrGroupId)
+                        ?.groupId
+                        ?.toHexKey() ?: continue
+                if (groups.smallState().held("$mlsId/${setting.wireName}") != null) continue
+                runStep("seed") {
+                    publishAll(groups.changeSetting(nostrGroupId, setting.wireName, value, clock()))
+                    seeded++
+                }
+            }
+            lastSmallState = groups.smallState().items
+            seeded
+        }
 
     /**
      * Before publishing [event], a KeyPackage of this device: a linked device names it in its roster
@@ -851,6 +950,9 @@ class MarmotDevices(
 
         /** How long a linked or ended request stays in [MarmotDevicesSnapshot.prompts]. */
         const val FINISHED_PROMPT_KEPT_SECS = 60 * 60L
+
+        /** The blob that holds the "That was me" answers, one slot per line. */
+        const val SIGN_IN_ANSWERS = "sign_in_answers"
 
         /** Pairing messages kept for [start] when they arrive before it. */
         const val MAX_EARLY_PAIRING = 64

@@ -39,18 +39,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.archived_chats_tab
+import com.vitorpamplona.amethyst.commons.resources.known
 import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.new_requests
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView
@@ -60,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -69,6 +76,30 @@ class MessagesTabItem(
     val scrollStateKey: String,
     val feedContentState: FeedContentState,
 )
+
+/**
+ * Known, New Requests and, while any Marmot chat is archived, Archived. The archived feed is kept
+ * current only while its tab is there.
+ */
+@Composable
+fun rememberMessagesTabs(
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+): ImmutableList<MessagesTabItem> {
+    val settings by accountViewModel.marmotChatSettingsFlow().collectAsStateWithLifecycle()
+    val hasArchived = settings.archived.isNotEmpty()
+    val archivedFeed = accountViewModel.feedStates.dmArchived
+    if (hasArchived) WatchLifecycleAndUpdateModel(archivedFeed)
+    return remember(knownFeedContentState, newFeedContentState, hasArchived) {
+        val base =
+            persistentListOf(
+                MessagesTabItem(Res.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
+                MessagesTabItem(Res.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
+            )
+        if (hasArchived) base.add(MessagesTabItem(Res.string.archived_chats_tab, ScrollStateKeys.MESSAGES_ARCHIVED, archivedFeed)) else base
+    }
+}
 
 @Composable
 fun MessagesTabHeader(

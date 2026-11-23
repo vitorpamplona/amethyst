@@ -83,7 +83,10 @@ fun MarmotDevicesPromptHost(
             attentionState.dismissRequest(prompt.sessionId)
             viewModel.rejectLink(prompt.sessionId)
         },
-        onSignInMine = { attentionState.dismissSignIn(it.slot) },
+        onSignInMine = {
+            attentionState.dismissSignIn(it.slot)
+            viewModel.acceptSignIn(it.slot)
+        },
         onSignInNotMe = {
             attentionState.dismissSignIn(it.slot)
             viewModel.rejectSignIn(it.slot)

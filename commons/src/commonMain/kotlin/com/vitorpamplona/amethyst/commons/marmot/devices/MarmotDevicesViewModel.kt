@@ -112,6 +112,9 @@ class MarmotDevicesViewModel(
 
     fun removeDevice(slot: HexKey) = run(DeviceActionFailure.REMOVE) { check(it.removeDevice(slot)) { "No relay confirmed the removal" } }
 
+    /** "That was me": the sign-in in [slot] stays listed as this user's and is never asked about again. */
+    fun acceptSignIn(slot: HexKey) = run(DeviceActionFailure.SIGN_IN) { check(it.acceptSignIn(slot)) { "Could not save the answer" } }
+
     /** "Not me": records that the sign-in in [slot] was not this user. */
     fun rejectSignIn(slot: HexKey) = run(DeviceActionFailure.SIGN_IN) { it.rejectSignIn(slot) }
 

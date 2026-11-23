@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotDeletedMessageNote
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -86,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderByParentFil
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_messages
+import com.vitorpamplona.amethyst.commons.resources.archive_conversation
+import com.vitorpamplona.amethyst.commons.resources.archived_chat_content_description
 import com.vitorpamplona.amethyst.commons.resources.channel_created
 import com.vitorpamplona.amethyst.commons.resources.channel_image
 import com.vitorpamplona.amethyst.commons.resources.channel_information_changed_to
@@ -129,6 +133,7 @@ import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
 import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.relay_group_server_label
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
+import com.vitorpamplona.amethyst.commons.resources.unarchive_conversation
 import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
 import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
@@ -173,6 +178,7 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzForum
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -558,18 +564,36 @@ private fun MarmotGroupRoomCompose(
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
 
+    var menuOpen by remember { mutableStateOf(false) }
+    // A State (no `by`): read only in the title and menu slots, so a toggle recomposes just those.
+    val chatSettings = accountViewModel.marmotChatSettingsFlow().collectAsStateWithLifecycle()
+    val title: @Composable (Modifier) -> Unit = { modifier ->
+        val settings = chatSettings.value
+        val id = chatroom.nostrGroupId
+        val (symbol, description) =
+            when {
+                settings.isMuted(id) -> MaterialSymbols.NotificationsOff to stringRes(Res.string.muted_chat_content_description)
+                settings.isPinned(id) -> MaterialSymbols.PushPin to stringRes(Res.string.pinned_to_top)
+                settings.isArchived(id) -> MaterialSymbols.MoveToInbox to stringRes(Res.string.archived_chat_content_description)
+                else -> MaterialSymbols.Lock to null
+            }
+        ChannelTitleWithLabelInfo(groupName, symbol, Res.string.marmot_group, modifier, labelContentDescription = description)
+    }
+
     val hasGroupFace = avatarUrl != null || image != null || !displayName.isNullOrBlank()
     if (!hasGroupFace && otherMembers.isNotEmpty()) {
         // An unnamed group without an avatar (White Noise's 1:1 chats) is about its people:
         // show them, as a NIP-17 room does, instead of a relay icon.
         ChannelName(
             channelPicture = { ChatRoomFaces(userHexList = otherMembers, size = ChatRowAvatarSize, accountViewModel = accountViewModel) },
-            channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
+            channelTitle = title,
             channelLastTime = lastMessage.createdAt(),
             channelLastContent = lastContent,
             hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
             onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+            onLongClick = { menuOpen = true },
         )
+        MarmotChatSettingsMenu(menuOpen, { menuOpen = false }, chatroom.nostrGroupId, chatSettings.value, accountViewModel)
         return
     }
 
@@ -587,7 +611,7 @@ private fun MarmotGroupRoomCompose(
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
+        channelTitle = title,
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
@@ -599,6 +623,56 @@ private fun MarmotGroupRoomCompose(
                 .value,
         fallbackSymbol = MaterialSymbols.Lock,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+        onLongClick = { menuOpen = true },
+    )
+    MarmotChatSettingsMenu(menuOpen, { menuOpen = false }, chatroom.nostrGroupId, chatSettings.value, accountViewModel)
+}
+
+/** Pin, mute and archive for one Marmot chat: the row's long-press menu. */
+@Composable
+fun MarmotChatSettingsMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    nostrGroupId: HexKey,
+    settings: MarmotChatSettingsSnapshot,
+    accountViewModel: AccountViewModel,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        MarmotChatSettingsMenuItems(nostrGroupId, settings, accountViewModel, onDismiss)
+    }
+}
+
+/** The three toggles, for any menu that shows them (the row's long press, the chat's top bar). */
+@Composable
+fun MarmotChatSettingsMenuItems(
+    nostrGroupId: HexKey,
+    settings: MarmotChatSettingsSnapshot,
+    accountViewModel: AccountViewModel,
+    onDone: () -> Unit,
+) {
+    val pinned = settings.isPinned(nostrGroupId)
+    val muted = settings.isMuted(nostrGroupId)
+    val archived = settings.isArchived(nostrGroupId)
+    DropdownMenuItem(
+        text = { Text(stringRes(if (pinned) Res.string.unpin_conversation else Res.string.pin_conversation)) },
+        onClick = {
+            accountViewModel.setMarmotChatSetting(nostrGroupId, MarmotChatSetting.PIN, !pinned)
+            onDone()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringRes(if (muted) Res.string.unmute_notifications else Res.string.mute_notifications)) },
+        onClick = {
+            accountViewModel.setMarmotChatSetting(nostrGroupId, MarmotChatSetting.MUTE, !muted)
+            onDone()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text(stringRes(if (archived) Res.string.unarchive_conversation else Res.string.archive_conversation)) },
+        onClick = {
+            accountViewModel.setMarmotChatSetting(nostrGroupId, MarmotChatSetting.ARCHIVE, !archived)
+            onDone()
+        },
     )
 }
 
