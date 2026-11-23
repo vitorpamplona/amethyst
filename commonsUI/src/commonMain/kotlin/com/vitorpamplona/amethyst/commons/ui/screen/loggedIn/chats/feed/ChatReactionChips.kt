@@ -91,7 +91,10 @@ data class ReactionChip(
     val type: String,
     val count: Int,
     val includesMe: Boolean,
-    /** What the chip draws; differs from [type] only for a Marmot custom emoji that cannot be shown as a picture yet. */
+    /**
+     * What the chip draws; differs from [type] only for a Marmot custom emoji that cannot be shown as a picture yet,
+     * and for a cordn custom emoji, whose [type] is its `:name:` and whose glyph adds the picture's URL.
+     */
     val glyph: String = type,
 )
 
