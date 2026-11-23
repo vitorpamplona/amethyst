@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,6 +54,11 @@ class MarmotDeviceLinkViewModel(
     val role: DeviceLinkRole,
     initialSessionId: HexKey?,
     private val attention: DeviceGroupAttentionState?,
+    /**
+     * Where the user's decisions (match, mismatch, cancel) run: the account's scope, because the
+     * screen closes right after Cancel and its own scope would take the cancel with it.
+     */
+    private val decisionScope: CoroutineScope? = null,
     private val clock: () -> Long = { TimeUtils.now() },
 ) : ViewModel() {
     private val openedAt = clock()
@@ -134,7 +140,7 @@ class MarmotDeviceLinkViewModel(
     }
 
     private fun launch(block: suspend () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+        (decisionScope ?: viewModelScope).launch(Dispatchers.IO) {
             try {
                 block()
             } catch (e: Exception) {
@@ -159,7 +165,7 @@ class MarmotDeviceLinkViewModel(
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = MarmotDeviceLinkViewModel(account.marmotDevices, role, sessionId, attention) as T
+        ): T = MarmotDeviceLinkViewModel(account.marmotDevices, role, sessionId, attention, account.scope) as T
     }
 
     companion object {
