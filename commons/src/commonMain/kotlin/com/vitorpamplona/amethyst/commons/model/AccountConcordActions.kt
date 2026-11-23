@@ -127,8 +127,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -267,27 +269,53 @@ class AccountConcordActions(
         list.addPendingJoin(entry)
         awaitConcordSession(entry.id)
         fetchedWraps.forEach { account.concordSessions.ingest(it) }
-        account.scope.launch(Dispatchers.IO) {
-            val persisted =
-                try {
-                    persistConcordEntry(entry)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("Concord", "Community List write for ${entry.id} failed", e)
-                    false
-                }
-            if (persisted) {
-                // Hand over to the written entry before letting go of the pending one, or the
-                // community would vanish for a beat and its session be torn down and rebuilt.
-                withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
-                list.dropPendingJoin(entry.id)
-                announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
-            } else {
-                list.dropPendingJoin(entry.id)
-                _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
+        val save =
+            account.scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                savePendingJoin(entry, inviteCreator, inviteLabel)
             }
+        pendingJoinSaves.merge(entry.id, save) { previous, next -> next.also { previous.cancel() } }
+        save.invokeOnCompletion { pendingJoinSaves.remove(entry.id, save) }
+        save.start()
+    }
+
+    /**
+     * The background half of [joinConcordCommunityOptimistically]. A leave ([leaveConcordCommunity])
+     * cancels it and drops the pending join, and every step that would make the membership real
+     * re-checks that the join is still pending: the List write ([ConcordChannelListState.followPendingJoin]
+     * decides inside the write lock) and the Guestbook JOIN. Without that, a leave during the save
+     * re-joined the community, or announced JOIN after the LEAVE.
+     */
+    private suspend fun savePendingJoin(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ) {
+        val list = account.concordChannelList
+        val persisted =
+            try {
+                writeConcordList { it.followPendingJoin(entry).orEmpty() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("Concord", "Community List write for ${entry.id} failed", e)
+                false
+            }
+        // Left while the List loaded: nothing was written, and nothing is announced or reported.
+        if (!list.isPendingJoin(entry.id)) return
+        if (persisted) {
+            // Hand over to the written entry before letting go of the pending one, or the
+            // community would vanish for a beat and its session be torn down and rebuilt.
+            withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
+            if (!list.isPendingJoin(entry.id)) return
+            list.dropPendingJoin(entry.id)
+            announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+        } else {
+            list.dropPendingJoin(entry.id)
+            _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
         }
     }
+
+    /** The background save of each pending join, by community id, so a leave can cancel it. */
+    private val pendingJoinSaves = ConcurrentMap<HexKey, Job>()
 
     private val _concordJoinFailures = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
@@ -821,6 +849,10 @@ class AccountConcordActions(
      */
     suspend fun leaveConcordCommunity(communityId: String): Boolean {
         val entry = account.concordSessions.sessionFor(communityId)?.entry
+        // A join still being saved in the background must not land after this leave: stop it, and
+        // drop the pending join first, so a save already inside the List write sees it is gone.
+        pendingJoinSaves.remove(communityId)?.cancel()
+        account.concordChannelList.dropPendingJoin(communityId)
         if (entry != null && account.isWriteable()) {
             val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
             if (relays.isNotEmpty()) {
@@ -842,9 +874,7 @@ class AccountConcordActions(
                 }
             }
         }
-        val left = writeConcordList { it.unfollow(communityId) }
-        if (left) account.concordChannelList.dropPendingJoin(communityId)
-        return left
+        return writeConcordList { it.unfollow(communityId) }
     }
 
     /**

@@ -44,6 +44,7 @@ import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -145,6 +146,30 @@ class ConcordPendingJoinTest {
             state.dropPendingJoin(alpha)
             withTimeout(5000) { while (state.liveCommunities.value.isEmpty()) yield() }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id }, "the written entry stays after the pending one goes")
+        }
+
+    @Test
+    fun aSaveAfterTheLeaveDroppedThePendingJoinWritesNothing() =
+        runTest {
+            val state = state()
+            state.markRelaysConfirmed()
+            state.addPendingJoin(entry(alpha))
+            // The user leaves while the background save still waits for the List.
+            state.dropPendingJoin(alpha)
+
+            assertNull(state.followPendingJoin(entry(alpha)), "a save that lost its pending join must not re-join")
+            assertTrue(state.entries().isEmpty())
+            assertFalse(state.isPendingJoin(alpha))
+        }
+
+    @Test
+    fun aSaveWhileStillPendingWritesTheMembership() =
+        runTest {
+            val state = state()
+            state.markRelaysConfirmed()
+            state.addPendingJoin(entry(alpha))
+            val events = state.followPendingJoin(entry(alpha))
+            assertEquals(1, events?.filterIsInstance<ConcordCommunityListFragmentEvent>()?.size)
         }
 
     @Test
