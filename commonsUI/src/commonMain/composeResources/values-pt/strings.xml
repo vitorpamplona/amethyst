@@ -9747,7 +9747,6 @@
     <string name="claude_code_status_starting">Iniciando</string>
     <string name="claude_code_status_working">Trabalhando</string>
     <string name="claude_code_status_needs_approval">Precisa da sua aprovação</string>
-    <string name="claude_code_status_ready">Pronto</string>
     <string name="claude_code_open_elsewhere_warning">Esta sessão está aberta em outro Claude Code agora. Continuá-la aqui ao mesmo tempo pode misturar o histórico dela.</string>
     <string name="claude_code_delete">Excluir</string>
     <string name="claude_code_delete_title">Excluir esta sessão?</string>
@@ -9849,8 +9848,6 @@
     <string name="claude_code_tool_from_line">a partir da linha %1$d</string>
     <string name="claude_code_tool_search_in">%1$s em %2$s</string>
     <string name="claude_code_waiting_approval">Aguardando sua aprovação</string>
-    <string name="claude_code_permission_edit">%1$s quer alterar %2$s</string>
-    <string name="claude_code_permission_create">%1$s quer criar %2$s</string>
     <string name="claude_code_permission_run">%1$s quer executar um comando</string>
     <string name="claude_code_permission_keys">Enter permite · Esc nega</string>
     <string name="claude_code_permission_keys_deny">Enter ou Esc nega</string>
@@ -9864,7 +9861,6 @@
     <string name="claude_code_notify_finished">%1$s terminou</string>
     <string name="claude_code_section_needs_you">Precisam de você</string>
     <string name="claude_code_status_in_terminal">aberta em um terminal</string>
-    <string name="claude_code_intro_title">Nova sessão em %1$s</string>
     <string name="claude_code_starter_explain">Explique como este repositório está organizado</string>
     <string name="claude_code_starter_tests">Execute os testes e corrija o que falhar</string>
     <string name="claude_code_starter_review_branch">Revise as alterações desta branch em relação a %1$s</string>
@@ -9964,7 +9960,6 @@
     <string name="claude_code_workstream_name">Nome</string>
     <string name="claude_code_workstream_name_hint">Para que serve</string>
     <string name="claude_code_workstream_name_desc">Dá nome à pasta e à branch da frente de trabalho.</string>
-    <string name="claude_code_workstream_go">Começar</string>
     <string name="claude_code_advanced">Avançado</string>
     <string name="claude_code_where">Onde</string>
     <string name="claude_code_where_clones">Clones novos</string>

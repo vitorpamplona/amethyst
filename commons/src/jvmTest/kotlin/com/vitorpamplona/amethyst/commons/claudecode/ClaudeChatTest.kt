@@ -43,6 +43,7 @@ import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -57,11 +58,18 @@ class ClaudeChatTest {
         val written = CopyOnWriteArrayList<String>()
         override val lines: Flow<String> = out.receiveAsFlow()
 
+        /** Turns end in an API error, the way Claude Code reports one (a success subtype, is_error). */
+        @Volatile var failTurns = false
+
         override suspend fun write(line: String) {
             written.add(line)
             when {
                 line.contains("\"subtype\":\"initialize\"") -> reply(line, "{}")
                 line.contains("\"subtype\":\"rename_session\"") -> reply(line, "{}")
+                line.contains("\"type\":\"user\"") && failTurns -> {
+                    emit("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-1","model":"claude-haiku-5-5","permissionMode":"default","tools":["Write"]}""")
+                    emit("""{"type":"result","subtype":"success","is_error":true,"result":"API Error: 529 Overloaded","session_id":"s-1"}""")
+                }
                 line.contains("\"type\":\"user\"") -> {
                     emit("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-1","model":"claude-haiku-5-5","permissionMode":"default","tools":["Write"]}""")
                     emit("""{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Writ"}},"session_id":"s-1","parent_tool_use_id":null}""")
@@ -108,10 +116,14 @@ class ClaudeChatTest {
     private fun TestScope.newChat(
         cli: ScriptedCli,
         title: String? = null,
+        /** How many starts fail, as a CLI that can't run would, before one works. */
+        failedStarts: Int = 0,
     ): ClaudeChat {
         chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+        var failuresLeft = failedStarts
         val starter =
             ClaudeCodeStarter { _, scope ->
+                if (failuresLeft-- > 0) throw IOException("cannot run claude")
                 ClaudeCodeConnection(cli, scope).also { it.initialize() }
             }
         val config = Files.createTempDirectory("claude-config").toFile()
@@ -166,6 +178,128 @@ class ClaudeChatTest {
 
             // The approval went back for the request the CLI asked.
             assertNotNull(cli.written.firstOrNull { it.contains("\"request_id\":\"p1\"") && it.contains("\"behavior\":\"allow\"") })
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aTurnThatEndsUnwatchedWaitsToBeSeen() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli)
+
+            // Nobody looks while the turn runs: its end waits for the user.
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            val ended = chat.state.value
+            assertEquals(ChatStatus.READY, ended.status)
+            assertTrue(ended.unseenFinish)
+            assertNotNull(ended.turnEndedAt)
+            assertNotNull(ended.lastTurnMillis)
+
+            // Opening the chat sees it.
+            val release = chat.viewing()
+            assertFalse(chat.state.value.unseenFinish)
+
+            // A turn that ends on screen needs no flag; one after the screen closed does.
+            chat.send("Again")
+            advanceUntilIdle()
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            assertFalse(chat.state.value.unseenFinish)
+
+            release()
+            release() // twice is once
+            chat.send("Once more")
+            advanceUntilIdle()
+            assertFalse(chat.state.value.unseenFinish, "a turn still running has not finished")
+            chat.approve(
+                chat.state.value.pendingPermissions
+                    .single(),
+                always = false,
+            )
+            advanceUntilIdle()
+            assertTrue(chat.state.value.unseenFinish)
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aFailedTurnSaysSoAndTryAgainSendsTheMessageAgain() =
+        runTest {
+            val cli = ScriptedCli().apply { failTurns = true }
+            val chat = newChat(cli)
+
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            val failed = chat.state.value
+            assertEquals(ChatStatus.READY, failed.status)
+            assertTrue(failed.lastTurnFailed)
+            val notice = failed.items.last() as ChatItem.Notice
+            assertEquals(NoticeKind.TURN_FAILED, notice.kind)
+            assertEquals("API Error: 529 Overloaded", notice.detail)
+
+            cli.failTurns = false
+            chat.retry()
+            advanceUntilIdle()
+            val again = chat.state.value
+            assertFalse(again.lastTurnFailed)
+            assertEquals(ChatStatus.NEEDS_APPROVAL, again.status)
+            assertEquals(listOf("Create hello.txt", "Create hello.txt"), again.items.filterIsInstance<ChatItem.UserText>().map { it.text })
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aStartThatFailsIsAFailedTurnAndDoesNotTimeTheNextOne() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli, failedStarts = 1)
+
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            val failed = chat.state.value
+            assertEquals(ChatStatus.ENDED, failed.status)
+            assertTrue(failed.error is ChatError.StartFailed)
+            assertTrue(failed.lastTurnFailed)
+            assertTrue(failed.unseenFinish, "nobody watched it fail")
+            assertEquals(null, failed.turnStartedAt)
+
+            // The next turn is timed from its own start, not the failed one's.
+            assertTrue(chat.retry())
+            advanceUntilIdle()
+            assertEquals(ChatStatus.NEEDS_APPROVAL, chat.state.value.status)
+            assertFalse(chat.state.value.lastTurnFailed)
+            assertNotNull(chat.state.value.turnStartedAt)
+            assertTrue(chat.state.value.turnStartedAt!! >= failed.turnEndedAt!!)
+            chatScope.cancel()
+        }
+
+    @Test
+    fun tryAgainTwiceSendsOnce() =
+        runTest {
+            val cli = ScriptedCli().apply { failTurns = true }
+            val chat = newChat(cli)
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            cli.failTurns = false
+
+            chat.retry()
+            chat.retry()
+            advanceUntilIdle()
+            assertEquals(
+                2,
+                chat.state.value.items
+                    .count { it is ChatItem.UserText },
+            )
+            assertEquals(2, cli.written.count { it.contains("\"type\":\"user\"") })
             chatScope.cancel()
         }
 

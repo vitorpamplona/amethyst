@@ -9323,7 +9323,6 @@
     <string name="claude_code_status_starting">Starten</string>
     <string name="claude_code_status_working">Bezig</string>
     <string name="claude_code_status_needs_approval">Wacht op je goedkeuring</string>
-    <string name="claude_code_status_ready">Klaar</string>
     <string name="claude_code_open_elsewhere_warning">Deze sessie is nu open in een andere Claude Code. Hem hier tegelijk voortzetten kan de geschiedenis door elkaar halen.</string>
     <string name="claude_code_delete">Verwijderen</string>
     <string name="claude_code_delete_title">Deze sessie verwijderen?</string>
@@ -9473,8 +9472,6 @@
     <string name="claude_code_tool_from_line">vanaf regel %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Wacht op je goedkeuring</string>
-    <string name="claude_code_permission_edit">%1$s wil %2$s wijzigen</string>
-    <string name="claude_code_permission_create">%1$s wil %2$s aanmaken</string>
     <string name="claude_code_permission_run">%1$s wil een opdracht uitvoeren</string>
     <string name="claude_code_permission_keys">Enter staat toe · Esc weigert</string>
     <string name="claude_code_permission_keys_deny">Enter of Esc weigert</string>
@@ -9492,7 +9489,6 @@
         <item quantity="other">Gearchiveerd · %1$d sessies</item>
     </plurals>
     <string name="claude_code_status_in_terminal">open in een terminal</string>
-    <string name="claude_code_intro_title">Nieuwe sessie in %1$s</string>
     <string name="claude_code_starter_explain">Leg uit hoe deze repository is opgebouwd</string>
     <string name="claude_code_starter_tests">Voer de tests uit en repareer wat faalt</string>
     <string name="claude_code_starter_review_branch">Review de wijzigingen van deze branch ten opzichte van %1$s</string>
@@ -10096,7 +10092,6 @@
     <string name="claude_code_workstream_name">Naam</string>
     <string name="claude_code_workstream_name_hint">Waar hij voor dient</string>
     <string name="claude_code_workstream_name_desc">Geeft de map en branch van de workstream hun naam.</string>
-    <string name="claude_code_workstream_go">Start</string>
     <string name="claude_code_advanced">Geavanceerd</string>
     <string name="claude_code_where">Waar</string>
     <string name="claude_code_where_clones">Verse klonen</string>

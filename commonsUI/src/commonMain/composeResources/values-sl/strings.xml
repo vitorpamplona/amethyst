@@ -9987,7 +9987,6 @@
     <string name="claude_code_status_starting">Zaganjanje</string>
     <string name="claude_code_status_working">Dela</string>
     <string name="claude_code_status_needs_approval">Potrebuje tvojo odobritev</string>
-    <string name="claude_code_status_ready">Pripravljeno</string>
     <string name="claude_code_open_elsewhere_warning">Ta seja je trenutno odprta v drugem Claude Code. Če jo hkrati nadaljuješ tukaj, se lahko njena zgodovina pomeša.</string>
     <string name="claude_code_delete">Izbriši</string>
     <string name="claude_code_delete_title">Izbrišem to sejo?</string>
@@ -10161,8 +10160,6 @@
     <string name="claude_code_tool_from_line">od vrstice %1$d</string>
     <string name="claude_code_tool_search_in">%1$s v %2$s</string>
     <string name="claude_code_waiting_approval">Čaka na tvojo odobritev</string>
-    <string name="claude_code_permission_edit">%1$s želi spremeniti %2$s</string>
-    <string name="claude_code_permission_create">%1$s želi ustvariti %2$s</string>
     <string name="claude_code_permission_run">%1$s želi zagnati ukaz</string>
     <string name="claude_code_permission_keys">Enter dovoli · Esc zavrne</string>
     <string name="claude_code_permission_keys_deny">Enter ali Esc zavrne</string>
@@ -10182,7 +10179,6 @@
         <item quantity="other">Arhivirano · %1$d sej</item>
     </plurals>
     <string name="claude_code_status_in_terminal">odprto v terminalu</string>
-    <string name="claude_code_intro_title">Nova seja v %1$s</string>
     <string name="claude_code_starter_explain">Pojasni, kako je organiziran ta repozitorij</string>
     <string name="claude_code_starter_tests">Zaženi teste in popravi, kar ne uspe</string>
     <string name="claude_code_starter_review_branch">Preglej spremembe te veje glede na %1$s</string>
@@ -10838,7 +10834,6 @@
     <string name="claude_code_workstream_name">Ime</string>
     <string name="claude_code_workstream_name_hint">Čemu je namenjen</string>
     <string name="claude_code_workstream_name_desc">Poimenuje mapo in vejo delovnega toka.</string>
-    <string name="claude_code_workstream_go">Začni</string>
     <string name="claude_code_advanced">Napredno</string>
     <string name="claude_code_where">Kje</string>
     <string name="claude_code_where_clones">Sveži kloni</string>

@@ -9369,7 +9369,6 @@
     <string name="claude_code_status_starting">Iniciando</string>
     <string name="claude_code_status_working">Trabajando</string>
     <string name="claude_code_status_needs_approval">Necesita tu aprobación</string>
-    <string name="claude_code_status_ready">Lista</string>
     <string name="claude_code_open_elsewhere_warning">Esta sesión está abierta ahora mismo en otro Claude Code. Continuarla aquí al mismo tiempo puede mezclar su historial.</string>
     <string name="claude_code_delete">Borrar</string>
     <string name="claude_code_delete_title">¿Borrar esta sesión?</string>
@@ -9525,8 +9524,6 @@
     <string name="claude_code_tool_from_line">desde la línea %1$d</string>
     <string name="claude_code_tool_search_in">%1$s en %2$s</string>
     <string name="claude_code_waiting_approval">Esperando tu aprobación</string>
-    <string name="claude_code_permission_edit">%1$s quiere cambiar %2$s</string>
-    <string name="claude_code_permission_create">%1$s quiere crear %2$s</string>
     <string name="claude_code_permission_run">%1$s quiere ejecutar un comando</string>
     <string name="claude_code_permission_keys">Enter permite · Esc deniega</string>
     <string name="claude_code_permission_keys_deny">Enter o Esc deniega</string>
@@ -9544,7 +9541,6 @@
         <item quantity="other">Archivadas · %1$d sesiones</item>
     </plurals>
     <string name="claude_code_status_in_terminal">abierta en una terminal</string>
-    <string name="claude_code_intro_title">Nueva sesión en %1$s</string>
     <string name="claude_code_starter_explain">Explica cómo está organizado este repositorio</string>
     <string name="claude_code_starter_tests">Ejecuta las pruebas y arregla lo que falle</string>
     <string name="claude_code_starter_review_branch">Revisa los cambios de esta rama frente a %1$s</string>
@@ -10180,7 +10176,6 @@
     <string name="claude_code_workstream_name">Nombre</string>
     <string name="claude_code_workstream_name_hint">Para qué es</string>
     <string name="claude_code_workstream_name_desc">Da nombre a la carpeta y la rama de la línea de trabajo.</string>
-    <string name="claude_code_workstream_go">Ir</string>
     <string name="claude_code_advanced">Avanzado</string>
     <string name="claude_code_where">Dónde</string>
     <string name="claude_code_where_clones">Clones nuevos</string>

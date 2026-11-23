@@ -9987,7 +9987,6 @@
     <string name="claude_code_status_starting">Uruchamianie</string>
     <string name="claude_code_status_working">Pracuje</string>
     <string name="claude_code_status_needs_approval">Wymaga Twojej zgody</string>
-    <string name="claude_code_status_ready">Gotowe</string>
     <string name="claude_code_open_elsewhere_warning">Ta sesja jest teraz otwarta w innym Claude Code. Kontynuowanie jej tutaj w tym samym czasie może pomieszać jej historię.</string>
     <string name="claude_code_delete">Usuń</string>
     <string name="claude_code_delete_title">Usunąć tę sesję?</string>
@@ -10161,8 +10160,6 @@
     <string name="claude_code_tool_from_line">od linii %1$d</string>
     <string name="claude_code_tool_search_in">%1$s w %2$s</string>
     <string name="claude_code_waiting_approval">Oczekiwanie na Twoją zgodę</string>
-    <string name="claude_code_permission_edit">%1$s chce zmienić %2$s</string>
-    <string name="claude_code_permission_create">%1$s chce utworzyć %2$s</string>
     <string name="claude_code_permission_run">%1$s chce uruchomić polecenie</string>
     <string name="claude_code_permission_keys">Enter zezwala · Esc odmawia</string>
     <string name="claude_code_permission_keys_deny">Enter lub Esc odmawia</string>
@@ -10182,7 +10179,6 @@
         <item quantity="other">Zarchiwizowane · %1$d sesji</item>
     </plurals>
     <string name="claude_code_status_in_terminal">otwarta w terminalu</string>
-    <string name="claude_code_intro_title">Nowa sesja w %1$s</string>
     <string name="claude_code_starter_explain">Wyjaśnij, jak zorganizowane jest to repozytorium</string>
     <string name="claude_code_starter_tests">Uruchom testy i napraw to, co nie przechodzi</string>
     <string name="claude_code_starter_review_branch">Przejrzyj zmiany tej gałęzi względem %1$s</string>
@@ -10838,7 +10834,6 @@
     <string name="claude_code_workstream_name">Nazwa</string>
     <string name="claude_code_workstream_name_hint">Do czego służy</string>
     <string name="claude_code_workstream_name_desc">Nadaje nazwę folderowi i gałęzi strumienia pracy.</string>
-    <string name="claude_code_workstream_go">Start</string>
     <string name="claude_code_advanced">Zaawansowane</string>
     <string name="claude_code_where">Gdzie</string>
     <string name="claude_code_where_clones">Nowe klony</string>

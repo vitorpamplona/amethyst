@@ -9323,7 +9323,6 @@
     <string name="claude_code_status_starting">Indul</string>
     <string name="claude_code_status_working">Dolgozik</string>
     <string name="claude_code_status_needs_approval">Jóváhagyásra vár</string>
-    <string name="claude_code_status_ready">Kész</string>
     <string name="claude_code_open_elsewhere_warning">Ez a munkamenet jelenleg egy másik Claude Code-ban is nyitva van. Ha egyszerre itt is folytatja, összekeveredhetnek az előzményei.</string>
     <string name="claude_code_delete">Törlés</string>
     <string name="claude_code_delete_title">Törli ezt a munkamenetet?</string>
@@ -9473,8 +9472,6 @@
     <string name="claude_code_tool_from_line">a(z) %1$d. sortól</string>
     <string name="claude_code_tool_search_in">%1$s itt: %2$s</string>
     <string name="claude_code_waiting_approval">Az Ön jóváhagyására vár</string>
-    <string name="claude_code_permission_edit">%1$s módosítaná ezt: %2$s</string>
-    <string name="claude_code_permission_create">%1$s létrehozná ezt: %2$s</string>
     <string name="claude_code_permission_run">%1$s parancsot futtatna</string>
     <string name="claude_code_permission_keys">Enter: engedélyezés · Esc: elutasítás</string>
     <string name="claude_code_permission_keys_deny">Enter vagy Esc: elutasítás</string>
@@ -9492,7 +9489,6 @@
         <item quantity="other">Archivált · %1$d munkamenet</item>
     </plurals>
     <string name="claude_code_status_in_terminal">nyitva egy terminálban</string>
-    <string name="claude_code_intro_title">Új munkamenet itt: %1$s</string>
     <string name="claude_code_starter_explain">Magyarázd el, hogyan épül fel ez a tároló</string>
     <string name="claude_code_starter_tests">Futtasd a teszteket, és javítsd, ami elbukik</string>
     <string name="claude_code_starter_review_branch">Nézd át ennek az ágnak a változtatásait ehhez képest: %1$s</string>
@@ -10096,7 +10092,6 @@
     <string name="claude_code_workstream_name">Név</string>
     <string name="claude_code_workstream_name_hint">Mire szolgál</string>
     <string name="claude_code_workstream_name_desc">Ez lesz a munkaszál mappájának és ágának a neve.</string>
-    <string name="claude_code_workstream_go">Indítás</string>
     <string name="claude_code_advanced">Speciális</string>
     <string name="claude_code_where">Hol</string>
     <string name="claude_code_where_clones">Friss klónok</string>

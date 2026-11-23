@@ -21,6 +21,7 @@
 package com.vitorpamplona.codex
 
 import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PlanStep
 import com.vitorpamplona.agents.TranscriptEntry
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -162,6 +163,24 @@ object CodexItems {
         }
         return entries
     }
+
+    /**
+     * The steps of a `turn/plan/updated` notification (`plan: [{step, status}]`, status
+     * `pending`, `inProgress` or `completed`). Codex keeps no plan in a saved thread, so this is
+     * live only.
+     */
+    fun planSteps(params: JsonObject): List<PlanStep> =
+        (params["plan"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val step = element as? JsonObject ?: return@mapNotNull null
+            val text = step.text("step")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val status =
+                when (step.text("status")) {
+                    "inProgress" -> PlanStep.Status.IN_PROGRESS
+                    "completed" -> PlanStep.Status.COMPLETED
+                    else -> PlanStep.Status.PENDING
+                }
+            PlanStep(text, status)
+        }
 
     /** A user input carrying an image, as `turn/start` takes it: a data URL. */
     fun imageInput(

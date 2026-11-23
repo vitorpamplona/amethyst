@@ -9748,7 +9748,6 @@
     <string name="claude_code_status_starting">Startet</string>
     <string name="claude_code_status_working">Arbeitet</string>
     <string name="claude_code_status_needs_approval">Braucht deine Freigabe</string>
-    <string name="claude_code_status_ready">Bereit</string>
     <string name="claude_code_open_elsewhere_warning">Diese Sitzung ist gerade in einem anderen Claude Code geöffnet. Wenn du sie gleichzeitig hier fortsetzt, kann ihr Verlauf durcheinandergeraten.</string>
     <string name="claude_code_delete">Löschen</string>
     <string name="claude_code_delete_title">Diese Sitzung löschen?</string>
@@ -9850,8 +9849,6 @@
     <string name="claude_code_tool_from_line">ab Zeile %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Wartet auf deine Freigabe</string>
-    <string name="claude_code_permission_edit">%1$s möchte %2$s ändern</string>
-    <string name="claude_code_permission_create">%1$s möchte %2$s erstellen</string>
     <string name="claude_code_permission_run">%1$s möchte einen Befehl ausführen</string>
     <string name="claude_code_permission_keys">Enter erlaubt · Esc lehnt ab</string>
     <string name="claude_code_permission_keys_deny">Enter oder Esc lehnt ab</string>
@@ -9865,7 +9862,6 @@
     <string name="claude_code_notify_finished">%1$s ist fertig</string>
     <string name="claude_code_section_needs_you">Braucht dich</string>
     <string name="claude_code_status_in_terminal">in einem Terminal geöffnet</string>
-    <string name="claude_code_intro_title">Neue Sitzung in %1$s</string>
     <string name="claude_code_starter_explain">Erkläre, wie dieses Repository aufgebaut ist</string>
     <string name="claude_code_starter_tests">Führe die Tests aus und behebe, was fehlschlägt</string>
     <string name="claude_code_starter_review_branch">Prüfe die Änderungen dieses Branches gegenüber %1$s</string>
@@ -9965,7 +9961,6 @@
     <string name="claude_code_workstream_name">Name</string>
     <string name="claude_code_workstream_name_hint">Wofür er ist</string>
     <string name="claude_code_workstream_name_desc">Benennt den Ordner und den Branch des Workstreams.</string>
-    <string name="claude_code_workstream_go">Los</string>
     <string name="claude_code_advanced">Erweitert</string>
     <string name="claude_code_where">Wo</string>
     <string name="claude_code_where_clones">Frische Klone</string>

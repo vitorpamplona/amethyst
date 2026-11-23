@@ -62,6 +62,13 @@ internal fun rememberChatCodeChips(): InlineCodeChips {
     return remember(color) { InlineCodeChips(color) }
 }
 
+/** The chat's blocks: inline code on chips, code blocks across the column with a copy button. */
+@Composable
+internal fun rememberChatBlocks(): ChatBlockComposer {
+    val chips = rememberChatCodeChips()
+    return remember(chips) { ChatBlockComposer(chips) }
+}
+
 /**
  * Markdown for replies: paragraphs spaced like prose, modest headings (a reply's `##` is a
  * section, not a page title), inline code in a monospace face (its chip comes from [rememberChatCodeChips]), and code

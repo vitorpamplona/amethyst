@@ -9486,7 +9486,12 @@
     <string name="claude_code_status_starting">Starting</string>
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
-    <string name="claude_code_status_ready">Ready</string>
+    <string name="claude_code_status_your_turn">Your turn</string>
+    <string name="claude_code_status_finished">Finished, your turn</string>
+    <string name="claude_code_status_failed">Failed</string>
+    <string name="claude_code_status_terminal_busy">working in a terminal</string>
+    <string name="claude_code_status_terminal_idle">your turn, in a terminal</string>
+    <string name="claude_code_status_terminal_waiting">needs you in a terminal</string>
     <string name="claude_code_open_elsewhere_warning">This session is open in another Claude Code right now. Continuing it here at the same time can mix up its history.</string>
     <string name="claude_code_delete">Delete</string>
     <string name="claude_code_delete_title">Delete this session?</string>
@@ -9514,7 +9519,7 @@
     <string name="claude_code_notice_process_ended">%1$s exited</string>
     <string name="claude_code_error_start_failed">Couldn’t start %1$s: %2$s</string>
     <string name="claude_code_error_exited">%1$s exited with code %2$s</string>
-    <string name="claude_code_run_app">Run this checkout</string>
+    <string name="claude_code_run_app">Run the app from this folder</string>
     <string name="claude_code_app_running">The app is running from this folder</string>
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>
@@ -9642,8 +9647,13 @@
     <string name="claude_code_tool_from_line">from line %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Waiting for your approval</string>
-    <string name="claude_code_permission_edit">%1$s wants to change %2$s</string>
-    <string name="claude_code_permission_create">%1$s wants to create %2$s</string>
+    <string name="claude_code_turn_done">%1$s is waiting for your next message</string>
+    <string name="claude_code_turn_done_after">%1$s finished after %2$s and is waiting for your next message</string>
+    <string name="claude_code_turn_done_terminal">%1$s is waiting for your next message in the terminal</string>
+    <string name="claude_code_tasks">Tasks</string>
+    <string name="claude_code_tasks_progress">%1$d of %2$d done</string>
+    <string name="claude_code_tasks_expand">Show tasks</string>
+    <string name="claude_code_tasks_collapse">Hide tasks</string>
     <string name="claude_code_permission_run">%1$s wants to run a command</string>
     <string name="claude_code_permission_keys">Enter allows · Esc denies</string>
     <string name="claude_code_permission_keys_deny">Enter or Esc denies</string>
@@ -9661,11 +9671,14 @@
         <item quantity="other">Archived · %1$d sessions</item>
     </plurals>
     <string name="claude_code_status_in_terminal">open in a terminal</string>
-    <string name="claude_code_intro_title">New session in %1$s</string>
     <string name="claude_code_starter_explain">Explain how this repository is organized</string>
     <string name="claude_code_starter_tests">Run the tests and fix what fails</string>
     <string name="claude_code_starter_review_branch">Review this branch's changes against %1$s</string>
     <string name="claude_code_starter_review_uncommitted">Review my uncommitted changes</string>
+    <plurals name="claude_code_uncommitted_files">
+        <item quantity="one">%1$d file not committed</item>
+        <item quantity="other">%1$d files not committed</item>
+    </plurals>
     <plurals name="claude_code_ahead_of">
         <item quantity="one">%1$d commit ahead of %2$s</item>
         <item quantity="other">%1$d commits ahead of %2$s</item>
@@ -9776,6 +9789,9 @@
     <string name="claude_code_settings_assistant_desc">Ask what a setting does, or what to change to get what you want. Claude only sees Amethyst’s settings, and every change waits for your approval. Keys, wallets, relays and payments stay out of its reach.</string>
     <string name="claude_code_settings_assistant_card">Not sure where something is? Ask the settings assistant.</string>
     <string name="claude_code_settings_assistant_ask">Ask the assistant about “%1$s”</string>
+    <string name="claude_code_intro_question">What should %1$s work on?</string>
+    <string name="claude_code_permission_change_this">%1$s wants to make this change</string>
+    <string name="claude_code_permission_create_this">%1$s wants to create this file</string>
     <string name="claude_code_permission_setting">Claude wants to change a setting</string>
     <string name="claude_code_settings_starter_data">Why does Amethyst use so much mobile data?</string>
     <string name="claude_code_settings_starter_text">Make the text bigger and easier to read</string>
@@ -10303,16 +10319,15 @@
     <string name="claude_code_workstream_name">Name</string>
     <string name="claude_code_workstream_name_hint">What it’s for</string>
     <string name="claude_code_workstream_name_desc">Names the workstream’s folder and branch.</string>
-    <string name="claude_code_workstream_go">Go</string>
     <string name="claude_code_advanced">Advanced</string>
     <string name="claude_code_where">Where</string>
     <string name="claude_code_where_clones">Fresh clones</string>
-    <string name="claude_code_where_folder">A folder on this computer</string>
+    <string name="claude_code_where_folder">A local folder</string>
     <plurals name="claude_code_workstream_cloning">
         <item quantity="one">Cloning %1$d repository. A message sent now goes out once it’s in.</item>
         <item quantity="other">Cloning %1$d repositories. A message sent now goes out once they’re in.</item>
     </plurals>
-    <string name="claude_code_storage">Storage</string>
+    <string name="claude_code_storage">Disk usage</string>
     <plurals name="claude_code_storage_workspaces">
         <item quantity="one">%1$d workstream · %2$s</item>
         <item quantity="other">%1$d workstreams · %2$s</item>
