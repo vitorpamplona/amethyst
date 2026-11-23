@@ -481,6 +481,33 @@ measured here (no device, no KVM for an emulator). `baselineprofile`'s `FeedScro
 measures the same first scroll on a device (frame timing of four flings down Home after a cold
 start) for an A/B there.
 
+## Multi-second freezes: Chromium starting on the UI thread
+
+Two benchmark boots on `main` stalled for 6.5 and 7.2 s at the start of a pass, the UI thread busy
+the whole time (not GC: 75 and 0 ms). Each was the only boot in its set that started Chromium: a
+feed video the native engine couldn't open fell back to `ChromiumVideoPane`, which started
+`DesktopCefEngine` as soon as the card composed, and JCEF initializes on the AWT event thread
+(`CefApp` runs `N_PreInitialize` and `N_Initialize` through `invokeAndWait`). Chromium's own log
+lines fall inside both stalls. In 16 instrumented boots (thread dumps every 300 ms, JFR) none froze
+for seconds, but a mid-pass start took 0.3 to 0.9 s of the UI thread and dropped that pass to 8.6 fps.
+A card now starts Chromium only once it has been the video in view for 0.8 s (`chromiumMayStart` in
+`DesktopVideoPlayer.kt`), unless Chromium already runs or the view was opened to watch the video.
+
+Two smaller UI-thread stalls from the same investigation: Skiko's `FrameWatcher` calls `System.gc()`
+every 30 s, a 117-373 ms stop-the-world full GC under G1, now concurrent with
+`-XX:+ExplicitGCInvokesConcurrent`; and compose-resources string loads block the UI thread in
+`runBlocking` on a cache miss (20-175 ms measured, longer while `Dispatchers.Default` is busy),
+not addressed yet.
+
+## The cache window on more feeds: held
+
+Extending Home's window to notifications, the default note feeds, hashtag, the profile's Notes tab,
+Discover's list tabs and Video (857d143a) was reverted: against `main`, 4 boots each, the profile
+screen's first pass fell 26% (42.2, 54.8, 53.0, 49.0 fps to 38.3, 29.1, 51.1, 37.1) with busy-time
+p90 51% worse, and Home's (with the docked notification panel opted in) was inconclusive. A first
+suspect, unconfirmed: the profile's tabs sit in a pager, so more than one list composes a screen
+ahead, and cards kept composed recompose as their data streams in during the first pass.
+
 ## Next
 
 1. **Count first loads apart from misses** in the summary: `img_mem_pct` mixes them, which is what

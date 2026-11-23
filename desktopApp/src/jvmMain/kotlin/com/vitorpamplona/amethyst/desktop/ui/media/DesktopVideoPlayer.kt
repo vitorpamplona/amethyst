@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -114,6 +115,38 @@ private const val CARD_ENGINE_DELAY_MS = 300L
 // card it passed the playing video for ~60 ms, and every one of those starts pulled bytes the video
 // the user stopped on then waited behind.
 private const val PLAY_SETTLE_MS = 250L
+
+/** How long a card is the video in view before it may start Chromium (chromiumMayStart). */
+private const val CHROMIUM_START_SETTLE_MS = 800L
+
+/**
+ * Whether a card whose video the native engine can't play may open it in Chromium now.
+ *
+ * Starting Chromium blocks the UI thread: JCEF initializes on the AWT event thread (CefApp's
+ * N_PreInitialize and N_Initialize run through invokeAndWait), 0.3 to 0.9 s on an idle machine and
+ * up to 7 s when the machine is busy loading its libraries. A card that started it as soon as it
+ * composed did so wherever a scroll happened to bring it, and froze the scroll for that long. So
+ * unless Chromium already runs, or the view was opened to watch this video ([inView] null), a card
+ * starts it only once it has been the video in view for [CHROMIUM_START_SETTLE_MS]: the user has
+ * stopped on it, and its poster shows until then.
+ */
+@Composable
+private fun chromiumMayStart(
+    engine: DesktopCefEngine,
+    inView: State<Boolean>?,
+): Boolean {
+    val running = engine.state.collectAsState().value is DesktopCefEngine.State.Ready
+    var settled by remember(engine) { mutableStateOf(false) }
+    if (inView != null && !settled) {
+        LaunchedEffect(inView.value) {
+            if (inView.value) {
+                delay(CHROMIUM_START_SETTLE_MS)
+                settled = true
+            }
+        }
+    }
+    return running || inView == null || settled
+}
 
 // What macOS's engine reports when AVFoundation hasn't read the video's size within its 5 s wait.
 // Behind a scroll's other downloads a playable MP4 timed out this way, and went to Chromium as if
@@ -272,9 +305,12 @@ fun DesktopVideoPlayer(
         }
     }
 
+    // Null where the view doesn't track what is in view: one the user opened to watch the video.
+    var inView: State<Boolean>? = null
     val visibilityModifier =
         if (autoPlayWhenVisible || pauseWhenHidden) {
             val (positionModifier, isWinner) = rememberVideoVisibilityWinner(url)
+            inView = isWinner
             // Only a video that was on screen pauses on leaving it, so one that first composes off
             // screen leaves alone whatever the engine is playing.
             val hasBeenVisible = remember(url) { booleanArrayOf(false) }
@@ -454,15 +490,19 @@ fun DesktopVideoPlayer(
                 if (retryNatively) {
                     VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
                 } else if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumMediaSession.canTry(url)) {
-                    ChromiumVideoPane(
-                        chromium,
-                        url,
-                        muted = GlobalMediaPlayer.defaultMuted,
-                        onFailed = { chromiumFailed = true },
-                        modifier = Modifier.fillMaxSize(),
-                        // Played where the native engine failed: the next card for it skips that engine.
-                        onPlaying = { scope.launch(Dispatchers.IO) { ChromiumVideoRoute.learn(url) } },
-                    )
+                    if (chromiumMayStart(chromium, inView)) {
+                        ChromiumVideoPane(
+                            chromium,
+                            url,
+                            muted = GlobalMediaPlayer.defaultMuted,
+                            onFailed = { chromiumFailed = true },
+                            modifier = Modifier.fillMaxSize(),
+                            // Played where the native engine failed: the next card for it skips that engine.
+                            onPlaying = { scope.launch(Dispatchers.IO) { ChromiumVideoRoute.learn(url) } },
+                        )
+                    } else {
+                        VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
+                    }
                 } else {
                     PlaybackErrorMessage(url = url, reason = errorReason)
                 }
