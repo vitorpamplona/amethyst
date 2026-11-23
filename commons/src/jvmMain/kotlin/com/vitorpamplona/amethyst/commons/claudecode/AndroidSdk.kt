@@ -42,7 +42,8 @@ object AndroidSdk {
         os: String = System.getProperty("os.name").orEmpty(),
     ): Map<String, String> {
         if (listOf("ANDROID_HOME", "ANDROID_SDK_ROOT").any { parent[it]?.let { dir -> File(dir).isDirectory } == true }) return emptyMap()
-        val found = candidates(parent, home, os).firstOrNull { File(it).isDirectory } ?: return emptyMap()
+        // As a File's path: the separators this system writes, whichever system's layout matched.
+        val found = candidates(parent, home, os).map(::File).firstOrNull { it.isDirectory }?.path ?: return emptyMap()
         return if (parent["ANDROID_SDK_ROOT"] != null) mapOf("ANDROID_HOME" to found, "ANDROID_SDK_ROOT" to found) else mapOf("ANDROID_HOME" to found)
     }
 
