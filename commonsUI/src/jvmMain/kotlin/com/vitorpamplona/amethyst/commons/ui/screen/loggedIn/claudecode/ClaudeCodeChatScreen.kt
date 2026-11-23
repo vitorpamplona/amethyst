@@ -237,6 +237,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_cloning
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.resources.try_again
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -249,6 +251,7 @@ import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -264,6 +267,8 @@ import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -494,6 +499,7 @@ fun ClaudeCodeChatScreen(
                     Messages(
                         chatKey = chat.key,
                         state = state,
+                        accountViewModel = accountViewModel,
                         readOnly = openElsewhere || folderGone,
                         terminalStatus = terminal?.status,
                         nav = nav,
@@ -664,6 +670,7 @@ private val landedChats: MutableSet<String> = ConcurrentHashMap.newKeySet()
 private fun Messages(
     chatKey: String,
     state: ClaudeChatState,
+    accountViewModel: AccountViewModel,
     readOnly: Boolean,
     /** What a terminal that has the session open says it is doing (`idle`, `busy`, `waiting`). */
     terminalStatus: String?,
@@ -730,6 +737,14 @@ private fun Messages(
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
     val replyBlocks = rememberChatBlocks()
+    // A sent image open full size: the message's images, and the one clicked.
+    var viewing by remember { mutableStateOf<Pair<ImmutableList<BaseMediaContent>, BaseMediaContent>?>(null) }
+    val onOpenImage = remember { { images: List<SentImage>, index: Int -> viewing = sentImagesToView(images, index) } }
+    // Outside the SelectionContainer below: a dialog is another layout hierarchy, and its text
+    // must not join the chat's selection.
+    viewing?.let { (all, shown) ->
+        ZoomableImageDialog(imageUrl = shown, allImages = all, onDismiss = { viewing = null }, accountViewModel = accountViewModel)
+    }
     // One selection for the whole chat: any part of any message, or a run across several, copies.
     SelectionContainer(modifier.fillMaxWidth()) {
         LazyColumn(
@@ -755,7 +770,7 @@ private fun Messages(
                             // A new turn: more room above it than between the parts of a reply.
                             is ChatItem.UserText ->
                                 Box(Modifier.padding(top = GroupGap - PartGap)) {
-                                    UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                                    UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } }, onOpenImage)
                                 }
                             is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = replyBlocks)
                             is ChatItem.ToolCall ->
@@ -1087,13 +1102,14 @@ private fun UserBubble(
     textStyle: TextStyle,
     onLink: (String) -> Unit,
     onEdit: (() -> Unit)?,
+    onOpenImage: (List<SentImage>, Int) -> Unit,
 ) {
     // One column: the caller may place this in a Box, which would stack the images and the
     // text on top of each other.
     Column(Modifier.fillMaxWidth()) {
         if (images.isNotEmpty()) {
             Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
-                SentImageRow(images)
+                SentImageRow(images, onOpen = { index -> onOpenImage(images, index) })
             }
         }
         if (text.isNotEmpty()) UserTextBubble(text, images.isNotEmpty(), textStyle, onLink, onEdit)
@@ -1769,3 +1785,22 @@ internal fun modeDescription(mode: PermissionMode): String =
         PermissionMode.AUTO -> stringRes(Res.string.claude_code_mode_auto_desc)
         else -> stringRes(Res.string.claude_code_mode_default_desc)
     }
+
+/**
+ * [images] as the app's image viewer takes them, with the one at [index] shown first: only those
+ * whose file is still on this computer. Null when that one's file is gone.
+ */
+internal fun sentImagesToView(
+    images: List<SentImage>,
+    index: Int,
+): Pair<ImmutableList<BaseMediaContent>, BaseMediaContent>? {
+    val viewable =
+        images.map { image ->
+            image.file
+                ?.let(::File)
+                ?.takeIf { it.isFile }
+                ?.let { MediaUrlImage(it.toURI().toString(), description = image.name) }
+        }
+    val shown = viewable.getOrNull(index) ?: return null
+    return viewable.filterNotNull().toImmutableList() to shown
+}
