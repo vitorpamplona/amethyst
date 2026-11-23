@@ -85,6 +85,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_pushed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_request_dismiss
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_requested
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_requested_draft
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_restoring
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_rules
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_send_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
@@ -126,6 +130,7 @@ fun ClaudeCodePullRequestsScreen(
     val workspace = viewModel.workspace
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val restoring by viewModel.restoring.collectAsStateWithLifecycle()
     val opening by viewModel.opening.collectAsStateWithLifecycle()
     val errors by viewModel.errors.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf(false) }
@@ -168,6 +173,8 @@ fun ClaudeCodePullRequestsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                         Text(stringRes(Res.string.claude_code_pr_rules), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh), modifier = Modifier)
+                        // A freed workstream: its clones come back for what needs them.
+                        if (restoring) Text(stringRes(Res.string.claude_code_pr_restoring), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }
@@ -178,8 +185,10 @@ fun ClaudeCodePullRequestsScreen(
                         opening = opening == row.name,
                         error = errors[row.name],
                         onOpen = { title, body, draft -> viewModel.openPullRequest(row.name, title, body, draft) },
-                        onChanges = { nav.nav(Route.ClaudeCodeChanges(key, row.name)) },
-                        onPropose = { nav.nav(Route.ClaudeCodePropose(key, row.name)) },
+                        onDismissRequest = { viewModel.dismissRequest(row.name) },
+                        // Both read the clone: a freed workstream's come back first.
+                        onChanges = { viewModel.withClones { nav.nav(Route.ClaudeCodeChanges(key, row.name)) } },
+                        onPropose = { viewModel.withClones { nav.nav(Route.ClaudeCodePropose(key, row.name)) } },
                         onOpenNostr = { repo -> nav.nav(Route.GitRepository(repo.kind, repo.pubKeyHex, repo.identifier)) },
                         onAskToCommit = {
                             viewModel.askToCommit(row.name)
@@ -215,6 +224,7 @@ private fun RepoCard(
     opening: Boolean,
     error: PullRequestError?,
     onOpen: (title: String, body: String, draft: Boolean) -> Unit,
+    onDismissRequest: () -> Unit,
     onChanges: () -> Unit,
     onPropose: () -> Unit,
     onOpenNostr: (NostrRepoRef) -> Unit,
@@ -255,6 +265,18 @@ private fun RepoCard(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+            // The agent asked for this pull request: its title and description fill the form below.
+            row.request?.let { request ->
+                FlowRow(verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringRes(if (request.draft) Res.string.claude_code_pr_requested_draft else Res.string.claude_code_pr_requested),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                    InlineAction(stringRes(Res.string.claude_code_pr_request_dismiss), onDismissRequest)
+                }
+            }
             val parts =
                 listOfNotNull(
                     status.ahead.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_pr_ahead, it, it) },
@@ -278,9 +300,10 @@ private fun RepoCard(
             val pr = row.pullRequest
             // A GitHub pull request, unless the repository is only on Nostr.
             val offersPullRequest = row.gitHub != null || row.nostr == null
-            if (pr != null) {
-                PullRequestLine(pr)
-            } else if (status.ahead > 0 && offersPullRequest) {
+            if (pr != null) PullRequestLine(pr)
+            // A new pull request: none yet, or the agent asks for one after the last was merged or closed.
+            val canAskForNew = pr == null || (!pr.isOpen && row.request != null)
+            if (canAskForNew && status.ahead > 0 && offersPullRequest) {
                 if (row.viaFork && row.gitHub != null) {
                     Text(stringRes(Res.string.claude_code_pr_via_fork, row.gitHub ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                 }

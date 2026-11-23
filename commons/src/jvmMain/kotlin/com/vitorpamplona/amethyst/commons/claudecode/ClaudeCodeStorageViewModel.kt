@@ -35,7 +35,7 @@ data class WorkspaceUse(
     val bytes: Long,
     /** Every pull request merged or closed. */
     val finished: Boolean,
-    /** Uncommitted files, or commits on no remote: cleaning up would lose them, so it doesn't. */
+    /** Work only its folder holds (files not committed, a stash): cleaning up would lose it, so it doesn't. */
     val unsaved: Boolean,
 )
 
@@ -49,8 +49,8 @@ data class StorageState(
 ) {
     val workspacesBytes: Long get() = workspaces.sumOf { it.bytes }
 
-    /** The finished workspaces a cleanup would remove: those with nothing unsaved. */
-    val removable: List<WorkspaceUse> get() = workspaces.filter { it.finished && !it.unsaved }
+    /** The finished workspaces a cleanup would free: those with clones and nothing unsaved. */
+    val removable: List<WorkspaceUse> get() = workspaces.filter { it.finished && !it.unsaved && !it.workspace.isFreed }
 }
 
 /** What the last action did, for the line under it. */
@@ -98,7 +98,7 @@ class ClaudeCodeStorageViewModel(
         val uses =
             workspaces.list().map { ws ->
                 val finished = ws.finishedAt != null
-                WorkspaceUse(ws, service.measure(ws), finished, finished && workspaces.hasUnsavedWork(ws))
+                WorkspaceUse(ws, service.measure(ws), finished, finished && workspaces.cannotFree(ws))
             }
         val mirrorDirs = workspaces.mirrorsDir.listFiles { f -> f.isDirectory && f.name.endsWith(".git") }.orEmpty()
         return StorageState(uses, mirrorDirs.size, workspaces.mirrorsSize(), workspaces.unusedMirrors().size)
@@ -106,7 +106,7 @@ class ClaudeCodeStorageViewModel(
 
     fun setAutoCleanup(on: Boolean) = service.setAutoCleanup(on)
 
-    /** Removes the finished workspaces' clones; their conversations stay, archived. */
+    /** Frees the finished workspaces' clones; their conversations stay, archived, and bring them back. */
     fun cleanUpFinished() {
         val removable = _state.value?.removable ?: return
         if (removable.isEmpty() || _working.value) return

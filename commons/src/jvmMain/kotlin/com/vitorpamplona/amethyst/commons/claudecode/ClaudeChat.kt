@@ -217,6 +217,11 @@ class ClaudeChat internal constructor(
      * only somewhere to show, and the chat refuses to start rather than resume there.
      */
     private val folderKnown: Boolean = true,
+    /**
+     * Runs before the agent starts: brings back the folder's clones when its workstream was freed,
+     * telling the callback how many repositories it makes. A failure ends the chat with its words.
+     */
+    private val restoreFolder: suspend (File, (Int) -> Unit) -> Unit = { _, _ -> },
 ) {
     private val workDir = cwd
 
@@ -453,6 +458,23 @@ class ClaudeChat internal constructor(
             throw e
         } catch (e: Exception) {
             // Said here too: this prompt marked the chat as working after [waitFor] ended it.
+            endTurnWithError(ChatError.CloneFailed(e.message)) { it.copy(cloning = null) }
+            return
+        }
+        // A freed workstream: its clones come back first, shown as cloning.
+        try {
+            var restored = false
+            restoreFolder(workDir) { repositories ->
+                restored = true
+                publish { it.copy(cloning = repositories) }
+            }
+            if (restored) {
+                publish { it.copy(cloning = null) }
+                refreshGit()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             endTurnWithError(ChatError.CloneFailed(e.message)) { it.copy(cloning = null) }
             return
         }
