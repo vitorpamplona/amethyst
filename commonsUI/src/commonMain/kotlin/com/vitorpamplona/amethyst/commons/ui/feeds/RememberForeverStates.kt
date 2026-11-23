@@ -25,7 +25,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -255,18 +254,6 @@ fun rememberForeverLazyListState(
         }
     }
     return scrollState
-}
-
-/**
- * A list position for a feed that keeps none across visits: [rememberLazyListState], composing a
- * screen of items ahead when [cacheAhead] asks and the platform provides a window, under the same
- * rule as [rememberForeverLazyListState].
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun rememberFeedLazyListState(cacheAhead: Boolean): LazyListState {
-    val cacheWindow = if (cacheAhead) LocalLazyListCacheWindow.current else null
-    return if (cacheWindow != null) rememberLazyListState(cacheWindow) else rememberLazyListState()
 }
 
 @Composable

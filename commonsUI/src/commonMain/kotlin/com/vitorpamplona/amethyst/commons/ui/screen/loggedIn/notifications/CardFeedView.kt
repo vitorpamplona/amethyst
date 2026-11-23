@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.notification_feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
@@ -311,42 +310,39 @@ private fun FeedLoaded(
                 key = { _, item -> "open-poll-${item.idHex}" },
                 contentType = { _, _ -> "OpenPoll" },
             ) { _, note ->
-                // The list composes cards a screen ahead: each marks itself read when it shows.
-                FirstShownItem { shown ->
-                    Row(modifier = shown.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
-                        Card(
-                            modifier = MaterialTheme.colorScheme.imageModifier,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
+                    Card(
+                        modifier = MaterialTheme.colorScheme.imageModifier,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                            OpenPollsSectionHeader()
+                            IconButton(
+                                modifier = Modifier.padding(end = Size10dp),
+                                onClick = { accountViewModel.dismissPollNotification(note.idHex) },
                             ) {
-                                OpenPollsSectionHeader()
-                                IconButton(
-                                    modifier = Modifier.padding(end = Size10dp),
-                                    onClick = { accountViewModel.dismissPollNotification(note.idHex) },
-                                ) {
-                                    CloseIcon()
-                                }
+                                CloseIcon()
                             }
-                            Row(Modifier.fillMaxWidth().animateItem()) {
-                                NoteCompose(
-                                    baseNote = note,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    routeForLastRead = routeForLastRead,
-                                    isBoostedNote = false,
-                                    isQuotedNote = false,
-                                    quotesLeft = 3,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                            }
-                            HorizontalDivider(
-                                thickness = DividerThickness,
+                        }
+                        Row(Modifier.fillMaxWidth().animateItem()) {
+                            NoteCompose(
+                                baseNote = note,
+                                modifier = Modifier.fillMaxWidth(),
+                                routeForLastRead = routeForLastRead,
+                                isBoostedNote = false,
+                                isQuotedNote = false,
+                                quotesLeft = 3,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
                             )
                         }
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
                     }
                 }
             }
@@ -364,21 +360,17 @@ private fun FeedLoaded(
                 label = "highlightAnimation",
             )
 
-            // The list composes cards a screen ahead: each marks itself read (and dismisses its tray
-            // notification) when it shows, not when it is composed.
-            FirstShownItem { shown ->
-                Row(shown.fillMaxWidth().background(highlightColor).animateItem()) {
-                    logTime(
-                        debugMessage = { "CardFeedView $item" },
-                    ) {
-                        RenderCardItem(
-                            item,
-                            routeForLastRead,
-                            showHidden = items.showHidden,
-                            accountViewModel,
-                            nav,
-                        )
-                    }
+            Row(Modifier.fillMaxWidth().background(highlightColor).animateItem()) {
+                logTime(
+                    debugMessage = { "CardFeedView $item" },
+                ) {
+                    RenderCardItem(
+                        item,
+                        routeForLastRead,
+                        showHidden = items.showHidden,
+                        accountViewModel,
+                        nav,
+                    )
                 }
             }
             HorizontalDivider(

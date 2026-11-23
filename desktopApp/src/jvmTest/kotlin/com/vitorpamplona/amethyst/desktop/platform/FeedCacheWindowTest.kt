@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,7 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,15 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedCacheWindow
 import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.LocalFirstShown
-import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -61,7 +53,7 @@ import kotlin.test.assertTrue
  * A feed that composes a screen ahead ([FeedCacheWindow]) must not treat those rows as seen: what
  * waits for [LocalFirstShown] (marking a note read, its "new" highlight) runs only once a row shows.
  */
-@OptIn(InternalComposeUiApi::class, ExperimentalFoundationApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(InternalComposeUiApi::class, ExperimentalFoundationApi::class)
 class FeedCacheWindowTest {
     private val ms = 1_000_000L
 
@@ -111,76 +103,6 @@ class FeedCacheWindowTest {
             assertTrue(8 !in seen, "a row still below the screen is not seen: $seen")
         } finally {
             scene.close()
-        }
-    }
-
-    /**
-     * What every feed that opts in relies on: a card's `calculateBackgroundColor` inside a
-     * [FirstShownItem] marks the feed read (and would dismiss its tray notification) when the card
-     * shows, not when the window composes it. Older cards sit on top here, so the read mark names the
-     * newest card marked.
-     */
-    @Test
-    fun cardsComposedAheadAreMarkedReadOnlyWhenShown() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-        val route = "FeedCacheWindowTest/${System.nanoTime()}"
-        val base = 1_800_000_000L
-        val composed = mutableSetOf<Int>()
-        val state = LazyListState(FeedCacheWindow, 0, 0)
-        lateinit var accountViewModel: AccountViewModel
-        lateinit var launcher: CoroutineScope
-        val scene =
-            ImageComposeScene(100, 200, Density(1f), coroutineContext = Dispatchers.Unconfined) {
-                accountViewModel = mockAccountViewModel()
-                launcher = rememberCoroutineScope()
-                val scope = rememberCoroutineScope()
-                val scheduler = remember(scope) { FramePrefetchScheduler(scope, frameIntervalNanos = { 1_000 * ms }, afterFrame = {}) }
-                MaterialTheme {
-                    CompositionLocalProvider(LocalPlatformPrefetchScheduler provides scheduler) {
-                        LazyColumn(Modifier.size(100.dp, 200.dp), state = state) {
-                            items(100) { row ->
-                                FirstShownItem { shown ->
-                                    DisposableEffect(row) {
-                                        composed += row
-                                        onDispose { composed -= row }
-                                    }
-                                    val background = calculateBackgroundColor(base + row, route, accountViewModel = accountViewModel)
-                                    Box(shown.fillMaxWidth().height(60.dp).background(background.value))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        try {
-            var time = 0L
-
-            fun frames(count: Int) = repeat(count) { scene.render(time).also { time += 16 * ms } }
-
-            // Marking runs on Dispatchers.IO: render until it lands, then a little longer.
-            fun lastReadAfterFrames(): Long {
-                val deadline = System.currentTimeMillis() + 5_000
-                var last = accountViewModel.account.loadLastRead(route)
-                while (System.currentTimeMillis() < deadline) {
-                    frames(5)
-                    Thread.sleep(50)
-                    val now = accountViewModel.account.loadLastRead(route)
-                    if (now == last && now > 0) break
-                    last = now
-                }
-                return accountViewModel.account.loadLastRead(route)
-            }
-
-            frames(10)
-            assertTrue(composed.containsAll(listOf(4, 5, 6)), "the window composed the next screen in idle time: $composed")
-            assertEquals(base + 3, lastReadAfterFrames(), "only the cards on screen (0..3) are marked read")
-
-            launcher.launch { state.scrollBy(130f) }
-            frames(3)
-            assertEquals(base + 5, lastReadAfterFrames(), "a card that scrolled in is marked read, the ones below are not")
-        } finally {
-            scene.close()
-            Dispatchers.resetMain()
         }
     }
 }

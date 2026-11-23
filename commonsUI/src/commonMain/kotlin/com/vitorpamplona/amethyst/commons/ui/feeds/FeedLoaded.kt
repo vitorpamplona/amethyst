@@ -66,20 +66,17 @@ fun FeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            // Lists that render this can compose a screen ahead: the note marks itself read when it shows.
-            FirstShownItem { shown ->
-                Row(shown.fillMaxWidth().animateItem()) {
-                    NoteCompose(
-                        item,
-                        modifier = Modifier.fillMaxWidth(),
-                        routeForLastRead = routeForLastRead,
-                        isBoostedNote = false,
-                        isHiddenFeed = items.showHidden,
-                        quotesLeft = 3,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+            Row(Modifier.fillMaxWidth().animateItem()) {
+                NoteCompose(
+                    item,
+                    modifier = Modifier.fillMaxWidth(),
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = false,
+                    isHiddenFeed = items.showHidden,
+                    quotesLeft = 3,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
 
             HorizontalDivider(

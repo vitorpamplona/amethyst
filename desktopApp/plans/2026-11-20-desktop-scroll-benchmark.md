@@ -463,54 +463,9 @@ already did that to one card on Android.
   (`ProvideFramePrefetch`). The window is `FeedCacheWindow`, one screen ahead and none behind: a
   card that leaves the screen is disposed as before, so a video that scrolled away can't keep its
   last "fully shown" report and play on off screen.
-- A feed opts in once everything its items do at composition that should wait for the user waits
-  for the signal. Every user of `calculateBackgroundColor` (NoteCompose, MultiSet, ZapUserSet,
-  NutzapUserSet, Badge, MessageSet and ChannelCard compose) reads it, so a list of those is ready
-  once each item is a `FirstShownItem`. The rest of a card's composition-time work only loads
-  (decrypting zap amounts, NIP-05 checks, participants, link previews), and a video plays only once
-  it is placed on screen (`VideoPlayerActiveMutex`, `rememberVideoVisibilityWinner`).
-- `FeedCacheWindowTest` checks that rows composed ahead are not seen until they scroll in, and that
-  cards marking a feed read through `calculateBackgroundColor` mark only the ones shown (without the
-  signal the cards composed ahead marked it too).
-
-Feeds that compose a screen ahead (`cacheAhead`, each item a `FirstShownItem`):
-
-| Feed | Where | Marks read |
-|---|---|---|
-| Home | `HomeScreen` | yes, `calculateBackgroundColor` |
-| Notifications, both tabs and the single list the docked side panel shows | `NotificationScreen` (`NotificationPagerPage`, `SingleNotificationsBody`), cards in `CardFeedView` | yes: cards and open polls, and NoteCompose dismisses the tray notification, all on first show |
-| Every feed drawn by the default `FeedLoaded` (`RefresheableFeedView` / `RefresheableFeedContentStateView` without `onLoaded`): profile conversations, mutuals, bookmarks, lists, apps, git repos; pinned notes, geohash, relay, community, follow pack, bookmark lists | `FeedView.kt`, `feeds/FeedLoaded.kt` | no (route null) |
-| Polls (default `FeedLoaded`) | `PollsScreen` | yes |
-| URL feed (`FeedLoaded` with the preview header) | `UrlScreen` | no |
-| Hashtag | `HashtagScreen`, `HashtagFeedLoaded` | no |
-| Profile's main tab (pinned notes + new threads) | `TabNotesNewThreads` | no |
-| Discover, list tabs | `DiscoverScreen` (`ChannelCardCompose`) | yes |
-| Video | `VideoScreen` | no; videos composed ahead acquire and prepare a player on Android (see below) |
-
-An unkeyed list (`RefresheableFeedView` passes no scroll key) takes the window through
-`rememberFeedLazyListState(cacheAhead)`.
-
-Not opted in:
-
-- **Chat message lists** (`ChatFeedView`): each row marks the room read from a `LaunchedEffect`
-  (`ChatMessageCompose`), and the list marks runs read too (`ChatFeedView`), neither through the
-  signal; reverse layout. Left as is.
-- **Discover's grid tabs**, the profile gallery and other grids: `rememberForeverLazyGridState` takes
-  no window.
-- **The other screens with their own renderer** (articles, longs, shorts, pictures, highlights, live
-  streams, nests, communities, badges, public chats, music, podcasts, workouts, chess, git
-  repositories, follow packs, apps, geocaches, NIPs, relay groups, web bookmarks, drafts, chat room
-  list, calendars, DVM results, thread view): not audited item by item yet. Each opts in the same
-  way once its items are checked.
-
-On Android, an inline video composed ahead acquires a `MediaController` from the player pool and
-prepares its stream (`GetVideoController`) before it shows, as Compose's own one-item prefetch
-already did for the next card; it plays only once it is the visible winner. In the video feed a
-screen ahead is one or two more cards. Unmeasured on a device.
-
-Checked headless (read-only npub, wide shell): Home with the docked notifications panel, the
-Notifications screen, Discover (Follow Packs), Media and the profile's Notes tab render and scroll
-with nothing new in the log. The other feeds have not been benchmarked yet.
+- Home is the only feed that opts in so far; its notes are `FirstShownItem`s. Another feed opts in
+  once everything its items do at composition that should wait for the user waits for the signal.
+- `FeedCacheWindowTest` checks that rows composed ahead are not seen until they scroll in.
 
 Home, 4 boots each, nothing else running (a first attempt was discarded: one baseline boot froze
 for seconds and another overlapped a build):

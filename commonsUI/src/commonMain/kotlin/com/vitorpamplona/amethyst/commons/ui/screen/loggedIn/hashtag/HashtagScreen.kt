@@ -136,8 +136,6 @@ fun HashtagScreen(
             null,
             accountViewModel = accountViewModel,
             nav = nav,
-            // Each note is a FirstShownItem (HashtagFeedLoaded).
-            cacheAhead = true,
             onLoaded = { state, listState ->
                 HashtagFeedLoaded(tag.hashtag, state, listState, accountViewModel, nav)
             },

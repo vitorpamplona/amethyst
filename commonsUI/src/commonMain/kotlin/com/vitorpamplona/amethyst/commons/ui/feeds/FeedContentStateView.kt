@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,8 +52,7 @@ fun RefresheableFeedContentStateView(
     nav: INav,
 ) {
     RefresheableBox(feedContentState, enablePullRefresh) {
-        // The default FeedLoaded's notes are FirstShownItems, so the list can compose a screen ahead.
-        SaveableFeedContentState(feedContentState, scrollStateKey, cacheAhead = true) { listState ->
+        SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
             RenderFeedContentState(feedContentState, accountViewModel, listState, nav, routeForLastRead)
         }
     }
@@ -63,7 +63,7 @@ fun SaveableFeedContentState(
     feedContentState: FeedContentState,
     scrollStateKey: String? = null,
     // Composes a screen of items ahead (rememberForeverLazyListState): only for a list whose items
-    // sit in a FirstShownItem, as the default FeedLoaded's do.
+    // sit in a FirstShownItem.
     cacheAhead: Boolean = false,
     content: @Composable (LazyListState) -> Unit,
 ) {
@@ -71,7 +71,7 @@ fun SaveableFeedContentState(
         if (scrollStateKey != null) {
             rememberForeverLazyListState(scrollStateKey, cacheAhead = cacheAhead)
         } else {
-            rememberFeedLazyListState(cacheAhead)
+            rememberLazyListState()
         }
 
     WatchScrollToTop(feedContentState, listState)

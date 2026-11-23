@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,7 +35,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
@@ -138,8 +136,7 @@ private fun RenderFeed(
     nav: INav,
 ) {
     RefresheableBox(invalidateableContent = videoFeedContentState) {
-        // Each card is a FirstShownItem (VideoFeedLoaded), so the list can compose a screen ahead.
-        SaveableFeedContentState(videoFeedContentState, scrollStateKey = scrollKey, cacheAhead = true) { listState ->
+        SaveableFeedContentState(videoFeedContentState, scrollStateKey = scrollKey) { listState ->
             RenderFeedContentState(
                 feedContentState = videoFeedContentState,
                 accountViewModel = accountViewModel,
@@ -177,45 +174,39 @@ fun VideoFeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            // Nothing here marks state at composition; a video plays only once it is placed on screen
-            // (VideoPlayerActiveMutex / rememberVideoVisibilityWinner), so composing ahead is safe.
-            FirstShownItem { shown ->
-                Column(shown) {
-                    when {
-                        item.event is PictureEvent -> {
-                            PictureCardCompose(
-                                baseNote = item,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
+            when {
+                item.event is PictureEvent -> {
+                    PictureCardCompose(
+                        baseNote = item,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
 
-                            HorizontalDivider(
-                                thickness = DividerThickness,
-                            )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                        item.event is VideoEvent -> {
-                            VideoCardCompose(item, accountViewModel, nav)
+                item.event is VideoEvent -> {
+                    VideoCardCompose(item, accountViewModel, nav)
 
-                            HorizontalDivider(
-                                thickness = DividerThickness,
-                            )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                        item.event is FileMetadataEvent -> {
-                            FileMetadataCardCompose(item, accountViewModel, nav)
+                item.event is FileMetadataEvent -> {
+                    FileMetadataCardCompose(item, accountViewModel, nav)
 
-                            HorizontalDivider(
-                                thickness = DividerThickness,
-                            )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
