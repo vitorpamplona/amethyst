@@ -192,8 +192,10 @@ class ClaudeChat internal constructor(
     private val onSessionChanged: () -> Unit,
     /** Reads the folder's git state; tests replace it. */
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
-    /** Whether [File] is a workspace whose pushes and pull requests only the user makes. */
-    private val publishingIsTheUsers: (File) -> Boolean = { false },
+    /** The agent workstream [File] is in, if any: its pushes are guarded, to the branches made for it. */
+    private val workstreamOf: (File) -> AgentWorkspace? = { null },
+    /** The push scope each session first started with, kept across app restarts. */
+    private val pushScopes: PushScopeStore = PushScopeStore.NONE,
     /** What to tell the agent about the folder it works in (a workstream's clones), if anything. */
     private val folderBrief: (File) -> String? = { null },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
@@ -253,6 +255,10 @@ class ClaudeChat internal constructor(
     /** Set by [kill]: a process that finishes starting afterwards is stopped at once. */
     @Volatile
     private var killed = false
+
+    /** What the session may push ([PushGuard]), fixed at its first start and reused by every later one. */
+    @Volatile
+    private var pushScope: PushScope? = null
 
     /** Set while a new workstream's repositories clone ([waitFor]): the agent starts in the folder once they are in. */
     @Volatile
@@ -592,8 +598,22 @@ class ClaudeChat internal constructor(
             }
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
-            // A nostr checkout, or a workspace whose pull requests the user opens: publishing is theirs.
-            val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null || publishingIsTheUsers(workDir)
+            // A nostr checkout, or an agent workstream: its pushes go through the guard, merging is the user's.
+            // A session once guarded stays so, with the scope it first started with, whatever the folder has become.
+            val workstream = workstreamOf(workDir)
+            val known = pushScope ?: current.sessionId?.let { id -> withContext(Dispatchers.IO) { pushScopes.load(id) } }
+            val nostrCheckout = known != null || workstream != null || (current.git ?: inspectGit(workDir))?.repo != null
+            val pushRules =
+                if (nostrCheckout) {
+                    withContext(Dispatchers.IO) {
+                        val repos = repos(workDir)
+                        val scope = PushGuard.scopeFor(known, current.sessionId, pushScopes) { PushGuard.capture(repos, workstream) }
+                        pushScope = scope
+                        PushGuard.environment(repos = repos, scope = scope)
+                    }
+                } else {
+                    null
+                }
             val options =
                 AgentStartOptions(
                     cwd = workDir,
@@ -602,11 +622,17 @@ class ClaudeChat internal constructor(
                     forkAt = if (forkOnStart) forkBefore?.parentUuid else null,
                     model = model,
                     permissionMode = current.permissionMode,
-                    // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
-                    blockedCommands = if (nostrCheckout) NO_PUBLISHING else emptyList(),
-                    environment = if (nostrCheckout) noPushEnvironment(remoteUrls = withContext(Dispatchers.IO) { remoteUrls(workDir) }) else emptyMap(),
+                    // As on Claude Code on the web: the agent pushes branches and opens pull requests when asked;
+                    // merging, tags, deleting branches and moving the default branch stay the user's.
+                    blockedCommands = if (nostrCheckout) NO_MERGING else emptyList(),
+                    // The same, read finer and in every permission mode: gh api writes, flags anywhere, the guard's own config.
+                    commandGuard = if (nostrCheckout) SessionCommandGuard else null,
+                    // The SDK too, so a Gradle build the agent runs finds it as a terminal's would.
+                    environment = AndroidSdk.environment() + pushRules?.environment.orEmpty(),
+                    // The git the guard was checked with, ahead of an older one the agent's PATH may find first.
+                    pathFirst = pushRules?.pathFirst.orEmpty(),
                     hostTools = mcpServers,
-                    instructions = folderBrief(workDir),
+                    instructions = listOfNotNull(folderBrief(workDir), pushRules?.note).joinToString("\n\n").ifEmpty { null },
                 ).let(launchOptions)
             val started =
                 try {
@@ -659,6 +685,8 @@ class ClaudeChat internal constructor(
                 val isNewSession = _state.value.sessionId != event.sessionId
                 // The copy has its own session now: later starts resume it, not the source.
                 if (isNewSession) forkOnStart = false
+                // The new session (or the copy) keeps the push scope it started with, for its later starts.
+                if (isNewSession) pushScope?.let { kept -> scope.launch(Dispatchers.IO) { pushScopes.save(event.sessionId, kept) } }
                 publish {
                     // A turn the agent started by itself (a background subagent reported back).
                     val ownTurn = it.status == ChatStatus.READY
@@ -806,17 +834,49 @@ class ClaudeChat internal constructor(
 
         private const val STREAM_PUBLISH_MS = 50L
 
-        /** What a session on a nostr repository may not run (command prefixes): pushing and publishing proposals. */
-        val NO_PUBLISHING =
+        /**
+         * What a session on a nostr repository or in a workstream may not run (command prefixes):
+         * merging a pull request or proposal, marking or closing one, publishing the repository's
+         * announcement or state (its branches and tags, signed), releases (tags), moving the
+         * default branch outside git push, and skipping the push guard. Pushing a branch and
+         * opening a pull request or proposal are allowed, as on Claude Code on the web.
+         *
+         * Prefixes catch a slip, not an agent set on getting around them: a reordered
+         * `gh api … -X PUT …/merge` gets past them, which [SessionCommandGuard] catches; a script
+         * the agent wrote gets past both.
+         */
+        val NO_MERGING =
             listOf(
-                "git push",
-                "ngit send",
-                "ngit pr merge",
-                "ngit sync",
-                "amy git pr",
-                "amy git pr-update",
-                "gh pr create",
                 "gh pr merge",
+                "gh pr review",
+                "gh pr close",
+                "gh release",
+                "gh repo sync",
+                "gh repo edit",
+                "gh repo delete",
+                "gh repo rename",
+                "gh repo archive",
+                "gh api -X PUT",
+                "gh api -XPUT",
+                "gh api --method PUT",
+                "git push --no-verify",
+                "ngit pr merge",
+                "ngit merge",
+                "ngit pr close",
+                "ngit pr applied",
+                "ngit sync",
+                "ngit init",
+                "ngit repo",
+                "ngit release",
+                "ngit account export",
+                "amy git init",
+                "amy git announce",
+                "amy git state",
+                "amy git merge",
+                "amy git applied",
+                "amy git merged",
+                "amy git resolved",
+                "amy git close",
             )
         private const val STDERR_SHOWN = 2_000
 
@@ -825,7 +885,7 @@ class ClaudeChat internal constructor(
          * that doesn't exist: an empty `pushInsteadOf` prefix matches every URL, and one per
          * URL in [remoteUrls] outranks the user's own rewrites (git takes the longest prefix, so
          * `url.git@github.com:.pushInsteadOf https://github.com/` would otherwise win). Unlike
-         * [NO_PUBLISHING]'s command rules, `git -C . push`, `/usr/bin/git push`, a script or
+         * [NO_MERGING]'s command rules, `git -C . push`, `/usr/bin/git push`, a script or
          * `--no-verify` don't get around it. The app's own push runs in its own process and is
          * untouched. Fetching still works.
          *
@@ -854,19 +914,10 @@ class ClaudeChat internal constructor(
 
         private const val NO_PUSH_URL = "publishing-is-the-users-step-in-amethyst://"
 
-        /**
-         * The remote URLs of the repository in [dir], or of the clones one folder down (a
-         * workspace's), as [noPushEnvironment] wants them.
-         */
-        fun remoteUrls(dir: File): List<String> =
-            (listOf(dir) + dir.listFiles().orEmpty().filter { it.isDirectory })
-                .filter { File(it, ".git").exists() }
-                .flatMap { repo ->
-                    GitWorkspace
-                        .git(repo, "config", "--get-regexp", "^remote\\..*\\.url$")
-                        ?.lines()
-                        .orEmpty()
-                        .mapNotNull { line -> line.substringAfter(' ', "").trim().takeIf { it.isNotEmpty() } }
-                }.distinct()
+        /** The repository in [dir], or the clones one folder down (a workspace's). */
+        fun repos(dir: File): List<File> = (listOf(dir) + dir.listFiles().orEmpty().filter { it.isDirectory }).filter { File(it, ".git").exists() }
+
+        /** The remote URLs of [repos] of [dir], push URLs included, as [noPushEnvironment] wants them. */
+        fun remoteUrls(dir: File): List<String> = repos(dir).flatMap { GitWorkspace.remoteUrls(it) }.distinct()
     }
 }

@@ -175,6 +175,23 @@ class CodexConnectionTest {
         }
 
     @Test
+    fun aCommandTheGuardRefusesIsDeclinedWithoutAskingTheUser() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w"), commandGuard = { if (it.contains("-X PUT")) "no writes" else null }))
+            server.push("""{"id":"r1","method":"item/commandExecution/requestApproval","params":{"threadId":"t1","turnId":"turn-1","itemId":"c1","command":"gh api repos/o/r/pulls/1/merge -X PUT"}}""")
+            withTimeout(5_000) { while (server.written.none { it["id"]?.toString() == "\"r1\"" }) kotlinx.coroutines.delay(10) }
+            val reply = server.written.last { it["id"]?.toString() == "\"r1\"" }
+            assertEquals("decline", reply["result"]!!.jsonObject["decision"]!!.jsonPrimitive.content)
+            server.push("""{"id":"r2","method":"item/commandExecution/requestApproval","params":{"threadId":"t1","turnId":"turn-1","itemId":"c2","command":"gh api repos/o/r/pulls"}}""")
+            val asked = withTimeout(5_000) { codex.events.first { it is AgentEvent.ApprovalRequested } } as AgentEvent.ApprovalRequested
+            assertEquals("r2", asked.request.requestId)
+            scope.cancel()
+        }
+
+    @Test
     fun blockedCommandsAreFoundInsideWrappersAndPastGitOptions() {
         val blocked = listOf("git push", "gh pr create", "ngit send", "amy git pr")
         listOf(
