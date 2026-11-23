@@ -25,10 +25,10 @@
 #   52  moving: amy M2 and M3 (K again) found a second device group; D moves into it with an
 #       ordinary confirmed link; W, left behind, cleans D's old entry up; D ends in M2's group.
 #   53  a rename that loses a fork comes back: D and M3 rename two devices at once.
-#   54  history through Blossom, across restarts, with an attachment key: D adds M2 and M3 to the
-#       long chat while Blossom is down (the history stays owed across runs), sends it once
-#       Blossom is back; M3 keeps the delivery across a run that cannot fetch it, then imports
-#       the whole history and opens the attachment sent before it was in the chat.
+#   54  history through Blossom, across restarts, with an attachment key: a fourth amy device M4
+#       links with M2 while Blossom is down, so the history M2 owes it stays owed across runs and
+#       goes once Blossom is back; M4 keeps the deliveries across a run that cannot fetch them,
+#       then imports the whole history and opens the attachment sent before it existed.
 #
 # Needs the headless runner's relay, A identity and helpers. Device groups are
 # behind `amy marmot devices enable`, so A and every other test stay as they are.
@@ -528,6 +528,7 @@ test_52_move_amy_device() {
     record_result "$id" fail "M2 and M3 did not link"; return
   fi
   M_READY=1
+  LAST_PAIRING_AT=$(( $(date +%s) + 610 ))
   # D, in W's group, links with M2 again: that moves it. A fresh amy run reads M3's Request
   # back as live for its 600 s, which would compete with D's: wait it out (W stays frozen).
   info "waiting 610s for M3's link request to expire"
@@ -592,9 +593,15 @@ test_54_history_blossom_restart_attachment() {
   local id="54 history via Blossom across restarts"
   [[ $M_READY -eq 1 && -n "$GROUP_41" ]] || { record_result "$id" skip "no second device group or chat"; return; }
   [[ -n "${BLOSSOM_PID:-}" ]] || { record_result "$id" skip "no blossom blob store"; return; }
-  # K's Blossom server list (kind 10063): where D uploads history.
-  amy_d event --kind 10063 --tags "[[\"server\",\"$BLOSSOM_URL\"]]" --relay "$RELAY_URL" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "could not publish K's Blossom list"; return; }
-  # A long chat: more than eight inline bundles' worth, and an attachment before M3 is in it.
+  local nsec="$K_NSEC"
+  [[ "$nsec" == nsec1* ]] || { record_result "$id" skip "K's nsec is not in this run's memory"; return; }
+  amy_k M4 init --nsec "$nsec" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy init M4 failed"; return; }
+  nsec=""
+  amy_k M4 relay add "$RELAY_URL" >>"$LOG_FILE" 2>&1
+  amy_k M4 marmot devices enable >>"$LOG_FILE" 2>&1
+  # K's Blossom server list (kind 10063): where a sibling uploads history.
+  amy_k M2 event --kind 10063 --tags "[[\"server\",\"$BLOSSOM_URL\"]]" --relay "$RELAY_URL" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "could not publish K's Blossom list"; return; }
+  # A long chat: more than eight inline bundles' worth, and an attachment, before M4 exists.
   local i big
   big=$(head -c 9000 /dev/zero | tr '\0' 'h')
   for i in $(seq 1 20); do amy_json marmot message send "$GROUP_41" "long-54-$i $big" >/dev/null 2>>"$LOG_FILE" || true; done
@@ -602,61 +609,67 @@ test_54_history_blossom_restart_attachment() {
   local sent inner
   sent=$(amy_json marmot media send "$GROUP_41" "$src" --caption "pic-54" --server "$BLOSSOM_URL" --mime application/octet-stream) || { record_result "$id" fail "A could not send the attachment"; return; }
   inner=$(printf '%s' "$sent" | jq -r '.inner_event_id')
-  amy_d marmot await message "$MLS_41" --match "long-54-20" --timeout 90 >/dev/null 2>>"$LOG_FILE" || warn "D did not see the long messages"
-  amy_d marmot await message "$MLS_41" --match "pic-54" --timeout 60 >/dev/null 2>>"$LOG_FILE" || warn "D did not see the attachment"
+  amy_k M2 marmot await message "$MLS_41" --match "pic-54" --timeout 90 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M2 never got A's messages"; return; }
 
-  # Blossom down: D adds M2 and M3 to the chat, but cannot upload the history, so it stays owed.
+  # Blossom down: M4 links with M2, M2 adds it to the chat but cannot upload the history.
+  local quiet=$(( ${LAST_PAIRING_AT:-0} + 610 - $(date +%s) ))
+  if (( quiet > 0 )); then info "waiting ${quiet}s for earlier link requests to expire"; sleep "$quiet"; fi
   stop_blossom
-  local deadline=$(( $(date +%s) + 240 )) owed="" in3=0
+  local w_pid; w_pid=$(cat "$W_DIR/pid" 2>/dev/null)
+  [[ -n "$w_pid" ]] && kill -STOP "$w_pid" 2>/dev/null
+  amy_link_pair M2 M4
+  local linked=$?
+  [[ -n "$w_pid" ]] && kill -CONT "$w_pid" 2>/dev/null
+  [[ $linked -eq 0 ]] || { record_result "$id" fail "M4 did not link"; start_blossom; return; }
+  local deadline=$(( $(date +%s) + 180 )) owed="" in4=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    amy_k M2 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
-    amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
-    owed=$(amy_d marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
-    amy_k M3 marmot group list 2>/dev/null | jq -e --arg g "$GROUP_41" '[.. | strings] | index($g) != null' >/dev/null && in3=1
-    [[ $in3 -eq 1 && "${owed:-0}" -ge 1 ]] && break
+    amy_k M4 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    owed=$(amy_k M2 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
+    amy_k M4 marmot group list 2>/dev/null | jq -e --arg g "$GROUP_41" '[.. | strings] | index($g) != null' >/dev/null && in4=1
+    [[ $in4 -eq 1 && "${owed:-0}" -ge 1 ]] && break
     sleep 2
   done
-  [[ $in3 -eq 1 ]] || { record_result "$id" fail "D never added M3 to the chat (owed=$owed)"; start_blossom; return; }
+  [[ $in4 -eq 1 ]] || { record_result "$id" fail "M2 never added M4 to the chat (owed=$owed)"; start_blossom; return; }
   [[ "${owed:-0}" -ge 1 ]] || { record_result "$id" fail "no history was owed while Blossom was down"; start_blossom; return; }
-  owed=$(amy_d marmot devices list 2>/dev/null | jq -r '.owed_histories')
+  owed=$(amy_k M2 marmot devices list 2>/dev/null | jq -r '.owed_histories')
   [[ "${owed:-0}" -ge 1 ]] || { record_result "$id" fail "the owed history did not survive a restart"; start_blossom; return; }
 
-  # Blossom back: D's next run uploads and sends it.
+  # Blossom back: M2's next run uploads and sends it.
   start_blossom || { record_result "$id" fail "blossom did not come back"; return; }
   deadline=$(( $(date +%s) + 120 ))
   while [[ $(date +%s) -lt $deadline ]]; do
-    owed=$(amy_d marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
+    owed=$(amy_k M2 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
     [[ "$owed" == 0 ]] && break
     sleep 2
   done
-  [[ "$owed" == 0 ]] || { record_result "$id" fail "D still owes $owed histories with Blossom up"; return; }
+  [[ "$owed" == 0 ]] || { record_result "$id" fail "M2 still owes $owed histories with Blossom up"; return; }
   local blobs; blobs=$(ls "$STATE_DIR/blossom/blobs" 2>/dev/null | wc -l)
 
-  # Blossom down again: M3 reads its delivery and keeps it across runs.
+  # Blossom down again: M4 reads its deliveries and keeps them across runs.
   stop_blossom
   local kept=""
   deadline=$(( $(date +%s) + 90 ))
   while [[ $(date +%s) -lt $deadline ]]; do
-    kept=$(amy_k M3 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
+    kept=$(amy_k M4 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
     [[ "${kept:-0}" -ge 1 ]] && break
     sleep 2
   done
-  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M3 kept no delivery while Blossom was down"; start_blossom; return; }
-  kept=$(amy_k M3 marmot devices list 2>/dev/null | jq -r '.kept_deliveries')
-  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M3's kept delivery did not survive a restart"; start_blossom; return; }
+  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M4 kept no delivery while Blossom was down"; start_blossom; return; }
+  kept=$(amy_k M4 marmot devices list 2>/dev/null | jq -r '.kept_deliveries')
+  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M4's kept delivery did not survive a restart"; start_blossom; return; }
   start_blossom || { record_result "$id" fail "blossom did not come back"; return; }
   deadline=$(( $(date +%s) + 120 ))
   while [[ $(date +%s) -lt $deadline ]]; do
-    kept=$(amy_k M3 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
+    kept=$(amy_k M4 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
     [[ "$kept" == 0 ]] && break
     sleep 2
   done
-  amy_k M3 marmot await message "$MLS_41" --match "long-54-1 " --timeout 30 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M3 did not import the oldest long message (kept=$kept)"; return; }
-  amy_k M3 marmot await message "$MLS_41" --match "before-link-41" --timeout 10 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M3 has no message from before D linked"; return; }
+  amy_k M4 marmot await message "$MLS_41" --match "long-54-1 " --timeout 30 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M4 did not import the oldest long message (kept=$kept)"; return; }
+  amy_k M4 marmot await message "$MLS_41" --match "before-link-41" --timeout 10 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M4 has no message from before D linked"; return; }
   local out="$STATE_DIR/attach-54.out"
-  amy_k M3 marmot media get "$GROUP_41" "$inner" --out "$out" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "M3 could not open the attachment sent before it was in the chat"; return; }
-  cmp -s "$src" "$out" || { record_result "$id" fail "M3 decrypted other bytes"; return; }
-  record_result "$id" pass "history owed across D's runs, $blobs blob(s) on Blossom, kept across M3's runs, attachment opened with the imported key"
+  amy_k M4 marmot media get "$GROUP_41" "$inner" --out "$out" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "M4 could not open the attachment sent before it existed"; return; }
+  cmp -s "$src" "$out" || { record_result "$id" fail "M4 decrypted other bytes"; return; }
+  record_result "$id" pass "history owed across M2's runs, $blobs blob(s) on Blossom, kept across M4's runs, attachment opened with the imported key"
 }
 
 # What W and D hold, into the log, when a device test fails.
