@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -969,7 +970,15 @@ private fun TurnDone(
     val agent = LocalAgentName.current
     val took = state.lastTurnMillis?.takeIf { !inTerminal && state.turnEndedAt != null }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, filled = true, modifier = Modifier.size(16.dp))
+        // Centering on the line box sits the check below the letters, whose capitals ride high in
+        // it: lift it to their middle.
+        Icon(
+            MaterialSymbols.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            filled = true,
+            modifier = Modifier.offset(y = (-1.5).dp).size(16.dp),
+        )
         Spacer(Modifier.width(10.dp))
         Text(
             when {
