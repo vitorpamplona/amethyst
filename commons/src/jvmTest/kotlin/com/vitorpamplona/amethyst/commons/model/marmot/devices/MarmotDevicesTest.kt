@@ -20,7 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot.devices
 
+import androidx.lifecycle.ViewModelStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedDeviceGroupBlobs
+import com.vitorpamplona.amethyst.commons.marmot.devices.DeviceGroupAttention
+import com.vitorpamplona.amethyst.commons.marmot.devices.DeviceLinkRole
+import com.vitorpamplona.amethyst.commons.marmot.devices.MarmotDeviceLinkViewModel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.marmot.OutboundGroupEvent
@@ -29,7 +35,9 @@ import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.ingest
+import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
 import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrust
+import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -37,13 +45,23 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -66,8 +84,10 @@ class MarmotDevicesTest {
 
     private inner class Device(
         keys: KeyPair,
-        dir: File,
+        val dir: File,
     ) {
+        /** Pin, mute and archive as this device's app holds them, fed from the device group. */
+        val chatSettings = MarmotChatSettings(null)
         val signer = NostrSignerInternal(keys)
         lateinit var peer: Device
         val keyPackages = HashMap<HexKey, KeyPackageEvent>()
@@ -127,7 +147,16 @@ class MarmotDevicesTest {
                     return true
                 }
             }
-        val devices = MarmotDevices(manager, signer, transport, { emptySet() }, { clock })
+        val devices =
+            MarmotDevices(
+                manager,
+                signer,
+                transport,
+                { emptySet() },
+                { clock },
+                signInAnswers = stores.blobs,
+                onSmallState = { state -> chatSettings.applySmallState(state, manager) },
+            )
 
         suspend fun receive(event: Event) {
             if (event is GiftWrapEvent && devices.onGiftWrap(event)) return
@@ -176,6 +205,186 @@ class MarmotDevicesTest {
         assertTrue(existing.devices.state.value.linked && fresh.devices.state.value.linked)
         return existing to fresh
     }
+
+    @Before
+    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @After
+    fun resetMainDispatcher() = Dispatchers.resetMain()
+
+    /** Runs [cancel] on a link screen's view model, then closes the screen at once, as Cancel does. */
+    private suspend fun cancelAndClose(
+        devices: MarmotDevices,
+        role: DeviceLinkRole,
+        sessionId: HexKey?,
+    ) {
+        val accountScope = CoroutineScope(SupervisorJob())
+        val viewModel = MarmotDeviceLinkViewModel(devices, role, sessionId, null, accountScope, { clock })
+        val store = ViewModelStore()
+        store.put("link", viewModel)
+        viewModel.cancel()
+        store.clear()
+        accountScope.coroutineContext.job.children
+            .toList()
+            .joinAll()
+    }
+
+    @Test
+    fun cancelOnTheNewDevicesLinkScreenReachesTheExistingDevice() =
+        runBlocking<Unit> {
+            val (existing, fresh) = pair()
+            fresh.devices.startLinkAsNewDevice()
+            pump()
+            assertTrue(
+                existing.devices.state.value.prompts
+                    .single()
+                    .state is DeviceLinkPrompt.State.Comparing,
+            )
+
+            cancelAndClose(fresh.devices, DeviceLinkRole.NEW_DEVICE, null)
+            pump()
+
+            assertEquals(NewDeviceLinkState.Ended(DeviceLinkEndReason.CANCELLED), fresh.devices.state.value.newDevice)
+            assertEquals(
+                DeviceLinkPrompt.State.Ended(DeviceLinkEndReason.CANCELLED_ELSEWHERE),
+                existing.devices.state.value.prompts
+                    .single()
+                    .state,
+            )
+        }
+
+    @Test
+    fun cancelOnTheExistingDevicesLinkScreenReachesTheNewDevice() =
+        runBlocking<Unit> {
+            val (existing, fresh) = pair()
+            fresh.devices.startLinkAsNewDevice()
+            pump()
+            val prompt =
+                existing.devices.state.value.prompts
+                    .single()
+
+            cancelAndClose(existing.devices, DeviceLinkRole.EXISTING_DEVICE, prompt.sessionId)
+            pump()
+
+            assertTrue(
+                existing.devices.state.value.prompts
+                    .single()
+                    .state is DeviceLinkPrompt.State.Ended,
+            )
+            val ended = fresh.devices.state.value.newDevice
+            assertTrue("the new device's screen ends too: $ended", ended is NewDeviceLinkState.Ended)
+            assertFalse(
+                fresh.devices.groups
+                    .trust()
+                    .trustsDeviceGroup,
+            )
+        }
+
+    @Test
+    fun pinMuteAndArchiveReachTheOtherDeviceAndBack() =
+        runBlocking<Unit> {
+            val (existing, fresh) = linked()
+            // The siblings hand each other private KeyPackages, so a new chat includes both.
+            existing.devices.tick()
+            fresh.devices.tick()
+            pump()
+            val chat = "c7".repeat(32)
+            existing.devices.createChat(chat, listOf("wss://relay.invalid"), null)
+            pump()
+            assertTrue("the sibling joined the chat", fresh.manager.groupManager.isMember(chat))
+
+            existing.devices.changeSetting(chat, MarmotChatSetting.PIN, true)
+            existing.devices.changeSetting(chat, MarmotChatSetting.ARCHIVE, true)
+            pump()
+            assertTrue(
+                fresh.chatSettings.state.value
+                    .isPinned(chat),
+            )
+            assertTrue(
+                fresh.chatSettings.state.value
+                    .isArchived(chat),
+            )
+
+            fresh.devices.changeSetting(chat, MarmotChatSetting.MUTE, true)
+            fresh.devices.changeSetting(chat, MarmotChatSetting.PIN, false)
+            pump()
+            assertTrue(
+                existing.chatSettings.state.value
+                    .isMuted(chat),
+            )
+            assertFalse(
+                existing.chatSettings.state.value
+                    .isPinned(chat),
+            )
+            assertTrue(
+                existing.chatSettings.state.value
+                    .isArchived(chat),
+            )
+        }
+
+    @Test
+    fun aReadPositionReachesTheOtherDevice() =
+        runBlocking<Unit> {
+            val (existing, fresh) = linked()
+            existing.devices.tick()
+            fresh.devices.tick()
+            pump()
+            val chat = "c8".repeat(32)
+            existing.devices.createChat(chat, listOf("wss://relay.invalid"), null)
+            pump()
+            val reads = ArrayList<Long>()
+            existing.devices.markRead(chat, 1, clock - 5, "ab".repeat(32))
+            pump()
+            fresh.devices.groups
+                .smallState()
+                .items
+                .forEach { if (it.name == "read") reads.add((it as SmallStateItem.Read).at) }
+            assertEquals(listOf(clock - 5), reads)
+        }
+
+    @Test
+    fun thatWasMeIsKeptAcrossARestart() =
+        runBlocking<Unit> {
+            val (existing, fresh) = linked()
+            // First check: only the two linked devices publish.
+            existing.devices.tick()
+            pump()
+            // Later, a third device of the account signs in.
+            val third = Device(KeyPair(fresh.signer.keyPair.privKey), folder.newFolder())
+            third.manager.restoreAll()
+            val kp = third.manager.generateKeyPackageEvent(emptyList())
+            existing.keyPackages[kp.id] = kp
+            clock += MarmotDevices.SIGN_IN_CHECK_EVERY_SECS + 1
+            existing.devices.tick()
+            val signIn =
+                existing.devices.state.value.signIns
+                    .single()
+            assertEquals(MarmotDeviceGroupManager.SignInClass.NEW_SIGN_IN, signIn.kind)
+            assertFalse(signIn.confirmed)
+
+            assertTrue(existing.devices.acceptSignIn(signIn.slot))
+            assertTrue(
+                existing.devices.state.value.signIns
+                    .single()
+                    .confirmed,
+            )
+            assertEquals(null, DeviceGroupAttention.of(existing.devices.state.value, emptySet(), emptySet(), false, false).signIn)
+
+            // A restart: a new runtime over the same stores still knows the answer.
+            val restarted = Device(KeyPair(existing.signer.keyPair.privKey), existing.dir)
+            restarted.peer = fresh
+            restarted.keyPackages.putAll(existing.keyPackages)
+            restarted.manager.restoreAll()
+            restarted.devices.start()
+            clock += MarmotDevices.SIGN_IN_CHECK_EVERY_SECS + 1
+            restarted.devices.tick()
+            val again =
+                restarted.devices.state.value.signIns
+                    .single { it.slot == signIn.slot }
+            assertEquals(signIn.slot, again.slot)
+            assertTrue("the answer survived the restart", again.confirmed)
+            assertEquals(null, DeviceGroupAttention.of(restarted.devices.state.value, emptySet(), emptySet(), false, false).signIn)
+        }
 
     @Test
     fun aRemovalNoRelayConfirmedKeepsTheDeviceAndItsSlot() =
