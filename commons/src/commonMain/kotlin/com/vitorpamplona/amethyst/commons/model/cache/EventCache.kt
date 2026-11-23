@@ -162,6 +162,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
@@ -4368,6 +4369,10 @@ open class EventCache :
                 is ConcordCommunityListEvent,
                 // Its successor (CORD-02 §8): the List split into addressable fragments at d = index.
                 is ConcordCommunityListFragmentEvent,
+                // A Concord invite bundle (CORD-05, kind 33301), fetched by the invite preview and a
+                // link refresh. Public and addressable at (33301, link signer, ""); the note card
+                // renders it. Unlisted, every one that arrived was dropped as "Event Not Supported".
+                is ConcordInviteBundleEvent,
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
