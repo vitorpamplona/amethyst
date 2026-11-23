@@ -1128,7 +1128,7 @@ private fun ConcordChannelEditDialog(
 
 /** Shows a freshly minted invite link as a QR code with copy + share actions. */
 @Composable
-private fun InviteLinkDialog(
+internal fun InviteLinkDialog(
     link: String,
     onDismiss: () -> Unit,
 ) {

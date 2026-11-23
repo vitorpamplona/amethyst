@@ -24,13 +24,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -62,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.ConcordRevokeResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_create
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_created
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_title
@@ -85,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -141,6 +147,18 @@ fun ConcordInviteLinksScreen(
     val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val communityState by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
+    // The empty list offers a first link when this account may mint one (CREATE_INVITE, as the
+    // community screen's Invite item), and shows it the way that item does.
+    var minting by remember(communityId) { mutableStateOf(false) }
+    var minted by remember(communityId) { mutableStateOf<String?>(null) }
+    val canCreate =
+        remember(communityState) {
+            communityState?.authority?.let {
+                it.isOwner(account.signer.pubKey) || it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
+            } == true
+        }
+    minted?.let { link -> InviteLinkDialog(link = link, onDismiss = { minted = null }) }
+
     LaunchedEffect(communityId, reloads) {
         state = LinksState.Loading
         state = account.concord.listConcordInviteLinks(communityId)?.let { LinksState.Loaded(it) } ?: LinksState.Unreadable
@@ -187,7 +205,21 @@ fun ConcordInviteLinksScreen(
 
                 is LinksState.Loaded ->
                     if (current.links.isEmpty()) {
-                        CenteredMessage(stringRes(Res.string.concord_invite_links_empty))
+                        EmptyLinks(
+                            canCreate = canCreate,
+                            creating = minting,
+                            onCreate = {
+                                minting = true
+                                scope.launch {
+                                    try {
+                                        minted = account.concord.mintConcordInvite(communityId)
+                                    } finally {
+                                        minting = false
+                                        reloads++
+                                    }
+                                }
+                            },
+                        )
                     } else {
                         LazyColumn(Modifier.fillMaxSize()) {
                             items(current.links, key = { it.token }) { link ->
@@ -294,6 +326,33 @@ private fun RevokeOutcome(
         }
     }
     HorizontalDivider()
+}
+
+@Composable
+private fun EmptyLinks(
+    canCreate: Boolean,
+    creating: Boolean,
+    onCreate: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringRes(Res.string.concord_invite_links_empty),
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        if (canCreate) {
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onCreate, enabled = !creating) {
+                SymbolIcon(symbol = MaterialSymbols.Link, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(Res.string.concord_invite_links_create))
+            }
+        }
+    }
 }
 
 @Composable

@@ -545,6 +545,7 @@
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_links_created">Created %1$s</string>
     <string name="concord_invite_links_empty">You haven't created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_create">Create invite link</string>
     <string name="concord_invite_links_unreadable">Your invite links couldn't be loaded, so none can be revoked right now. Check your connection and try again.</string>
     <string name="concord_invite_revoke_action">Revoke link</string>
     <string name="concord_invite_revoke_title">Revoke this link?</string>
