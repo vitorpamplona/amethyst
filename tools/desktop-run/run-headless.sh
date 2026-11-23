@@ -15,8 +15,10 @@
 #                       $RUN_DIR/profile/signup.nsec, read before --fresh clears the profile
 #   --signup "<name>"   sign up a new account as the Sign Up button does; it publishes to public
 #                       relays, and its nsec goes to $RUN_DIR/profile/signup.nsec
-#   --local-only        the app reaches 127.0.0.1 and nothing else (its proxy points at a closed
-#                       port), so a test account on AMETHYST_LOCAL_RELAYS can't publish elsewhere
+#   --local-only        the app reaches 127.0.0.1 and the hosts of AMETHYST_LOCAL_RELAYS, nothing
+#                       else (its proxy points at a closed port), so a test account can't publish
+#                       elsewhere; with --signup the new account's relay lists name only
+#                       AMETHYST_LOCAL_RELAYS (which it then requires) instead of the public defaults
 #
 # Env: AMETHYST_DISPLAY (default :99), AMETHYST_SCREEN (default 1600x1000x24),
 #      AMETHYST_RUN_DIR (default /tmp/amethyst-desktop-run: log, profile, screenshots),
@@ -124,6 +126,12 @@ case "${1:-}" in
       shift
     done
     [ "$account_options" -le 1 ] || { echo "Pass only one of --login, --login-file and --signup" >&2; exit 2; }
+    # A sign-up names its relays in every list it publishes: on a local-only run, only the local ones.
+    unset AMETHYST_SIGNUP_RELAYS
+    if $local_only && [ -n "${AMETHYST_SIGNUP:-}" ]; then
+      [ -n "${AMETHYST_LOCAL_RELAYS:-}" ] || { echo "--signup with --local-only needs AMETHYST_LOCAL_RELAYS: the relays the new account gets instead of the public defaults" >&2; exit 2; }
+      export AMETHYST_SIGNUP_RELAYS="$AMETHYST_LOCAL_RELAYS"
+    fi
     # After the options: --login-file may name the signup.nsec this deletes.
     $fresh && rm -rf "$DATA_DIR"
     # The window sizes itself to the screen only when no bounds were saved; keep it reproducible.
@@ -138,7 +146,14 @@ case "${1:-}" in
       # Pointing the proxy at a closed port and narrowing that list to loopback (the sandbox's
       # list also lets LAN ranges through) leaves only this machine reachable.
       # The app inherits the environment from Gradle; --offline keeps Gradle off the network too.
-      export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.(proxyHost|proxyPort|nonProxyHosts)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 -Dhttp.nonProxyHosts=localhost|127.*|[::1]"
+      # The hosts of AMETHYST_LOCAL_RELAYS get through too, so a test relay on another local address
+      # (named through -Djdk.net.hosts.file, which this keeps) is reachable as well.
+      local_hosts=""
+      for relay in ${AMETHYST_LOCAL_RELAYS//,/ }; do
+        host="${relay#*://}"; host="${host%%/*}"; host="${host%:*}"
+        [ -n "$host" ] && local_hosts="$local_hosts|$host"
+      done
+      export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.(proxyHost|proxyPort|nonProxyHosts)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 -Dhttp.nonProxyHosts=localhost|127.*|[::1]$local_hosts"
       run_args="$run_args --offline"
     fi
     (cd "$REPO_ROOT" && exec nohup ./gradlew :desktopApp:run --console=plain \

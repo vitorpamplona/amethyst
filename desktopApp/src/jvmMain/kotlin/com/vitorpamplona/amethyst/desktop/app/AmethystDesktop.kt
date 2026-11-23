@@ -250,7 +250,15 @@ fun main(args: Array<String>) {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             .orEmpty()
-    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey, startupSignUpName, startupLocalRelays)
+    // The relays a startup sign-up gives the new account instead of the defaults: what
+    // `run-headless.sh --signup --local-only` sets, so the test account never names a public relay.
+    val startupSignUpRelays =
+        startupSetting("AMETHYST_SIGNUP_RELAYS", "amethyst.signupRelays")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey, startupSignUpName, startupLocalRelays, startupSignUpRelays)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a

@@ -243,6 +243,22 @@ class AccountSessionManagerTest {
     }
 
     @Test
+    fun aSignUpOnGivenRelaysNamesOnlyThose() {
+        val local = setOf(NormalizedRelayUrl("ws://relay.concord-gaps.test:7871/"))
+        val account = manager.createNewAccount("Test", transientAccount = true, relays = local)
+
+        assertEquals(
+            local,
+            account.backupNIP65RelayList
+                ?.relays()
+                ?.map { it.relayUrl }
+                ?.toSet(),
+        )
+        assertEquals(local, account.backupDMRelayList?.relays()?.toSet())
+        assertEquals(local, account.backupKeyPackageRelayList?.relays()?.toSet())
+    }
+
+    @Test
     fun anEmailShapedKeyIsANip05Address() {
         assertTrue(EMAIL_PATTERN.matches("vitor@vitorpamplona.com"))
         assertTrue(!EMAIL_PATTERN.matches("npub1abc"))

@@ -92,7 +92,11 @@ which count as its outbox, inbox and Global, so a run reads and writes on a rela
 (`amy serve`). That alone does not keep a fresh account off public relays: until the app reads the
 account's relay list, its outbox is the default set, and it publishes a Marmot key package there at
 login. Add `start --local-only` for a run that must stay on this machine: the app's proxy points at a
-closed port, so only `127.0.0.1` answers. `cli/tests/chess/chess-ui.sh` sets this up for chess, and
+closed port, so only `127.0.0.1` and the hosts named in `AMETHYST_LOCAL_RELAYS` answer. With
+`--signup` too, the new account's relay lists (NIP-65, DM, key package, search, indexer, favorites)
+name only `AMETHYST_LOCAL_RELAYS` instead of Amethyst's defaults, and it publishes only there
+(`AMETHYST_SIGNUP_RELAYS`, which the script sets; `--local-only --signup` refuses to start without
+`AMETHYST_LOCAL_RELAYS`). `cli/tests/chess/chess-ui.sh` sets this up for chess, and
 `cli/tests/git/git-grasp-e2e.sh --keep` leaves a local GRASP server and its repositories running for
 the app (log in with `--login-file cli/tests/git/state-git-grasp/m.nsec`).
 
@@ -112,7 +116,8 @@ size known and the first frame. `grep VideoTimeline` the log; `grep 'first frame
   password prompt), so its nsec is written to `profile/signup.nsec` (owner-only, replacing the last
   sign-up's) and the log names the npub; reopen the same account later with
   `start --login-file /tmp/amethyst-desktop-run/profile/signup.nsec`. It publishes, so the rule
-  above applies.
+  above applies, unless it runs with `--local-only` and `AMETHYST_LOCAL_RELAYS`: then it starts on,
+  and publishes to, only those relays.
 - The container has no OS keyring, so a key that is remembered goes to the NIP-49 password file.
   The login screen says so, and that is expected here.
 
