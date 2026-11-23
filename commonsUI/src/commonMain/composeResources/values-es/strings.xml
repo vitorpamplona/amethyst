@@ -10385,6 +10385,9 @@
     <string name="marmot_devices_link_new_desc">Este dispositivo aprueba otro de los tuyos</string>
     <string name="marmot_devices_link_this">Vincular este dispositivo a uno existente</string>
     <string name="marmot_devices_link_this_desc">Apruébalo en un dispositivo que ya tenga tus chats</string>
+    <string name="marmot_devices_move_this">Mover este dispositivo a otro grupo de tus dispositivos</string>
+    <string name="marmot_devices_move_this_desc">Apruébalo en un dispositivo de ese grupo; este dispositivo deja su grupo actual cuando termine el traslado</string>
+    <string name="marmot_devices_moving">Este dispositivo se está moviendo a otro grupo de tus dispositivos. Sigue en su grupo actual hasta que termine el traslado.</string>
     <string name="marmot_devices_section_sign_ins">Otros inicios de sesión</string>
     <string name="marmot_devices_sign_in_new">Nuevo inicio de sesión %1$s</string>
     <string name="marmot_devices_sign_in_earlier">Inició sesión antes que este dispositivo, %1$s</string>
@@ -10396,6 +10399,7 @@
     <string name="marmot_devices_failed_action">Eso no funcionó. Inténtalo de nuevo.</string>
     <string name="marmot_devices_switch_off_while_linked">Este dispositivo está vinculado a tus otros dispositivos, así que esto sigue activado. Para desvincularlo, quítalo desde uno de tus otros dispositivos o cierra la sesión de esta cuenta aquí.</string>
     <string name="marmot_link_title_new">Vincular este dispositivo</string>
+    <string name="marmot_link_title_move">Mover este dispositivo</string>
     <string name="marmot_link_title_existing">Vincular un dispositivo nuevo</string>
     <string name="marmot_link_starting">Enviando la solicitud de vinculación…</string>
     <string name="marmot_link_waiting_answer">Esperando a otro de tus dispositivos. Abre Amethyst o White Noise en él: te pedirá vincular este.</string>

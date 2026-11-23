@@ -48,12 +48,15 @@ import java.io.File
  */
 object MarmotDevicesCommands {
     private const val USAGE =
-        "marmot devices <enable|disable|list|sync|link|remove|rename|chats|read|pin|mute|archive|sign-in>\n" +
+        "marmot devices <enable|disable|list|sync|link|move|remove|rename|chats|read|pin|mute|archive|sign-in>\n" +
             "  enable | disable                          the device-group switch (off by default)\n" +
             "  list                                      this account's devices and any link in progress\n" +
             "  sync [--timeout SECS]                     one pass: pairing, group catch-up, device-group duties\n" +
             "  link --new [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
             "  link --existing [--label L] [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
+            "  move [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
+            "                                            leave this device group for the one of the device that answers\n" +
+            "                                            (it runs `link --existing`); done once the move is made\n" +
             "  remove SLOT                               remove a linked device\n" +
             "  rename SLOT LABEL                         rename a device, this one included (its slot or `self`)\n" +
             "  chats                                     each Marmot chat's pin, mute, archive and synced read position\n" +
@@ -76,6 +79,7 @@ object MarmotDevicesCommands {
                     "list" to { rest -> list(dataDir, rest) },
                     "sync" to { rest -> sync(dataDir, rest) },
                     "link" to { rest -> link(dataDir, rest) },
+                    "move" to { rest -> link(dataDir, arrayOf("--new") + rest, move = true) },
                     "remove" to { rest -> remove(dataDir, rest) },
                     "rename" to { rest -> rename(dataDir, rest) },
                     "chats" to { rest -> chats(dataDir, rest) },
@@ -329,9 +333,15 @@ object MarmotDevicesCommands {
         } ?: disabled()
     }
 
+    /**
+     * `link --new` / `link --existing`, and `move`: a linked device linking again as the new device,
+     * which moves it to the answering device's group (`device-group.md` "Moving between device
+     * groups"); it ends once the move is made, then settles while the old group hears `moved`.
+     */
     private suspend fun link(
         dataDir: DataDir,
         rest: Array<String>,
+        move: Boolean = false,
     ): Int {
         val args = Args(rest, booleanFlags = setOf("new", "existing"))
         val asNew = args.bool("new")
@@ -353,6 +363,7 @@ object MarmotDevicesCommands {
         }
         return withDevices(dataDir) { ctx, devices ->
             devices.start(announce = true)
+            if (move && !devices.state.value.linked) return@withDevices Output.error("not_linked", "this device is in no device group: link it with `link --new`")
             val deadline = System.currentTimeMillis() + timeoutMs
             // Read on a daemon thread, outside the coroutine scope: a blocking read is not
             // cancellable, so a reader inside the scope kept the run alive after the link ended.
@@ -396,7 +407,8 @@ object MarmotDevicesCommands {
                                     }
                                 }
                             is NewDeviceLinkState.Ended -> return@coroutineScope Output.error("link_ended", st.reason.name.lowercase())
-                            NewDeviceLinkState.Linked -> if (linkedAt == null) linkedAt = System.currentTimeMillis()
+                            // A move is done once it is made: the destination's roster holds this device's first Commit.
+                            NewDeviceLinkState.Linked -> if (linkedAt == null && !s.moving) linkedAt = System.currentTimeMillis()
                             else -> {}
                         }
                     } else {
@@ -421,7 +433,21 @@ object MarmotDevicesCommands {
                 lines?.cancel()
                 val s = devices.state.value
                 if (linkedAt == null) return@coroutineScope Output.error("timeout", "the link did not complete in ${timeoutMs / 1000}s")
-                Output.emit(render(s) + mapOf("role" to if (asNew) "new" else "existing", "code" to shown?.map { it.emoji }, "code_numbers" to shown?.map { it.number }))
+                Output.emit(
+                    render(s) +
+                        mapOf(
+                            "role" to
+                                if (move) {
+                                    "moved"
+                                } else if (asNew) {
+                                    "new"
+                                } else {
+                                    "existing"
+                                },
+                            "code" to shown?.map { it.emoji },
+                            "code_numbers" to shown?.map { it.number },
+                        ),
+                )
                 0
             }
         } ?: disabled()
@@ -496,6 +522,9 @@ object MarmotDevicesCommands {
             "new_device" to s.newDevice?.let(::stateName),
             "prompts" to s.prompts.map { mapOf("session_id" to it.sessionId, "slot" to it.slot, "state" to it.state::class.simpleName?.lowercase()) },
             "remaining_chats" to s.remainingChats,
+            "moving" to s.moving,
+            "owed_histories" to s.owedHistories,
+            "kept_deliveries" to s.keptDeliveries,
             "sign_ins" to s.signIns.map { mapOf("slot" to it.slot, "published_at" to it.publishedAt, "kind" to it.kind.name.lowercase(), "confirmed" to it.confirmed) },
         )
 

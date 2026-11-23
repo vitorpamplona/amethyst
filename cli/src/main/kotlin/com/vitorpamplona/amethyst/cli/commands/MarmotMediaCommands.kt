@@ -320,13 +320,14 @@ object MarmotMediaCommands {
             }
 
             // The media secret is per-epoch: the attachment opens under the key
-            // of the epoch that carried this message, not the current one.
-            val epochSecret =
-                ctx.marmot.mediaSecretForMessage(resolved, eventId)
+            // of the epoch that carried this message, not the current one, or,
+            // for history a linked device delivered, under the file key it gave.
+            val cipher =
+                ctx.marmot.mediaCipherForMessage(resolved, eventId, reference)
                     ?: return Output.error("decrypt_failed", "the media key of the epoch that carried $eventId is no longer held")
             val plaintext =
                 try {
-                    ctx.marmot.decryptMedia(resolved, reference, ciphertext, epochSecret)
+                    cipher.decrypt(ciphertext)
                 } catch (e: Exception) {
                     return Output.error("decrypt_failed", "${e.message}")
                 }

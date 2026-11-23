@@ -225,6 +225,10 @@ ALL_TESTS=(
   test_46_history_reaches_wn
   test_50_that_was_me_persists
   test_43_amy_removes_wn_device
+  test_51_archive_unpins
+  test_52_move_amy_device
+  test_53_rename_fork_recovers
+  test_54_history_blossom_restart_attachment
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

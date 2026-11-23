@@ -20,6 +20,15 @@
 #   48  a read position from W reaches D.
 #   49  renames: D renames W and itself; W's list shows both labels, D's client and platform.
 #   50  "That was me": a sign-in D answered stays answered in a later run.
+#   51  archiving unpins: W's archive unpins D's pinned chat, D refuses to pin an archived chat,
+#       and D's own archive of a pinned chat unpins it.
+#   52  moving: amy M2 and M3 (K again) found a second device group; D moves into it with an
+#       ordinary confirmed link; W, left behind, cleans D's old entry up; D ends in M2's group.
+#   53  a rename that loses a fork comes back: D and M3 rename two devices at once.
+#   54  history through Blossom, across restarts, with an attachment key: D adds M2 and M3 to the
+#       long chat while Blossom is down (the history stays owed across runs), sends it once
+#       Blossom is back; M3 keeps the delivery across a run that cannot fetch it, then imports
+#       the whole history and opens the attachment sent before it was in the chat.
 #
 # Needs the headless runner's relay, A identity and helpers. Device groups are
 # behind `amy marmot devices enable`, so A and every other test stay as they are.
@@ -109,6 +118,7 @@ test_40_link_amy_new_to_wn_existing() {
   banner "Test 40 — link: wn W existing, amy D new, seven emoji compared"
   local id="40 device link wn existing -> amy new"
   devices_setup || { record_result "$id" fail "setup failed"; return; }
+  LAST_PAIRING_AT=$(date +%s)
   devices_prelink_chat || warn "the pre-link chat for test 41 could not be made"
 
   local fifo="$STATE_DIR/d-confirm.fifo" codef="$STATE_DIR/d-code.json" out="$STATE_DIR/d-link.json" rcf="$STATE_DIR/d-link.rc"
@@ -197,6 +207,7 @@ test_42_link_wn_new_to_amy_existing() {
   banner "Test 42 — link: amy D existing, a fresh wn W2 new"
   local id="42 device link amy existing -> wn new"
   [[ -n "$K_HEX" ]] || { record_result "$id" skip "no device-group account"; return; }
+  LAST_PAIRING_AT=$(date +%s)
   start_daemon W2 "$W2_DIR" "$W2_SOCKET"
   local nsec="$K_NSEC"
   if [[ "$nsec" != nsec1* ]]; then record_result "$id" fail "K's nsec is not in this run's memory"; return; fi
@@ -428,6 +439,224 @@ test_50_that_was_me_persists() {
   local again; again=$(amy_d marmot devices sync --timeout 4 2>/dev/null | jq -r --arg s "$slot" '.sign_ins[]? | select(.slot == $s) | .confirmed')
   [[ "$again" == true ]] || { record_result "$id" fail "a later run lists the sign-in as confirmed=$again"; return; }
   record_result "$id" pass "sign-in ${slot:0:12} stays answered"
+}
+
+test_51_archive_unpins() {
+  banner "Test 51 — archiving a chat unpins it (here and from wn)"
+  local id="51 archive unpins"
+  [[ -n "$GROUP_41" ]] || { record_result "$id" skip "no chat"; return; }
+  amy_d marmot devices archive "$MLS_41" off >>"$LOG_FILE" 2>&1
+  amy_d marmot devices pin "$MLS_41" on >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy pin failed"; return; }
+  [[ "$(d_chat_field pinned)" == true ]] || { record_result "$id" fail "the pin did not hold on D"; return; }
+
+  # W archives: D, applying it, unpins.
+  wn_w chats archive "$MLS_41" >>"$LOG_FILE" 2>&1 || warn "wn chats archive returned nonzero"
+  local deadline=$(( $(date +%s) + 90 )) a="" p=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    a=$(d_chat_field archived); p=$(d_chat_field pinned)
+    [[ "$a" == true && "$p" == false ]] && break
+    sleep 2
+  done
+  [[ "$a" == true && "$p" == false ]] || { record_result "$id" fail "after W's archive D has archived=$a pinned=$p"; return; }
+
+  # An archived chat is not pinned.
+  if amy_d marmot devices pin "$MLS_41" on >"$STATE_DIR/pin51.json" 2>&1; then
+    record_result "$id" fail "D pinned an archived chat: $(cat "$STATE_DIR/pin51.json")"; return
+  fi
+  grep -q archived "$STATE_DIR/pin51.json" || { record_result "$id" fail "pinning an archived chat failed for another reason: $(cat "$STATE_DIR/pin51.json")"; return; }
+
+  # D's own archive of a pinned chat unpins it too.
+  amy_d marmot devices archive "$MLS_41" off >>"$LOG_FILE" 2>&1
+  amy_d marmot devices pin "$MLS_41" on >>"$LOG_FILE" 2>&1
+  local out; out=$(amy_d marmot devices archive "$MLS_41" on 2>>"$LOG_FILE")
+  [[ "$(printf '%s' "$out" | jq -r '.pinned')" == false && "$(d_chat_field pinned)" == false ]] || { record_result "$id" fail "D's archive left the chat pinned: $out"; return; }
+  amy_d marmot devices archive "$MLS_41" off >>"$LOG_FILE" 2>&1
+  wn_w chats unarchive "$MLS_41" >>"$LOG_FILE" 2>&1 || true
+  record_result "$id" pass "W's archive unpinned D's chat; pinning it refused; D's archive unpins"
+}
+
+# amy_k <account> ARGS…: another amy device of K (M2, M3).
+amy_k() { local acct="$1"; shift; HOME="$STATE_DIR" "$AMY_BIN" --account "$acct" --secret-backend plaintext --json "$@"; }
+M_READY=0
+
+# amy_link_pair <existing-acct> <new-acct> [move]: link two amy devices of K, codes compared after.
+# The other devices of K that would answer the request are frozen (W) or not running (D).
+amy_link_pair() {
+  local existing="$1" fresh="$2" verb="${3:-link}"
+  local ce="$STATE_DIR/code-$existing.json" cn="$STATE_DIR/code-$fresh.json"
+  local oe="$STATE_DIR/link-$existing.json" on="$STATE_DIR/link-$fresh.json"
+  rm -f "$ce" "$cn" "$oe" "$on"
+  local new_args=(marmot devices link --new)
+  [[ "$verb" == move ]] && new_args=(marmot devices move)
+  ( AMY_TEST_AUTO_CONFIRM=1 amy_k "$existing" marmot devices link --existing --label "$fresh" --confirm yes --code-file "$ce" --timeout 240 --settle 25 >"$oe" 2>>"$LOG_FILE"; echo $? >"$oe.rc" ) &
+  local pe=$!
+  sleep 3
+  ( amy_k "$fresh" "${new_args[@]}" --confirm yes --code-file "$cn" --timeout 240 --settle 40 >"$on" 2>>"$LOG_FILE"; echo $? >"$on.rc" ) &
+  local pn=$!
+  wait "$pe" "$pn"
+  [[ "$(cat "$oe.rc")" == 0 && "$(cat "$on.rc")" == 0 ]] || { warn "link $existing <- $fresh: rc $(cat "$oe.rc")/$(cat "$on.rc"): $(tail -c 200 "$on")"; return 1; }
+  [[ "$(jq -c '[.code[].emoji]' "$ce")" == "$(jq -c '[.code[].emoji]' "$cn")" ]] || { warn "the two amy devices showed different codes"; return 1; }
+}
+
+test_52_move_amy_device() {
+  banner "Test 52 — D moves from W's device group to a second one (M2, M3)"
+  local id="52 move between device groups"
+  [[ -n "$K_HEX" ]] || { record_result "$id" skip "no device-group account"; return; }
+  local nsec="$K_NSEC"
+  [[ "$nsec" == nsec1* ]] || { record_result "$id" skip "K's nsec is not in this run's memory"; return; }
+  local a
+  for a in M2 M3; do
+    amy_k "$a" init --nsec "$nsec" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy init $a failed"; return; }
+    amy_k "$a" relay add "$RELAY_URL" >>"$LOG_FILE" 2>&1
+    amy_k "$a" marmot devices enable >>"$LOG_FILE" 2>&1
+  done
+  nsec=""
+  local d_slot w_slot old_group
+  d_slot=$(amy_d marmot devices list 2>/dev/null | jq -r '.this_slot')
+  w_slot=$(wn_w --json devices list 2>/dev/null | wn_result | jq -r '.devices[]? | select(.is_this_device) | .slot_id_hex')
+  # A link Request stays live for 600 s, and an existing device that sees two live ones answers
+  # neither: let the Requests of the earlier links (D's, W2's) run out first.
+  local quiet=$(( ${LAST_PAIRING_AT:-0} + 610 - $(date +%s) ))
+  if (( quiet > 0 )); then info "waiting ${quiet}s for earlier link requests to expire"; sleep "$quiet"; fi
+  local w_pid; w_pid=$(cat "$W_DIR/pid" 2>/dev/null)
+  [[ -n "$w_pid" ]] && kill -STOP "$w_pid" 2>/dev/null
+  local started=$(date +%s)
+  # M2 founds a second device group of K by approving M3.
+  if ! amy_link_pair M2 M3; then
+    [[ -n "$w_pid" ]] && kill -CONT "$w_pid" 2>/dev/null
+    record_result "$id" fail "M2 and M3 did not link"; return
+  fi
+  M_READY=1
+  # D, in W's group, links with M2 again: that moves it. A fresh amy run reads M3's Request
+  # back as live for its 600 s, which would compete with D's: wait it out (W stays frozen).
+  info "waiting 610s for M3's link request to expire"
+  sleep 610
+  if ! amy_link_pair M2 D move; then
+    [[ -n "$w_pid" ]] && kill -CONT "$w_pid" 2>/dev/null
+    record_result "$id" fail "D's move did not complete"; return
+  fi
+  [[ -n "$w_pid" ]] && kill -CONT "$w_pid" 2>/dev/null
+  local moved_at=$(( $(date +%s) - started ))
+
+  # W reads D's `moved` and removes D's old entry; D then drops its copy of the old group.
+  local deadline=$(( $(date +%s) + 150 )) wn="" dl=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    wn=$(wn_w --json devices list 2>/dev/null | wn_result | jq -c '[.devices[].slot_id_hex] | sort')
+    [[ "$wn" == "[\"$w_slot\"]" ]] && break
+    sleep 3
+  done
+  dl=$(amy_d marmot devices list 2>/dev/null)
+  printf 'test52 D: %s\nW: %s\n' "$dl" "$wn" >>"$LOG_FILE"
+  local dn m2n
+  dn=$(printf '%s' "$dl" | jq '[.devices[].slot] | length')
+  m2n=$(amy_k M2 marmot devices list 2>/dev/null | jq '[.devices[].slot] | length')
+  [[ "$(printf '%s' "$dl" | jq -r '.moving')" == false && "$dn" == 3 && "$m2n" == 3 ]] || { record_result "$id" fail "after the move D lists $dn devices (moving=$(printf '%s' "$dl" | jq -r '.moving')), M2 lists $m2n (want 3)"; return; }
+  printf '%s' "$dl" | jq -e --arg w "$w_slot" '[.devices[].slot] | index($w) == null' >/dev/null || { record_result "$id" fail "D still lists W"; return; }
+  [[ "$wn" == "[\"$w_slot\"]" ]] || { devices_diag; record_result "$id" fail "W still lists $wn after D moved (moved at ${moved_at}s)"; return; }
+  record_result "$id" pass "D moved at ${moved_at}s; W cleaned D up; D, M2 and M3 list three devices"
+}
+
+test_53_rename_fork_recovers() {
+  banner "Test 53 — two renames at once: the one that loses its fork is made again"
+  local id="53 rename lost in a fork comes back"
+  [[ $M_READY -eq 1 ]] || { record_result "$id" skip "no second device group"; return; }
+  local m2_slot m3_slot
+  m2_slot=$(amy_k M2 marmot devices list 2>/dev/null | jq -r '.this_slot')
+  m3_slot=$(amy_k M3 marmot devices list 2>/dev/null | jq -r '.this_slot')
+  amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+  amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+  # Both from the same epoch: two Commits on one parent.
+  amy_d marmot devices rename "$m2_slot" "Fork-A" >>"$LOG_FILE" 2>&1 &
+  local p1=$!
+  amy_k M3 marmot devices rename self "Fork-B" >>"$LOG_FILE" 2>&1 &
+  local p2=$!
+  wait "$p1" "$p2"
+  local deadline=$(( $(date +%s) + 150 )) labels=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    amy_k M2 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    labels=$(for a in D M2 M3; do amy_k "$a" marmot devices list 2>/dev/null | jq -c --arg a "$m2_slot" --arg b "$m3_slot" '[(.devices[] | select(.slot == $a) | .label), (.devices[] | select(.slot == $b) | .label)]'; done | sort -u)
+    [[ "$labels" == '["Fork-A","Fork-B"]' ]] && break
+    sleep 2
+  done
+  [[ "$labels" == '["Fork-A","Fork-B"]' ]] || { record_result "$id" fail "the devices settled on $(printf '%s' "$labels" | tr '\n' ' ')"; return; }
+  local recovered; recovered=$(grep -c 'lost a fork; making it again' "$LOG_FILE" 2>/dev/null || true)
+  record_result "$id" pass "all three show both renames (recoveries logged: ${recovered:-0})"
+}
+
+test_54_history_blossom_restart_attachment() {
+  banner "Test 54 — a long history through Blossom, across restarts, with an attachment key"
+  local id="54 history via Blossom across restarts"
+  [[ $M_READY -eq 1 && -n "$GROUP_41" ]] || { record_result "$id" skip "no second device group or chat"; return; }
+  [[ -n "${BLOSSOM_PID:-}" ]] || { record_result "$id" skip "no blossom blob store"; return; }
+  # K's Blossom server list (kind 10063): where D uploads history.
+  amy_d event --kind 10063 --tags "[[\"server\",\"$BLOSSOM_URL\"]]" --relay "$RELAY_URL" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "could not publish K's Blossom list"; return; }
+  # A long chat: more than eight inline bundles' worth, and an attachment before M3 is in it.
+  local i big
+  big=$(head -c 9000 /dev/zero | tr '\0' 'h')
+  for i in $(seq 1 20); do amy_json marmot message send "$GROUP_41" "long-54-$i $big" >/dev/null 2>>"$LOG_FILE" || true; done
+  local src="$STATE_DIR/attach-54.bin"; head -c 3000 /dev/urandom >"$src"
+  local sent inner
+  sent=$(amy_json marmot media send "$GROUP_41" "$src" --caption "pic-54" --server "$BLOSSOM_URL" --mime application/octet-stream) || { record_result "$id" fail "A could not send the attachment"; return; }
+  inner=$(printf '%s' "$sent" | jq -r '.inner_event_id')
+  amy_d marmot await message "$MLS_41" --match "long-54-20" --timeout 90 >/dev/null 2>>"$LOG_FILE" || warn "D did not see the long messages"
+  amy_d marmot await message "$MLS_41" --match "pic-54" --timeout 60 >/dev/null 2>>"$LOG_FILE" || warn "D did not see the attachment"
+
+  # Blossom down: D adds M2 and M3 to the chat, but cannot upload the history, so it stays owed.
+  stop_blossom
+  local deadline=$(( $(date +%s) + 240 )) owed="" in3=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_k M2 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    owed=$(amy_d marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
+    amy_k M3 marmot group list 2>/dev/null | jq -e --arg g "$GROUP_41" '[.. | strings] | index($g) != null' >/dev/null && in3=1
+    [[ $in3 -eq 1 && "${owed:-0}" -ge 1 ]] && break
+    sleep 2
+  done
+  [[ $in3 -eq 1 ]] || { record_result "$id" fail "D never added M3 to the chat (owed=$owed)"; start_blossom; return; }
+  [[ "${owed:-0}" -ge 1 ]] || { record_result "$id" fail "no history was owed while Blossom was down"; start_blossom; return; }
+  owed=$(amy_d marmot devices list 2>/dev/null | jq -r '.owed_histories')
+  [[ "${owed:-0}" -ge 1 ]] || { record_result "$id" fail "the owed history did not survive a restart"; start_blossom; return; }
+
+  # Blossom back: D's next run uploads and sends it.
+  start_blossom || { record_result "$id" fail "blossom did not come back"; return; }
+  deadline=$(( $(date +%s) + 120 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    owed=$(amy_d marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.owed_histories')
+    [[ "$owed" == 0 ]] && break
+    sleep 2
+  done
+  [[ "$owed" == 0 ]] || { record_result "$id" fail "D still owes $owed histories with Blossom up"; return; }
+  local blobs; blobs=$(ls "$STATE_DIR/blossom/blobs" 2>/dev/null | wc -l)
+
+  # Blossom down again: M3 reads its delivery and keeps it across runs.
+  stop_blossom
+  local kept=""
+  deadline=$(( $(date +%s) + 90 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    kept=$(amy_k M3 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
+    [[ "${kept:-0}" -ge 1 ]] && break
+    sleep 2
+  done
+  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M3 kept no delivery while Blossom was down"; start_blossom; return; }
+  kept=$(amy_k M3 marmot devices list 2>/dev/null | jq -r '.kept_deliveries')
+  [[ "${kept:-0}" -ge 1 ]] || { record_result "$id" fail "M3's kept delivery did not survive a restart"; start_blossom; return; }
+  start_blossom || { record_result "$id" fail "blossom did not come back"; return; }
+  deadline=$(( $(date +%s) + 120 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    kept=$(amy_k M3 marmot devices sync --timeout 3 2>>"$LOG_FILE" | jq -r '.kept_deliveries')
+    [[ "$kept" == 0 ]] && break
+    sleep 2
+  done
+  amy_k M3 marmot await message "$MLS_41" --match "long-54-1 " --timeout 30 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M3 did not import the oldest long message (kept=$kept)"; return; }
+  amy_k M3 marmot await message "$MLS_41" --match "before-link-41" --timeout 10 >/dev/null 2>>"$LOG_FILE" || { record_result "$id" fail "M3 has no message from before D linked"; return; }
+  local out="$STATE_DIR/attach-54.out"
+  amy_k M3 marmot media get "$GROUP_41" "$inner" --out "$out" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "M3 could not open the attachment sent before it was in the chat"; return; }
+  cmp -s "$src" "$out" || { record_result "$id" fail "M3 decrypted other bytes"; return; }
+  record_result "$id" pass "history owed across D's runs, $blobs blob(s) on Blossom, kept across M3's runs, attachment opened with the imported key"
 }
 
 # What W and D hold, into the log, when a device test fails.

@@ -55,6 +55,15 @@ class DeviceLinkScreenTest {
     }
 
     @Test
+    fun aLinkedDeviceThatMovesStartsAndIsDoneOnlyOnceTheMoveIsMade() {
+        val linked = MarmotDevicesSnapshot(linked = true)
+        assertEquals(DeviceLinkScreenState.Starting, DeviceLinkScreen.state(linked, DeviceLinkRole.NEW_DEVICE, null, move = true))
+        val firstCommitSent = linked.copy(newDevice = NewDeviceLinkState.Linked, moving = true)
+        assertEquals(DeviceLinkScreenState.Joining, DeviceLinkScreen.state(firstCommitSent, DeviceLinkRole.NEW_DEVICE, null, move = true))
+        assertEquals(DeviceLinkScreenState.Linked(null), DeviceLinkScreen.state(firstCommitSent.copy(moving = false), DeviceLinkRole.NEW_DEVICE, null, move = true))
+    }
+
+    @Test
     fun aNewDeviceFollowsItsLinkState() {
         fun of(
             s: NewDeviceLinkState,

@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.amethyst.commons.wot.sortedKeysByFollowsThenTrust
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupIconChange
@@ -2638,6 +2639,16 @@ open class BaseAccountViewModel(
         nostrGroupId: String,
         innerEventId: String,
     ): ByteArray? = account.marmotManager?.mediaSecretForMessage(nostrGroupId, innerEventId)
+
+    /**
+     * The cipher for [reference], an `encrypted-media-v2` attachment of [innerEventId]: under the
+     * media key of its epoch, or under the file key a linked device's history gave for it.
+     */
+    suspend fun marmotMediaCipherForMessage(
+        nostrGroupId: String,
+        innerEventId: String,
+        reference: EncryptedMediaReferenceV2,
+    ): EncryptedMediaV2Cipher? = account.marmotManager?.mediaCipherForMessage(nostrGroupId, innerEventId, reference)
 
     /**
      * True when this group carries the `encrypted-media-v2` policy (`0x800b`)
