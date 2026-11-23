@@ -168,6 +168,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp)
+    // The device-group screens' tests build roster and sign-in states out of marmot-kmp's types,
+    // already on the runtime classpath through commons.
+    testImplementation(libs.marmot)
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
