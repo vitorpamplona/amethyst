@@ -34,8 +34,9 @@ import java.io.File
 
 /**
  * Publishing a branch through the user's own `ngit` (https://gitworkshop.dev/ngit), signed by the
- * account they logged in with there, instead of the app's signer. Only the user's click runs it:
- * a Claude Code session is never allowed to (ClaudeChat.NO_PUBLISHING).
+ * account they logged in with there, instead of the app's signer. The user's click runs it here; a
+ * Claude Code session may also open a proposal itself when asked, but never merge one
+ * (ClaudeChat.NO_MERGING).
  */
 object Ngit {
     /** An account `ngit account whoami` lists; [active] is the one it signs with. */
