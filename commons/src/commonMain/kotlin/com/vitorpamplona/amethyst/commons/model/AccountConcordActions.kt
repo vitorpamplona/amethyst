@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
@@ -127,8 +129,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -267,27 +271,53 @@ class AccountConcordActions(
         list.addPendingJoin(entry)
         awaitConcordSession(entry.id)
         fetchedWraps.forEach { account.concordSessions.ingest(it) }
-        account.scope.launch(Dispatchers.IO) {
-            val persisted =
-                try {
-                    persistConcordEntry(entry)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("Concord", "Community List write for ${entry.id} failed", e)
-                    false
-                }
-            if (persisted) {
-                // Hand over to the written entry before letting go of the pending one, or the
-                // community would vanish for a beat and its session be torn down and rebuilt.
-                withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
-                list.dropPendingJoin(entry.id)
-                announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
-            } else {
-                list.dropPendingJoin(entry.id)
-                _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
+        val save =
+            account.scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                savePendingJoin(entry, inviteCreator, inviteLabel)
             }
+        pendingJoinSaves.merge(entry.id, save) { previous, next -> next.also { previous.cancel() } }
+        save.invokeOnCompletion { pendingJoinSaves.remove(entry.id, save) }
+        save.start()
+    }
+
+    /**
+     * The background half of [joinConcordCommunityOptimistically]. A leave ([leaveConcordCommunity])
+     * cancels it and drops the pending join, and every step that would make the membership real
+     * re-checks that the join is still pending: the List write ([ConcordChannelListState.followPendingJoin]
+     * decides inside the write lock) and the Guestbook JOIN. Without that, a leave during the save
+     * re-joined the community, or announced JOIN after the LEAVE.
+     */
+    private suspend fun savePendingJoin(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ) {
+        val list = account.concordChannelList
+        val persisted =
+            try {
+                writeConcordList { it.followPendingJoin(entry).orEmpty() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("Concord", "Community List write for ${entry.id} failed", e)
+                false
+            }
+        // Left while the List loaded: nothing was written, and nothing is announced or reported.
+        if (!list.isPendingJoin(entry.id)) return
+        if (persisted) {
+            // Hand over to the written entry before letting go of the pending one, or the
+            // community would vanish for a beat and its session be torn down and rebuilt.
+            withTimeoutOrNull(SESSION_WAIT_MS) { list.awaitWritten(entry.id) }
+            if (!list.isPendingJoin(entry.id)) return
+            list.dropPendingJoin(entry.id)
+            announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+        } else {
+            list.dropPendingJoin(entry.id)
+            _concordJoinFailures.tryEmit(currentConcordName(account.concordSessions.sessionFor(entry.id), entry))
         }
     }
+
+    /** The background save of each pending join, by community id, so a leave can cancel it. */
+    private val pendingJoinSaves = ConcurrentMap<HexKey, Job>()
 
     private val _concordJoinFailures = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
@@ -558,6 +588,42 @@ class AccountConcordActions(
     }
 
     /**
+     * Retires [links] of [entry]'s community in one pass: a confirmed revocation tombstone at each
+     * link's coordinate (in parallel), then ONE invite-list write recording the tombstones that
+     * landed and ONE registry edit dropping their signers. [entry] is the post-rotation entry, passed
+     * in: re-read from the List right after adopting a new root it is still the old epoch's, or not
+     * there yet, and the registry edit was then skipped. Returns the links retired on the wire.
+     */
+    private suspend fun retireConcordInviteLinks(
+        entry: ConcordCommunityListEntry,
+        relays: Set<NormalizedRelayUrl>,
+        links: List<ConcordInviteListEntry>,
+    ): List<ConcordInviteListEntry> {
+        val now = TimeUtils.now()
+        val retired =
+            coroutineScope {
+                links
+                    .map { link ->
+                        async {
+                            val published =
+                                runCatchingCancellable {
+                                    account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), now), relays)
+                                }.onFailure { Log.w("Concord", "invite revocation failed for ${entry.id}", it) }.getOrDefault(false)
+                            link.takeIf { published }
+                        }
+                    }.awaitAll()
+                    .filterNotNull()
+            }
+        if (retired.isEmpty()) return retired
+        val recorded = publishConcordInviteList(ConcordInviteListDocument(tombstones = retired.map { ConcordInviteListTombstone(token = it.token, communityId = entry.id) }))
+        if (recorded == null) {
+            Log.w("Concord") { "Retired ${retired.size} links of ${entry.id} on the wire but could not tombstone them in the invite list; a later revoke will record them" }
+        }
+        publishConcordInviteRegistry(entry, recorded, retired = retired.map { it.signerPubKeyHex().lowercase() })
+        return retired
+    }
+
+    /**
      * Re-posts every live link this account minted for [entry]'s community at its own coordinate,
      * carrying [entry]'s epoch (CORD-05). The kind-33301 bundle is addressable and authored by the
      * link signer, so this moves the link behind the same URL instead of orphaning it at a dead
@@ -590,9 +656,9 @@ class AccountConcordActions(
         val links =
             if (severed) {
                 val (cut, kept) = live.partition { it.isSeveredBy(entry.rootEpoch) }
-                for (link in cut) {
-                    val revoked = revokeConcordInvite(entry.id, link.token, refoundIfPrivatized = false)
-                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired an invite link minted at epoch ${link.epoch()}: $revoked" }
+                if (cut.isNotEmpty()) {
+                    val retired = retireConcordInviteLinks(entry, relays, cut)
+                    Log.i("Concord") { "Severing Refounding ${entry.id}: retired ${retired.size} of ${cut.size} invite links minted under older epochs" }
                 }
                 kept
             } else {
@@ -821,6 +887,10 @@ class AccountConcordActions(
      */
     suspend fun leaveConcordCommunity(communityId: String): Boolean {
         val entry = account.concordSessions.sessionFor(communityId)?.entry
+        // A join still being saved in the background must not land after this leave: stop it, and
+        // drop the pending join first, so a save already inside the List write sees it is gone.
+        pendingJoinSaves.remove(communityId)?.cancel()
+        account.concordChannelList.dropPendingJoin(communityId)
         if (entry != null && account.isWriteable()) {
             val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
             if (relays.isNotEmpty()) {
@@ -842,9 +912,7 @@ class AccountConcordActions(
                 }
             }
         }
-        val left = writeConcordList { it.unfollow(communityId) }
-        if (left) account.concordChannelList.dropPendingJoin(communityId)
-        return left
+        return writeConcordList { it.unfollow(communityId) }
     }
 
     /**
@@ -1753,9 +1821,10 @@ class AccountConcordActions(
     /**
      * Creates ([roleIdHex] null) or edits a legacy CORD-04 role: [name], [position] (1 and up, lower
      * ranks higher) and [permissions]. The fold honors a role edition only from a MANAGE_ROLES
-     * holder who strictly outranks both the role's old and new position, so anything else is
-     * refused here instead of published to be dropped. A Roles v2 community refuses it with
-     * [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
+     * holder who strictly outranks both the role's old and new position, and who holds every
+     * permission the role will carry, so anything else is refused here instead of published to be
+     * dropped. Permissions the editor lacks throw [ConcordNotice.RoleBitsNotHeld]; a Roles v2
+     * community refuses it with [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
      */
     suspend fun defineConcordRole(
         communityId: String,
@@ -1771,6 +1840,10 @@ class AccountConcordActions(
         val state = session.state.value ?: return false
         val existing = roleIdHex?.let { state.roles[it] ?: return false }
         if (!canEditConcordRole(state.authority, existing?.position, position)) return false
+        // The fold drops a role edition that hands out a bit its author does not hold.
+        if (!ConcordRoleRules.canGive(state.authority.effectivePermissions(account.signer.pubKey), permissions)) {
+            throw UserNoticeException(ConcordNotice.RoleBitsNotHeld)
+        }
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
         val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
         val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)
@@ -3276,13 +3349,16 @@ class AccountConcordActions(
             if (state.dissolved || !state.isRolesV2) continue
             // Each wrap is opened once by the session, and settled here for good once judged, so a
             // drain on every structural tick costs nothing for deliveries already seen.
+            val opened = ArrayList<Pair<HexKey, AdoptedAccessKey>>()
             for (pending in session.pendingAccessDeliveries()) {
                 val channelIdHex = pending.channelIdHex
                 val delivery = pending.delivery
                 val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
                 // Settled only once the key is written or the delivery definitively holds nothing for
                 // us: a signer that could not answer, or a List that could not be written, leaves it
-                // for the next drain (holders read us as served, so none would deliver again).
+                // for the next drain (holders read us as served, so none would deliver again). The
+                // keys it opens are written together below, in one List write for the community.
+                var collected = false
                 val settled =
                     ConcordAccessDrain.drainOne(
                         delivery = delivery,
@@ -3290,35 +3366,59 @@ class AccountConcordActions(
                         signer = account.signer,
                         heldEpoch = held?.epoch,
                         trusted = { ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer) },
-                    ) { key -> adoptAccessKey(session.entry.id, channelIdHex, key, delivery) }
-                if (settled) session.retireAccessWrap(pending.wrapId)
+                    ) { key ->
+                        collected = true
+                        opened += pending.wrapId to AdoptedAccessKey(channelIdHex, key, delivery)
+                        true
+                    }
+                if (settled && !collected) session.retireAccessWrap(pending.wrapId)
+            }
+            if (opened.isNotEmpty() && adoptAccessKeys(session.entry.id, opened.map { it.second })) {
+                opened.forEach { session.retireAccessWrap(it.first) }
             }
         }
     }
 
+    /** A Channel key an access delivery handed us, waiting for [adoptAccessKeys] to write it. */
+    private class AdoptedAccessKey(
+        val channelIdHex: HexKey,
+        val key: ByteArray,
+        val delivery: ChannelDelivery,
+    )
+
     /**
-     * Writes a delivered Channel key into the Community List. True once the List holds it (written
-     * now, or already held at that epoch or later); false when the write failed and must be retried.
+     * Writes the Channel keys a drain collected for [communityId] into the Community List in one
+     * write. True once the List holds them (written now, or already held at that epoch or later);
+     * false when the write failed and they must be collected again.
      */
-    private suspend fun adoptAccessKey(
+    private suspend fun adoptAccessKeys(
         communityId: String,
-        channelIdHex: HexKey,
-        key: ByteArray,
-        delivery: ChannelDelivery,
+        keys: List<AdoptedAccessKey>,
     ): Boolean {
-        var changed = false
+        val adopted = ArrayList<AdoptedAccessKey>()
         val written =
             try {
                 writeConcordList { list ->
+                    adopted.clear()
                     list.update(communityId) { cur ->
-                        ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))?.also { changed = true }
+                        // Oldest epoch first, so a newer delivery of the same Channel lands last.
+                        var next = cur
+                        for (k in keys.sortedBy { it.delivery.newEpoch }) {
+                            ConcordChannelKeyring.withChannelKey(next, PrivateChannelKey(k.channelIdHex.lowercase(), k.key.toHexKey(), k.delivery.newEpoch))?.let {
+                                next = it
+                                adopted += k
+                            }
+                        }
+                        next.takeIf { adopted.isNotEmpty() }
                     }
                 }
             } catch (e: SignerExceptions) {
-                Log.w("Concord", "Access delivery $communityId/$channelIdHex: Community List not signed, retrying later", e)
+                Log.w("Concord", "Access deliveries for $communityId: Community List not signed, retrying later", e)
                 false
             }
-        if (written && changed) Log.i("Concord") { "Access delivery $communityId/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
+        if (written) {
+            adopted.forEach { k -> Log.i("Concord") { "Access delivery $communityId/${k.channelIdHex}: adopted epoch ${k.delivery.newEpoch} from ${k.delivery.deliverer}" } }
+        }
         return written
     }
 

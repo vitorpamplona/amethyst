@@ -355,6 +355,14 @@ class ConcordCommunitySession(
     // re-judged on every fold while the buffer still holds them.
     private val heldBackWriterWraps = HashMap<HexKey, LinkedHashSet<HexKey>>()
 
+    // Wrap id -> the plane and rumor a held-back writer post opened to, so re-judging it on a fold
+    // is a ledger check, not another decryption. Holds exactly the ids [heldBackWriterWraps] does.
+    private val heldBackOpened = HashMap<HexKey, Pair<ChannelPlane, Event>>()
+
+    // A writer certificate's verdict (a Schnorr verify) by everything it is a function of, so a
+    // typing heartbeat or a re-judged post doesn't verify the same certificate again. Oldest first.
+    private val certificateVerdicts = LinkedHashMap<String, Boolean>()
+
     // Each Private Channel's access plane on Roles v2 (CORD-03 §5) -> (channel id, plane key). Key
     // deliveries land here; opening one takes the account signer, so they are buffered for a drain.
     @Volatile
@@ -1095,7 +1103,7 @@ class ConcordCommunitySession(
                 heldBackWriterWraps.mapNotNull { (channelIdHex, ids) ->
                     val buffer = channelWrapsById[channelIdHex] ?: return@mapNotNull null
                     // A held-back wrap the buffer has since trimmed can never be re-opened.
-                    ids.retainAll { it in buffer }
+                    ids.removeAll { id -> (id !in buffer).also { if (it) heldBackOpened.remove(id) } }
                     if (ids.isEmpty()) null else channelIdHex to ids.mapNotNull { buffer[it] }
                 }
             }
@@ -1123,7 +1131,7 @@ class ConcordCommunitySession(
         val authors = HashSet<HexKey>()
         val now = TimeUtils.now()
         for (wrap in wraps) {
-            val (plane, rumor) = openOnAny(wrap, planes) ?: continue
+            val (plane, rumor) = heldBackOpening(wrap, planes) ?: openOnAny(wrap, planes) ?: continue
             // A post at a writer address stands only inside its window, with a certificate from the
             // epoch's certifier, before any stop naming its author (CORD-03 §1). One that doesn't is
             // held back: a manager would see it flagged, everyone else nothing.
@@ -1132,8 +1140,10 @@ class ConcordCommunitySession(
                 lock.withLock {
                     if (stands) {
                         heldBackWriterWraps[channelIdHex]?.remove(wrap.id)
+                        heldBackOpened.remove(wrap.id)
                     } else {
                         heldBackWriterWraps.getOrPut(channelIdHex) { LinkedHashSet() }.add(wrap.id)
+                        heldBackOpened[wrap.id] = plane to rumor
                     }
                 }
                 // Re-judged on the next fold ([rejudgeHeldBackWriterPosts]): the ledger entry or
@@ -1195,7 +1205,30 @@ class ConcordCommunitySession(
             ConcordActions.openChannelRumorAnyExpiry(wrap, plane.key, plane.channelIdHex, plane.epoch, ChannelChat.PLANE_KINDS, plane.writerEpoch)?.let { plane to it }
         }
 
-    /** Whether a post that came to the writer address [address] of [channelIdHex] stands on the folded ledger. */
+    /** The opening a held-back writer post was kept with, when [wrap] is one and its plane is still among [planes]. */
+    private fun heldBackOpening(
+        wrap: Event,
+        planes: List<ChannelPlane>,
+    ): Pair<ChannelPlane, Event>? {
+        val opened = lock.withLock { heldBackOpened[wrap.id] } ?: return null
+        val (kept, rumor) = opened
+        // Planes are re-derived on every fold, and a GroupKey compares by reference: match by value.
+        val plane =
+            planes.firstOrNull {
+                it.channelIdHex == kept.channelIdHex &&
+                    it.epoch == kept.epoch &&
+                    it.writerEpoch == kept.writerEpoch &&
+                    it.key.publicKey.contentEquals(kept.key.publicKey) &&
+                    it.key.conversationKey.contentEquals(kept.key.conversationKey)
+            } ?: return null
+        return plane to rumor
+    }
+
+    /**
+     * Whether a post that came to the writer address [address] of [channelIdHex] stands on the folded
+     * ledger. The certificate is judged through [certificateHolds] (cached), then quartz's rule runs
+     * on the window with its certifier cleared, so only the time and the stop list are re-checked.
+     */
     private fun writerPostStands(
         channelIdHex: HexKey,
         address: HexKey,
@@ -1208,7 +1241,30 @@ class ConcordCommunitySession(
         val authority = folded.authority
         val privileged = authority.isOwner(author) || (!authority.isBanned(author) && authority.hasPermission(author, ConcordPermissions.MANAGE_CHANNELS))
         val ms = ChannelChat.orderingMs(rumor) ?: return false
-        return ledger.postStands(communityIdBytes, window, author, ms, ConcordWritersLedger.wcertOf(rumor), privileged)
+        val certifier = window.certifier
+        if (!privileged && certifier != null) {
+            val certificate = ConcordWritersLedger.wcertOf(rumor) ?: return false
+            if (!certificateHolds(channelIdHex, window.epoch, author, certifier, certificate)) return false
+        }
+        return ledger.postStands(communityIdBytes, window.copy(certifier = null), author, ms, null, privileged)
+    }
+
+    /** [ConcordWritersLedger.verifyCertificate], remembered for the last [MAX_CERTIFICATE_VERDICTS] certificates. */
+    private fun certificateHolds(
+        channelIdHex: HexKey,
+        epoch: Long,
+        author: HexKey,
+        certifier: HexKey,
+        certificate: String,
+    ): Boolean {
+        val key = "$channelIdHex:$epoch:${author.lowercase()}:${certifier.lowercase()}:$certificate"
+        lock.withLock { certificateVerdicts[key] }?.let { return it }
+        val holds = ConcordWritersLedger.verifyCertificate(communityIdBytes, channelIdHex.hexToByteArray(), epoch, author, certifier, certificate)
+        lock.withLock {
+            certificateVerdicts[key] = holds
+            while (certificateVerdicts.size > MAX_CERTIFICATE_VERDICTS) certificateVerdicts.remove(certificateVerdicts.keys.first())
+        }
+        return holds
     }
 
     /** Records [rumor]'s author as seen at its CORD-02 §4 time (observation counts forward only). */
@@ -1388,8 +1444,16 @@ class ConcordCommunitySession(
     // Channel id -> rumor id -> author of each rumor a hide keeps out of the store, re-judged per fold.
     private val hiddenByModeration = HashMap<HexKey, LinkedHashMap<HexKey, HexKey>>()
 
+    // The fold and hide revision [releaseUncoveredHides] last re-judged [hiddenByModeration] against.
+    private var lastReleaseJudgedAgainst: Pair<ConcordCommunityState?, Long>? = null
+
     // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
     private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
+
+    // Channel id -> the held hides (by deletion id, oldest first) whose hider could not moderate the
+    // channel when it was held: a member's own deletes, mostly. Evicted before any other, so a flood
+    // of them can't push out a moderator's hide.
+    private val unprivilegedHides = HashMap<HexKey, LinkedHashSet<HexKey>>()
 
     private val _moderationHideRevision = MutableStateFlow(0L)
 
@@ -1419,17 +1483,46 @@ class ConcordCommunitySession(
         held[hide.deletionId] = hide
         val byTarget = hidesByTarget.getOrPut(hide.channelIdHex) { HashMap() }
         hide.targets.forEach { byTarget.getOrPut(it) { ArrayList(1) }.add(hide) }
-        // Bounded like the wrap buffer: any member can post deletes, so the oldest go first.
+        val unprivileged = unprivilegedHides.getOrPut(hide.channelIdHex) { LinkedHashSet() }
+        if (!mayModerate(hide)) unprivileged.add(hide.deletionId)
+        // Bounded like the wrap buffer: any member can post deletes. The oldest of those whose hider
+        // can't moderate here go first, so only moderators' own hides ever push each other out.
         while (held.size > MAX_MODERATION_HIDES_PER_CHANNEL) {
-            val oldest = held.remove(held.keys.first()) ?: break
-            oldest.targets.forEach { target ->
+            val victim = nextEvictionLocked(held, unprivileged) ?: break
+            held.remove(victim.deletionId)
+            unprivileged.remove(victim.deletionId)
+            victim.targets.forEach { target ->
                 val list = byTarget[target] ?: return@forEach
-                list.remove(oldest)
+                list.remove(victim)
                 if (list.isEmpty()) byTarget.remove(target)
             }
         }
         return true
     }
+
+    /**
+     * The hide to evict from [held]: the oldest of [unprivileged] whose hider still can't moderate
+     * (one granted the bit since it was held, or held before the first fold, is promoted out of
+     * [unprivileged] here), else the oldest of all. Caller holds [lock].
+     */
+    private fun nextEvictionLocked(
+        held: LinkedHashMap<HexKey, ConcordModerationHide>,
+        unprivileged: LinkedHashSet<HexKey>,
+    ): ConcordModerationHide? {
+        while (unprivileged.isNotEmpty()) {
+            val id = unprivileged.first()
+            unprivileged.remove(id)
+            val hide = held[id] ?: continue
+            if (!mayModerate(hide)) return hide
+        }
+        return held.values.firstOrNull()
+    }
+
+    /**
+     * Whether the current fold would honor [hide]'s hider over a member who holds no role: they may
+     * moderate the channel at all. False before the Control Plane folds.
+     */
+    private fun mayModerate(hide: ConcordModerationHide): Boolean = _state.value?.honorsModerationHide(hide.hider, ROLELESS_MEMBER, hide.channelIdHex, hide.citation) == true
 
     /**
      * True when a held moderation hide on [channelIdHex] names [rumorId], written by [author], and
@@ -1472,7 +1565,15 @@ class ConcordCommunitySession(
      * longer holds can't be reopened and is let go.
      */
     private fun releaseUncoveredHides() {
-        val hidden = lock.withLock { hiddenByModeration.flatMap { (channelIdHex, byId) -> byId.map { Triple(channelIdHex, it.key, it.value) } } }
+        // A hide only comes undone when the fold moves (the state flow keeps the same instance for an
+        // equal fold), or a new hide is held: a refold that changed nothing re-judges nothing.
+        val judgedAgainst = _state.value to _moderationHideRevision.value
+        val hidden =
+            lock.withLock {
+                if (lastReleaseJudgedAgainst?.let { it.first === judgedAgainst.first && it.second == judgedAgainst.second } == true) return
+                lastReleaseJudgedAgainst = judgedAgainst
+                hiddenByModeration.flatMap { (channelIdHex, byId) -> byId.map { Triple(channelIdHex, it.key, it.value) } }
+            }
         if (hidden.isEmpty()) return
         val uncovered = hidden.filter { (channelIdHex, rumorId, author) -> !isHiddenByModeration(channelIdHex, rumorId, author) }
         if (uncovered.isEmpty()) return
@@ -1604,6 +1705,13 @@ class ConcordCommunitySession(
 
         /** Moderation hides held per channel (CORD-03 §3); any member can post a delete, so this is bounded. */
         const val MAX_MODERATION_HIDES_PER_CHANNEL = 2000
+
+        // A key no member holds: never the owner, never ranked, so a hide over it is honored exactly
+        // when its hider may moderate the channel.
+        private const val ROLELESS_MEMBER = ""
+
+        /** Writer-certificate verdicts a session remembers (see [certificateHolds]). */
+        const val MAX_CERTIFICATE_VERDICTS = 1024
 
         /** How many hidden rumors per channel a session re-judges on each fold. */
         const val MAX_HIDDEN_RUMORS_PER_CHANNEL = 4000

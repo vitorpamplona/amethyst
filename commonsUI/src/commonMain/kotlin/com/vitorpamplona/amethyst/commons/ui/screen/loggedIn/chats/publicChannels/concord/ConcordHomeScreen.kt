@@ -222,6 +222,30 @@ fun ConcordHomeScreen(
                 }
             }
 
+        // Each open community's readable channels, most-recently-active first. Worked out here, not
+        // in the LazyColumn builder, which re-runs on every recomposition: a key lookup per Private
+        // Channel and a sort per community each time.
+        val channelsByCommunity =
+            remember(sorted, revision, expandStates) {
+                sorted
+                    .filter { (expandStates[it.id] ?: ChannelExpand.CLOSED) != ChannelExpand.CLOSED }
+                    .associate { entry ->
+                        val state =
+                            account.concordSessions
+                                .sessionFor(entry.id)
+                                ?.state
+                                ?.value
+                        entry.id to
+                            state
+                                ?.channels
+                                ?.entries
+                                ?.filter { (key, ch) -> !ch.definition.private || ConcordChannelKeyring.heldKey(entry, key) != null }
+                                ?.sortedByDescending {
+                                    LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
+                                }.orEmpty()
+                    }
+            }
+
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
             // Pending Direct Invites (CORD-05 §6), parked until the user accepts or declines.
             concordPendingDirectInvites(invites, accountViewModel, nav)
@@ -254,12 +278,7 @@ fun ConcordHomeScreen(
                     // Channels, most-recently-active first, each with its last message + unread state.
                     // In UNREAD mode a row hides itself unless it has new messages (peek).
                     // Private Channels without a held key are unreadable and nameless: left out, as Armada does.
-                    val channels =
-                        state.channels.entries
-                            .filter { (key, ch) -> !ch.definition.private || ConcordChannelKeyring.heldKey(entry, key) != null }
-                            .sortedByDescending {
-                                LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
-                            }
+                    val channels = channelsByCommunity[entry.id].orEmpty()
                     items(channels, key = { "${entry.id}/${it.key}" }) { ch ->
                         val def = ch.value.definition
                         ConcordChannelRow(

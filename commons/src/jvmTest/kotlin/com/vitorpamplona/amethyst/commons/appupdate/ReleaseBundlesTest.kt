@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.commons.appupdate
 
 import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
 import java.io.File
 import java.net.InetSocketAddress
 import java.nio.file.Files
@@ -37,6 +39,7 @@ import kotlin.test.assertTrue
 class ReleaseBundlesTest {
     private val dir = Files.createTempDirectory("release-bundles").toFile()
     private val signer = NostrSignerInternal(KeyPair())
+    private val blossom = BlossomClient(OkHttpClient())
     private val fixture = File(requireNotNull(javaClass.getResource("/appupdate/fixture-signed.apk")).toURI())
 
     @AfterTest
@@ -108,15 +111,15 @@ class ReleaseBundlesTest {
             server.start()
             try {
                 val base = "http://127.0.0.1:${server.address.port}"
-                assertEquals("$base/$sha256", ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer))
+                assertEquals("$base/$sha256", ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer, blossom))
                 assertTrue(authorization!!.startsWith("Nostr "), "BUD-02 upload auth")
                 assertEquals(sha256, contentDigest, "cdn.zapstore.dev refuses an upload without Content-Digest")
                 assertEquals(sha256, xSha256)
 
                 returnedHash = "0".repeat(64)
-                assertFailsWith<ReleaseFilesException> { ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer) }
+                assertFailsWith<ReleaseFilesException> { ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer, blossom) }
 
-                assertEquals("https://cdn.example/$sha256", ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", "https://cdn.example/", signer, dryRun = true))
+                assertEquals("https://cdn.example/$sha256", ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", "https://cdn.example/", signer, blossom, dryRun = true))
             } finally {
                 server.stop(0)
             }
@@ -127,9 +130,9 @@ class ReleaseBundlesTest {
         runTest {
             File(dir, "icon.png").writeBytes(byteArrayOf(1, 2, 3))
             val config = ZapstoreConfig(icon = "./icon.png", images = listOf("https://example.com/shot.png"))
-            assertFailsWith<ReleaseFilesException> { ReleaseBundles.listingMedia(config, dir, null, signer) }
+            assertFailsWith<ReleaseFilesException> { ReleaseBundles.listingMedia(config, dir, null, signer, blossom) }
 
-            val media = ReleaseBundles.listingMedia(config, dir, "https://cdn.example", signer, dryRun = true)
+            val media = ReleaseBundles.listingMedia(config, dir, "https://cdn.example", signer, blossom, dryRun = true)
             assertTrue(media.iconUrl!!.startsWith("https://cdn.example/"))
             assertEquals(listOf("https://example.com/shot.png"), media.imageUrls)
         }

@@ -152,11 +152,11 @@ object ReleasesCommands {
                             }
                         val mirrored =
                             apks.map { (file, apk) ->
-                                if (blossom == null) apk else apk.copy(urls = apk.urls + ReleaseBundles.mirrorToBlossom(file, AndroidRelease.APK_MIME_TYPE, blossom, signer, dryRun = dryRun, sha256 = apk.sha256))
+                                if (blossom == null) apk else apk.copy(urls = apk.urls + ReleaseBundles.mirrorToBlossom(file, AndroidRelease.APK_MIME_TYPE, blossom, signer, ctx.blossom, dryRun = dryRun, sha256 = apk.sha256))
                             }
                         val media =
                             if (withListing) {
-                                ReleaseBundles.listingMedia(config, yaml.absoluteFile.parentFile, blossom, signer, dryRun)
+                                ReleaseBundles.listingMedia(config, yaml.absoluteFile.parentFile, blossom, signer, ctx.blossom, dryRun)
                             } else {
                                 null
                             }

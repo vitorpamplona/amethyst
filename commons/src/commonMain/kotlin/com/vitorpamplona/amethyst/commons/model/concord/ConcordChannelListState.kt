@@ -169,6 +169,9 @@ class ConcordChannelListState(
         pendingJoins.update { it - communityId }
     }
 
+    /** Whether [communityId] is a join the List has not taken yet (see [addPendingJoin]). */
+    fun isPendingJoin(communityId: String): Boolean = communityId in pendingJoins.value
+
     /** Whether the List as read from the fragments (not a pending join) holds [communityId]. */
     suspend fun awaitWritten(communityId: String) {
         liveDocument.first { doc -> doc.entries.any { it.id == communityId } }
@@ -292,13 +295,26 @@ class ConcordChannelListState(
      * without destroying a fragment, and [ConcordListTooLargeException] when a fragment would
      * pass the event ceiling.
      */
-    suspend fun follow(entry: ConcordCommunityListEntry): List<Event> =
+    suspend fun follow(entry: ConcordCommunityListEntry): List<Event> = writeLock.withLock { followLocked(entry) }
+
+    /**
+     * [follow] for a pending join (see [addPendingJoin]), decided inside the write lock: null, and
+     * nothing written, when [entry] is no longer pending because the user left it meanwhile. A leave
+     * drops the pending join before it takes the lock, so a background save that has not written yet
+     * can never re-join a community the user just left.
+     */
+    suspend fun followPendingJoin(entry: ConcordCommunityListEntry): List<Event>? =
         writeLock.withLock {
-            val (set, doc) = snapshot()
-            val removedAt = doc.residue.removedAt(entry.id)
-            val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
-            write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
+            if (!isPendingJoin(entry.id)) return@withLock null
+            followLocked(entry)
         }
+
+    private suspend fun followLocked(entry: ConcordCommunityListEntry): List<Event> {
+        val (set, doc) = snapshot()
+        val removedAt = doc.residue.removedAt(entry.id)
+        val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
+        return write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
+    }
 
     /**
      * Read-modify-write one membership: [transform] receives the entry for [communityId] **as the

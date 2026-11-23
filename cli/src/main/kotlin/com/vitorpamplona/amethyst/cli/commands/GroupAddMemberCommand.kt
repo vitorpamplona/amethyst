@@ -153,7 +153,7 @@ object GroupAddMemberCommand {
                         buildSet {
                             addAll(recipient.dmInboxOrFallback())
                             if (isEmpty() && !recipient.dmInboxWithheld) {
-                                addAll(ctx.fallbackRelays(DefaultDMRelayList.toSet()))
+                                addAll(Context.fallbackRelays(DefaultDMRelayList.toSet()))
                             }
                             addAll(ctx.outboxRelays())
                         }

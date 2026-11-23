@@ -87,6 +87,15 @@ class RelayGroupCommandResultsTest {
     }
 
     @Test
+    fun aDmCommandsOkSaysWhetherItMadeANewDm() {
+        assertEquals(true, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\",\"created\":true}"))
+        assertEquals(true, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\", \"created\": true}"))
+        assertEquals(false, buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\",\"created\":false}"))
+        assertNull(buzzDmCreatedFromOk("response:{\"channel_id\":\"$dm\"}"))
+        assertNull(buzzDmCreatedFromOk(null))
+    }
+
+    @Test
     fun anAgentsHistoryTagRefusalAsksForAnUntaggedAdd() {
         assertTrue(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, ONLY_PEOPLE_SHARE_HISTORY))))
         assertFalse(buzzDmAddRefusedHistoryTag(mapOf(relay to PublishResult(false, "forbidden: not a member"))))

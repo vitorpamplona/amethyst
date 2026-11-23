@@ -87,6 +87,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_large
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_many
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_unavailable
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_bits_not_held
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_title
 import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_grants_unsupported
 import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_private_channel_unsupported
 import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_roles_unsupported
@@ -320,6 +322,7 @@ fun UserNotice.text(): NoticeText =
         ConcordNotice.ChannelKeyRotated -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
         ConcordNotice.ChannelKeyRotationFailed -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
         ConcordNotice.RolesUpdateFailed -> text(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)
+        ConcordNotice.RoleBitsNotHeld -> text(Res.string.concord_role_editor_title, Res.string.concord_role_editor_bits_not_held)
         ConcordNotice.KickFailed -> text(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
         is ConcordNotice.RolesV2Unsupported ->
             text(

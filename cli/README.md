@@ -670,7 +670,7 @@ screen speaks.
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 | `amy relaygroup pin` / `unpin` on Buzz | Buzz pins are NIP-PM: one 40010 pin / 40011 unpin command naming the message (by id; no `a` pins), allowed to anyone who may post in the channel. The relay rewrites its relay-signed 30623 list, read back into `pins`. |
-| `amy relaygroup pins RELAY GID [--timeout S]` | The pinned messages in display order: the 39005 (NIP-29, `#d`) or Buzz's 30623 (`#h`), only when signed by the relay's NIP-11 `self`. |
+| `amy relaygroup pins RELAY GID [--timeout S]` | The pinned messages in display order: the 39005 (NIP-29, `#d`) or Buzz's 30623 (`#h`), only when signed by the relay's NIP-11 `self`; a relay with no `self` answers `verified: false` (any author's newest list). |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 

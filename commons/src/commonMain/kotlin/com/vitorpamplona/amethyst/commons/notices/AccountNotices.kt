@@ -129,6 +129,12 @@ sealed interface ConcordNotice : UserNotice {
 
     data object RolesUpdateFailed : ConcordNotice
 
+    /**
+     * A role edit that would give a permission the editor does not hold itself: every reader drops
+     * such an edition (CORD-04 role gate), so it was refused rather than published.
+     */
+    data object RoleBitsNotHeld : ConcordNotice
+
     data object KickFailed : ConcordNotice
 
     /**

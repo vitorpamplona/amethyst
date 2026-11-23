@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
@@ -179,8 +180,9 @@ class Context(
             // per-user URLs on one host — each a fresh lookup. SurgeDns (shared with
             // the Android app) collapses all of it: single-flight per host,
             // stale-while-revalidate positives, 10-min negative TTL, persisted
-            // across runs via [dnsStore].
-            .dns(surgeDns)
+            // across runs via [dnsStore]. [LocalOnly.dns] judges the addresses it hands out, so
+            // AMY_LOCAL_ONLY covers a persisted answer too, not only a fresh lookup.
+            .dns(LocalOnly.dns(surgeDns))
             // Virtual threads: OkHttp runs each websocket's reader loop inside its
             // call, so every open relay socket holds a dispatcher thread for life,
             // and the default executor starts each as a platform thread inside the
@@ -195,6 +197,12 @@ class Context(
                     maxRequestsPerHost = 16
                 },
             ).build()
+
+    /**
+     * The Blossom client every command uses: it rides [okhttp], so [LocalOnly] covers Blossom
+     * uploads and downloads the same way it covers relay sockets.
+     */
+    val blossom: BlossomClient by lazy { BlossomClient(okhttp) }
 
     val client: NostrClient =
         NostrClient(
@@ -376,7 +384,7 @@ class Context(
             // Publish-before-apply: a group-state change becomes canonical only
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
-            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays, untilFirstAccept = true) },
+            MarmotPublisher { event, relays -> client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true) },
             publishObligationStore,
             ingestDedupStore,
             deviceGroupConfig =
@@ -641,11 +649,18 @@ class Context(
     }
 
     /**
-     * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
-     * relays to use instead. Every place amy would fall back to a public default set asks this, so
-     * an offline harness's accounts stay on its own relays even when nobody advertised a list.
+     * The relays of [relays] this run may dial: under AMY_LOCAL_ONLY a refused one would only fail,
+     * and the pool would wait out its timeout. Every relay funnel here (publish, the drains, the page
+     * walks, request/response, the Marmot publisher) filters through it.
      */
-    fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
+    suspend fun dialable(relays: Collection<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = LocalOnly.dialable(relays)
+
+    /** [filters] keyed only by the relays [dialable] keeps. */
+    suspend fun <V> dialable(filters: Map<NormalizedRelayUrl, V>): Map<NormalizedRelayUrl, V> {
+        if (!LocalOnly.enabled) return filters
+        val keep = dialable(filters.keys)
+        return filters.filterKeys { it in keep }
+    }
 
     /**
      * Publish an event to the given relays and wait for OK confirmations.
@@ -664,8 +679,8 @@ class Context(
         verifyAndStore(event)
         // Under AMY_LOCAL_ONLY a refused relay is answered here, without dialing it: the socket
         // would only fail, and the pool would wait out the timeout on it.
-        val (allowed, refused) = relayList.partition { LocalOnly.allowsRelay(it) }
-        val refusedResults = refused.associateWith { PublishResult(false, "${LocalOnly.ENV}: not on this machine or its private network") }
+        val allowed = dialable(relayList)
+        val refusedResults = (relayList - allowed).associateWith { PublishResult(false, "${LocalOnly.ENV}: not on this machine or its private network") }
         if (allowed.isEmpty()) return refusedResults
 
         // NIP-42 write path: an auth-required relay refuses the FIRST publish `auth-required:`, and the
@@ -674,7 +689,7 @@ class Context(
         // `duplicate:`. [publishAwaitingOkThroughAuth] keeps one OK listener open across the AUTH and
         // warms it up with a `pendingOnAuthRequired` read, the same code the app runs. A relay that
         // refuses our AUTH `blocked:` (a banned key) answers with that at once.
-        return client.publishAwaitingOkThroughAuth(event, allowed.toSet(), timeoutSecs) { needAuth ->
+        return client.publishAwaitingOkThroughAuth(event, allowed, timeoutSecs) { needAuth ->
             val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
             drain(needAuth.associateWith { warmFilter }, idleTimeoutMs = 8_000, pendingOnAuthRequired = true)
         } + refusedResults
@@ -728,7 +743,7 @@ class Context(
         pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
-            filters = filters.filterKeys { LocalOnly.allowsRelay(it) },
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
         ) { _, event -> verifyAndStore(event) }
@@ -763,7 +778,7 @@ class Context(
         onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
-            filters = filters,
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
@@ -790,7 +805,7 @@ class Context(
         onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
     ): Int =
         client.streamAllPagesFromPoolWithHooks(
-            filters = filters,
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
@@ -810,10 +825,11 @@ class Context(
         responseFilter: Filter,
         timeoutMs: Long = 15_000,
     ): Event? {
-        if (relays.isEmpty()) return null
+        val reachable = dialable(relays)
+        if (reachable.isEmpty()) return null
         val reply = CompletableDeferred<Event>()
         val subId = newSubId()
-        val filters = relays.associateWith { listOf(responseFilter) }
+        val filters = reachable.associateWith { listOf(responseFilter) }
         val listener =
             object : SubscriptionListener {
                 override suspend fun onEvent(
@@ -827,7 +843,7 @@ class Context(
             }
         client.subscribe(subId, filters, listener)
         return try {
-            publish(request, relays)
+            publish(request, reachable)
             val event = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
             if (verifyAndStore(event)) event else null
         } finally {
@@ -1082,13 +1098,26 @@ class Context(
     }
 
     companion object {
-        /** The relays [BOOTSTRAP_ENV] names, or null when it is unset. */
-        fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
-            System
-                .getenv(BOOTSTRAP_ENV)
-                ?.split(',')
-                ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-                ?.toSet()
+        /**
+         * The relays [BOOTSTRAP_ENV] names, or null when it is unset or blank. Throws
+         * [IllegalArgumentException] (exit 2, `bad_args`) when it is set but names no valid relay:
+         * `amy create` would otherwise sign relay lists that list nothing and exit 0.
+         */
+        fun bootstrapOverride(): Set<NormalizedRelayUrl>? = parseBootstrapOverride(System.getenv(BOOTSTRAP_ENV))
+
+        internal fun parseBootstrapOverride(raw: String?): Set<NormalizedRelayUrl>? {
+            if (raw.isNullOrBlank()) return null
+            val relays = raw.split(',').mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+            require(relays.isNotEmpty()) { "$BOOTSTRAP_ENV is set but names no valid relay: $raw" }
+            return relays
+        }
+
+        /**
+         * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
+         * relays to use instead. Every place amy would fall back to a public default set asks this, so
+         * an offline harness's accounts stay on its own relays even when nobody advertised a list.
+         */
+        fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
 
         /** Replaces [bootstrapRelays]' seed set, comma-separated. */
         const val BOOTSTRAP_ENV = "AMY_BOOTSTRAP_RELAYS"

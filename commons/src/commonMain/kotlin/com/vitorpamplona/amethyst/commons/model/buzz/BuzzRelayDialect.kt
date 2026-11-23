@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 
 import com.vitorpamplona.quartz.buzz.workspace.BuzzChannelLabels
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,9 +81,9 @@ object BuzzRelayDialect {
     fun looksLikeBuzzGroupState(event: Event?): Boolean {
         if (event == null) return false
         if (BuzzChannelLabels.looksLikeBuzzGroupState(event)) return true
-        val firstTopic = event.tags.firstOrNull { it.size > 1 && it[0] == "t" }?.get(1) ?: return false
+        val firstTopic = event.tags.fastFirstOrNull { it.size > 1 && it[0] == "t" }?.get(1) ?: return false
         if (firstTopic !in BuzzChannelLabels.RESERVED) return false
-        val groupId = event.tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: return false
+        val groupId = event.tags.fastFirstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: return false
         return UUID.matches(groupId)
     }
 

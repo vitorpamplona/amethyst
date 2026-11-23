@@ -527,14 +527,25 @@ fun ConcordChannelListScreen(
         // A Private Channel this account holds no key for can't be read or posted in, and its
         // definition is sealed, so all a row could show is its 64-char id. Armada hides them; so
         // do we, except for those who manage channels, who see a locked row they can act on.
-        val heldEntry = session?.entry
+        // Which Private Channels this account holds a key for, worked out once per fold, not per row
+        // on every recomposition.
+        val heldKeys =
+            remember(state, session) {
+                val heldEntry = session?.entry
+                state
+                    ?.channels
+                    ?.filter { (key, ch) -> ch.definition.private && heldEntry != null && ConcordChannelKeyring.heldKey(heldEntry, key) != null }
+                    ?.keys
+                    .orEmpty()
+            }
         val channels =
-            state
-                ?.channels
-                ?.entries
-                ?.filter { (key, ch) ->
-                    canManageChannels || !ch.definition.private || (heldEntry != null && ConcordChannelKeyring.heldKey(heldEntry, key) != null)
-                }.orEmpty()
+            remember(state, heldKeys, canManageChannels) {
+                state
+                    ?.channels
+                    ?.entries
+                    ?.filter { (key, ch) -> canManageChannels || !ch.definition.private || key in heldKeys }
+                    .orEmpty()
+            }
         if (channels.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
@@ -565,7 +576,7 @@ fun ConcordChannelListScreen(
                                 .sorted()
                         }
                     // A rotation needs the current key (CORD-06): only a holder can rotate.
-                    val holdsKey = def.private && session?.entry?.let { ConcordChannelKeyring.heldKey(it, entry.key) } != null
+                    val holdsKey = def.private && entry.key in heldKeys
                     ConcordChannelListRow(
                         communityId = communityId,
                         channelKey = entry.key,

@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.marmot.OutboundGroupEvent
@@ -141,7 +140,7 @@ object GroupMetadataCommands {
                 try {
                     tmp.writeBytes(ciphertext)
                     val auth = BlossomAuth.createUploadAuth(imageHash, ciphertext.size.toLong(), "Group image", uploadSigner)
-                    val result = BlossomClient().upload(tmp, "application/octet-stream", server, auth)
+                    val result = ctx.blossom.upload(tmp, "application/octet-stream", server, auth)
                     if (result.sha256 != null && result.sha256 != imageHash) {
                         throw BlobHashMismatch("blossom returned ${result.sha256}, expected $imageHash")
                     }
@@ -177,7 +176,7 @@ object GroupMetadataCommands {
             val view = ctx.marmot.groupView(gid) ?: return Output.error("not_member", "not a member of group $gid")
             val image = view.image ?: return Output.error("not_found", "group $gid has no Blossom avatar")
             val ciphertext =
-                BlossomClient().download(BlossomServerUrl.blob(server, image.hash))
+                ctx.blossom.download(BlossomServerUrl.blob(server, image.hash))
                     ?: return Output.error("download_failed", "blob ${image.hash} not on $server")
             val plaintext =
                 image.cipher().decryptOrNull(ciphertext)

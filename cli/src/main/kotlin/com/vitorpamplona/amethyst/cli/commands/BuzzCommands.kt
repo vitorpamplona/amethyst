@@ -24,8 +24,11 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.BuzzDmAddResult
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
 import com.vitorpamplona.amethyst.commons.model.buzzDmAddRefusedHistoryTag
+import com.vitorpamplona.amethyst.commons.model.buzzDmAddResult
+import com.vitorpamplona.amethyst.commons.model.buzzDmCreatedFromOk
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
@@ -313,7 +316,7 @@ object BuzzCommands {
                 signed = ctx.signer.sign(dmAddMemberTemplate(channelId, member, sentHistory))
                 ack = ctx.publish(signed, setOf(relay))
             }
-            if (ack.values.none { it.accepted } && ack.values.any { it.message.startsWith(BuzzDmRules.NEEDS_HISTORY_CHOICE) }) {
+            if (buzzDmAddResult(ack, relay, fromChannelId = channelId) == BuzzDmAddResult.NeedsHistoryChoice) {
                 return Output.error(
                     "needs_history_choice",
                     "adding $member would let them see this DM's history: send again with --history include or --history exclude",
@@ -332,7 +335,8 @@ object BuzzCommands {
                     "history" to sentHistory,
                     "published" to ack.values.any { it.accepted },
                     "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
-                    "created" to okMessage?.contains("\"created\":true"),
+                    // false, not null, for an OK that doesn't say: the key's shape before the parser.
+                    "created" to (buzzDmCreatedFromOk(okMessage) ?: okMessage?.let { false }),
                     "relay_message" to okMessage,
                 ),
             )

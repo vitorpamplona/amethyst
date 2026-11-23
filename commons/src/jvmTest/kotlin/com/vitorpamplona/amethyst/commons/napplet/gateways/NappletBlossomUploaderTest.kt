@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -39,7 +40,7 @@ class NappletBlossomUploaderTest {
         private val answer: BlossomUploadResult? = null,
         private val refusal: String? = null,
         private val held: Set<String> = emptySet(),
-    ) : BlossomClient() {
+    ) : BlossomClient(OkHttpClient()) {
         var uploads = 0
 
         override suspend fun upload(
