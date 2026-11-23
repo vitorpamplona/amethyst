@@ -186,6 +186,24 @@ class ClaudeCodeConnectionTest {
         }
 
     @Test
+    fun aGuardThatThrowsDeniesAndTheSessionGoesOn() =
+        runTest {
+            val transport = FakeTransport()
+            val connection = ClaudeCodeConnection(transport, backgroundScope, commandGuard = { throw IllegalStateException("broken") })
+            transport.emit("""{"type":"control_request","request_id":"h1","request":{"subtype":"hook_callback","callback_id":"${ClaudeCodeConnection.GUARD_HOOK_ID}","input":{"tool_input":{"command":"ls"}}}}""")
+            transport.emit("""{"type":"control_request","request_id":"h2","request":{"subtype":"hook_callback","callback_id":"${ClaudeCodeConnection.GUARD_HOOK_ID}","input":{"tool_input":{"command":"pwd"}}}}""")
+            transport.end()
+            connection.messages.toList()
+
+            val answers = transport.written.map { obj(it)["response"]!!.jsonObject }
+            assertEquals(listOf("h1", "h2"), answers.map { it["request_id"]!!.jsonPrimitive.content })
+            answers.forEach {
+                val output = it["response"]!!.jsonObject["hookSpecificOutput"]!!.jsonObject
+                assertEquals("deny", output["permissionDecision"]!!.jsonPrimitive.content)
+            }
+        }
+
+    @Test
     fun withoutAGuardTheHandshakeRegistersNoHook() =
         runTest {
             val transport = FakeTransport()

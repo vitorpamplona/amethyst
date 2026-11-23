@@ -43,8 +43,14 @@ class SessionCommandGuardTest {
             "gh api repos/o/r/pulls --raw-field title=x",
             "gh api repos/o/r/pulls --field=title=x",
             "gh api repos/o/r/pulls -ftitle=x",
-            // A GET with fields is still refused: only a bare read passes.
-            "gh api -X GET repos/o/r/pulls -F per_page=100",
+            // A body can't be a read, whatever the method.
+            "gh api -X GET repos/o/r/pulls --input body.json",
+            "gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }'",
+            "gh api graphql -f query='  # merge it\n  mutation { mergePullRequest(input: {}) { clientMutationId } }'",
+            "gh api graphql -f query='query A { viewer { login } } mutation B { x }'",
+            // A query from a file can't be checked.
+            "gh api graphql -F query=@q.graphql",
+            "gh api graphql --input q.json",
         )
 
     @Test
@@ -57,6 +63,11 @@ class SessionCommandGuardTest {
             "gh api --method=get repos/o/r/pulls",
             "gh api repos/o/r/pulls --jq '.[].title'",
             "gh api -H 'Accept: application/vnd.github+json' --paginate repos/o/r/issues",
+            // Fields of an explicit GET are query parameters.
+            "gh api -X GET repos/o/r/pulls -F per_page=100",
+            "gh api --method GET search/issues -f q='repo:o/r is:open'",
+            "gh api graphql -f query='query { viewer { login } }'",
+            "gh api graphql -f query='{ repository(owner: \"o\", name: \"r\") { id } }' -f owner=o",
         )
 
     @Test
@@ -76,6 +87,16 @@ class SessionCommandGuardTest {
             "gh pr edit 1 -B dev",
             "gh pr edit 1 --base=dev",
             "gh release create v1",
+            "gh workflow run ci.yml",
+            "gh workflow enable ci.yml",
+            "gh workflow disable ci.yml",
+            "gh secret set TOKEN",
+            "gh secret list",
+            "gh variable set NAME",
+            "gh repo create o/new --public",
+            "gh repo fork",
+            "gh run cancel 1",
+            "gh run rerun 1",
         )
 
     @Test
@@ -102,6 +123,22 @@ class SessionCommandGuardTest {
             "echo $(gh api -X PUT repos/o/r/pulls/1/merge)",
             "env FOO=1 gh pr merge 1",
             "command gh pr merge 1",
+            "echo \"$(date)\" \"$(gh pr merge 1)\"",
+            "echo `date` `gh pr merge 1`",
+            "git commit -m \"$(gh pr merge 1)\"",
+            "(cd x && gh pr merge 1)",
+            "cat <<EOF\n$(gh pr merge 1)\nEOF",
+        )
+
+    @Test
+    fun textThatOnlyMentionsACommandGoes() =
+        allowed(
+            "git commit -m 'never run `gh pr merge 1`'",
+            "git commit -m 'or $(gh pr merge 1)'",
+            "gh pr create --title x --body \"$(cat <<'EOF'\nDon't run `gh pr merge` here (it's the user's).\nEOF\n)\"",
+            "gh pr create --title x --body \"$(cat <<\"EOF\"\nthen $(gh pr merge 1)\nEOF\n)\"",
+            "cat > notes.md <<EOF\n# Notes\ngh pr merge 1\ngit push --no-verify\nEOF",
+            "cat > notes.md <<-'EOF'\n\tgh pr merge 1\n\tEOF\necho done",
         )
 
     @Test
@@ -113,6 +150,10 @@ class SessionCommandGuardTest {
             "unset GIT_CONFIG_COUNT; git push origin agent/x",
             "GIT_CONFIG_COUNT=0 git push origin agent/x",
             "export GIT_CONFIG_COUNT=0",
+            "export -n GIT_CONFIG_COUNT",
+            "declare -x GIT_CONFIG_COUNT=0",
+            "env GIT_CONFIG_COUNT=0 git push",
+            "env -uGIT_CONFIG_COUNT git push",
             "GIT_CONFIG_PARAMETERS=\"'hook.amethyst-push-guard.enabled'='false'\" git push",
             "git push --no-verify origin agent/x",
             "git push origin agent/x --no-verify",
@@ -137,6 +178,10 @@ class SessionCommandGuardTest {
             "git push --no-thin origin agent/x",
             "git -c user.name=x commit -m 'push --no-verify later'",
             "echo \$GIT_CONFIG_COUNT",
+            "git commit -m \"uses GIT_CONFIG\"",
+            "grep -rn GIT_CONFIG_COUNT commons/",
+            "git log --grep=GIT_CONFIG",
+            "printenv | grep GIT_CONFIG",
             "./gradlew :commons:jvmTest",
             "ls -la",
         )

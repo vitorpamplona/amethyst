@@ -158,6 +158,16 @@ class CodexConnection(
     @Volatile
     private var guard: CommandGuard? = null
 
+    /** Whether [guard] refuses [command]; a guard that fails refuses, and the reader goes on. */
+    private fun guardRefuses(command: String): Boolean {
+        val guard = guard ?: return false
+        return try {
+            guard.refusal(command) != null
+        } catch (e: Exception) {
+            true
+        }
+    }
+
     /** Approvals waiting on the user: Codex's request id, by the id the chat knows. */
     private val openApprovals = ConcurrentHashMap<String, JsonElement>()
 
@@ -298,7 +308,7 @@ class CodexConnection(
             when (request.method) {
                 "item/commandExecution/requestApproval" -> {
                     val command = params.text("command") ?: items[itemId]?.text("command").orEmpty()
-                    if (CodexModes.runsBlocked(command, blocked) || guard?.refusal(command) != null) {
+                    if (CodexModes.runsBlocked(command, blocked) || guardRefuses(command)) {
                         // Publishing is the user's step here: Codex hears no, the user isn't asked.
                         rpc.reply(request.id, buildJsonObject { put("decision", "decline") })
                         return

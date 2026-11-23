@@ -271,14 +271,22 @@ class ClaudeCodeConnection(
                 )
             }
 
-        /** The hook's answer for the command in [request]: a deny with the guard's reason, or nothing to add. */
+        /**
+         * The hook's answer for the command in [request]: a deny with the guard's reason, or nothing
+         * to add. A guard that fails denies: it runs on the reader, which must not die with it.
+         */
         internal fun guardAnswer(
             guard: CommandGuard,
             request: JsonObject,
         ): JsonObject {
             val toolInput = (request["input"] as? JsonObject)?.get("tool_input") as? JsonObject
             val command = toolInput?.text("command") ?: return JsonObject(emptyMap())
-            val reason = guard.refusal(command) ?: return JsonObject(emptyMap())
+            val reason =
+                try {
+                    guard.refusal(command)
+                } catch (e: Exception) {
+                    "The app could not check this command (${e.message ?: e::class.simpleName}), so it doesn't run."
+                } ?: return JsonObject(emptyMap())
             return buildJsonObject {
                 put(
                     "hookSpecificOutput",

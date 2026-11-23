@@ -25,14 +25,16 @@ import com.vitorpamplona.agents.CommandGuard
 /**
  * The shell commands a guarded session (a nostr checkout, a workstream) may not run, checked
  * before each one runs ([CommandGuard]): merging, closing or approving a pull request or
- * proposal, writes through `gh api` (anything but a plain GET), changing or deleting the
- * repository, releases, publishing a nostr repository's announcement or state, and turning
- * the push guard ([PushGuard]) off.
+ * proposal, writes through `gh api` (only reads pass), changing or deleting the repository, its
+ * workflows, secrets and variables, releases, publishing a nostr repository's announcement or
+ * state, and turning the push guard ([PushGuard]) off.
  *
- * It reads the command line as a shell would split it: chains, pipes, subshells, `sh -c`
- * scripts, wrappers (`env`, `command`, `timeout`), leading variable assignments and full paths.
- * It is a check on what the agent types, not a sandbox: a script file it wrote, an alias or a
- * program of its own still runs whatever it likes. Prevents accidents, not a determined agent.
+ * It parses the command line as a shell would: chains, pipes, subshells, `$(…)` and backquotes
+ * (in plain or double-quoted text, not single-quoted), here-documents (their text is data; a
+ * substitution in an unquoted one runs), `sh -c` scripts, wrappers (`env`, `command`,
+ * `timeout`), leading variable assignments and full paths. It is a check on what the agent
+ * types, not a sandbox: a script file it wrote, an alias or a program of its own still runs
+ * whatever it likes. Prevents accidents, not a determined agent.
  */
 object SessionCommandGuard : CommandGuard {
     override fun refusal(command: String): String? = refusal(command, depth = 0)
@@ -41,8 +43,9 @@ object SessionCommandGuard : CommandGuard {
         command: String,
         depth: Int,
     ): String? {
-        if (depth > MAX_NESTING) return "Amethyst can't check a command nested this deep; run it in simpler steps."
-        for (words in segments(command)) {
+        val commands = if (depth > MAX_NESTING) null else commands(command)
+        if (commands == null) return "Amethyst can't check a command nested this deep; run it in simpler steps."
+        for (words in commands) {
             segmentRefusal(words, depth)?.let { return it }
         }
         return null
@@ -54,33 +57,43 @@ object SessionCommandGuard : CommandGuard {
         all: List<String>,
         depth: Int,
     ): String? {
-        all.firstOrNull { it.contains("GIT_CONFIG") && !it.contains("\$GIT_CONFIG") && !it.contains("\${GIT_CONFIG") }?.let {
-            return "The push guard runs from the session's GIT_CONFIG_* variables; this session may not change them ($it)."
-        }
-        // A command substitution inside a quoted word is a command of its own.
-        all.firstOrNull { it.contains("\$(") || it.contains('`') }?.let { word ->
-            refusal(word.replace("\$(", ";").replace('`', ';'), depth + 1)?.let { return it }
-        }
         var words = all
         while (true) {
             val first = words.firstOrNull() ?: return null
             val name = first.substringAfterLast('/')
             words =
                 when {
-                    ASSIGNMENT.matches(first) -> words.drop(1)
+                    ASSIGNMENT.matches(first) -> {
+                        if (first.startsWith(GIT_CONFIG)) return changesGuardConfig(first)
+                        words.drop(1)
+                    }
                     name == "env" -> {
                         var i = 1
                         while (i < words.size && (words[i].startsWith("-") || ASSIGNMENT.matches(words[i]))) {
                             val option = words[i]
-                            if (option == "-" || option == "-i" || option == "--ignore-environment") {
-                                return "env -i drops the push guard's configuration; this session may not run it."
+                            when {
+                                option == "-" || option == "-i" || option == "--ignore-environment" ->
+                                    return "env -i drops the push guard's configuration; this session may not run it."
+                                option == "-S" || option == "--split-string" -> return refusal(words.drop(i + 1).joinToString(" "), depth + 1)
+                                option == "-u" || option == "--unset" -> {
+                                    if (words.getOrNull(i + 1).orEmpty().startsWith(GIT_CONFIG)) return changesGuardConfig(words[i + 1])
+                                    i++
+                                }
+                                option.startsWith("--unset=") -> if (option.removePrefix("--unset=").startsWith(GIT_CONFIG)) return changesGuardConfig(option)
+                                option.startsWith("-u") && !option.startsWith("--") -> if (option.substring(2).startsWith(GIT_CONFIG)) return changesGuardConfig(option)
+                                option == "-C" || option == "--chdir" -> i++
+                                option.startsWith(GIT_CONFIG) -> return changesGuardConfig(option)
                             }
-                            if (option == "-S" || option == "--split-string") {
-                                return refusal(words.drop(i + 1).joinToString(" "), depth + 1)
-                            }
-                            i += if (option == "-u" || option == "--unset" || option == "-C" || option == "--chdir") 2 else 1
+                            i++
                         }
                         words.drop(i)
+                    }
+                    name == "unset" -> return words.drop(1).firstOrNull { it.startsWith(GIT_CONFIG) }?.let(::changesGuardConfig)
+                    name in DECLARERS -> {
+                        val args = words.drop(1)
+                        // `export -n` / `declare +x` stop passing a variable on, as unsetting it would.
+                        val unexports = args.any { (it.startsWith("-") && 'n' in it) || it.startsWith("+") }
+                        return args.firstOrNull { it.startsWith(GIT_CONFIG) && ('=' in it || unexports) }?.let(::changesGuardConfig)
                     }
                     name in WRAPPERS -> words.drop(1).dropWhile { it.startsWith("-") || it.toDoubleOrNull() != null }
                     name in SHELLS -> {
@@ -96,7 +109,14 @@ object SessionCommandGuard : CommandGuard {
         }
     }
 
+    private const val GIT_CONFIG = "GIT_CONFIG"
+
+    private fun changesGuardConfig(word: String) = "The push guard runs from the session's GIT_CONFIG_* variables; this session may not change them ($word)."
+
     private val ASSIGNMENT = Regex("[A-Za-z_][A-Za-z0-9_]*=.*", RegexOption.DOT_MATCHES_ALL)
+
+    /** Builtins that set or export variables. */
+    private val DECLARERS = setOf("export", "declare", "typeset", "local", "readonly")
 
     /** Commands that run the command after them (and their own options). */
     private val WRAPPERS = setOf("command", "builtin", "exec", "nohup", "time", "nice", "timeout", "xargs", "sudo", "stdbuf", "caffeinate", "then", "do", "else", "if", "while", "until", "!", "{")
@@ -162,32 +182,60 @@ object SessionCommandGuard : CommandGuard {
         return when {
             command == "api" -> ghApiRefusal(args.drop(args.indexOf("api") + 1))
             command == "release" -> "Releases are the user's to publish."
+            command == "secret" || command == "variable" -> "The repository's ${command}s are the user's to manage."
             command == "pr" && sub in setOf("merge", "review", "close") -> "gh pr $sub is the user's to do from the app."
             command == "pr" && sub == "edit" && args.any { it == "-B" || it == "--base" || it.startsWith("--base=") || (it.startsWith("-B") && !it.startsWith("--")) } ->
                 "Changing a pull request's base branch is the user's to do."
-            command == "repo" && sub in setOf("edit", "delete", "rename", "archive", "unarchive", "sync") -> "gh repo $sub changes the repository; that is the user's to do."
+            command == "repo" && sub in setOf("edit", "delete", "rename", "archive", "unarchive", "sync", "create", "fork") -> "gh repo $sub is the user's to do."
+            command == "workflow" && sub in setOf("run", "enable", "disable") -> "gh workflow $sub is the user's to do."
+            command == "run" && sub in setOf("cancel", "rerun", "delete") -> "gh run $sub is the user's to do."
             else -> null
         }
     }
 
-    /** Only a plain read: no fields or body, and no method but GET. */
+    /**
+     * Only reads: no body (`--input`), fields only with an explicit GET (they are then query
+     * parameters), and a GraphQL query that is not a mutation and is written out, not read from a file.
+     */
     private fun ghApiRefusal(args: List<String>): String? {
-        val write = "gh api may only read here (GET, no -f/-F/--input); writes are the user's to do."
+        val write = "gh api may only read here (GET, or a GraphQL query that isn't a mutation); writes are the user's to do."
+        var method: String? = null
+        var endpoint: String? = null
+        val fields = ArrayList<String>()
         var i = 0
         while (i < args.size) {
             val arg = args[i++]
             when {
-                arg in setOf("-f", "-F", "--field", "--raw-field", "--input") -> return write
-                arg.startsWith("--field=") || arg.startsWith("--raw-field=") || arg.startsWith("--input=") -> return write
-                (arg.startsWith("-f") || arg.startsWith("-F")) && !arg.startsWith("--") -> return write
-                arg == "-X" || arg == "--method" -> if (!args.getOrNull(i++).equals("GET", ignoreCase = true)) return write
-                arg.startsWith("--method=") -> if (!arg.removePrefix("--method=").equals("GET", ignoreCase = true)) return write
-                arg.startsWith("-X") -> if (!arg.substring(2).equals("GET", ignoreCase = true)) return write
+                arg == "--input" || arg.startsWith("--input=") -> return write
+                arg == "-X" || arg == "--method" -> method = args.getOrNull(i++).orEmpty()
+                arg.startsWith("--method=") -> method = arg.removePrefix("--method=")
+                arg.startsWith("-X") -> method = arg.substring(2)
+                arg in setOf("-f", "-F", "--field", "--raw-field") -> fields.add(args.getOrNull(i++).orEmpty())
+                arg.startsWith("--field=") || arg.startsWith("--raw-field=") -> fields.add(arg.substringAfter('='))
+                (arg.startsWith("-f") || arg.startsWith("-F")) && !arg.startsWith("--") -> fields.add(arg.substring(2))
                 arg in GH_API_OPTIONS_WITH_VALUE -> i++
+                !arg.startsWith("-") && endpoint == null -> endpoint = arg
             }
         }
-        return null
+        val verb = method?.uppercase()
+        if (endpoint == "graphql") {
+            if (verb != null && verb != "POST" && verb != "GET") return write
+            val query = fields.firstOrNull { it.startsWith("query=") }?.removePrefix("query=") ?: return write
+            if (query.startsWith("@")) return "gh api graphql with a query from a file can't be checked here; write the query out."
+            return if (isMutation(query)) write else null
+        }
+        if (fields.isNotEmpty()) return if (verb == "GET") null else write
+        return if (verb == null || verb == "GET") null else write
     }
+
+    /** Whether a GraphQL document has a mutation in it, outside its comments and strings. */
+    private fun isMutation(query: String): Boolean {
+        val code = query.replace(GRAPHQL_STRING, "\"\"").lines().joinToString("\n") { it.substringBefore('#') }
+        return GRAPHQL_MUTATION.containsMatchIn(code)
+    }
+
+    private val GRAPHQL_STRING = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+    private val GRAPHQL_MUTATION = Regex("\\bmutation\\b")
 
     private val GH_API_OPTIONS_WITH_VALUE = setOf("-H", "--header", "-q", "--jq", "-t", "--template", "--hostname", "--cache", "-p", "--preview")
 
@@ -205,67 +253,229 @@ object SessionCommandGuard : CommandGuard {
     }
 
     /**
-     * [command] split as a shell would into simple commands (at `;`, `&`, `|`, newlines,
-     * parentheses, backquotes and `$(`), each a list of words with quotes and escapes removed.
+     * Every simple command [command] runs, at any depth (inside `(…)`, `$(…)`, backquotes, and
+     * substitutions in unquoted here-documents), each as its words with quotes and escapes
+     * removed; null when it nests too deep to check.
      */
-    internal fun segments(command: String): List<List<String>> {
-        val segments = ArrayList<MutableList<String>>()
-        segments.add(ArrayList())
-        val word = StringBuilder()
-        var inWord = false
-
-        fun endWord() {
-            if (inWord) segments.last().add(word.toString())
-            word.setLength(0)
-            inWord = false
-        }
-
-        fun endSegment() {
-            endWord()
-            if (segments.last().isNotEmpty()) segments.add(ArrayList())
-        }
-        val n = command.length
-        var i = 0
-        while (i < n) {
-            val c = command[i]
-            when {
-                c == '\\' && i + 1 < n -> {
-                    if (command[i + 1] != '\n') word.append(command[i + 1])
-                    inWord = true
-                    i++
-                }
-                c == '\'' -> {
-                    val end = command.indexOf('\'', i + 1).let { if (it < 0) n else it }
-                    word.append(command, i + 1, end)
-                    inWord = true
-                    i = end
-                }
-                c == '"' -> {
-                    var j = i + 1
-                    while (j < n && command[j] != '"') {
-                        if (command[j] == '\\' && j + 1 < n && command[j + 1] in "\"\\$`") j++
-                        word.append(command[j])
-                        j++
-                    }
-                    inWord = true
-                    i = j
-                }
-                c == '$' && i + 1 < n && command[i + 1] == '(' && !inWord -> {
-                    endSegment()
-                    i++
-                }
-                c == '\n' || c in SEPARATORS -> endSegment()
-                c.isWhitespace() -> endWord()
-                else -> {
-                    word.append(c)
-                    inWord = true
-                }
-            }
-            i++
-        }
-        endWord()
-        return segments.filter { it.isNotEmpty() }
+    internal fun commands(command: String): List<List<String>>? {
+        val parser = ShellParser(command)
+        parser.parseAll()
+        return if (parser.tooDeep) null else parser.out
     }
 
-    private const val SEPARATORS = ";&|()`"
+    private class Heredoc(
+        val delimiter: String,
+        val quoted: Boolean,
+        val stripTabs: Boolean,
+    )
+
+    /** A shell's reading of a command line, as far as finding the commands in it needs. */
+    private class ShellParser(
+        private val s: String,
+        val out: MutableList<List<String>> = ArrayList(),
+        private var nesting: Int = 0,
+    ) {
+        private var i = 0
+        private val pending = ArrayList<Heredoc>()
+        var tooDeep = false
+
+        fun parseAll() = parseList(null)
+
+        /** Text where only substitutions run: an unquoted here-document's body. */
+        fun parseExpansions() {
+            while (i < s.length && !tooDeep) {
+                when {
+                    s[i] == '\\' -> i += 2
+                    s.startsWith("$(", i) -> {
+                        i += 2
+                        parseList(')')
+                    }
+                    s[i] == '`' -> {
+                        i++
+                        parseList('`')
+                    }
+                    else -> i++
+                }
+            }
+        }
+
+        /** Commands up to [stop] (the end of a substitution or subshell), or the end of the text. */
+        private fun parseList(stop: Char?) {
+            if (++nesting > MAX_PARSE_NESTING) {
+                tooDeep = true
+                i = s.length
+                return
+            }
+            var words = ArrayList<String>()
+            val word = StringBuilder()
+            var inWord = false
+
+            fun endWord() {
+                if (inWord) words.add(word.toString())
+                word.setLength(0)
+                inWord = false
+            }
+
+            fun endCommand() {
+                endWord()
+                if (words.isNotEmpty()) out.add(words)
+                words = ArrayList()
+            }
+            while (i < s.length && !tooDeep) {
+                val c = s[i]
+                when {
+                    stop != null && c == stop -> {
+                        endCommand()
+                        i++
+                        nesting--
+                        return
+                    }
+                    c == '\\' -> {
+                        if (i + 1 < s.length && s[i + 1] != '\n') {
+                            word.append(s[i + 1])
+                            inWord = true
+                        }
+                        i += 2
+                    }
+                    c == '\'' -> {
+                        val end = s.indexOf('\'', i + 1).let { if (it < 0) s.length else it }
+                        word.append(s, i + 1, end)
+                        inWord = true
+                        i = end + 1
+                    }
+                    c == '"' -> {
+                        i++
+                        readDoubleQuoted(word)
+                        inWord = true
+                    }
+                    s.startsWith("$(", i) -> {
+                        i += 2
+                        parseList(')')
+                        word.append("$()")
+                        inWord = true
+                    }
+                    c == '`' -> {
+                        i++
+                        parseList('`')
+                        word.append("``")
+                        inWord = true
+                    }
+                    c == '#' && !inWord -> while (i < s.length && s[i] != '\n') i++
+                    s.startsWith("<<", i) && !s.startsWith("<<<", i) -> {
+                        endWord()
+                        i += 2
+                        readHeredocStart()
+                    }
+                    c == '(' -> {
+                        endCommand()
+                        i++
+                        parseList(')')
+                    }
+                    c == '\n' -> {
+                        endCommand()
+                        i++
+                        readHeredocBodies()
+                    }
+                    c == ')' || c in ";&|" -> {
+                        endCommand()
+                        i++
+                    }
+                    c.isWhitespace() -> {
+                        endWord()
+                        i++
+                    }
+                    else -> {
+                        word.append(c)
+                        inWord = true
+                        i++
+                    }
+                }
+            }
+            endCommand()
+            nesting--
+        }
+
+        private fun readDoubleQuoted(word: StringBuilder) {
+            while (i < s.length && !tooDeep) {
+                val c = s[i]
+                when {
+                    c == '"' -> {
+                        i++
+                        return
+                    }
+                    c == '\\' && i + 1 < s.length && s[i + 1] in "\"\\$`\n" -> {
+                        if (s[i + 1] != '\n') word.append(s[i + 1])
+                        i += 2
+                    }
+                    s.startsWith("$(", i) -> {
+                        i += 2
+                        parseList(')')
+                        word.append("$()")
+                    }
+                    c == '`' -> {
+                        i++
+                        parseList('`')
+                        word.append("``")
+                    }
+                    else -> {
+                        word.append(c)
+                        i++
+                    }
+                }
+            }
+        }
+
+        /** After `<<`: `-` to strip tabs, then the delimiter; any quoting in it makes the body plain text. */
+        private fun readHeredocStart() {
+            val stripTabs = i < s.length && s[i] == '-'
+            if (stripTabs) i++
+            while (i < s.length && (s[i] == ' ' || s[i] == '\t')) i++
+            val delimiter = StringBuilder()
+            var quoted = false
+            while (i < s.length && !s[i].isWhitespace() && s[i] !in ";&|()<>") {
+                val c = s[i]
+                when (c) {
+                    '\'', '"' -> {
+                        quoted = true
+                        val end = s.indexOf(c, i + 1).let { if (it < 0) s.length else it }
+                        delimiter.append(s, i + 1, end)
+                        i = end + 1
+                    }
+                    '\\' -> {
+                        quoted = true
+                        if (i + 1 < s.length) delimiter.append(s[i + 1])
+                        i += 2
+                    }
+                    else -> {
+                        delimiter.append(c)
+                        i++
+                    }
+                }
+            }
+            pending.add(Heredoc(delimiter.toString(), quoted, stripTabs))
+        }
+
+        /** The bodies of the here-documents started on the line just ended, in order. */
+        private fun readHeredocBodies() {
+            val docs = pending.toList()
+            pending.clear()
+            for (doc in docs) {
+                val body = StringBuilder()
+                while (i < s.length) {
+                    val end = s.indexOf('\n', i).let { if (it < 0) s.length else it }
+                    val line = s.substring(i, end)
+                    i = minOf(end + 1, s.length)
+                    if ((if (doc.stripTabs) line.trimStart('\t') else line) == doc.delimiter) break
+                    body.append(line).append('\n')
+                }
+                if (!doc.quoted) {
+                    val inner = ShellParser(body.toString(), out, nesting)
+                    inner.parseExpansions()
+                    if (inner.tooDeep) tooDeep = true
+                }
+            }
+        }
+    }
+
+    private const val MAX_PARSE_NESTING = 32
 }
