@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
@@ -37,12 +38,12 @@ import java.io.File
  */
 class MarmotDeviceGroupSwitch(
     accountDir: File,
-) {
+) : DeviceGroupSwitch {
     private val marker = File(accountDir, FILE_NAME)
 
-    fun isEnabled(): Boolean = marker.exists()
+    override fun isEnabled(): Boolean = marker.exists()
 
-    fun setEnabled(enabled: Boolean) {
+    override fun setEnabled(enabled: Boolean) {
         if (enabled) {
             if (!marker.exists() && !marker.createNewFile()) Log.w(TAG) { "could not create ${marker.absolutePath}" }
         } else if (marker.exists() && !marker.delete()) {

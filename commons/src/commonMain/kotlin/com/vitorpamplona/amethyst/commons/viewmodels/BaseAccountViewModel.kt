@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.marmot.devices.DeviceGroupAttentionState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
@@ -244,6 +245,9 @@ open class BaseAccountViewModel(
      * when an upload went to another server than the one they picked. Screens upload through this.
      */
     val mediaUploader: MediaUploader by lazy { NoticingMediaUploader(host.mediaUploader, notices) }
+
+    /** What the device-group prompts already showed this session, shared by the prompt host and the devices screens. */
+    val marmotDeviceAttention: DeviceGroupAttentionState by lazy { DeviceGroupAttentionState() }
 
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =

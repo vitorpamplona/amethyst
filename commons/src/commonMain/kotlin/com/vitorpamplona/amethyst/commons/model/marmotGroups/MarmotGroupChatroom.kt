@@ -203,6 +203,43 @@ class MarmotGroupChatroom(
     // Per-instance lock shared by previously @Synchronized methods.
     private val syncLock = KmpLock()
 
+    /**
+     * The MLS epoch each message decrypted or sent in this run went out in, by note id: a device-group
+     * read marker names it (`account-sync.md`). A message restored from the store has none.
+     */
+    private var epochs: PersistentMap<String, Long> = persistentMapOf()
+
+    fun recordEpoch(
+        noteId: HexKey,
+        epoch: Long,
+    ) = syncLock.withLock { epochs = epochs.put(noteId, epoch) }
+
+    /**
+     * The read position to share for a reader whose last-read time is [readUpTo]: the furthest
+     * (epoch, created_at, id) among the messages at or before it whose epoch this run knows.
+     */
+    fun readPositionAt(readUpTo: Long): ReadPosition? {
+        val known = epochs
+        var best: ReadPosition? = null
+        for (msg in messages) {
+            val createdAt = msg.createdAt() ?: continue
+            if (createdAt > readUpTo) continue
+            val epoch = known[msg.idHex] ?: continue
+            val candidate = ReadPosition(epoch, createdAt, msg.idHex)
+            if (best == null || candidate > best) best = candidate
+        }
+        return best
+    }
+
+    /** A message position as a device-group read marker orders it. */
+    data class ReadPosition(
+        val epoch: Long,
+        val createdAt: Long,
+        val eventId: HexKey,
+    ) : Comparable<ReadPosition> {
+        override fun compareTo(other: ReadPosition): Int = compareValuesBy(this, other, { it.epoch }, { it.createdAt }, { it.eventId })
+    }
+
     // Synthetic note used by list views to represent the group when no
     // messages have been received yet. Lazily created and kept stable so
     // equality-based feed diffing treats it as the same row across refreshes.
@@ -351,6 +388,7 @@ class MarmotGroupChatroom(
                     newestMessage = messages.minWithOrNull(feedOrder)
                 }
                 arrival = arrival.remove(msg.idHex)
+                epochs = epochs.remove(msg.idHex)
 
                 changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
                 return@withLock true

@@ -74,6 +74,7 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -82,6 +83,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -101,6 +103,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * hour after the network comes back.
  */
 private const val NONE_MAX_AGE_SECONDS = 60L
+
+/** How long a chat's last-read time must hold still before its position goes to the other devices. */
+private const val READ_POSITION_SETTLE_MS = 3_000L
 
 /**
  * Which install owns the newest KeyPackage currently on the account's relays.
@@ -331,6 +336,7 @@ class AccountMarmotActions(
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
         manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson(), outbound.epoch)
+        outbound.epoch?.let { account.marmotGroupList.getOrCreateGroup(nostrGroupId).recordEpoch(innerEvent.id, it) }
         // Our own removal or dismissal takes effect now, not when the relay echoes it back.
         applyMarmotModeration(nostrGroupId, innerEvent)
     }
@@ -1151,6 +1157,44 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
         account.marmotGroupList.notifyGroupChanged(nostrGroupId)
+    }
+
+    /**
+     * While a chat is open: shares each settled change of its last-read time with this account's
+     * other devices ([shareMarmotReadPosition]). Returns at once while device groups are off.
+     */
+    @OptIn(FlowPreview::class)
+    suspend fun shareMarmotReadPositions(nostrGroupId: HexKey) {
+        if (account.marmotDevices == null) return
+        account
+            .loadLastReadFlow(marmotGroupLastReadRoute(nostrGroupId))
+            .debounce(READ_POSITION_SETTLE_MS)
+            .collect { readUpTo ->
+                try {
+                    shareMarmotReadPosition(nostrGroupId, readUpTo)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "could not share the read position of ${nostrGroupId.take(8)}", e)
+                }
+            }
+    }
+
+    /**
+     * With device groups on and this device linked: tells the account's other devices that the user
+     * read [nostrGroupId] up to [readUpTo] (the chat's last-read time), as the furthest message at or
+     * before it whose epoch this run saw. Positions only move forward, so a repeat sends nothing.
+     */
+    suspend fun shareMarmotReadPosition(
+        nostrGroupId: HexKey,
+        readUpTo: Long,
+    ) {
+        val devices = account.marmotDevices ?: return
+        if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
+        val position =
+            account.marmotGroupList.rooms
+                .get(nostrGroupId)
+                ?.readPositionAt(readUpTo) ?: return
+        devices.markRead(nostrGroupId, position.epoch, position.createdAt, position.eventId)
     }
 
     /**

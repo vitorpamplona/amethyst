@@ -1273,6 +1273,18 @@ sealed class Route {
         val nostrGroupId: String,
     ) : Route()
 
+    /** This account's Marmot devices: the roster, linking, and the device-group switch. */
+    @Serializable object MarmotDevicesSettings : Route()
+
+    /**
+     * Linking a device with the seven-emoji comparison. [asNewDevice]: this device joins the
+     * account's others; otherwise it approves a new one, the request [sessionId] or the next to come.
+     */
+    @Serializable data class MarmotDeviceLink(
+        val asNewDevice: Boolean,
+        val sessionId: String? = null,
+    ) : Route()
+
     @Serializable data class NewGroupDM(
         val message: String? = null,
         val attachment: String? = null,

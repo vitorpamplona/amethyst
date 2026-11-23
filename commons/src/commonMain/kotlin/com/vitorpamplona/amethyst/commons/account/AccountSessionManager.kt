@@ -67,12 +67,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
 
@@ -80,6 +82,9 @@ private const val BUNKER_URI_PREFIX = "bunker://"
 
 // Comfortably longer than the account Tor connector's debounce (200 ms) plus loading the account.
 private const val SIGNER_RELAY_HANDOVER_MS = 10_000L
+
+/** How long a logout waits for the device group to take the sign-out before deleting the account. */
+private const val DEVICE_GROUP_SIGN_OUT_TIMEOUT_MS = 15_000L
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -631,6 +636,22 @@ class AccountSessionManager(
         }
     }
 
+    /**
+     * With Marmot device groups on and this device linked: signs it out through its siblings
+     * (`device-group.md` "Signing out"), so they remove it from the account's devices and its chats.
+     * Bounded, because the account's files go next whatever the relays say.
+     */
+    private suspend fun signOutOfDeviceGroup(hex: HexKey) {
+        val devices = accountsCache.loadedAccount(hex)?.marmotDevices ?: return
+        if (!devices.state.value.linked) return
+        try {
+            withTimeout(DEVICE_GROUP_SIGN_OUT_TIMEOUT_MS) { devices.signOutThroughSiblings() }
+        } catch (e: Exception) {
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            Log.w("AccountSessionManager", "Could not sign out through the account's other devices", e)
+        }
+    }
+
     fun logOff(accountInfo: AccountInfo) {
         scope.launch(Dispatchers.IO) {
             val hex = decodePublicKeyAsHexOrNull(accountInfo.npub)
@@ -645,6 +666,9 @@ class AccountSessionManager(
 
             // Read before the settings are deleted: the logout needs the address and transport key.
             logOutOfRemoteSigner(hex, accountInfo.npub)
+
+            // A device linked to the account's other devices asks them to take it out, while it still can.
+            signOutOfDeviceGroup(hex)
 
             if (accountInfo.npub == currentAccountNPub()) {
                 // End what the account had running before its state is torn down.

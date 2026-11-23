@@ -945,6 +945,8 @@ class GroupEventHandler(
         // peer-sent kind:1210 is dropped inside addMessage — see
         // `MarmotGroupList.isDisplayableFeedMessage`.
         account.marmotGroupList.addMessage(result.groupId, innerNote)
+        // The epoch it was sent in, for the read marker a device group shares.
+        account.marmotGroupList.getOrCreateGroup(result.groupId).recordEpoch(innerEvent.id, result.epoch)
         account.marmot.applyMarmotModeration(result.groupId, innerEvent)
 
         // No expiry prune here: the ingest that produced this result

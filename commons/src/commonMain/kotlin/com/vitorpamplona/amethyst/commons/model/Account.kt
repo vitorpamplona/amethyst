@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
@@ -518,6 +519,12 @@ class Account(
      * secrets, so the app passes stores that encrypt them at rest.
      */
     val marmotDeviceGroupStores: DeviceGroupBlobStores? = null,
+    /**
+     * The device-group switch the settings screen flips, or null on a front end that offers no
+     * switch. It is read before this account is built ([marmotDeviceGroupStores] follows it), so a
+     * change applies on the next launch.
+     */
+    val marmotDeviceGroupSwitch: DeviceGroupSwitch? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
