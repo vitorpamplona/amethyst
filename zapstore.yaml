@@ -137,13 +137,20 @@ supported_nips:
   - "99" # Classified Listings
 
 # ═══════════════════════════════════════════════════════════════════
-# VARIANTS
+# APK SELECTION
 # ═══════════════════════════════════════════════════════════════════
 
-# APK variant patterns (for apps with multiple builds)
-variants:
-  fdroid: ".*-fdroid-.*\\.apk$"
-  google: ".*-googleplay-.*\\.apk$"
+# Regex on APK filenames: the one APK `zsp publish` takes from the GitHub
+# Release. zsp 2.x publishes a single APK per release and refuses to guess
+# between the googleplay and fdroid arm64 builds (`apk_selection_required`).
+# `amy releases publish` ignores this key and picks with --android-flavor and
+# --android-abis (googleplay, arm64-v8a by default).
+#
+# There is no `variants` key any more: zsp dropped it, and zsp 2.x rejects a
+# file that still has it. Zapstore installs one APK per app id, so the two
+# flavors cannot both be listed under com.vitorpamplona.amethyst
+# (RELEASE_OPS.md § Nostr releases).
+match: "^amethyst-googleplay-arm64-v8a-v.*\\.apk$"
 
 # ═══════════════════════════════════════════════════════════════════
 # PUBLISHING RELAYS
@@ -151,10 +158,10 @@ variants:
 # Relays are NOT configured in this file. `amy releases publish`, which reads
 # this file for the listing and the supported NIPs, publishes to
 # AndroidRelease.RELAYS (relay.zapstore.dev first) unless --relay says otherwise.
-# `zsp publish` reads them from the RELAY_URLS environment variable
+# `zsp publish` (2.x) reads them from the RELAYS environment variable
 # (comma-separated) and falls back to wss://relay.zapstore.dev, e.g.:
 #
-#   RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol" \
+#   RELAYS="wss://relay.zapstore.dev,wss://nos.lol" \
 #     SIGN_WITH=<amethyst-nsec> zsp publish
 #
 # See RELEASE_OPS.md for the maintainer publishing checklist.

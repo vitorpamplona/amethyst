@@ -97,7 +97,7 @@ fun TabNotesNewThreads(
                 }
 
                 is FeedState.Loaded -> {
-                    PrefetchLoadedFeedMedia(state, listState, accountViewModel)
+                    PrefetchLoadedFeedMedia(state, listState, accountViewModel, mediaAtNoteWidth = true)
                     FeedLoadedWithPinnedNotes(
                         pinnedFeedState = pinnedFeedState as? FeedState.Loaded,
                         loaded = state,

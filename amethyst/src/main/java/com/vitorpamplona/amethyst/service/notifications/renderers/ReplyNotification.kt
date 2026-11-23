@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.notifi
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replyGroupKeyFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replySummaryIdFor
+import com.vitorpamplona.amethyst.service.notifications.PrivateRumorGate
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
@@ -57,6 +58,12 @@ object ReplyNotification {
         parentNote: Note?,
         threadRootId: String,
     ) {
+        // This renderer is public by design (REPLY channel, a Reply action that broadcasts a public
+        // reply), so it never shows a private rumor: a Marmot/Concord thread message or a
+        // gift-wrapped event that only looks like a public reply. The dispatcher already refuses
+        // them; this keeps any other caller from leaking one.
+        if (!PrivateRumorGate.isSigned(event)) return
+
         val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
         if (!account.isAcceptable(replyNote)) return
 

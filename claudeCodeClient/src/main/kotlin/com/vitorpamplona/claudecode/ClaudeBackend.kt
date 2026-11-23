@@ -103,6 +103,7 @@ class ClaudeBackend(
                 tools = if (options.onlyHostTools) emptyList() else null,
                 allowedTools = options.preApprovedTools,
                 appendSystemPrompt = options.instructions,
+                persistSession = options.persist,
             )
 
         private fun ClaudeSessionInfo.toAgent() = AgentSessionInfo(sessionId, title, customTitle, firstPrompt, lastPrompt, cwd, gitBranch, createdAt, lastModified)

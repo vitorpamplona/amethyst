@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.home_tabs_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.import_follows_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
 import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.media_servers_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.messages_settings
@@ -178,6 +180,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.reactions, MaterialSymbols.FavoriteBorder, Res.string.reactions_search_keywords, Route.UpdateReactionType),
                     symEntry(Res.string.reactions_settings, MaterialSymbols.ThumbUp, Res.string.reactions_settings_search_keywords, Route.ReactionsSettings),
                     symEntry(Res.string.messages_settings, MaterialSymbols.Mail, Res.string.messages_settings_search_keywords, Route.MessagesSettings),
+                    symEntry(Res.string.marmot_devices_title, MaterialSymbols.PhonelinkLock, Res.string.marmot_devices_search_keywords, Route.MarmotDevicesSettings),
                     symEntry(Res.string.bottom_bar_settings, MaterialSymbols.Dashboard, Res.string.bottom_bar_search_keywords, Route.BottomBarSettings),
                     symEntry(Res.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, Res.string.drawer_search_keywords, Route.DrawerSettings),
                     symEntry(Res.string.accent_color, MaterialSymbols.Circle, Res.string.accent_color_search_keywords, Route.AccentColorSettings),

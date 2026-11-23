@@ -246,13 +246,14 @@ object ReleaseBundles {
         baseDir: File,
         server: String?,
         signer: NostrSigner,
+        client: BlossomClient,
         dryRun: Boolean = false,
     ): ListingMedia {
         suspend fun host(pathOrUrl: String): String {
             if (pathOrUrl.startsWith("https://")) return pathOrUrl
             val file = File(baseDir, pathOrUrl).takeIf { it.isFile } ?: throw ReleaseFilesException("No such listing image: $pathOrUrl")
             server ?: throw ReleaseFilesException("$pathOrUrl is a local file: pass a Blossom server to host it (zsp uses ${AndroidRelease.ZAPSTORE_BLOSSOM})")
-            return mirrorToBlossom(file, imageType(file), server, signer, dryRun = dryRun)
+            return mirrorToBlossom(file, imageType(file), server, signer, client, dryRun = dryRun)
         }
         return ListingMedia(config.icon?.let { host(it) }, config.images.map { host(it) })
     }
@@ -275,7 +276,7 @@ object ReleaseBundles {
         contentType: String,
         server: String,
         signer: NostrSigner,
-        client: BlossomClient = BlossomClient(),
+        client: BlossomClient,
         dryRun: Boolean = false,
         /** The file's SHA-256 when the caller already has it (an APK's, from [androidApks]). */
         sha256: String = ApkInspector.sha256(file),

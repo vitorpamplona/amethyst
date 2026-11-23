@@ -38,7 +38,7 @@ import java.nio.file.Files
  * to [BlossomClient] in `jvmMain` so the CLI and the desktop app share one upload path.
  */
 class StaticSitePublisher(
-    private val client: BlossomClient = BlossomClient(),
+    private val client: BlossomClient,
 ) {
     /** One uploaded file: its absolute web [path], content [sha256], byte [size], and Blossom [url]. */
     data class UploadedFile(

@@ -24,9 +24,13 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.newRelayGroupId
+import com.vitorpamplona.amethyst.commons.model.relayGroupCreateTemplates
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
+import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -34,8 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
@@ -59,6 +61,7 @@ object RelayGroupCommands {
         |  relaygroup create RELAY --name NAME        create a group (publishes 9007+9002)
         |    [--about A] [--picture URL] [--banner URL]
         |    [--parent GID] [--private] [--closed]
+        |    [--forum]                                Buzz: a forum channel, not a stream
         |  relaygroup join RELAY GID [--code CODE]    request to join (kind 9021)
         |    [--reason R]
         |  relaygroup join naddr1…[?invite=CODE]      same, from a shared group identifier
@@ -72,9 +75,12 @@ object RelayGroupCommands {
         |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
         |    [--role admin|moderator]
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
-        |  relaygroup pin RELAY GID REF               pin an event (kind 9010); REF is a
-        |                                             note1/nevent1/hex id or naddr1/kind:pk:d
+        |  relaygroup pin RELAY GID REF               pin an event (kind 9010; on Buzz a
+        |                                             NIP-PM 40010); REF is a note1/nevent1/hex
+        |                                             id or naddr1/kind:pk:d (not on Buzz)
         |  relaygroup unpin RELAY GID REF             unpin it, keeping every other pin
+        |                                             (on Buzz a NIP-PM 40011)
+        |  relaygroup pins RELAY GID [--timeout S]    the pinned messages (39005; Buzz 30623)
         """.trimMargin()
 
     suspend fun dispatch(
@@ -84,7 +90,7 @@ object RelayGroupCommands {
         route(
             "relaygroup",
             tail,
-            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user|pin|unpin> …",
+            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user|pin|unpin|pins> …",
             help = USAGE,
             routes =
                 mapOf(
@@ -101,6 +107,7 @@ object RelayGroupCommands {
                     "remove-user" to { rest -> RelayGroupModerationCommands.removeUser(dataDir, rest) },
                     "pin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = true) },
                     "unpin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = false) },
+                    "pins" to { rest -> RelayGroupModerationCommands.pins(dataDir, rest) },
                 ),
         )
 
@@ -122,32 +129,64 @@ object RelayGroupCommands {
         val parent = args.flag("parent")
         val isPrivate = args.bool("private")
         val isClosed = args.bool("closed")
+        val isForum = args.bool("forum")
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val groupId = RandomInstance.bytes(8).toHexKey()
+            // Buzz keys channels by UUID, wants the name on the 9007 itself and ignores NIP-29 topics:
+            // the app's create builds both events the same way (relayGroupCreateTemplates).
+            val isBuzz = BuzzRelayDialect.isBuzz(relay) || BuzzRelayDialect.looksLikeBuzzRelay(relay, ctx.relayInfo(relay))
+            val groupId = newRelayGroupId(isBuzz)
+            val groupName = if (isBuzz) canonicalBuzzChannelName(name) else name.trim()
+            if (groupName.isEmpty()) return Output.error("bad_args", "relaygroup create requires a non-blank --name")
+            val templates =
+                relayGroupCreateTemplates(
+                    isBuzz = isBuzz,
+                    groupId = groupId,
+                    name = groupName,
+                    about = about,
+                    picture = picture,
+                    banner = banner,
+                    isPrivate = isPrivate,
+                    isClosed = isClosed,
+                    parent = parent,
+                    channelType =
+                        if (!isBuzz) {
+                            null
+                        } else if (isForum) {
+                            BUZZ_CHANNEL_TYPE_FORUM
+                        } else {
+                            BUZZ_CHANNEL_TYPE_STREAM
+                        },
+                )
             val target = setOf(relay)
 
-            val createAck = ctx.publish(ctx.signer.sign(CreateGroupEvent.build(groupId)), target)
-            val status = groupStatus(isPrivate, isClosed)
-            val edit = GroupEditMetadataEvent.build(groupId, name = name, about = about, picture = picture, banner = banner, status = status, parent = parent)
-            val editAck = ctx.publish(ctx.signer.sign(edit), target)
+            // A refused 9007 made nothing: say why and stop, before naming or listing a group that isn't there.
+            val signedCreate = ctx.signer.sign(templates.create)
+            val createAck = ctx.publish(signedCreate, target)
+            RawEventSupport.publishGuard(createAck, signedCreate.id, extra = mapOf("group_id" to groupId, "step" to "create"))?.let { return it }
+
+            val signedEdit = ctx.signer.sign(templates.edit)
+            val editAck = ctx.publish(signedEdit, target)
             // Track it in our own kind:10009 so `relaygroup list` shows it, matching
             // the Android create flow (Account.createRelayGroup → follow).
             val listed = updateGroupList(ctx, relay, groupId, add = true)
+            RawEventSupport
+                .publishGuard(editAck, signedEdit.id, extra = mapOf("group_id" to groupId, "step" to "edit", "created" to true, "listed" to listed.listed))
+                ?.let { return it }
 
             Output.emit(
                 mapOf(
                     "group_id" to groupId,
                     "relay" to relay.url,
-                    "name" to name,
+                    "name" to groupName,
                     "parent" to parent,
                     "private" to isPrivate,
                     "closed" to isClosed,
+                    "buzz" to isBuzz,
                     "published" to (createAck.values.any { it.accepted } && editAck.values.any { it.accepted }),
-                    "listed" to listed,
-                ),
+                ) + listed.fields(),
             )
             return 0
         }
@@ -196,8 +235,7 @@ object RelayGroupCommands {
                     "relay" to relay.url,
                     "code" to code,
                     "published" to ack.values.any { it.accepted },
-                    "listed" to listed,
-                ),
+                ) + listed.fields(),
             )
             return 0
         }
@@ -225,7 +263,7 @@ object RelayGroupCommands {
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = false)
             Output.emit(
-                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it.accepted }, "listed" to listed),
+                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it.accepted }) + listed.fields(),
             )
             return 0
         }
@@ -249,18 +287,30 @@ object RelayGroupCommands {
 internal fun normalizeGroupRelay(url: String): NormalizedRelayUrl? = RelayUrlNormalizer.normalizeOrNull(url.trim())
 
 /**
+ * Whether the caller's kind-10009 group list now names the group, and why not when it doesn't.
+ * Only bookkeeping: the relay decides membership, so a group that is not listed still works. A Buzz
+ * relay refuses 10009 from members, so when it is the only outbox relay the list cannot be stored.
+ */
+internal class ListUpdate(
+    val listed: Boolean,
+    val detail: String? = null,
+) {
+    fun fields(): Map<String, Any?> = if (detail == null) mapOf("listed" to listed) else mapOf("listed" to listed, "list_note" to detail)
+}
+
+/**
  * Add or remove a group from the caller's kind-10009 "simple groups" list (private
  * item) and publish the new version to their outbox relays. Mirrors the Android
- * follow/unfollow. Returns true when the updated list was published to ≥1 relay.
+ * follow/unfollow. Listed when the updated list was published to ≥1 relay.
  */
 private suspend fun updateGroupList(
     ctx: Context,
     relay: NormalizedRelayUrl,
     groupId: String,
     add: Boolean,
-): Boolean {
+): ListUpdate {
     val outbox = ctx.outboxRelays()
-    if (outbox.isEmpty()) return false
+    if (outbox.isEmpty()) return ListUpdate(false, "no outbox relays: the kind-10009 group list was not updated (`amy relay add` one)")
 
     // Load the current list from BOTH the local store (amy's source of truth —
     // every list we've published/synced is here) and a fresh relay drain, then
@@ -285,11 +335,14 @@ private suspend fun updateGroupList(
         when {
             add && current == null -> SimpleGroupListEvent.create(publicGroups = listOf(tag), signer = ctx.signer)
             add -> SimpleGroupListEvent.add(current!!, tag, isPrivate = false, signer = ctx.signer)
-            current == null -> return false // nothing to remove from
+            current == null -> return ListUpdate(false) // nothing to remove from
             else -> SimpleGroupListEvent.remove(current, tag, signer = ctx.signer)
         }
 
-    return ctx.publish(updated, outbox).values.any { it.accepted }
+    val ack = ctx.publish(updated, outbox)
+    if (ack.values.any { it.accepted }) return ListUpdate(true)
+    val reasons = ack.entries.joinToString("; ") { (url, result) -> "${url.url}: ${result.message}" }
+    return ListUpdate(false, "no outbox relay accepted the kind-10009 group list ($reasons); the group still works, it just isn't remembered in your list")
 }
 
 /**

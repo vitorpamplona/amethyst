@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
@@ -38,7 +39,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
@@ -125,7 +125,8 @@ object NipCommand {
 
     private fun fetchText(url: String): String? =
         try {
-            OkHttpClient()
+            LocalOnly
+                .httpClient()
                 .newCall(
                     Request
                         .Builder()
@@ -146,7 +147,7 @@ object NipCommand {
         timeoutMs: Long,
     ): List<Map<String, Any?>> {
         if (SEARCH_RELAYS.isEmpty()) return emptyList()
-        val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
+        val okhttp = LocalOnly.httpClientBuilder().socketFactory(TcpNoDelaySocketFactory).build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
         val filter = Filter(kinds = listOf(NIPTEXT_KIND, WIKI_KIND, LONGFORM_KIND), search = "NIP-$slug", limit = 10)
         val subId = newSubId()

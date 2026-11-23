@@ -120,4 +120,50 @@ class NavigationHostBackgroundTest {
         val brightest = brightestPopFrame(largeScreen = true)
         assertTrue(brightest < 40, "the window's light background showed through the pop (brightness $brightest)")
     }
+
+    /**
+     * A capped screen leaves its fill to the display while it stands still, so it must paint it
+     * while it moves: a pushed screen with nothing of its own to draw still hides the bright one it
+     * slides over, instead of showing it through its gutters and column.
+     */
+    @Test
+    fun aCappedScreenCoversTheOneBelowWhileItSlidesIn() {
+        NavTransitionTier.isLargeScreen = false
+        val nav = Nav(NavBackStacks(Route.Home), CoroutineScope(Dispatchers.Unconfined))
+        val destinations =
+            NavDestinations().apply {
+                composableFromEnd<Route.Home> { Box(Modifier.fillMaxSize().background(Color.White)) }
+                composableFromEnd<Route.Settings> { Box(Modifier.fillMaxSize()) }
+            }
+        val owner =
+            object : ViewModelStoreOwner {
+                override val viewModelStore = ViewModelStore()
+            }
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                AmethystPreviewTheme(dark = true) {
+                    CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+                        NavigationHost(nav, destinations)
+                    }
+                }
+            }
+        try {
+            var time = 0L
+
+            fun frame() = scene.render(time).also { time += 16 * ms }
+
+            repeat(3) { frame() }
+            assertTrue(frame().brightness(150, 100) > 200, "the bright screen shows at rest")
+            nav.stacks.push(Route.Settings)
+            // While the push runs (a 300 ms tween), the bright screen only scales behind it.
+            var darkest = 255
+            repeat(14) { darkest = minOf(darkest, frame().brightness(150, 100)) }
+            assertTrue(darkest < 40, "the bright screen showed through the sliding screen (brightness $darkest)")
+            repeat(30) { frame() }
+            assertTrue(frame().brightness(150, 100) < 40, "the pushed screen is dark at rest")
+        } finally {
+            scene.close()
+            owner.viewModelStore.clear()
+        }
+    }
 }

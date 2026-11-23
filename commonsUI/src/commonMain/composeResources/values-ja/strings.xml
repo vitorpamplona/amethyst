@@ -5092,7 +5092,6 @@
     <string name="concord_create_failed">コミュニティを作成できませんでした。どの relay にも受け付けられなかったか、コミュニティリストを更新できませんでした。relay を確認して再試行してください。</string>
     <string name="concord_create_relays">Relay</string>
     <string name="concord_create_relays_desc">このコミュニティの暗号化メッセージを保存する relay です。空欄にすると自分の relay を使用します。</string>
-    <string name="concord_create_title">新しい Concord チャンネル</string>
     <string name="concord_direct_invite_accept">承諾</string>
     <string name="concord_direct_invite_accept_failed">このコミュニティに接続できませんでした。しばらくしてから再試行してください。</string>
     <string name="concord_direct_invite_action">npub で招待…</string>
@@ -9027,7 +9026,7 @@
     <string name="media_failed_unknown_image">この画像を読み込めませんでした</string>
     <string name="media_failed_unknown_gif">この GIF を読み込めませんでした</string>
     <string name="media_failed_open_in_browser">ブラウザで開く</string>
-    <string name="ai_code_title">AI コード</string>
+    <string name="ai_code_title">エージェント型コーディング</string>
     <string name="claude_code_new_session">新しいセッション</string>
     <string name="claude_code_search_hint">セッションを検索</string>
     <string name="claude_code_no_sessions">このコンピューターにはまだ Claude Code のセッションがありません。ここで開始するか、ターミナルで claude を実行するとこの一覧に表示されます。</string>
@@ -9036,7 +9035,6 @@
     <string name="claude_code_status_starting">起動中</string>
     <string name="claude_code_status_working">作業中</string>
     <string name="claude_code_status_needs_approval">承認が必要</string>
-    <string name="claude_code_status_ready">準備完了</string>
     <string name="claude_code_open_elsewhere_warning">このセッションは現在別の Claude Code で開かれています。ここで同時に続けると履歴が混ざる可能性があります。</string>
     <string name="claude_code_delete">削除</string>
     <string name="claude_code_delete_title">このセッションを削除しますか？</string>
@@ -9180,8 +9178,6 @@
     <string name="claude_code_tool_from_line">%1$d 行目から</string>
     <string name="claude_code_tool_search_in">%2$s 内の %1$s</string>
     <string name="claude_code_waiting_approval">あなたの承認を待っています</string>
-    <string name="claude_code_permission_edit">%1$s が %2$s を変更しようとしています</string>
-    <string name="claude_code_permission_create">%1$s が %2$s を作成しようとしています</string>
     <string name="claude_code_permission_run">%1$s がコマンドを実行しようとしています</string>
     <string name="claude_code_permission_keys">Enter で許可 · Esc で拒否</string>
     <string name="claude_code_permission_keys_deny">Enter または Esc で拒否</string>
@@ -9198,7 +9194,6 @@
         <item quantity="other">アーカイブ · %1$d セッション</item>
     </plurals>
     <string name="claude_code_status_in_terminal">ターミナルで開いています</string>
-    <string name="claude_code_intro_title">%1$s での新しいセッション</string>
     <string name="claude_code_starter_explain">このリポジトリの構成を説明して</string>
     <string name="claude_code_starter_tests">テストを実行して、失敗したものを修正して</string>
     <string name="claude_code_starter_review_branch">%1$s に対するこのブランチの変更をレビューして</string>
@@ -9808,7 +9803,6 @@
     <string name="claude_code_workstream_name">名前</string>
     <string name="claude_code_workstream_name_hint">用途</string>
     <string name="claude_code_workstream_name_desc">ワークストリームのフォルダーとブランチの名前になります。</string>
-    <string name="claude_code_workstream_go">開始</string>
     <string name="claude_code_advanced">詳細設定</string>
     <string name="claude_code_where">場所</string>
     <string name="claude_code_where_clones">新しいクローン</string>

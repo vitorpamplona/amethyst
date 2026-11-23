@@ -596,9 +596,7 @@ dependencies {
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
     implementation(project(":nestsClient"))
-    // Agent text stream previews: marmot-kmp's raw-QUIC binding plus the QUIC
-    // stack under it (for the certificate validator it requires).
-    implementation(libs.marmot.quic)
+    // quic-kmp's QuicLog, which the app routes into Quartz's Log (QuicLogBridge).
     implementation(libs.quic)
     implementation(project(":nappletHost"))
     // Compose Multiplatform resources runtime, so app-side screens that share a

@@ -25,7 +25,10 @@ import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPollRumors
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 object MessageCommands {
     val USAGE: String =
@@ -33,11 +36,15 @@ object MessageCommands {
         |amy marmot message — MLS group messaging
         |
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
+        |  marmot message reply GID EVENT_ID TEXT     publish kind:9 replying to an inner event (q tag)
         |  marmot message list GID [--limit N]        dump decrypted inner events (default --limit 50;
         |                                              --limit 0 = unlimited)
         |  marmot message edit GID EVENT_ID TEXT      publish kind:1009 replacing a message's text
         |  marmot message react GID EVENT_ID EMOJI    publish kind:7 reaction targeting an inner event
         |  marmot message delete GID EVENT_ID…        publish kind:5 deletion targeting inner events
+        |  marmot message poll GID QUESTION OPTION OPTION… [--multiple] [--ends-at UNIX]
+        |                                             publish a kind:1068 poll (2–10 options, ids "0".."9")
+        |  marmot message vote GID POLL_ID OPTION_ID… publish a kind:1018 vote; replaces your earlier vote
         """.trimMargin()
 
     suspend fun dispatch(
@@ -47,13 +54,16 @@ object MessageCommands {
         route(
             "message",
             tail,
-            "message <send|list|edit|react|delete> …",
+            "message <send|reply|list|edit|react|delete|poll|vote> …",
             mapOf(
                 "send" to { rest -> send(dataDir, rest) },
+                "reply" to { rest -> reply(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
                 "edit" to { rest -> edit(dataDir, rest) },
                 "react" to { rest -> react(dataDir, rest) },
                 "delete" to { rest -> delete(dataDir, rest) },
+                "poll" to { rest -> poll(dataDir, rest) },
+                "vote" to { rest -> vote(dataDir, rest) },
             ),
             help = USAGE,
         )
@@ -105,6 +115,7 @@ object MessageCommands {
 
             val raw = ctx.marmot.loadStoredMessages(gid)
             val parsed = raw.mapNotNull { Event.fromJsonOrNull(it) }
+            val parsedById = parsed.associateBy { it.id }
             // An edit is not its own row: it replaces the target's text in
             // place. Resolving the overlay here rather than in the renderer is
             // what keeps every front end from re-deriving the authorship and
@@ -129,6 +140,8 @@ object MessageCommands {
                             val id = obj["id"] as? String
                             val edited = overlays[id]
                             val retracted = id != null && id in deleted
+                            val event = parsedById[id]
+                            val poll = event?.let { MarmotPolls.parsePoll(it) }
                             mapOf(
                                 "event_id" to obj["id"],
                                 "author" to obj["pubkey"],
@@ -138,7 +151,11 @@ object MessageCommands {
                                 "deleted" to retracted,
                                 "expires_at" to expiries[id],
                                 "created_at" to obj["created_at"],
-                            )
+                            ) +
+                                listOfNotNull(
+                                    event?.let(::replyTarget)?.let { "reply_to" to it },
+                                    poll?.let { "poll" to pollFields(it) },
+                                )
                         } catch (_: Exception) {
                             mapOf("raw" to line)
                         }
@@ -276,6 +293,172 @@ object MessageCommands {
             )
             return 0
         }
+    }
+
+    /**
+     * Reply to a message in the group. `message reply <gid> <event_id> <text>`
+     *
+     * The same kind:9 the app's composer sends for a reply: a `q` tag naming the parent and its
+     * author, built by MarmotManager.buildTextMessage.
+     */
+    private suspend fun reply(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.size < 3) return Output.error("bad_args", "message reply <gid> <target_event_id> <text>")
+        val targetId = rest[1]
+        val text = rest[2]
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
+
+            val target =
+                findStoredInnerEvent(ctx, gid, targetId)
+                    ?: return Output.error("not_found", "no stored message $targetId in group $gid")
+            val bundle = ctx.marmot.buildTextMessage(gid, text, replyToEventId = target.id, replyToAuthorPubKey = target.pubKey)
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.outbound.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
+
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to bundle.innerEvent.id,
+                    "outer_event_id" to bundle.outbound.signedEvent.id,
+                    "kind" to bundle.innerEvent.kind,
+                    "reply_to" to target.id,
+                ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * Ask the group a question. `message poll <gid> <question> <option> <option>… [--multiple] [--ends-at UNIX]`
+     *
+     * Options get the ids "0".."9" in the order given; `message vote` takes those ids.
+     */
+    private suspend fun poll(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest, booleanFlags = setOf("multiple"), valueFlags = setOf("ends-at"))
+        val multiple = args.bool("multiple")
+        val endsAt = args.flag("ends-at")?.let { it.toLongOrNull() ?: return Output.error("bad_args", "--ends-at takes unix seconds, got '$it'") }
+        args.rejectUnknown()
+        val positional = args.positional
+        if (positional.size < 4) return Output.error("bad_args", "message poll <gid> <question> <option> <option>… [--multiple] [--ends-at UNIX]")
+        val question = positional[1]
+        val options = positional.drop(2)
+        val type = if (multiple) MarmotPolls.PollType.MULTIPLE_CHOICE else MarmotPolls.PollType.SINGLE_CHOICE
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(positional[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
+
+            var reason: MarmotPolls.BuildError? = null
+            val rumor =
+                MarmotPollRumors.poll(ctx.identity.pubKeyHex, question, options, type, endsAt, onError = { reason = it })
+                    ?: return Output.error("bad_args", pollErrorText(reason))
+            val bundle = ctx.marmot.buildGroupMessage(gid, rumor)
+            ctx.marmot.persistDecryptedMessage(gid, rumor.toJson(), bundle.epoch)
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.signedEvent.id)?.let { return it }
+
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to rumor.id,
+                    "outer_event_id" to bundle.signedEvent.id,
+                    "kind" to rumor.kind,
+                    "poll" to pollFields(MarmotPolls.parsePoll(rumor)!!),
+                ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * Vote on a poll in the group. `message vote <gid> <poll_event_id> <option_id>…`
+     *
+     * A vote is the voter's whole selection and replaces any earlier one; the poll must still be
+     * open and the selection must fit its type (one id for a single-choice poll).
+     */
+    private suspend fun vote(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.size < 3) return Output.error("bad_args", "message vote <gid> <poll_event_id> <option_id>…")
+        val pollId = rest[1]
+        val optionIds = rest.drop(2)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
+
+            val poll =
+                findStoredInnerEvent(ctx, gid, pollId)
+                    ?: return Output.error("not_found", "no stored message $pollId in group $gid")
+            val definition =
+                MarmotPolls.parsePoll(poll)
+                    ?: return Output.error("not_a_poll", "$pollId is not a poll this client can read")
+            val rumor =
+                MarmotPollRumors.vote(ctx.identity.pubKeyHex, poll, optionIds)
+                    ?: return Output.error(
+                        "bad_selection",
+                        "can't vote ${optionIds.joinToString(",")} on $pollId: the poll is closed or the selection does not fit it " +
+                            "(options ${definition.options.joinToString(",") { it.id }}, ${definition.type.nip88})",
+                    )
+            val bundle = ctx.marmot.buildGroupMessage(gid, rumor)
+            ctx.marmot.persistDecryptedMessage(gid, rumor.toJson(), bundle.epoch)
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.signedEvent.id)?.let { return it }
+
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to rumor.id,
+                    "outer_event_id" to bundle.signedEvent.id,
+                    "kind" to rumor.kind,
+                    "poll_id" to poll.id,
+                    "options" to MarmotPolls.parseResponse(rumor)?.second,
+                ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
+    }
+
+    private fun pollErrorText(reason: MarmotPolls.BuildError?): String =
+        when (reason) {
+            MarmotPolls.BuildError.InvalidQuestion -> "the question is empty, too long or has control characters"
+            MarmotPolls.BuildError.InvalidOptionCount -> "a poll takes ${MarmotPolls.MIN_OPTIONS} to ${MarmotPolls.MAX_OPTIONS} options"
+            MarmotPolls.BuildError.InvalidOptionLabel -> "an option is empty, too long or has control characters"
+            MarmotPolls.BuildError.InvalidDeadline -> "--ends-at must be in the future and within 30 days"
+            else -> "the poll breaks the Marmot poll profile"
+        }
+
+    private fun pollFields(poll: MarmotPolls.Definition): Map<String, Any?> =
+        mapOf(
+            "question" to poll.question,
+            "type" to poll.type.nip88,
+            "ends_at" to poll.endsAt,
+            "options" to poll.options.map { mapOf("id" to it.id, "label" to it.label) },
+        )
+
+    /**
+     * The message [event] replies to, as the app reads it: [ChatEvent.replyingTo] (the last `q`
+     * that quotes an event, never an address), else White Noise's NIP-10 `e`.
+     */
+    private fun replyTarget(event: Event): String? {
+        val chat = event as? ChatEvent ?: return null
+        return chat.replyingTo() ?: chat.replyTargetIds().firstOrNull()
     }
 
     /**

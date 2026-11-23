@@ -52,9 +52,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -81,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_view_grouped_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_view_inline
 import com.vitorpamplona.amethyst.commons.resources.concord_view_inline_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_view_mode_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_entry_desc
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
 import com.vitorpamplona.amethyst.commons.resources.messages_load_types_desc
 import com.vitorpamplona.amethyst.commons.resources.messages_load_types_title
 import com.vitorpamplona.amethyst.commons.resources.messages_settings
@@ -189,6 +193,31 @@ fun MessagesSettingsScreen(
                                 ui = ui,
                                 checked = ui.type in enabled,
                                 onCheckedChange = { accountViewModel.account.settings.setChatFeedEnabled(ui.type, it) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (ChatFeedType.MARMOT in enabled) {
+                item {
+                    // Linked devices are a Marmot feature: the way in sits with the Marmot toggle.
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                    ) {
+                        SettingsControlRow(
+                            icon = MaterialSymbols.PhonelinkLock,
+                            title = stringRes(Res.string.marmot_devices_title),
+                            description = stringRes(Res.string.marmot_devices_entry_desc),
+                            onClick = { nav.nav(Route.MarmotDevicesSettings) },
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

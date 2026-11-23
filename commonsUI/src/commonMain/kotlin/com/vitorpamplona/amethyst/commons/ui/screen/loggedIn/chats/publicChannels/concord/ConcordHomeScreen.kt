@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -66,8 +67,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_count
-import com.vitorpamplona.amethyst.commons.resources.concord_create_title
+import com.vitorpamplona.amethyst.commons.resources.concord_create_community_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_home_joining
+import com.vitorpamplona.amethyst.commons.resources.concord_home_loading
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_member_count
 import com.vitorpamplona.amethyst.commons.resources.concord_show_all_channels
@@ -88,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import kotlinx.coroutines.flow.combine
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -126,6 +130,10 @@ fun ConcordHomeScreen(
     // does not re-run each time the invites scroll back into view.
     RefreshConcordDirectInvites(accountViewModel)
     val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
+    // Until the List has been fetched, or while an accepted invite is joining, an empty hub means
+    // "not here yet", not "none": say so instead of "you haven't joined any".
+    val listLoaded by account.concordChannelList.loaded.collectAsStateWithLifecycle()
+    val joining by account.concord.joiningConcordDirectInvites.collectAsStateWithLifecycle()
 
     // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
     // new messages) → OPEN (all channels) → CLOSED. Multi-open, so several can be expanded at once.
@@ -159,7 +167,7 @@ fun ConcordHomeScreen(
                 FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
                     SymbolIcon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(Res.string.concord_create_title),
+                        contentDescription = stringRes(Res.string.concord_create_community_title),
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -173,12 +181,24 @@ fun ConcordHomeScreen(
                 concordPendingDirectInvites(invites, accountViewModel, nav)
                 item(key = "concord-home-empty") {
                     Box(Modifier.fillParentMaxWidth().fillParentMaxHeight(if (invites.isEmpty()) 1f else 0.5f), contentAlignment = Alignment.Center) {
-                        Text(
-                            stringRes(Res.string.concord_home_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 32.dp),
-                        )
+                        if (joining.isNotEmpty() || !listLoaded) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp)
+                                Text(
+                                    stringRes(if (joining.isNotEmpty()) Res.string.concord_home_joining else Res.string.concord_home_loading),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 32.dp),
+                                )
+                            }
+                        } else {
+                            Text(
+                                stringRes(Res.string.concord_home_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 32.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -200,6 +220,30 @@ fun ConcordHomeScreen(
                             .orEmpty()
                     communityActivity(entry.id, keys)
                 }
+            }
+
+        // Each open community's readable channels, most-recently-active first. Worked out here, not
+        // in the LazyColumn builder, which re-runs on every recomposition: a key lookup per Private
+        // Channel and a sort per community each time.
+        val channelsByCommunity =
+            remember(sorted, revision, expandStates) {
+                sorted
+                    .filter { (expandStates[it.id] ?: ChannelExpand.CLOSED) != ChannelExpand.CLOSED }
+                    .associate { entry ->
+                        val state =
+                            account.concordSessions
+                                .sessionFor(entry.id)
+                                ?.state
+                                ?.value
+                        entry.id to
+                            state
+                                ?.channels
+                                ?.entries
+                                ?.filter { (key, ch) -> !ch.definition.private || ConcordChannelKeyring.heldKey(entry, key) != null }
+                                ?.sortedByDescending {
+                                    LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
+                                }.orEmpty()
+                    }
             }
 
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
@@ -233,16 +277,14 @@ fun ConcordHomeScreen(
                 if (mode != ChannelExpand.CLOSED && state != null) {
                     // Channels, most-recently-active first, each with its last message + unread state.
                     // In UNREAD mode a row hides itself unless it has new messages (peek).
-                    val channels =
-                        state.channels.entries.sortedByDescending {
-                            LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
-                        }
+                    // Private Channels without a held key are unreadable and nameless: left out, as Armada does.
+                    val channels = channelsByCommunity[entry.id].orEmpty()
                     items(channels, key = { "${entry.id}/${it.key}" }) { ch ->
                         val def = ch.value.definition
                         ConcordChannelRow(
                             communityId = entry.id,
                             channelKey = ch.key,
-                            channelName = def.name.ifBlank { ch.key },
+                            channelName = def.name.ifBlank { ch.key.take(8) },
                             icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag,
                             hideIfRead = mode == ChannelExpand.UNREAD,
                             accountViewModel = accountViewModel,

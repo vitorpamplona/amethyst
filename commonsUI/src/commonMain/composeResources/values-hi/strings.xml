@@ -3915,7 +3915,6 @@
     <string name="concord_create_failed">समुदाय बनाया नहीं जा सका। कोई पुनःप्रसारक ने उसे स्वीकारा नहीं। अथवा आपकी समुदाय सूची का अद्यतन असफल। पुनःप्रसारकों की जाँच करें तथा पुनःप्रयास करें।</string>
     <string name="concord_create_relays">पुनःप्रसारक</string>
     <string name="concord_create_relays_desc">पुनःप्रसारक जो इस समुदाय के रहस्यीकृत सन्देशों को रखते हैं। रिक्त छोड दें अपने ही पुनःप्रसारकों का उपयोग करने के लिए।</string>
-    <string name="concord_create_title">नयी कोंकोर्ड प्रणाली</string>
     <string name="concord_direct_invite_accept">स्वीकार</string>
     <string name="concord_direct_invite_accept_failed">यह समुदाय अभिगम्य नहीं। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="concord_direct_invite_action">आमन्त्रणकर्ता npub…</string>
@@ -9323,7 +9322,6 @@
     <string name="claude_code_status_starting">आरम्भ हो रहा है</string>
     <string name="claude_code_status_working">कार्य मध्य</string>
     <string name="claude_code_status_needs_approval">आपकी अनुमति आवश्यक</string>
-    <string name="claude_code_status_ready">तत्पर</string>
     <string name="claude_code_open_elsewhere_warning">यह सत्र अभी एक अन्य Claude Code में खुला है। इसे यहाँ भी साथ ही आगे बढाने से इसका इतिहास मिश्रित हो सकता है।</string>
     <string name="claude_code_delete">मिटाएँ</string>
     <string name="claude_code_delete_title">क्या यह सत्र मिटा दें।</string>
@@ -9473,8 +9471,6 @@
     <string name="claude_code_tool_from_line">पंक्ति %1$d से</string>
     <string name="claude_code_tool_search_in">%2$s में %1$s</string>
     <string name="claude_code_waiting_approval">आपकी अनुमति की प्रतीक्षा</string>
-    <string name="claude_code_permission_edit">%1$s %2$s को परिवर्तित करना चाहता है</string>
-    <string name="claude_code_permission_create">%1$s %2$s बनाना चाहता है</string>
     <string name="claude_code_permission_run">%1$s एक आदेश चलाना चाहता है</string>
     <string name="claude_code_permission_keys">एण्टर अनुमति देता है · एस्केप अस्वीकार करता है</string>
     <string name="claude_code_permission_keys_deny">एण्टर अथवा एस्केप अस्वीकार करता है</string>
@@ -9492,7 +9488,6 @@
         <item quantity="other">संगृहीत · %1$d सत्र</item>
     </plurals>
     <string name="claude_code_status_in_terminal">आदेशपटल में खुला</string>
-    <string name="claude_code_intro_title">%1$s में नया सत्र</string>
     <string name="claude_code_starter_explain">समझाओ कि यह क्रमलेखकोश कैसे व्यवस्थित है</string>
     <string name="claude_code_starter_tests">परीक्षण चलाओ तथा जो असफल हों उन्हें सुधारो</string>
     <string name="claude_code_starter_review_branch">%1$s के विरुद्ध इस शाखा के परिवर्तनों की समीक्षा करो</string>
@@ -10096,7 +10091,6 @@
     <string name="claude_code_workstream_name">नाम</string>
     <string name="claude_code_workstream_name_hint">यह किसलिए है</string>
     <string name="claude_code_workstream_name_desc">कार्यप्रवाह के अभिलेखकोश तथा शाखा का नामकरण करता है।</string>
-    <string name="claude_code_workstream_go">जाएँ</string>
     <string name="claude_code_advanced">उन्नत</string>
     <string name="claude_code_where">कहाँ</string>
     <string name="claude_code_where_clones">नवीन अनुकृतियाँ</string>
@@ -10142,7 +10136,7 @@
     <string name="claude_code_storage_measuring">मापन चालू…</string>
     <string name="claude_code_archive">संग्रह करें</string>
     <string name="claude_code_unarchive">संग्रह से निकालें</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">कर्षण अनुरोध बनाएँ</string>
     <string name="claude_code_update_pr">कर्षण अनुरोध अद्यतन करें</string>
     <string name="claude_code_drafting">%1$s शीर्षक तथा विवरण लिख रहा है…</string>

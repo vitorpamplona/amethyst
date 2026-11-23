@@ -26,6 +26,7 @@ import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PlanStep
 import com.vitorpamplona.agents.TranscriptEntry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +126,33 @@ class CodexConnectionTest {
             assertEquals(AgentEvent.ReplyDelta("One "), events[4])
             assertEquals(ContentBlock.Text("One file."), (events[5] as AgentEvent.Reply).content.single())
             assertEquals(AgentEvent.TurnEnded(interrupted = false, failure = null), events[6])
+            scope.cancel()
+        }
+
+    // The shape of codex-rs app-server-protocol v2 `TurnPlanUpdatedNotification`.
+    @Test
+    fun planUpdatesBecomeTheAgentsPlan() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w")))
+            codex.send("fix it")
+            server.push(
+                """{"method":"turn/plan/updated","params":{"threadId":"t1","turnId":"turn-1","explanation":null,"plan":[""" +
+                    """{"step":"Read the code","status":"completed"},{"step":"Fix the bug","status":"inProgress"},{"step":"Run tests","status":"pending"}]}}""",
+            )
+            val events = withTimeout(5_000) { codex.events.take(2).toList() }
+            assertEquals(
+                AgentEvent.PlanUpdated(
+                    listOf(
+                        PlanStep("Read the code", PlanStep.Status.COMPLETED),
+                        PlanStep("Fix the bug", PlanStep.Status.IN_PROGRESS),
+                        PlanStep("Run tests", PlanStep.Status.PENDING),
+                    ),
+                ),
+                events[1],
+            )
             scope.cancel()
         }
 

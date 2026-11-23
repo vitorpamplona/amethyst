@@ -67,6 +67,17 @@ class ConcordChannel(
         notes: List<Note>,
     ): Boolean = account.concord.deleteConcordRumors(this, notes)
 
+    /** A moderator's hide (CORD-03 §3): the shared "Delete for everyone" action, with its confirmation. */
+    override fun canRemoveForEveryone(
+        account: Account,
+        note: Note,
+    ): Boolean = account.concord.canHideConcordMessage(note)
+
+    override suspend fun removeForEveryone(
+        account: Account,
+        note: Note,
+    ): Boolean = account.concord.hideConcordMessages(this, listOf(note))
+
     override fun canEdit(
         account: Account,
         note: Note,

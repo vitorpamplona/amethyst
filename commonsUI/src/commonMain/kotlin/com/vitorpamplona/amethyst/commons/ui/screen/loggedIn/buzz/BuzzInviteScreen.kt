@@ -180,7 +180,7 @@ fun BuzzInviteScreen(
                     onClick = {
                         // Open the relay's group screen, which now lists the channels the claim just
                         // granted you membership to (importable into Amethyst).
-                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
+                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl(BuzzInviteLink.isSecure(link)))?.let { relay ->
                             nav.newStack(Route.RelayGroupServer(relay.url))
                         }
                     },
@@ -197,7 +197,7 @@ fun BuzzInviteScreen(
                         // pre-approve NIP-42 auth to its relay so the read-only channel/DM discovery
                         // authenticates without a prompt, then hand off to the in-app window.nostr
                         // browser to accept terms + sign the claim.
-                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
+                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl(BuzzInviteLink.isSecure(link)))?.let { relay ->
                             accountViewModel.account.buzzWorkspaces.join(relay)
                             scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
                         }

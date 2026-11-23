@@ -60,8 +60,9 @@ class ChatroomListNewFeedFilter(
             if (!isEnabled(ChatFeedType.MARMOT)) {
                 emptyList()
             } else {
+                val archived = account.marmotChatSettings.state.value.archived
                 account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                    if (!chatroom.isKnown(followingKeySet)) {
+                    if (!chatroom.isKnown(followingKeySet) && chatroom.nostrGroupId !in archived) {
                         chatroom.newestMessage ?: chatroom.placeholderNote()
                     } else {
                         null

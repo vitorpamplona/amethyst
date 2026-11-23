@@ -18,20 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.accountsCache
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
-import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
-import kotlinx.coroutines.CoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 
-/**
- * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
- * Preview brokers are commonly self-signed and the binding expects that; the platform trust
- * store is still the default answer, and a deployment that pins does it here.
- */
-fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
-    QuicAgentTextStreamTransport(
-        parentScope = scope,
-        certificateValidator = JdkCertificateValidator(),
-    )
+// Android draws on the GPU, where a rounded clip costs nothing per pixel.
+actual fun Modifier.mediaClip(shape: Shape): Modifier = clip(shape)

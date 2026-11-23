@@ -50,7 +50,7 @@ set -uo pipefail
 
 WORK="${WORK:-$(mktemp -d)}"
 PORT="${PORT:-7452}"
-CONTAINER="cordn-interop-client"
+CONTAINER="${CONTAINER:-cordn-interop-client}"
 # shellcheck source=stack.sh
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/stack.sh"
 

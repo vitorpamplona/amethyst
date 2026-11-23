@@ -3893,7 +3893,6 @@
     <string name="concord_create_failed">Die Community konnte nicht erstellt werden: Kein Relay hat sie akzeptiert, oder deine Community-Liste konnte nicht aktualisiert werden. Prüfe die Relays und versuche es erneut.</string>
     <string name="concord_create_relays">Relais</string>
     <string name="concord_create_relays_desc">Relays, die die verschlüsselten Nachrichten dieser Community speichern. Leer lassen, um deine eigenen zu verwenden.</string>
-    <string name="concord_create_title">Neuer Concord-Kanal</string>
     <string name="concord_direct_invite_accept">Annehmen</string>
     <string name="concord_direct_invite_accept_failed">Diese Community ist nicht erreichbar. Versuche es gleich noch einmal.</string>
     <string name="concord_direct_invite_action">Per npub einladen…</string>
@@ -9748,7 +9747,6 @@
     <string name="claude_code_status_starting">Startet</string>
     <string name="claude_code_status_working">Arbeitet</string>
     <string name="claude_code_status_needs_approval">Braucht deine Freigabe</string>
-    <string name="claude_code_status_ready">Bereit</string>
     <string name="claude_code_open_elsewhere_warning">Diese Sitzung ist gerade in einem anderen Claude Code geöffnet. Wenn du sie gleichzeitig hier fortsetzt, kann ihr Verlauf durcheinandergeraten.</string>
     <string name="claude_code_delete">Löschen</string>
     <string name="claude_code_delete_title">Diese Sitzung löschen?</string>
@@ -9850,8 +9848,6 @@
     <string name="claude_code_tool_from_line">ab Zeile %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Wartet auf deine Freigabe</string>
-    <string name="claude_code_permission_edit">%1$s möchte %2$s ändern</string>
-    <string name="claude_code_permission_create">%1$s möchte %2$s erstellen</string>
     <string name="claude_code_permission_run">%1$s möchte einen Befehl ausführen</string>
     <string name="claude_code_permission_keys">Enter erlaubt · Esc lehnt ab</string>
     <string name="claude_code_permission_keys_deny">Enter oder Esc lehnt ab</string>
@@ -9865,7 +9861,6 @@
     <string name="claude_code_notify_finished">%1$s ist fertig</string>
     <string name="claude_code_section_needs_you">Braucht dich</string>
     <string name="claude_code_status_in_terminal">in einem Terminal geöffnet</string>
-    <string name="claude_code_intro_title">Neue Sitzung in %1$s</string>
     <string name="claude_code_starter_explain">Erkläre, wie dieses Repository aufgebaut ist</string>
     <string name="claude_code_starter_tests">Führe die Tests aus und behebe, was fehlschlägt</string>
     <string name="claude_code_starter_review_branch">Prüfe die Änderungen dieses Branches gegenüber %1$s</string>
@@ -9965,7 +9960,6 @@
     <string name="claude_code_workstream_name">Name</string>
     <string name="claude_code_workstream_name_hint">Wofür er ist</string>
     <string name="claude_code_workstream_name_desc">Benennt den Ordner und den Branch des Workstreams.</string>
-    <string name="claude_code_workstream_go">Los</string>
     <string name="claude_code_advanced">Erweitert</string>
     <string name="claude_code_where">Wo</string>
     <string name="claude_code_where_clones">Frische Klone</string>
@@ -10181,7 +10175,7 @@
     <string name="media_trim_hint">Ziehe die Enden, um einen Teil zu behalten</string>
     <string name="media_trim_upload_failed">Video konnte nicht gekürzt werden</string>
     <string name="media_crop_failed">Dieses Bild kann hier nicht zugeschnitten werden. Speichern verwendet es unverändert.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">PR erstellen</string>
     <string name="claude_code_update_pr">PR aktualisieren</string>
     <string name="claude_code_drafting">%1$s schreibt Titel und Beschreibung…</string>

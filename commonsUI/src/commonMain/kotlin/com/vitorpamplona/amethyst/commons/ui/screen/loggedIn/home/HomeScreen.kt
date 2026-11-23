@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
@@ -392,11 +393,14 @@ fun HomeFeeds(
     }
 
     RefresheableHomeBox(onRefresh, enablePullRefresh) {
-        SaveableFeedContentState(feedState, scrollStateKey) { listState ->
+        // Each note is a FirstShownItem (FeedLoaded), so the list can compose a screen ahead.
+        SaveableFeedContentState(feedState, scrollStateKey, cacheAhead = true) { listState ->
             RenderFeedContentState(
                 feedContentState = feedState,
                 accountViewModel = accountViewModel,
                 listState = listState,
+                // Note cards, with the live bubbles on top.
+                prefetchAtNoteWidth = true,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
@@ -473,21 +477,24 @@ fun FeedLoaded(
             }
         }
         itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .animateItem(),
-            ) {
-                NoteCompose(
-                    item,
-                    modifier = Modifier.fillMaxWidth(),
-                    routeForLastRead = routeForLastRead,
-                    isBoostedNote = false,
-                    isHiddenFeed = items.showHidden,
-                    quotesLeft = 3,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+            // The list composes notes a screen ahead: the note marks itself read when it shows.
+            FirstShownItem { shown ->
+                Row(
+                    shown
+                        .fillMaxWidth()
+                        .animateItem(),
+                ) {
+                    NoteCompose(
+                        item,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = routeForLastRead,
+                        isBoostedNote = false,
+                        isHiddenFeed = items.showHidden,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
 
             HorizontalDivider(

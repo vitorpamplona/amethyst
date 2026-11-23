@@ -4043,7 +4043,6 @@
     <string name="concord_create_failed">Komunitu se nepodařilo vytvořit: žádný relay ji nepřijal, nebo se nepodařilo aktualizovat váš seznam komunit. Zkontrolujte relaye a zkuste to znovu.</string>
     <string name="concord_create_relays">Relaye</string>
     <string name="concord_create_relays_desc">Relaye, které uchovávají šifrované zprávy této komunity. Nechte prázdné pro použití vlastních.</string>
-    <string name="concord_create_title">Nový kanál Concord</string>
     <string name="concord_direct_invite_accept">Přijmout</string>
     <string name="concord_direct_invite_accept_failed">Tuto komunitu se nepodařilo kontaktovat. Zkuste to za chvíli znovu.</string>
     <string name="concord_direct_invite_action">Pozvat podle npub…</string>
@@ -10442,7 +10441,6 @@
     <string name="claude_code_status_starting">Spouští se</string>
     <string name="claude_code_status_working">Pracuje</string>
     <string name="claude_code_status_needs_approval">Potřebuje vaše schválení</string>
-    <string name="claude_code_status_ready">Připraveno</string>
     <string name="claude_code_open_elsewhere_warning">Tato relace je právě otevřená v jiném Claude Code. Když v ní budete současně pokračovat i tady, může se její historie promíchat.</string>
     <string name="claude_code_delete">Smazat</string>
     <string name="claude_code_delete_title">Smazat tuto relaci?</string>
@@ -10544,8 +10542,6 @@
     <string name="claude_code_tool_from_line">od řádku %1$d</string>
     <string name="claude_code_tool_search_in">%1$s v %2$s</string>
     <string name="claude_code_waiting_approval">Čeká na vaše schválení</string>
-    <string name="claude_code_permission_edit">%1$s chce změnit %2$s</string>
-    <string name="claude_code_permission_create">%1$s chce vytvořit %2$s</string>
     <string name="claude_code_permission_run">%1$s chce spustit příkaz</string>
     <string name="claude_code_permission_keys">Enter povolí · Esc zamítne</string>
     <string name="claude_code_permission_keys_deny">Enter nebo Esc zamítne</string>
@@ -10559,7 +10555,6 @@
     <string name="claude_code_notify_finished">Hotovo: %1$s</string>
     <string name="claude_code_section_needs_you">Čeká na vás</string>
     <string name="claude_code_status_in_terminal">otevřeno v terminálu</string>
-    <string name="claude_code_intro_title">Nová relace v %1$s</string>
     <string name="claude_code_starter_explain">Vysvětlete, jak je tento repozitář uspořádaný</string>
     <string name="claude_code_starter_tests">Spusťte testy a opravte, co selže</string>
     <string name="claude_code_starter_review_branch">Zrevidujte změny této větve oproti %1$s</string>
@@ -10659,7 +10654,6 @@
     <string name="claude_code_workstream_name">Název</string>
     <string name="claude_code_workstream_name_hint">K čemu slouží</string>
     <string name="claude_code_workstream_name_desc">Pojmenuje složku a větev pracovního proudu.</string>
-    <string name="claude_code_workstream_go">Začít</string>
     <string name="claude_code_advanced">Pokročilé</string>
     <string name="claude_code_where">Kde</string>
     <string name="claude_code_where_clones">Čerstvé klony</string>
@@ -10898,7 +10892,7 @@
     <string name="media_trim_hint">Přetažením konců vyberte část, kterou chcete ponechat</string>
     <string name="media_trim_upload_failed">Video se nepodařilo zkrátit</string>
     <string name="media_crop_failed">Tento obrázek zde nelze oříznout. Tlačítko Uložit ho použije beze změn.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Vytvořit PR</string>
     <string name="claude_code_update_pr">Aktualizovat PR</string>
     <string name="claude_code_drafting">%1$s píše název a popis…</string>

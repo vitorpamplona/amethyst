@@ -24,12 +24,17 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.BuzzDmAddResult
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
+import com.vitorpamplona.amethyst.commons.model.buzzDmAddRefusedHistoryTag
+import com.vitorpamplona.amethyst.commons.model.buzzDmAddResult
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.dm.BuzzDmRules
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
-import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.dm.dmHistory
+import com.vitorpamplona.quartz.buzz.dm.tags.DmHistoryTag
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteClaim
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -83,9 +88,9 @@ object BuzzCommands {
         |    [--timeout SECS]
         |amy buzz dm list [--relays R,R]             list my DMs (44100 member-added + 40099 dm_created)
         |    [--limit N] [--timeout SECS]
-        |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM with 1-8 people (kind-41010)
+        |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM (up to 8 more people; agents extra) (kind-41010)
         |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
-        |amy buzz dm add-member RELAY CHANNEL PUBKEY add a member to a group DM (kind-41011)
+        |amy buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude] add a member to a DM (kind-41011)
         |amy buzz job …                             file/list/show/cancel agent jobs (43001-43006)
         |amy buzz workflow …                        trigger/run/approve Buzz workflows (30620/46020/46030)
         |amy buzz agent serve RELAY --exec CMD       run a parallel backlog scheduler (worktree-isolated)
@@ -123,7 +128,7 @@ object BuzzCommands {
             |amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]
             |amy buzz dm open RELAY PUBKEY [PUBKEY…]
             |amy buzz dm hide RELAY CHANNEL
-            |amy buzz dm add-member RELAY CHANNEL PUBKEY
+            |amy buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]
             """.trimMargin()
         return route(
             "buzz dm",
@@ -194,7 +199,7 @@ object BuzzCommands {
         }
     }
 
-    /** `buzz dm open RELAY PUBKEY [PUBKEY…]` → publishes a kind-41010 with 1-8 `p` participants. */
+    /** `buzz dm open RELAY PUBKEY [PUBKEY…]` → publishes a kind-41010, one `p` per other participant. */
     private suspend fun dmOpen(
         dataDir: DataDir,
         rest: Array<String>,
@@ -214,13 +219,15 @@ object BuzzCommands {
             if (hex !in participants) participants.add(hex)
             i++
         }
-        if (participants.size !in DmOpenEvent.MIN_PARTICIPANTS..DmOpenEvent.MAX_PARTICIPANTS) {
-            return Output.error("bad_args", "a DM needs ${DmOpenEvent.MIN_PARTICIPANTS}-${DmOpenEvent.MAX_PARTICIPANTS} participants")
+        // At most 9 people, me included, but agents don't count: only the relay knows who is an
+        // agent, so the cap is its to enforce (`invalid: a DM may hold at most 9 people…`).
+        if (participants.isEmpty()) {
+            return Output.error("bad_args", "a DM needs at least one other participant")
         }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val signed = ctx.signer.sign(DmOpenEvent.build(participants))
+            val signed = ctx.signer.sign(BuzzDmRules.openTemplate(participants))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             // The relay confirms a DM open synchronously in the OK message as
@@ -264,20 +271,92 @@ object BuzzCommands {
             DmHideEvent.build(channelId)
         }
 
-    /** `buzz dm add-member RELAY CHANNEL PUBKEY` → publishes a kind-41011 (`h` + new `p`). */
+    /**
+     * `buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]` → publishes a
+     * kind-41011 (`h` + new `p`), with the same default as the app: `ask` (`["history", "ask"]`).
+     * The relay then decides where there is nothing to decide (a DM of one person forks a new DM
+     * without history; people who already share a DM land there) and otherwise refuses with
+     * `needs-choice: history`, which this reports as `needs_history_choice` so the caller sends
+     * again with `include` (the DM grows in place and PUBKEY sees its history) or `exclude` (no tag:
+     * the relay finds or creates the DM of this DM's people plus PUBKEY). `--include-history` is the
+     * old spelling of `--history include`. An agent may send no history tag at all (the relay answers
+     * `forbidden: only people can share a DM's history`), so for the default `ask` that refusal is
+     * answered by sending the add again untagged, and `history` reports `exclude`. `channel_id` is the DM the conversation is in now, read
+     * from the relay's OK, and `created` says whether the relay made it just now.
+     */
     private suspend fun dmAddMember(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY"
-        val memberInput = Args(rest).positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY [--history ask|include|exclude]"
+        val args = Args(rest)
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val channelId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+        val memberInput = args.positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val member =
             decodePublicKeyAsHexOrNull(memberInput.trim())?.takeIf { it.isValid() }
                 ?: return Output.error("bad_args", "invalid public key (npub or 64-char hex): $memberInput")
-        return publishScoped(dataDir, rest, usage) { _, channelId, _ ->
-            DmAddMemberEvent.build(channelId, member)
+        val legacyInclude = args.bool("include-history")
+        val history = args.flag("history")?.trim()?.lowercase() ?: if (legacyInclude) HISTORY_INCLUDE else HISTORY_ASK
+        if (history !in setOf(HISTORY_ASK, HISTORY_INCLUDE, HISTORY_EXCLUDE)) return Output.error("bad_args", usage)
+        args.rejectUnknown()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            var sentHistory = history
+            var signed = ctx.signer.sign(dmAddMemberTemplate(channelId, member, sentHistory))
+            var ack = ctx.publish(signed, setOf(relay))
+            if (sentHistory == HISTORY_ASK && buzzDmAddRefusedHistoryTag(ack)) {
+                // An agent may not send a history tag at all (only people choose): send the default
+                // add again untagged, as the app does. An explicit `--history include` keeps the
+                // relay's refusal instead of quietly becoming something else.
+                sentHistory = HISTORY_EXCLUDE
+                signed = ctx.signer.sign(dmAddMemberTemplate(channelId, member, sentHistory))
+                ack = ctx.publish(signed, setOf(relay))
+            }
+            if (buzzDmAddResult(ack, relay, fromChannelId = channelId) == BuzzDmAddResult.NeedsHistoryChoice) {
+                return Output.error(
+                    "needs_history_choice",
+                    "adding $member would let them see this DM's history: send again with --history include or --history exclude",
+                    extra = mapOf("event_id" to signed.id, "group_id" to channelId, "member" to member),
+                )
+            }
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
+            val okMessage = ack.values.firstOrNull { it.accepted }?.message
+            Output.emit(
+                mapOf(
+                    "event_id" to signed.id,
+                    "kind" to signed.kind,
+                    "relay" to relay.url,
+                    "group_id" to channelId,
+                    "member" to member,
+                    "history" to sentHistory,
+                    "published" to ack.values.any { it.accepted },
+                    "channel_id" to BuzzDmRules.channelIdFromOk(okMessage),
+                    // false, not null, for an OK that doesn't say: the key's shape before the parser.
+                    "created" to (BuzzDmRules.createdFromOk(okMessage) ?: okMessage?.let { false }),
+                    "relay_message" to okMessage,
+                ),
+            )
+            return 0
         }
     }
+
+    private fun dmAddMemberTemplate(
+        channelId: String,
+        member: HexKey,
+        history: String,
+    ) = DmAddMemberEvent.build(channelId, member) {
+        when (history) {
+            HISTORY_ASK -> dmHistory(DmHistoryTag.ASK)
+            HISTORY_INCLUDE -> dmHistory(DmHistoryTag.INCLUDE)
+        }
+    }
+
+    private const val HISTORY_ASK = "ask"
+    private const val HISTORY_INCLUDE = "include"
+    private const val HISTORY_EXCLUDE = "exclude"
 
     private val jsonMedia = "application/json".toMediaType()
     private val jsonParser = Json { ignoreUnknownKeys = true }
@@ -300,6 +379,9 @@ object BuzzCommands {
 
         val invite = BuzzInviteLink.parse(urlArg) ?: return Output.error("bad_args", "not a Buzz invite link: $urlArg")
         if (invite.isExpired(TimeUtils.now())) return Output.error("expired", "this invite has expired")
+        // The relay writes the link's scheme from its own url: `http://` for a `ws://` deployment.
+        val secure = BuzzInviteLink.isSecure(urlArg)
+        val httpBase = invite.httpBase(secure)
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -308,7 +390,7 @@ object BuzzCommands {
             // 1. Join policy (optional). A relay with a configured policy requires an accepted
             //    receipt before the claim; one without returns 404 and we skip straight to claim.
             var policyReceipt: String? = null
-            val (policyCode, policyBody) = httpGet(http, "${invite.httpBase()}/api/join-policy")
+            val (policyCode, policyBody) = httpGet(http, "$httpBase/api/join-policy")
             if (policyCode == 200) {
                 val policy = jsonParser.parseToJsonElement(policyBody).jsonObject["policy"]?.jsonObject
                 val version = policy?.get("version")?.jsonPrimitive?.content
@@ -326,7 +408,7 @@ object BuzzCommands {
                             put("policy_version", version)
                             put("age_confirmed", true)
                         }.toString()
-                    val (acceptCode, acceptBody) = httpPost(http, "${invite.httpBase()}/api/invites/accept-policy", acceptReq, null)
+                    val (acceptCode, acceptBody) = httpPost(http, "$httpBase/api/invites/accept-policy", acceptReq, null)
                     if (acceptCode != 200) return Output.error("policy_failed", "accept-policy failed ($acceptCode): $acceptBody")
                     policyReceipt =
                         jsonParser
@@ -339,7 +421,7 @@ object BuzzCommands {
             }
 
             // 3. Claim — NIP-98-signed POST. The `u` tag must equal the tenant-host URL.
-            val claimUrl = "${invite.httpBase()}/api/invites/claim"
+            val claimUrl = "$httpBase/api/invites/claim"
             val claimReq =
                 buildJsonObject {
                     put("code", invite.code)
@@ -368,7 +450,7 @@ object BuzzCommands {
                     "community_id" to (result["community_id"]?.jsonPrimitive?.content ?: invite.communityId),
                     "role" to (result["role"]?.jsonPrimitive?.content ?: invite.role),
                     "host" to invite.host,
-                    "relay" to invite.relayUrl(),
+                    "relay" to invite.relayUrl(secure),
                 ),
             )
             return 0

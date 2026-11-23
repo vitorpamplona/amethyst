@@ -5,7 +5,10 @@
 // openUri). It passed the sound through unchanged, left over from an audio-level display removed
 // upstream in 7b8cc87, and macOS's audio thread crashed in its process callback
 // (AudioQueueProcessingTapGetSourceAudio, a null read) within minutes of scrolling a video feed.
-// The rest is the upstream file as is. Drop this directory once upstream ships without the tap.
+// Second change: play on a video that played to its end starts it over (see play() and
+// clearEndFlag()). Before, a replay sometimes didn't start, or started with a frozen picture.
+// The rest is the upstream file as is. Drop this directory once upstream ships without the tap
+// and with that fix.
 
 import AVFoundation
 import CoreGraphics
@@ -996,7 +999,16 @@ class MacVideoPlayer {
     func play() {
         if isReadyForPlayback {
             isPlaying = true
-            player?.play()
+            if let item = player?.currentItem, !isHLSStream, isAtEnd(item) {
+                // AVPlayer ignores play() on an item at its end. Kotlin also seeks to 0 for a
+                // replay, but that seek can land after this play, and then nothing plays.
+                player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+                    guard let self = self, finished, self.isPlaying else { return }
+                    self.player?.play()
+                }
+            } else {
+                player?.play()
+            }
             configureDisplayLink()
         } else {
             // Mark that playback is pending
@@ -1234,6 +1246,20 @@ class MacVideoPlayer {
         }
     }
 
+    /// Whether [item] sits at its end, within a frame: the only place AVPlayer ignores play().
+    private func isAtEnd(_ item: AVPlayerItem) -> Bool {
+        let duration = item.duration
+        guard duration.isNumeric, duration.seconds > 0 else { return false }
+        return item.currentTime().seconds >= duration.seconds - 0.05
+    }
+
+    /// Forgets an end not yet consumed: a play starts a new run, and an end left over from the last
+    /// run would make Kotlin stop this one as soon as it starts. Runs on the caller's thread, before
+    /// Kotlin marks the player as playing, not with the play() it posts to the main thread.
+    func clearEndFlag() {
+        didPlayToEnd = false
+    }
+
     /// Consumes the end-of-playback flag. Returns true once per playback completion.
     func consumeDidPlayToEnd() -> Bool {
         if didPlayToEnd {
@@ -1307,6 +1333,7 @@ public func openUri(_ context: UnsafeMutableRawPointer?, _ uri: UnsafePointer<CC
 public func playVideo(_ context: UnsafeMutableRawPointer?) {
     guard let context = context else { return }
     let player = Unmanaged<MacVideoPlayer>.fromOpaque(context).takeUnretainedValue()
+    player.clearEndFlag()
     DispatchQueue.main.async {
         player.play()
     }

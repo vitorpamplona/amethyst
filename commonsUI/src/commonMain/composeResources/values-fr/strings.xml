@@ -5260,7 +5260,6 @@
     <string name="concord_create_failed">La communauté n'a pas pu être créée : aucun relais ne l'a acceptée, ou votre liste de communautés n'a pas pu être mise à jour. Vérifiez les relais et réessayez.</string>
     <string name="concord_create_relays">Relais</string>
     <string name="concord_create_relays_desc">Relais qui stockent les messages chiffrés de cette communauté. Laissez vide pour utiliser les vôtres.</string>
-    <string name="concord_create_title">Nouveau canal Concord</string>
     <string name="concord_direct_invite_accept">Accepter</string>
     <string name="concord_direct_invite_accept_failed">Impossible de joindre cette communauté. Réessayez dans un instant.</string>
     <string name="concord_direct_invite_action">Inviter par npub…</string>
@@ -9360,7 +9359,7 @@
     <string name="media_failed_unknown_image">Impossible de charger cette image</string>
     <string name="media_failed_unknown_gif">Impossible de charger ce GIF</string>
     <string name="media_failed_open_in_browser">Ouvrir dans le navigateur</string>
-    <string name="ai_code_title">Code IA</string>
+    <string name="ai_code_title">Codage agentique</string>
     <string name="claude_code_new_session">Nouvelle session</string>
     <string name="claude_code_search_hint">Rechercher des sessions</string>
     <string name="claude_code_no_sessions">Aucune session Claude Code sur cet ordinateur pour l'instant. Démarrez-en une ici, ou lancez claude dans un terminal et elle apparaîtra dans cette liste.</string>
@@ -9369,7 +9368,6 @@
     <string name="claude_code_status_starting">Démarrage</string>
     <string name="claude_code_status_working">En cours</string>
     <string name="claude_code_status_needs_approval">Attend votre approbation</string>
-    <string name="claude_code_status_ready">Prêt</string>
     <string name="claude_code_open_elsewhere_warning">Cette session est ouverte dans un autre Claude Code en ce moment. La poursuivre ici en même temps peut mélanger son historique.</string>
     <string name="claude_code_delete">Supprimer</string>
     <string name="claude_code_delete_title">Supprimer cette session ?</string>
@@ -9525,8 +9523,6 @@
     <string name="claude_code_tool_from_line">à partir de la ligne %1$d</string>
     <string name="claude_code_tool_search_in">%1$s dans %2$s</string>
     <string name="claude_code_waiting_approval">En attente de votre approbation</string>
-    <string name="claude_code_permission_edit">%1$s veut modifier %2$s</string>
-    <string name="claude_code_permission_create">%1$s veut créer %2$s</string>
     <string name="claude_code_permission_run">%1$s veut exécuter une commande</string>
     <string name="claude_code_permission_keys">Entrée autorise · Échap refuse</string>
     <string name="claude_code_permission_keys_deny">Entrée ou Échap refuse</string>
@@ -9544,7 +9540,6 @@
         <item quantity="other">Archivées · %1$d sessions</item>
     </plurals>
     <string name="claude_code_status_in_terminal">ouverte dans un terminal</string>
-    <string name="claude_code_intro_title">Nouvelle session dans %1$s</string>
     <string name="claude_code_starter_explain">Explique comment ce dépôt est organisé</string>
     <string name="claude_code_starter_tests">Lance les tests et corrige ce qui échoue</string>
     <string name="claude_code_starter_review_branch">Relis les modifications de cette branche par rapport à %1$s</string>
@@ -10180,7 +10175,6 @@
     <string name="claude_code_workstream_name">Nom</string>
     <string name="claude_code_workstream_name_hint">À quoi il sert</string>
     <string name="claude_code_workstream_name_desc">Donne son nom au dossier et à la branche du chantier.</string>
-    <string name="claude_code_workstream_go">Démarrer</string>
     <string name="claude_code_advanced">Avancé</string>
     <string name="claude_code_where">Où</string>
     <string name="claude_code_where_clones">Nouveaux clones</string>

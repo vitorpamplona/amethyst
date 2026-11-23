@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -50,7 +51,6 @@ import com.vitorpamplona.quartz.nip65RelayList.setFacet
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 
@@ -295,7 +295,7 @@ object RelayCommands {
                 .build()
 
         return try {
-            OkHttpClient().newCall(request).execute().use { response ->
+            LocalOnly.httpClient().newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     return Output.error("http_error", "relay returned HTTP ${response.code} for $httpUrl")
                 }

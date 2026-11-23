@@ -73,7 +73,7 @@ fun HashtagFeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    PrefetchLoadedFeedMedia(loaded, listState, accountViewModel)
+    PrefetchLoadedFeedMedia(loaded, listState, accountViewModel, mediaAtNoteWidth = true)
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),

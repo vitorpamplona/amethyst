@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.ScheduledFlag
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.ui.components.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.commons.ui.note.Gallery
@@ -188,7 +188,7 @@ fun RenderLiveActivityThumb(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .clip(QuoteBorder),
+                            .mediaClip(QuoteBorder),
                 )
             } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
 

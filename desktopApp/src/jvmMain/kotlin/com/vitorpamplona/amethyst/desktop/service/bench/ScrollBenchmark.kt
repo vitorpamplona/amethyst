@@ -25,6 +25,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.desktop.app.DesktopNavigator
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.AWTEvent
 import java.awt.Component
 import java.awt.EventQueue
@@ -78,7 +82,7 @@ import kotlin.system.exitProcess
 object ScrollBenchmark {
     private const val TAG = "ScrollBenchmark"
 
-    // Read with its `.waitSeconds`, `.notches`, `.intervalMs`, `.at` and `.measure` settings. The dev `run`
+    // Read with its `.waitSeconds`, `.notches`, `.intervalMs`, `.at`, `.measure` and `.screen` settings. The dev `run`
     // forwards only the properties desktopApp/build.gradle.kts lists: add a new one there too.
     const val PROPERTY = "amethyst.scrollBench"
 
@@ -96,6 +100,9 @@ object ScrollBenchmark {
         // listener, the frame recorder, screenshots). The release's AOT training scrolls this way, so
         // the cache it ships profiles the app as users run it, not the benchmark's instruments.
         val measure: Boolean = true,
+        // A drawer entry (a NavBarItem name, e.g. PICTURES) to open first, as its drawer row opens
+        // it; null scrolls the screen the app starts on (the home feed).
+        val screen: NavBarItem? = null,
     )
 
     fun config(): Config? {
@@ -114,6 +121,10 @@ object ScrollBenchmark {
             atX = at[0],
             atY = at[1],
             measure = System.getProperty("$PROPERTY.measure")?.toBooleanStrictOrNull() ?: true,
+            screen =
+                System.getProperty("$PROPERTY.screen")?.takeIf { it.isNotBlank() }?.let { name ->
+                    requireNotNull(NavBarItem.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }) { "No drawer entry named $name" }
+                },
         )
     }
 
@@ -124,10 +135,14 @@ object ScrollBenchmark {
 
     /** Runs the benchmark in [window] when the property asks for it; nothing otherwise. */
     @Composable
-    fun Run(window: JFrame) {
+    fun Run(
+        window: JFrame,
+        navigator: DesktopNavigator,
+    ) {
         val config = configured ?: return
         LaunchedEffect(Unit) {
             try {
+                config.screen?.let { open(navigator, it) }
                 run(window, config)
             } catch (e: CancellationException) {
                 // The window's composition went away (a crash rebuilt the window): not a result, and
@@ -153,6 +168,23 @@ object ScrollBenchmark {
 
     /** Written last when the passes are done, in either mode. */
     const val DONE_FILE = "done.txt"
+
+    /** Opens the drawer entry [item] once an account is logged in, the way its drawer row does. */
+    private suspend fun open(
+        navigator: DesktopNavigator,
+        item: NavBarItem,
+    ) {
+        val def = requireNotNull(NavBarCatalog[item]) { "$item has no drawer row" }
+        val accountViewModel =
+            withTimeoutOrNull(60_000) {
+                while (navigator.nav == null || navigator.accountViewModel == null) delay(200)
+                navigator.accountViewModel
+            } ?: error("No logged-in account after 60 s to open $item in")
+        val route = def.resolveRoute(accountViewModel)
+        require(navigator.destinations?.has(route) != false) { "$item opens ${route::class.simpleName}, which this desktop has no screen for" }
+        navigator.goDrawer { route }
+        Log.i(TAG) { "Scroll benchmark: opened $item" }
+    }
 
     private suspend fun run(
         window: JFrame,
@@ -341,6 +373,7 @@ object ScrollBenchmark {
             "startup_cache" to startupCache(),
             "refresh_hz" to (refresh?.toString() ?: "unknown"),
             "window" to "${window.width}x${window.height}",
+            "screen" to (config.screen?.name ?: "HOME"),
             "notches" to config.notches.toString(),
             "interval_ms" to config.intervalMs.toString(),
             "wait_s" to config.waitSeconds.toString(),

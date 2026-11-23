@@ -1,0 +1,185 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.cli
+
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import okhttp3.Dns
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import java.io.IOException
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.UnknownHostException
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * `AMY_LOCAL_ONLY=1`: amy reaches only hosts on this machine or its private network, whatever a
+ * relay list, a default set or a link names. Test harnesses set it so a run can never send its
+ * throwaway accounts' events to the public relays Amethyst ships as defaults.
+ *
+ * A host is allowed when it is named in [Context.BOOTSTRAP_ENV] or `AMY_ALLOW_HOSTS` (comma
+ * separated), or when every address it resolves to is loopback, link-local, private (RFC 1918,
+ * IPv6 ULA) or carrier-grade NAT (100.64.0.0/10). Anything else fails before the connection
+ * opens, with an IOException naming the host, and is reported once per host on stderr.
+ *
+ * Every OkHttp client amy builds goes through [httpClientBuilder], so the rule covers relay
+ * sockets and plain HTTP (Blossom, NIP-05, zaps, mints) alike. It is enforced twice: by [dns],
+ * on the very addresses a connection dials (a resolver's cached answer included), and by an
+ * interceptor, for a request that goes out through a proxy and is never resolved here.
+ */
+object LocalOnly {
+    const val ENV = "AMY_LOCAL_ONLY"
+    const val ALLOW_ENV = "AMY_ALLOW_HOSTS"
+
+    val enabled: Boolean by lazy { System.getenv(ENV)?.trim()?.lowercase() in setOf("1", "true", "yes") }
+
+    private val namedHosts: Set<String> by lazy {
+        listOfNotNull(System.getenv(Context.BOOTSTRAP_ENV), System.getenv(ALLOW_ENV))
+            .flatMap { it.split(',') }
+            .mapNotNull { hostOf(it.trim()) }
+            .toSet()
+    }
+
+    // Host -> whether every address it resolved to is local. A lookup that fails is not cached: the
+    // host is refused this once, and asked again next time.
+    private val verdicts = ConcurrentHashMap<String, Boolean>()
+
+    // Hosts already reported refused on stderr, so each is named once.
+    private val reported: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    private fun refuse(host: String): Boolean {
+        if (reported.add(host)) System.err.println("[amy] $ENV: refusing $host (not on this machine or its private network)")
+        return false
+    }
+
+    private fun isNamed(host: String): Boolean = host == "localhost" || host in namedHosts
+
+    /** `wss://relay.example:443/path` or a bare `relay.example` → `relay.example`. */
+    internal fun hostOf(entry: String): String? {
+        if (entry.isEmpty()) return null
+        val afterScheme = entry.substringAfter("://", entry)
+        val authority = afterScheme.substringBefore('/').substringAfterLast('@')
+        val host =
+            if (authority.startsWith("[")) {
+                authority.substringAfter('[').substringBefore(']')
+            } else {
+                authority.substringBefore(':')
+            }
+        return host.lowercase().ifEmpty { null }
+    }
+
+    internal fun isLocalAddress(address: InetAddress): Boolean {
+        if (address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress || address.isAnyLocalAddress) return true
+        val bytes = address.address
+        return if (address is Inet4Address) {
+            // 100.64.0.0/10, carrier-grade NAT: never the public internet.
+            bytes[0].toInt() and 0xff == 100 && (bytes[1].toInt() and 0xc0) == 64
+        } else {
+            // fc00::/7, unique local addresses.
+            (bytes[0].toInt() and 0xfe) == 0xfc
+        }
+    }
+
+    /**
+     * Whether [host] may be reached while [enabled]. Blocks on DNS the first time; the verdict of a
+     * lookup that answered is kept for the process, a failed lookup is not.
+     */
+    fun allows(host: String): Boolean {
+        val key = host.lowercase()
+        if (isNamed(key)) return true
+        verdicts[key]?.let { return it || refuse(key) }
+        val addresses = runCatching { InetAddress.getAllByName(key) }.getOrNull()
+        if (addresses.isNullOrEmpty()) return refuse(key)
+        val allowed = verdicts.computeIfAbsent(key) { addresses.all { isLocalAddress(it) } }
+        return allowed || refuse(key)
+    }
+
+    /** [allows] for a relay url; always true while [enabled] is off. */
+    fun allowsRelay(relay: NormalizedRelayUrl): Boolean = !enabled || hostOf(relay.url)?.let { allows(it) } ?: false
+
+    /**
+     * The relays of [relays] that may be dialed: all of them while [guarded] is off. Each distinct
+     * host is resolved once, in parallel and off the caller's thread, so a long relay list doesn't
+     * wait on its lookups one after another.
+     */
+    suspend fun dialable(
+        relays: Collection<NormalizedRelayUrl>,
+        guarded: Boolean = enabled,
+    ): Set<NormalizedRelayUrl> {
+        if (!guarded) return relays.toSet()
+        val byHost = relays.groupBy { hostOf(it.url) }
+        val allowedHosts =
+            coroutineScope {
+                byHost.keys
+                    .filterNotNull()
+                    .map { host -> async(Dispatchers.IO) { host.takeIf { allows(it) } } }
+                    .awaitAll()
+                    .filterNotNullTo(HashSet())
+            }
+        return byHost.filterKeys { it != null && it in allowedHosts }.values.flatMapTo(LinkedHashSet()) { it }
+    }
+
+    /**
+     * [delegate] judged on the addresses it returns: a host that resolves to any address off this
+     * machine and its private network fails with an [UnknownHostException], however the resolver
+     * came by the answer (SurgeDns serves a persisted one first). Hosts named in [Context.BOOTSTRAP_ENV]
+     * or [ALLOW_ENV] pass as they are. [guarded] is a test seam.
+     */
+    fun dns(
+        delegate: Dns,
+        guarded: Boolean = enabled,
+    ): Dns {
+        if (!guarded) return delegate
+        return Dns { hostname ->
+            val addresses = delegate.lookup(hostname)
+            val key = hostname.lowercase()
+            if (isNamed(key) || addresses.all { isLocalAddress(it) }) {
+                addresses
+            } else {
+                refuse(key)
+                throw UnknownHostException("$ENV is set: refusing to reach $hostname")
+            }
+        }
+    }
+
+    private val interceptor =
+        Interceptor { chain ->
+            val host = chain.request().url.host
+            if (!allows(host)) throw IOException("$ENV is set: refusing to reach $host")
+            chain.proceed(chain.request())
+        }
+
+    /**
+     * The one way amy makes an OkHttp client: a plain builder, plus the [ENV] guard when it is on.
+     * Callers add their own timeouts, socket factory or dispatcher on top. [guarded] is a test seam.
+     */
+    fun httpClientBuilder(guarded: Boolean = enabled): OkHttpClient.Builder =
+        OkHttpClient.Builder().also {
+            if (guarded) it.addInterceptor(interceptor).dns(dns(Dns.SYSTEM, guarded = true))
+        }
+
+    /** [httpClientBuilder] with nothing else set. */
+    fun httpClient(): OkHttpClient = httpClientBuilder().build()
+}

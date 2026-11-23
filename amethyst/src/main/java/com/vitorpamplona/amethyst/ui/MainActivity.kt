@@ -26,8 +26,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedCacheWindow
+import com.vitorpamplona.amethyst.commons.ui.feeds.LocalLazyListCacheWindow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
@@ -52,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -61,7 +66,11 @@ class MainActivity : AppCompatActivity() {
         setContent {
             AmethystTheme {
                 NowProvider {
-                    AmethystApp(Amethyst.instance.sessionManager, AndroidAppRoot)
+                    // Android's prefetch scheduler runs between frames, so a feed that asks for it
+                    // composes a screen of notes ahead (rememberForeverLazyListState(cacheAhead)).
+                    CompositionLocalProvider(LocalLazyListCacheWindow provides FeedCacheWindow) {
+                        AmethystApp(Amethyst.instance.sessionManager, AndroidAppRoot)
+                    }
                 }
             }
         }

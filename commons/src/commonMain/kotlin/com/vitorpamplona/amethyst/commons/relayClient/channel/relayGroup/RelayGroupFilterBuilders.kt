@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.pmPinnedMessages.ChannelPinsEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
@@ -105,8 +106,12 @@ val RELAY_GROUP_METADATA_KINDS =
  *
  * Splitting into two filter objects fixes it: those relays evaluate the rule per filter, so the
  * metadata filter is served normally and the pins filter is served (or harmlessly ignored) on its own.
+ *
+ * The same filter asks for Buzz's NIP-PM pin list (30623): on Buzz, 39005 is a thread summary and
+ * pins live in a relay-signed 30623 read by `#h` ([buildRelayGroupLiveStateFilter]). A relay29-family
+ * relay matches nothing on it, and no relay mixes it with the metadata block.
  */
-val RELAY_GROUP_PIN_KINDS = listOf(GroupPinnedEvent.KIND)
+val RELAY_GROUP_PIN_KINDS = listOf(GroupPinnedEvent.KIND, ChannelPinsEvent.KIND)
 
 /**
  * A live, channel-scoped subscription to this group's own relay-signed state (39000-39003) on a Buzz

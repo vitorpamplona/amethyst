@@ -2544,7 +2544,6 @@
     <string name="concord_create_action">创建</string>
     <string name="concord_create_relays">中继</string>
     <string name="concord_create_relays_desc">存储此社区加密消息的中继。留空以使用您自己的中继。</string>
-    <string name="concord_create_title">新建Concord 频道</string>
     <string name="concord_edit_title">编辑社区</string>
     <string name="concord_home_title">Concord 频道</string>
     <string name="concord_invite_action">邀请其他人</string>
@@ -9064,7 +9063,7 @@
     <string name="media_failed_unknown_image">无法加载此图片</string>
     <string name="media_failed_unknown_gif">无法加载此 GIF</string>
     <string name="media_failed_open_in_browser">在浏览器中打开</string>
-    <string name="ai_code_title">AI 编程</string>
+    <string name="ai_code_title">智能体编程</string>
     <string name="claude_code_new_session">新会话</string>
     <string name="claude_code_search_hint">搜索会话</string>
     <string name="claude_code_no_sessions">此电脑上还没有 Claude Code 会话。在此开始一个，或在终端中运行 claude，它就会显示在此列表中。</string>
@@ -9073,7 +9072,6 @@
     <string name="claude_code_status_starting">正在启动</string>
     <string name="claude_code_status_working">工作中</string>
     <string name="claude_code_status_needs_approval">需要您批准</string>
-    <string name="claude_code_status_ready">就绪</string>
     <string name="claude_code_open_elsewhere_warning">此会话当前在另一个 Claude Code 中打开。同时在此继续可能会混淆其历史记录。</string>
     <string name="claude_code_delete">删除</string>
     <string name="claude_code_delete_title">删除此会话？</string>
@@ -9217,8 +9215,6 @@
     <string name="claude_code_tool_from_line">从第 %1$d 行起</string>
     <string name="claude_code_tool_search_in">在 %2$s 中搜索 %1$s</string>
     <string name="claude_code_waiting_approval">正在等待您的批准</string>
-    <string name="claude_code_permission_edit">%1$s 想要更改 %2$s</string>
-    <string name="claude_code_permission_create">%1$s 想要创建 %2$s</string>
     <string name="claude_code_permission_run">%1$s 想要运行一条命令</string>
     <string name="claude_code_permission_keys">Enter 允许 · Esc 拒绝</string>
     <string name="claude_code_permission_keys_deny">Enter 或 Esc 拒绝</string>
@@ -9235,7 +9231,6 @@
         <item quantity="other">已归档 · %1$d 个会话</item>
     </plurals>
     <string name="claude_code_status_in_terminal">在终端中打开</string>
-    <string name="claude_code_intro_title">在 %1$s 中新建会话</string>
     <string name="claude_code_starter_explain">解释此仓库的组织结构</string>
     <string name="claude_code_starter_tests">运行测试并修复失败项</string>
     <string name="claude_code_starter_review_branch">审查此分支相对于 %1$s 的更改</string>
@@ -9845,7 +9840,6 @@
     <string name="claude_code_workstream_name">名称</string>
     <string name="claude_code_workstream_name_hint">用途</string>
     <string name="claude_code_workstream_name_desc">用于命名工作流的文件夹和分支。</string>
-    <string name="claude_code_workstream_go">开始</string>
     <string name="claude_code_advanced">高级</string>
     <string name="claude_code_where">位置</string>
     <string name="claude_code_where_clones">全新克隆</string>

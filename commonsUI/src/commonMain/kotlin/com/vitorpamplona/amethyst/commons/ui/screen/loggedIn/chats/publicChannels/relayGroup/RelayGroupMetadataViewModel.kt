@@ -29,27 +29,35 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.RelayGroupCreateResult
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.newRelayGroupId
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.report
+import com.vitorpamplona.amethyst.commons.notices.ui.ResUserNoticeResolver
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_name_taken
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_name_taken_title
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_refused
+import com.vitorpamplona.amethyst.commons.resources.relay_group_edit_refused
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
 import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
 import com.vitorpamplona.quartz.buzz.workspace.isValidBuzzChannelName
-import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
@@ -147,9 +155,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
         this.account = accountViewModel.account
         if (this.relay == null) {
             this.relay = relay
-            // Random NIP-29 group id: 8 secure bytes, hex-encoded (matches Armada) — except on a
-            // Buzz relay, which keys channels by UUID and ignores an id it cannot parse as one.
-            this.groupId = if (BuzzRelayDialect.isBuzz(relay)) newBuzzChannelId() else RandomInstance.bytes(8).toHexKey()
+            this.groupId = newRelayGroupId(BuzzRelayDialect.isBuzz(relay))
         }
     }
 
@@ -215,14 +221,21 @@ class RelayGroupMetadataViewModel : ViewModel() {
         touched = true
     }
 
+    /**
+     * Uploads a picked picture, then publishes the create or edit. The publish runs in the
+     * account's scope, not this screen's: a create is several events (the 9007, the 9002, the
+     * kind-10009 follow), and leaving the screen while it waits for the relay must not stop it
+     * halfway. A refusal is reported through [onError] whether or not the screen is still there;
+     * [onSuccess] (which navigates) only runs while it is.
+     */
     fun submit(
         uploader: MediaUploader,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         if (isWorking) return
+        isWorking = true
         viewModelScope.launch(Dispatchers.IO) {
-            isWorking = true
             try {
                 val local = pickedMedia
                 if (local != null) {
@@ -231,27 +244,70 @@ class RelayGroupMetadataViewModel : ViewModel() {
                     pickedMedia = null
                 }
 
-                try {
-                    publish()
-                } catch (e: SignerExceptions.ReadOnlyException) {
-                    onError(
-                        loadStringRes(Res.string.read_only_user),
-                        loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                    )
-                    return@launch
-                } catch (_: SignerExceptions) {
-                    // The user rejected it in their signer, or the signer was unavailable: nothing
-                    // was published, so keep the form open instead of reporting success.
-                    return@launch
-                }
-                onSuccess()
+                val published = account.scope.async(Dispatchers.IO) { publishReporting(onError) }.await()
+                if (published) onSuccess()
             } finally {
                 isWorking = false
             }
         }
     }
 
-    private suspend fun publish() {
+    /** [publish], with its refusals and signer failures reported through [onError]. True when it went out. */
+    private suspend fun publishReporting(onError: (String, String) -> Unit): Boolean =
+        try {
+            when (val outcome = publish()) {
+                is PublishOutcome.Done -> {
+                    // Sent, but not fully settled: say so, and still close the form, since the group
+                    // exists (or will) under this form's id and a second Create could only be refused.
+                    outcome.notice?.let { onError.report(ResUserNoticeResolver, it) }
+                    true
+                }
+
+                is PublishOutcome.NameTaken -> {
+                    // Nothing was sent: the directory we already loaded shows the clash.
+                    onError(loadStringRes(Res.string.buzz_channel_name_taken_title), loadStringRes(Res.string.buzz_channel_name_taken, outcome.name))
+                    false
+                }
+
+                is PublishOutcome.Refused -> {
+                    // Keep the form open with the relay's reason.
+                    val title = if (outcome.creating) Res.string.relay_group_create_refused else Res.string.relay_group_edit_refused
+                    onError(loadStringRes(title), outcome.reason)
+                    false
+                }
+            }
+        } catch (e: SignerExceptions.ReadOnlyException) {
+            onError(
+                loadStringRes(Res.string.read_only_user),
+                loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+            )
+            false
+        } catch (_: SignerExceptions) {
+            // The user rejected it in their signer, or the signer was unavailable: nothing was
+            // published, so keep the form open instead of reporting success.
+            false
+        }
+
+    private sealed interface PublishOutcome {
+        /** Sent; [notice] is what the user should still hear about a create that did not fully settle. */
+        data class Done(
+            val notice: UserNotice? = null,
+        ) : PublishOutcome
+
+        /** On Buzz, a loaded listed channel already holds [name]; nothing was sent. */
+        data class NameTaken(
+            val name: String,
+        ) : PublishOutcome
+
+        /** The relay refused the create ([creating]) or the edit, for [reason]. */
+        data class Refused(
+            val creating: Boolean,
+            val reason: String,
+        ) : PublishOutcome
+    }
+
+    /** Publishes the create or edit. */
+    private suspend fun publish(): PublishOutcome {
         // Send Buzz the name it would store anyway (no leading `#`s), so our optimistic copy and
         // the relay's 39000 agree.
         val name = if (isBuzzRelay) canonicalBuzzChannelName(name.value.text) else name.value.text.trim()
@@ -271,42 +327,71 @@ class RelayGroupMetadataViewModel : ViewModel() {
         val geohashes = parseGeohashes()
         val existing = channel
         if (existing == null) {
-            account.relayGroups.createRelayGroup(
-                relay = relay!!,
-                groupId = groupId,
-                name = name,
-                about = about,
-                picture = picture,
-                banner = banner,
-                isPrivate = isPrivate,
-                isClosed = isClosed,
-                isHidden = isHidden,
-                isRestricted = isRestricted,
-                hashtags = hashtags,
-                geohashes = geohashes,
-                parent = parentGroupId,
-                channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null,
-            )
+            val relay = relay!!
+            val channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null
+            // Buzz refuses a listed channel whose name another listed one holds; say so before sending
+            // when the directory we already loaded shows the clash.
+            account.relayGroups.buzzListedNameTaken(relay, name, isPrivate, channelType)?.let { return PublishOutcome.NameTaken(it) }
+            val result =
+                account.relayGroups.createRelayGroup(
+                    relay = relay,
+                    groupId = groupId,
+                    name = name,
+                    about = about,
+                    picture = picture,
+                    banner = banner,
+                    isPrivate = isPrivate,
+                    isClosed = isClosed,
+                    isHidden = isHidden,
+                    isRestricted = isRestricted,
+                    hashtags = hashtags,
+                    geohashes = geohashes,
+                    parent = parentGroupId,
+                    channelType = channelType,
+                )
+            return when (result) {
+                is RelayGroupCreateResult.Refused -> {
+                    PublishOutcome.Refused(creating = true, reason = result.message)
+                }
+
+                is RelayGroupCreateResult.Created -> {
+                    PublishOutcome.Done(
+                        when {
+                            !result.followed -> RelayGroupCreateNotice.NotFollowed
+                            !result.confirmed -> RelayGroupCreateNotice.Unconfirmed
+                            else -> null
+                        },
+                    )
+                }
+            }
         } else {
-            account.relayGroups.editRelayGroupMetadata(
-                channel = existing,
-                name = name,
-                about = about,
-                picture = picture,
-                // Buzz has no banner field: keep whatever the channel carries rather than clear it.
-                banner = if (isBuzzRelay) existing.bannerPicture() else banner,
-                isPrivate = isPrivate,
-                isClosed = isClosed,
-                isHidden = isHidden,
-                isRestricted = isRestricted,
-                hashtags = hashtags,
-                geohashes = geohashes,
-                // Only override the parent when the user actually re-parented; otherwise let
-                // Account read the group's live parent so a rename can't accidentally re-root it.
-                // children likewise defaults to the live child list, so a concurrently-added
-                // subgroup isn't dropped by this metadata edit.
-                parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
-            )
+            // A rename clashes the same way; the channel being renamed keeps its own name.
+            if (name != existing.event?.name()) {
+                account.relayGroups
+                    .buzzListedNameTaken(existing.groupId.relayUrl, name, isPrivate, existing.event?.buzzChannelType(), except = existing.groupId)
+                    ?.let { return PublishOutcome.NameTaken(it) }
+            }
+            val refusal =
+                account.relayGroups.editRelayGroupMetadata(
+                    channel = existing,
+                    name = name,
+                    about = about,
+                    picture = picture,
+                    // Buzz has no banner field: keep whatever the channel carries rather than clear it.
+                    banner = if (isBuzzRelay) existing.bannerPicture() else banner,
+                    isPrivate = isPrivate,
+                    isClosed = isClosed,
+                    isHidden = isHidden,
+                    isRestricted = isRestricted,
+                    hashtags = hashtags,
+                    geohashes = geohashes,
+                    // Only override the parent when the user actually re-parented; otherwise let
+                    // Account read the group's live parent so a rename can't accidentally re-root it.
+                    // children likewise defaults to the live child list, so a concurrently-added
+                    // subgroup isn't dropped by this metadata edit.
+                    parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
+                )
+            return if (refusal != null) PublishOutcome.Refused(creating = false, reason = refusal) else PublishOutcome.Done()
         }
     }
 

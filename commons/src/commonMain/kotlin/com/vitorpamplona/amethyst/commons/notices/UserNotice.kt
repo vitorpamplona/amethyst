@@ -33,6 +33,16 @@ import com.vitorpamplona.amethyst.commons.model.User
  */
 sealed interface UserNotice
 
+/**
+ * Thrown by headless code that refuses an action for a reason the user should hear as [notice];
+ * `notifySignerErrors` (what `launchSigner` and `reportSignerErrors` run in) reports the notice
+ * instead of a generic failure. An [IllegalStateException], so a caller that only knows `check`
+ * failures still stops on it.
+ */
+class UserNoticeException(
+    val notice: UserNotice,
+) : IllegalStateException(notice.toString())
+
 /** Where headless code reports a [UserNotice]. In the GUI apps this is the toast manager. */
 fun interface UserNoticeSink {
     fun notify(notice: UserNotice)

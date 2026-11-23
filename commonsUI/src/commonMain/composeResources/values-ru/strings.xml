@@ -5437,7 +5437,6 @@
     <string name="concord_create_failed">Не удалось создать сообщество: ни один relay его не принял, или не удалось обновить ваш список сообществ. Проверьте relay и попробуйте снова.</string>
     <string name="concord_create_relays">Relay</string>
     <string name="concord_create_relays_desc">Relay, хранящие зашифрованные сообщения сообщества. Оставьте пустым, чтобы использовать свои.</string>
-    <string name="concord_create_title">Новый канал Concord</string>
     <string name="concord_direct_invite_accept">Принять</string>
     <string name="concord_direct_invite_accept_failed">Не удалось связаться с сообществом. Попробуйте чуть позже.</string>
     <string name="concord_direct_invite_action">Пригласить по npub…</string>
@@ -10026,7 +10025,7 @@
     <string name="media_failed_unknown_image">Не удалось загрузить изображение</string>
     <string name="media_failed_unknown_gif">Не удалось загрузить GIF</string>
     <string name="media_failed_open_in_browser">Открыть в браузере</string>
-    <string name="ai_code_title">ИИ-код</string>
+    <string name="ai_code_title">Агентное программирование</string>
     <string name="claude_code_new_session">Новая сессия</string>
     <string name="claude_code_search_hint">Поиск сессий</string>
     <string name="claude_code_no_sessions">На этом компьютере пока нет сессий Claude Code. Начните здесь или запустите claude в терминале — сессия появится в этом списке.</string>
@@ -10035,7 +10034,6 @@
     <string name="claude_code_status_starting">Запуск</string>
     <string name="claude_code_status_working">Работает</string>
     <string name="claude_code_status_needs_approval">Нужно ваше одобрение</string>
-    <string name="claude_code_status_ready">Готово</string>
     <string name="claude_code_open_elsewhere_warning">Эта сессия сейчас открыта в другом Claude Code. Если продолжать её здесь одновременно, история может перепутаться.</string>
     <string name="claude_code_delete">Удалить</string>
     <string name="claude_code_delete_title">Удалить эту сессию?</string>
@@ -10215,8 +10213,6 @@
     <string name="claude_code_tool_from_line">со строки %1$d</string>
     <string name="claude_code_tool_search_in">%1$s в %2$s</string>
     <string name="claude_code_waiting_approval">Ожидает вашего одобрения</string>
-    <string name="claude_code_permission_edit">%1$s хочет изменить %2$s</string>
-    <string name="claude_code_permission_create">%1$s хочет создать %2$s</string>
     <string name="claude_code_permission_run">%1$s хочет выполнить команду</string>
     <string name="claude_code_permission_keys">Enter — разрешить · Esc — отклонить</string>
     <string name="claude_code_permission_keys_deny">Enter или Esc — отклонить</string>
@@ -10236,7 +10232,6 @@
         <item quantity="other">Архив · %1$d сессии</item>
     </plurals>
     <string name="claude_code_status_in_terminal">открыта в терминале</string>
-    <string name="claude_code_intro_title">Новая сессия в %1$s</string>
     <string name="claude_code_starter_explain">Объясни, как устроен этот репозиторий</string>
     <string name="claude_code_starter_tests">Запусти тесты и исправь то, что падает</string>
     <string name="claude_code_starter_review_branch">Проведи ревью изменений этой ветки относительно %1$s</string>
@@ -10924,7 +10919,6 @@
     <string name="claude_code_workstream_name">Название</string>
     <string name="claude_code_workstream_name_hint">Для чего оно</string>
     <string name="claude_code_workstream_name_desc">Даёт имя папке и ветке направления работы.</string>
-    <string name="claude_code_workstream_go">Начать</string>
     <string name="claude_code_advanced">Дополнительно</string>
     <string name="claude_code_where">Где</string>
     <string name="claude_code_where_clones">Свежие клоны</string>

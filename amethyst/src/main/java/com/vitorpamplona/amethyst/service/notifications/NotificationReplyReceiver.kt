@@ -320,6 +320,13 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
 
         val targetEvent = LocalCache.getNoteIfExists(targetEventId)?.event ?: return
+        // A public reply copies the target's root and author tags and goes to public relays, so its
+        // target must be a public event. An unsigned rumor (a Marmot/Concord group message, a
+        // gift-wrapped DM event) would leak the reply and the private thread's ids.
+        if (!PrivateRumorGate.isSigned(targetEvent)) {
+            Log.w("NotificationReply") { "Refusing a public reply to the unsigned event $targetEventId" }
+            return
+        }
 
         // Resolve @/nostr: mentions typed into the notification reply, so a cited member is tagged
         // (`p`) and linkable — the same enrichment the in-app composers do. The comment builders

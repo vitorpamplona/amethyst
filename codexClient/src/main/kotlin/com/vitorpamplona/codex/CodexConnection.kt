@@ -255,6 +255,7 @@ class CodexConnection(
                 CodexItems.toolUse(item)?.let { showCall(it) }
                 CodexItems.toolResult(item)?.let { output.send(AgentEvent.ToolResults(listOf(it))) }
             }
+            "turn/plan/updated" -> output.send(AgentEvent.PlanUpdated(CodexItems.planSteps(params)))
             "thread/tokenUsage/updated" -> {
                 val usage = params["tokenUsage"] as? JsonObject ?: return
                 val last = (usage["last"] as? JsonObject)?.long("totalTokens")

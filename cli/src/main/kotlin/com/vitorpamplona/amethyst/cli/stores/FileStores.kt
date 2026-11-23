@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.stores
 
 import com.vitorpamplona.amethyst.cli.SecureFileIO
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.marmot.groups.MarmotMessageStore
@@ -143,6 +144,29 @@ class FileKeyPackageBundleStore(
 
     override suspend fun delete() {
         file.deleteOrWarn("FileKeyPackageBundleStore", "key package bundle")
+    }
+}
+
+/**
+ * The Marmot device-group records (trust, private KeyPackages, small state) as owner-only
+ * files, `<dir>/<name>.bin`, the same protection as the KeyPackage bundle beside them.
+ */
+class FileDeviceGroupBlobs(
+    private val dir: File,
+) : DeviceGroupBlobs {
+    private fun file(name: String): File {
+        require(name.all { it.isLetterOrDigit() || it == '_' }) { "bad record name $name" }
+        return File(dir, "$name.bin")
+    }
+
+    override suspend fun load(name: String): ByteArray? = file(name).takeIf { it.exists() }?.readBytes()
+
+    override suspend fun save(
+        name: String,
+        bytes: ByteArray,
+    ) {
+        SecureFileIO.secureMkdirs(dir)
+        SecureFileIO.writeBytesAtomic(file(name), bytes)
     }
 }
 

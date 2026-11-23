@@ -5748,41 +5748,6 @@
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1/marmot-quic-jvm-2.2.1.jar",
-    "sha256": "6cfe61d69a553af3e06a86533fd61cbe137afe83d566902f365caf04c8a820cc",
-    "dest": "offline-repository/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1",
-    "dest-filename": "marmot-quic-jvm-2.2.1.jar"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1/marmot-quic-jvm-2.2.1.module",
-    "sha256": "b06ee54e863d63252b50cf1291ae30496fbbf8befb0f3c06f5341871435a372e",
-    "dest": "offline-repository/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1",
-    "dest-filename": "marmot-quic-jvm-2.2.1.module"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1/marmot-quic-jvm-2.2.1.pom",
-    "sha256": "1c6be9ad9f62bc0b04fd3fcd1491b59170a20682671f74eb51911b2f81ba917d",
-    "dest": "offline-repository/com/vitorpamplona/marmot/marmot-quic-jvm/2.2.1",
-    "dest-filename": "marmot-quic-jvm-2.2.1.pom"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot-quic/2.2.1/marmot-quic-2.2.1.module",
-    "sha256": "04c9cb94f52158c4a3eb2b76858146c2fc87e8b1bfe8664abfd9f31cd1a42290",
-    "dest": "offline-repository/com/vitorpamplona/marmot/marmot-quic/2.2.1",
-    "dest-filename": "marmot-quic-2.2.1.module"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot-quic/2.2.1/marmot-quic-2.2.1.pom",
-    "sha256": "f9cc50087d64f786b18402e14c991a8a632df8548cf4411079395aa73d0bc21a",
-    "dest": "offline-repository/com/vitorpamplona/marmot/marmot-quic/2.2.1",
-    "dest-filename": "marmot-quic-2.2.1.pom"
-  },
-  {
-    "type": "file",
     "url": "https://repo.maven.apache.org/maven2/com/vitorpamplona/marmot/marmot/2.2.1/marmot-2.2.1.module",
     "sha256": "b37cb7532e16f2509813e67d44b1f66a34d88b415c00cc52207087ba3b187b9b",
     "dest": "offline-repository/com/vitorpamplona/marmot/marmot/2.2.1",

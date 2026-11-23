@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.sun.management.UnixOperatingSystemMXBean
+import com.vitorpamplona.amethyst.cli.stores.FileDeviceGroupBlobs
 import com.vitorpamplona.amethyst.cli.stores.FileIngestDedupStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
@@ -31,11 +32,17 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotSyncPolicy
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -49,8 +56,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchRes
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.streamAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -83,7 +90,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
@@ -151,8 +157,8 @@ class Context(
     // Internal (not private) so [CashuContext] can reuse the shared instance
     // for mint HTTP.
     internal val okhttp =
-        OkHttpClient
-            .Builder()
+        LocalOnly
+            .httpClientBuilder()
             .socketFactory(TcpNoDelaySocketFactory)
             // The crawl opens WebSockets to thousands of relays. Each WS-upgrade
             // handshake is an async call through OkHttp's shared Dispatcher, whose
@@ -176,8 +182,9 @@ class Context(
             // per-user URLs on one host — each a fresh lookup. SurgeDns (shared with
             // the Android app) collapses all of it: single-flight per host,
             // stale-while-revalidate positives, 10-min negative TTL, persisted
-            // across runs via [dnsStore].
-            .dns(surgeDns)
+            // across runs via [dnsStore]. [LocalOnly.dns] judges the addresses it hands out, so
+            // AMY_LOCAL_ONLY covers a persisted answer too, not only a fresh lookup.
+            .dns(LocalOnly.dns(surgeDns))
             // Virtual threads: OkHttp runs each websocket's reader loop inside its
             // call, so every open relay socket holds a dispatcher thread for life,
             // and the default executor starts each as a platform thread inside the
@@ -192,6 +199,12 @@ class Context(
                     maxRequestsPerHost = 16
                 },
             ).build()
+
+    /**
+     * The Blossom client every command uses: it rides [okhttp], so [LocalOnly] covers Blossom
+     * uploads and downloads the same way it covers relay sockets.
+     */
+    val blossom: BlossomClient by lazy { BlossomClient(okhttp) }
 
     val client: NostrClient =
         NostrClient(
@@ -373,11 +386,44 @@ class Context(
             // Publish-before-apply: a group-state change becomes canonical only
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
-            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays, untilFirstAccept = true) },
+            MarmotPublisher { event, relays -> client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true) },
             publishObligationStore,
             ingestDedupStore,
+            deviceGroupConfig =
+                if (deviceGroupsEnabled) {
+                    DeviceGroupBlobStores(deviceGroupBlobs).config(deviceGroupRelays.map { it.url }, client = "amy", platform = MarmotDevicePlatform.name())
+                } else {
+                    null
+                },
         )
     }
+
+    /** Whether this account's device-group switch is on (`amy marmot devices enable`). */
+    val deviceGroupsEnabled: Boolean get() = !anonymous && dataDir.deviceGroupSwitchFile.exists()
+
+    /** Where a device group this device creates lives; resolved in [prepare], before [marmot] is built. */
+    private var deviceGroupRelays: Set<NormalizedRelayUrl> = emptySet()
+
+    /** Marmot device groups (`amy marmot devices`), or null while the switch is off. */
+    val marmotDevices: MarmotDevices? by lazy {
+        if (!deviceGroupsEnabled) return@lazy null
+        MarmotDevices(
+            manager = marmot,
+            signer = signer,
+            transport = CliMarmotDevicesTransport(this),
+            keyPackageRelays = { keyPackageRelays() },
+            signInAnswers = deviceGroupBlobs,
+            onSmallState = { state -> marmotChatSettings.applySmallState(state, marmot, skip = { id -> marmotDevices?.isDeviceGroup(id) == true }) },
+            // Imported history is already in the message store, which every `marmot message` verb reads.
+            onHistoryImported = { imports -> System.err.println("imported history: ${imports.sumOf { it.events.size }} message(s) in ${imports.size} chat(s)") },
+        )
+    }
+
+    /** This account's own device-group records and chat settings, owner-only files. */
+    private val deviceGroupBlobs by lazy { FileDeviceGroupBlobs(dataDir.deviceGroupDir) }
+
+    /** Pin, mute and archive of this account's Marmot chats (`amy marmot devices chats|pin|mute|archive`). */
+    val marmotChatSettings: MarmotChatSettings by lazy { MarmotChatSettings(deviceGroupBlobs) }
 
     // ------------------------------------------------------------------
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
@@ -421,7 +467,10 @@ class Context(
         if (prepared) return
         // Anonymous runs have no account and therefore no marmot state to
         // restore (and touching `marmot` would allocate the per-account stores).
+        if (deviceGroupsEnabled) deviceGroupRelays = outboxRelays()
         if (!anonymous) marmot.restoreAll()
+        if (!anonymous) marmotChatSettings.load()
+        marmotDevices?.start(announce = false)
         client.connect()
         // A bunker account must open its NIP-46 response subscription and run
         // the connect handshake before any signing/encryption call.
@@ -511,7 +560,7 @@ class Context(
      */
     suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
         relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
-            ?: DefaultNIP65RelaySet
+            ?: fallbackRelays(DefaultNIP65RelaySet)
 
     /**
      * NIP-65 *write* relays only, with no fallback: where a NIP-FA key list and NIP-FB tasks are
@@ -552,7 +601,7 @@ class Context(
      */
     suspend fun inboxRelays(): Set<NormalizedRelayUrl> =
         dmInboxOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
-            ?: DefaultDMRelayList.toSet()
+            ?: fallbackRelays(DefaultDMRelayList.toSet())
 
     /**
      * Our own KeyPackage relay list (MIP-00 kind:10051). Falls back to
@@ -616,12 +665,19 @@ class Context(
         }
     }
 
-    private fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
-        System
-            .getenv(BOOTSTRAP_ENV)
-            ?.split(',')
-            ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-            ?.toSet()
+    /**
+     * The relays of [relays] this run may dial: under AMY_LOCAL_ONLY a refused one would only fail,
+     * and the pool would wait out its timeout. Every relay funnel here (publish, the drains, the page
+     * walks, request/response, the Marmot publisher) filters through it.
+     */
+    suspend fun dialable(relays: Collection<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = LocalOnly.dialable(relays)
+
+    /** [filters] keyed only by the relays [dialable] keeps. */
+    suspend fun <V> dialable(filters: Map<NormalizedRelayUrl, V>): Map<NormalizedRelayUrl, V> {
+        if (!LocalOnly.enabled) return filters
+        val keep = dialable(filters.keys)
+        return filters.filterKeys { it in keep }
+    }
 
     /**
      * Publish an event to the given relays and wait for OK confirmations.
@@ -638,31 +694,22 @@ class Context(
         // truth — even if every relay rejects, we want our own outbound
         // event in the local cache.
         verifyAndStore(event)
-        if (relayList.isEmpty()) return emptyMap()
+        // Under AMY_LOCAL_ONLY a refused relay is answered here, without dialing it: the socket
+        // would only fail, and the pool would wait out the timeout on it.
+        val allowed = dialable(relayList)
+        val refusedResults = (relayList - allowed).associateWith { PublishResult(false, "${LocalOnly.ENV}: not on this machine or its private network") }
+        if (allowed.isEmpty()) return refusedResults
 
-        var results = client.publishAndCollectResults(event, relayList, timeoutSecs)
-
-        // NIP-42 write path: an auth-required relay rejects the FIRST publish with
-        // `auth-required`. The publish opens a connection, races the async AUTH reply, and
-        // tears down before it lands — and [relayAuth] only re-auths on a REQ `CLOSED`, never
-        // on a rejected EVENT `OK`. The READ path, though, holds the connection open and its
-        // `auth-required:` CLOSED reliably drives a re-auth (`reauthenticateIfAuthRequired`),
-        // leaving the pooled connection authenticated. So on `auth-required` we warm auth with
-        // a tiny `pendingOnAuthRequired` REQ, then retry the publish on the now-authed socket.
-        var attempt = 0
-        while (attempt < 4) {
-            val needAuth =
-                results
-                    .filterValues { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }
-                    .keys
-            if (needAuth.isEmpty()) break
-            // A cheap REQ whose only purpose is to force the AUTH handshake to completion.
+        // NIP-42 write path: an auth-required relay refuses the FIRST publish `auth-required:`, and the
+        // pool sends the event again once our AUTH lands. That re-send's OK is the relay's real answer
+        // (a Buzz DM command's carries the channel it made); publishing again ourselves only gets
+        // `duplicate:`. [publishAwaitingOkThroughAuth] keeps one OK listener open across the AUTH and
+        // warms it up with a `pendingOnAuthRequired` read, the same code the app runs. A relay that
+        // refuses our AUTH `blocked:` (a banned key) answers with that at once.
+        return client.publishAwaitingOkThroughAuth(event, allowed, timeoutSecs) { needAuth ->
             val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
             drain(needAuth.associateWith { warmFilter }, idleTimeoutMs = 8_000, pendingOnAuthRequired = true)
-            results = results + client.publishAndCollectResults(event, needAuth, timeoutSecs)
-            attempt++
-        }
-        return results
+        } + refusedResults
     }
 
     /**
@@ -713,7 +760,7 @@ class Context(
         pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
-            filters = filters,
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
         ) { _, event -> verifyAndStore(event) }
@@ -748,7 +795,7 @@ class Context(
         onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
-            filters = filters,
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
@@ -775,7 +822,7 @@ class Context(
         onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
     ): Int =
         client.streamAllPagesFromPoolWithHooks(
-            filters = filters,
+            filters = dialable(filters),
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
@@ -795,10 +842,11 @@ class Context(
         responseFilter: Filter,
         timeoutMs: Long = 15_000,
     ): Event? {
-        if (relays.isEmpty()) return null
+        val reachable = dialable(relays)
+        if (reachable.isEmpty()) return null
         val reply = CompletableDeferred<Event>()
         val subId = newSubId()
-        val filters = relays.associateWith { listOf(responseFilter) }
+        val filters = reachable.associateWith { listOf(responseFilter) }
         val listener =
             object : SubscriptionListener {
                 override suspend fun onEvent(
@@ -812,7 +860,7 @@ class Context(
             }
         client.subscribe(subId, filters, listener)
         return try {
-            publish(request, relays)
+            publish(request, reachable)
             val event = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
             if (verifyAndStore(event)) event else null
         } finally {
@@ -980,9 +1028,16 @@ class Context(
                     override fun groupRelays(nostrGroupId: HexKey) = marmotGroupRelays(nostrGroupId)
                 },
             drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
-            publish = { event, relayList -> publish(event, relayList) },
+            publish = { event, relayList ->
+                // A rotated KeyPackage of a linked device is announced in its roster entry first.
+                if (event is KeyPackageEvent) marmotDevices?.beforeKeyPackagePublish(event)
+                publish(event, relayList)
+            },
             log = { System.err.println("[cli] $it") },
-            publishAndConfirm = { event, relayList -> publish(event, relayList).values.any { it.accepted } },
+            publishAndConfirm = { event, relayList ->
+                if (event is KeyPackageEvent) marmotDevices?.beforeKeyPackagePublish(event)
+                publish(event, relayList).values.any { it.accepted }
+            },
         )
     }
 
@@ -993,7 +1048,11 @@ class Context(
      * (lookback windows, cursor advancement rules, MIP-00 rotation) lives in
      * the shared [MarmotSyncPolicy]; see its docs for the reasoning.
      */
-    suspend fun syncIncoming(timeoutMs: Long = 8_000) = marmotSyncPolicy.syncIncoming(timeoutMs)
+    suspend fun syncIncoming(timeoutMs: Long = 8_000) {
+        marmotSyncPolicy.syncIncoming(timeoutMs)
+        // What the device group queued while ingesting (hand-offs, small state) leaves before the run ends.
+        marmotDevices?.afterIngest()
+    }
 
     /**
      * Resolve a group identifier given on the CLI to the nostr_group_id that
@@ -1056,6 +1115,27 @@ class Context(
     }
 
     companion object {
+        /**
+         * The relays [BOOTSTRAP_ENV] names, or null when it is unset or blank. Throws
+         * [IllegalArgumentException] (exit 2, `bad_args`) when it is set but names no valid relay:
+         * `amy create` would otherwise sign relay lists that list nothing and exit 0.
+         */
+        fun bootstrapOverride(): Set<NormalizedRelayUrl>? = parseBootstrapOverride(System.getenv(BOOTSTRAP_ENV))
+
+        internal fun parseBootstrapOverride(raw: String?): Set<NormalizedRelayUrl>? {
+            if (raw.isNullOrBlank()) return null
+            val relays = raw.split(',').mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+            require(relays.isNotEmpty()) { "$BOOTSTRAP_ENV is set but names no valid relay: $raw" }
+            return relays
+        }
+
+        /**
+         * [defaults] — one of the public relay sets Amethyst ships — unless [BOOTSTRAP_ENV] names the
+         * relays to use instead. Every place amy would fall back to a public default set asks this, so
+         * an offline harness's accounts stay on its own relays even when nobody advertised a list.
+         */
+        fun fallbackRelays(defaults: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = bootstrapOverride() ?: defaults
+
         /** Replaces [bootstrapRelays]' seed set, comma-separated. */
         const val BOOTSTRAP_ENV = "AMY_BOOTSTRAP_RELAYS"
 

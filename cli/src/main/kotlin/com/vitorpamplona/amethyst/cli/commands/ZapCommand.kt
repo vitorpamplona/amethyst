@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.LocalOnly
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
@@ -383,5 +384,5 @@ object ZapCommand {
      */
     private fun sharedOkHttp(
         @Suppress("UNUSED_PARAMETER") ctx: Context,
-    ): OkHttpClient = OkHttpClient.Builder().build()
+    ): OkHttpClient = LocalOnly.httpClientBuilder().build()
 }

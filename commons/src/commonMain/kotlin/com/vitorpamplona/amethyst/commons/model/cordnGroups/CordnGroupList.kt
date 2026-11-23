@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.cordnGroups
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +54,12 @@ class CordnGroupList(
         val gid: String,
     )
 
+    /**
+     * Written from the sync loop, a delivery listener and the UI at once: every read and write
+     * holds [lock], so two callers never both create a room for one key, and [all] is a snapshot
+     * taken under it.
+     */
+    private val lock = KmpLock()
     private val rooms = LinkedHashMap<RoomKey, CordnGroupChatroom>()
 
     private val _all = MutableStateFlow<List<CordnGroupChatroom>>(emptyList())
@@ -90,26 +98,28 @@ class CordnGroupList(
         gid: String,
     ): CordnGroupChatroom {
         val key = RoomKey(coordinatorPubKey, gid)
-        rooms[key]?.let { return it }
-        val room =
-            CordnGroupChatroom(
-                gid = gid,
-                coordinatorPubKey = coordinatorPubKey,
-                accountPubKey = accountPubKey,
-                // The room is the only place that sees every way its newest
-                // message can change, so it is the room that reports one.
-                onNewestChanged = { bumpRevision() },
-            )
-        rooms[key] = room
-        _all.value = rooms.values.toList()
-        bumpRevision()
-        return room
+        return lock.withLock {
+            rooms[key]?.let { return@withLock it }
+            val room =
+                CordnGroupChatroom(
+                    gid = gid,
+                    coordinatorPubKey = coordinatorPubKey,
+                    accountPubKey = accountPubKey,
+                    // The room is the only place that sees every way its newest
+                    // message can change, so it is the room that reports one.
+                    onNewestChanged = { bumpRevision() },
+                )
+            rooms[key] = room
+            _all.value = rooms.values.toList()
+            bumpRevision()
+            room
+        }
     }
 
     fun get(
         coordinatorPubKey: HexKey,
         gid: String,
-    ): CordnGroupChatroom? = rooms[RoomKey(coordinatorPubKey, gid)]
+    ): CordnGroupChatroom? = lock.withLock { rooms[RoomKey(coordinatorPubKey, gid)] }
 
     /**
      * Files [delivered] into its room, creating it if needed.
@@ -128,22 +138,28 @@ class CordnGroupList(
         coordinatorPubKey: HexKey,
         gid: String,
     ) {
-        if (rooms.remove(RoomKey(coordinatorPubKey, gid)) != null) {
-            _all.value = rooms.values.toList()
-            bumpRevision()
+        lock.withLock {
+            if (rooms.remove(RoomKey(coordinatorPubKey, gid)) != null) {
+                _all.value = rooms.values.toList()
+                bumpRevision()
+            }
         }
     }
 
     /** Drops every room served by [coordinatorPubKey]. For a purge. */
     fun forgetCoordinator(coordinatorPubKey: HexKey) {
-        rooms.keys.filter { it.coordinatorPubKey == coordinatorPubKey }.forEach { rooms.remove(it) }
-        _all.value = rooms.values.toList()
-        bumpRevision()
+        lock.withLock {
+            rooms.keys.removeAll { it.coordinatorPubKey == coordinatorPubKey }
+            _all.value = rooms.values.toList()
+            bumpRevision()
+        }
     }
 
     fun clear() {
-        rooms.clear()
-        _all.value = emptyList()
-        bumpRevision()
+        lock.withLock {
+            rooms.clear()
+            _all.value = emptyList()
+            bumpRevision()
+        }
     }
 }

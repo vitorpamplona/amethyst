@@ -118,20 +118,16 @@ Not candidates: identifiers (`"kind %1$d"`, `"line %1$d"`), percentages, unit ab
 `"%1$d days"` fed `UNUSED_MIRROR_DAYS = 60` has one correct form in every locale and stays a `<string>`.
 Amounts pre-formatted into `%s` (sats) can't be plurals at all; they read as units.
 
-To list the candidates across a whole catalog (a heuristic: review every hit by hand):
+To list the candidates across both default catalogs (a heuristic: review every hit by hand):
 
 ```bash
-python3 - commonsUI/src/commonMain/composeResources amethyst/src/main/res <<'PY'
-import re, io, sys
-S = re.compile(r'<string name="([^"]+)"[^>]*>(.*?)</string>', re.S)
-COUNT = re.compile(r'(?<!kind )(?<!\^)(?<!\\)%\d+\$d(?!%)\s+([A-Za-z][\w-]*)')   # %1$d <word>
-UNITS = {'s','ms','sec','min','h','hr','d','m','km','kb','mb','gb','tb','b','px','dp','sp','x','sat','sats',
-         'bytes','byte','hz','khz','fps','of','to','and','or','in','at','on','by'}
-for base in sys.argv[1:]:
-    for m in S.finditer(io.open(f'{base}/values/strings.xml', encoding='utf-8').read()):
-        if any(w.lower() not in UNITS for w in COUNT.findall(m[2])): print(f'{m[1]}\t{m[2]}')
-PY
+tools/agent-hooks/plural_candidates_check.py --all
 ```
+
+It prints `<catalog>\t<key>\t<rules>\t<text>` per hit. `counted-noun` is a `%N$d` followed by a word that
+isn't a unit, `two-counts` is two of those in one string, `s-hedge` is an `(s)`/`(es)` hedge and
+`hardcoded-one` is a literal `1 <noun>`. Without `--all` the same script checks only the keys a branch adds,
+and the pre-push hooks run it that way as a warning.
 
 Also scan the trees you touch for:
 

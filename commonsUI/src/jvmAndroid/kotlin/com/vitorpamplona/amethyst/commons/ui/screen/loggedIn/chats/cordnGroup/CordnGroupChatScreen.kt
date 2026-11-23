@@ -134,12 +134,13 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
-import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
+import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
@@ -460,63 +461,78 @@ private fun CordnGroupChat(
                                     UnreadDivider()
                                 }
 
-                                CordnMessageRow(
-                                    message = message,
-                                    room = room,
-                                    annotations = annotations,
-                                    me = me,
-                                    // Grouped when the same person keeps talking inside the
-                                    // shared chat window: one avatar and name per burst
-                                    // instead of per line, and the bubbles of a burst square
-                                    // off against each other — which is most of what makes a
-                                    // wall of messages readable.
-                                    groupPosition =
-                                        remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
-                                            cordnGroupPositionFor(newer, message, older)
+                                val display = remember(message.envelope) { CordnStreamRows.display(message.envelope) }
+                                val label = cordnRowLabel(message.envelope, annotations, display)
+                                // A withdrawn call announcement is a deleted message, not "Call started".
+                                if (message.envelope.kind == CordnCallAnnouncement.KIND && label != null && !annotations.isDeleted(message.envelope.id)) {
+                                    CordnCallRow(message, label, (display as? CordnStreamRows.Display.Call)?.announcement)
+                                } else {
+                                    CordnMessageRow(
+                                        message = message,
+                                        room = room,
+                                        annotations = annotations,
+                                        me = me,
+                                        // Grouped when the same person keeps talking inside the
+                                        // shared chat window: one avatar and name per burst
+                                        // instead of per line, and the bubbles of a burst square
+                                        // off against each other — which is most of what makes a
+                                        // wall of messages readable.
+                                        groupPosition =
+                                            remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
+                                                cordnGroupPositionFor(newer, message, older)
+                                            },
+                                        // The edit if there is one, and nothing at all if the
+                                        // message was withdrawn: rendering the original text of
+                                        // a deleted message would defeat the deletion.
+                                        // A calendar event names itself (its content is its description,
+                                        // often empty, and a cancelled one stays visible as cancelled,
+                                        // calendar-events.md §6), and a kind this client does not draw
+                                        // says its NIP-31 alt (cordnRowLabel).
+                                        text =
+                                            when {
+                                                annotations.isDeleted(message.envelope.id) -> null
+                                                else -> label ?: annotations.contentOf(message.envelope.id)
+                                            },
+                                        isEdited = annotations.isEdited(message.envelope.id) || annotations.isRevised(message.envelope.id),
+                                        shouldHighlight = highlighted == message.envelope.id,
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                        onHighlightFinished = { highlighted = null },
+                                        onScrollToMessage = jumpTo,
+                                        onReply = {
+                                            replyingTo = message
+                                            editing = null
                                         },
-                                    // The edit if there is one, and nothing at all if the
-                                    // message was withdrawn: rendering the original text of
-                                    // a deleted message would defeat the deletion.
-                                    text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
-                                    isEdited = annotations.isEdited(message.envelope.id),
-                                    shouldHighlight = highlighted == message.envelope.id,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                    onHighlightFinished = { highlighted = null },
-                                    onScrollToMessage = jumpTo,
-                                    onReply = {
-                                        replyingTo = message
-                                        editing = null
-                                    },
-                                    onEdit = {
-                                        editing = message
-                                        replyingTo = null
-                                        room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
-                                    },
-                                    onDelete = {
-                                        // Through trySend like the rest: a deletion is an
-                                        // annotation, and an annotation of your own comes back
-                                        // as an Echo too, so deleting your own message used to
-                                        // look like nothing had happened until someone else's
-                                        // traffic refreshed the fold.
-                                        scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
-                                    },
-                                    onTogglePin = {
-                                        val pinned = annotations.isPinned(message.envelope.id)
-                                        scope.launch {
-                                            trySend {
-                                                it.post(
-                                                    gid = room.gid,
-                                                    pinTo = message.target(),
-                                                    pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                                                )
+                                        onEdit = {
+                                            editing = message
+                                            replyingTo = null
+                                            room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
+                                        },
+                                        onDelete = {
+                                            // Through trySend like the rest: a deletion is an
+                                            // annotation, and an annotation of your own comes back
+                                            // as an Echo too, so deleting your own message used to
+                                            // look like nothing had happened until someone else's
+                                            // traffic refreshed the fold.
+                                            scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
+                                        },
+                                        onTogglePin = {
+                                            val pinned = annotations.isPinned(message.envelope.id)
+                                            scope.launch {
+                                                trySend {
+                                                    it.post(
+                                                        gid = room.gid,
+                                                        pinTo = message.target(),
+                                                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                    onReact = { emoji ->
-                                        scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
-                                    },
-                                )
+                                        },
+                                        onReact = { emoji ->
+                                            scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -932,7 +948,7 @@ private fun AllPinnedDialog(
                                     if (annotations.isDeleted(message.envelope.id)) {
                                         stringRes(Res.string.cordn_message_deleted)
                                     } else {
-                                        annotations.contentOf(message.envelope.id).orEmpty()
+                                        cordnRowLabel(message.envelope, annotations) ?: annotations.contentOf(message.envelope.id).orEmpty()
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
@@ -1162,19 +1178,23 @@ private suspend fun sendAttachment(
 @Composable
 fun CordnAttachment(
     attachment: CordnMediaAttachment,
+    message: CordnDeliveredMessage,
     room: CordnGroupChatroom,
     accountViewModel: AccountViewModel,
 ) {
-    // Derived, not carried: spec/applications/encrypted-media.md §3.1. Null
-    // means this device cannot open the group at all, which is the one case
-    // there is nothing to draw for.
+    // The key of the epoch that carried the message (encrypted-media.md §7
+    // step 5), captured when it arrived and stored with it. Not the group's
+    // current key: that one stops opening every older attachment at the next
+    // Commit. A message stored before keys were kept falls back to the current
+    // key. Null means this device cannot open the group at all, which is the
+    // one case there is nothing to draw for.
     val mediaKey =
-        remember(room.gid, attachment.url) {
+        remember(room.gid, attachment.url, message.envelope.id) {
             accountViewModel.account.cordnRuntime
                 ?.sessionOrNull(room.coordinatorPubKey)
                 ?.manager
-                ?.group(room.gid)
-                ?.let { CordnMediaEncryption.mediaKey(it) }
+                ?.mediaKeyFor(room.gid, message)
+                ?: message.mediaKey
         }
 
     if (mediaKey == null) {

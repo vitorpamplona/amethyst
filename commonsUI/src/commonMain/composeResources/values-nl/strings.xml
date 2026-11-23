@@ -3917,7 +3917,6 @@
     <string name="concord_create_failed">De community kon niet worden gemaakt: geen enkele relay heeft hem geaccepteerd, of je community-lijst kon niet worden bijgewerkt. Controleer de relays en probeer het opnieuw.</string>
     <string name="concord_create_relays">Relays</string>
     <string name="concord_create_relays_desc">Relays die de versleutelde berichten van deze community opslaan. Laat leeg om je eigen te gebruiken.</string>
-    <string name="concord_create_title">Nieuw Concord-kanaal</string>
     <string name="concord_direct_invite_accept">Accepteren</string>
     <string name="concord_direct_invite_accept_failed">Kon deze community niet bereiken. Probeer het zo meteen opnieuw.</string>
     <string name="concord_direct_invite_action">Uitnodigen via npub…</string>
@@ -9323,7 +9322,6 @@
     <string name="claude_code_status_starting">Starten</string>
     <string name="claude_code_status_working">Bezig</string>
     <string name="claude_code_status_needs_approval">Wacht op je goedkeuring</string>
-    <string name="claude_code_status_ready">Klaar</string>
     <string name="claude_code_open_elsewhere_warning">Deze sessie is nu open in een andere Claude Code. Hem hier tegelijk voortzetten kan de geschiedenis door elkaar halen.</string>
     <string name="claude_code_delete">Verwijderen</string>
     <string name="claude_code_delete_title">Deze sessie verwijderen?</string>
@@ -9473,8 +9471,6 @@
     <string name="claude_code_tool_from_line">vanaf regel %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Wacht op je goedkeuring</string>
-    <string name="claude_code_permission_edit">%1$s wil %2$s wijzigen</string>
-    <string name="claude_code_permission_create">%1$s wil %2$s aanmaken</string>
     <string name="claude_code_permission_run">%1$s wil een opdracht uitvoeren</string>
     <string name="claude_code_permission_keys">Enter staat toe · Esc weigert</string>
     <string name="claude_code_permission_keys_deny">Enter of Esc weigert</string>
@@ -9492,7 +9488,6 @@
         <item quantity="other">Gearchiveerd · %1$d sessies</item>
     </plurals>
     <string name="claude_code_status_in_terminal">open in een terminal</string>
-    <string name="claude_code_intro_title">Nieuwe sessie in %1$s</string>
     <string name="claude_code_starter_explain">Leg uit hoe deze repository is opgebouwd</string>
     <string name="claude_code_starter_tests">Voer de tests uit en repareer wat faalt</string>
     <string name="claude_code_starter_review_branch">Review de wijzigingen van deze branch ten opzichte van %1$s</string>
@@ -10096,7 +10091,6 @@
     <string name="claude_code_workstream_name">Naam</string>
     <string name="claude_code_workstream_name_hint">Waar hij voor dient</string>
     <string name="claude_code_workstream_name_desc">Geeft de map en branch van de workstream hun naam.</string>
-    <string name="claude_code_workstream_go">Start</string>
     <string name="claude_code_advanced">Geavanceerd</string>
     <string name="claude_code_where">Waar</string>
     <string name="claude_code_where_clones">Verse klonen</string>
@@ -10142,7 +10136,7 @@
     <string name="claude_code_storage_measuring">Meten…</string>
     <string name="claude_code_archive">Archiveren</string>
     <string name="claude_code_unarchive">Uit archief halen</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Pull request maken</string>
     <string name="claude_code_update_pr">PR bijwerken</string>
     <string name="claude_code_drafting">%1$s schrijft de titel en beschrijving…</string>

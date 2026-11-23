@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -34,6 +35,7 @@ import com.vitorpamplona.marmot.client.MarmotIngestResult
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotReceiver
 import com.vitorpamplona.marmot.client.ingestWelcome
+import com.vitorpamplona.marmot.features.devicePairing.MarmotDevicePairingKinds
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -57,7 +59,6 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -464,6 +465,17 @@ private suspend fun processMarmotWelcomeFlow(
     // in, or naming a KeyPackage this device never held). "h" is optional per MIP-02 — some
     // senders (e.g. whitenoise-rs) omit it — so the group id comes from the MLS GroupContext.
     when (val result = manager.ingestWelcome(innerEvent)) {
+        is MarmotIngestResult.JoinedGroup if account.marmotDevices?.isDeviceGroup(result.nostrGroupId) == true -> {
+            // This device's link Welcome: the hidden device group, not a chat. No room, no "added"
+            // notification; the device-group runtime sends the first Commit.
+            Log.d("MarmotDbg") { "processMarmotWelcomeFlow: joined the device group ${result.nostrGroupId.take(8)}…" }
+            account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
+            account.marmotDevices?.afterIngest()
+            // The link consumed this device's published KeyPackage: replace it, announced in the
+            // roster now that the first Commit is out.
+            if (result.needsKeyPackageRotation) account.marmot.publishMarmotKeyPackages()
+        }
+
         is MarmotIngestResult.JoinedGroup -> {
             Log.d("MarmotDbg") {
                 "processMarmotWelcomeFlow: Joined ${result.nostrGroupId.take(8)}… needsKeyPackageRotation=${result.needsKeyPackageRotation}"
@@ -493,6 +505,7 @@ private suspend fun processMarmotWelcomeFlow(
             // have no `p` tag, so the cache-observer path can't route them;
             // this is the single point where we know the recipient account.
             account.marmotNotifier().notifyWelcome(innerEvent, account)
+            account.marmotDevices?.afterIngest()
         }
 
         is MarmotIngestResult.AlreadyInGroup -> {
@@ -601,6 +614,14 @@ class SealEventHandler(
         if (innerRumor.kind == ConcordDirectInvite.KIND) {
             account.concord.directInviteInbox.offerRumor(publicNote.event ?: event, event, rumor)
             eventNote.event = event.copyNoContent()
+            return
+        }
+        // Marmot device pairing (MarmotDevicePairingKinds, gift-wrapped by an account to itself): a
+        // device of this account linking itself. Not a message for the user: never cached or shown.
+        // With device groups on, the pairing runtime reads it; otherwise it is dropped.
+        if (MarmotDevicePairingKinds.isPairingKind(innerRumor.kind)) {
+            eventNote.event = event.copyNoContent()
+            account.marmotDevices?.onPairingRumor(event.pubKey, innerRumor)
             return
         }
         // Tagged as an invite but carrying something else: never one, so the inbox sweep skips it.
@@ -761,6 +782,8 @@ class GroupEventHandler(
 
         try {
             receiver.receive(event)
+            // Device-group answers queued by this event (hand-offs, small state) go out now.
+            account.marmotDevices?.afterIngest(groupId)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MarmotDbg", "GroupEventHandler.add: exception processing kind:445", e)
@@ -869,7 +892,7 @@ class GroupEventHandler(
         // needs this path to surface the note (otherwise the
         // operator saw nothing but a misleading "inner event
         // already in cache" log and the message never rendered).
-        val indexed = account.marmot.indexMarmotInnerEvent(innerEvent)
+        val indexed = account.marmot.indexMarmotGroupInnerEvent(result.groupId, innerEvent)
         val innerNote = indexed.note
         val isNew = indexed.isNew
 
@@ -922,12 +945,15 @@ class GroupEventHandler(
         // peer-sent kind:1210 is dropped inside addMessage — see
         // `MarmotGroupList.isDisplayableFeedMessage`.
         account.marmotGroupList.addMessage(result.groupId, innerNote)
+        // The epoch it was sent in, for the read marker a device group shares.
+        account.marmotGroupList.getOrCreateGroup(result.groupId).recordEpoch(innerEvent.id, result.epoch)
         account.marmot.applyMarmotModeration(result.groupId, innerEvent)
 
-        // Traffic is the natural clock for disappearing messages: a
-        // group being read is a group whose expired messages should
-        // already be gone.
-        manager.pruneExpiredMessages(result.groupId)
+        // No expiry prune here: the ingest that produced this result
+        // (MarmotIngest's application-message branch) already ran
+        // `pruneExpiredMessages` for the group, right after persisting the
+        // message. A second one per message re-read the group's whole expiry
+        // list again for nothing, quadratic over a catch-up.
 
         // Notify only on first-time indexing, so a relay re-broadcast or a
         // persist-replay doesn't double-notify. Our OWN messages are never
@@ -939,11 +965,16 @@ class GroupEventHandler(
             // notification path can't route them. Fire the popup
             // directly here — only on first-time decryption, so
             // a relay re-broadcast or persist-replay doesn't
-            // double-notify. Restrict to ChatEvent (kind:9) so
-            // reactions, deletions, and control messages stay
+            // double-notify. Only chat notifies (kind:9 and NIP-22
+            // kind:1111 thread messages, MarmotGroupNotifier.notifies),
+            // so reactions, deletions, and control messages stay
             // silent. A message an admin removed before it
             // landed is never shown, so it never notifies either.
-            if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
+            if (MarmotGroupNotifier.notifies(innerEvent) &&
+                !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id) &&
+                !account.marmotChatSettings.state.value
+                    .isMuted(result.groupId)
+            ) {
                 account.marmotNotifier().notifyGroupMessage(
                     innerEvent,
                     result.groupId,

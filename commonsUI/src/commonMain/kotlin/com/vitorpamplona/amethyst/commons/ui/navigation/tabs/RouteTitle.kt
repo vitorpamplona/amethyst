@@ -40,8 +40,13 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
+import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_new
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
@@ -49,9 +54,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val MAX_TITLE = 40
 
@@ -98,6 +105,9 @@ fun routeTitle(
                     ?.let { return it.trim().take(MAX_TITLE) }
             }
         }
+        // The community's name, so two communities open side by side are told apart: their tabs
+        // both read "Concord server" before.
+        is Route.ConcordServer -> concordCommunityName(route.communityId, accountViewModel)?.let { return it.take(MAX_TITLE) }
         is Route.Hashtag -> return "#${route.hashtag}"
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
         is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
@@ -129,16 +139,35 @@ fun routeTitle(
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
+        // Short enough for a tab: "Agentic Coding changes" was cut to "Agentic Coding chan…".
+        is Route.ClaudeCodeChanges -> return stringRes(Res.string.claude_code_changes)
+        is Route.ClaudeCodePullRequests -> return stringRes(Res.string.claude_code_pull_requests)
         // The screen's own title; spelled out, its name read "Nip46 connected apps".
         is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
+        // The screens' own titles; spelled out, they read "Marmot devices settings".
+        is Route.MarmotDevicesSettings -> return stringRes(Res.string.marmot_devices_title)
+        is Route.MarmotDeviceLink -> return stringRes(if (route.asNewDevice) Res.string.marmot_link_title_new else Res.string.marmot_link_title_existing)
         else -> {}
     }
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }
     if (section != null && route !is Route.Profile) return stringRes(section.labelRes)
     val name = route::class.simpleName.orEmpty()
-    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "AI Code changes".
+    // The coding-agent routes kept Claude's name, but the screen runs Codex too: "Agentic Coding changes".
     if (name.startsWith(AGENT_ROUTE_PREFIX)) return stringRes(Res.string.ai_code_title) + " " + spellOut(name.removePrefix(AGENT_ROUTE_PREFIX)).lowercase()
     return spellOut(name)
+}
+
+/** A Concord community's folded name, else the name its list entry was saved with; null for one not joined. */
+@Composable
+private fun concordCommunityName(
+    communityId: String,
+    accountViewModel: AccountViewModel,
+): String? {
+    val sessions = accountViewModel.account.concordSessions
+    val revision by sessions.revision.collectAsState()
+    val session = remember(communityId, revision) { sessions.sessionFor(communityId) }
+    val state by (session?.state ?: remember { MutableStateFlow<ConcordCommunityState?>(null) }).collectAsState()
+    return state?.metadata?.name?.ifBlank { null } ?: session?.entry?.name?.ifBlank { null }
 }
 
 /** The icon a tab shows for [route] when it has no picture of its own: the bar's icon for a section. */

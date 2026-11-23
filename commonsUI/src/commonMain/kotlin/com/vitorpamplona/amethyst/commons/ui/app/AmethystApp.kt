@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.SelectedListAuthorsSu
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.loading_account
 import com.vitorpamplona.amethyst.commons.service.crashreports.DisplayCrashMessages
+import com.vitorpamplona.amethyst.commons.ui.CachingStringsReader
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.DisplayBlossomSyncProgress
 import com.vitorpamplona.amethyst.commons.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
@@ -106,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppManifestPreloader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.marmotDevices.MarmotDevicesPromptHost
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
@@ -118,14 +120,28 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.LocalResourceReader
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
  * shell (drawer, bars, navigation host and every shared screen) for the current account. [root]
  * supplies what only the front end has; see [AppRoot].
  */
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun AmethystApp(
+    sessionManager: AccountSessionManager,
+    root: AppRoot,
+) {
+    // Strings are read from their packed files once, not once per string (CachingStringsReader).
+    CompositionLocalProvider(LocalResourceReader provides CachingStringsReader.over(LocalResourceReader.current)) {
+        AmethystAppContent(sessionManager, root)
+    }
+}
+
+@Composable
+private fun AmethystAppContent(
     sessionManager: AccountSessionManager,
     root: AppRoot,
 ) {
@@ -386,6 +402,8 @@ private fun AppNavigation(
 
         DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
         DisplayNotifyMessages(accountViewModel, nav)
+        // Marmot device groups: a sibling's link request, an unknown sign-in, this device unlinked.
+        MarmotDevicesPromptHost(accountViewModel, nav)
         DisplayCrashMessages(accountViewModel, nav)
         // Background work, a front page printing elsewhere included: one popup for all of it.
         DisplayBroadcastProgress(accountViewModel, nav)

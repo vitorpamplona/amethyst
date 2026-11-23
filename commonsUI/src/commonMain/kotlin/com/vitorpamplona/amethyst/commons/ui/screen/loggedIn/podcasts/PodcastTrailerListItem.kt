@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.podcasts.trailerAudio
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_season
+import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 
-private val PLAYER_SHAPE = Modifier.clip(RoundedCornerShape(12.dp))
+private val PLAYER_SHAPE = Modifier.mediaClip(RoundedCornerShape(12.dp))
 
 /**
  * A Podcasting-2.0 trailer (kind 30055) as a compact row, used on a podcast's show page and as

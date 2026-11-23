@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.NwcFailure
 import com.vitorpamplona.amethyst.commons.notices.PostNotSent
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupCreateNotice
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupNotice
 import com.vitorpamplona.amethyst.commons.notices.ResolvedNotice
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UploadNotice
@@ -67,8 +69,11 @@ import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invites_title
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
+import com.vitorpamplona.amethyst.commons.resources.concord_join_not_saved_named
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
@@ -82,6 +87,12 @@ import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_large
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_many
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_unavailable
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_bits_not_held
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_title
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_grants_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_private_channel_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_roles_unsupported
+import com.vitorpamplona.amethyst.commons.resources.concord_roles_v2_title
 import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup
 import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
 import com.vitorpamplona.amethyst.commons.resources.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception
@@ -121,6 +132,12 @@ import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_followed
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_not_followed_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_unconfirmed_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_refused_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_refused_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_state
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
@@ -289,11 +306,33 @@ fun UserNotice.text(): NoticeText =
                     else -> Res.string.concord_pin_failed_generic
                 },
             )
+        is ConcordNotice.JoinNotSaved -> {
+            val name = communityName?.takeIf { it.isNotBlank() }
+            if (name != null) {
+                NoticeText(Res.string.concord_direct_invites_title, str(Res.string.concord_join_not_saved_named, raw(name)))
+            } else {
+                text(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_not_saved)
+            }
+        }
         ConcordNotice.DissolveFailed -> text(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+        is RelayGroupNotice.PinRefused ->
+            NoticeText(if (unpin) Res.string.relay_group_unpin_refused_title else Res.string.relay_group_pin_refused_title, raw(reason))
+        RelayGroupCreateNotice.Unconfirmed -> text(Res.string.relay_group_create_unconfirmed_title, Res.string.relay_group_create_unconfirmed)
+        RelayGroupCreateNotice.NotFollowed -> text(Res.string.relay_group_create_not_followed_title, Res.string.relay_group_create_not_followed)
         ConcordNotice.ChannelKeyRotated -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
         ConcordNotice.ChannelKeyRotationFailed -> text(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
         ConcordNotice.RolesUpdateFailed -> text(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)
+        ConcordNotice.RoleBitsNotHeld -> text(Res.string.concord_role_editor_title, Res.string.concord_role_editor_bits_not_held)
         ConcordNotice.KickFailed -> text(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
+        is ConcordNotice.RolesV2Unsupported ->
+            text(
+                Res.string.concord_roles_v2_title,
+                when (editor) {
+                    ConcordNotice.RolesV2Editor.ROLES -> Res.string.concord_roles_v2_roles_unsupported
+                    ConcordNotice.RolesV2Editor.GRANTS -> Res.string.concord_roles_v2_grants_unsupported
+                    ConcordNotice.RolesV2Editor.PRIVATE_CHANNEL -> Res.string.concord_roles_v2_private_channel_unsupported
+                },
+            )
 
         Bolt12OfferNotice.PaymentSent -> text(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
         MarmotNotice.ResetDone -> text(Res.string.reset_marmot_state, Res.string.reset_marmot_success)

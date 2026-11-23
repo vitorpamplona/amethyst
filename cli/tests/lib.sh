@@ -11,6 +11,14 @@
 
 set -u
 
+# ------- offline by default --------------------------------------------------
+# amy refuses every host that is not on this machine or its private network
+# (cli/.../LocalOnly.kt), whatever a relay list or a default set names, so a run
+# never sends its throwaway accounts to the public relays Amethyst ships as
+# defaults. A harness that exercises a live public service on purpose sets
+# AMY_LOCAL_ONLY=0 before it sources this file.
+export AMY_LOCAL_ONLY="${AMY_LOCAL_ONLY:-1}"
+
 # ------- colors --------------------------------------------------------------
 if [[ -t 1 ]]; then
     C_RESET=$'\033[0m'

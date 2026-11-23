@@ -541,7 +541,7 @@ fun main(args: Array<String>) {
                 ) {
                     windows.MainWindowEffects(window)
                     // `-Damethyst.scrollBench=<dir>`: scrolls the feed, writes frame timings, exits.
-                    ScrollBenchmark.Run(window)
+                    ScrollBenchmark.Run(window, root.navigator)
 
                     // The screens see the window stopped while it is hidden (the tray, a print), as
                     // Android's do in the background: their feeds let go of the relays after the

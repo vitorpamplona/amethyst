@@ -32,14 +32,17 @@ object GroupReadCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             ctx.syncIncoming()
-            val ids = ctx.marmot.activeGroupIds()
+            // The device group is not a chat: `amy marmot devices list` shows it as the roster.
+            val ids = ctx.marmot.activeGroupIds().filterNot { ctx.marmotDevices?.isDeviceGroup(it) == true }
             val items =
                 ids.map { id ->
                     val m = ctx.marmot.groupView(id)
                     mapOf(
                         "group_id" to id,
                         "name" to (m?.name ?: ""),
-                        "members" to ctx.marmot.memberCount(id),
+                        // Accounts, not leaves: someone on two devices is one member.
+                        "members" to ctx.marmot.accountCount(id),
+                        "leaves" to ctx.marmot.memberCount(id),
                         "epoch" to ctx.marmot.groupEpoch(id),
                     )
                 }
@@ -60,8 +63,9 @@ object GroupReadCommands {
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val meta = ctx.marmot.groupView(gid)
             val members =
-                ctx.marmot.memberPubkeys(gid).map {
-                    mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
+                ctx.marmot.memberAccounts(gid).map {
+                    // One row per account; `leaf_indices` lists its devices.
+                    mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndices.first(), "leaf_indices" to it.leafIndices)
                 }
             Output.emit(
                 mapOf(
@@ -113,8 +117,9 @@ object GroupReadCommands {
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val members =
-                ctx.marmot.memberPubkeys(gid).map {
-                    mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
+                ctx.marmot.memberAccounts(gid).map {
+                    // One row per account; `leaf_indices` lists its devices.
+                    mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndices.first(), "leaf_indices" to it.leafIndices)
                 }
             Output.emit(mapOf("group_id" to gid, "members" to members))
             return 0

@@ -72,9 +72,7 @@ dependencies {
     // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
-
-    // Marmot's raw-QUIC transport for agent text stream previews, as on Android
-    implementation(libs.marmot.quic)
+    // quic-kmp's QuicLog, which the app routes into Quartz's Log (QuicLogBridge).
     implementation(libs.quic)
 
     // The shared preference files (DataStore), as commons opens them
@@ -170,6 +168,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp)
+    // The device-group screens' tests build roster and sign-in states out of marmot-kmp's types,
+    // already on the runtime classpath through commons.
+    testImplementation(libs.marmot)
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
@@ -217,6 +218,7 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.scrollBench.intervalMs",
             "amethyst.scrollBench.at",
             "amethyst.scrollBench.measure",
+            "amethyst.scrollBench.screen",
         )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
@@ -349,6 +351,10 @@ compose.desktop {
         }
 
         jvmArgs += "-Xmx2g"
+        // Skiko's FrameWatcher calls System.gc() every 30 s while frames draw; with G1 that is a
+        // stop-the-world full collection, measured at 117-373 ms on the UI thread, sometimes
+        // inside a scroll. This makes the explicit call start a concurrent cycle instead.
+        jvmArgs += "-XX:+ExplicitGCInvokesConcurrent"
 
         // JDK 24 and later warn at every start, and will refuse in a later release, when a class
         // path library loads native code (JNA, secp256k1, Skiko, SQLite) or calls sun.misc.Unsafe's

@@ -3893,7 +3893,6 @@
     <string name="concord_create_failed">Gemenskapen kunde inte skapas: inget relä godtog den, eller så kunde din gemenskapslista inte uppdateras. Kontrollera reläerna och försök igen.</string>
     <string name="concord_create_relays">Reläer</string>
     <string name="concord_create_relays_desc">Reläer som lagrar den här gemenskapens krypterade meddelanden. Lämna tomt för att använda dina egna.</string>
-    <string name="concord_create_title">Ny Concord-kanal</string>
     <string name="concord_direct_invite_accept">Acceptera</string>
     <string name="concord_direct_invite_accept_failed">Kunde inte nå den här gemenskapen. Försök igen om en stund.</string>
     <string name="concord_direct_invite_action">Bjud in via npub…</string>
@@ -9746,7 +9745,6 @@
     <string name="claude_code_status_starting">Startar</string>
     <string name="claude_code_status_working">Arbetar</string>
     <string name="claude_code_status_needs_approval">Behöver ditt godkännande</string>
-    <string name="claude_code_status_ready">Redo</string>
     <string name="claude_code_open_elsewhere_warning">Den här sessionen är öppen i en annan Claude Code just nu. Om du fortsätter den här samtidigt kan dess historik blandas ihop.</string>
     <string name="claude_code_delete">Ta bort</string>
     <string name="claude_code_delete_title">Ta bort den här sessionen?</string>
@@ -9848,8 +9846,6 @@
     <string name="claude_code_tool_from_line">från rad %1$d</string>
     <string name="claude_code_tool_search_in">%1$s i %2$s</string>
     <string name="claude_code_waiting_approval">Väntar på ditt godkännande</string>
-    <string name="claude_code_permission_edit">%1$s vill ändra %2$s</string>
-    <string name="claude_code_permission_create">%1$s vill skapa %2$s</string>
     <string name="claude_code_permission_run">%1$s vill köra ett kommando</string>
     <string name="claude_code_permission_keys">Enter tillåter · Esc nekar</string>
     <string name="claude_code_permission_keys_deny">Enter eller Esc nekar</string>
@@ -9863,7 +9859,6 @@
     <string name="claude_code_notify_finished">%1$s är klar</string>
     <string name="claude_code_section_needs_you">Behöver dig</string>
     <string name="claude_code_status_in_terminal">öppen i en terminal</string>
-    <string name="claude_code_intro_title">Ny session i %1$s</string>
     <string name="claude_code_starter_explain">Förklara hur det här repositoryt är organiserat</string>
     <string name="claude_code_starter_tests">Kör testerna och åtgärda det som misslyckas</string>
     <string name="claude_code_starter_review_branch">Granska den här grenens ändringar mot %1$s</string>
@@ -9963,7 +9958,6 @@
     <string name="claude_code_workstream_name">Namn</string>
     <string name="claude_code_workstream_name_hint">Vad det är till för</string>
     <string name="claude_code_workstream_name_desc">Namnger arbetsspårets mapp och gren.</string>
-    <string name="claude_code_workstream_go">Starta</string>
     <string name="claude_code_advanced">Avancerat</string>
     <string name="claude_code_where">Var</string>
     <string name="claude_code_where_clones">Nya kloner</string>
@@ -10142,7 +10136,7 @@
     <string name="media_trim_hint">Dra i ändarna för att behålla en del</string>
     <string name="media_trim_upload_failed">Det gick inte att klippa videon</string>
     <string name="media_crop_failed">Bilden kan inte beskäras här. Spara använder den som den är.</string>
-    <string name="ai_code_title">AI Code</string>
+    <string name="ai_code_title">Agentic Coding</string>
     <string name="claude_code_create_pr">Skapa en PR</string>
     <string name="claude_code_update_pr">Uppdatera PR</string>
     <string name="claude_code_drafting">%1$s skriver titeln och beskrivningen…</string>

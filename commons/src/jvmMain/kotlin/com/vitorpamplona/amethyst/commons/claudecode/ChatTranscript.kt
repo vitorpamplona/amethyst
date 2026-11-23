@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PlanStep
 import com.vitorpamplona.agents.TranscriptEntry
+import kotlinx.serialization.json.JsonObject
 
 /** One row of a Claude Code conversation as the chat screen shows it. */
 @Immutable
@@ -105,6 +107,32 @@ class ChatTranscript {
     @Synchronized
     fun snapshot(): List<ChatItem> = cached ?: items.toList().also { cached = it }
 
+    // Read back from the rows only when they changed, not on every streamed delta.
+    private var cachedTasks: Pair<List<ChatItem>, List<AgentTask>>? = null
+
+    /** The plan an agent reported on its own ([setPlan]), which stands in for its task tool calls. */
+    private var reportedPlan: List<AgentTask>? = null
+
+    /**
+     * The agent's task list: the plan it last reported, for an agent that reports one (Codex),
+     * else what its task tool calls in [snapshot] leave (Claude Code).
+     */
+    @Synchronized
+    fun tasks(): List<AgentTask> {
+        reportedPlan?.let { return it }
+        val rows = snapshot()
+        cachedTasks?.let { (from, tasks) -> if (from === rows) return tasks }
+        // A plan the agent hasn't touched since the user last wrote is an old one: a new turn that
+        // leaves it alone hides it, rather than keep a stale card above the composer for good.
+        val lastPrompt = rows.indexOfLast { it is ChatItem.UserText }
+        val lastPlanCall = rows.indexOfLast { it is ChatItem.ToolCall && ToolKind.of(it.name) == ToolKind.PLAN }
+        val tasks = if (lastPlanCall < lastPrompt) emptyList() else rows.agentTasks { call -> parsedInputs.getOrPut(call.toolUseId) { parseToolInput(call.input) } }
+        return tasks.also { cachedTasks = rows to it }
+    }
+
+    /** Each task-tool call's input, read once: the list is folded again on every change. */
+    private val parsedInputs = HashMap<String, JsonObject?>()
+
     val size: Int @Synchronized get() = items.size
 
     @Synchronized
@@ -128,6 +156,21 @@ class ChatTranscript {
                 }
             }
         }
+    }
+
+    /** The agent's whole plan, as it just reported it: replaces the last one. */
+    @Synchronized
+    fun setPlan(steps: List<PlanStep>) {
+        reportedPlan =
+            steps.mapIndexed { index, step ->
+                val status =
+                    when (step.status) {
+                        PlanStep.Status.PENDING -> AgentTask.Status.PENDING
+                        PlanStep.Status.IN_PROGRESS -> AgentTask.Status.IN_PROGRESS
+                        PlanStep.Status.COMPLETED -> AgentTask.Status.COMPLETED
+                    }
+                AgentTask("plan-$index", step.text, activeForm = null, status = status)
+            }
     }
 
     /** A message a subagent wrote, live or saved: it goes inside the call that started it. */
@@ -176,12 +219,13 @@ class ChatTranscript {
         cached = null
     }
 
-    /** A prompt the user just typed in this app. */
+    /** A prompt the user just typed in this app. A new turn: a plan an agent reported is the last turn's. */
     @Synchronized
     fun addPrompt(
         text: String,
         images: List<SentImage> = emptyList(),
     ) {
+        reportedPlan = null
         add(ChatItem.UserText(nextId++, text, images))
     }
 
@@ -324,6 +368,9 @@ enum class ToolKind {
 
     /** Looking up the app's own settings (the settings assistant). */
     SETTINGS,
+
+    /** Keeping the agent's own task list: shown as the task card, not as rows of the chat. */
+    PLAN,
     OTHER,
     ;
 
@@ -347,6 +394,7 @@ enum class ToolKind {
                 "Grep", "Glob", "LS", "ToolSearch" -> SEARCH
                 "WebFetch", "WebSearch" -> WEB
                 "Task", "Agent", "Workflow" -> AGENT
+                "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TodoWrite" -> PLAN
                 else -> OTHER
             }
     }
@@ -355,7 +403,8 @@ enum class ToolKind {
 /**
  * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
  * its own row, so a turn that runs one command still shows it. Edits are never folded: what a
- * turn changed is what the user reads it for, so each edit keeps its own row.
+ * turn changed is what the user reads it for, so each edit keeps its own row. Calls that keep the
+ * agent's task list are left out, unless refused: the task card shows what they did.
  */
 fun List<ChatItem>.toChatRows(): List<ChatRow> {
     val rows = ArrayList<ChatRow>()
@@ -370,6 +419,8 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
         run.clear()
     }
     forEach { item ->
+        // A refused one stays: it did nothing to the card, and the user should see that it failed.
+        if (item is ChatItem.ToolCall && !item.isError && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
         if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.EDIT) {
             flush()
             rows.add(ChatRow.Single(item))

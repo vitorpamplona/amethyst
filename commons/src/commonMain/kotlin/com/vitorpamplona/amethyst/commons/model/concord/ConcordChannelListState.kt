@@ -47,7 +47,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -55,10 +57,10 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.concurrent.Volatile
 
 /**
  * Persistence hook for the account's Community List (offline backup): the kind-33302 fragments
@@ -136,12 +138,43 @@ class ConcordChannelListState(
      * "not loaded yet", not "no List", and a write would replace fragments another device or
      * client published — so [follow]/[unfollow] refuse rather than guess.
      */
-    @Volatile
-    var relaysConfirmed = false
-        private set
+    private val relaysConfirmedFlow = MutableStateFlow(false)
+
+    val relaysConfirmed: Boolean get() = relaysConfirmedFlow.value
+
+    /**
+     * [relaysConfirmed] as state: false while the List is still being fetched, so a screen can say
+     * "loading" instead of "you haven't joined any" for a List that simply has not arrived yet.
+     */
+    val loaded: StateFlow<Boolean> = relaysConfirmedFlow.asStateFlow()
 
     fun markRelaysConfirmed() {
-        relaysConfirmed = true
+        relaysConfirmedFlow.value = true
+    }
+
+    /**
+     * Communities a join accepted that the List has not taken yet, by id. Writing the membership
+     * waits for the List to load (an unloaded List must never be written, CORD-02 §8), which on a
+     * real network is a ~30 s drain of the stock relays; meanwhile the community is shown, and its
+     * session built, from here. Never written: [follow] is what makes a membership durable, and
+     * [dropPendingJoin] takes it back if that write fails.
+     */
+    private val pendingJoins = MutableStateFlow<Map<String, ConcordCommunityListEntry>>(emptyMap())
+
+    fun addPendingJoin(entry: ConcordCommunityListEntry) {
+        pendingJoins.update { it + (entry.id to entry) }
+    }
+
+    fun dropPendingJoin(communityId: String) {
+        pendingJoins.update { it - communityId }
+    }
+
+    /** Whether [communityId] is a join the List has not taken yet (see [addPendingJoin]). */
+    fun isPendingJoin(communityId: String): Boolean = communityId in pendingJoins.value
+
+    /** Whether the List as read from the fragments (not a pending join) holds [communityId]. */
+    suspend fun awaitWritten(communityId: String) {
+        liveDocument.first { doc -> doc.entries.any { it.id == communityId } }
     }
 
     /** The retired single-event list's coordinate, still read for migration. */
@@ -201,13 +234,17 @@ class ConcordChannelListState(
             .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
     val liveCommunities: StateFlow<List<ConcordCommunityListEntry>> =
-        liveDocument
-            .map { it.entries }
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptyList(),
-            )
+        combine(liveDocument.map { it.entries }, pendingJoins) { entries, pending ->
+            if (pending.isEmpty()) {
+                entries
+            } else {
+                entries + pending.values.filter { p -> entries.none { it.id == p.id } }
+            }
+        }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            emptyList(),
+        )
 
     /**
      * When this account left each community it no longer holds (community id → the List
@@ -258,13 +295,26 @@ class ConcordChannelListState(
      * without destroying a fragment, and [ConcordListTooLargeException] when a fragment would
      * pass the event ceiling.
      */
-    suspend fun follow(entry: ConcordCommunityListEntry): List<Event> =
+    suspend fun follow(entry: ConcordCommunityListEntry): List<Event> = writeLock.withLock { followLocked(entry) }
+
+    /**
+     * [follow] for a pending join (see [addPendingJoin]), decided inside the write lock: null, and
+     * nothing written, when [entry] is no longer pending because the user left it meanwhile. A leave
+     * drops the pending join before it takes the lock, so a background save that has not written yet
+     * can never re-join a community the user just left.
+     */
+    suspend fun followPendingJoin(entry: ConcordCommunityListEntry): List<Event>? =
         writeLock.withLock {
-            val (set, doc) = snapshot()
-            val removedAt = doc.residue.removedAt(entry.id)
-            val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
-            write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
+            if (!isPendingJoin(entry.id)) return@withLock null
+            followLocked(entry)
         }
+
+    private suspend fun followLocked(entry: ConcordCommunityListEntry): List<Event> {
+        val (set, doc) = snapshot()
+        val removedAt = doc.residue.removedAt(entry.id)
+        val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
+        return write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
+    }
 
     /**
      * Read-modify-write one membership: [transform] receives the entry for [communityId] **as the

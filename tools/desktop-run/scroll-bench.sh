@@ -23,6 +23,8 @@
 #   -Damethyst.scrollBench.intervalMs=16    one notch every N ms
 #   -Damethyst.scrollBench.waitSeconds=30   how long the feed gets to load before the first pass
 #   -Damethyst.scrollBench.at=0.5,0.6       where to scroll, as fractions of the window
+#   -Damethyst.scrollBench.screen=PICTURES  a drawer entry (NavBarItem name) to open and scroll
+#                                           instead of the home feed
 #
 # Compare two builds by running this on each and handing both report folders to the summary:
 #   python3 tools/desktop-run/scroll_bench_summary.py <before-dir> <after-dir>
@@ -35,7 +37,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 RUN_HEADLESS="$REPO_ROOT/tools/desktop-run/run-headless.sh"
 SUMMARY="$REPO_ROOT/tools/desktop-run/scroll_bench_summary.py"
 RUN_DIR="${AMETHYST_RUN_DIR:-/tmp/amethyst-desktop-run}"
-APP_PATTERN='^[^ ]*java .*AmethystDesktopKt'
+# The app run-headless.sh started for this run dir (its profile is on the command line), not another one.
+APP_PATTERN="^[^ ]*java .*-Damethyst\\.dataDir=$RUN_DIR/profile .*AmethystDesktopKt"
 
 runs=3
 warmup=1

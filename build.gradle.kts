@@ -109,7 +109,7 @@ subprojects {
         // aggregate. A root `./gradlew test` therefore runs `test` only in the Java/Android
         // modules that own one and *silently* skips every KMP module - Gradle only errors when
         // no project at all has the task, and four of them do, so it exits 0 looking healthy.
-        // That hid ~8k tests (quartz, commons, commonsUI, quic, nestsClient, marmotQuic), which
+        // That hid ~8k tests (quartz, commons, commonsUI, quic, nestsClient), which
         // is most of this repo's suite. Register the alias so the documented command means what
         // it says.
         //

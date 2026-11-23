@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.marmot.devices.DeviceGroupAttentionState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
@@ -50,6 +51,9 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -73,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
+import com.vitorpamplona.amethyst.commons.notices.RelayGroupNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
@@ -115,6 +120,7 @@ import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MediaUploadKey
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -242,6 +248,9 @@ open class BaseAccountViewModel(
      */
     val mediaUploader: MediaUploader by lazy { NoticingMediaUploader(host.mediaUploader, notices) }
 
+    /** What the device-group prompts already showed this session, shared by the prompt host and the devices screens. */
+    val marmotDeviceAttention: DeviceGroupAttentionState by lazy { DeviceGroupAttentionState() }
+
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =
         BroadcastTracker(
@@ -289,6 +298,13 @@ open class BaseAccountViewModel(
         viewModelScope.launch {
             account.concord.concordKicks.collect { notice ->
                 notices.notify(ConcordNotice.Kicked(notice.communityName))
+            }
+        }
+
+        // A join shown at once whose List write failed later: the community was taken back out.
+        viewModelScope.launch {
+            account.concord.concordJoinFailures.collect { name ->
+                notices.notify(ConcordNotice.JoinNotSaved(name))
             }
         }
     }
@@ -694,6 +710,33 @@ open class BaseAccountViewModel(
         roleIds: List<String>,
     ) = launchSigner {
         if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
+            notices.notify(ConcordNotice.RolesUpdateFailed)
+        }
+    }
+
+    /**
+     * Create ([roleIdHex] null) or edit a CORD-04 role of [communityId] from the role editor. A
+     * Roles v2 community refuses it with [ConcordNotice.RolesV2Unsupported], reported by
+     * [launchSigner] like the other legacy editors.
+     */
+    fun defineConcordRole(
+        communityId: String,
+        roleIdHex: String?,
+        name: String,
+        position: Long,
+        permissions: ConcordPermissions,
+    ) = launchSigner {
+        if (!account.concord.defineConcordRole(communityId, roleIdHex, name, position, permissions)) {
+            notices.notify(ConcordNotice.RolesUpdateFailed)
+        }
+    }
+
+    /** Delete the role [roleIdHex] of [communityId] from the role editor. */
+    fun deleteConcordRole(
+        communityId: String,
+        roleIdHex: String,
+    ) = launchSigner {
+        if (!account.concord.deleteConcordRole(communityId, roleIdHex)) {
             notices.notify(ConcordNotice.RolesUpdateFailed)
         }
     }
@@ -1843,34 +1886,6 @@ open class BaseAccountViewModel(
      */
     fun leaveConcordCommunity(communityId: String) = launchSigner { account.concord.leaveConcordCommunity(communityId) }
 
-    fun createRelayGroup(
-        relay: NormalizedRelayUrl,
-        groupId: String,
-        name: String,
-        about: String?,
-        picture: String?,
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-        hashtags: List<String>,
-        geohashes: List<String>,
-    ) = launchSigner {
-        account.relayGroups.createRelayGroup(
-            relay,
-            groupId,
-            name,
-            about,
-            picture,
-            isPrivate,
-            isClosed,
-            isHidden,
-            isRestricted,
-            hashtags,
-            geohashes,
-        )
-    }
-
     fun createRelayGroupInvite(
         channel: RelayGroupChannel,
         code: String,
@@ -1885,12 +1900,12 @@ open class BaseAccountViewModel(
     fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note) }
+    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note)?.let { notices.notify(RelayGroupNotice.PinRefused(unpin = false, reason = it)) } }
 
     fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note) }
+    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note)?.let { notices.notify(RelayGroupNotice.PinRefused(unpin = true, reason = it)) } }
 
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,
@@ -1920,32 +1935,6 @@ open class BaseAccountViewModel(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
     ) = launchSigner { account.relayGroups.removeCommunityMember(relay, pubkey) }
-
-    fun editRelayGroupMetadata(
-        channel: RelayGroupChannel,
-        name: String?,
-        about: String?,
-        picture: String?,
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-        hashtags: List<String>,
-        geohashes: List<String>,
-    ) = launchSigner {
-        account.relayGroups.editRelayGroupMetadata(
-            channel,
-            name,
-            about,
-            picture,
-            isPrivate,
-            isClosed,
-            isHidden,
-            isRestricted,
-            hashtags,
-            geohashes,
-        )
-    }
 
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
@@ -2172,6 +2161,17 @@ open class BaseAccountViewModel(
 
     fun mutedPublicChatsFlow(): StateFlow<Set<String>> = account.settings.mutedPublicChats
 
+    /** Pin, mute and archive of this account's Marmot chats. */
+    fun marmotChatSettingsFlow(): StateFlow<MarmotChatSettingsSnapshot> = account.marmotChatSettings.state
+
+    fun setMarmotChatSetting(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        on: Boolean,
+    ) = launchSigner {
+        account.marmot.setMarmotChatSetting(nostrGroupId, setting, on)
+    }
+
     fun toggleMutedPublicChat(channelId: String) =
         launchSigner {
             account.toggleMutedPublicChat(channelId)
@@ -2348,6 +2348,12 @@ open class BaseAccountViewModel(
         hexList
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
             .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
+
+    /** Whether an event created at [createdAt] is newer than what [routeForLastRead] has read, without marking it. */
+    fun isUnread(
+        routeForLastRead: String,
+        createdAt: Long?,
+    ): Boolean = createdAt != null && createdAt > account.loadLastRead(routeForLastRead)
 
     fun loadAndMarkAsRead(
         routeForLastRead: String,
@@ -2800,19 +2806,21 @@ open class BaseAccountViewModel(
         }
     }
 
-    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+    /** One row per member ACCOUNT (its first leaf), however many devices it has in the group. */
+    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberRows(nostrGroupId) ?: emptyList()
 
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,
         memberPubKey: String,
     ): String = account.marmot.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
 
+    /** Remove an account, every one of its devices, from a Marmot group. */
     suspend fun removeMarmotGroupMember(
         nostrGroupId: String,
-        targetLeafIndex: Int,
+        targetPubKey: String,
     ) {
         val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+        account.marmot.removeMarmotGroupMember(nostrGroupId, targetPubKey, relays)
     }
 
     suspend fun grantMarmotGroupAdmin(

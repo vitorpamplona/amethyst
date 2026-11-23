@@ -85,9 +85,11 @@ object GroupAddMemberCommand {
 
                 // KeyPackage discovery: the invitee's kind:10002 write set is
                 // the rule now; their kind:10051 is a legacy hint and our
-                // bootstrap pool a last-resort fallback. Newest valid
-                // kind:30443, else newest valid legacy kind:443 (White
-                // Noise's MDK still publishes 443).
+                // bootstrap pool a last-resort fallback. Every device: each
+                // fresh valid kind:30443 slot (at most 20, none withdrawn by a
+                // kind-5 slot deletion, none the group could not take). A
+                // legacy kind:443 alone no longer counts: that member has to
+                // republish first.
                 val lookup =
                     KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,
@@ -96,18 +98,20 @@ object GroupAddMemberCommand {
                         myOutbox = seed,
                         targetKeyPackageRelays = recipient.keyPackage,
                         idleTimeoutMs = 10_000,
+                        compatible = ctx.marmot.inviteCompatibility(gid),
                     )
                 val kpRelays = lookup.relays
-                val kpEvent = lookup.keyPackage
-                if (kpEvent == null) {
+                val kpEvents = lookup.keyPackages
+                if (kpEvents.isEmpty()) {
                     report.add(mapOf("pubkey" to pub, "status" to "no_key_package"))
                     continue
                 }
 
-                val (commitEvent, welcomeDelivery) =
-                    ctx.marmot.addMember(
+                // One commit adds every device; each gets its own Welcome.
+                val (commitEvent, welcomeDeliveries) =
+                    ctx.marmot.addMembers(
                         nostrGroupId = gid,
-                        keyPackageEvent = kpEvent,
+                        keyPackageEvents = kpEvents,
                         relays = groupRelays.toList(),
                     )
 
@@ -126,7 +130,7 @@ object GroupAddMemberCommand {
                         emptyMap()
                     }
                 val welcomeTargets: Set<NormalizedRelayUrl> =
-                    if (welcomeDelivery != null) {
+                    if (welcomeDeliveries.isNotEmpty()) {
                         // Welcome gift wrap (kind:1059 wrapping kind:444) must
                         // land on a relay the invitee actually polls for their
                         // NIP-59 inbox. Priority:
@@ -149,32 +153,34 @@ object GroupAddMemberCommand {
                         buildSet {
                             addAll(recipient.dmInboxOrFallback())
                             if (isEmpty() && !recipient.dmInboxWithheld) {
-                                addAll(DefaultDMRelayList)
+                                addAll(Context.fallbackRelays(DefaultDMRelayList.toSet()))
                             }
                             addAll(ctx.outboxRelays())
                         }
                     } else {
                         emptySet()
                     }
-                val welcomeAck =
-                    if (welcomeDelivery != null && welcomeTargets.isNotEmpty()) {
-                        ctx.publish(welcomeDelivery.giftWrapEvent, welcomeTargets)
+                val welcomeAcks =
+                    if (welcomeTargets.isNotEmpty()) {
+                        welcomeDeliveries.map { ctx.publish(it.giftWrapEvent, welcomeTargets) }
                     } else {
-                        emptyMap()
+                        emptyList()
                     }
 
                 report.add(
                     mapOf(
                         "pubkey" to pub,
                         "status" to "invited",
-                        "key_package_event_id" to kpEvent.id,
+                        "key_package_event_id" to kpEvents.first().id,
+                        "key_package_event_ids" to kpEvents.map { it.id },
                         "commit_event_id" to commitEvent?.signedEvent?.id,
                         // Null commit_event_id is not a failure — it is the
                         // founding add, which publishes no group message.
                         "founding_local_merge" to (commitEvent == null),
-                        "welcome_event_id" to welcomeDelivery?.giftWrapEvent?.id,
+                        "welcome_event_id" to welcomeDeliveries.firstOrNull()?.giftWrapEvent?.id,
+                        "welcome_event_ids" to welcomeDeliveries.map { it.giftWrapEvent.id },
                         "commit_accepted_by" to commitAck.filterValues { it.accepted }.keys.map { it.url },
-                        "welcome_accepted_by" to welcomeAck.filterValues { it.accepted }.keys.map { it.url },
+                        "welcome_accepted_by" to welcomeAcks.flatMap { ack -> ack.filterValues { it.accepted }.keys.map { it.url } }.distinct(),
                         "welcome_targets" to welcomeTargets.map { it.url },
                         "welcome_inbox_withheld" to recipient.dmInboxWithheld,
                         "key_package_relays" to kpRelays.map { it.url },

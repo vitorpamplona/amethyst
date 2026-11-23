@@ -23,12 +23,13 @@ package com.vitorpamplona.amethyst.commons.service.image
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import coil3.Image
-import coil3.asImage
 import com.vitorpamplona.amethyst.commons.base64Image.toPlatformImage
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 
-actual fun PlatformImage.toCoilImage(): Image = toSkiaBitmap().asImage(true)
+// Placeholders (blurhash, thumbhash) are a few dozen pixels stretched over a whole card: drawn 1:1 from
+// a copy at the card's size, not resampled every frame (see PixelExactImage).
+actual fun PlatformImage.toCoilImage(): Image = PixelExactImage(toSkiaBitmap())
 
 actual fun base64DataUriToCoilImage(dataUri: String): Image = Base64Image.toPlatformImage(dataUri).toCoilImage()
 

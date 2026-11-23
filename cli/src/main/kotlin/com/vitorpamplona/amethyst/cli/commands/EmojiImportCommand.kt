@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiArchiveLi
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiImport
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.extractEmojiArchive
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -204,7 +203,7 @@ object EmojiImportCommand {
         failed: ConcurrentLinkedQueue<Map<String, String>>,
         paymentRequired: AtomicReference<BlossomPaymentException?>,
     ) {
-        val client = BlossomClient()
+        val client = ctx.blossom
         val slots = Semaphore(PARALLEL_UPLOADS)
         val started = AtomicInteger(0)
         coroutineScope {

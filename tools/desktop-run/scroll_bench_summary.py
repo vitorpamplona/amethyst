@@ -73,7 +73,7 @@ def load(directory):
 
 def table(title, env, medians):
     print(f"\n{title}")
-    keys = ["version", "java", "cores", "render_api", "window", "notches", "interval_ms"]
+    keys = ["version", "java", "cores", "render_api", "window", "screen", "notches", "interval_ms"]
     print("  " + ", ".join(f"{k}={env[k]}" for k in keys if k in env))
     names = list(medians)
     print("  " + "pass".ljust(12) + "".join(col.rjust(13) for col, _ in COLUMNS) + "boots".rjust(7))

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
@@ -49,6 +50,8 @@ import org.jcodec.common.model.ColorSpace
 import org.jcodec.common.model.Picture
 import org.jcodec.scale.AWTUtil
 import org.jcodec.scale.ColorUtil
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Image
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -212,8 +215,9 @@ object VideoThumbnailCache {
     private fun isPersistable(url: String) = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
 
     // v2: frames from before rotation was applied are on disk sideways; v3: anamorphic ones
-    // from before the pixel ratio was applied are squashed. Leave both behind.
-    private fun diskKey(url: String) = sha1Hex("v3:$url")
+    // from before the pixel ratio was applied are squashed; v4: ones from before the decoder's crop
+    // was applied carry its padding rows (624x640 for a 624x626 video). Leave them all behind.
+    private fun diskKey(url: String) = sha1Hex("v4:$url")
 
     private fun readDisk(url: String): ImageBitmap? {
         if (!isPersistable(url)) return null
@@ -222,14 +226,25 @@ object VideoThumbnailCache {
         if (diskFile.length() <= 0) return null
         // The pixel ratio of an anamorphic video, beside its poster: the player needs it too.
         val parFile = File(diskDir, "$key$PAR_SUFFIX")
-        val image = runCatching { ImageIO.read(diskFile) }.getOrNull() ?: return null
+        val poster = runCatching { decodePoster(diskFile.readBytes()) }.getOrNull() ?: return null
         // The poster is already at the video's display shape.
-        recordShape(url, image)
+        if (poster.width > 0 && poster.height > 0) MediaAspectRatioCache.addMeasured(url, poster.width, poster.height)
         if (parFile.exists()) {
-            runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, image.width.toFloat() / image.height) }
+            runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, poster.width.toFloat() / poster.height) }
         }
-        return image.toComposeImageBitmap()
+        return poster
     }
+
+    /**
+     * A stored poster's JPEG [bytes], decoded by Skia straight into the bitmap the card draws. ImageIO
+     * decoded it into Java arrays that toComposeImageBitmap then copied into Skia's, which on a first
+     * scroll down a feed took 5% of every thread's CPU (posters come from disk on every launch).
+     */
+    internal fun decodePoster(bytes: ByteArray): ImageBitmap? =
+        Image.makeFromEncoded(bytes).use { image ->
+            if (image.width <= 0 || image.height <= 0) return null
+            Bitmap.makeFromImage(image).asComposeImageBitmap()
+        }
 
     private suspend fun load(url: String): ImageBitmap? {
         readDisk(url)?.let { return it }
@@ -362,7 +377,7 @@ object VideoThumbnailCache {
     }
 
     /** A frame of [mp4], which holds the start of [url]; records the video's pixel ratio on the way. */
-    private fun tryJCodec(
+    internal fun tryJCodec(
         mp4: File,
         url: String,
     ): BufferedImage? =
@@ -370,7 +385,11 @@ object VideoThumbnailCache {
             NIOUtils.readableChannel(mp4).use { ch ->
                 val grab = FrameGrab.createFrameGrab(ch).seekToSecondSloppy(1.0)
                 val frame = grab.nativeFrameWithMetadata ?: return null
-                val native: Picture = frame.picture ?: return null
+                // The decoder hands back whole 16-pixel macroblocks: a 624x626 video decodes to 624x640,
+                // and the stream's crop says which part is the picture. Without it the poster was taller
+                // than the video, so the card took the wrong shape until the video loaded, and the
+                // poster sat between black bars over it.
+                val native: Picture = frame.picture?.cropped() ?: return null
                 val rgb = Picture.create(native.width, native.height, ColorSpace.RGB)
                 ColorUtil.getTransform(native.color, ColorSpace.RGB).transform(native, rgb)
                 val par =

@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordModerationHideSweep
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.model.drss.DrssState
@@ -66,6 +67,12 @@ import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
@@ -219,7 +226,6 @@ import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.aes.AES_GCM_NAME
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotPushCoordinator
@@ -227,6 +233,7 @@ import com.vitorpamplona.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
@@ -431,6 +438,9 @@ private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
 /** Delay before the first stock-relay Direct Invite sweep, so it doesn't compete with the start-up fetches. */
 private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
 
+/** How often the Marmot device-group duties (heartbeats, private KeyPackages, gap fills, pairing expiry) run. */
+private const val MARMOT_DEVICE_GROUP_TICK_MS = 60_000L
+
 /** How often to sweep the stock relays for Direct Invites while the account is loaded. */
 private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
@@ -470,8 +480,6 @@ class Account(
     val nip46Consent: Nip46ConsentPrompter,
     /** Where this account's geohash-chat seed and nickname are kept (the app's encrypted storage). */
     val geohashIdentityStore: GeohashIdentityStore,
-    /** Builds the raw-QUIC transport for agent text stream previews, on the account's scope. */
-    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -507,6 +515,26 @@ class Account(
      * once and start waking a device its owner asked to be forgotten.
      */
     val marmotPushStateStore: com.vitorpamplona.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
+    /**
+     * Marmot device groups (one account's devices linked into a hidden device group), or null
+     * while the account's switch is off (the default; `MarmotDeviceGroupSwitch`). The blobs hold
+     * secrets, so the app passes stores that encrypt them at rest.
+     */
+    val marmotDeviceGroupStores: DeviceGroupBlobStores? = null,
+    /**
+     * The device-group switch the settings screen flips, or null on a front end that offers no
+     * switch. It is read before this account is built ([marmotDeviceGroupStores] follows it), so a
+     * change applies on the next launch.
+     */
+    val marmotDeviceGroupSwitch: DeviceGroupSwitch? = null,
+    /**
+     * This account's own Marmot records that are not protocol state, kept with or without device
+     * groups: the chats' pin, mute and archive ([marmotChatSettings]) and the sign-ins the user said
+     * were theirs. Encrypted at rest by the app; null keeps them in memory only.
+     */
+    val marmotLocalBlobs: DeviceGroupBlobs? = null,
+    /** This device's platform for its device-group roster entry (`Android`, `Linux`, …); empty when unknown. */
+    val marmotDevicePlatform: String = "",
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -814,18 +842,19 @@ class Account(
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl>,
     ) {
-        val authority =
-            concordSessions
-                .sessionFor(communityId)
-                ?.state
-                ?.value
-                ?.authority
-        if (authority?.isBanned(rumor.pubKey) == true) return
+        val session = concordSessions.sessionFor(communityId)
+        val state = session?.state?.value
+        if (state?.authority?.isBanned(rumor.pubKey) == true) return
         // CORD-08 §3: an already-expired rumor is never stored. The session refuses it first; this
         // backs it up for any other caller of the sink.
         if (ConcordDisappearing.isExpired(rumor)) return
         registerConcordEncryptedImages(rumor)
         cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
+        // A moderation hide (CORD-03 §3): the session holds every kind 5 of the channel and judges it
+        // against the fold; apply what it covers now to this channel's notes only. A target that
+        // arrives later, or a Grant that folds later, is handled by the session's gate and the sweep
+        // in refreshConcordChannelIndex.
+        if (rumor is DeletionRequestEvent && session != null) ConcordModerationHideSweep.sweep(cache, session, channelIdHex, rumor.deleteEventIds())
     }
 
     /**
@@ -932,8 +961,20 @@ class Account(
                 }
             }
             concordBannedSwept[communityId] = banned
+            // Moderation hides are judged against the fold, so a hide that arrived before its
+            // hider's Grant applies once the Grant folds. Re-swept only when the fold or the held
+            // hides moved.
+            val hideRevision = session.moderationHideRevision.value
+            val lastSwept = concordHidesSwept[communityId]
+            if (lastSwept == null || lastSwept.first !== state || lastSwept.second != hideRevision) {
+                ConcordModerationHideSweep.sweep(cache, session)
+                concordHidesSwept[communityId] = state to hideRevision
+            }
         }
     }
+
+    /** The fold and hide revision each community's moderation hides were last swept against. */
+    private val concordHidesSwept = HashMap<String, Pair<ConcordCommunityState, Long>>()
 
     /** The banlist each community's loaded notes were last swept against ([refreshConcordChannelIndex]). */
     private val concordBannedSwept = HashMap<String, Set<HexKey>>()
@@ -1262,6 +1303,43 @@ class Account(
                 marmotPublishObligationStore,
                 marmotIngestDedupStore,
                 scope = scope,
+                deviceGroupConfig =
+                    marmotDeviceGroupStores?.config(
+                        relays =
+                            outboxRelays.flow.value
+                                .ifEmpty {
+                                    settings.backupNIP65RelayList
+                                        ?.writeRelaysNorm()
+                                        ?.toSet()
+                                        .orEmpty()
+                                }.map { it.url },
+                        // Read when the device group is founded, by then the account's lists have
+                        // usually loaded: the relays its other devices read, not the app's defaults.
+                        relayProvider = { (marmot.deviceGroupRelays() ?: outboxRelays.flow.value).map { it.url } },
+                        client = AMETHYST_CLIENT_TAG_NAME,
+                        platform = marmotDevicePlatform,
+                    ),
+            )
+        }
+
+    /** Pin, mute and archive of this account's Marmot chats, shared with its linked devices when device groups are on. */
+    val marmotChatSettings = MarmotChatSettings(marmotLocalBlobs)
+
+    /**
+     * Device groups for this account (linking its devices, the hidden device group, adding
+     * siblings to chats), or null while the switch is off. See [MarmotDevices].
+     */
+    val marmotDevices: MarmotDevices? =
+        marmotManager?.takeIf { it.deviceGroups != null }?.let { manager ->
+            MarmotDevices(
+                manager = manager,
+                signer = signer,
+                transport = AccountMarmotDevicesTransport(this),
+                keyPackageRelays = { marmot.keyPackagePublishRelays() },
+                signInAnswers = marmotLocalBlobs,
+                onSmallState = { state -> marmot.applyMarmotSmallState(state) },
+                onHistoryImported = { imports -> marmot.indexImportedMarmotHistory(imports) },
+                onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
             )
         }
 
@@ -1278,16 +1356,6 @@ class Account(
         marmotManager?.let {
             marmotPushStateStore?.let { store -> MarmotPushCoordinator(it, store) } ?: MarmotPushCoordinator(it)
         }
-
-    /**
-     * Raw QUIC for agent text stream previews (`transports/quic.md`).
-     *
-     * Only the live preview needs it. A device that cannot open a QUIC
-     * connection still participates fully — it reads every stream's
-     * authoritative kind:9 like ordinary chat — which is why this is a
-     * separate optional piece rather than part of [marmotManager].
-     */
-    val marmotStreamTransport: MarmotQuicTransport by lazy { marmotStreamTransportFactory(scope) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -4535,8 +4603,33 @@ class Account(
                 }
             }
 
+            // The device group is not a chat: no room, so no list, feed or notification ever shows it.
+            marmotGroupList.isHidden = { id -> marmotDevices?.isDeviceGroup(id) == true }
+
             scope.launch(Dispatchers.IO) {
+                marmotChatSettings.load()
                 marmotManager.restoreAll()
+
+                // Device groups (behind their switch): load trust, announce this device, run the timers.
+                marmotDevices?.let { devices ->
+                    runCatchingCancellable { devices.start() }.onFailure { Log.w("Account", "Marmot device groups failed to start", it) }
+                    // Each time this device comes to trust a device group (at start, or once a link
+                    // joins), its own pins, mutes and archives go to the siblings that hold none.
+                    scope.launch(Dispatchers.IO) {
+                        devices.state
+                            .map { it.linked }
+                            .distinctUntilChanged()
+                            .filter { it }
+                            .collect { runCatchingCancellable { marmot.seedMarmotSmallState() }.onFailure { e -> Log.w("Account", "seeding the Marmot small state failed", e) } }
+                    }
+                    scope.launch(Dispatchers.IO) {
+                        while (isActive) {
+                            delay(MARMOT_DEVICE_GROUP_TICK_MS)
+                            // One failed tick (a store read, the trust record) must not stop the timers.
+                            runCatchingCancellable { devices.tick() }.onFailure { Log.w("Account", "Marmot device-group tick failed", it) }
+                        }
+                    }
+                }
 
                 // Ensure the local user has a KeyPackage published to relays
                 // so other users can invite them to groups. Without this,
@@ -4554,6 +4647,13 @@ class Account(
                 // not wait on the network.
                 scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
 
+                // A first login publishes before the account's relay lists have loaded; once they
+                // do (and whenever they change), the KeyPackages follow them to the chosen relays.
+                scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+
+                // The device group follows the account's relay list the same way.
+                if (marmotDevices != null) scope.launch(Dispatchers.IO) { marmot.runMarmotDeviceGroupRelayWatcher() }
+
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
@@ -4564,6 +4664,11 @@ class Account(
                 // after the ratchet advances, so persisted plaintext is the
                 // only way to restore group history across restarts.
                 marmotManager.activeGroupIds().forEach { groupId ->
+                    if (marmotDevices?.isDeviceGroup(groupId) == true) {
+                        // Still subscribed (its kind 445s run the device group), never a chatroom.
+                        marmotGroupList.notifyGroupChanged(groupId)
+                        return@forEach
+                    }
                     val chatroom = marmotGroupList.getOrCreateGroup(groupId)
                     marmotManager.syncMetadataTo(groupId, chatroom)
                     // Force the kind:445 EOSE manager to re-poll its filter
@@ -4593,7 +4698,7 @@ class Account(
                                 // they never carry a Schnorr signature.
                                 // Same indexing as live decryption, so a restored
                                 // kind:1009 edit is re-linked to its message too.
-                                val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
+                                val innerNote = marmot.indexMarmotGroupInnerEvent(groupId, innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
                                 marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {
@@ -4659,6 +4764,8 @@ class Account(
                 // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
                 // key, or drop the channel when it cut us.
                 runCatchingCancellable { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                // On Roles v2 a Private Channel's key may come on its access plane instead (CORD-03 §5).
+                runCatchingCancellable { concord.drainConcordAccessDeliveries() }.onFailure { Log.w("Concord", "access delivery drain failed", it) }
                 // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
                 runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.

@@ -636,6 +636,11 @@ kind:10040 out-of-band.
 | `amy marmot group promote / demote / remove GID NPUB` | Admin verbs. |
 | `amy marmot group set-retention GID SECS` | Disappearing messages, in seconds (`0` disables). Not retroactive: each message keeps the expiry pinned from the epoch that delivered it. |
 | `amy marmot group leave GID` | Self-remove. |
+| `amy marmot devices enable \| disable` | The device-group switch (off by default): this account's devices link into a hidden device group and are added to each other's chats. |
+| `amy marmot devices list` | This account's linked devices (`this_slot`, `devices[]`, any link in progress, `remaining_chats`, `sign_ins`). |
+| `amy marmot devices link --new \| --existing [--confirm yes\|no\|stdin] [--code-file PATH] [--label L] [--timeout SECS] [--settle SECS]` | Link with the seven-emoji comparison (`features/device-pairing.md`), as the new device or the one approving it. Prints the code on stderr (and to `--code-file` as JSON); `--confirm stdin` reads `yes`/`no` once the user compared. Pairing secrets live only in this run. |
+| `amy marmot devices sync [--timeout SECS]` | One pass: own pairing gift wraps, the group catch-up and the device-group duties (heartbeat, private KeyPackages, adding siblings to chats). |
+| `amy marmot devices remove SLOT` | Remove a linked device from the device group and its leaves from every chat; deletes its KeyPackage slot. |
 | `amy marmot group disband GID --yes` | End the group for every member. Terminal and irreversible — a replacement conversation is a new group with a new id — so `--yes` is required. |
 | `amy marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
 | `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. Default `--limit 50`. Each row carries `edited`, `deleted` and the pinned `expires_at`. |
@@ -654,16 +659,18 @@ screen speaks.
 | `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
 | `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
 | `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
-| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. |
+| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed] [--forum]` | Create a group (publishes 9007 + 9002, built as the app builds them); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. On a Buzz relay (its NIP-11 `software` is Buzz) the id is a UUID, the 9007 carries the name, visibility and channel type (`--forum`, else stream). A refused 9007 exits `rejected` with the relay's reason. |
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
 | `amy relaygroup join naddr1…[?invite=CODE]` | Same, from NIP-29's shareable group identifier; the `?invite=` suffix becomes the join `code`. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
 | `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
-| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role; without it an existing member keeps theirs. |
+| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role (sent as the `role` tag with a bare `p`, since Buzz reads `p[2]` first and refuses NIP-29 roles there); without it an existing member keeps theirs. |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
+| `amy relaygroup pin` / `unpin` on Buzz | Buzz pins are NIP-PM: one 40010 pin / 40011 unpin command naming the message (by id; no `a` pins), allowed to anyone who may post in the channel. The relay rewrites its relay-signed 30623 list, read back into `pins`. |
+| `amy relaygroup pins RELAY GID [--timeout S]` | The pinned messages in display order: the 39005 (NIP-29, `#d`) or Buzz's 30623 (`#h`), only when signed by the relay's NIP-11 `self`; a relay with no `self` answers `verified: false` (any author's newest list). |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 
@@ -681,9 +688,9 @@ and `commons` aggregator the app uses.
 | `amy buzz console [--relays R,R] [--timeout SECS]` | Fetch my kind:44200 turn metrics (`#p`=me), decrypt, and aggregate fleet + per-agent cost/tokens. |
 | `amy buzz personas [--relays R,R] [--timeout SECS]` | List my kind:30175 persona definitions (newest per slug). |
 | `amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]` | List my DMs: discover channels I'm in via kind:44100 member-added notifications (`#p`=me), keep the ones a kind:40099 `dm_created` marks as DMs. (The deployed relay does not emit kind:41001.) |
-| `amy buzz dm open RELAY PUBKEY [PUBKEY…]` | Open (or re-surface) a DM with 1-8 people (kind:41010). The relay assigns the channel id and confirms via 41001. |
+| `amy buzz dm open RELAY PUBKEY [PUBKEY…]` | Open (or re-surface) a DM (kind:41010): at most 9 people counting me, agents not counted (the relay enforces it). The relay assigns the channel id and returns it in its OK (`channel_id`). |
 | `amy buzz dm hide RELAY CHANNEL` | Hide a DM from my sidebar (kind:41012); re-opening it un-hides. |
-| `amy buzz dm add-member RELAY CHANNEL PUBKEY` | Add a member to an existing group DM (kind:41011). |
+| `amy buzz dm add-member RELAY CHANNEL PUBKEY [--history ask\|include\|exclude]` | Add someone to a DM (kind:41011). The default, `ask` (as in the app), lets the relay decide where there is nothing to decide (a DM of one person forks a new DM without history; people who already share a DM land there) and otherwise fails with `needs_history_choice`: send again with `include` (the DM grows in place and PUBKEY sees its history) or `exclude` (no tag: the relay finds or creates the DM of this DM's people plus PUBKEY). `--include-history` is the old spelling of `--history include`. `channel_id` is the DM the conversation is in now. |
 | `amy buzz job request RELAY <text> [--agent PUBKEY] [--channel GID]` | File an agent job (kind:43001): ask an agent to do a task, optionally targeting an agent (`p`) and/or scoping to a channel (`h`). |
 | `amy buzz job list RELAY [--channel GID] [--mine\|--assigned] [--limit N] [--timeout SECS]` | List jobs and their folded state (REQUESTED/ACCEPTED/IN_PROGRESS/COMPLETED/FAILED/CANCELLED). `--mine` = jobs I requested; `--assigned` = jobs targeting me. |
 | `amy buzz job show RELAY JOBID [--timeout SECS]` | Show one job's full lifecycle (request + every reply, folded). |

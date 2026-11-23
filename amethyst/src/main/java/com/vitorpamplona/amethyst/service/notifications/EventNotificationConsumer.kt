@@ -336,7 +336,7 @@ class EventNotificationConsumer(
     }
 
     suspend fun notifyGroupMessage(
-        innerEvent: ChatEvent,
+        innerEvent: Event,
         nostrGroupId: String,
         account: Account,
     ) = withWakeLock {

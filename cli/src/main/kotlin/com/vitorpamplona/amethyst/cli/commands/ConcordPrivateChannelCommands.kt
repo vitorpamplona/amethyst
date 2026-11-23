@@ -401,7 +401,7 @@ object ConcordPrivateChannelCommands {
             val draft = ConcordActions.draftDirectInvite(entry, state, me, member, onlyChannelIds = channels) as? ConcordDirectInviteDraft.Ready ?: continue
             val wrap = ConcordActions.buildDirectInvite(ctx.signer, member, draft.invite)
             val lists = ctx.cachedRelayListsOf(member) ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, member, ctx.bootstrapRelays())
-            val ack = ctx.publish(wrap, ConcordActions.directInviteDeliveryRelays(lists))
+            val ack = ctx.publish(wrap, ConcordActions.directInviteDeliveryRelays(lists, Context.bootstrapOverride()))
             vended += mapOf("member" to member, "channels" to draft.invite.channels.map { it.id }, "delivered" to ack.values.any { it.accepted })
         }
         return mapOf("channel_keys_vended" to vended, "channels_rotated" to rotated, "channels_not_rotated" to unrotated, "channels_not_held" to unheld)

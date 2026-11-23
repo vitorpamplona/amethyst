@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
+import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -90,4 +95,33 @@ class ConcordChannelLastNoteTest {
         c.refreshAfterEventLoad(stray)
         assertNull(c.lastNote)
     }
+
+    /**
+     * A live message reached the open channel feed with no event: [com.vitorpamplona.amethyst.commons.model.Channel.addNote]'s
+     * Addition is the feed's only cue, and it fired before the event loaded, so the feed sorted the
+     * note at createdAt 0 (the top of the timeline, above every older message) and kept it there
+     * until the channel was reopened. Once the event lands, the channel must tell its feed again.
+     */
+    @Test
+    fun eventLoadTellsTheFeedAgainSoItResorts() =
+        runTest {
+            val c = channel()
+            val older = Note("11".repeat(32)).apply { event = event(1000) }
+            c.addNote(older)
+
+            val changes = mutableListOf<ListChange<Note>>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { c.changesFlow().collect { changes.add(it) } }
+
+            val live = Note("22".repeat(32))
+            c.addNote(live)
+            // What the feed saw at that moment: the live note sorts below (older than) everything.
+            assertEquals(listOf(older, live), setOf(older, live).sortedByDefaultFeedOrder())
+
+            live.event = event(2000)
+            c.refreshAfterEventLoad(live)
+
+            val additions = changes.filterIsInstance<ListChange.Addition<Note>>().map { it.item }
+            assertEquals(listOf(live, live), additions, "the feed must hear about the note again once its event loads")
+            assertEquals(listOf(live, older), setOf(older, live).sortedByDefaultFeedOrder())
+        }
 }

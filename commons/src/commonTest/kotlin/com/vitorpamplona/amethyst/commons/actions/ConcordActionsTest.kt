@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -27,7 +30,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ConcordActionsTest {
@@ -154,6 +160,33 @@ class ConcordActionsTest {
             assertEquals("Test", state.metadata?.name)
             assertTrue(state.channels.isNotEmpty())
         }
+
+    /** A refold re-derives every plane; each derivation is an EC op, so the same inputs give the held key back. */
+    @Test
+    fun planeKeysAreDerivedOnceForTheSameInputs() {
+        val root = KeyPair().privKey!!
+        val channel = KeyPair().pubKey
+        val first = ConcordActions.publicChannel(root, channel, 3)
+        assertSame(first, ConcordActions.publicChannel(root.copyOf(), channel.copyOf(), 3))
+        // Another epoch, root or channel is another key.
+        assertNotSame(first, ConcordActions.publicChannel(root, channel, 4))
+        assertEquals(ConcordChannelKeys.publicChannel(root, channel, 4).publicKeyHex, ConcordActions.publicChannel(root, channel, 4).publicKeyHex)
+        assertNotEquals(first.publicKeyHex, ConcordActions.publicChannel(KeyPair().privKey!!, channel, 3).publicKeyHex)
+
+        val key = KeyPair().privKey!!.toHexKey()
+        val channelIdHex = channel.toHexKey()
+        val entry =
+            ConcordCommunityListEntry(
+                id = KeyPair().pubKey.toHexKey(),
+                owner = KeyPair().pubKey.toHexKey(),
+                ownerSalt = KeyPair().pubKey.toHexKey(),
+                root = root.toHexKey(),
+                privateChannels = listOf(PrivateChannelKey(channelIdHex, key, 2)),
+            )
+        val conv = ConcordActions.channelConversationKeys(entry)
+        assertSame(conv(channelIdHex, 2), ConcordActions.channelConversationKeys(entry)(channelIdHex, 2))
+        assertTrue(conv(channelIdHex, 2)!!.contentEquals(ConcordChannelKeys.privateChannel(key.hexToByteArray(), channel, 2).conversationKey))
+    }
 
     private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 }
