@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_w
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pick_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_requested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
@@ -177,6 +178,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget_group
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_freed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
@@ -625,7 +627,14 @@ private fun SessionRow(
                 row.workspaceSize?.let { size ->
                     Text(" • " + formatFileSize(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
                 }
-                row.workspace?.let { PullRequestBadge(it) }
+                // Its clones were freed: the next message (or Unarchive) makes them again.
+                if (row.workspace?.isFreed == true) {
+                    Text(" • " + stringRes(Res.string.claude_code_workspace_freed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
+                }
+                row.workspace?.let {
+                    PublishRequestBadge(it)
+                    PullRequestBadge(it)
+                }
                 // A workspace's branch is the app's own name for it: its repositories say more.
                 val where = row.workspace?.repoLabels?.joinToString(", ") ?: row.gitBranch
                 where?.let {
@@ -675,6 +684,20 @@ private fun SessionRow(
             }
         }
     }
+}
+
+/** The agent asked the user to open a pull request, and it waits on the Pull requests screen. */
+@Composable
+private fun PublishRequestBadge(workspace: AgentWorkspace) {
+    if (workspace.publishRequests.isEmpty()) return
+    val color = MaterialTheme.colorScheme.primary
+    Text(
+        stringRes(Res.string.claude_code_pr_badge_requested),
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.padding(start = 6.dp).border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /**
