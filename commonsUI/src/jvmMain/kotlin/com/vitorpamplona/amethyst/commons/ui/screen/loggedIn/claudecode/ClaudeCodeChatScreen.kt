@@ -280,6 +280,12 @@ internal val LocalAgentName = staticCompositionLocalOf { "Claude" }
 /** How many rows from the end the view may be and still follow new ones. */
 private const val FOLLOW_SLACK = 3
 
+/**
+ * Past the last item's top, clamped to the list's end: a tall last row (an error banner, a long
+ * reply) shows whole instead of stopping at its first line.
+ */
+private const val TO_ITS_END = 100_000
+
 /** One Claude Code session: its history, the live turn, and the approvals it waits on. */
 @Composable
 fun ClaudeCodeChatScreen(
@@ -337,6 +343,19 @@ fun ClaudeCodeChatScreen(
     // Typing goes straight to the composer, and the keys below work, without a click first.
     LaunchedEffect(Unit) { composerFocus.requestFocus() }
     val pending = state.pendingPermissions.firstOrNull()
+    // Sends the failed message again; a saved session's message with images can't be, so its text
+    // goes back into the composer to send with them by hand.
+    val retry: (() -> Unit)? =
+        if (openElsewhere || folderGone) {
+            null
+        } else {
+            {
+                if (viewModel.retry() == false) {
+                    (state.items.lastOrNull { it is ChatItem.UserText } as? ChatItem.UserText)?.let { composerText.setTextAndPlaceCursorAtEnd(it.text) }
+                    composerFocus.requestFocus()
+                }
+            }
+        }
     var switching by remember { mutableStateOf(false) }
     val keys =
         Modifier.onPreviewKeyEvent { event ->
@@ -451,7 +470,8 @@ fun ClaudeCodeChatScreen(
                 contentAlignment = Alignment.TopCenter,
             ) {
                 Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
-                    state.error?.let { ErrorBanner(it) }
+                    // A start that failed can be tried again; a gone folder or a failed clone can't.
+                    state.error?.let { ErrorBanner(it, onRetry = retry?.takeIf { _ -> state.lastTurnFailed && !state.isBusy }) }
                     state.cloning?.let { CloningNote(it) }
                     if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
                     runError?.let { Banner(stringRes(Res.string.claude_code_run_failed, it)) }
@@ -488,7 +508,7 @@ fun ClaudeCodeChatScreen(
                             composerText.setTextAndPlaceCursorAtEnd(it)
                             composerFocus.requestFocus()
                         },
-                        onRetry = if (openElsewhere || folderGone) null else ({ viewModel.retry() }),
+                        onRetry = retry,
                     )
 
                     state.pendingPermissions.firstOrNull()?.let { request ->
@@ -662,12 +682,19 @@ private fun Messages(
     val showResume = state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly
     // The agent answered and stopped: it waits for the next message. Not after a note that says
     // how the turn ended (stopped, failed), and not while a terminal still works on it.
+    // Only where something waits: a process here between turns, or a terminal that says it's idle.
+    // Not a saved session nothing runs for yet, nor one whose folder is gone, nor after an error.
+    val waiting =
+        if (terminalStatus != null) {
+            terminalStatus == TERMINAL_IDLE
+        } else {
+            !readOnly && state.error == null && (state.status == ChatStatus.READY || state.status == ChatStatus.ENDED)
+        }
     val showDone =
         state.historyLoaded &&
-            !busy &&
+            waiting &&
             state.streamingText.isEmpty() &&
-            state.items.lastOrNull().let { it is ChatItem.AssistantText || it is ChatItem.ToolCall } &&
-            (terminalStatus == null || terminalStatus == TERMINAL_IDLE)
+            state.items.lastOrNull().let { it is ChatItem.AssistantText || it is ChatItem.ToolCall }
     // Every item the list below emits, in the same order, so the last index is the list's own.
     val itemCount =
         (if (!state.historyLoaded || showIntro) 1 else 0) +
@@ -681,20 +708,22 @@ private fun Messages(
     // back keeps where the user left it.
     val landed = remember(chatKey) { booleanArrayOf(chatKey in landedChats) }
     // Follows the conversation while its end is in view; someone scrolled up to read is left there.
-    LaunchedEffect(itemCount, state.streamingText.length / 200) {
+    // Keyed on the last row and on the turn running too: when a turn ends, its live status leaves
+    // as the reply or the error arrives, and the count alone stays the same.
+    LaunchedEffect(itemCount, rows.lastOrNull()?.key, busy, state.streamingText.length / 200) {
         if (!state.historyLoaded || itemCount == 0) return@LaunchedEffect
         val last = itemCount - 1
         if (!landed[0]) {
             landed[0] = true
             landedChats.add(chatKey)
-            listState.scrollToItem(last)
+            listState.scrollToItem(last, TO_ITS_END)
             return@LaunchedEffect
         }
         val lastVisible =
             listState.layoutInfo.visibleItemsInfo
                 .lastOrNull()
                 ?.index
-        if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last)
+        if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last, TO_ITS_END)
     }
     val uriHandler = LocalUriHandler.current
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
@@ -1684,10 +1713,15 @@ private fun ChatMenu(
 }
 
 @Composable
-private fun ErrorBanner(error: ChatError) {
+private fun ErrorBanner(
+    error: ChatError,
+    /** Offered where trying again can work: the agent wasn't installed, or didn't start. */
+    onRetry: (() -> Unit)? = null,
+) {
+    val action = onRetry?.let { stringRes(Res.string.try_again) }
     when (error) {
-        ChatError.NotInstalled -> Banner(stringRes(Res.string.claude_code_not_installed))
-        is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, LocalAgentName.current, error.message ?: ""))
+        ChatError.NotInstalled -> Banner(stringRes(Res.string.claude_code_not_installed), action) { onRetry?.invoke() }
+        is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, LocalAgentName.current, error.message ?: ""), action) { onRetry?.invoke() }
         ChatError.FolderGone -> Banner(stringRes(Res.string.claude_code_folder_gone))
         ChatError.HeldElsewhere -> Banner(stringRes(Res.string.claude_code_open_elsewhere_readonly))
         is ChatError.CloneFailed -> Banner(stringRes(Res.string.claude_code_workspace_clone_failed, error.message ?: ""))

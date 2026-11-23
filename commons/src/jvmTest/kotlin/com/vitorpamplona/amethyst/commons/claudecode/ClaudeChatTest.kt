@@ -116,10 +116,14 @@ class ClaudeChatTest {
     private fun TestScope.newChat(
         cli: ScriptedCli,
         title: String? = null,
+        /** How many starts fail, as a CLI that can't run would, before one works. */
+        failedStarts: Int = 0,
     ): ClaudeChat {
         chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+        var failuresLeft = failedStarts
         val starter =
             ClaudeCodeStarter { _, scope ->
+                if (failuresLeft-- > 0) throw IOException("cannot run claude")
                 ClaudeCodeConnection(cli, scope).also { it.initialize() }
             }
         val config = Files.createTempDirectory("claude-config").toFile()
@@ -250,6 +254,52 @@ class ClaudeChatTest {
             assertFalse(again.lastTurnFailed)
             assertEquals(ChatStatus.NEEDS_APPROVAL, again.status)
             assertEquals(listOf("Create hello.txt", "Create hello.txt"), again.items.filterIsInstance<ChatItem.UserText>().map { it.text })
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aStartThatFailsIsAFailedTurnAndDoesNotTimeTheNextOne() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli, failedStarts = 1)
+
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            val failed = chat.state.value
+            assertEquals(ChatStatus.ENDED, failed.status)
+            assertTrue(failed.error is ChatError.StartFailed)
+            assertTrue(failed.lastTurnFailed)
+            assertTrue(failed.unseenFinish, "nobody watched it fail")
+            assertEquals(null, failed.turnStartedAt)
+
+            // The next turn is timed from its own start, not the failed one's.
+            assertTrue(chat.retry())
+            advanceUntilIdle()
+            assertEquals(ChatStatus.NEEDS_APPROVAL, chat.state.value.status)
+            assertFalse(chat.state.value.lastTurnFailed)
+            assertNotNull(chat.state.value.turnStartedAt)
+            assertTrue(chat.state.value.turnStartedAt!! >= failed.turnEndedAt!!)
+            chatScope.cancel()
+        }
+
+    @Test
+    fun tryAgainTwiceSendsOnce() =
+        runTest {
+            val cli = ScriptedCli().apply { failTurns = true }
+            val chat = newChat(cli)
+            chat.send("Create hello.txt")
+            advanceUntilIdle()
+            cli.failTurns = false
+
+            chat.retry()
+            chat.retry()
+            advanceUntilIdle()
+            assertEquals(
+                2,
+                chat.state.value.items
+                    .count { it is ChatItem.UserText },
+            )
+            assertEquals(2, cli.written.count { it.contains("\"type\":\"user\"") })
             chatScope.cancel()
         }
 

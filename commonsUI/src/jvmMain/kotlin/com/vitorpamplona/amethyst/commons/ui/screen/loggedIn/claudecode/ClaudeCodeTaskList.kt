@@ -73,9 +73,16 @@ internal fun AgentTaskList(
     chatKey: String,
 ) {
     val openByDefault = working && !approvalPending
-    var expanded by rememberSaveable(chatKey) { mutableStateOf(openByDefault) }
-    // Follows the turn; the user's own click holds until the turn changes state again.
-    LaunchedEffect(openByDefault) { expanded = openByDefault }
+    // The user's own click (null: none), kept across chat switches, until the turn changes state.
+    var choice by rememberSaveable(chatKey) { mutableStateOf<Boolean?>(null) }
+    var followedDefault by rememberSaveable(chatKey) { mutableStateOf(openByDefault) }
+    LaunchedEffect(openByDefault) {
+        if (followedDefault != openByDefault) {
+            followedDefault = openByDefault
+            choice = null
+        }
+    }
+    val expanded = choice ?: openByDefault
     val done = tasks.count { it.status == AgentTask.Status.COMPLETED }
     val current = tasks.firstOrNull { it.status == AgentTask.Status.IN_PROGRESS }
     Surface(
@@ -87,7 +94,7 @@ internal fun AgentTaskList(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded }
+                    .clickable { choice = !expanded }
                     .padding(horizontal = CardPadding, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

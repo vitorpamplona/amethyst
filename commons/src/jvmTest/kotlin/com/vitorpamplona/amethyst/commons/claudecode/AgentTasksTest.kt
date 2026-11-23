@@ -118,4 +118,40 @@ class AgentTasksTest {
         val group = rows.single() as ChatRow.ToolGroup
         assertEquals(listOf("b1", "b2"), group.calls.map { it.toolUseId })
     }
+
+    @Test
+    fun aPlanLeftAloneSinceTheUserWroteIsHidden() {
+        val transcript = ChatTranscript()
+        transcript.run("t1", "TaskCreate", """{"subject":"Plan","description":"d"}""", "Task #1 created successfully: Plan")
+        assertEquals(1, transcript.tasks().size)
+        transcript.addPrompt("something else")
+        assertTrue(transcript.tasks().isEmpty(), "a new turn that doesn't touch the plan hides it")
+        transcript.run("t2", "TaskUpdate", """{"taskId":"1","status":"in_progress"}""", "Updated task #1 status")
+        assertEquals(AgentTask.Status.IN_PROGRESS, transcript.tasks().single().status)
+    }
+
+    @Test
+    fun aReportedPlanIsTheTurnsOwn() {
+        val transcript = ChatTranscript()
+        transcript.setPlan(listOf(PlanStep("Fix", PlanStep.Status.IN_PROGRESS)))
+        transcript.addPrompt("next")
+        assertTrue(transcript.tasks().isEmpty())
+    }
+
+    @Test
+    fun aRefusedTaskCallShowsAsARow() {
+        val transcript = ChatTranscript()
+        transcript.run("t1", "TaskUpdate", """{"taskId":"1","status":"completed"}""", "No task found with ID 1", isError = true)
+        val call = (transcript.snapshot().toChatRows().single() as ChatRow.Single).item as ChatItem.ToolCall
+        assertTrue(call.isError)
+    }
+
+    @Test
+    fun idsAreCountedWhenTheResultDoesNotNameThem() {
+        val transcript = ChatTranscript()
+        transcript.run("t1", "TaskCreate", """{"subject":"A","description":"d"}""", "Created.")
+        transcript.run("t2", "TaskCreate", """{"subject":"B","description":"d"}""", "Created.")
+        transcript.run("t3", "TaskUpdate", """{"taskId":"2","status":"completed"}""", "Updated")
+        assertEquals(listOf(AgentTask.Status.PENDING, AgentTask.Status.COMPLETED), transcript.tasks().map { it.status })
+    }
 }

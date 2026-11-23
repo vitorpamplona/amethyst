@@ -101,6 +101,15 @@ sealed interface ChatError {
     ) : ChatError
 }
 
+/**
+ * The agent waits on the user: for an approval, or to read how a turn they didn't watch ended.
+ * The list's rows and the drawer's badge both ask this, so they can't disagree.
+ */
+fun needsUser(
+    status: ChatStatus?,
+    unseenFinish: Boolean,
+): Boolean = status == ChatStatus.NEEDS_APPROVAL || (unseenFinish && status != ChatStatus.WORKING && status != ChatStatus.STARTING)
+
 /** What a chat is for: work on code in a folder, or the settings assistant (no files, only settings tools). */
 enum class ChatKind { CODE, SETTINGS }
 
@@ -160,6 +169,8 @@ data class ClaudeChatState(
     val lastTurnFailed: Boolean = false,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
+
+    val needsUser: Boolean get() = needsUser(status, unseenFinish)
 }
 
 /**
@@ -222,6 +233,18 @@ class ClaudeChat internal constructor(
 
     /** How many screens show the chat now: a turn that ends while one does is seen. */
     private val viewers = AtomicInteger(0)
+
+    /** The last message as it went out, images and all: what [retry] sends again. */
+    private class SentPrompt(
+        val text: String,
+        val images: List<ImageInput>,
+        val files: List<File?>,
+    )
+
+    @Volatile private var lastSent: SentPrompt? = null
+
+    /** Sends on their way but not yet running as a turn: a second Try again meanwhile would send twice. */
+    private val sendsInFlight = AtomicInteger(0)
     private var connection: AgentConnection? = null
 
     /** Until the CLI names the copy's own session, the process starts with `--fork-session`. */
@@ -316,22 +339,20 @@ class ClaudeChat internal constructor(
     }
 
     /**
-     * Sends the user's last message again, with the images that went with it while their files
-     * are still there: for a turn that ended in an error.
+     * Sends the user's last message again, for a turn that ended in an error: as it went out, images
+     * included. False when it can't go out the same way (a saved session keeps no images): the
+     * caller offers its text to send by hand. A retry while one is already on its way does nothing.
      */
-    fun retry() {
-        val last = _state.value.items.lastOrNull { it is ChatItem.UserText } as? ChatItem.UserText ?: return
-        val files = last.images.mapNotNull { image -> image.file?.let(::File)?.takeIf { it.isFile } }
-        val images =
-            files.mapNotNull { file ->
-                try {
-                    ImageInput.fromFile(file)
-                } catch (e: IOException) {
-                    Log.w(TAG, "Could not read ${file.name} again", e)
-                    null
-                }
-            }
-        send(last.text, images, files.take(images.size))
+    fun retry(): Boolean {
+        if (_state.value.isBusy || sendsInFlight.get() > 0) return true
+        lastSent?.let {
+            send(it.text, it.images, it.files)
+            return true
+        }
+        val last = _state.value.items.lastOrNull { it is ChatItem.UserText } as? ChatItem.UserText ?: return true
+        if (last.images.isNotEmpty()) return false
+        send(last.text)
+        return true
     }
 
     /** The user hasn't seen how a turn ended unless a screen showed the chat as it did. */
@@ -381,46 +402,60 @@ class ClaudeChat internal constructor(
         val trimmed = text.trim()
         if (trimmed.isEmpty() && images.isEmpty()) return
         val sent = images.mapIndexed { i, image -> SentImage(image.name, imageFiles.getOrNull(i)?.absolutePath) }
+        lastSent = SentPrompt(trimmed, images, imageFiles)
+        sendsInFlight.incrementAndGet()
         scope.launch {
-            historyReady.await()
-            // Every way of sending lands here (the composer, review comments, questions from the
-            // Changes screen), so this is where a session held elsewhere is kept read-only.
-            val current = _state.value
-            val id = current.sessionId
-            if (id != null && !current.forking && connection == null && heldElsewhere(id)) {
-                publish { it.copy(error = ChatError.HeldElsewhere) }
-                return@launch
-            }
-            lock.withLock {
-                transcript.addPrompt(trimmed, sent)
-                publish {
-                    it.copy(
-                        status = ChatStatus.WORKING,
-                        error = null,
-                        activity = null,
-                        turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis(),
-                        unseenFinish = false,
-                        lastTurnFailed = false,
-                    )
-                }
-            }
-            // A workstream still cloning: the prompt shows now, and goes out once its folder is ready.
             try {
-                preparation?.await()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Said here too: this prompt marked the chat as working after [waitFor] ended it.
-                publish { it.copy(cloning = null, status = ChatStatus.ENDED, error = ChatError.CloneFailed(e.message)) }
-                return@launch
+                sendNow(trimmed, images, sent)
+            } finally {
+                sendsInFlight.decrementAndGet()
             }
-            val c = ensureStarted() ?: return@launch
-            try {
-                c.send(trimmed, images)
-            } catch (e: IOException) {
-                Log.w(TAG, "Could not send to ${backend.displayName}", e)
-                publish { it.copy(status = ChatStatus.ENDED, error = ChatError.StartFailed(e.message)) }
+        }
+    }
+
+    private suspend fun sendNow(
+        trimmed: String,
+        images: List<ImageInput>,
+        sent: List<SentImage>,
+    ) {
+        historyReady.await()
+        // Every way of sending lands here (the composer, review comments, questions from the
+        // Changes screen), so this is where a session held elsewhere is kept read-only.
+        val current = _state.value
+        val id = current.sessionId
+        if (id != null && !current.forking && connection == null && heldElsewhere(id)) {
+            publish { it.copy(error = ChatError.HeldElsewhere) }
+            return
+        }
+        lock.withLock {
+            transcript.addPrompt(trimmed, sent)
+            publish {
+                it.copy(
+                    status = ChatStatus.WORKING,
+                    error = null,
+                    activity = null,
+                    turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis(),
+                    unseenFinish = false,
+                    lastTurnFailed = false,
+                )
             }
+        }
+        // A workstream still cloning: the prompt shows now, and goes out once its folder is ready.
+        try {
+            preparation?.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Said here too: this prompt marked the chat as working after [waitFor] ended it.
+            endTurnWithError(ChatError.CloneFailed(e.message)) { it.copy(cloning = null) }
+            return
+        }
+        val c = ensureStarted() ?: return
+        try {
+            c.send(trimmed, images)
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not send to ${backend.displayName}", e)
+            endTurnWithError(ChatError.StartFailed(e.message))
         }
     }
 
@@ -552,7 +587,7 @@ class ClaudeChat internal constructor(
             // A removed worktree, or a session that never named its folder: resuming elsewhere
             // (the home folder) would run the session there.
             if (!canRunHere()) {
-                publish { it.copy(status = ChatStatus.ENDED, error = ChatError.FolderGone) }
+                endTurnWithError(ChatError.FolderGone)
                 return@withLock null
             }
             publish { it.copy(status = ChatStatus.STARTING) }
@@ -577,11 +612,11 @@ class ClaudeChat internal constructor(
                 try {
                     backend.start(options, scope)
                 } catch (e: AgentNotInstalledException) {
-                    publish { it.copy(status = ChatStatus.ENDED, error = ChatError.NotInstalled) }
+                    endTurnWithError(ChatError.NotInstalled)
                     return@withLock null
                 } catch (e: IOException) {
                     Log.w(TAG, "Could not start Claude Code", e)
-                    publish { it.copy(status = ChatStatus.ENDED, error = ChatError.StartFailed(e.message)) }
+                    endTurnWithError(ChatError.StartFailed(e.message))
                     return@withLock null
                 }
             if (killed) {
@@ -607,22 +642,12 @@ class ClaudeChat internal constructor(
             connection = null
             val wasBusy = _state.value.isBusy
             val error = if (code != null && code != 0 && wasBusy) ChatError.Exited(code, c.stderrTail().takeLast(STDERR_SHOWN)) else null
-            if (wasBusy) transcript.addNotice(NoticeKind.PROCESS_ENDED)
-            val now = System.currentTimeMillis()
-            publish {
-                it.copy(
-                    status = ChatStatus.ENDED,
-                    pendingPermissions = emptyList(),
-                    streamingText = "",
-                    activity = null,
-                    turnStartedAt = null,
-                    error = error ?: it.error,
-                    // A turn the process's end cut short is over too: the user has to look.
-                    turnEndedAt = if (wasBusy) now else it.turnEndedAt,
-                    lastTurnMillis = if (wasBusy) it.turnStartedAt?.let { start -> now - start } else it.lastTurnMillis,
-                    unseenFinish = it.unseenFinish || (wasBusy && unseen()),
-                    lastTurnFailed = it.lastTurnFailed || wasBusy,
-                )
+            if (wasBusy) {
+                // A turn the process's end cut short is over too, and failed: the user has to look.
+                transcript.addNotice(NoticeKind.PROCESS_ENDED)
+                finishTurn(failed = true) { it.copy(status = ChatStatus.ENDED, error = error ?: it.error) }
+            } else {
+                publish { it.copy(status = ChatStatus.ENDED, pendingPermissions = emptyList(), streamingText = "", activity = null, turnStartedAt = null) }
             }
         }
         onSessionChanged()
@@ -718,28 +743,49 @@ class ClaudeChat internal constructor(
                     event.interrupted -> transcript.addNotice(NoticeKind.INTERRUPTED)
                     event.failure != null -> transcript.addNotice(NoticeKind.TURN_FAILED, event.failure)
                 }
-                val now = System.currentTimeMillis()
-                publish {
-                    it.copy(
-                        status = ChatStatus.READY,
-                        activity = null,
-                        turnStartedAt = null,
-                        turnEndedAt = now,
-                        lastTurnMillis = it.turnStartedAt?.let { start -> now - start },
-                        // A turn the user stopped needs no telling.
-                        unseenFinish = !event.interrupted && unseen(),
-                        lastTurnFailed = event.failure != null,
-                        streamingText = "",
-                        pendingPermissions = emptyList(),
-                        costUsd = event.costUsd ?: it.costUsd,
-                        contextWindow = event.contextWindow ?: it.contextWindow,
-                    )
+                // A turn the user stopped needs no telling.
+                finishTurn(failed = event.failure != null, tellUser = !event.interrupted) {
+                    it.copy(status = ChatStatus.READY, costUsd = event.costUsd ?: it.costUsd, contextWindow = event.contextWindow ?: it.contextWindow)
                 }
                 refreshGit()
                 onSessionChanged()
             }
         }
     }
+
+    /**
+     * Ends the running turn, however it ended: an answer, an error from the agent, the process
+     * dying, or a start that never happened. Times it, says whether it [failed], and marks it for
+     * the user when no screen showed it end ([tellUser]).
+     */
+    private fun finishTurn(
+        failed: Boolean,
+        tellUser: Boolean = true,
+        change: (ClaudeChatState) -> ClaudeChatState,
+    ) {
+        val now = System.currentTimeMillis()
+        publish {
+            val started = it.turnStartedAt
+            change(it).copy(
+                activity = null,
+                streamingText = "",
+                pendingPermissions = emptyList(),
+                turnStartedAt = null,
+                turnEndedAt = now,
+                lastTurnMillis = started?.let { start -> now - start },
+                unseenFinish = tellUser && unseen(),
+                lastTurnFailed = failed,
+            )
+        }
+        // Opened as the turn ended: [viewing] may have cleared the flag before this set it.
+        if (!unseen()) _state.update { if (it.unseenFinish) it.copy(unseenFinish = false) else it }
+    }
+
+    /** A turn that ended before the agent could answer: it couldn't start, a clone failed, the message didn't go out. */
+    private fun endTurnWithError(
+        error: ChatError,
+        change: (ClaudeChatState) -> ClaudeChatState = { it },
+    ) = finishTurn(failed = true) { change(it).copy(status = ChatStatus.ENDED, error = error) }
 
     /** Applies [change] and refreshes the rows from the transcript. */
     private fun publish(change: (ClaudeChatState) -> ClaudeChatState) {

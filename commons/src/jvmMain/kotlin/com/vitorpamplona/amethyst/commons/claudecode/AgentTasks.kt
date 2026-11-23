@@ -43,25 +43,35 @@ data class AgentTask(
  * The agent's task list, read back from its task tool calls in the order they were made:
  *
  * - `TaskCreate {subject, activeForm}` adds a pending task; its result names the id
- *   ("Task #3 created successfully: …").
+ *   ("Task #3 created successfully: …"). Should that wording change, ids are counted from 1 in
+ *   creation order, as the CLI numbers them.
  * - `TaskUpdate {taskId, status, subject, activeForm}` changes one; status `deleted` removes it.
  * - `TodoWrite {todos: [{content, status, activeForm}]}` (older CLIs, and the SDK mode of some)
  *   replaces the whole list.
  *
  * Only the main conversation's calls count: a subagent's are inside its own call. A call the CLI
- * refused changes nothing.
+ * refused changes nothing. [inputOf] reads a call's input; a caller that folds the same calls
+ * again and again passes one that remembers.
  */
-fun List<ChatItem>.agentTasks(): List<AgentTask> {
+fun List<ChatItem>.agentTasks(inputOf: (ChatItem.ToolCall) -> JsonObject? = { parseToolInput(it.input) }): List<AgentTask> {
     // Insertion order is the order the agent created them, which is the order it shows them.
     val tasks = LinkedHashMap<String, AgentTask>()
+    var created = 0
     forEach { item ->
         val call = item as? ChatItem.ToolCall ?: return@forEach
         if (call.name !in TASK_TOOLS || call.isError) return@forEach
-        val input = parseInput(call.input) ?: return@forEach
+        val input = inputOf(call) ?: return@forEach
         when (call.name) {
             TASK_CREATE -> {
                 val subject = input.text("subject") ?: return@forEach
-                val id = call.result?.let { CREATED_ID.find(it)?.groupValues?.get(1) } ?: call.toolUseId
+                created++
+                val result = call.result
+                val id =
+                    when {
+                        // Still running: no id yet, so nothing can update it.
+                        result == null -> call.toolUseId
+                        else -> CREATED_ID.find(result)?.groupValues?.get(1) ?: created.toString()
+                    }
                 tasks[id] = AgentTask(id, subject, input.text("activeForm"), AgentTask.Status.PENDING)
             }
             TASK_UPDATE -> {
@@ -106,7 +116,7 @@ private val CREATED_ID = Regex("""Task #(\w+)""")
 
 private val lenient = Json { ignoreUnknownKeys = true }
 
-private fun parseInput(input: String): JsonObject? = runCatching { lenient.parseToJsonElement(input) as? JsonObject }.getOrNull()
+internal fun parseToolInput(input: String): JsonObject? = runCatching { lenient.parseToJsonElement(input) as? JsonObject }.getOrNull()
 
 private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
 

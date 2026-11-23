@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.PlanStep
 import com.vitorpamplona.agents.TranscriptEntry
+import kotlinx.serialization.json.JsonObject
 
 /** One row of a Claude Code conversation as the chat screen shows it. */
 @Immutable
@@ -121,8 +122,16 @@ class ChatTranscript {
         reportedPlan?.let { return it }
         val rows = snapshot()
         cachedTasks?.let { (from, tasks) -> if (from === rows) return tasks }
-        return rows.agentTasks().also { cachedTasks = rows to it }
+        // A plan the agent hasn't touched since the user last wrote is an old one: a new turn that
+        // leaves it alone hides it, rather than keep a stale card above the composer for good.
+        val lastPrompt = rows.indexOfLast { it is ChatItem.UserText }
+        val lastPlanCall = rows.indexOfLast { it is ChatItem.ToolCall && ToolKind.of(it.name) == ToolKind.PLAN }
+        val tasks = if (lastPlanCall < lastPrompt) emptyList() else rows.agentTasks { call -> parsedInputs.getOrPut(call.toolUseId) { parseToolInput(call.input) } }
+        return tasks.also { cachedTasks = rows to it }
     }
+
+    /** Each task-tool call's input, read once: the list is folded again on every change. */
+    private val parsedInputs = HashMap<String, JsonObject?>()
 
     val size: Int @Synchronized get() = items.size
 
@@ -210,12 +219,13 @@ class ChatTranscript {
         cached = null
     }
 
-    /** A prompt the user just typed in this app. */
+    /** A prompt the user just typed in this app. A new turn: a plan an agent reported is the last turn's. */
     @Synchronized
     fun addPrompt(
         text: String,
         images: List<SentImage> = emptyList(),
     ) {
+        reportedPlan = null
         add(ChatItem.UserText(nextId++, text, images))
     }
 
@@ -394,7 +404,7 @@ enum class ToolKind {
  * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
  * its own row, so a turn that runs one command still shows it. Edits are never folded: what a
  * turn changed is what the user reads it for, so each edit keeps its own row. Calls that keep the
- * agent's task list are left out: the task card shows what they did.
+ * agent's task list are left out, unless refused: the task card shows what they did.
  */
 fun List<ChatItem>.toChatRows(): List<ChatRow> {
     val rows = ArrayList<ChatRow>()
@@ -409,7 +419,8 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
         run.clear()
     }
     forEach { item ->
-        if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
+        // A refused one stays: it did nothing to the card, and the user should see that it failed.
+        if (item is ChatItem.ToolCall && !item.isError && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
         if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.EDIT) {
             flush()
             rows.add(ChatRow.Single(item))

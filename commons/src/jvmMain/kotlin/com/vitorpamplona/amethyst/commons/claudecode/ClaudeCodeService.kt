@@ -96,7 +96,7 @@ data class ClaudeSessionRow(
     val lastTurnFailed: Boolean = false,
 ) {
     /** The agent waits on the user: for an approval, or to read how its turn ended. */
-    val needsYou: Boolean get() = appStatus == ChatStatus.NEEDS_APPROVAL || (unseenFinish && appStatus != ChatStatus.WORKING && appStatus != ChatStatus.STARTING)
+    val needsYou: Boolean get() = needsUser(appStatus, unseenFinish)
 }
 
 /** A chat that wants the user: it waits on an approval, or its turn ended. */
@@ -724,11 +724,7 @@ class ClaudeCodeService(
     }
 
     private fun recountNeedsYou() {
-        _needsYou.value =
-            chats.value.values.count {
-                val state = it.state.value
-                state.status == ChatStatus.NEEDS_APPROVAL || (state.unseenFinish && !state.isBusy)
-            }
+        _needsYou.value = chats.value.values.count { it.state.value.needsUser }
     }
 
     /**

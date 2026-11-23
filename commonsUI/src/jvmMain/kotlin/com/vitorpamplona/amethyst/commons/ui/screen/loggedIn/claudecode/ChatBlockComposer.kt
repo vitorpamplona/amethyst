@@ -36,9 +36,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -55,12 +57,14 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.markdown.InlineCodeChips
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
+import kotlinx.coroutines.launch
 
 /**
  * How a reply's blocks draw in the chat: paragraphs with their inline code on chips
@@ -92,6 +96,8 @@ private fun ChatCodeBlock(
 ) {
     val code = literal.trimEnd('\n')
     var copied by remember(code) { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     LaunchedEffect(copied) {
         if (copied) {
             delay(COPIED_SHOWN_MS)
@@ -110,8 +116,18 @@ private fun ChatCodeBlock(
                 HoverTooltip(label) {
                     IconButton(
                         onClick = {
-                            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(code), null)
-                            copied = true
+                            scope.launch {
+                                // Another app can hold the system clipboard open (Windows), or there
+                                // is none (headless): a copy that can't happen must not take the app down.
+                                try {
+                                    clipboard.setText(code)
+                                    copied = true
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    Log.w("ChatCodeBlock", "Could not copy the code block", e)
+                                }
+                            }
                         },
                         modifier = Modifier.size(32.dp),
                     ) {
