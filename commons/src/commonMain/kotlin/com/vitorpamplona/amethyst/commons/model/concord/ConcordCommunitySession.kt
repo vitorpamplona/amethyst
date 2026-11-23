@@ -1444,6 +1444,9 @@ class ConcordCommunitySession(
     // Channel id -> rumor id -> author of each rumor a hide keeps out of the store, re-judged per fold.
     private val hiddenByModeration = HashMap<HexKey, LinkedHashMap<HexKey, HexKey>>()
 
+    // The fold and hide revision [releaseUncoveredHides] last re-judged [hiddenByModeration] against.
+    private var lastReleaseJudgedAgainst: Pair<ConcordCommunityState?, Long>? = null
+
     // Channel id -> target rumor id -> the hides naming it, so the ingest gate is a lookup.
     private val hidesByTarget = HashMap<HexKey, HashMap<HexKey, MutableList<ConcordModerationHide>>>()
 
@@ -1562,7 +1565,15 @@ class ConcordCommunitySession(
      * longer holds can't be reopened and is let go.
      */
     private fun releaseUncoveredHides() {
-        val hidden = lock.withLock { hiddenByModeration.flatMap { (channelIdHex, byId) -> byId.map { Triple(channelIdHex, it.key, it.value) } } }
+        // A hide only comes undone when the fold moves (the state flow keeps the same instance for an
+        // equal fold), or a new hide is held: a refold that changed nothing re-judges nothing.
+        val judgedAgainst = _state.value to _moderationHideRevision.value
+        val hidden =
+            lock.withLock {
+                if (lastReleaseJudgedAgainst?.let { it.first === judgedAgainst.first && it.second == judgedAgainst.second } == true) return
+                lastReleaseJudgedAgainst = judgedAgainst
+                hiddenByModeration.flatMap { (channelIdHex, byId) -> byId.map { Triple(channelIdHex, it.key, it.value) } }
+            }
         if (hidden.isEmpty()) return
         val uncovered = hidden.filter { (channelIdHex, rumorId, author) -> !isHiddenByModeration(channelIdHex, rumorId, author) }
         if (uncovered.isEmpty()) return

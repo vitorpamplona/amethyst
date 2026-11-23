@@ -3349,13 +3349,16 @@ class AccountConcordActions(
             if (state.dissolved || !state.isRolesV2) continue
             // Each wrap is opened once by the session, and settled here for good once judged, so a
             // drain on every structural tick costs nothing for deliveries already seen.
+            val opened = ArrayList<Pair<HexKey, AdoptedAccessKey>>()
             for (pending in session.pendingAccessDeliveries()) {
                 val channelIdHex = pending.channelIdHex
                 val delivery = pending.delivery
                 val held = ConcordChannelKeyring.heldKey(session.entry, channelIdHex)
                 // Settled only once the key is written or the delivery definitively holds nothing for
                 // us: a signer that could not answer, or a List that could not be written, leaves it
-                // for the next drain (holders read us as served, so none would deliver again).
+                // for the next drain (holders read us as served, so none would deliver again). The
+                // keys it opens are written together below, in one List write for the community.
+                var collected = false
                 val settled =
                     ConcordAccessDrain.drainOne(
                         delivery = delivery,
@@ -3363,35 +3366,59 @@ class AccountConcordActions(
                         signer = account.signer,
                         heldEpoch = held?.epoch,
                         trusted = { ConcordChannelAccess.deliveryTrusted(state, channelIdHex, me, delivery.deliverer) },
-                    ) { key -> adoptAccessKey(session.entry.id, channelIdHex, key, delivery) }
-                if (settled) session.retireAccessWrap(pending.wrapId)
+                    ) { key ->
+                        collected = true
+                        opened += pending.wrapId to AdoptedAccessKey(channelIdHex, key, delivery)
+                        true
+                    }
+                if (settled && !collected) session.retireAccessWrap(pending.wrapId)
+            }
+            if (opened.isNotEmpty() && adoptAccessKeys(session.entry.id, opened.map { it.second })) {
+                opened.forEach { session.retireAccessWrap(it.first) }
             }
         }
     }
 
+    /** A Channel key an access delivery handed us, waiting for [adoptAccessKeys] to write it. */
+    private class AdoptedAccessKey(
+        val channelIdHex: HexKey,
+        val key: ByteArray,
+        val delivery: ChannelDelivery,
+    )
+
     /**
-     * Writes a delivered Channel key into the Community List. True once the List holds it (written
-     * now, or already held at that epoch or later); false when the write failed and must be retried.
+     * Writes the Channel keys a drain collected for [communityId] into the Community List in one
+     * write. True once the List holds them (written now, or already held at that epoch or later);
+     * false when the write failed and they must be collected again.
      */
-    private suspend fun adoptAccessKey(
+    private suspend fun adoptAccessKeys(
         communityId: String,
-        channelIdHex: HexKey,
-        key: ByteArray,
-        delivery: ChannelDelivery,
+        keys: List<AdoptedAccessKey>,
     ): Boolean {
-        var changed = false
+        val adopted = ArrayList<AdoptedAccessKey>()
         val written =
             try {
                 writeConcordList { list ->
+                    adopted.clear()
                     list.update(communityId) { cur ->
-                        ConcordChannelKeyring.withChannelKey(cur, PrivateChannelKey(channelIdHex.lowercase(), key.toHexKey(), delivery.newEpoch))?.also { changed = true }
+                        // Oldest epoch first, so a newer delivery of the same Channel lands last.
+                        var next = cur
+                        for (k in keys.sortedBy { it.delivery.newEpoch }) {
+                            ConcordChannelKeyring.withChannelKey(next, PrivateChannelKey(k.channelIdHex.lowercase(), k.key.toHexKey(), k.delivery.newEpoch))?.let {
+                                next = it
+                                adopted += k
+                            }
+                        }
+                        next.takeIf { adopted.isNotEmpty() }
                     }
                 }
             } catch (e: SignerExceptions) {
-                Log.w("Concord", "Access delivery $communityId/$channelIdHex: Community List not signed, retrying later", e)
+                Log.w("Concord", "Access deliveries for $communityId: Community List not signed, retrying later", e)
                 false
             }
-        if (written && changed) Log.i("Concord") { "Access delivery $communityId/$channelIdHex: adopted epoch ${delivery.newEpoch} from ${delivery.deliverer}" }
+        if (written) {
+            adopted.forEach { k -> Log.i("Concord") { "Access delivery $communityId/${k.channelIdHex}: adopted epoch ${k.delivery.newEpoch} from ${k.delivery.deliverer}" } }
+        }
         return written
     }
 
