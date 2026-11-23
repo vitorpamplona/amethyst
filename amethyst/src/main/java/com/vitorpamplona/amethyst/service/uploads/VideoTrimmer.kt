@@ -33,13 +33,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
 import com.vitorpamplona.amethyst.commons.service.uploads.gif.GifEditor
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.runInterruptible
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.SoftReference
 import kotlin.math.max
@@ -60,8 +55,8 @@ object VideoTrimmer {
      * Writes [startMs]..[endMs] (both kept) of [uri] to [out], already stripped of its metadata;
      * false when it could not: an empty range, a start past the end of the video (of the audio,
      * for a file with no video track), a track MP4 can't hold, more than one video track. [out]
-     * does not exist after a false. A cancelled caller interrupts the remux and gets the
-     * cancellation, not a false.
+     * does not exist after a false or a cancellation. A cancelled caller interrupts the remux and
+     * gets the cancellation, not a false.
      */
     suspend fun trim(
         context: Context,
@@ -69,24 +64,11 @@ object VideoTrimmer {
         startMs: Long,
         endMs: Long,
         out: File,
-    ): Boolean {
-        // TrimRange refuses these with an IllegalArgumentException; the Studio's handles never make them.
-        if (startMs < 0 || endMs <= startMs) {
-            Log.w(TAG) { "Trim $startMs..$endMs of $uri keeps nothing" }
-            return false
-        }
-        return try {
-            val result = runInterruptible(Dispatchers.IO) { Mp4Sanitizer.sanitize(context, uri, out, TrimRange(startMs, endMs)) }
-            if (!result.fastStart) Log.w(TAG) { "Trimmed video is not fast-start: ${out.name}" }
-            true
-        } catch (e: IOException) {
-            // An interrupted remux surfaces as InterruptedIOException, which runInterruptible does
-            // not turn into a cancellation: a cancelled upload stops here instead of failing the trim.
-            currentCoroutineContext().ensureActive()
-            Log.w(TAG, "Trim of $uri failed", e)
-            false
-        }
-    }
+    ): Boolean =
+        // An empty range fails in TrimRange's own check, before the library opens the file.
+        MetadataStripper.runSanitizer(out, "Trim $startMs..$endMs of $uri failed") {
+            Mp4Sanitizer.sanitize(context, uri, out, TrimRange(startMs, endMs))
+        } != null
 
     /** How long [uri] runs, in milliseconds: a video's own length, or a GIF's frame delays added up. */
     fun durationMs(

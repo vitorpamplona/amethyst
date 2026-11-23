@@ -917,27 +917,13 @@ class AndroidMediaUploader(
         trim: VideoTrim,
     ): MediaCompressorResult? =
         withContext(Dispatchers.IO) {
+            // The trim deletes the file when it fails or is cancelled.
             val file = File.createTempFile("trim_", ".mp4", appContext.cacheDir)
-            val trimmed =
-                try {
-                    VideoTrimmer.trim(appContext, uri, trim.startMs, trim.endMs, file)
-                } catch (e: CancellationException) {
-                    discardTrim(file)
-                    throw e
-                }
-            if (trimmed) {
-                // The trim stripped it too: the upload's metadata strip sends it as it is.
-                sanitizedTempFiles.mark(file)
-                MediaCompressorResult(Uri.fromFile(file), "video/mp4", file.length())
-            } else {
-                discardTrim(file)
-                null
-            }
+            if (!VideoTrimmer.trim(appContext, uri, trim.startMs, trim.endMs, file)) return@withContext null
+            // The trim stripped it too: the upload's metadata strip sends it as it is.
+            sanitizedTempFiles.mark(file)
+            MediaCompressorResult(Uri.fromFile(file), "video/mp4", file.length())
         }
-
-    private fun discardTrim(file: File) {
-        if (!file.delete() && file.exists()) Log.w("AndroidMediaUploader") { "could not delete $file" }
-    }
 
     override suspend fun videoFrame(
         uri: MediaUri,

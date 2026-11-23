@@ -100,13 +100,10 @@ class VideoTrimmerTest {
             every { path } returns file.absolutePath
         }
 
-    /** Stubs the trimming [Mp4Sanitizer.sanitize] to write [bytes] and report [fastStart]. */
-    private fun trimSucceeds(
-        fastStart: Boolean = true,
-        bytes: Int = 128,
-    ) {
+    /** Stubs the trimming [Mp4Sanitizer.sanitize] to write [TRIMMED_BYTES] bytes and report [fastStart]. */
+    private fun trimSucceeds(fastStart: Boolean = true) {
         every { Mp4Sanitizer.sanitize(context, picked, capture(output), capture(range)) } answers {
-            output.captured.writeBytes(ByteArray(bytes))
+            output.captured.writeBytes(ByteArray(TRIMMED_BYTES))
             SanitizeResult(output.captured, fastStart)
         }
     }
@@ -124,7 +121,7 @@ class VideoTrimmerTest {
             assertTrue(output.captured.name.startsWith("trim_"))
             assertEquals(output.captured.absolutePath, trimmed!!.uri.path)
             assertEquals("video/mp4", trimmed.contentType)
-            assertEquals(128L, trimmed.size)
+            assertEquals(TRIMMED_BYTES.toLong(), trimmed.size)
         }
 
     @Test
@@ -213,5 +210,9 @@ class VideoTrimmerTest {
         }
 
         assertFalse(output.captured.exists())
+    }
+
+    private companion object {
+        const val TRIMMED_BYTES = 128
     }
 }
