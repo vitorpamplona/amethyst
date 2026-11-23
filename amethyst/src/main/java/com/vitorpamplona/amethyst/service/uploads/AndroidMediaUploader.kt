@@ -99,6 +99,15 @@ class AndroidMediaUploader(
 ) : MediaUploader {
     override val videoCompression: VideoCompressionSupport get() = VideoCompressionSupport.Supported
 
+    /** The temp files this uploader wrote already sanitized, which its metadata strip leaves alone. */
+    internal val sanitizedTempFiles = SanitizedTempFiles()
+
+    /** [MetadataStripper.strip], except for a file [sanitizedTempFiles] marks: that one is already clean. */
+    internal suspend fun strip(
+        uri: Uri,
+        mimeType: String?,
+    ): StrippingResult = if (sanitizedTempFiles.isSanitized(uri)) StrippingResult(uri, true) else MetadataStripper.strip(uri, mimeType, appContext)
+
     override suspend fun upload(
         progress: UploadOrchestrator,
         uri: MediaUri,
@@ -113,7 +122,7 @@ class AndroidMediaUploader(
         onStrippingFailed: suspend () -> Boolean,
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
-    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress).upload(uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
+    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress, ::strip).upload(uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
 
     override suspend fun uploadEncrypted(
         progress: UploadOrchestrator,
@@ -130,7 +139,7 @@ class AndroidMediaUploader(
         onStrippingFailed: suspend () -> Boolean,
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
-    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress).uploadEncrypted(uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
+    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress, ::strip).uploadEncrypted(uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
 
     override suspend fun compressIfNeeded(
         progress: UploadOrchestrator,
@@ -139,11 +148,13 @@ class AndroidMediaUploader(
         compressionQuality: CompressorQuality,
         useH265: Boolean,
         convertGifToMp4: Boolean,
-    ): MediaCompressorResult = withContext(Dispatchers.IO) { Job(progress).compressIfNeeded(uri, mimeType, compressionQuality, appContext, useH265, convertGifToMp4) }
+    ): MediaCompressorResult = withContext(Dispatchers.IO) { Job(progress, ::strip).compressIfNeeded(uri, mimeType, compressionQuality, appContext, useH265, convertGifToMp4) }
 
     /** One upload's run: the pipeline, reporting into [progress]. */
     private class Job(
         val progress: UploadOrchestrator,
+        /** The metadata strip: [AndroidMediaUploader.strip]. */
+        val strip: suspend (Uri, String?) -> StrippingResult,
     ) {
         fun error(
             error: UploadError,
@@ -653,7 +664,6 @@ class AndroidMediaUploader(
             compressionQuality: CompressorQuality,
             stripMetadata: Boolean,
             onStrippingFailed: suspend () -> Boolean,
-            context: Context,
         ): Uri? {
             val effectiveMimeType = compressed.contentType ?: mimeType
             val isVideo = effectiveMimeType?.startsWith("video/", ignoreCase = true) == true
@@ -666,7 +676,7 @@ class AndroidMediaUploader(
 
             // AvifMetadataNotVerifiableException is allowed to propagate so the caller
             // can emit a specific error rather than the generic "Upload cancelled".
-            val strippingResult = MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
+            val strippingResult = strip(compressed.uri, effectiveMimeType)
 
             if (!strippingResult.stripped && !onStrippingFailed()) return null
 
@@ -712,7 +722,7 @@ class AndroidMediaUploader(
 
             val finalUri =
                 try {
-                    stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                    stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed)
                 } catch (e: AvifMetadataNotVerifiableException) {
                     return error(UploadError.AVIF_METADATA_STRIP_FAILED, e.message ?: e.javaClass.simpleName).also {
                         deleteTempUri(compressed.uri, uri)
@@ -772,7 +782,7 @@ class AndroidMediaUploader(
 
             val finalUri =
                 try {
-                    stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                    stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed)
                 } catch (e: AvifMetadataNotVerifiableException) {
                     return error(UploadError.AVIF_METADATA_STRIP_FAILED, e.message ?: e.javaClass.simpleName).also {
                         deleteTempUri(compressed.uri, uri)
@@ -1088,6 +1098,7 @@ class AndroidMediaUploader(
         }
 
     override fun discardTempFile(uri: MediaUri) {
+        sanitizedTempFiles.forget(uri)
         try {
             uri.path?.let { path -> File(path).takeIf { it.exists() }?.delete() }
         } catch (e: Exception) {
@@ -1111,7 +1122,7 @@ class AndroidMediaUploader(
     override suspend fun stripMetadata(
         uri: MediaUri,
         mimeType: String?,
-    ): MediaUri = withContext(Dispatchers.IO) { MetadataStripper.strip(uri, mimeType, appContext).uri }
+    ): MediaUri = withContext(Dispatchers.IO) { strip(uri, mimeType).uri }
 
     override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { appContext.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
 }
