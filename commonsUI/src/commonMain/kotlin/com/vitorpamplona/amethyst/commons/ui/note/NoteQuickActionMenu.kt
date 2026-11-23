@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
@@ -752,15 +754,20 @@ fun QuickActionAlertDialog(
         title = { Text(title) },
         text = { Text(textContent) },
         confirmButton = {
-            Row(
+            // Wraps on a narrow window rather than squeezing the action button; Cancel sits by the action.
+            FlowRow(
                 modifier =
                     Modifier
                         .padding(all = 8.dp)
                         .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 TextButton(onClick = onClickDontShowAgain) {
                     Text(stringRes(Res.string.quick_action_dont_show_again_button))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringRes(Res.string.cancel))
                 }
                 Button(
                     onClick = onClickDoOnce,
@@ -826,8 +833,12 @@ fun QuickActionAlertDialogOneButton(
                     Modifier
                         .padding(all = 8.dp)
                         .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringRes(Res.string.cancel))
+                }
                 Button(
                     onClick = onClickDoOnce,
                     colors = buttonColors,
