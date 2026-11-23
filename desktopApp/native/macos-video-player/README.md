@@ -8,7 +8,8 @@ thread crashes in its callback (`AudioQueueProcessingTapGetSourceAudio` under `t
 read), often within minutes of scrolling a video feed.
 
 This directory is that library's native source at the version in `VERSION`, with the tap
-removed (see the header of `NativeVideoPlayer.swift`). `:desktopApp:buildMacVideoPlayer` compiles
+removed and one playback fix: play on a video that ended starts it over, where a replay sometimes
+did not start or played with a frozen picture (see the header of `NativeVideoPlayer.swift`). `:desktopApp:buildMacVideoPlayer` compiles
 it on macOS, the same `clang` + `swiftc` steps as upstream's `build.sh`, and the result ships in
 the app's resources, signed with the app. The library loads its native player from
 `java.library.path` before it unpacks the one in its jar, and the macOS app sets that path to its
@@ -23,5 +24,6 @@ played about 175 videos over five sessions without a crash.
 The JNI functions are registered by name from `jni_bridge.c`, so this build must match the jar's
 Kotlin side. The build fails when `composemediaplayer` in `gradle/libs.versions.toml` differs from
 `VERSION`. On a bump: if the new release still has the tap, copy its `NativeVideoPlayer.swift` and
-`jni_bridge.c` here, remove the tap the same way, and update `VERSION`; if it no longer has the tap,
+`jni_bridge.c` here, remove the tap the same way, carry the replay fix over unless upstream has
+its own, and update `VERSION`; if it no longer has the tap and replays an ended video correctly,
 delete this directory, the build task and the `java.library.path` arguments.
