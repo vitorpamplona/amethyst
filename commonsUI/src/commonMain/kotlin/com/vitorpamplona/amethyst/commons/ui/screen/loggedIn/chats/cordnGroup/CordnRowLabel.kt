@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnCallAnnouncement
-import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnStreamRows
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.cordn_calendar_event_cancelled
@@ -35,8 +33,10 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_call_unsupported
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
+import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
 
 /**
  * What a cordn row, its pinned entry and the room's inbox preview say for a message whose

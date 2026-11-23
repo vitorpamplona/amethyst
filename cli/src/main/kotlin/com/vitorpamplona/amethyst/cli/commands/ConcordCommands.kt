@@ -118,6 +118,8 @@ object ConcordCommands {
         |                                               --rejoin re-accepts that link (a bundle never
         |                                               moves the base on its own, CORD-06 §2);
         |                                               refuses if that epoch banned us
+        |  concord members COMMUNITY                   the Guestbook (CORD-02 §5): who is in, and each
+        |                                               npub's latest Join, Leave or Kick
         |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04),
         |                                               and public: true/false + live invite links
         |                                               from the folded registries (CORD-05 §5)
@@ -153,13 +155,14 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|members|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
                     "create" to { rest -> create(dataDir, rest) },
                     "list" to { rest -> list(dataDir, rest) },
                     "import" to { rest -> import(dataDir, rest) },
+                    "members" to { rest -> members(dataDir, rest) },
                     "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
                     "channel" to { rest -> ConcordPrivateChannelCommands.channel(dataDir, rest) },
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
@@ -186,6 +189,33 @@ object ConcordCommands {
                     "timer" to { rest -> ConcordModCommands.timer(dataDir, rest) },
                 ),
         )
+
+    /** The Guestbook as a member sees it: its coalesced motions (Kicks honored against the fold) and who is in. */
+    private suspend fun members(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        args.rejectUnknown()
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val state = ConcordChannelCommands.foldState(ctx, sc)
+            val coalesced = Guestbook.coalesce(guestbookEntriesOf(ctx, sc), TimeUtils.nowMillis(), state.authority)
+            Output.emit(
+                mapOf(
+                    "community_id" to sc.communityId,
+                    "members" to ConcordActions.joinedMembers(coalesced).sorted(),
+                    "guestbook" to
+                        coalesced.values.sortedBy { it.ms }.map {
+                            mapOf("member" to it.member, "action" to it.action.name.lowercase(), "created_at" to it.createdAt, "by" to it.author)
+                        },
+                ),
+            )
+            return 0
+        }
+    }
 
     private suspend fun create(
         dataDir: DataDir,

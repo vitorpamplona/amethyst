@@ -85,7 +85,7 @@ quartzKmp = "2.22.0"
 # and cordn (vitorpamplona/cordn-kmp), both built against the quartz and mls-kmp versions here. Released
 # on Nostr + Blossom only since marmot 2.3.0 and cordn 1.3.0.
 marmotKmp = "3.0.0"
-cordnKmp = "1.4.1"
+cordnKmp = "1.5.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
 # versions those libraries were built against. crypto-kmp is on Nostr + Blossom (Magpie) since 2.1.1.
