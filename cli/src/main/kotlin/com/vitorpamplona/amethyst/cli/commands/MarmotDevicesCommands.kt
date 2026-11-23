@@ -33,9 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.SasSymbol
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import java.io.File
@@ -180,26 +178,36 @@ object MarmotDevicesCommands {
         args.rejectUnknown()
         if (asNew == asExisting) return Output.error("bad_args", "pass exactly one of --new or --existing")
         if (confirm !in setOf("yes", "no", "stdin")) return Output.error("bad_args", "--confirm is yes, no or stdin")
+        // Approving without comparing the seven emoji links whichever device asked: tests only.
+        if (asExisting && confirm == "yes") {
+            if (System.getenv(AUTO_CONFIRM_ENV) != "1") {
+                return Output.error("bad_args", "--existing --confirm yes approves any request unseen; compare the code (--confirm stdin), or set $AUTO_CONFIRM_ENV=1 in a test")
+            }
+            System.err.println("warning: $AUTO_CONFIRM_ENV=1: approving the link request without comparing the code")
+        }
         return withDevices(dataDir) { ctx, devices ->
             devices.start(announce = true)
             val deadline = System.currentTimeMillis() + timeoutMs
+            // Read on a daemon thread, outside the coroutine scope: a blocking read is not
+            // cancellable, so a reader inside the scope kept the run alive after the link ended.
+            val lines = if (confirm == "stdin") stdinLines() else null
             coroutineScope {
-                var answer: Deferred<String?>? = null
                 var shown: List<SasSymbol>? = null
 
                 fun decision(code: List<SasSymbol>): Boolean? {
                     if (shown != code) {
                         shown = code
                         showCode(code, codeFile)
-                        if (confirm == "stdin") answer = async(Dispatchers.IO) { readlnOrNull() }
+                        // An answer typed before this code was shown is not an answer to it.
+                        while (lines?.tryReceive()?.isSuccess == true) Unit
                     }
                     return when (confirm) {
                         "yes" -> true
                         "no" -> false
                         else ->
-                            answer
-                                ?.takeIf { it.isCompleted }
-                                ?.getCompleted()
+                            lines
+                                ?.tryReceive()
+                                ?.getOrNull()
                                 ?.trim()
                                 ?.lowercase()
                                 ?.let { it == "yes" || it == "y" }
@@ -244,13 +252,29 @@ object MarmotDevicesCommands {
                     linkedAt?.let { if (System.currentTimeMillis() - it >= settleMs) break }
                     delay(POLL_MS)
                 }
-                answer?.cancel()
+                lines?.cancel()
                 val s = devices.state.value
                 if (linkedAt == null) return@coroutineScope Output.error("timeout", "the link did not complete in ${timeoutMs / 1000}s")
                 Output.emit(render(s) + mapOf("role" to if (asNew) "new" else "existing", "code" to shown?.map { it.emoji }, "code_numbers" to shown?.map { it.number }))
                 0
             }
         } ?: disabled()
+    }
+
+    /** Lines of stdin, read on a daemon thread that never keeps the process alive. */
+    private fun stdinLines(): Channel<String> {
+        val lines = Channel<String>(Channel.UNLIMITED)
+        val reader =
+            Thread({
+                try {
+                    while (true) lines.trySend(readlnOrNull() ?: break)
+                } finally {
+                    lines.close()
+                }
+            }, "amy-stdin")
+        reader.isDaemon = true
+        reader.start()
+        return lines
     }
 
     private fun showCode(
@@ -317,5 +341,8 @@ object MarmotDevicesCommands {
         }
 
     private const val POLL_MS = 1_500L
+
+    /** Lets `link --existing --confirm yes` approve without comparing, for interop tests only. */
+    const val AUTO_CONFIRM_ENV = "AMY_TEST_AUTO_CONFIRM"
     private const val PAIRING_LOOKBACK_SECS = 2 * 24 * 60 * 60L + 15 * 60L
 }
