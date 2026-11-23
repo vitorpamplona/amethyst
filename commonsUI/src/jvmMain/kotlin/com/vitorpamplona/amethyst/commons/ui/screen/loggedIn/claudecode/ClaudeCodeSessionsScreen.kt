@@ -606,6 +606,8 @@ private fun SessionRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // The PR pills stand taller than the line around them: a gap keeps their border off the title.
+            Spacer(Modifier.height(3.dp))
             // What matters first: what the session is doing, then when, then where. The branch is
             // the one that gives way when the line runs out, not the status.
             Row(verticalAlignment = Alignment.CenterVertically) {
