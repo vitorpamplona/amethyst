@@ -154,4 +154,47 @@ class PublishToolServerTest {
             )
             assertNull(workspaces.recordPublishRequest("gone", "app", request))
         }
+
+    @Test
+    fun anOpenPullRequestTakesTheNewCommitsSoTheAgentIsNotAskedToRequestAnother() =
+        runBlocking {
+            val ws = workspaces.create(listOf(remote("app")), null, branch = "agent/o")
+            val app = File(ws.dir, "app")
+            File(app, "more.txt").writeText("more\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "more")
+            workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/4", "OPEN", isDraft = false))
+            val refused = tool(File(ws.dir)).call(PublishToolServer.REQUEST, args("title" to "More"))
+            assertTrue(refused.isError)
+            assertTrue(refused.text.contains("https://github.com/o/app/pull/4"), refused.text)
+            assertTrue(asked.isEmpty())
+            // Merged since: new work needs a new pull request, and the agent may ask for it.
+            workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/4", "MERGED", isDraft = false))
+            assertFalse(tool(File(ws.dir)).call(PublishToolServer.REQUEST, args("title" to "More")).isError)
+            assertEquals("app", asked.single().first)
+        }
+
+    @Test
+    fun aRequestWaitsUntilAPullRequestIsOpenOrOpenedAfterIt() {
+        val request = PublishRequest("Next", requestedAt = 1_000)
+        assertEquals(request, ClaudeCodeWorkspaceViewModel.pendingRequest(request, null))
+        // An earlier pull request of the branch, merged or closed before the agent asked: still waiting.
+        assertEquals(request, ClaudeCodeWorkspaceViewModel.pendingRequest(request, PullRequestInfo("u", "MERGED", isDraft = false, createdAt = 500)))
+        assertEquals(request, ClaudeCodeWorkspaceViewModel.pendingRequest(request, PullRequestInfo("u", "CLOSED", isDraft = false)))
+        // Answered: one is open, or one was opened after the request (and merged since).
+        assertNull(ClaudeCodeWorkspaceViewModel.pendingRequest(request, PullRequestInfo("u", "OPEN", isDraft = false, createdAt = 500)))
+        assertNull(ClaudeCodeWorkspaceViewModel.pendingRequest(request, PullRequestInfo("u", "MERGED", isDraft = false, createdAt = 2_000)))
+        assertNull(ClaudeCodeWorkspaceViewModel.pendingRequest(null, null))
+    }
+
+    @Test
+    fun aPullRequestsCreationTimeIsRead() {
+        val pr = GitHubPullRequests.parseState("""{"url":"https://github.com/o/app/pull/1","state":"MERGED","isDraft":false,"createdAt":"2026-01-02T03:04:05Z"}""")
+        assertEquals(
+            java.time.Instant
+                .parse("2026-01-02T03:04:05Z")
+                .toEpochMilli(),
+            pr?.createdAt,
+        )
+    }
 }

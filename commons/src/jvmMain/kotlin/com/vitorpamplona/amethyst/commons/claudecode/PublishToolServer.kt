@@ -95,6 +95,15 @@ class PublishToolServer(
         if (now == null || now.ahead == 0) {
             return HostToolResult("${repo.branch} has no commits beyond ${repo.baseBranch} in ${repo.name}: there is nothing to publish yet.", isError = true)
         }
+        // An open pull request takes new commits once the user pushes them: no second one to ask for.
+        // One merged or closed is done: new work needs a new pull request, and this asks for it.
+        workspace.pullRequests[repo.name]?.takeIf { it.isOpen }?.let { open ->
+            return HostToolResult(
+                "${repo.name} already has an open pull request from ${repo.branch}: ${open.url}. Your new commits go into it when the user " +
+                    "pushes the branch from the Pull requests screen; tell them it has new commits. Don't push yourself.",
+                isError = true,
+            )
+        }
         val draft = (arguments["draft"] as? JsonPrimitive)?.booleanOrNull ?: false
         request(workspace, repo, PublishRequest(title, arguments.string("body")?.trim().orEmpty(), draft, System.currentTimeMillis()))
         return HostToolResult(

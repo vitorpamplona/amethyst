@@ -84,8 +84,9 @@ data class AgentWorkspace(
     val isFreed: Boolean get() = freedAt != null
 
     /**
-     * Since when nobody needed its clones, for the automatic cleanup: its work done ([finishedAt]),
-     * or, when the user brought it back after that, since then. Null while its work isn't done.
+     * Since when the record says nobody needed its clones: its work done ([finishedAt]), or, when
+     * the user brought it back after that, since then. Null while its work isn't done. The
+     * automatic cleanup also counts its sessions' last activity, which the record doesn't hold.
      */
     val idleSince: Long?
         get() = finishedAt?.let { maxOf(it, restoredAt ?: 0L) }
@@ -426,48 +427,58 @@ class AgentWorkspaces(
      * Records [pr] as the pull request of [repo] in the workspace [id] (null: it has none), and
      * returns the workspace as saved. Nothing happens to a workspace that is gone.
      */
-    @Synchronized
     fun recordPullRequest(
         id: String,
         repo: String,
         pr: PullRequestInfo?,
-    ): AgentWorkspace? {
-        val file = File(metaDir, "$id.json")
-        val workspace = read(file) ?: return null
-        val next =
-            if (pr == null) {
-                workspace.pullRequests - repo
-            } else {
-                // When it first closed: a later check of a merged one must not move the date.
-                val before = workspace.pullRequests[repo]
-                val now = System.currentTimeMillis()
-                val closedAt = if (pr.isOpen) null else before?.closedAt?.takeIf { before.url == pr.url } ?: now
-                workspace.pullRequests + (repo to SavedPullRequest(pr.url, pr.state, pr.isDraft, now, closedAt))
-            }
-        // A new check time alone is no change: the record is rewritten only when something moved.
-        if (next.mapValues { it.value.copy(checkedAt = 0) } == workspace.pullRequests.mapValues { it.value.copy(checkedAt = 0) }) return workspace
-        val updated = workspace.copy(pullRequests = next)
-        save(updated)
-        return updated
-    }
+    ): AgentWorkspace? =
+        update(id) { workspace ->
+            val next =
+                if (pr == null) {
+                    workspace.pullRequests - repo
+                } else {
+                    // When it first closed: a later check of a merged one must not move the date.
+                    val before = workspace.pullRequests[repo]
+                    val now = System.currentTimeMillis()
+                    val closedAt = if (pr.isOpen) null else before?.closedAt?.takeIf { before.url == pr.url } ?: now
+                    workspace.pullRequests + (repo to SavedPullRequest(pr.url, pr.state, pr.isDraft, now, closedAt))
+                }
+            // A new check time alone is no change: the record is rewritten only when something moved.
+            if (next.mapValues { it.value.copy(checkedAt = 0) } == workspace.pullRequests.mapValues { it.value.copy(checkedAt = 0) }) workspace else workspace.copy(pullRequests = next)
+        }
 
     /**
      * Records what the agent asked to publish from [repo] in the workspace [id] (null: nothing,
      * once the user opened or dismissed it), and returns the workspace as saved. Nothing happens
      * to a workspace that is gone.
      */
-    @Synchronized
     fun recordPublishRequest(
         id: String,
         repo: String,
         request: PublishRequest?,
+    ): AgentWorkspace? =
+        update(id) { workspace ->
+            val next = if (request == null) workspace.publishRequests - repo else workspace.publishRequests + (repo to request)
+            if (next == workspace.publishRequests) workspace else workspace.copy(publishRequests = next)
+        }
+
+    /** The workspace [id] as saved now, or null when it is gone. */
+    fun get(id: String): AgentWorkspace? = read(File(metaDir, "$id.json"))
+
+    /**
+     * Re-reads the workspace [id] and saves what [change] makes of it, unless that is the same; the
+     * one way a record changes once made. Each change reads the record as the last one left it, so
+     * a pull request seen during a restore's minutes of git work isn't lost when the restore saves.
+     * Null, and nothing saved, when the workspace is gone.
+     */
+    @Synchronized
+    private fun update(
+        id: String,
+        change: (AgentWorkspace) -> AgentWorkspace,
     ): AgentWorkspace? {
-        val file = File(metaDir, "$id.json")
-        val workspace = read(file) ?: return null
-        val next = if (request == null) workspace.publishRequests - repo else workspace.publishRequests + (repo to request)
-        if (next == workspace.publishRequests) return workspace
-        val updated = workspace.copy(publishRequests = next)
-        save(updated)
+        val workspace = get(id) ?: return null
+        val updated = change(workspace)
+        if (updated != workspace) save(updated)
         return updated
     }
 
@@ -503,6 +514,7 @@ class AgentWorkspaces(
             if (meta.exists() && !meta.delete()) Log.w(TAG) { "Could not remove $meta" }
             val freed = freedDir(workspace.id)
             if (freed.exists() && !deleteTree(freed)) Log.w(TAG) { "Could not remove $freed" }
+            trashDirs(workspace.id).forEach { if (!deleteTree(it)) Log.w(TAG) { "Could not remove $it" } }
             // Its conversations stay, archived, and Claude files them by folder: a new workstream in this
             // folder would show them as its own.
             try {
@@ -530,20 +542,50 @@ class AgentWorkspaces(
             val staging = File(metaDir, "${workspace.id}$FREED.tmp")
             if (staging.exists() && !deleteTree(staging)) throw IOException("Could not remove $staging")
             if (!staging.mkdirs()) throw IOException("Could not create $staging")
+            val saved = freedDir(workspace.id)
             try {
                 clones.forEach { (repo, dir) -> keep(repo, dir, FreedFiles(staging, repo.name)) }
-                val saved = freedDir(workspace.id)
                 if (saved.exists() && !deleteTree(saved)) throw IOException("Could not remove $saved")
                 if (!staging.renameTo(saved)) throw IOException("Could not move $staging to $saved")
             } catch (e: Throwable) {
                 if (!deleteTree(staging)) Log.w(TAG) { "Could not remove $staging" }
                 throw e
             }
-            val freed = workspace.copy(freedAt = System.currentTimeMillis())
-            save(freed)
-            // Only now: what brings the clones back is on disk. A clone left half removed is made
-            // again by [restore]. Anything else in the folder (notes, the agent's settings) stays.
-            clones.forEach { (_, dir) -> if (!deleteTree(dir)) throw IOException("Could not remove $dir") }
+            // Only now: what brings the clones back is on disk. Each clone leaves the folder whole,
+            // by a rename into the trash (meta/ is on the same disk), so none is ever left half
+            // removed for a restore to take as whole. Anything else in the folder (notes, the
+            // agent's settings) stays.
+            val trash = emptyTrash(workspace.id)
+            val moved = mutableListOf<Pair<File, File>>()
+
+            /** Puts back what moved: the workspace is as it was, and nothing says it was freed. */
+            fun undo(e: Exception): Nothing {
+                if (moved.all { (dir, target) -> target.renameTo(dir) }) {
+                    if (!deleteTree(saved)) Log.w(TAG) { "Could not remove $saved" }
+                    if (!deleteTree(trash)) Log.w(TAG) { "Could not remove $trash" }
+                    throw e
+                }
+                // A clone is stuck in the trash: the bundle is what brings it back now.
+                Log.w(TAG, "Could not put the clones of ${workspace.dir} back", e)
+                update(workspace.id) { it.copy(freedAt = System.currentTimeMillis()) }
+                throw e
+            }
+            try {
+                clones.forEach { (repo, dir) ->
+                    val target = File(trash, repo.name)
+                    if (!dir.renameTo(target)) throw IOException("Could not move $dir aside")
+                    moved.add(dir to target)
+                }
+            } catch (e: IOException) {
+                undo(e)
+            }
+            val freed =
+                try {
+                    update(workspace.id) { it.copy(freedAt = System.currentTimeMillis()) } ?: workspace.copy(freedAt = System.currentTimeMillis())
+                } catch (e: IOException) {
+                    undo(e)
+                }
+            if (!deleteTree(trash)) Log.w(TAG) { "Could not empty $trash; it goes with the next free or delete" }
             freed
         }
 
@@ -591,20 +633,60 @@ class AgentWorkspaces(
                 if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create $dir")
                 workspace.repos.forEach { repo ->
                     val target = File(dir, repo.name)
-                    if (target.isDirectory && GitWorkspace.git(target, "rev-parse", "--git-dir") != null) return@forEach
+                    val files = FreedFiles(saved, repo.name)
+                    // One still there is kept only when whole: a delete that stopped partway leaves
+                    // a .git whose refs read while its objects are gone.
+                    if (target.exists() && isWholeClone(target, files, thorough = true)) return@forEach
                     if (target.exists() && !deleteTree(target)) throw IOException("Could not remove $target")
                     made.add(target)
-                    restoreClone(repo, target, FreedFiles(saved, repo.name))
+                    restoreClone(repo, target, files)
+                    if (!isWholeClone(target, files, thorough = false)) throw IOException("${repo.name} did not come back whole")
                 }
             } catch (e: Throwable) {
                 made.forEach { if (it.exists() && !deleteTree(it)) Log.w(TAG) { "Could not remove the half-made $it" } }
                 throw e
             }
-            val restored = workspace.copy(freedAt = null, restoredAt = System.currentTimeMillis())
-            save(restored)
+            val now = System.currentTimeMillis()
+            val restored = update(workspace.id) { it.copy(freedAt = null, restoredAt = now) } ?: workspace.copy(freedAt = null, restoredAt = now)
+            // Every clone is back and whole: only now may the bundles go.
             if (saved.exists() && !deleteTree(saved)) Log.w(TAG) { "Could not remove $saved" }
             restored
         }
+    }
+
+    /**
+     * Whether [target] is a whole clone of what [files] kept: a repository whose saved branch and
+     * every bundled branch resolve to commits it has, at the commits bundled. [thorough] also
+     * walks every object (`fsck --connectivity-only`) and wants no file changed: for a clone found
+     * in a freed workspace, which nothing vouches for.
+     */
+    private fun isWholeClone(
+        target: File,
+        files: FreedFiles,
+        thorough: Boolean,
+    ): Boolean {
+        if (!File(target, ".git").isDirectory || GitWorkspace.git(target, "rev-parse", "--git-dir") == null) return false
+        val head = readFreed(files.summary)?.head
+        if (head != null && GitWorkspace.git(target, "rev-parse", "--verify", "--quiet", "refs/heads/$head^{commit}") == null) return false
+        if (files.bundle.isFile) {
+            val heads =
+                GitWorkspace
+                    .git(target, "bundle", "list-heads", files.bundle.absolutePath)
+                    ?.lines()
+                    ?.filter { it.isNotBlank() }
+                    ?: return false
+            val allThere =
+                heads.all { line ->
+                    val sha = line.substringBefore(' ')
+                    val ref = line.substringAfter(' ')
+                    GitWorkspace.git(target, "rev-parse", "--verify", "--quiet", "$ref^{commit}")?.trim() == sha &&
+                        GitWorkspace.run(target, listOf("git", "rev-list", "--objects", "--quiet", sha, "--not", "--remotes=origin")).code == 0
+                }
+            if (!allThere) return false
+        }
+        if (!thorough) return true
+        return GitWorkspace.run(target, listOf("git", "fsck", "--connectivity-only", "--no-dangling", "--no-progress"), timeoutSeconds = NETWORK_TIMEOUT).code == 0 &&
+            GitWorkspace.git(target, "status", "--porcelain")?.isBlank() == true
     }
 
     /** Clones [repo] into [target] from its mirror, and puts back what [files] kept of it. */
@@ -616,7 +698,9 @@ class AgentWorkspaces(
         // No checkout yet: the saved branches may replace the one the clone starts on.
         withMirror(repo.url) { mirror -> git(target.parentFile, "clone", "--quiet", "--no-checkout", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
         git(target, "remote", "set-url", "origin", repo.url)
-        if (files.bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", files.bundle.absolutePath, "refs/heads/*:refs/heads/*", "refs/remotes/*:refs/remotes/*")
+        // Forced: a branch the agent moved past the base (its local main among them) comes back
+        // where it left it, though the clone starts it at the base as the mirror has it now.
+        if (files.bundle.isFile) git(target, "fetch", "--quiet", "--update-head-ok", files.bundle.absolutePath, "+refs/heads/*:refs/heads/*", "+refs/remotes/*:refs/remotes/*")
         val head = readFreed(files.summary)?.head ?: repo.branch
         // A branch with nothing of its own was not bundled: it starts again from the base, as now,
         // and like the one [create] made, tracks nothing until the user pushes it.
@@ -663,6 +747,20 @@ class AgentWorkspaces(
         }
 
     private fun freedDir(id: String) = File(metaDir, "$id$FREED")
+
+    /**
+     * An empty folder for [free] to move workspace [id]'s clones into before removing them, on the
+     * same disk: `meta/<id>.trash/`, or, when an earlier one could not be emptied, one beside it.
+     */
+    private fun emptyTrash(id: String): File {
+        val trash = File(metaDir, "$id$TRASH")
+        val fresh = if (!trash.exists() || deleteTree(trash)) trash else File(metaDir, "$id$TRASH-${System.nanoTime()}")
+        if (!fresh.mkdirs()) throw IOException("Could not create $fresh")
+        return fresh
+    }
+
+    /** Every trash folder [free] left for workspace [id]. */
+    private fun trashDirs(id: String): List<File> = metaDir.listFiles { f -> f.name == "$id$TRASH" || f.name.startsWith("$id$TRASH-") }.orEmpty().toList()
 
     /** Where a freed workspace keeps one repository, under `meta/<id>.freed/`. */
     private class FreedFiles(
@@ -917,18 +1015,51 @@ class AgentWorkspaces(
         /** A freed workstream's folder in `meta/`. */
         private const val FREED = ".freed"
 
+        /** Where a workstream's clones wait to be removed, in `meta/`. */
+        private const val TRASH = ".trash"
+
+        /**
+         * Folders a build or a package manager makes again from what is committed: an ignored one
+         * of these names goes with its clone. Any other ignored folder (a virtualenv, IDE settings,
+         * data, secrets) is work only that folder holds.
+         */
+        private val REBUILDABLE_DIRS =
+            setOf(
+                "build",
+                "out",
+                "target",
+                "dist",
+                "node_modules",
+                ".gradle",
+                ".kotlin",
+                ".cxx",
+                ".externalNativeBuild",
+                "__pycache__",
+                ".pytest_cache",
+                ".mypy_cache",
+                ".ruff_cache",
+                ".next",
+                ".nuxt",
+                ".turbo",
+                ".parcel-cache",
+                ".dart_tool",
+                "DerivedData",
+            )
+
         /** Files operating systems drop in folders: never anyone's work. */
         private val OS_CLUTTER = setOf(".DS_Store", "Thumbs.db", "desktop.ini")
 
         /**
          * Whether a `git status --porcelain --ignored` [line] is something a build makes again or
-         * clutter: an ignored directory as a whole, or an OS file, ignored or not.
+         * clutter: an ignored build-output directory ([REBUILDABLE_DIRS]) as a whole, or an OS
+         * file, ignored or not.
          */
         internal fun isRebuildable(line: String): Boolean {
             val ignored = line.startsWith("!! ")
             if (!ignored && !line.startsWith("?? ")) return false
             val path = line.drop(3).trim('"')
-            return (ignored && path.endsWith("/")) || path.removeSuffix("/").substringAfterLast('/') in OS_CLUTTER
+            val name = path.removeSuffix("/").substringAfterLast('/')
+            return (ignored && path.endsWith("/") && name in REBUILDABLE_DIRS) || name in OS_CLUTTER
         }
 
         private const val BRANCHES = "+refs/heads/*:refs/heads/*"

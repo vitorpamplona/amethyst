@@ -49,7 +49,7 @@ data class WorkspaceRepoRow(
     val gitHub: String? = null,
     /** The user can't push to it: the branch goes to their fork. */
     val viaFork: Boolean = false,
-    /** The pull request the agent asked the user to open ([PublishToolServer]), while none is open. */
+    /** The pull request the agent asked the user to open ([PublishToolServer]), until one is open or opened after it. */
     val request: PublishRequest? = null,
 ) {
     val name get() = status.repo.name
@@ -164,8 +164,8 @@ class ClaudeCodeWorkspaceViewModel(
         if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
         // The agent's request, until a pull request is open: then it was answered, here or elsewhere.
         val request = ws.publishRequests[status.repo.name]
-        if (request != null && pr != null) service.recordPublishRequest(ws.id, status.repo.name, null)
-        val asked = request.takeIf { pr == null }
+        val asked = pendingRequest(request, pr)
+        if (request != null && asked == null) service.recordPublishRequest(ws.id, status.repo.name, null)
         return WorkspaceRepoRow(
             status = status,
             pullRequest = pr,
@@ -236,6 +236,8 @@ class ClaudeCodeWorkspaceViewModel(
                         if (result.pushed) refresh()
                     }
                     is GitHubPullRequests.Result.Opened -> {
+                        // The new one is the branch's now, over any merged or closed before it.
+                        service.recordPullRequest(ws.id, repo, PullRequestInfo(result.url, "OPEN", draft, System.currentTimeMillis()))
                         // Answered: the agent's request, if any, is done.
                         service.recordPublishRequest(ws.id, repo, null)
                         refresh()
@@ -263,6 +265,22 @@ class ClaudeCodeWorkspaceViewModel(
                 Log.w("ClaudeCodeWorkspace", "Could not remove the workspace", e)
                 _errors.update { it + ("" to PullRequestError(e.message ?: ws.dir, pushed = false)) }
             }
+        }
+    }
+
+    companion object {
+        /**
+         * The agent's [request] while it still waits on the user, given the branch's pull request
+         * [pr] as GitHub has it now: answered once one is open, or once one was opened after the
+         * request. An earlier pull request, merged or closed before the agent asked, answers nothing.
+         */
+        internal fun pendingRequest(
+            request: PublishRequest?,
+            pr: PullRequestInfo?,
+        ): PublishRequest? {
+            if (request == null || pr == null) return request
+            val answered = pr.isOpen || (pr.createdAt != null && pr.createdAt >= request.requestedAt)
+            return request.takeIf { !answered }
         }
     }
 }

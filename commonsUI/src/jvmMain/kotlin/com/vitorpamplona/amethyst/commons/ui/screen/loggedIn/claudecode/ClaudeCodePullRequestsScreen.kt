@@ -300,9 +300,10 @@ private fun RepoCard(
             val pr = row.pullRequest
             // A GitHub pull request, unless the repository is only on Nostr.
             val offersPullRequest = row.gitHub != null || row.nostr == null
-            if (pr != null) {
-                PullRequestLine(pr)
-            } else if (status.ahead > 0 && offersPullRequest) {
+            if (pr != null) PullRequestLine(pr)
+            // A new pull request: none yet, or the agent asks for one after the last was merged or closed.
+            val canAskForNew = pr == null || (!pr.isOpen && row.request != null)
+            if (canAskForNew && status.ahead > 0 && offersPullRequest) {
                 if (row.viaFork && row.gitHub != null) {
                     Text(stringRes(Res.string.claude_code_pr_via_fork, row.gitHub ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                 }

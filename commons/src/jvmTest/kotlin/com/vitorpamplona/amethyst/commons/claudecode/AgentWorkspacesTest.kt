@@ -810,4 +810,182 @@ class AgentWorkspacesTest {
         Thread.sleep(3_500)
         assertFalse(marker.exists(), "the command kept running after its caller gave up")
     }
+
+    /** Moves the remote's main on by one commit, as someone else's merge does. */
+    private fun moveRemoteMain(file: String) {
+        val seed = File(tmp, "seed-app")
+        File(seed, file).writeText("$file\n")
+        git(seed, "add", ".")
+        git(seed, "commit", "--quiet", "-m", file)
+        git(File(tmp, "remotes/app.git"), "fetch", "--quiet", seed.absolutePath, "main:main")
+    }
+
+    private fun isPosix() = "posix" in FileSystems.getDefault().supportedFileAttributeViews()
+
+    private fun chmod(
+        dir: File,
+        mode: String,
+    ) = Files.setPosixFilePermissions(
+        dir.toPath(),
+        java.nio.file.attribute.PosixFilePermissions
+            .fromString(mode),
+    )
+
+    @Test
+    fun commitsOnTheLocalBaseBranchComeBackAfterTheBaseMovedUpstream() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/m")
+            val app = File(ws.dir, "app")
+            // The agent committed on main by mistake, then went back to its branch.
+            git(app, "checkout", "--quiet", "main")
+            File(app, "on-main.txt").writeText("mine\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "on main")
+            val mine = git(app, "rev-parse", "HEAD").trim()
+            git(app, "checkout", "--quiet", "agent/m")
+            val freed = workspaces.free(ws)
+            // Upstream main moves while it is freed: the clone starts with main somewhere else.
+            moveRemoteMain("later.txt")
+
+            workspaces.restore(freed)
+            assertEquals(mine, git(app, "rev-parse", "main").trim())
+            assertEquals("agent/m", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
+            assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
+        }
+
+    @Test
+    fun aCloneThatCannotBeMovedAsideLeavesTheWorkspaceAsItWas() =
+        runBlocking {
+            if (!isPosix()) return@runBlocking
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/k")
+            val app = File(ws.dir, "app")
+            File(app, "k.txt").writeText("k\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "k")
+            // Nothing in the workstream's folder can be renamed or removed.
+            chmod(File(ws.dir), "r-xr-xr-x")
+            try {
+                assertTrue(runCatching { workspaces.free(ws) }.isFailure)
+            } finally {
+                chmod(File(ws.dir), "rwxr-xr-x")
+            }
+            // Not freed, on disk as in the record: the clone is whole, and nothing was kept for it.
+            assertFalse(workspaces.list().single().isFreed)
+            assertEquals("k\n", File(app, "k.txt").readText())
+            assertEquals("", git(app, "status", "--porcelain"))
+            assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
+        }
+
+    @Test
+    fun aCloneThatCannotBeWhollyDeletedIsStillFreed() =
+        runBlocking {
+            if (!isPosix()) return@runBlocking
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/l")
+            val app = File(ws.dir, "app")
+            File(app, ".gitignore").writeText("build/\n")
+            File(app, "l.txt").writeText("l\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "l")
+            // Build output whose files can't be removed: the delete fails partway.
+            val locked = File(app, "build/locked").apply { mkdirs() }
+            File(locked, "out.bin").writeText("x")
+            chmod(locked, "r-xr-xr-x")
+            try {
+                val freed = workspaces.free(ws)
+                assertTrue(freed.isFreed)
+                assertTrue(workspaces.list().single().isFreed)
+                // The clone left the workstream whole, whatever stayed behind in the trash.
+                assertFalse(app.exists())
+            } finally {
+                tmp.walkTopDown().filter { it.isDirectory }.forEach { chmod(it, "rwxr-xr-x") }
+            }
+            workspaces.restore(workspaces.list().single())
+            assertEquals("l\n", File(app, "l.txt").readText())
+        }
+
+    @Test
+    fun aBrokenCloneLeftInAFreedWorkspaceIsMadeAgainAndTheBundleKeptUntilThen() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/b")
+            val app = File(ws.dir, "app")
+            File(app, "b.txt").writeText("b\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "b")
+            val mine = git(app, "rev-parse", "HEAD").trim()
+            val copy = File(tmp, "copy-of-git")
+            File(app, ".git").copyRecursively(copy)
+            val freed = workspaces.free(ws)
+            // What a delete that failed partway leaves: a .git whose refs read, with its objects gone.
+            val leftover = File(app, ".git")
+            copy.copyRecursively(leftover)
+            File(leftover, "objects").deleteRecursively()
+            File(leftover, "objects/pack").mkdirs()
+            assertNotNull(GitWorkspace.git(app, "rev-parse", "--git-dir"))
+
+            workspaces.restore(freed)
+            assertEquals(mine, git(app, "rev-parse", "HEAD").trim())
+            assertEquals("b\n", File(app, "b.txt").readText())
+            assertEquals("agent/b", git(app, "rev-parse", "--abbrev-ref", "HEAD").trim())
+        }
+
+    @Test
+    fun aRestoreThatCannotMakeACloneKeepsTheBundle() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/c")
+            val app = File(ws.dir, "app")
+            File(app, "c.txt").writeText("c\n")
+            git(app, "add", ".")
+            git(app, "commit", "--quiet", "-m", "c")
+            val freed = workspaces.free(ws)
+            val bundle = File(tmp, "agents/meta/${ws.id}.freed/app.bundle")
+            // The base the bundle needs is gone from everywhere: the remote and its mirror.
+            File(tmp, "remotes/app.git").deleteRecursively()
+            workspaces.mirrorDir(appUrl).deleteRecursively()
+            assertTrue(runCatching { workspaces.restore(freed) }.isFailure)
+            assertTrue(bundle.isFile)
+            assertTrue(workspaces.list().single().isFreed)
+        }
+
+    @Test
+    fun aPullRequestSeenWhileTheClonesComeBackIsKept() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/p")
+            val freed = workspaces.free(ws)
+            // The mirror's next fetch takes a while, as one over the network does.
+            git(workspaces.mirrorDir(appUrl), "config", "remote.origin.uploadpack", "sleep 2; git-upload-pack")
+            val restoring = async(Dispatchers.IO) { workspaces.restore(freed) }
+            delay(500)
+            workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/3", "OPEN", isDraft = false))
+            workspaces.recordPublishRequest(ws.id, "app", PublishRequest("Title", requestedAt = 7))
+            val restored = restoring.await()
+            val saved = workspaces.list().single()
+            assertFalse(saved.isFreed)
+            assertEquals("https://github.com/o/app/pull/3", saved.pullRequests["app"]?.url)
+            assertEquals("Title", saved.publishRequests["app"]?.title)
+            assertEquals(saved, restored)
+        }
+
+    @Test
+    fun onlyKnownBuildOutputIsRebuildable() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/v")
+            val dir = File(ws.dir, "app")
+            File(dir, ".gitignore").writeText("node_modules/\n.gradle/\n.venv/\n.idea/\ndata/\n")
+            git(dir, "add", ".")
+            git(dir, "commit", "--quiet", "-m", "ignore")
+            File(dir, "node_modules/x").mkdirs()
+            File(dir, "node_modules/x/index.js").writeText("x")
+            File(dir, ".gradle/caches").mkdirs()
+            File(dir, ".gradle/caches/c").writeText("x")
+            assertFalse(workspaces.cannotFree(ws))
+            // Ignored, but no build makes them again: a virtualenv, IDE settings, data.
+            listOf(".venv/lib/site.py", ".idea/workspace.xml", "data/db.sqlite").forEach { path ->
+                val file = File(dir, path).apply { parentFile.mkdirs() }
+                file.writeText("x")
+                assertTrue(workspaces.cannotFree(ws), path)
+                assertTrue(AgentWorkspaces.deleteTree(File(dir, path.substringBefore('/'))))
+            }
+            assertTrue(AgentWorkspaces.isRebuildable("!! app/build/"))
+            assertFalse(AgentWorkspaces.isRebuildable("!! secrets/"))
+        }
 }

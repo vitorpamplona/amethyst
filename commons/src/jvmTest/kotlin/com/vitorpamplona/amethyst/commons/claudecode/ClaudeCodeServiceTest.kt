@@ -27,6 +27,7 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,9 +37,13 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -583,4 +588,99 @@ class ClaudeCodeServiceTest {
             assertFalse(File(chat.state.value.cwd).exists())
             assertTrue(service.agentWorkspaces.list().isEmpty())
         }
+
+    @Test
+    fun withAutomaticCleanupOffArchivingKeepsTheClones() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("kept")), "Kept", agentId = "claude")
+            val session = "99999999-2222-3333-4444-555555555555"
+            sessionIn(session, ws.dir)
+            service.refresh()
+            service.setAutoCleanup(false)
+
+            service.archive(service.rows.value.single { it.sessionId == session }, true)
+            assertTrue(
+                service.rows.value
+                    .single { it.sessionId == session }
+                    .archived,
+            )
+            // Archived only: freeing is the opt-in cleanup's to do.
+            assertTrue(File(ws.dir, ws.repos.single().name).isDirectory)
+            assertFalse(
+                service.agentWorkspaces
+                    .list()
+                    .single()
+                    .isFreed,
+            )
+        }
+
+    @Test
+    fun aWorkstreamUsedSinceItsWorkWasDoneIsNotDueForCleanup() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("busy")), "Busy", agentId = "claude")
+            service.agentWorkspaces.recordPullRequest(ws.id, "busy", PullRequestInfo("https://github.com/o/busy/pull/1", "MERGED", isDraft = false))
+            val done =
+                assertNotNull(
+                    service.agentWorkspaces
+                        .list()
+                        .single()
+                        .finishedAt,
+                )
+            val session = "aaaaaaaa-2222-3333-4444-555555555555"
+            sessionIn(session, ws.dir)
+            // The user kept working in it a day and a half after the merge.
+            assertTrue(File(config, "projects/-ws-$session/$session.jsonl").setLastModified(done + 36 * HOUR))
+            service.refresh()
+
+            assertTrue(service.dueForCleanup(done + 48 * HOUR).isEmpty())
+            assertEquals(listOf(ws.id), service.dueForCleanup(done + 61 * HOUR).map { it.id })
+        }
+
+    @Test
+    fun anAgentsRequestToPublishIsSavedAndTellsTheUser() =
+        runBlocking {
+            val ws = service.agentWorkspaces.create(listOf(remote("tells")), "Tells", branch = "agent/t", agentId = "claude")
+            val repo = File(ws.dir, "tells")
+            File(repo, "work.txt").writeText("done\n")
+            git(repo, "add", ".")
+            git(repo, "commit", "--quiet", "-m", "work")
+            service.refresh()
+            val chat = service.newChat(File(ws.dir), PermissionMode.AUTO)
+            val listening = CompletableDeferred<Unit>()
+            val heard =
+                async(Dispatchers.Default) {
+                    withTimeout(5_000) {
+                        service.attention
+                            .onSubscription { listening.complete(Unit) }
+                            .first { it.kind == ChatAttention.Kind.REQUESTS_PUBLISH }
+                    }
+                }
+            listening.await()
+
+            val result = service.publishTool(chat.key, File(ws.dir)).call(PublishToolServer.REQUEST, JsonObject(mapOf("title" to JsonPrimitive("Ship it"))))
+            assertFalse(result.isError, result.text)
+            val attention = heard.await()
+            assertEquals(chat.key, attention.key)
+            // Saved with the workstream, and known to the list without reading the disk.
+            assertEquals(
+                "Ship it",
+                service.agentWorkspaces
+                    .list()
+                    .single()
+                    .publishRequests["tells"]
+                    ?.title,
+            )
+            assertEquals(
+                "Ship it",
+                service
+                    .workspaceAt(ws.dir)
+                    ?.publishRequests
+                    ?.get("tells")
+                    ?.title,
+            )
+        }
+
+    private companion object {
+        const val HOUR = 60 * 60_000L
+    }
 }

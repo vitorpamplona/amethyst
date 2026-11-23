@@ -229,9 +229,17 @@ class ClaudeCodeService(
         return ProjectInfo(repo?.identifier ?: mainCheckout?.name ?: dir.name, repo)
     }
 
-    /** The workspaces as of the last [refresh] or change: rows look theirs up without reading the disk. */
-    @Volatile
-    private var knownWorkspaces: List<AgentWorkspace> = emptyList()
+    /**
+     * The workspaces as of the last [refresh] or change: rows look theirs up without reading the
+     * disk. Changed only through [MutableStateFlow.update]: frees, restores and pull request checks
+     * change it from several threads, and none may undo another's change.
+     */
+    private val workspacesState = MutableStateFlow<List<AgentWorkspace>>(emptyList())
+
+    private val knownWorkspaces: List<AgentWorkspace> get() = workspacesState.value
+
+    /** Puts [updated] in place of the workspace of its id. */
+    private fun replaceWorkspace(updated: AgentWorkspace) = workspacesState.update { list -> list.map { if (it.id == updated.id) updated else it } }
 
     /** The workstream [cwd] is in, as of the last refresh or change; for screens, which must not read the disk. */
     fun workspaceAt(cwd: String?): AgentWorkspace? = workspaceOf(cwd)
@@ -300,7 +308,7 @@ class ClaudeCodeService(
         request: PublishRequest?,
     ) {
         val updated = agentWorkspaces.recordPublishRequest(id, repo, request) ?: return
-        knownWorkspaces = knownWorkspaces.map { if (it.id == id) updated else it }
+        replaceWorkspace(updated)
         rebuildRows()
     }
 
@@ -312,7 +320,7 @@ class ClaudeCodeService(
         notify: Boolean = true,
     ) {
         val updated = agentWorkspaces.recordPullRequest(id, repo, pr) ?: return
-        knownWorkspaces = knownWorkspaces.map { if (it.id == id) updated else it }
+        replaceWorkspace(updated)
         if (notify) rebuildRows()
     }
 
@@ -338,7 +346,7 @@ class ClaudeCodeService(
         }
         recountNeedsYou()
         agentWorkspaces.delete(workspace)
-        knownWorkspaces = knownWorkspaces.filter { it.id != workspace.id }
+        workspacesState.update { list -> list.filter { it.id != workspace.id } }
         if (thenRefresh) refresh()
     }
 
@@ -442,13 +450,17 @@ class ClaudeCodeService(
             chatsIn(current).forEach { it.close() }
             try {
                 val freed = agentWorkspaces.free(current)
-                knownWorkspaces = knownWorkspaces.map { if (it.id == freed.id) freed else it }
+                replaceWorkspace(freed)
                 workspaceSizes[freed.id] = 0L to System.currentTimeMillis()
                 true
             } catch (e: IOException) {
                 // UnsavedWorkException included: work that appeared since the check.
                 Log.w(TAG, "Kept the clones of ${current.dir}", e)
-                false
+                // As the disk has it: a free that failed late may have saved the record as freed.
+                val onDisk = withContext(Dispatchers.IO) { agentWorkspaces.get(current.id) }
+                onDisk?.let(::replaceWorkspace)
+                if (onDisk?.isFreed == true) workspaceSizes.remove(onDisk.id)
+                onDisk?.isFreed == true
             }
         }
 
@@ -465,7 +477,7 @@ class ClaudeCodeService(
                     val current = latest(workspace)
                     if (!current.isFreed) return@withLock current
                     agentWorkspaces.restore(current).also { restored ->
-                        knownWorkspaces = knownWorkspaces.map { if (it.id == restored.id) restored else it }
+                        replaceWorkspace(restored)
                         workspaceSizes.remove(restored.id)
                     }
                 }
@@ -506,7 +518,7 @@ class ClaudeCodeService(
         if (now - lastAutoCleanup < AUTO_CLEANUP_EVERY_MS) return
         lastAutoCleanup = now
         if (!preferences.value.autoCleanup) return
-        val due = knownWorkspaces.filter { ws -> !ws.isFreed && ws.idleSince?.let { now - it > CLEANUP_AFTER_MS } == true }
+        val due = dueForCleanup(now)
         scope.launch {
             if (due.isNotEmpty()) {
                 val removed = cleanUp(due)
@@ -517,11 +529,30 @@ class ClaudeCodeService(
         }
     }
 
+    /** The workstreams whose clones nobody needed for [CLEANUP_AFTER_MS] as of [now]: what the automatic cleanup frees. */
+    internal fun dueForCleanup(now: Long): List<AgentWorkspace> = knownWorkspaces.filter { ws -> !ws.isFreed && idleSince(ws)?.let { now - it > CLEANUP_AFTER_MS } == true }
+
+    /**
+     * Since when nobody used [workspace]'s clones: its work done, or brought back
+     * ([AgentWorkspace.idleSince]), or a session there last moved, whichever came last. Null while
+     * its work isn't done, or a chat there is working now.
+     */
+    private fun idleSince(workspace: AgentWorkspace): Long? {
+        val done = workspace.idleSince ?: return null
+        if (isBusy(workspace)) return null
+        val lastSession =
+            saved.value
+                .filter { workspaceOf(it.cwd)?.id == workspace.id }
+                .maxOfOrNull { it.lastModified } ?: 0L
+        return maxOf(done, lastSession)
+    }
+
     /**
      * Archives the row's session, or brings it back ([setArchived]).
      *
-     * Archived, its chat ends when idle (the next message starts it again), and its workstream's
-     * clones are freed once every session there is archived ([freeWorkspace]). Brought back, it is
+     * Archived, its chat ends when idle (the next message starts it again), and, when the user lets
+     * the app clean up on its own ([AgentPreferences.autoCleanup]), its workstream's clones are
+     * freed once every session there is archived ([freeWorkspace]). Brought back, it is
      * listed again as it is: a freed workstream's clones come back with its next message.
      */
     suspend fun archive(
@@ -533,7 +564,8 @@ class ClaudeCodeService(
         if (archived) {
             // An idle chat would sit there "Ready" under Archived, holding a process.
             chats.value[row.key]?.takeIf { !it.state.value.isBusy }?.close()
-            workspaceOf(row.cwd)?.takeIf { everySessionArchived(it, sessionId) }?.let { freeWorkspace(it) }
+            // Only when the user lets the app give disk back on its own ([AgentPreferences.autoCleanup]).
+            if (preferences.value.autoCleanup) workspaceOf(row.cwd)?.takeIf { everySessionArchived(it, sessionId) }?.let { freeWorkspace(it) }
         }
         refresh()
     }
@@ -601,7 +633,7 @@ class ClaudeCodeService(
                 .filter { !projects.containsKey(it) }
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value = liveSessions()
-            knownWorkspaces = agentWorkspaces.list()
+            workspacesState.value = agentWorkspaces.list()
             _preferences.value = agentWorkspaces.preferences()
         }
         _loaded.value = true
@@ -696,7 +728,7 @@ class ClaudeCodeService(
                 val workspace = agentWorkspaces.create(clean, name, agentId = agent.id, nostrRepos = nostrRepos, claimed = dir)
                 // Offered first next time; only once they cloned, so a mistyped URL isn't.
                 agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
-                knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
+                workspacesState.update { list -> listOf(workspace) + list.filter { it.id != workspace.id } }
                 rebuildRows()
             }
         chat.waitFor(cloning, clean.size)
@@ -862,7 +894,7 @@ class ClaudeCodeService(
     }
 
     /** The publish tool of the chat [key] working in [cwd]: its requests are saved with the workstream, and the user is told. */
-    private fun publishTool(
+    internal fun publishTool(
         key: String,
         cwd: File,
     ) = PublishToolServer(
