@@ -326,5 +326,18 @@ class MarmotDevicesTest {
             assertEquals(trust.encode().toList(), reopened?.encode()?.toList())
         }
 
+    @Test
+    fun anUnreadableRecordIsAnErrorNotAMissingOne() =
+        runBlocking<Unit> {
+            val dir = folder.newFolder()
+            val blobs = EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key")))
+            DeviceGroupBlobStores(blobs).trust.save(DeviceGroupTrust("ab".repeat(32)))
+            // Another key: the record is there but cannot be read.
+            val otherKey = EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "other.key")))
+            val failure = runCatching { DeviceGroupBlobStores(otherKey).trust.load() }
+            assertTrue("a record that does not decrypt must not read as absent", failure.isFailure)
+            assertEquals(null, DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(folder.newFolder(), SecretEncryption(File(dir, "secret.key")))).trust.load())
+        }
+
     private fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 }

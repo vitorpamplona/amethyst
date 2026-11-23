@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import com.vitorpamplona.amethyst.commons.util.moveOrCopy
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 /**
@@ -56,11 +59,13 @@ class EncryptedDeviceGroupBlobs(
             mutex.withLock {
                 val target = file(name)
                 if (!target.exists()) return@withLock null
+                // Thrown, never null: a null reads as "no record", so marmot-kmp would start a fresh
+                // one and the next save would overwrite the real record.
                 try {
-                    encryption.decrypt(target.readBytes())
+                    checkNotNull(encryption.decrypt(target.readBytes())) { "could not decrypt" }
                 } catch (e: Exception) {
-                    Log.w(TAG, "unreadable device-group record $name", e)
-                    null
+                    Log.e(TAG, "unreadable device-group record $name", e)
+                    throw e
                 }
             }
         }
@@ -75,10 +80,7 @@ class EncryptedDeviceGroupBlobs(
             if (!parent.exists() && !parent.mkdirs()) throw IllegalStateException("could not create ${parent.absolutePath}")
             val tmp = File(parent, "${target.name}.tmp")
             tmp.writeBytes(encryption.encrypt(bytes))
-            if (!tmp.renameTo(target)) {
-                tmp.copyTo(target, overwrite = true)
-                if (!tmp.delete()) Log.w(TAG) { "could not delete temp file ${tmp.absolutePath}" }
-            }
+            FileSystem.SYSTEM.moveOrCopy(tmp.toOkioPath(), target.toOkioPath())
         }
     }
 
