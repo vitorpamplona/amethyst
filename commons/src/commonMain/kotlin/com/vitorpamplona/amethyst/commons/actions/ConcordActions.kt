@@ -45,7 +45,6 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
-import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
@@ -73,10 +72,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -704,19 +701,7 @@ object ConcordActions {
         citation: AuthorityCitation?,
         createdAt: Long,
     ): Event {
-        val delete = ChannelChat.delete(moderatorSigner.pubKey, channelId, epoch, targets, createdAt)
-        val rumor =
-            if (citation == null) {
-                delete
-            } else {
-                RumorAssembler.assembleRumor<DeletionRequestEvent>(
-                    pubKey = delete.pubKey,
-                    createdAt = delete.createdAt,
-                    kind = delete.kind,
-                    tags = delete.tags + arrayOf(VacTag.assemble(citation)),
-                    content = delete.content,
-                )
-            }
+        val rumor = ChannelChat.moderationHide(moderatorSigner.pubKey, channelId, epoch, targets, citation, createdAt)
         return wrapChat(rumor, channel, moderatorSigner)
     }
 
