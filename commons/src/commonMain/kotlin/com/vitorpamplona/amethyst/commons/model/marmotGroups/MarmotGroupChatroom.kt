@@ -46,10 +46,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
-import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,16 +82,28 @@ class MarmotGroupChatroom(
     private var nextArrival = 0L
 
     /**
+     * The arrival of the last few messages taken out, so a "message deleted" placeholder put back
+     * under the same id keeps its original's place among same-second messages.
+     */
+    private var removedArrival: PersistentMap<String, Long> = persistentMapOf()
+
+    /**
      * Newest first, like every feed, but messages of the same second keep the order they arrived
      * in: `created_at` has one-second resolution, and three messages sent within one second
      * (White Noise does) showed shuffled under the id tiebreak of the default feed order. Neither the
      * Marmot spec nor MDK orders them by anything the sender controls; MDK breaks the tie by
      * message id. The id stays the last resort here, for notes this room never saw arrive.
+     *
+     * Each read is a comparator over the arrivals as they are now: one that read the live map
+     * could see a message leave mid-sort and break the sort's contract.
      */
-    val feedOrder: Comparator<Note> =
-        compareByDescending<Note> { it.createdAt() }
-            .thenByDescending { arrival[it.idHex] ?: -1L }
-            .thenBy { it.idHex }
+    val feedOrder: Comparator<Note>
+        get() {
+            val arrivals = arrival
+            return compareByDescending<Note> { it.createdAt() }
+                .thenByDescending { arrivals[it.idHex] ?: -1L }
+                .thenBy { it.idHex }
+        }
     var displayName = MutableStateFlow<String?>(null)
     var description = MutableStateFlow<String?>(null)
 
@@ -212,7 +222,10 @@ class MarmotGroupChatroom(
     fun recordEpoch(
         noteId: HexKey,
         epoch: Long,
-    ) = syncLock.withLock { epochs = epochs.put(noteId, epoch) }
+    ) = syncLock.withLock {
+        // Only for a message this room holds: reactions and deletions decrypt too, and are not one.
+        if (arrival.containsKey(noteId)) epochs = epochs.put(noteId, epoch)
+    }
 
     /**
      * The read position to share for a reader whose last-read time is [readUpTo]: the furthest
@@ -259,6 +272,9 @@ class MarmotGroupChatroom(
 
     companion object {
         fun placeholderIdHex(nostrGroupId: HexKey): HexKey = "marmot-empty-$nostrGroupId"
+
+        /** Removed messages whose arrival a placeholder can still take over. */
+        private const val REMOVED_ARRIVALS_KEPT = 64
     }
 
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>>? = null
@@ -360,7 +376,10 @@ class MarmotGroupChatroom(
         syncLock.withLock {
             if (msg !in messages) {
                 messages = messages.add(msg)
-                arrival = arrival.put(msg.idHex, nextArrival++)
+                // A "message deleted" placeholder takes the place of the message it stands for.
+                val original = (msg as? MarmotDeletedMessageNote)?.deletedId
+                val order = original?.let { removedArrival[it] }?.also { removedArrival = removedArrival.remove(original) } ?: nextArrival++
+                arrival = arrival.put(msg.idHex, order)
                 msg.addGatherer(this)
                 // The group counts its polls' votes by its own rules, whatever the cache derived.
                 (msg.event as? PollEvent)?.let { msg.pollState().updatePolicy(pollTallyPolicy(it)) }
@@ -387,6 +406,10 @@ class MarmotGroupChatroom(
                 if (msg == newestMessage) {
                     newestMessage = messages.minWithOrNull(feedOrder)
                 }
+                arrival[msg.idHex]?.let { order ->
+                    removedArrival = removedArrival.put(msg.idHex, order)
+                    if (removedArrival.size > REMOVED_ARRIVALS_KEPT) removedArrival = removedArrival.remove(removedArrival.keys.first())
+                }
                 arrival = arrival.remove(msg.idHex)
                 epochs = epochs.remove(msg.idHex)
 
@@ -406,20 +429,6 @@ class MarmotGroupChatroom(
         }
     }
 
-    fun pruneMessagesToTheLatestOnly(): Set<Note> {
-        val sorted = messages.sortedWith(feedOrder)
-        val toKeep =
-            sorted.take(100).toSet() +
-                sorted.filter { it.flowSet?.isInUse() ?: false }
-
-        val toRemove = messages.minus(toKeep)
-        messages = toKeep.toPersistentSet()
-        arrival = arrival.mutate { map -> toRemove.forEach { map.remove(it.idHex) } }
-
-        changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
-        return toRemove
-    }
-
     /**
      * Drop every message from this chatroom. Used when the local user leaves
      * the group: cuts the strong references held in [messages] so the
@@ -432,6 +441,8 @@ class MarmotGroupChatroom(
             if (toRemove.isEmpty()) return@withLock toRemove
             messages = persistentSetOf()
             arrival = persistentMapOf()
+            removedArrival = persistentMapOf()
+            epochs = persistentMapOf()
             newestMessage = null
             changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
             toRemove

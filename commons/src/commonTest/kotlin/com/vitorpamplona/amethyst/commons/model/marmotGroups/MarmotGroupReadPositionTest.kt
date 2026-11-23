@@ -90,4 +90,17 @@ class MarmotGroupReadPositionTest {
         room.removeMessageSync(second)
         assertEquals(MarmotGroupChatroom.ReadPosition(4, 100, first.idHex), room.readPositionAt(1_000))
     }
+
+    @Test
+    fun onlyAMessageOfTheRoomRecordsAnEpoch() {
+        val room = MarmotGroupChatroom("c".repeat(64))
+        room.addMessageSync(first)
+        // A reaction or a deletion decrypts with an epoch too, but is no message here.
+        room.recordEpoch("9".repeat(64), 7)
+        room.recordEpoch(first.idHex, 4)
+        assertEquals(MarmotGroupChatroom.ReadPosition(4, 100, first.idHex), room.readPositionAt(1_000))
+        room.clearAllMessagesSync()
+        room.addMessageSync(first)
+        assertNull(room.readPositionAt(1_000), "leaving the group forgets the epochs")
+    }
 }

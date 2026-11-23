@@ -81,4 +81,17 @@ class MarmotGroupMessageOrderTest {
         assertEquals(listOf("Fourth", "Second", "Hello"), room.messages.sortedWith(room.feedOrder).map { it.event?.content })
         assertEquals("Fourth", room.newestMessage?.event?.content)
     }
+
+    @Test
+    fun aDeletedPlaceholderKeepsItsMessagesPlace() {
+        val room = MarmotGroupChatroom("c".repeat(64))
+        listOf(hello, second, third).forEach(room::addMessageSync)
+        room.removeMessageSync(second)
+        room.addMessageSync(MarmotDeletedMessageNote(second.idHex, second.author, 1_800_000_000L))
+
+        assertEquals(
+            listOf(third.idHex, MarmotDeletedMessageNote.idFor(second.idHex), hello.idHex),
+            room.messages.sortedWith(room.feedOrder).map { it.idHex },
+        )
+    }
 }
