@@ -320,10 +320,12 @@ object ObserverWeather {
     ): String? = condition(code)?.let { labels.conditions[it] }
 
     /**
-     * The weather as a strip under the paper's dateline, in [labels]' words (the reader's language,
-     * from the app's resources): now, today's high and low, rain and sun, the next days, and
-     * Open-Meteo's credit (CC BY 4.0, kept as written). Every value is escaped; it carries its own
-     * styles, on the house tokens, and nothing that fetches or runs.
+     * The weather as the paper's ear, in [labels]' words (the reader's language, from the app's
+     * resources): a small stacked box beside the nameplate, as newspapers print it. The place, the
+     * temperature now, today's high and low with its rain and sun, a short table of the next days,
+     * and Open-Meteo's credit (CC BY 4.0, kept as written). Every value is escaped; it carries its own
+     * styles, on the house tokens, and nothing that fetches or runs. On a window too narrow for an
+     * ear it sits under the motto instead.
      */
     fun strip(
         report: WeatherReport,
@@ -333,46 +335,53 @@ object ObserverWeather {
         val today = report.days.firstOrNull()
         val later = report.days.drop(1)
         val out = StringBuilder()
-        out.append("<div class=\"weather-strip\" data-credit=\"weather\">")
+        out.append("<div class=\"weather-ear\" data-credit=\"weather\">")
         out.append("<style>")
-        out.append(".weather-strip{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px;padding:8px 0;border-bottom:1px solid var(--rule);font-family:var(--util);font-size:.78rem;color:var(--ink-2)}")
-        out.append(".weather-strip .ws-place{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.66rem;color:var(--ink-3)}")
-        out.append(".weather-strip .ws-now b{font-family:var(--serif);font-size:1.25rem;color:var(--ink)}")
-        out.append(".weather-strip .ws-credit{margin-left:auto;font-size:.66rem;color:var(--ink-3)}")
-        out.append("@media (max-width:720px){.weather-strip .ws-credit{margin-left:0;flex-basis:100%}}")
+        out.append(".weather-ear{font-family:var(--util);font-size:.72rem;line-height:1.4;color:var(--ink-2);text-align:left;max-width:15rem;margin:12px auto 0;padding-top:8px;border-top:1px solid var(--rule-soft)}")
+        out.append(".weather-ear p{margin:0}")
+        out.append(".weather-ear .we-place{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.6rem;color:var(--ink-3)}")
+        out.append(".weather-ear .we-now{margin:2px 0}")
+        out.append(".weather-ear .we-now b{font-family:var(--serif);font-size:1.7rem;line-height:1;color:var(--ink);margin-right:4px}")
+        out.append(".weather-ear table{border-collapse:collapse;width:100%;margin-top:5px}")
+        out.append(".weather-ear td{font-family:var(--util);font-size:.68rem;padding:1px 6px 1px 0;border:0;color:var(--ink-2)}")
+        out.append(".weather-ear td.n{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}")
+        out.append(".weather-ear .we-credit{font-size:.58rem;color:var(--ink-3);margin-top:5px}")
+        out.append("@media (min-width:1260px){.masthead{position:relative}.weather-ear{position:absolute;top:20px;right:0;width:12.5rem;margin:0;padding:0 0 0 12px;border-top:0;border-left:1px solid var(--rule)}}")
         out.append("</style>")
-        out.append("<span class=\"ws-place\">").append(escape("${labels.title} · ${report.place}")).append("</span>")
+        out.append("<p class=\"we-place\">").append(escape("${labels.title} · ${report.place.substringBefore(',').trim()}")).append("</p>")
         if (report.now != null) {
             out
-                .append("<span class=\"ws-now\"><b>")
+                .append("<p class=\"we-now\"><b>")
                 .append(report.now)
                 .append(unit)
                 .append("</b>")
-            words(report.nowCode, labels)?.let { out.append(' ').append(escape(it)) }
-            out.append("</span>")
+            words(report.nowCode, labels)?.let { out.append(escape(it)) }
+            out.append("</p>")
         }
         if (today != null) {
-            val parts = mutableListOf<String>()
-            if (today.high != null && today.low != null) parts += "${labels.high} ${today.high}°, ${labels.low} ${today.low}°"
-            words(today.code, labels)?.let { parts += it }
-            today.rain?.let { parts += "$it% ${labels.rain}" }
-            if (report.sunrise != null && report.sunset != null) parts += "${labels.sun} ${report.sunrise}–${report.sunset}"
-            if (parts.isNotEmpty()) out.append("<span class=\"ws-today\">").append(escape("${labels.today}: " + parts.joinToString(", "))).append("</span>")
+            if (today.high != null && today.low != null) {
+                out.append("<p class=\"we-today\">").append(escape("${labels.today}: ${labels.high} ${today.high}°, ${labels.low} ${today.low}°")).append("</p>")
+            }
+            val more = listOfNotNull(today.rain?.let { "$it% ${labels.rain}" }, if (report.sunrise != null && report.sunset != null) "${labels.sun} ${report.sunrise}–${report.sunset}" else null)
+            if (more.isNotEmpty()) out.append("<p class=\"we-today\">").append(escape(more.joinToString(" · "))).append("</p>")
         }
-        later.forEach { day ->
-            val name = dayOfWeek(day.date)?.let { labels.weekdays.getOrNull(it - 1) } ?: return@forEach
-            val temps = if (day.high != null && day.low != null) " ${day.high}°/${day.low}°" else ""
-            val rain = day.rain?.let { " $it%" }.orEmpty()
-            out.append("<span class=\"ws-day\">").append(escape("$name$temps$rain")).append("</span>")
-        }
-        out.append("<span class=\"ws-credit\">").append(escape(CREDIT + (report.asOf?.let { " · $it" } ?: ""))).append("</span>")
+        val rows =
+            later.mapNotNull { day ->
+                val name = dayOfWeek(day.date)?.let { labels.weekdays.getOrNull(it - 1) } ?: return@mapNotNull null
+                val temps = if (day.high != null && day.low != null) "${day.high}°/${day.low}°" else ""
+                val rain = day.rain?.let { "$it%" }.orEmpty()
+                "<tr><td>${escape(name)}</td><td class=\"n\">${escape(temps)}</td><td class=\"n\">${escape(rain)}</td></tr>"
+            }
+        if (rows.isNotEmpty()) out.append("<table>").append(rows.joinToString("")).append("</table>")
+        out.append("<p class=\"we-credit\">").append(escape(CREDIT + (report.asOf?.let { " · $it" } ?: ""))).append("</p>")
         out.append("</div>")
         return out.toString()
     }
 
     /**
-     * [html] with the [report] strip under its dateline (else under its masthead, else at the top of
-     * its sheet or body), for the screen only: what is kept, shared and published stays without it.
+     * [html] with the [report] ear in its masthead, after the motto (else under its dateline, else at
+     * the top of its sheet or body), for the screen only: what is kept, shared and published stays
+     * without it.
      */
     fun withStrip(
         html: String,
@@ -380,19 +389,20 @@ object ObserverWeather {
         labels: WeatherLabels = WeatherLabels.ENGLISH,
     ): String {
         val strip = strip(report, labels)
-        val at = afterElement(html, "dateline") ?: afterElement(html, "masthead") ?: afterOpening(html, "class=\"sheet\"") ?: afterOpening(html, "<body")
+        val at = closeOf(html, "masthead")?.first ?: closeOf(html, "dateline")?.last ?: afterOpening(html, "class=\"sheet\"") ?: afterOpening(html, "<body")
         return if (at == null) strip + html else html.substring(0, at) + strip + html.substring(at)
     }
 
     /**
-     * Right after the element whose class list starts with [cls], found by its own closing tag:
-     * nested elements of the same name (a dateline with a `<div>` inside) are counted, not taken
-     * for its end. Null when there is none, or it never closes.
+     * Where the element whose class list starts with [cls] closes: the range of its own closing tag,
+     * found by counting nested elements of the same name (a dateline with a `<div>` inside), not
+     * the first close after it. Its start is the inside end of the element, its last + 1 right after
+     * it. Null when there is none, or it never closes.
      */
-    private fun afterElement(
+    private fun closeOf(
         html: String,
         cls: String,
-    ): Int? {
+    ): IntRange? {
         val attr = Regex("class=\"$cls[\" ]").find(html)?.range?.first ?: return null
         val open = html.lastIndexOf('<', attr).takeIf { it >= 0 } ?: return null
         val name =
@@ -405,7 +415,7 @@ object ObserverWeather {
         var depth = 0
         tags.findAll(html, open).forEach { tag ->
             depth += if (tag.groupValues[1].isEmpty()) 1 else -1
-            if (depth == 0) return tag.range.last + 1
+            if (depth == 0) return IntRange(tag.range.first, tag.range.last + 1)
         }
         return null
     }

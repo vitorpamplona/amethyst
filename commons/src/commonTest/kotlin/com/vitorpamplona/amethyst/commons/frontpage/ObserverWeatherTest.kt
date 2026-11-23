@@ -122,27 +122,33 @@ class ObserverWeatherTest {
     }
 
     @Test
-    fun theStripGoesUnderTheDatelineEscaped() {
+    fun theWeatherIsTheMastheadsEarEscaped() {
         val report = ObserverWeather.parseForecast(forecast, somerville.copy(name = "<b>Somerville</b>"))!!
         val page =
             "<html><head></head><body><div class=\"sheet\"><div class=\"folio\"><span>x</span></div>" +
                 "<header class=\"masthead\"><h1>The Nostr Observer</h1></header><div class=\"dateline\"><span>a</span><span>b</span></div><section class=\"fold\"></section></div></body></html>"
         val shown = ObserverWeather.withStrip(page, report)
-        val strip = shown.indexOf("class=\"weather-strip\"")
-        assertTrue(strip > shown.indexOf("class=\"dateline\""))
-        assertTrue(strip < shown.indexOf("class=\"fold\""))
+        val ear = shown.indexOf("class=\"weather-ear\"")
+        // Inside the masthead, after the nameplate: an ear, not a strip under the dateline.
+        assertTrue(ear > shown.indexOf("The Nostr Observer</h1>"))
+        assertTrue(ear < shown.indexOf("</header>"))
         assertTrue(shown.contains("&lt;b&gt;Somerville&lt;/b&gt;"))
         assertFalse(shown.contains("<b>Somerville</b>"))
-        assertTrue(shown.contains("42°F"))
-        assertTrue(shown.contains("Saturday 61°/36° 0%"))
+        assertTrue(shown.contains("<b>42°F</b>Clear"))
+        // The next days stacked in a small table, one a row.
+        assertTrue(shown.contains("<tr><td>Saturday</td><td class=\"n\">61°/36°</td><td class=\"n\">0%</td></tr>"))
+        assertTrue(shown.contains("Today: high 65°, low 36°"))
+        assertTrue(shown.contains("0% rain · sun 06:41–16:18"))
         assertTrue(shown.contains(ObserverWeather.CREDIT))
         // Nothing in it fetches.
         assertFalse(Regex("(?i)url\\(|src=|href=|@import").containsMatchIn(ObserverWeather.strip(report)))
-        // Without a dateline, under the masthead; without either, at the top of the sheet.
-        val noDateline = ObserverWeather.withStrip(page.replace("<div class=\"dateline\"><span>a</span><span>b</span></div>", ""), report)
-        assertTrue(noDateline.indexOf("weather-strip") > noDateline.indexOf("</header>"))
+        // Without a masthead, under the dateline; without either, at the top of the sheet.
+        val noMasthead = ObserverWeather.withStrip(page.replace("<header class=\"masthead\"><h1>The Nostr Observer</h1></header>", ""), report)
+        assertTrue(noMasthead.indexOf("weather-ear") > noMasthead.indexOf("<span>b</span></div>"))
         val bare = ObserverWeather.withStrip("<body><p>x</p></body>", report)
-        assertTrue(bare.indexOf("weather-strip") in bare.indexOf("<body>")..bare.indexOf("<p>"))
+        assertTrue(bare.indexOf("weather-ear") in bare.indexOf("<body>")..bare.indexOf("<p>"))
+        // The place is its first name, as an ear has room for.
+        assertTrue(ObserverWeather.strip(ObserverWeather.parseForecast(forecast, somerville)!!).contains("Weather · Somerville</p>"))
     }
 
     @Test
@@ -162,8 +168,9 @@ class ObserverWeatherTest {
         val strip = ObserverWeather.strip(report, pt)
         assertTrue(strip.contains("Tempo · Somerville"))
         assertTrue(strip.contains("Céu limpo"))
-        assertTrue(strip.contains("Hoje: máx. 65°, mín. 36°, Nublado, 0% chuva, sol 06:41–16:18"))
-        assertTrue(strip.contains("sábado 61°/36° 0%"))
+        assertTrue(strip.contains("Hoje: máx. 65°, mín. 36°"))
+        assertTrue(strip.contains("0% chuva · sol 06:41–16:18"))
+        assertTrue(strip.contains("<td>sábado</td>"))
         // The credit stays as Open-Meteo asks for it.
         assertTrue(strip.contains(ObserverWeather.CREDIT))
         // A code with no word in the labels is left out rather than shown in English.
@@ -176,8 +183,12 @@ class ObserverWeatherTest {
         val page = "<body><div class=\"dateline\"><div><span>a</span></div><span>b</span></div><section class=\"fold\"></section></body>"
         val shown = ObserverWeather.withStrip(page, report)
         // After the dateline's own close, not its inner div's.
-        assertTrue(shown.indexOf("weather-strip") > shown.indexOf("<span>b</span></div>"))
-        assertTrue(shown.indexOf("weather-strip") < shown.indexOf("class=\"fold\""))
+        assertTrue(shown.indexOf("weather-ear") > shown.indexOf("<span>b</span></div>"))
+        assertTrue(shown.indexOf("weather-ear") < shown.indexOf("class=\"fold\""))
+        // A masthead with an inner header of its own: the ear goes in the outer one, at its end.
+        val nested = ObserverWeather.withStrip("<header class=\"masthead\"><header><h1>T</h1></header><p class=\"motto\">m</p></header><p>after</p>", report)
+        assertTrue(nested.indexOf("weather-ear") > nested.indexOf("class=\"motto\""))
+        assertTrue(nested.indexOf("weather-ear") < nested.indexOf("<p>after</p>"))
     }
 
     @Test

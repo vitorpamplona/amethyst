@@ -49,6 +49,8 @@ internal const val HOUSE_CSS: String =
  *   figure.whole       a picture that may stand taller than the cap
  *                      (every other picture is capped in height, set narrower, never cropped)
  *   div.spread         a picture spread of <figure>s, the first one large
+ *   .fold of 3 .col    the column holding the .lead-head is set in the middle
+ *   a lead story with no <figure> runs in two columns on a wide column
  *   div.agate          the small-print strip: up to five .cell columns of
  *                      .box-head + .wire-item (headlines, on air, classifieds,
  *                      coming up, conditions)
@@ -679,6 +681,74 @@ td.num {
 }
 .band.tinted .band-head {
   border-bottom-color: var(--rule);
+}
+
+/* THE LEAD SITS IN THE MIDDLE.
+ *
+ * Where the fold has three columns or more, the column holding the lead (its
+ * `.lead-head`) is set in the centre, with the column written before it on
+ * its left, as a broadsheet sets its front, whatever order the markup gave.
+ * Desktop and tablet only: a phone reads the lead first. The borders follow
+ * the order seen, not the order written. */
+@media (min-width: 721px) {
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col {
+    order: 3;
+  }
+  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head) {
+    order: 2;
+    padding-left: 20px;
+    border-left: 1px solid var(--rule);
+  }
+  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head):first-child + .col,
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:not(:has(.lead-head)):first-child {
+    order: 1;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head):first-child + .col + .col {
+    border-left: 1px solid var(--rule);
+  }
+}
+
+/* A LEAD WITH NO PICTURE IS SET IN TWO COLUMNS.
+ *
+ * A wide column of running text reads as a wall: ninety characters to a line
+ * is twice a newspaper's measure. The lead's kicker, headline, dek and byline
+ * span the top; its paragraphs run in two columns with a rule between. */
+@media (min-width: 900px) {
+  .col.span-6 > .story:has(> .lead-head):not(:has(figure)),
+  .col.span-8 > .story:has(> .lead-head):not(:has(figure)),
+  .col.span-12 > .story:has(> .lead-head):not(:has(figure)) {
+    display: block;
+    column-count: 2;
+    column-gap: 26px;
+    column-rule: 1px solid var(--rule-soft);
+  }
+  .story:has(> .lead-head):not(:has(figure)) > :is(.kicker, .lead-head, .main-head, .dek, .byline) {
+    column-span: all;
+    margin-bottom: 9px;
+  }
+  .story:has(> .lead-head):not(:has(figure)) > p:not(.kicker):not(.dek):not(.byline) {
+    margin-bottom: 9px;
+  }
+}
+
+/* A PICTURE IN A NARROW COLUMN FILLS IT.
+ *
+ * Capped and set narrower, a phone screenshot in a quarter-width column is a
+ * ribbon with paper either side. There it fills the column's width and is cut
+ * from the top down: a screenshot's top is what it is about. `figure.whole`
+ * still shows all of it. */
+.col.span-3 figure:not(.whole) img,
+.col.span-4 figure:not(.whole) img,
+.cols3 .cell figure:not(.whole) img,
+.cols4 .cell figure:not(.whole) img,
+.cols5 .cell figure:not(.whole) img {
+  width: 100%;
+  align-self: stretch;
+  max-height: 20rem;
+  object-fit: cover;
+  object-position: center top;
 }
 
 /* --- responsive ------------------------------------------------------- */
