@@ -88,4 +88,14 @@ class ClaudeCodeLauncherTest {
         assertTrue("/opt/claude/bin" in path)
         assertTrue("/home/u/.local/bin" in path)
     }
+
+    @Test
+    fun pathFirstFoldersLeadTheProcessPath() {
+        val launcher = ClaudeCodeLauncher(environment = mapOf("PATH" to "/usr/bin:/opt/git/bin", "HOME" to "/home/u"))
+        val env = launcher.processEnvironment(File("/opt/claude/bin/claude"), ClaudeCodeOptions(cwd = File("/work"), environment = mapOf("A" to "1"), pathFirst = listOf(File("/opt/git/bin"))))
+        val path = env.getValue("PATH").split(File.pathSeparator)
+        assertEquals(listOf("/opt/git/bin", "/usr/bin"), path.take(2))
+        assertEquals(1, path.count { it == "/opt/git/bin" })
+        assertEquals("1", env["A"])
+    }
 }

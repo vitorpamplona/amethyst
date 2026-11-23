@@ -1,6 +1,6 @@
 ---
 name: amy-expert
-description: amy CLI in cli/: adding an `amy <verb>` command, Main.kt dispatch, Output.emit/--json contract, exit codes 0/1/2/124, ~/.amy layout, cli/tests harnesses. Use when touching cli/. Enforces the thin-assembly rule: logic goes to commons/quartz.
+description: amy CLI in cli/: adding an `amy <verb>` command, Main.kt dispatch, Output.emit/--json contract, exit codes 0/1/2/124, ~/.amy layout, cli/tests harnesses. Use when touching cli/ or querying/debugging a relay (not nak). Logic goes to commons/quartz.
 ---
 
 # amy CLI
@@ -63,6 +63,24 @@ Don't re-invent what exists: user identifiers via `ctx.requireUserHex` (or quart
 `relayClient/oneshot/` (`OneShotNoteCache`, `EventLocator`, `ThreadLoader`, `NotificationsLoader`,
 over `OneShotRelayAccess`; amy's adapter is `NoteSupport.access(ctx)`); builders in commons
 `actions/` and `model/`.
+
+## Relay checks
+
+Every relay query, publish or relay debugging step goes through the repo-built `amy`
+(`./gradlew :cli:installDist`, then `cli/build/install/amy/bin/amy`), never `nak`, `websocat`, a
+WebSocket script or the Homebrew `amy` (stale, ignores `AMY_BOOTSTRAP_RELAYS`). `amy` runs the
+app's relay client, so its answer is the app's: nostr.wine refuses `nak` (Go's `Go-http-client`
+user agent gets HTTP 403) but serves Amethyst, and that once got a healthy relay called dead.
+
+- **Read-only: run it anonymous**, with no account: `HOME=<scratch dir> amy --json fetch --kind K
+  --author HEX --tag d=X --relay wss://…`. With an account (the default one included) a relay's
+  NIP-42 challenge makes `amy` sign, which can prompt the reader's real bunker and time out
+  (`User didn't accept or reject in time`).
+- One `--relay` per run tells you which relay holds what; `queried_relays` and `count` are in the
+  `--json` output.
+- Signing or publishing uses a throwaway key against a local relay (`amy serve`) unless the human
+  approves a real one.
+- If `amy` has no verb for the check, say so and add one (below) instead of switching tools.
 
 ## Where things live
 

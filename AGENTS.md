@@ -68,7 +68,8 @@ it to Quartz).
 
 Don't assert a diagnosis you haven't reproduced. This repo gives you cheap
 verification tools: `./gradlew test`, per-module test suites, and the `amy`
-CLI (built partly to drive `quartz`/`commons` for interop checks). If a
+CLI. Talk to relays only through the repo-built `amy`, never `nak` or a
+script: it runs the app's relay client (`amy-expert`, "Relay checks"). If a
 claim is checkable in under a minute, check it before stating it — write
 the failing case first, watch it fail, then explain.
 
