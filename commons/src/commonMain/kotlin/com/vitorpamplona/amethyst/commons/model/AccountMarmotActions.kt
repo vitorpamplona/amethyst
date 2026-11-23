@@ -82,11 +82,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1161,22 +1163,42 @@ class AccountMarmotActions(
 
     /**
      * While a chat is open: shares each settled change of its last-read time with this account's
-     * other devices ([shareMarmotReadPosition]). Returns at once while device groups are off.
+     * other devices ([shareMarmotReadPosition]). Returns at once while device groups are off. When
+     * the chat closes before the last change settled, that change is shared from the account's
+     * scope, so a quick look at a chat still moves the other devices' read position.
      */
     @OptIn(FlowPreview::class)
     suspend fun shareMarmotReadPositions(nostrGroupId: HexKey) {
         if (account.marmotDevices == null) return
-        account
-            .loadLastReadFlow(marmotGroupLastReadRoute(nostrGroupId))
-            .debounce(READ_POSITION_SETTLE_MS)
-            .collect { readUpTo ->
-                try {
-                    shareMarmotReadPosition(nostrGroupId, readUpTo)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("MarmotDbg", "could not share the read position of ${nostrGroupId.take(8)}", e)
+        val latest = MutableStateFlow<Long?>(null)
+        val shared = MutableStateFlow<Long?>(null)
+        try {
+            account
+                .loadLastReadFlow(marmotGroupLastReadRoute(nostrGroupId))
+                .onEach { latest.value = it }
+                .debounce(READ_POSITION_SETTLE_MS)
+                .collect { readUpTo ->
+                    shared.value = readUpTo
+                    shareMarmotReadPositionQuietly(nostrGroupId, readUpTo)
                 }
+        } finally {
+            val unsent = latest.value
+            if (unsent != null && unsent != shared.value) {
+                account.scope.launch(Dispatchers.IO) { shareMarmotReadPositionQuietly(nostrGroupId, unsent) }
             }
+        }
+    }
+
+    private suspend fun shareMarmotReadPositionQuietly(
+        nostrGroupId: HexKey,
+        readUpTo: Long,
+    ) {
+        try {
+            shareMarmotReadPosition(nostrGroupId, readUpTo)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "could not share the read position of ${nostrGroupId.take(8)}", e)
+        }
     }
 
     /**
