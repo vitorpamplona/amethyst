@@ -69,10 +69,9 @@ import kotlin.io.encoding.Base64
  * Exists only while the account's device-group switch is on (`MarmotDeviceGroupSwitch`): the
  * [manager] must have been built with a `MarmotDeviceGroupConfig`.
  *
- * Not done here, by design for now: history deliveries (kind 473, `account-sync.md` "History").
- * A newly linked device gets its chats but not their past messages; the delivery would plug in
- * after [addNewDeviceToChatsAndReport] (the approver sends the bundles it has for each chat) and
- * in [afterIngest] (the new device imports them). The switch stays off by default until it lands.
+ * History deliveries (kind 473, `account-sync.md` "History"): the device whose Add brings a
+ * sibling into a chat sends it the chat's earlier messages ([tick]); a newly added device imports
+ * what it is sent and hands it to the app ([afterIngest]).
  */
 class MarmotDevices(
     private val manager: MarmotManager,
@@ -92,6 +91,11 @@ class MarmotDevices(
      * [start] and after every ingest that moved the device group, outside the lock.
      */
     private val onSmallState: (suspend (AccountSyncState) -> Unit)? = null,
+    /**
+     * Earlier messages a sibling delivered to this newly added device (`account-sync.md` "History
+     * deliveries"), already in the message store, for the app to show. Called outside the lock.
+     */
+    private val onHistoryImported: (suspend (List<MarmotDeviceGroupManager.ImportedHistory>) -> Unit)? = null,
     /**
      * Chats a sibling added this device to (a sibling Welcome joined them inside the device group,
      * so no ingest result reported them): the app names, subscribes and lists them. Called outside
@@ -264,8 +268,17 @@ class MarmotDevices(
                 queueJoinedChats()
                 queueSmallState()
             }
+            queueImportedHistory()
             refreshState()
         }
+
+    /** Hands the app the history imported since the last call, after the lock is released. */
+    private fun queueImportedHistory() {
+        val imported = groups.drainImportedHistory()
+        if (imported.isEmpty()) return
+        val show = onHistoryImported ?: return
+        sends.add { show(imported) }
+    }
 
     /** Hands the app the small state after the lock is released, so applying it can take its time. */
     private suspend fun queueSmallState() {
@@ -604,6 +617,13 @@ class MarmotDevices(
                     publishAll(fill.claims)
                     fill.adds.forEach { publishSiblingAdd(it, now) }
                 }
+                // After the Adds above: each sibling they brought into a chat gets its history.
+                runStep("history") { publishAll(groups.historyDeliveries(now)) }
+                runStep("kept history") {
+                    groups.importKeptHistory(now)
+                    queueImportedHistory()
+                }
+                runStep("own entry") { groups.stageOwnEntryRefresh()?.let { groups.applyStaged(it) } }
                 runStep("sibling welcome repairs") { publishAll(groups.siblingWelcomeRepairs(now)) }
                 runStep("broadcast") { publishAll(groups.broadcastDue(now)) }
                 if (now - lastRetag > RETAG_EVERY_SECS) {
@@ -668,7 +688,6 @@ class MarmotDevices(
             if (approval.outcome != DeviceGroupTrust.Outcome.MADE) continue
             groups.addNewDeviceToChats(approval.slot, now).forEach { publishSiblingAdd(it, now) }
             if (inventorySent.add(approval.slot)) publishAll(groups.chatInventory(approval.slot, now, now))
-            // History deliveries (kind 473) for the chats just added would go here.
         }
     }
 
@@ -780,6 +799,37 @@ class MarmotDevices(
     suspend fun signOutThroughSiblings(): Boolean =
         locked {
             val applied = groups.applyStaged(groups.stageSignOut())
+            refreshState()
+            applied.event != null
+        }
+
+    /**
+     * Renames the device in [slot], this one included (`device-group.md` "Labels, clients and
+     * platforms"). False when no relay confirmed the Commit; true when the label already was [label].
+     */
+    suspend fun renameDevice(
+        slot: HexKey,
+        label: String,
+    ): Boolean =
+        locked {
+            val staged = groups.stageRename(slot, label.trim()) ?: return@locked true
+            val applied = groups.applyStaged(staged)
+            refreshState()
+            applied.event != null
+        }
+
+    /**
+     * Moves the device group to [relays], the account's relay list as it is now: the Commit goes
+     * out on the relays the siblings listen to, and the group's traffic follows. Null when there was
+     * nothing to move (no device group, or it lists those relays already); false when no relay
+     * confirmed the move.
+     */
+    suspend fun followRelays(relays: List<String>): Boolean? =
+        locked {
+            val t = groups.trust()
+            if (!t.trustsDeviceGroup || t.unlinked) return@locked null
+            val staged = groups.stageRelays(relays) ?: return@locked null
+            val applied = groups.applyStaged(staged)
             refreshState()
             applied.event != null
         }

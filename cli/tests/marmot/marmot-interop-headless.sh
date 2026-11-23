@@ -216,8 +216,14 @@ ALL_TESTS=(
   test_38_thread_message_wn_to_amy
   test_40_link_amy_new_to_wn_existing
   test_41_prelink_chat_reaches_amy
+  test_45_history_reaches_amy
+  test_47_chat_settings_cross
+  test_48_read_position_reaches_amy
+  test_49_renames_cross
   test_42_link_wn_new_to_amy_existing
   test_44_amy_adds_wn_device_to_chats
+  test_46_history_reaches_wn
+  test_50_that_was_me_persists
   test_43_amy_removes_wn_device
 )
 

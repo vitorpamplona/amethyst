@@ -533,6 +533,8 @@ class Account(
      * were theirs. Encrypted at rest by the app; null keeps them in memory only.
      */
     val marmotLocalBlobs: DeviceGroupBlobs? = null,
+    /** This device's platform for its device-group roster entry (`Android`, `Linux`, …); empty when unknown. */
+    val marmotDevicePlatform: String = "",
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -1303,13 +1305,19 @@ class Account(
                 scope = scope,
                 deviceGroupConfig =
                     marmotDeviceGroupStores?.config(
-                        outboxRelays.flow.value
-                            .ifEmpty {
-                                settings.backupNIP65RelayList
-                                    ?.writeRelaysNorm()
-                                    ?.toSet()
-                                    .orEmpty()
-                            }.map { it.url },
+                        relays =
+                            outboxRelays.flow.value
+                                .ifEmpty {
+                                    settings.backupNIP65RelayList
+                                        ?.writeRelaysNorm()
+                                        ?.toSet()
+                                        .orEmpty()
+                                }.map { it.url },
+                        // Read when the device group is founded, by then the account's lists have
+                        // usually loaded: the relays its other devices read, not the app's defaults.
+                        relayProvider = { (marmot.deviceGroupRelays() ?: outboxRelays.flow.value).map { it.url } },
+                        client = AMETHYST_CLIENT_TAG_NAME,
+                        platform = marmotDevicePlatform,
                     ),
             )
         }
@@ -1330,6 +1338,7 @@ class Account(
                 keyPackageRelays = { marmot.keyPackagePublishRelays() },
                 signInAnswers = marmotLocalBlobs,
                 onSmallState = { state -> marmot.applyMarmotSmallState(state) },
+                onHistoryImported = { imports -> marmot.indexImportedMarmotHistory(imports) },
                 onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
             )
         }
@@ -4641,6 +4650,9 @@ class Account(
                 // A first login publishes before the account's relay lists have loaded; once they
                 // do (and whenever they change), the KeyPackages follow them to the chosen relays.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+
+                // The device group follows the account's relay list the same way.
+                if (marmotDevices != null) scope.launch(Dispatchers.IO) { marmot.runMarmotDeviceGroupRelayWatcher() }
 
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
@@ -389,7 +390,11 @@ class Context(
             publishObligationStore,
             ingestDedupStore,
             deviceGroupConfig =
-                if (deviceGroupsEnabled) DeviceGroupBlobStores(deviceGroupBlobs).config(deviceGroupRelays.map { it.url }) else null,
+                if (deviceGroupsEnabled) {
+                    DeviceGroupBlobStores(deviceGroupBlobs).config(deviceGroupRelays.map { it.url }, client = "amy", platform = MarmotDevicePlatform.name())
+                } else {
+                    null
+                },
         )
     }
 
@@ -409,6 +414,8 @@ class Context(
             keyPackageRelays = { keyPackageRelays() },
             signInAnswers = deviceGroupBlobs,
             onSmallState = { state -> marmotChatSettings.applySmallState(state, marmot, skip = { id -> marmotDevices?.isDeviceGroup(id) == true }) },
+            // Imported history is already in the message store, which every `marmot message` verb reads.
+            onHistoryImported = { imports -> System.err.println("imported history: ${imports.sumOf { it.events.size }} message(s) in ${imports.size} chat(s)") },
         )
     }
 

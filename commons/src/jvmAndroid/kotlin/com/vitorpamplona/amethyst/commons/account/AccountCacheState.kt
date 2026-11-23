@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotDeviceGroupSwitch
+import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
 import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -505,6 +506,7 @@ class AccountCacheState(
             marmotDeviceGroupStores = marmotDeviceGroupStores,
             marmotDeviceGroupSwitch = marmotDeviceGroupSwitch,
             marmotLocalBlobs = marmotLocalBlobs,
+            marmotDevicePlatform = MarmotDevicePlatform.name(),
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
             signerPermissionStore = signerPermissionStore,

@@ -51,6 +51,7 @@ import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
+import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
@@ -731,6 +732,42 @@ class AccountMarmotActions(
         ) { _, _, _, _, _ -> keyPackageRelayChoice() }.distinctUntilChanged()
 
     /**
+     * Where this account's device group lives: the write relays of its kind:10002, the list every
+     * device of the account reads, or null while none has loaded (a first login's outbox is the
+     * app's defaults, which its other devices may not read).
+     */
+    fun deviceGroupRelays(): Set<NormalizedRelayUrl>? =
+        account.nip65RelayList
+            .nip65Event(account.nip65RelayList.nip65ListNote)
+            ?.allWriteRelaysNorm()
+            ?.toSet()
+            ?.takeIf { it.isNotEmpty() }
+
+    /**
+     * Moves the device group to [deviceGroupRelays] whenever the account's relay list loads or
+     * changes, so its traffic stays on the relays the account's devices share. Runs until
+     * [account]'s scope is cancelled.
+     */
+    suspend fun runMarmotDeviceGroupRelayWatcher() {
+        val devices = account.marmotDevices ?: return
+        combine(account.nip65RelayList.getNIP65RelayListFlow(), devices.state.map { it.linked }) { _, linked -> if (linked) deviceGroupRelays() else null }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { relays ->
+                try {
+                    when (devices.followRelays(relays.map { it.url })) {
+                        true -> Log.d("MarmotDbg") { "moved the device group to ${relays.map { it.url }}" }
+                        false -> Log.w("MarmotDbg") { "no relay confirmed moving the device group to ${relays.size} relay(s)" }
+                        null -> {}
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "could not move the device group to the account's relays", e)
+                }
+            }
+    }
+
+    /**
      * Chats a sibling added this device to: the account accepted them on that device, so they are
      * Known here too; each gets its name and members and its subscription, as a Welcome's would.
      */
@@ -738,6 +775,34 @@ class AccountMarmotActions(
         chats.forEach { id ->
             account.marmotGroupList.markAsKnown(id)
             syncAndNotify(id)
+        }
+    }
+
+    /**
+     * History a linked sibling delivered (`account-sync.md` "History deliveries"): already in the
+     * message store, indexed here like a restored message. Importing is not reading, so it moves no
+     * read position, but it is not news either: the chat's local last-read time moves past it, so
+     * the earlier messages do not show as unread.
+     */
+    suspend fun indexImportedMarmotHistory(imports: List<MarmotDeviceGroupManager.ImportedHistory>) {
+        for (history in imports) {
+            val groupId = history.nostrGroupId
+            val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+            for (event in history.events) {
+                try {
+                    val note = indexMarmotGroupInnerEvent(groupId, event).note
+                    account.marmotGroupList.addMessage(groupId, note)
+                    history.epochs[event.id]?.let { chatroom.recordEpoch(event.id, it) }
+                    applyMarmotModeration(groupId, event)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "could not index an imported message of $groupId", e)
+                }
+            }
+            val newest = history.events.maxOfOrNull { it.createdAt } ?: continue
+            val route = marmotGroupLastReadRoute(groupId)
+            if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
+            account.marmotGroupList.notifyGroupChanged(groupId)
         }
     }
 

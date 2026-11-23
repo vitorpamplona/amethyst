@@ -13,6 +13,13 @@
 #   42  amy D is the existing device, a fresh wn W2 the new one.
 #   44  amy D, the approver, adds W2 to that chat; W2 reads a message there.
 #   43  amy D removes W2; W sees two devices again and W2 sees itself unlinked.
+#   45  history: D, added to the chat by W, has the message A sent before the link.
+#   46  history: W2, added by amy D, has a message from before W2 linked.
+#   47  archive and mute cross between amy D and wn W, both ways; amy's pin reaches W's
+#       small state (wn has no pin verb, so only the archive and mute are read back).
+#   48  a read position from W reaches D.
+#   49  renames: D renames W and itself; W's list shows both labels, D's client and platform.
+#   50  "That was me": a sign-in D answered stays answered in a later run.
 #
 # Needs the headless runner's relay, A identity and helpers. Device groups are
 # behind `amy marmot devices enable`, so A and every other test stay as they are.
@@ -87,6 +94,15 @@ devices_prelink_chat() {
   [[ -n "${inv:-}" ]] || return 1
   wn_w groups accept "$inv" >>"$LOG_FILE" 2>&1 || true
   GROUP_41="$gid"
+  # A message from before D exists, for the history test (45): W must hold it to send it.
+  amy_json marmot message send "$gid" "before-link-41" >/dev/null || return 0
+  deadline=$(( $(date +%s) + 60 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    wn_w --json messages list "$MLS_41" --limit 20 2>/dev/null | jq_list messages \
+      | jq -e 'select((.plaintext // .content // "") | contains("before-link-41"))' >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  warn "W never showed the pre-link message"
 }
 
 test_40_link_amy_new_to_wn_existing() {
@@ -284,6 +300,134 @@ test_43_amy_removes_wn_device() {
   [[ "$wn" == 2 && "$dn" == 2 ]] || { record_result "$id" fail "after removal W=$wn D=$dn (want 2), W2 lists ${w2:-?}"; return; }
   [[ "${w2:-0}" == 0 ]] || { record_result "$id" fail "W2 still lists ${w2} devices: it did not see its removal"; return; }
   record_result "$id" pass "removed in $(( $(date +%s) - started ))s"
+}
+
+test_45_history_reaches_amy() {
+  banner "Test 45 — history: D, added by W, gets the message from before the link"
+  local id="45 history wn adder -> amy new device"
+  [[ -n "$GROUP_41" ]] || { record_result "$id" skip "no pre-link chat"; return; }
+  local started=$(date +%s)
+  if amy_d marmot await message "$MLS_41" --match "before-link-41" --timeout 120 >/dev/null 2>>"$LOG_FILE"; then
+    record_result "$id" pass "the pre-link message arrived at $(( $(date +%s) - started ))s"
+  else
+    devices_diag "$MLS_41"
+    record_result "$id" fail "D never got the message A sent before it linked"
+  fi
+}
+
+test_46_history_reaches_wn() {
+  banner "Test 46 — history: W2, added by amy D, gets messages from before it linked"
+  local id="46 history amy adder -> wn new device"
+  [[ -n "$GROUP_41" ]] || { record_result "$id" skip "no chat"; return; }
+  local deadline=$(( $(date +%s) + 120 )) saw=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if wn_w2 --json messages list "$MLS_41" --limit 50 2>/dev/null | jq_list messages \
+         | jq -e 'select((.plaintext // .content // "") | contains("from-D-linked-device"))' >/dev/null 2>&1; then
+      saw=1; break
+    fi
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    sleep 2
+  done
+  [[ $saw -eq 1 ]] || { wn_w2 --json messages list "$MLS_41" --limit 50 >>"$LOG_FILE" 2>&1; record_result "$id" fail "W2 never showed D's message from before W2 linked"; return; }
+  record_result "$id" pass "W2 holds the pre-link message"
+}
+
+# d_chat_field <field>: one field of D's row for the test chat in `marmot devices chats`.
+d_chat_field() {
+  amy_d marmot devices chats 2>/dev/null | jq -r --arg m "$MLS_41" --arg g "$GROUP_41" --arg f "$1" \
+    '.chats[] | select(.group_id == $g or .group_id == $m) | .[$f]' 2>/dev/null | head -n 1
+}
+
+test_47_chat_settings_cross() {
+  banner "Test 47 — archive and mute cross between amy D and wn W"
+  local id="47 chat settings amy <-> wn"
+  [[ -n "$GROUP_41" ]] || { record_result "$id" skip "no chat"; return; }
+  amy_d marmot devices pin "$MLS_41" on >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy pin failed"; return; }
+  amy_d marmot devices archive "$MLS_41" on >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy archive failed"; return; }
+  local deadline=$(( $(date +%s) + 90 )) archived=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if wn_w --json chats list-archived 2>/dev/null | jq -e --arg m "$MLS_41" '[.. | strings] | index($m) != null' >/dev/null; then archived=1; break; fi
+    sleep 2
+  done
+  [[ $archived -eq 1 ]] || { wn_w --json chats list-archived >>"$LOG_FILE" 2>&1; record_result "$id" fail "W never showed the chat D archived"; return; }
+
+  wn_w chats unarchive "$MLS_41" >>"$LOG_FILE" 2>&1 || warn "wn chats unarchive returned nonzero"
+  wn_w chats mute "$MLS_41" forever >>"$LOG_FILE" 2>&1 || warn "wn chats mute returned nonzero"
+  deadline=$(( $(date +%s) + 90 ))
+  local a="" m=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    a=$(d_chat_field archived); m=$(d_chat_field muted)
+    [[ "$a" == false && "$m" == true ]] && break
+    sleep 2
+  done
+  [[ "$a" == false && "$m" == true ]] || { amy_d marmot devices chats >>"$LOG_FILE" 2>&1; record_result "$id" fail "D after W's unarchive and mute: archived=$a muted=$m"; return; }
+  record_result "$id" pass "D's archive reached W; W's unarchive and mute reached D (pinned=$(d_chat_field pinned))"
+}
+
+test_48_read_position_reaches_amy() {
+  banner "Test 48 — a read position from W reaches D"
+  local id="48 read position wn -> amy"
+  [[ -n "$GROUP_41" ]] || { record_result "$id" skip "no chat"; return; }
+  local before; before=$(d_chat_field read_at)
+  wn_w chats mark-read "$MLS_41" >>"$LOG_FILE" 2>&1 || warn "wn chats mark-read returned nonzero"
+  local deadline=$(( $(date +%s) + 90 )) r=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    r=$(d_chat_field read_at)
+    [[ -n "$r" && "$r" != null && "$r" != "$before" ]] && break
+    sleep 2
+  done
+  [[ -n "$r" && "$r" != null && "$r" != "$before" ]] || { record_result "$id" fail "D holds no new read position (before=$before now=$r)"; return; }
+  record_result "$id" pass "read position at $r"
+}
+
+test_49_renames_cross() {
+  banner "Test 49 — D renames W and itself"
+  local id="49 rename amy -> wn"
+  [[ -n "$K_HEX" ]] || { record_result "$id" skip "no device-group account"; return; }
+  local w_slot
+  w_slot=$(wn_w --json devices list 2>/dev/null | wn_result | jq -r '.devices[]? | select(.is_this_device) | .slot_id_hex')
+  [[ -n "$w_slot" ]] || { record_result "$id" skip "W is not linked"; return; }
+  amy_d marmot devices rename "$w_slot" "Phone (renamed)" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy rename of W failed"; return; }
+  amy_d marmot devices rename self "amy laptop" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy rename of itself failed"; return; }
+  local deadline=$(( $(date +%s) + 90 )) list=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    list=$(wn_w --json devices list 2>/dev/null | wn_result)
+    printf '%s' "$list" | jq -e '[.. | strings] | (index("Phone (renamed)") != null and index("amy laptop") != null)' >/dev/null 2>&1 && break
+    sleep 2
+  done
+  printf '%s\n' "$list" >>"$LOG_FILE"
+  printf '%s' "$list" | jq -e '[.. | strings] | (index("Phone (renamed)") != null and index("amy laptop") != null)' >/dev/null 2>&1 \
+    || { record_result "$id" fail "W's list does not show both new labels"; return; }
+  local mine; mine=$(amy_d marmot devices list 2>/dev/null | jq -c '.devices[] | select(.is_this_device) | [.label, .client, .platform]')
+  [[ "$mine" == *'"amy laptop","amy"'* ]] || { record_result "$id" fail "D's own entry is $mine"; return; }
+  record_result "$id" pass "W lists both labels; D is $mine"
+}
+
+test_50_that_was_me_persists() {
+  banner "Test 50 — That was me stays answered in a later run"
+  local id="50 That was me persists"
+  [[ -n "$K_HEX" ]] || { record_result "$id" skip "no device-group account"; return; }
+  local nsec="$K_NSEC"
+  [[ "$nsec" == nsec1* ]] || { record_result "$id" skip "K's nsec is not in this run's memory"; return; }
+  # E: K signed in once more, on an amy that never links: a new sign-in for D.
+  amy_e() { HOME="$STATE_DIR" "$AMY_BIN" --account E --secret-backend plaintext --json "$@"; }
+  amy_e init --nsec "$nsec" >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy init E failed"; return; }
+  nsec=""
+  amy_e relay add "$RELAY_URL" >>"$LOG_FILE" 2>&1
+  amy_e marmot key-package publish >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "E could not publish a KeyPackage"; return; }
+  local deadline=$(( $(date +%s) + 60 )) slot=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    slot=$(amy_d marmot devices sync --timeout 4 2>/dev/null | jq -r '[.sign_ins[]? | select(.kind == "new_sign_in")][0].slot // empty')
+    [[ -n "$slot" ]] && break
+    sleep 2
+  done
+  [[ -n "$slot" ]] || { record_result "$id" fail "D never listed E's sign-in"; return; }
+  amy_d marmot devices sign-in "$slot" mine >>"$LOG_FILE" 2>&1 || { record_result "$id" fail "amy sign-in mine failed"; return; }
+  local again; again=$(amy_d marmot devices sync --timeout 4 2>/dev/null | jq -r --arg s "$slot" '.sign_ins[]? | select(.slot == $s) | .confirmed')
+  [[ "$again" == true ]] || { record_result "$id" fail "a later run lists the sign-in as confirmed=$again"; return; }
+  record_result "$id" pass "sign-in ${slot:0:12} stays answered"
 }
 
 # What W and D hold, into the log, when a device test fails.

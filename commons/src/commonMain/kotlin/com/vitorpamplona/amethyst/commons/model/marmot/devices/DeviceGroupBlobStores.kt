@@ -69,8 +69,18 @@ class DeviceGroupBlobStores(
             override suspend fun save(state: AccountSyncState) = blobs.save(ACCOUNT_SYNC, state.encode())
         }
 
-    /** The config a `MarmotManager` takes; [relays] are where a device group this device creates lives. */
-    fun config(relays: List<String>) = MarmotDeviceGroupConfig(trust, privateKeyPackages, relays, accountSync)
+    /**
+     * The config a `MarmotManager` takes. A device group this device creates lives on
+     * [relayProvider]'s relays as they are then (the account's lists load after the account is
+     * built), or on [relays] when it names none. [client] and [platform] go in this device's own
+     * roster entry, for the user to tell the devices apart.
+     */
+    fun config(
+        relays: List<String>,
+        relayProvider: (suspend () -> List<String>)? = null,
+        client: String = "",
+        platform: String = "",
+    ) = MarmotDeviceGroupConfig(trust, privateKeyPackages, relays, accountSync, relayProvider, client, platform)
 
     companion object {
         const val TRUST = "device_group_trust"

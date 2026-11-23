@@ -34,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -76,6 +77,10 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_devices_not_linked
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_remaining_chats
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_remove_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_remove_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_rename
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_rename_label
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_rename_save
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_rename_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_restart_off
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_restart_on
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_section_link
@@ -154,6 +159,7 @@ fun MarmotDevicesScreen(
             onRemove = { viewModel.removeDevice(it.slot) },
             onRejectSignIn = { viewModel.rejectSignIn(it.slot) },
             onAcceptSignIn = { viewModel.acceptSignIn(it.slot) },
+            onRename = { device, label -> viewModel.renameDevice(device.slot, label) },
             modifier = Modifier.padding(padding),
         )
     }
@@ -187,8 +193,10 @@ fun MarmotDevicesContent(
     onRejectSignIn: (SignIn) -> Unit,
     modifier: Modifier = Modifier,
     onAcceptSignIn: (SignIn) -> Unit = {},
+    onRename: (LinkedDevice, String) -> Unit = { _, _ -> },
 ) {
     var removing by remember { mutableStateOf<LinkedDevice?>(null) }
+    var renaming by remember { mutableStateOf<LinkedDevice?>(null) }
     val snapshot = model.snapshot
 
     Column(
@@ -251,7 +259,7 @@ fun MarmotDevicesContent(
             }
             snapshot.devices.forEachIndexed { index, device ->
                 if (index > 0) SettingsDivider()
-                DeviceRow(device, onRemove = { removing = device })
+                DeviceRow(device, onRemove = { removing = device }, onRename = { renaming = device })
             }
         }
 
@@ -281,6 +289,17 @@ fun MarmotDevicesContent(
         Explainer(stringRes(Res.string.marmot_devices_history_note))
     }
 
+    renaming?.let { device ->
+        RenameDeviceDialog(
+            device = device,
+            onDismiss = { renaming = null },
+            onSave = { label ->
+                renaming = null
+                onRename(device, label)
+            },
+        )
+    }
+
     removing?.let { device ->
         AlertDialog(
             onDismissRequest = { removing = null },
@@ -297,13 +316,49 @@ fun MarmotDevicesContent(
     }
 }
 
+/** The label the user gave it, else its client and platform, else "Unnamed device". */
 @Composable
-private fun deviceName(device: LinkedDevice): String = device.label.ifBlank { stringRes(Res.string.marmot_devices_unnamed) }
+private fun deviceName(device: LinkedDevice): String =
+    device.label.ifBlank {
+        listOf(device.client, device.platform)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .ifBlank { stringRes(Res.string.marmot_devices_unnamed) }
+    }
+
+@Composable
+private fun RenameDeviceDialog(
+    device: LinkedDevice,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var label by remember(device.slot) { mutableStateOf(device.label) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.marmot_devices_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { label = it.take(MAX_LABEL_CHARS) },
+                label = { Text(stringRes(Res.string.marmot_devices_rename_label)) },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(label.trim()) }, enabled = label.trim() != device.label) { Text(stringRes(Res.string.marmot_devices_rename_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+    )
+}
+
+/** Long enough for any name a user gives a device; the roster holds more, but a screen does not. */
+private const val MAX_LABEL_CHARS = 64
 
 @Composable
 private fun DeviceRow(
     device: LinkedDevice,
     onRemove: () -> Unit,
+    onRename: () -> Unit,
 ) {
     val details =
         buildList {
@@ -345,6 +400,14 @@ private fun DeviceRow(
             if (details.isNotEmpty()) {
                 Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        IconButton(onClick = onRename) {
+            Icon(
+                symbol = MaterialSymbols.Edit,
+                contentDescription = stringRes(Res.string.marmot_devices_rename),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         if (!device.isThisDevice) {
             IconButton(onClick = onRemove) {

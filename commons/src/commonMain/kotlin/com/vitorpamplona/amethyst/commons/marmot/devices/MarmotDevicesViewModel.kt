@@ -48,6 +48,7 @@ enum class DeviceActionFailure {
      */
     SWITCH_WHILE_LINKED,
     REMOVE,
+    RENAME,
     SIGN_IN,
     LINK,
 }
@@ -111,6 +112,12 @@ class MarmotDevicesViewModel(
     }
 
     fun removeDevice(slot: HexKey) = run(DeviceActionFailure.REMOVE) { check(it.removeDevice(slot)) { "No relay confirmed the removal" } }
+
+    /** Renames the device in [slot], this one included, on every device of the account. */
+    fun renameDevice(
+        slot: HexKey,
+        label: String,
+    ) = run(DeviceActionFailure.RENAME) { check(it.renameDevice(slot, label)) { "No relay confirmed the rename" } }
 
     /** "That was me": the sign-in in [slot] stays listed as this user's and is never asked about again. */
     fun acceptSignIn(slot: HexKey) = run(DeviceActionFailure.SIGN_IN) { check(it.acceptSignIn(slot)) { "Could not save the answer" } }

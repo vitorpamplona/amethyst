@@ -48,13 +48,14 @@ import java.io.File
  */
 object MarmotDevicesCommands {
     private const val USAGE =
-        "marmot devices <enable|disable|list|sync|link|remove|chats|read|pin|mute|archive|sign-in>\n" +
+        "marmot devices <enable|disable|list|sync|link|remove|rename|chats|read|pin|mute|archive|sign-in>\n" +
             "  enable | disable                          the device-group switch (off by default)\n" +
             "  list                                      this account's devices and any link in progress\n" +
             "  sync [--timeout SECS]                     one pass: pairing, group catch-up, device-group duties\n" +
             "  link --new [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
             "  link --existing [--label L] [--confirm yes|no|stdin] [--code-file PATH] [--timeout SECS] [--settle SECS]\n" +
             "  remove SLOT                               remove a linked device\n" +
+            "  rename SLOT LABEL                         rename a device, this one included (its slot or `self`)\n" +
             "  chats                                     each Marmot chat's pin, mute, archive and synced read position\n" +
             "  read GROUP                                share that this account read GROUP up to its newest message\n" +
             "  pin|mute|archive GROUP [on|off]           change one, on every linked device\n" +
@@ -76,6 +77,7 @@ object MarmotDevicesCommands {
                     "sync" to { rest -> sync(dataDir, rest) },
                     "link" to { rest -> link(dataDir, rest) },
                     "remove" to { rest -> remove(dataDir, rest) },
+                    "rename" to { rest -> rename(dataDir, rest) },
                     "chats" to { rest -> chats(dataDir, rest) },
                     "read" to { rest -> markRead(dataDir, rest) },
                     "pin" to { rest -> chatSetting(dataDir, MarmotChatSetting.PIN, rest) },
@@ -172,6 +174,29 @@ object MarmotDevicesCommands {
                 return@withDevices Output.error("not_confirmed", "no relay confirmed the removal of $slot")
             }
             Output.emit(render(devices.state.value) + mapOf("removed" to slot))
+            0
+        } ?: disabled()
+    }
+
+    private suspend fun rename(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val target = args.positionalOrNull(0) ?: return Output.error("bad_args", "marmot devices rename SLOT LABEL")
+        val label = args.positionalOrNull(1) ?: return Output.error("bad_args", "marmot devices rename SLOT LABEL")
+        args.rejectUnknown()
+        return withDevices(dataDir) { ctx, devices ->
+            ctx.syncIncoming(4_000)
+            val slot = if (target == "self") devices.state.value.ownSlot else target
+            if (slot == null ||
+                devices.state.value.devices
+                    .none { it.slot == slot }
+            ) {
+                return@withDevices Output.error("not_found", "no linked device in slot $target")
+            }
+            if (!devices.renameDevice(slot, label)) return@withDevices Output.error("not_confirmed", "no relay confirmed the rename of $slot")
+            Output.emit(render(devices.state.value) + mapOf("renamed" to slot))
             0
         } ?: disabled()
     }
@@ -440,6 +465,9 @@ object MarmotDevicesCommands {
                     mapOf(
                         "slot" to it.slot,
                         "label" to it.label,
+                        "client" to it.client,
+                        "platform" to it.platform,
+                        "bring_history" to it.bringHistory,
                         "is_this_device" to it.isThisDevice,
                         "status" to it.status.name.lowercase(),
                         "linked_at" to it.linkedAt,
