@@ -61,13 +61,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAwaitingOkThroughAuth
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.warmUpAuth
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -218,12 +219,8 @@ class AccountRelayGroupActions(
     ): Map<NormalizedRelayUrl, PublishResult> {
         // Same delivery tracking as every other group command, so the chat shows it as sent.
         account.chatDeliveryTracker.trackPublic(signed.id, setOf(relay))
-        return account.client.publishAwaitingOkThroughAuth(signed, setOf(relay), timeoutSecs) {
-            account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
-                filters = mapOf(relay to listOf(Filter(kinds = listOf(warmUpKind), limit = 1))),
-                idleTimeoutMs = AUTH_WARM_UP_MS,
-                pendingOnAuthRequired = true,
-            ) { _, _ -> false }
+        return account.client.publishAwaitingOkThroughAuth(signed, setOf(relay), timeoutSecs) { needAuth ->
+            account.client.taggedAs(SubPurpose.RELAY_GROUPS).warmUpAuth(needAuth, warmUpKind, AUTH_WARM_UP_MS)
         }
     }
 
@@ -259,8 +256,9 @@ class AccountRelayGroupActions(
      * to decide (a DM of one person forks a new DM without history; people who already share a DM
      * land there) and answer [BuzzDmAddResult.NeedsHistoryChoice] when the newcomer would join this
      * conversation in place, so the caller asks the user and sends again with [BuzzDmHistory.SHARE]
-     * or [BuzzDmHistory.DONT_SHARE]. An agent account may not send the tag: the relay's refusal is
-     * answered by sending the add again untagged.
+     * or [BuzzDmHistory.DONT_SHARE]. An agent account may not send the tag: the relay's refusal of
+     * the default [BuzzDmHistory.ASK] is answered by sending the add again untagged, while an explicit
+     * [BuzzDmHistory.SHARE] keeps the refusal instead of quietly not sharing (as `amy` does).
      */
     suspend fun addBuzzDmMember(
         channel: RelayGroupChannel,
@@ -280,7 +278,7 @@ class AccountRelayGroupActions(
             )
         account.cache.justConsumeMyOwnEvent(signed)
         val result = buzzDmAddResult(publishAwaitingOk(signed, relay), relay, fromChannelId = channel.groupId.id)
-        if (result is BuzzDmAddResult.Refused && result.message == ONLY_PEOPLE_SHARE_HISTORY && history != BuzzDmHistory.DONT_SHARE) {
+        if (result is BuzzDmAddResult.Refused && result.message == ONLY_PEOPLE_SHARE_HISTORY && history == BuzzDmHistory.ASK) {
             return addBuzzDmMember(channel, member, BuzzDmHistory.DONT_SHARE)
         }
         return result
@@ -546,7 +544,7 @@ class AccountRelayGroupActions(
                 channel.groupId != except &&
                     !channel.isPrivate() &&
                     (type == null || type == BUZZ_CHANNEL_TYPE_STREAM || type == BUZZ_CHANNEL_TYPE_FORUM) &&
-                    event.tags.none { it.isNotEmpty() && it[0] == "unlisted" } &&
+                    !event.tags.fastAny { it.isNotEmpty() && it[0] == "unlisted" } &&
                     !RelayGroupDeletions.isDeleted(channel.groupId) &&
                     event.name()?.let { canonicalBuzzChannelName(it).equals(wanted, ignoreCase = true) } == true
             }?.event
@@ -966,7 +964,7 @@ sealed interface BuzzDmAddResult {
 }
 
 /** Reads the relay's answer to a DM add sent from the DM on [relay] whose id the event's `h` names. */
-internal fun buzzDmAddResult(
+fun buzzDmAddResult(
     results: Map<NormalizedRelayUrl, PublishResult>,
     relay: NormalizedRelayUrl,
     fromChannelId: String? = null,
@@ -988,7 +986,26 @@ internal fun buzzDmAddResult(
  * states its back-off (re-sent after it). A `rate-limited:` without one is the relay's last word:
  * the pool drops the event.
  */
-internal fun PublishResult.isNotYetAnswered(): Boolean = !accepted && (message.startsWith(AUTH_REQUIRED_PREFIX) || (retryAfterMs != null && message.startsWith(RATE_LIMITED_PREFIX)))
+internal fun PublishResult.isNotYetAnswered(): Boolean =
+    !accepted &&
+        when (MachineReadablePrefix.parse(message)) {
+            MachineReadablePrefix.AUTH_REQUIRED -> true
+            MachineReadablePrefix.RATE_LIMITED -> retryAfterMs != null
+            else -> false
+        }
+
+/**
+ * Whether the relay says a DM command made a new DM (`response:{…,"created":true}`), or null when the
+ * OK does not say. Shared by the app and `amy buzz dm add-member`.
+ */
+fun buzzDmCreatedFromOk(message: String?): Boolean? =
+    message
+        ?.let { CREATED_FIELD.find(it) }
+        ?.groupValues
+        ?.get(1)
+        ?.toBooleanStrict()
+
+private val CREATED_FIELD = Regex("\"created\"\\s*:\\s*(true|false)")
 
 /** The relay's refusal of a history tag from an agent (buzz `handle_dm_add_member`, `ONLY_PEOPLE_SHARE_HISTORY`). */
 const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's history"
@@ -999,9 +1016,6 @@ const val ONLY_PEOPLE_SHARE_HISTORY = "forbidden: only people can share a DM's h
  * app and `amy buzz dm add-member`.
  */
 fun buzzDmAddRefusedHistoryTag(results: Map<NormalizedRelayUrl, PublishResult>): Boolean = results.values.none { it.accepted } && results.values.any { it.message == ONLY_PEOPLE_SHARE_HISTORY }
-
-private const val AUTH_REQUIRED_PREFIX = "auth-required:"
-private const val RATE_LIMITED_PREFIX = "rate-limited:"
 
 /** How long a group command waits for its OK; the AUTH warm-up can double it. */
 private const val OK_TIMEOUT_SECS = 15L
