@@ -171,7 +171,8 @@ private fun PollsPages(
             userScrollEnabled = true,
         ) { page ->
             RefresheableBox(tabs[page].feedState, true) {
-                SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                // The default FeedLoaded's notes are FirstShownItems, so the list can compose a screen ahead.
+                SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey, cacheAhead = true) { listState ->
                     RenderFeedContentState(
                         feedContentState = tabs[page].feedState,
                         accountViewModel = accountViewModel,

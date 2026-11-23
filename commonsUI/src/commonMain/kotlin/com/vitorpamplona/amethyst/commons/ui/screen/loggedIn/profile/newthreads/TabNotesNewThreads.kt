@@ -40,11 +40,13 @@ import com.vitorpamplona.amethyst.commons.profile.newthreads.dal.UserProfileNewT
 import com.vitorpamplona.amethyst.commons.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberFeedLazyListState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -62,9 +64,8 @@ fun TabNotesNewThreads(
 
     Column(Modifier.fillMaxHeight()) {
         RefresheableBox(feedViewModel, enablePullRefresh = false) {
-            val listState =
-                androidx.compose.foundation.lazy
-                    .rememberLazyListState()
+            // Each note is a FirstShownItem (FeedLoadedWithPinnedNotes), so the list can compose a screen ahead.
+            val listState = rememberFeedLazyListState(cacheAhead = true)
 
             WatchScrollToTop(feedViewModel.feedState, listState)
 
@@ -151,18 +152,20 @@ private fun FeedLoadedWithPinnedNotes(
                 key = { "pinned-${it.idHex}" },
                 contentType = { it.event?.kind ?: -1 },
             ) { item ->
-                Column(Modifier.fillMaxWidth().animateItem()) {
-                    NoteCompose(
-                        item,
-                        modifier = Modifier.fillMaxWidth(),
-                        routeForLastRead = null,
-                        isBoostedNote = false,
-                        isHiddenFeed = pinnedItems.showHidden,
-                        isPinned = true,
-                        quotesLeft = 3,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                FirstShownItem { shown ->
+                    Column(shown.fillMaxWidth().animateItem()) {
+                        NoteCompose(
+                            item,
+                            modifier = Modifier.fillMaxWidth(),
+                            routeForLastRead = null,
+                            isBoostedNote = false,
+                            isHiddenFeed = pinnedItems.showHidden,
+                            isPinned = true,
+                            quotesLeft = 3,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
                 HorizontalDivider(thickness = DividerThickness)
             }
@@ -174,17 +177,19 @@ private fun FeedLoadedWithPinnedNotes(
                 key = { _, item -> item.idHex },
                 contentType = { _, item -> item.event?.kind ?: -1 },
             ) { _, item ->
-                Row(Modifier.fillMaxWidth().animateItem()) {
-                    NoteCompose(
-                        item,
-                        modifier = Modifier.fillMaxWidth(),
-                        routeForLastRead = null,
-                        isBoostedNote = false,
-                        isHiddenFeed = feedItems.showHidden,
-                        quotesLeft = 3,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                FirstShownItem { shown ->
+                    Row(shown.fillMaxWidth().animateItem()) {
+                        NoteCompose(
+                            item,
+                            modifier = Modifier.fillMaxWidth(),
+                            routeForLastRead = null,
+                            isBoostedNote = false,
+                            isHiddenFeed = feedItems.showHidden,
+                            quotesLeft = 3,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
                 HorizontalDivider(thickness = DividerThickness)
             }

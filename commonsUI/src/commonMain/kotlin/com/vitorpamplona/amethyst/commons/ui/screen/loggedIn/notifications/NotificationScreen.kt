@@ -235,7 +235,8 @@ fun SingleNotificationsBody(
     scrollStateKey: String = ScrollStateKeys.NOTIFICATION_SCREEN,
 ) {
     RefresheableBox(notifFeedContentState, true) {
-        val listState = rememberForeverLazyListState(scrollStateKey)
+        // Each card is a FirstShownItem (RenderCardFeed), so the list can compose a screen ahead.
+        val listState = rememberForeverLazyListState(scrollStateKey, cacheAhead = true)
 
         WatchScrollToTop(notifFeedContentState, listState)
 
@@ -312,7 +313,8 @@ private fun NotificationPagerPage(
     drivesPaging: Boolean = true,
 ) {
     RefresheableBox(state, true) {
-        val listState = rememberForeverLazyListState(scrollStateKey)
+        // Each card is a FirstShownItem (RenderCardFeed), so the list can compose a screen ahead.
+        val listState = rememberForeverLazyListState(scrollStateKey, cacheAhead = true)
 
         WatchScrollToTop(state, listState)
 

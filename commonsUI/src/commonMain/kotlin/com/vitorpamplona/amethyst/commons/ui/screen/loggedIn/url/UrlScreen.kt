@@ -112,6 +112,8 @@ fun UrlScreen(
                 null,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                // FeedLoaded's notes are FirstShownItems; the preview header only loads.
+                cacheAhead = true,
                 onLoaded = { state, listState ->
                     FeedLoaded(
                         state,

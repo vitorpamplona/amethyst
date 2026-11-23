@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.discover_reads
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
@@ -306,7 +307,8 @@ private fun DiscoverPages(
                             )
                         }
                     } else {
-                        SaveableFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
+                        // Each card is a FirstShownItem (DiscoverFeedLoaded), so the list can compose a screen ahead.
+                        SaveableFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey, cacheAhead = true) { listState ->
                             RenderDiscoverFeed(
                                 feedContentState = tab.feedState,
                                 routeForLastRead = tab.routeForLastRead,
@@ -452,15 +454,18 @@ private fun DiscoverFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
-                ChannelCardCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = Modifier.fillMaxWidth(),
-                    forceEventKind = forceEventKind,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+            // The list composes cards a screen ahead: each marks itself read when it shows.
+            FirstShownItem { shown ->
+                Row(shown.fillMaxWidth().animateItem()) {
+                    ChannelCardCompose(
+                        baseNote = item,
+                        routeForLastRead = routeForLastRead,
+                        modifier = Modifier.fillMaxWidth(),
+                        forceEventKind = forceEventKind,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
 
             HorizontalDivider(

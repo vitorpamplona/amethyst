@@ -24,7 +24,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberFeedLazyListState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -53,10 +53,13 @@ fun RefresheableFeedView(
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    // Set when [onLoaded] puts each item in a FirstShownItem, so the list composes a screen ahead.
+    // The default renderer (FeedLoaded) does, so without [onLoaded] the list always does.
+    cacheAhead: Boolean = false,
     onLoaded: (@Composable (FeedState.Loaded, LazyListState) -> Unit)? = null,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel.feedState, scrollStateKey) { listState ->
+        SaveableFeedState(viewModel.feedState, scrollStateKey, cacheAhead = cacheAhead || onLoaded == null) { listState ->
             if (onLoaded != null) {
                 RenderFeedState(
                     viewModel,
@@ -77,13 +80,15 @@ fun RefresheableFeedView(
 fun SaveableFeedState(
     feedContentState: FeedContentState,
     scrollStateKey: String? = null,
+    // Composes a screen of items ahead: only for a list whose items sit in a FirstShownItem.
+    cacheAhead: Boolean = false,
     content: @Composable (LazyListState) -> Unit,
 ) {
     val listState =
         if (scrollStateKey != null) {
-            rememberForeverLazyListState(scrollStateKey)
+            rememberForeverLazyListState(scrollStateKey, cacheAhead = cacheAhead)
         } else {
-            rememberLazyListState()
+            rememberFeedLazyListState(cacheAhead)
         }
 
     WatchScrollToTop(feedContentState, listState)

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.hashtag_label_added_by
+import com.vitorpamplona.amethyst.commons.ui.feeds.FirstShownItem
 import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -84,19 +85,22 @@ fun HashtagFeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            Column(Modifier.fillMaxWidth().animateItem()) {
-                HashtagLabelAttribution(item, tag, accountViewModel)
+            // The list composes notes a screen ahead (HashtagScreen): a note waits to be shown.
+            FirstShownItem { shown ->
+                Column(shown.fillMaxWidth().animateItem()) {
+                    HashtagLabelAttribution(item, tag, accountViewModel)
 
-                NoteCompose(
-                    item,
-                    modifier = Modifier.fillMaxWidth(),
-                    routeForLastRead = null,
-                    isBoostedNote = false,
-                    isHiddenFeed = items.showHidden,
-                    quotesLeft = 3,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                    NoteCompose(
+                        item,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = null,
+                        isBoostedNote = false,
+                        isHiddenFeed = items.showHidden,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
 
             HorizontalDivider(
