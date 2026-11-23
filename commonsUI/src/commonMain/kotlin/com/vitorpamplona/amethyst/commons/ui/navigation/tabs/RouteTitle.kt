@@ -52,9 +52,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val MAX_TITLE = 40
 
@@ -101,6 +103,9 @@ fun routeTitle(
                     ?.let { return it.trim().take(MAX_TITLE) }
             }
         }
+        // The community's name, so two communities open side by side are told apart: their tabs
+        // both read "Concord server" before.
+        is Route.ConcordServer -> concordCommunityName(route.communityId, accountViewModel)?.let { return it.take(MAX_TITLE) }
         is Route.Hashtag -> return "#${route.hashtag}"
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
         is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
@@ -145,6 +150,19 @@ fun routeTitle(
     // The coding-agent routes kept Claude's name, but the screen runs Codex too: "AI Code changes".
     if (name.startsWith(AGENT_ROUTE_PREFIX)) return stringRes(Res.string.ai_code_title) + " " + spellOut(name.removePrefix(AGENT_ROUTE_PREFIX)).lowercase()
     return spellOut(name)
+}
+
+/** A Concord community's folded name, else the name its list entry was saved with; null for one not joined. */
+@Composable
+private fun concordCommunityName(
+    communityId: String,
+    accountViewModel: AccountViewModel,
+): String? {
+    val sessions = accountViewModel.account.concordSessions
+    val revision by sessions.revision.collectAsState()
+    val session = remember(communityId, revision) { sessions.sessionFor(communityId) }
+    val state by (session?.state ?: remember { MutableStateFlow<ConcordCommunityState?>(null) }).collectAsState()
+    return state?.metadata?.name?.ifBlank { null } ?: session?.entry?.name?.ifBlank { null }
 }
 
 /** The icon a tab shows for [route] when it has no picture of its own: the bar's icon for a section. */

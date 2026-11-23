@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.app_name
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_access_role_label
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_create
@@ -103,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_confirm
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_message
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
+import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_title
@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
+import com.vitorpamplona.amethyst.commons.resources.concord_not_joined
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
@@ -200,7 +201,7 @@ fun ConcordChannelListScreen(
     val communityName =
         state?.metadata?.name
             ?: session?.entry?.name?.ifBlank { null }
-            ?: stringRes(Res.string.app_name)
+            ?: stringRes(Res.string.concord_home_title)
 
     // Owner from the list entry, not the folded authority: a community whose relays are dead never
     // folds a Control Plane, and that is exactly the case where leaving matters most.
@@ -227,9 +228,12 @@ fun ConcordChannelListScreen(
                 // so we never hold the user behind a spinner waiting on a relay that may be dead.
                 accountViewModel.leaveConcordCommunity(communityId)
                 // Don't strand the user on the server view of a community they just left. Popping is
-                // right when we were pushed here; when this community is a bottom-nav root there is
-                // nothing to pop, so restart the stack on the Concord hub.
-                if (canPop) nav.popBack() else nav.newStack(Route.Concords)
+                // right when we were pushed here. When this community is a root there is nothing to
+                // pop, so restart on the Concord hub; but back still runs first, because on the
+                // desktop's tab strip it closes this tab, which the restart alone left open on a
+                // community the account is no longer in.
+                nav.popBack()
+                if (!canPop) nav.newStack(Route.Concords)
             },
         )
     }
@@ -400,6 +404,9 @@ fun ConcordChannelListScreen(
                 // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
                 nav = nav,
                 actions = {
+                    // Nothing here works without a membership: a tab left open on a community the
+                    // account left (or was kicked from) offered Members, Invite and Leave again.
+                    if (session == null) return@TopBarExtensibleWithBackButton
                     // One overflow instead of four icons: at phone width the icons squeezed the name, and
                     // none of these is a daily action. Destructive membership actions stay at the bottom,
                     // mirroring the NIP-29 relay-group top bar, never as a one-tap icon.
@@ -551,7 +558,7 @@ fun ConcordChannelListScreen(
         if (channels.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringRes(Res.string.concord_channels_empty),
+                    stringRes(if (session == null) Res.string.concord_not_joined else Res.string.concord_channels_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
