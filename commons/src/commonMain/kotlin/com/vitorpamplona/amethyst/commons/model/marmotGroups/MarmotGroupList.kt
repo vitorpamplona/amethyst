@@ -26,11 +26,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Tracks all Marmot MLS group chatrooms for an account.
@@ -82,20 +86,27 @@ class MarmotGroupList(
      * ([MarmotGroupChatroom.isKnown]), recomputed on every group change and every change of
      * [follows]. A reply flips [MarmotGroupChatroom.ownerSentMessage] without changing which
      * rooms exist, so a screen that cached the split on the room list never moved the group out
-     * of New Requests. [extraGroupIds] adds groups the MLS state holds but no message reached yet.
+     * of New Requests. [extraGroupIds] adds groups the MLS state holds but no message reached yet,
+     * except hidden ones ([isHidden]: the device group). Computed on [context], off the main thread,
+     * and a burst of messages costs one recomputation.
      */
     fun knownSplit(
         follows: Flow<Set<HexKey>>,
         extraGroupIds: () -> Collection<HexKey> = { emptyList() },
+        context: CoroutineContext = Dispatchers.Default,
     ): Flow<MarmotGroupSplit> =
-        combine(groupListChanges.onStart { emit("") }, follows) { _, following ->
+        combine(groupListChanges.onStart { emit("") }.conflate(), follows) { _, following ->
             val groups = ArrayList<Pair<HexKey, MarmotGroupChatroom>>()
-            rooms.forEach { key, chatroom -> groups.add(key to chatroom) }
-            extraGroupIds().forEach { id -> if (groups.none { it.first == id }) groups.add(id to getOrCreateGroup(id)) }
+            val listed = HashSet<HexKey>()
+            rooms.forEach { key, chatroom ->
+                groups.add(key to chatroom)
+                listed.add(key)
+            }
+            extraGroupIds().forEach { id -> if (!isHidden(id) && listed.add(id)) groups.add(id to getOrCreateGroup(id)) }
             groups.sortByDescending { it.second.newestMessage?.createdAt() ?: 0L }
             val (known, requests) = groups.partition { it.second.isKnown(following) }
             MarmotGroupSplit(known, requests)
-        }
+        }.conflate().flowOn(context)
 
     fun addMessage(
         nostrGroupId: HexKey,

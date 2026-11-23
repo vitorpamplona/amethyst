@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -55,6 +56,23 @@ class MarmotGroupKnownSplitTest {
         return Note(event.id).also { it.loadEvent(event, User(pubKey, context), emptyList()) }
     }
 
+    private fun TestScope.testDispatcher() = UnconfinedTestDispatcher(testScheduler)
+
+    @Test
+    fun theDeviceGroupIsNeverARequest() =
+        runTest(UnconfinedTestDispatcher()) {
+            val list = MarmotGroupList(owner)
+            val deviceGroup = "f".repeat(64)
+            list.isHidden = { it == deviceGroup }
+            val seen = mutableListOf<MarmotGroupSplit>()
+            backgroundScope.launch {
+                list.knownSplit(MutableStateFlow(emptySet()), extraGroupIds = { listOf(deviceGroup, groupId) }, context = testDispatcher()).collect { seen.add(it) }
+            }
+
+            assertEquals(listOf(groupId), seen.last().requests.map { it.first })
+            assertEquals(emptyList(), seen.last().known.map { it.first })
+        }
+
     @Test
     fun replyingMovesTheGroupToKnownAtOnce() =
         runTest(UnconfinedTestDispatcher()) {
@@ -64,7 +82,7 @@ class MarmotGroupKnownSplitTest {
 
             val follows = MutableStateFlow<Set<HexKey>>(emptySet())
             val seen = mutableListOf<MarmotGroupSplit>()
-            backgroundScope.launch { list.knownSplit(follows).collect { seen.add(it) } }
+            backgroundScope.launch { list.knownSplit(follows, context = testDispatcher()).collect { seen.add(it) } }
 
             assertEquals(listOf(groupId), seen.last().requests.map { it.first })
             assertEquals(emptyList(), seen.last().known.map { it.first })
@@ -83,7 +101,7 @@ class MarmotGroupKnownSplitTest {
             list.addMessage(groupId, chat(peer, "1".repeat(64)))
             val follows = MutableStateFlow<Set<HexKey>>(emptySet())
             val seen = mutableListOf<MarmotGroupSplit>()
-            backgroundScope.launch { list.knownSplit(follows).collect { seen.add(it) } }
+            backgroundScope.launch { list.knownSplit(follows, context = testDispatcher()).collect { seen.add(it) } }
 
             follows.value = setOf(peer)
 
@@ -98,7 +116,7 @@ class MarmotGroupKnownSplitTest {
             list.addMessage(older, Note("e".repeat(64)).also { it.loadEvent(Event("e".repeat(64), owner, 1_700_000_000L, 9, emptyArray(), "old", ""), User(owner, context), emptyList()) })
             list.addMessage(groupId, chat(owner, "2".repeat(64)))
             val seen = mutableListOf<MarmotGroupSplit>()
-            backgroundScope.launch { list.knownSplit(MutableStateFlow(emptySet())).collect { seen.add(it) } }
+            backgroundScope.launch { list.knownSplit(MutableStateFlow(emptySet()), context = testDispatcher()).collect { seen.add(it) } }
 
             assertEquals(listOf(groupId, older), seen.last().known.map { it.first })
         }
