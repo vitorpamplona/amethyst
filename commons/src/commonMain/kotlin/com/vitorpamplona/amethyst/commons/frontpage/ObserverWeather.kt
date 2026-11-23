@@ -80,8 +80,6 @@ data class WeatherReport(
     val nowCode: Int? = null,
     /** Today first, then the next days. */
     val days: List<WeatherDay> = emptyList(),
-    val sunrise: String? = null,
-    val sunset: String? = null,
 )
 
 /** The Observer's weather: the `place` param, the Open-Meteo requests and readings, and the Weather desk the writer reads. */
@@ -138,7 +136,7 @@ object ObserverWeather {
     fun forecastUrl(place: ObserverPlace): String =
         "https://api.open-meteo.com/v1/forecast?latitude=${coordinate(place.latitude)}&longitude=${coordinate(place.longitude)}" +
             "&current=temperature_2m,weather_code" +
-            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
             "&timezone=auto&forecast_days=$DAYS" +
             (if (place.fahrenheit) "&temperature_unit=fahrenheit" else "")
 
@@ -189,18 +187,6 @@ object ObserverWeather {
             now = current?.double("temperature_2m")?.roundToInt(),
             nowCode = current?.double("weather_code")?.roundToInt(),
             days = days,
-            sunrise =
-                daily
-                    .strings("sunrise")
-                    .firstOrNull()
-                    ?.substringAfter('T', "")
-                    ?.takeIf { it.isNotEmpty() },
-            sunset =
-                daily
-                    .strings("sunset")
-                    .firstOrNull()
-                    ?.substringAfter('T', "")
-                    ?.takeIf { it.isNotEmpty() },
         )
     }
 
@@ -228,42 +214,75 @@ object ObserverWeather {
             else -> null
         }
 
-    private val WEEKDAYS = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    private val WEEKDAYS = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     /**
-     * The paper's Weather desk, as the digest gives it to the writer: the forecast, the figures to
-     * set as given, and the credit Open-Meteo asks for (CC BY 4.0). A desk like the others: the
-     * writer decides where it runs, a box of its own, never the lead. [namesPlace] is false while the
-     * paper goes to the reader's public Observer site: then the place isn't given, so the page can't
-     * say where the reader lives.
+     * The paper's Weather desk, as the digest gives it to the writer: the weather card, made here
+     * and set as given, and where it runs. The writer only places it: the figures, the table and
+     * the credit Open-Meteo asks for (CC BY 4.0) are the same every morning, the box the house
+     * stylesheet draws as `.box.weather`. [namesPlace] is false while the paper goes to the
+     * reader's public Observer site: then the card names no place, so the page can't say where the
+     * reader lives.
      */
     fun desk(
         report: WeatherReport,
         namesPlace: Boolean,
+    ): List<String> =
+        listOf(
+            "Set this card exactly as given, at the top of a narrow column of the fold: a box of its own, " +
+                "never the lead, never in the masthead, never twice. Change nothing in it and add nothing to it.",
+        ) + card(report, namesPlace)
+
+    /** The weather card's markup, line by line: escaped, and only the classes the house stylesheet styles. */
+    fun card(
+        report: WeatherReport,
+        namesPlace: Boolean,
     ): List<String> {
         val unit = if (report.fahrenheit) "°F" else "°C"
-        val out = mutableListOf<String>()
-        out +=
-            if (namesPlace) {
-                "For ${report.place}."
-            } else {
-                "The place is not given: this paper is published on the reader's public site. Head the box \"Weather\" and name no place."
-            }
-        if (report.now != null) out += "Now${report.asOf?.let { " ($it)" }.orEmpty()}: ${report.now}$unit${words(report.nowCode)?.let { ", $it" }.orEmpty()}."
-        report.days.forEachIndexed { i, day ->
-            val name = if (i == 0) "Today" else dayOfWeek(day.date)?.let { WEEKDAYS[it - 1] } ?: day.date
+        val head = if (namesPlace) "Weather · ${escape(report.place.substringBefore(',').trim())}" else "Weather"
+        val out = mutableListOf("<div class=\"box weather\">", "<div class=\"box-head\">$head</div>")
+        if (report.now != null) {
+            val sky = words(report.nowCode)?.let { " ${capitalized(it)} now" }.orEmpty()
+            out += "<p class=\"wx-now\"><b>${report.now}$unit</b>$sky</p>"
+        }
+        report.days.firstOrNull()?.let { today ->
             val parts =
                 listOfNotNull(
-                    if (day.high != null && day.low != null) "high ${day.high}$unit, low ${day.low}$unit" else null,
-                    words(day.code),
-                    day.rain?.let { "$it% chance of rain" },
-                    if (i == 0 && report.sunrise != null && report.sunset != null) "sunrise ${report.sunrise}, sunset ${report.sunset}" else null,
+                    if (today.high != null && today.low != null) "high ${today.high}$unit, low ${today.low}$unit" else null,
+                    words(today.code),
+                    today.rain?.let { "$it% chance of rain" },
                 )
-            if (parts.isNotEmpty()) out += "$name (${day.date}): ${parts.joinToString(", ")}."
+            if (parts.isNotEmpty()) out += "<p class=\"wx-today\">Today: ${parts.joinToString(", ")}.</p>"
         }
-        out += "Credit it where it runs, as written: \"$CREDIT\". It is not news and not from Nostr: set it as a box of its own (a rail, an ear, a corner), never the lead, the figures as given, nothing added."
+        val next = report.days.drop(1)
+        if (next.isNotEmpty()) {
+            out += "<table>"
+            out += "<thead><tr><th>Day</th><th>Hi / Lo</th><th>Rain</th><th>Sky</th></tr></thead>"
+            out += "<tbody>"
+            next.forEach { day ->
+                val name = dayOfWeek(day.date)?.let { "${WEEKDAYS[it - 1]} ${day.date.substringAfterLast('-').trimStart('0')}" } ?: day.date
+                val hiLo = if (day.high != null && day.low != null) "${day.high} / ${day.low}" else "–"
+                val rain = day.rain?.let { "$it%" } ?: "–"
+                val sky = words(day.code)?.let(::capitalized) ?: "–"
+                out += "<tr><td>$name</td><td>$hiLo</td><td>$rain</td><td>$sky</td></tr>"
+            }
+            out += "</tbody>"
+            out += "</table>"
+        }
+        report.asOf?.let { out += "<p class=\"wx-note\">Forecast as of $it, local time.</p>" }
+        out += "<p class=\"wx-credit\">$CREDIT</p>"
+        out += "</div>"
         return out
     }
+
+    private fun capitalized(text: String) = text.replaceFirstChar { it.uppercaseChar() }
+
+    private fun escape(text: String) =
+        text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
 
     /** Countries that read temperatures in °F. */
     private val FAHRENHEIT_COUNTRIES = setOf("US", "LR", "MM", "BS", "BZ", "KY", "PW", "FM", "MH")

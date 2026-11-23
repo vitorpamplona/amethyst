@@ -91,16 +91,19 @@ The paper never leaves the reader's servers unencrypted unless publishing is on.
 Observer screen (Open-Meteo's place search), so every device prints the same city.
 
 - When a print starts, before anything is paid for, the printing device fetches Open-Meteo's
-  forecast for the place (now, today's high, low, rain and sun, three more days; 10 s at most,
+  forecast for the place (now, today's high, low and rain, three more days; no sunrise or sunset; 10 s at most,
   through the client the reader's network settings pick for public pages).
 - It is a desk like the others (2026-11-23): the digest gives the writer a "Weather" section,
-  written by the app and placed before the notice that everything below is other people's data,
-  with the figures, the credit Open-Meteo asks for (CC BY 4.0) and how to run it (a box of its own,
-  never the lead, the figures as given). The writer sets it where a paper would, sized like the
-  rest of the page. (A first version drew it over the page at display time, as a strip and then as
-  a masthead ear; it was the wrong shape, and above the news.)
-- While the paper goes to the reader's public Observer site, the desk doesn't give the place and
-  tells the writer to name none, so the public page doesn't say where the reader lives.
+  written by the app and placed before the notice that everything below is other people's data.
+  It holds the weather card ready made (`ObserverWeather.card`): a `.box.weather` with the place in
+  its head, the reading now set large, today in a line, the next days in a small Day / Hi-Lo / Rain
+  / Sky table, the time of the reading and the credit Open-Meteo asks for (CC BY 4.0). The writer
+  sets it as given at the top of a narrow column, never the lead; the house stylesheet draws it,
+  so it looks the same every morning. On a phone the fold puts the lead's column first, so the card
+  never stands between the nameplate and the news. (A first version drew it over the page at
+  display time, as a strip and then as a masthead ear; it was the wrong shape, and above the news.)
+- While the paper goes to the reader's public Observer site, the card's head is just "Weather":
+  the public page doesn't say where the reader lives.
 - No place, or no answer in time: the paper prints without the desk. A printer that shows no
   weather (the Assistant) understands the param and prints as before.
 

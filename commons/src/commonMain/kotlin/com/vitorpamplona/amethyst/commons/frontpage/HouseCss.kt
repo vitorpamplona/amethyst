@@ -56,6 +56,7 @@ internal const val HOUSE_CSS: String =
  *                      coming up, conditions)
  *   .cols5             a five-column band
  *   section.band.tinted   a band set apart from the network's own news
+ *   div.box.weather    the weather card, as the Weather desk gives it
  */
 
 :root {
@@ -683,6 +684,50 @@ td.num {
   border-bottom-color: var(--rule);
 }
 
+/* THE WEATHER CARD: the Weather desk's box, made by the app and set as given at
+ * the top of a narrow column. The place in its head, the reading now large,
+ * today in a line, the next days in a small table, the credit last. */
+.box.weather {
+  gap: 8px;
+}
+.weather .wx-now {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  line-height: 1.1;
+  margin: 0;
+}
+.weather .wx-now b {
+  font-size: 2.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-right: 4px;
+}
+.weather .wx-today {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+  margin: 0;
+}
+.weather th,
+.weather td {
+  font-size: 0.76rem;
+  padding: 5px 8px 5px 0;
+}
+.weather td:first-child {
+  white-space: nowrap;
+}
+.weather .wx-note {
+  font-size: 0.74rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--ink-3);
+  margin: 0;
+}
+.weather .wx-credit {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 /* THE LEAD SITS IN THE MIDDLE.
  *
  * Where the fold has three columns or more, the column holding the lead (its
@@ -780,6 +825,12 @@ td.num {
   .fold {
     display: flex;
     flex-direction: column;
+  }
+  /* A phone reads the lead first, whatever column was written before it: a
+   * rail's weather card or briefs never stand between the nameplate and the
+   * news. */
+  .fold > .col:has(.lead-head) {
+    order: -1;
   }
   .col {
     padding: 18px 0;
