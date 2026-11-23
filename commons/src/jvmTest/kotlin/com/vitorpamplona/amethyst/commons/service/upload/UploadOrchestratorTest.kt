@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
@@ -297,7 +298,7 @@ class UploadOrchestratorTest {
         private val failNext: Boolean = false,
         // Whether a HEAD for the blob finds it (BUD-01).
         private val holds: Boolean = false,
-    ) : BlossomClient() {
+    ) : BlossomClient(OkHttpClient()) {
         var lastUploadedFile: File? = null
         var lastUploadedBytes: ByteArray? = null
         var uploads = 0

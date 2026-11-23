@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
@@ -195,6 +196,12 @@ class Context(
                     maxRequestsPerHost = 16
                 },
             ).build()
+
+    /**
+     * The Blossom client every command uses: it rides [okhttp], so [LocalOnly] covers Blossom
+     * uploads and downloads the same way it covers relay sockets.
+     */
+    val blossom: BlossomClient by lazy { BlossomClient(okhttp) }
 
     val client: NostrClient =
         NostrClient(

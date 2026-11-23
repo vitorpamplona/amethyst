@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
@@ -214,7 +213,7 @@ object MarmotMediaCommands {
                         ctx.signer,
                     )
                 val result =
-                    BlossomClient().upload(encrypted.ciphertext, "application/octet-stream", store.serverRoot, auth)
+                    ctx.blossom.upload(encrypted.ciphertext, "application/octet-stream", store.serverRoot, auth)
                 if (result.sha256 != null && result.sha256 != ciphertextHash) {
                     return Output.error("hash_mismatch", "blossom returned ${result.sha256}, expected $ciphertextHash")
                 }
@@ -308,7 +307,7 @@ object MarmotMediaCommands {
 
             val ciphertext =
                 try {
-                    BlossomClient().download(locator.value)
+                    ctx.blossom.download(locator.value)
                 } catch (e: Exception) {
                     return Output.error("download_failed", "${e.message}")
                 } ?: return Output.error("download_failed", "blob ${locator.value} not available")

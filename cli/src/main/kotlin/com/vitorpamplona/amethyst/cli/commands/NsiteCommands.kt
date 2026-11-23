@@ -185,7 +185,7 @@ object NsiteCommands {
                         "no static-website manifest for this author",
                         mapOf("pubkey" to authorHex, "d" to identifier),
                     )
-            return StaticSiteServe.serve(manifest.paths, (manifest.servers + extraServers).distinct(), port)
+            return StaticSiteServe.serve(manifest.paths, (manifest.servers + extraServers).distinct(), port, ctx.blossom)
         }
     }
 
@@ -266,6 +266,7 @@ object NsiteCommands {
                     ),
                 outFile = outFile,
                 maxInlineBytes = maxInlineBytes,
+                blossom = ctx.blossom,
             )
         }
     }

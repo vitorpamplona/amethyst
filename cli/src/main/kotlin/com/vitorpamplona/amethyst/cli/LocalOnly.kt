@@ -106,9 +106,9 @@ object LocalOnly {
 
     /**
      * The one way amy makes an OkHttp client: a plain builder, plus the [ENV] guard when it is on.
-     * Callers add their own timeouts, socket factory or dispatcher on top.
+     * Callers add their own timeouts, socket factory or dispatcher on top. [guarded] is a test seam.
      */
-    fun httpClientBuilder(): OkHttpClient.Builder = OkHttpClient.Builder().also { if (enabled) it.addInterceptor(interceptor) }
+    fun httpClientBuilder(guarded: Boolean = enabled): OkHttpClient.Builder = OkHttpClient.Builder().also { if (guarded) it.addInterceptor(interceptor) }
 
     /** [httpClientBuilder] with nothing else set. */
     fun httpClient(): OkHttpClient = httpClientBuilder().build()
