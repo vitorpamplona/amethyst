@@ -54,6 +54,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The Studio trim through LightCompressor-enhanced's [Mp4Sanitizer]: the range it asks for, what a
@@ -187,21 +188,30 @@ class VideoTrimmerTest {
             assertTrue(tempFolder.root.listFiles()!!.none { it.name.startsWith("trim_") })
         }
 
-    @Test
+    @Test(timeout = 20_000)
     fun `cancelling the upload interrupts the trim and deletes its file`() {
         val started = CountDownLatch(1)
+        val interrupted = AtomicBoolean(false)
         every { Mp4Sanitizer.sanitize(context, picked, capture(output), any<TrimRange>()) } answers {
             started.countDown()
-            Thread.sleep(30_000)
-            fail("the trim was not interrupted")
-            error("unreachable")
+            try {
+                Thread.sleep(30_000)
+            } catch (e: InterruptedException) {
+                interrupted.set(true)
+                throw e
+            }
+            SanitizeResult(output.captured, true)
         }
 
         runBlocking {
             // Off this thread, which waits on the latch below.
             val trim = async(Dispatchers.IO) { uploader.trimVideo(picked, "video/mp4", VideoTrim(0, 3_000)) }
-            assertTrue(started.await(10, TimeUnit.SECONDS))
-            trim.cancel()
+            try {
+                assertTrue(started.await(10, TimeUnit.SECONDS))
+            } finally {
+                // Also when the trim never started, so the test fails instead of waiting on it.
+                trim.cancel()
+            }
             try {
                 trim.await()
                 fail("a cancelled trim returned")
@@ -209,6 +219,7 @@ class VideoTrimmerTest {
             }
         }
 
+        assertTrue("the remux was not interrupted", interrupted.get())
         assertFalse(output.captured.exists())
     }
 
