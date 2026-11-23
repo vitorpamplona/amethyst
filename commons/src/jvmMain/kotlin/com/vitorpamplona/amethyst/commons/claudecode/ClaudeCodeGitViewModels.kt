@@ -383,9 +383,15 @@ class ClaudeCodeProposeViewModel(
     private val service: ClaudeCodeService,
     private val key: String,
     /** A repository's folder in the chat's workspace, or null for the chat's folder itself. */
-    repo: String? = null,
+    private val repo: String? = null,
 ) : ViewModel() {
     val chat: ClaudeChat? = service.chat(key)
+
+    /** The workstream [repo] is in, when the chat works in one. */
+    private val workspace: AgentWorkspace? = repo?.let { service.workspaceAt(chat?.state?.value?.cwd) }
+
+    /** What the agent asked to publish ([PublishToolServer]): its title and description are the draft. */
+    private val request: PublishRequest? = repo?.let { workspace?.publishRequests?.get(it) }
     private val dir: File? =
         chat
             ?.state
@@ -436,10 +442,11 @@ class ClaudeCodeProposeViewModel(
             val info = GitWorkspace.inspect(dir)
             _info.value = info
             if (!gateScript(dir).isFile) _gate.value = GateState.None
-            // A first draft from the commits themselves, shown while the agent writes a better one.
-            if (_draft.value == null && info != null) _draft.value = draftFromCommits(info)
+            // The agent's own request, when it sent one: its words are the draft, and nothing is asked
+            // again. Otherwise a first draft from the commits, shown while the agent writes a better one.
+            if (_draft.value == null && info != null) _draft.value = request?.let { ProposalDraft(it.title, it.body) } ?: draftFromCommits(info)
             // A new proposal is described as the screen opens; an update keeps its description.
-            if (info != null && info.proposalId == null && info.commits.isNotEmpty()) draftWithAgent()
+            if (request == null && info != null && info.proposalId == null && info.commits.isNotEmpty()) draftWithAgent()
         }
     }
 
@@ -687,6 +694,9 @@ class ClaudeCodeProposeViewModel(
             } catch (e: IOException) {
                 Log.w(TAG, "Could not link the proposal to $branch", e)
             }
+            // The agent's request is answered: its card leaves the Pull requests screen.
+            val ws = workspace
+            if (ws != null && repo != null && request != null) service.recordPublishRequest(ws.id, repo, null)
             chat?.refreshGit()
         }
     }
