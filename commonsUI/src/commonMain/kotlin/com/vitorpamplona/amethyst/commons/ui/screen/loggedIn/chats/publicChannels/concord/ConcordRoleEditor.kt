@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_perm_manage_roles
 import com.vitorpamplona.amethyst.commons.resources.concord_perm_mention_everyone
 import com.vitorpamplona.amethyst.commons.resources.concord_perm_pin_messages
 import com.vitorpamplona.amethyst.commons.resources.concord_perm_view_audit_log
+import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_bits_not_held
 import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_delete
 import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_delete_message
 import com.vitorpamplona.amethyst.commons.resources.concord_role_editor_edit
@@ -114,6 +115,7 @@ fun ConcordRoleEditorDialog(
         }
     // The permissions a role may be given here: the ones this viewer holds.
     val offeredBits = remember(authority, me) { ConcordRoleRules.EDITABLE_BITS.filter { authority.hasPermission(me, it) } }
+    val myBits = remember(authority, me) { authority.effectivePermissions(me) }
 
     var draft by remember { mutableStateOf<RoleDraft?>(null) }
     var toDelete by remember { mutableStateOf<Pair<String, RoleEntity>?>(null) }
@@ -162,6 +164,9 @@ fun ConcordRoleEditorDialog(
                 }
                 roles.forEach { (id, role) ->
                     val editable = ConcordRoleRules.canPlace(myRank, role.position, role.position)
+                    // The draft starts from the role's bits, but only the viewer's own are offered:
+                    // a role holding one the viewer lacks can't be saved (every reader drops it).
+                    val bitsHeld = ConcordRoleRules.canGive(myBits, role.permissionBits())
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -173,9 +178,19 @@ fun ConcordRoleEditorDialog(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            if (editable && !bitsHeld) {
+                                Text(
+                                    stringRes(Res.string.concord_role_editor_bits_not_held),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                         if (editable) {
-                            IconButton(onClick = { draft = RoleDraft(id, role.name, role.position, role.permissionBits()) }) {
+                            IconButton(
+                                enabled = bitsHeld,
+                                onClick = { draft = RoleDraft(id, role.name, role.position, role.permissionBits()) },
+                            ) {
                                 SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.concord_role_editor_edit))
                             }
                             IconButton(onClick = { toDelete = id to role }) {

@@ -3076,6 +3076,7 @@
     <string name="concord_role_editor_position_hint">Los números más bajos tienen más rango. La más alta que puedes dar es %1$d.</string>
     <string name="concord_role_editor_position_label">Posición %1$d</string>
     <string name="concord_role_editor_permissions">Permisos</string>
+    <string name="concord_role_editor_bits_not_held">Este rol tiene permisos que tú no tienes, así que no puedes editarlo.</string>
     <string name="concord_perm_manage_roles">Gestionar roles</string>
     <string name="concord_perm_manage_channels">Gestionar canales</string>
     <string name="concord_perm_manage_metadata">Editar los datos de la comunidad</string>

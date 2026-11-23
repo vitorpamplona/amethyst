@@ -4363,6 +4363,7 @@
     <string name="concord_role_editor_position_hint">Lower numbers rank higher. The highest you can give is %1$d.</string>
     <string name="concord_role_editor_position_label">Position %1$d</string>
     <string name="concord_role_editor_permissions">Permissions</string>
+    <string name="concord_role_editor_bits_not_held">This role has permissions you don't hold, so you can't edit it.</string>
     <string name="concord_perm_manage_roles">Manage roles</string>
     <string name="concord_perm_manage_channels">Manage channels</string>
     <string name="concord_perm_manage_metadata">Edit community details</string>

@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordRoleRules
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeException
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
@@ -1783,9 +1785,10 @@ class AccountConcordActions(
     /**
      * Creates ([roleIdHex] null) or edits a legacy CORD-04 role: [name], [position] (1 and up, lower
      * ranks higher) and [permissions]. The fold honors a role edition only from a MANAGE_ROLES
-     * holder who strictly outranks both the role's old and new position, so anything else is
-     * refused here instead of published to be dropped. A Roles v2 community refuses it with
-     * [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
+     * holder who strictly outranks both the role's old and new position, and who holds every
+     * permission the role will carry, so anything else is refused here instead of published to be
+     * dropped. Permissions the editor lacks throw [ConcordNotice.RoleBitsNotHeld]; a Roles v2
+     * community refuses it with [ConcordNotice.RolesV2Unsupported] (thrown by [ConcordModeration]).
      */
     suspend fun defineConcordRole(
         communityId: String,
@@ -1801,6 +1804,10 @@ class AccountConcordActions(
         val state = session.state.value ?: return false
         val existing = roleIdHex?.let { state.roles[it] ?: return false }
         if (!canEditConcordRole(state.authority, existing?.position, position)) return false
+        // The fold drops a role edition that hands out a bit its author does not hold.
+        if (!ConcordRoleRules.canGive(state.authority.effectivePermissions(account.signer.pubKey), permissions)) {
+            throw UserNoticeException(ConcordNotice.RoleBitsNotHeld)
+        }
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES) ?: return false
         val roleId = roleIdHex?.hexToByteArray() ?: RandomInstance.bytes(32)
         val role = (existing ?: RoleEntity()).copy(name = trimmed, position = position, permissions = permissions.toWire(), deleted = false)

@@ -25,7 +25,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 /**
  * What a legacy CORD-04 role editor may write. Every reader drops a role edition whose author does
  * not strictly outrank the role (lower position ranks higher; the owner is 0 and no role may take
- * 0), both where it stood and where it moves to, so an editor offers nothing else.
+ * 0), both where it stood and where it moves to, or that hands out a permission its author does not
+ * hold itself (quartz `AuthorityResolver`'s role gate), so an editor offers nothing else.
  */
 object ConcordRoleRules {
     /** Whether an editor of rank [myRank] may move a role from [oldPosition] (null: a new role) to [newPosition]. */
@@ -34,6 +35,28 @@ object ConcordRoleRules {
         oldPosition: Long?,
         newPosition: Long,
     ): Boolean = newPosition >= 1 && myRank < newPosition && (oldPosition == null || myRank < oldPosition)
+
+    /**
+     * Whether a role may carry [roleBits] when written by an editor holding [myBits]: only bits the
+     * editor holds itself, or the edition would escalate through the role and every reader drops
+     * it. The owner holds every bit. A delete is not judged on bits.
+     */
+    fun canGive(
+        myBits: ConcordPermissions,
+        roleBits: ConcordPermissions,
+    ): Boolean = myBits.hasAll(roleBits)
+
+    /**
+     * The fold's whole rule for a role edition (the role's MANAGE_ROLES and Grant-citation checks
+     * aside): [canPlace] for the positions and [canGive] for the bits it will carry.
+     */
+    fun canWrite(
+        myRank: Long,
+        myBits: ConcordPermissions,
+        oldPosition: Long?,
+        newPosition: Long,
+        roleBits: ConcordPermissions,
+    ): Boolean = canPlace(myRank, oldPosition, newPosition) && canGive(myBits, roleBits)
 
     /** The highest position an editor of rank [myRank] may give a role. */
     fun highestPlaceable(myRank: Long): Long = maxOf(1L, myRank + 1)
