@@ -73,8 +73,9 @@ object ConcordModerationHideSweep {
     ) {
         val note = cache.getNoteIfExists(target) ?: return
         if (!isRumorOf(note, channelId, session)) return
-        val author = note.event?.pubKey ?: return
-        if (!session.isHiddenByModeration(channelId.channelId, target, author)) return
+        val event = note.event ?: return
+        val author = event.pubKey
+        if (!session.isHiddenByModeration(channelId.channelId, target, author, event.kind)) return
         note.detachFromChildren()
         cache.pruner.unlinkAndRemove(note)
         session.markHiddenByModeration(channelId.channelId, target, author)
