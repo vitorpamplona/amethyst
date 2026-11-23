@@ -10481,8 +10481,8 @@
     <string name="marmot_devices_entry_desc">Use your Marmot chats on more than one device</string>
     <string name="marmot_devices_section_switch">On this device</string>
     <string name="marmot_devices_switch_title">Device groups</string>
-    <string name="marmot_devices_switch_desc">Off by default. A change applies the next time Amethyst starts.</string>
-    <string name="marmot_devices_explainer">Device groups link this account's devices, so each one is in your Marmot chats and keeps read markers in step with the others. They work with White Noise's linked devices. To link a device you compare seven emoji on both screens.</string>
+    <string name="marmot_devices_switch_desc">On for accounts you add from this version on. A change applies the next time Amethyst starts.</string>
+    <string name="marmot_devices_explainer">Device groups link this account's devices, so each one is in your Marmot chats, gets their earlier messages, and keeps read markers, pins, mutes and archived chats in step with the others. They work with White Noise's linked devices. To link a device you compare seven emoji on both screens.</string>
     <string name="marmot_devices_history_note">A newly linked device gets your chats and their earlier messages, which the device that adds it to each chat sends it.</string>
     <string name="marmot_devices_restart_on">Device groups turn on the next time Amethyst starts.</string>
     <string name="marmot_devices_restart_off">Device groups turn off the next time Amethyst starts.</string>

@@ -3093,8 +3093,8 @@
     <string name="marmot_devices_entry_desc">Usa tus chats de Marmot en más de un dispositivo</string>
     <string name="marmot_devices_section_switch">En este dispositivo</string>
     <string name="marmot_devices_switch_title">Grupos de dispositivos</string>
-    <string name="marmot_devices_switch_desc">Desactivado por defecto. Un cambio se aplica la próxima vez que se inicie Amethyst.</string>
-    <string name="marmot_devices_explainer">Los grupos de dispositivos vinculan los dispositivos de esta cuenta, para que cada uno esté en tus chats de Marmot y mantenga las marcas de lectura al día con los demás. Funcionan con los dispositivos vinculados de White Noise. Para vincular un dispositivo comparas siete emojis en ambas pantallas.</string>
+    <string name="marmot_devices_switch_desc">Activado para las cuentas que añadas desde esta versión. Un cambio se aplica la próxima vez que se inicie Amethyst.</string>
+    <string name="marmot_devices_explainer">Los grupos de dispositivos vinculan los dispositivos de esta cuenta, para que cada uno esté en tus chats de Marmot, reciba sus mensajes anteriores y mantenga las marcas de lectura, los chats fijados, silenciados y archivados al día con los demás. Funcionan con los dispositivos vinculados de White Noise. Para vincular un dispositivo comparas siete emojis en ambas pantallas.</string>
     <string name="marmot_devices_history_note">Un dispositivo recién vinculado recibe tus chats y sus mensajes anteriores, que le envía el dispositivo que lo añade a cada chat.</string>
     <string name="marmot_devices_restart_on">Los grupos de dispositivos se activarán la próxima vez que se inicie Amethyst.</string>
     <string name="marmot_devices_restart_off">Los grupos de dispositivos se desactivarán la próxima vez que se inicie Amethyst.</string>

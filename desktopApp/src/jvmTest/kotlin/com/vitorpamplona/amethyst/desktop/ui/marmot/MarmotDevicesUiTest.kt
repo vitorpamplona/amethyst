@@ -122,7 +122,7 @@ class MarmotDevicesUiTest {
             }
         }
         compose.onNodeWithText("Link a new device").assertDoesNotExist()
-        compose.onNodeWithText("Off by default. A change applies the next time Amethyst starts.").performClick()
+        compose.onNodeWithText("On for accounts you add from this version on. A change applies the next time Amethyst starts.").performClick()
         compose.waitForIdle()
         assertEquals(true, switched)
     }

@@ -363,7 +363,10 @@ class AccountCacheState(
                 disabled = { !accountSettings.syncedSettings.security.addClientTag.value },
             )
 
-        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }
+        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}")
+        // An account this install never held: device groups start on for it (MarmotDeviceGroupSwitch).
+        val newAccount = !accountDir.exists()
+        accountDir.mkdirs()
 
         val mlsStore =
             try {
@@ -448,7 +451,7 @@ class AccountCacheState(
 
         // Marmot device groups stay off unless this account's switch file exists; their records hold
         // the device tag's signing seed and private KeyPackages, so they are encrypted at rest.
-        val marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir)
+        val marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir, newAccount)
         val marmotLocalBlobs = EncryptedDeviceGroupBlobs(accountDir)
         val marmotDeviceGroupStores =
             if (marmotDeviceGroupSwitch.isEnabled()) {

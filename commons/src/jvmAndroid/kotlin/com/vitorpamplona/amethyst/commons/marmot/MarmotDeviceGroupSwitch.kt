@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
 /**
- * The per-account switch for Marmot device groups, OFF unless its marker file exists:
+ * The per-account switch for Marmot device groups, on while its marker file exists:
  *
  * ```
  * <accountDir>/marmot_device_groups.enabled
@@ -33,13 +33,25 @@ import java.io.File
  *
  * Read once when the account's `MarmotManager` is built, because turning device groups on changes
  * what this device's KeyPackages advertise (`0x800e`/`0x800f`) and which stores it opens: a change
- * takes effect on the next launch. It stays off by default until history deliveries (kind 473)
- * land, since a newly linked device would otherwise get its chats without their past messages.
+ * takes effect on the next launch.
+ *
+ * On by default for an account this install has not held before ([newAccount]: its directory did
+ * not exist yet), which writes the marker once; the user turns it off from the devices screen. An
+ * account an earlier version already held keeps what it had, off unless its user turned it on.
  */
 class MarmotDeviceGroupSwitch(
     accountDir: File,
+    newAccount: Boolean = false,
 ) : DeviceGroupSwitch {
     private val marker = File(accountDir, FILE_NAME)
+
+    init {
+        if (newAccount && !marker.exists()) {
+            val dir = marker.parentFile
+            if (dir != null && !dir.exists() && !dir.mkdirs()) Log.w(TAG) { "could not create ${dir.absolutePath}" }
+            if (!marker.createNewFile() && !marker.exists()) Log.w(TAG) { "could not create ${marker.absolutePath}" }
+        }
+    }
 
     override fun isEnabled(): Boolean = marker.exists()
 
