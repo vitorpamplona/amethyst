@@ -678,7 +678,7 @@ class ClaudeCodeService(
                 launchOptions = launchOptions,
                 kind = kind,
                 forkBefore = forkBefore,
-                publishingIsTheUsers = { agentWorkspaces.of(it) != null },
+                workstreamOf = { agentWorkspaces.of(it) },
                 folderBrief = { agentWorkspaces.of(it)?.brief },
                 folderKnown = folderKnown,
             )

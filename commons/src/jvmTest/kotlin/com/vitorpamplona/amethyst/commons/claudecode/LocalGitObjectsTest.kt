@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.claudecode
 import com.vitorpamplona.quartz.nip34Git.git.GitObjectType
 import com.vitorpamplona.quartz.nip34Git.git.GitObjectWriter
 import kotlinx.coroutines.runBlocking
-import org.junit.Assume.assumeTrue
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -223,113 +222,6 @@ class LocalGitObjectsTest {
         } finally {
             remote.deleteRecursively()
         }
-    }
-
-    @Test
-    fun theGuardPushesBranchesAndSyncsMainButNothingElse() {
-        val origin = Files.createTempDirectory("origin").toFile()
-        val mirror = Files.createTempDirectory("mirror").toFile()
-        val hooks = Files.createTempDirectory("hooks").toFile()
-        try {
-            git("init", "-q", "--bare", origin.absolutePath)
-            git("init", "-q", "--bare", mirror.absolutePath)
-            git("remote", "add", "origin", origin.absolutePath)
-            git("remote", "add", "mirror", mirror.absolutePath)
-            git("push", "-q", "origin", "main")
-            git("push", "-q", "mirror", "main")
-            git("fetch", "-q", "--all")
-            val rules = ClaudeChat.pushGuardEnvironment(emptyMap(), listOf(dir), File(hooks, "push-guard.sh"))
-            // An older git (before 2.54) has no config hooks: the session gets the full block instead.
-            assumeTrue("git has no config hooks", rules.guarded)
-            assertEquals(null, rules.note)
-            val env = rules.environment
-
-            fun asTheSession(command: String): Int {
-                val p =
-                    ProcessBuilder("sh", "-c", command)
-                        .directory(dir)
-                        .apply { environment().forgetInheritedRepository() }
-                        .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
-                        .redirectErrorStream(true)
-                        .apply { environment().putAll(env) }
-                        .start()
-                p.inputStream.readBytes()
-                return p.waitFor()
-            }
-
-            fun originHas(ref: String) = GitWorkspace.git(origin, "rev-parse", "-q", "--verify", ref)?.trim()
-
-            assertEquals(0, asTheSession("git push -q origin HEAD:refs/heads/agent/x"), "a branch must go")
-            assertEquals(0, asTheSession("git push -q -f origin main:refs/heads/agent/x"), "a branch may be rewritten, as on the web")
-            git("tag", "v1")
-            listOf(
-                "git push -q origin v1",
-                "git push -q origin --tags",
-                "git push -q origin :agent/x",
-                "git push -q origin --delete agent/x",
-                // New work on main, not on any other remote.
-                "git push -q origin HEAD:main",
-                "git -C . push -q origin HEAD:refs/heads/main",
-            ).forEach { assertTrue(asTheSession(it) != 0, "pushed with: $it") }
-            git("config", "hook.pre-push.enabled", "false")
-            assertTrue(asTheSession("git push -q origin HEAD:main") != 0, "the repository's config turned the guard off")
-            git("config", "--unset", "hook.pre-push.enabled")
-            assertEquals(null, originHas("refs/tags/v1"))
-            assertEquals(GitWorkspace.git(dir, "rev-parse", "main")?.trim(), originHas("refs/heads/main"))
-            assertNotNull(originHas("refs/heads/agent/x"))
-
-            // A copy of the mirror's main set by hand, not what the mirror has: no sync.
-            git("update-ref", "refs/remotes/mirror/main", "HEAD")
-            assertTrue(asTheSession("git push -q origin HEAD:main") != 0, "a forged mirror ref moved main")
-            // Pushed by URL, main is still the default branch.
-            assertTrue(asTheSession("git push -q ${origin.absolutePath} HEAD:main") != 0, "a push by URL moved main")
-
-            // The mirror moved ahead: main may follow it, and only to that commit.
-            git("push", "-q", "mirror", "HEAD:main")
-            git("fetch", "-q", "mirror")
-            assertEquals(0, asTheSession("git push -q origin mirror/main:refs/heads/main"), "a sync to the mirror's main must go")
-            assertEquals(GitWorkspace.git(dir, "rev-parse", "HEAD")?.trim(), originHas("refs/heads/main"))
-        } finally {
-            origin.deleteRecursively()
-            mirror.deleteRecursively()
-            hooks.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun theGuardProtectsADefaultBranchNotNamedMain() {
-        val origin = Files.createTempDirectory("origin").toFile()
-        val hooks = Files.createTempDirectory("hooks").toFile()
-        try {
-            git("init", "-q", "--bare", "-b", "develop", origin.absolutePath)
-            git("remote", "add", "origin", origin.absolutePath)
-            git("push", "-q", "origin", "main:develop")
-            // No `refs/remotes/origin/HEAD` in the clone: the guard asks the remote.
-            val rules = ClaudeChat.pushGuardEnvironment(emptyMap(), listOf(dir), File(hooks, "push-guard.sh"))
-            assumeTrue("git has no config hooks", rules.guarded)
-            val p =
-                ProcessBuilder("git", "push", "-q", "origin", "HEAD:develop")
-                    .directory(dir)
-                    .apply { environment().forgetInheritedRepository() }
-                    .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
-                    .redirectErrorStream(true)
-                    .apply { environment().putAll(rules.environment) }
-                    .start()
-            p.inputStream.readBytes()
-            assertTrue(p.waitFor() != 0, "new work reached the default branch")
-            assertEquals(GitWorkspace.git(dir, "rev-parse", "main")?.trim(), GitWorkspace.git(origin, "rev-parse", "develop")?.trim())
-        } finally {
-            origin.deleteRecursively()
-            hooks.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun theGuardFallsBackToNoPushWithoutARepositoryToAsk() {
-        val rules = ClaudeChat.pushGuardEnvironment(emptyMap(), emptyList(), File(dir, "unused.sh"))
-        assertEquals(false, rules.guarded)
-        assertNotNull(rules.note)
-        assertEquals("url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf", rules.environment["GIT_CONFIG_KEY_0"])
     }
 
     @Test

@@ -82,8 +82,7 @@ data class AgentWorkspace(
                 repos.forEach { appendLine("- ${it.name}/: ${it.url}, on branch ${it.branch} (from ${it.baseBranch})") }
                 append(
                     "Commit your work on those branches. You may push them and open a pull request when the user asks. " +
-                        "Merging, tags, deleting branches and adding work to the default branch are the user's; " +
-                        "the default branch only moves forward to what another remote already has (a mirror sync).",
+                        "Merging, tags, deleting branches and anything on the default branch are the user's.",
                 )
             }
 
