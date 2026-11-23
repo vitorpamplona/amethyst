@@ -105,6 +105,17 @@ class ChatTranscript {
     @Synchronized
     fun snapshot(): List<ChatItem> = cached ?: items.toList().also { cached = it }
 
+    // Read back from the rows only when they changed, not on every streamed delta.
+    private var cachedTasks: Pair<List<ChatItem>, List<AgentTask>>? = null
+
+    /** The agent's task list as its task tool calls in [snapshot] leave it. */
+    @Synchronized
+    fun tasks(): List<AgentTask> {
+        val rows = snapshot()
+        cachedTasks?.let { (from, tasks) -> if (from === rows) return tasks }
+        return rows.agentTasks().also { cachedTasks = rows to it }
+    }
+
     val size: Int @Synchronized get() = items.size
 
     @Synchronized

@@ -108,6 +108,8 @@ data class ClaudeChatState(
     val cwd: String,
     val title: String?,
     val items: List<ChatItem> = emptyList(),
+    /** The plan the agent keeps with its task tools, read back from [items]. */
+    val tasks: List<AgentTask> = emptyList(),
     /** Text of the reply being written, before its message is complete. */
     val streamingText: String = "",
     val pendingPermissions: List<PermissionRequest> = emptyList(),
@@ -661,7 +663,7 @@ class ClaudeChat internal constructor(
 
     /** Applies [change] and refreshes the rows from the transcript. */
     private fun publish(change: (ClaudeChatState) -> ClaudeChatState) {
-        _state.update { change(it).copy(items = transcript.snapshot()) }
+        _state.update { change(it).copy(items = transcript.snapshot(), tasks = transcript.tasks()) }
     }
 
     companion object {

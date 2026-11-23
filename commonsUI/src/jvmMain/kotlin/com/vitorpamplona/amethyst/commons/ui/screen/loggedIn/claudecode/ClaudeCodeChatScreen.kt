@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
+import com.vitorpamplona.amethyst.commons.claudecode.hasOpenWork
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
@@ -480,6 +481,9 @@ fun ClaudeCodeChatScreen(
                             onDeny = { viewModel.deny(request) },
                         )
                     }
+
+                    // The agent's plan stays in view while there is work left in it.
+                    if (state.tasks.hasOpenWork) AgentTaskList(state.tasks, working = state.isBusy, chatKey = chat.key)
 
                     if (folderGone && !state.isBusy) {
                         // A removed worktree: its history reads, but there is nowhere to continue it.

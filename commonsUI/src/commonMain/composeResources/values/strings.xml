@@ -9642,6 +9642,10 @@
     <string name="claude_code_tool_from_line">from line %1$d</string>
     <string name="claude_code_tool_search_in">%1$s in %2$s</string>
     <string name="claude_code_waiting_approval">Waiting for your approval</string>
+    <string name="claude_code_tasks">Tasks</string>
+    <string name="claude_code_tasks_progress">%1$d of %2$d done</string>
+    <string name="claude_code_tasks_expand">Show tasks</string>
+    <string name="claude_code_tasks_collapse">Hide tasks</string>
     <string name="claude_code_permission_edit">%1$s wants to change %2$s</string>
     <string name="claude_code_permission_create">%1$s wants to create %2$s</string>
     <string name="claude_code_permission_run">%1$s wants to run a command</string>
