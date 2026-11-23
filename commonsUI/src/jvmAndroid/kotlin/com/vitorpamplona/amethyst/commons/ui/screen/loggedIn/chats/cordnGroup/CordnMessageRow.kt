@@ -624,8 +624,10 @@ private fun CordnQuoteActionSheet(
 fun CordnCallRow(
     message: CordnDeliveredMessage,
     label: String,
+    /** The parsed announcement the row already holds (`CordnStreamRows.Display.Call`); null when unsupported. */
+    announcement: CordnCallAnnouncement?,
 ) {
-    val isOpen = remember(message.envelope.id) { CordnCallAnnouncement.parse(message.envelope.kind, message.envelope.tags)?.isOpen == true }
+    val isOpen = announcement?.isOpen == true
     val tint = if (isOpen) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(

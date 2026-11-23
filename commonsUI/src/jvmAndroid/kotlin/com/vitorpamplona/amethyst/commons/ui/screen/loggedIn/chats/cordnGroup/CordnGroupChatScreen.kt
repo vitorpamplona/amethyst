@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnCallAnnouncement
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnStreamRows
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -460,9 +461,11 @@ private fun CordnGroupChat(
                                     UnreadDivider()
                                 }
 
-                                val label = cordnRowLabel(message.envelope, annotations)
-                                if (message.envelope.kind == CordnCallAnnouncement.KIND && label != null) {
-                                    CordnCallRow(message, label)
+                                val display = remember(message.envelope) { CordnStreamRows.display(message.envelope) }
+                                val label = cordnRowLabel(message.envelope, annotations, display)
+                                // A withdrawn call announcement is a deleted message, not "Call started".
+                                if (message.envelope.kind == CordnCallAnnouncement.KIND && label != null && !annotations.isDeleted(message.envelope.id)) {
+                                    CordnCallRow(message, label, (display as? CordnStreamRows.Display.Call)?.announcement)
                                 } else {
                                     CordnMessageRow(
                                         message = message,

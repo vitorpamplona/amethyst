@@ -50,6 +50,7 @@ import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 fun cordnRowLabel(
     envelope: CordnEnvelope,
     annotations: CordnAnnotationIndex,
+    display: CordnStreamRows.Display = remember(envelope) { CordnStreamRows.display(envelope) },
 ): String? {
     // A calendar event's content is its description, often empty; the row names the event, and a
     // cancelled one stays visible as cancelled (calendar-events.md §6).
@@ -60,7 +61,7 @@ fun cordnRowLabel(
         )
     }
 
-    return when (val display = remember(envelope) { CordnStreamRows.display(envelope) }) {
+    return when (display) {
         CordnStreamRows.Display.Regular -> null
         is CordnStreamRows.Display.Call -> cordnCallLine(display.announcement)
         CordnStreamRows.Display.UnsupportedCall -> stringRes(Res.string.cordn_call_unsupported)

@@ -661,16 +661,23 @@ internal fun CordnGroupRoomCompose(
             // preview as "File"). Otherwise the edited text when there is one:
             // showing the original in the inbox while the room shows the edit is
             // the kind of mismatch that reads as a sync bug.
+            // A withdrawn message previews as deleted, never as what it said: the edit index
+            // (contentOf) does not know about deletions.
+            val deleted = annotations.isDeleted(message.envelope.id)
             val text =
-                cordnRowLabel(message.envelope, annotations)
-                    ?: annotations.contentOf(message.envelope.id)
-                    ?: message.envelope.content
+                if (deleted) {
+                    ""
+                } else {
+                    cordnRowLabel(message.envelope, annotations)
+                        ?: annotations.contentOf(message.envelope.id)
+                        ?: message.envelope.content
+                }
             // A voice note or a photo carries no text, so the row used to read
             // "Someone: " and trail off — an attachment looked like an empty
             // message. Name what was sent instead, the way the bubble does.
             val preview =
                 text.takeIf { it.isNotBlank() }
-                    ?: if (annotations.isDeleted(message.envelope.id)) {
+                    ?: if (deleted) {
                         stringRes(Res.string.cordn_preview_deleted)
                     } else {
                         stringRes(attachmentLabelFor(message.envelope.tags))
