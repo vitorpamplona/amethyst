@@ -42,8 +42,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The widths, in dp, the user dragged the side-by-side panes of a wide window to: the docked
- * drawer, the docked notification panel, and the chat list beside an open chat (Messages and every
- * other chat list share it). Null is "never dragged": the layout's own default. The layout clamps
+ * drawer, the docked notification panel, the chat list beside an open chat (Messages and every
+ * other chat list share it), and the Changes panel beside an agent chat. Null is "never dragged": the layout's own default. The layout clamps
  * them to what the window can hold, so these are what the user asked for, not necessarily what is
  * drawn.
  */
@@ -52,6 +52,7 @@ data class PaneWidths(
     val drawer: Float? = null,
     val notifications: Float? = null,
     val chatList: Float? = null,
+    val changesPanel: Float? = null,
 )
 
 /**
@@ -83,10 +84,12 @@ class PaneWidthPreferences(
 
     fun setChatList(width: Float) = widths.update { it.copy(chatList = width) }
 
+    fun setChangesPanel(width: Float) = widths.update { it.copy(changesPanel = width) }
+
     private suspend fun restoreFromDisk() {
         try {
             val prefs = store.data.first()
-            widths.value = PaneWidths(prefs[DRAWER], prefs[NOTIFICATIONS], prefs[CHAT_LIST])
+            widths.value = PaneWidths(prefs[DRAWER], prefs[NOTIFICATIONS], prefs[CHAT_LIST], prefs[CHANGES_PANEL])
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("PaneWidthPrefs") { "Error reading pane widths: ${e.message}" }
@@ -99,6 +102,7 @@ class PaneWidthPreferences(
                 prefs.putOrRemove(DRAWER, value.drawer)
                 prefs.putOrRemove(NOTIFICATIONS, value.notifications)
                 prefs.putOrRemove(CHAT_LIST, value.chatList)
+                prefs.putOrRemove(CHANGES_PANEL, value.changesPanel)
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -118,5 +122,6 @@ class PaneWidthPreferences(
         private val DRAWER = floatPreferencesKey("ui.panes.drawerWidth")
         private val NOTIFICATIONS = floatPreferencesKey("ui.panes.notificationsWidth")
         private val CHAT_LIST = floatPreferencesKey("ui.panes.chatListWidth")
+        private val CHANGES_PANEL = floatPreferencesKey("ui.panes.changesPanelWidth")
     }
 }
