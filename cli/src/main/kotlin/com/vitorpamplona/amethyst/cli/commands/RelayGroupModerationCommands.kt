@@ -254,6 +254,7 @@ object RelayGroupModerationCommands {
                 "dialect" to "buzz",
                 "target" to eventId,
                 "pins" to pins?.map { it.ref },
+                "pins_verified" to (relayKey != null),
                 "published" to ack.values.any { it.accepted },
             ),
         )
@@ -311,6 +312,9 @@ object RelayGroupModerationCommands {
                     "dialect" to if (isBuzz) "buzz" else "nip29",
                     "pins" to pins.map { it.ref },
                     "count" to pins.size,
+                    // False when the relay names no NIP-11 `self`: the list then came from whoever
+                    // signed the newest one, and nothing proves it is the relay's.
+                    "verified" to (relayKey != null),
                 ),
             )
             return 0
@@ -331,7 +335,8 @@ object RelayGroupModerationCommands {
 
     /**
      * The latest relay-signed 39005 in [result]; an empty list only when the relay answered (EOSE)
-     * and had none. A timeout maps to `timeout` (exit 124), any other unanswered read to
+     * and had none. With no [relayKey] any author's list is read, so a caller that reads it must say
+     * it is unverified and one that rewrites the list must refuse (see [pin]). A timeout maps to `timeout` (exit 124), any other unanswered read to
      * `fetch_failed` (exit 1).
      */
     internal fun readPinList(
