@@ -536,6 +536,26 @@ object ConcordActions {
         createdAt: Long,
     ): Event = wrapChat(ConcordDisappearing.timerNotice(authorSigner.pubKey, channelId, epoch, timerSecs, createdAt), channel, authorSigner)
 
+    /**
+     * The `p` tags a Concord message carries for the users it [mentioned]: one each, lowercase,
+     * never the [author] and never one [alreadyTagged] (a reply already credits its parent's author).
+     * A mention is found by its `p`, by Armada and by this app's Notifications alike, so a message
+     * that cites someone without one notifies nobody.
+     */
+    fun mentionTags(
+        mentioned: Collection<HexKey>,
+        author: HexKey,
+        alreadyTagged: Set<HexKey> = emptySet(),
+    ): Array<Array<String>> {
+        val skip = alreadyTagged.mapTo(HashSet()) { it.lowercase() } + author.lowercase()
+        return mentioned
+            .map { it.lowercase() }
+            .distinct()
+            .filter { it !in skip }
+            .map { arrayOf("p", it) }
+            .toTypedArray()
+    }
+
     /** Builds an encrypted-seal channel message wrap to publish on the [channel] plane. */
     suspend fun buildChannelMessage(
         authorSigner: NostrSigner,

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -103,8 +104,12 @@ object ConcordChannelCommands {
                 ConcordActions.currentChannelPlane(ConcordCommands.entryFor(sc), state, channelId)
                     ?: return Output.error("no_channel_key", "channel '$channelRef' is not folded, or is private and this account holds no key for it (CORD-03 §1)")
             val channel = plane.key
+            // The composer's tagger, as the app's send runs it: a cited npub becomes a `nostr:`
+            // reference and a `p` tag, which is how every Concord client finds a mention.
+            val tagged = OneShotNoteCache(NoteSupport.access(ctx)).tag(text)
+            val mentions = ConcordActions.mentionTags(tagged.mentions.map { it.pubKey }, ctx.signer.pubKey)
             // CORD-08 §2: the folded timer rides inside the signed rumor, and on the wrap for relays.
-            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now(), timerSecs = state.metadata?.messageExpirationSecs())
+            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, tagged.message, TimeUtils.now(), mentions, timerSecs = state.metadata?.messageExpirationSecs())
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
