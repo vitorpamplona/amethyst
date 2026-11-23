@@ -30,7 +30,7 @@ import com.vitorpamplona.agents.CommandGuard
  * state, and turning the push guard ([PushGuard]) off.
  *
  * It parses the command line as a shell would: chains, pipes, subshells, `$(…)` and backquotes
- * (in plain or double-quoted text, not single-quoted), here-documents (their text is data; a
+ * (in plain or double-quoted text, not single-quoted or `$'…'`), here-strings, here-documents (their text is data; a
  * substitution in an unquoted one runs), `sh -c` scripts, wrappers (`env`, `command`,
  * `timeout`), leading variable assignments and full paths. It is a check on what the agent
  * types, not a sandbox: a script file it wrote, an alias or a program of its own still runs
@@ -361,7 +361,17 @@ object SessionCommandGuard : CommandGuard {
                         inWord = true
                     }
                     c == '#' && !inWord -> while (i < s.length && s[i] != '\n') i++
-                    s.startsWith("<<", i) && !s.startsWith("<<<", i) -> {
+                    s.startsWith("$'", i) -> {
+                        i += 2
+                        readAnsiCQuoted(word)
+                        inWord = true
+                    }
+                    // A here-string: the next word, read as any other.
+                    s.startsWith("<<<", i) -> {
+                        endWord()
+                        i += 3
+                    }
+                    s.startsWith("<<", i) -> {
                         endWord()
                         i += 2
                         readHeredocStart()
@@ -416,6 +426,27 @@ object SessionCommandGuard : CommandGuard {
                         i++
                         parseList('`')
                         word.append("``")
+                    }
+                    else -> {
+                        word.append(c)
+                        i++
+                    }
+                }
+            }
+        }
+
+        /** `$'…'`: backslash escapes, `\'` among them, and no substitution inside. */
+        private fun readAnsiCQuoted(word: StringBuilder) {
+            while (i < s.length) {
+                val c = s[i]
+                when {
+                    c == '\'' -> {
+                        i++
+                        return
+                    }
+                    c == '\\' && i + 1 < s.length -> {
+                        word.append(s[i + 1])
+                        i += 2
                     }
                     else -> {
                         word.append(c)

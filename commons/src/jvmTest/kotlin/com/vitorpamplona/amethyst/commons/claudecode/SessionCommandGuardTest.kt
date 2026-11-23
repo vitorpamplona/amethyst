@@ -128,6 +128,12 @@ class SessionCommandGuardTest {
             "git commit -m \"$(gh pr merge 1)\"",
             "(cd x && gh pr merge 1)",
             "cat <<EOF\n$(gh pr merge 1)\nEOF",
+            // A here-string is one word, not a here-document swallowing the lines after it.
+            "grep x <<< \"\$v\"\ngh pr merge 1",
+            "grep x <<< \"$(gh pr merge 1)\"",
+            // In $'…' a \' doesn't end the quote.
+            "printf $'a\\'b\\n'; gh pr merge 1",
+            "echo $'it\\'s'; gh pr merge 1",
         )
 
     @Test
@@ -139,6 +145,9 @@ class SessionCommandGuardTest {
             "gh pr create --title x --body \"$(cat <<\"EOF\"\nthen $(gh pr merge 1)\nEOF\n)\"",
             "cat > notes.md <<EOF\n# Notes\ngh pr merge 1\ngit push --no-verify\nEOF",
             "cat > notes.md <<-'EOF'\n\tgh pr merge 1\n\tEOF\necho done",
+            "grep x <<< \"\$v\"",
+            "echo $'it\\'s'",
+            "echo $'no $(gh pr merge 1) here'",
         )
 
     @Test
