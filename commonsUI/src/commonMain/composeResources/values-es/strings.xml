@@ -4800,6 +4800,21 @@
     <string name="emoji_pack_empty_title">Este paquete está vacío</string>
     <string name="emoji_pack_empty_body">Agrega emojis uno por uno, o trae un conjunto entero de imágenes o un .zip de una sola vez.</string>
     <string name="cordn_groups_title">Grupos Cordn</string>
+    <string name="cordn_calendar_cancelled">Cancelado</string>
+    <plurals name="cordn_calendar_going">
+        <item quantity="one">%1$d asistirá</item>
+        <item quantity="other">%1$d asistirán</item>
+    </plurals>
+    <plurals name="cordn_calendar_maybe">
+        <item quantity="one">%1$d quizás</item>
+        <item quantity="other">%1$d quizás</item>
+    </plurals>
+    <plurals name="cordn_calendar_declined">
+        <item quantity="one">%1$d no puede ir</item>
+        <item quantity="other">%1$d no pueden ir</item>
+    </plurals>
+    <string name="cordn_poll_closes">Cierra %1$s</string>
+    <string name="cordn_poll_closed">Cerrada</string>
     <string name="marmot_retention_title">Mensajes temporales</string>
     <string name="marmot_retention_off">Desactivado</string>
     <string name="marmot_retention_1h">1 hora</string>

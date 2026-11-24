@@ -65,6 +65,20 @@ object CliJson {
     /** A JSON text as a tree, for embedding parsed JSON (an event, a profile's content) in a result. */
     fun parse(json: String): JsonElement = Json.parseToJsonElement(json)
 
+    /**
+     * A tag list given on the command line (`[["option","0","Pizza"],["polltype","singlechoice"]]`),
+     * as an event's tags. Throws [IllegalArgumentException] on anything else.
+     */
+    fun parseTagArray(json: String): Array<Array<String>> {
+        val root = runCatching { Json.parseToJsonElement(json) }.getOrNull() as? JsonArray ?: throw IllegalArgumentException("not a JSON array")
+        return root
+            .map { tag ->
+                (tag as? JsonArray ?: throw IllegalArgumentException("a tag is not an array: $tag"))
+                    .map { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: throw IllegalArgumentException("a tag value is not a string: $it") }
+                    .toTypedArray()
+            }.toTypedArray()
+    }
+
     /** [value] as one line of JSON. */
     fun encode(value: Any?): String = output.encodeToString(JsonElement.serializer(), toJsonElement(value))
 

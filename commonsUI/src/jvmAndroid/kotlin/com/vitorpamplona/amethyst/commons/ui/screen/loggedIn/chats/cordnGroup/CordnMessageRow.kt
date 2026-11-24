@@ -37,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -120,12 +121,16 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnMentions
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCustomEmoji
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -175,6 +180,10 @@ fun CordnMessageRow(
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
     onReact: (String) -> Unit,
+    /** Casts the reader's whole selection on this poll. */
+    onVote: (List<String>) -> Unit = {},
+    /** Answers this calendar event's RSVP; null offers no answer. */
+    onRsvp: ((CordnCalendar.RsvpStatus) -> Unit)? = null,
 ) {
     val isMine = message.envelope.pubKey == me
     val isPinned = annotations.isPinned(message.envelope.id)
@@ -195,7 +204,9 @@ fun CordnMessageRow(
     // a 48sp emoji tripled the height of a one-line-per-message layout. Decided here, before
     // ChatBubbleLayout draws the row, so it reads the setting rather than the layout's local.
     val jumboAllowed = chatJumboEmojiAllowed()
-    val jumboCount = remember(text, jumboAllowed) { if (text != null && jumboAllowed) jumboEmojiCount(text) else 0 }
+    // A poll or a calendar event draws a card, never a bare emoji, whatever its text is.
+    val isCard = message.envelope.kind == CordnMessageKinds.POLL || CordnMessageKinds.isCalendarEvent(message.envelope.kind)
+    val jumboCount = remember(text, jumboAllowed, isCard) { if (text != null && jumboAllowed && !isCard) jumboEmojiCount(text) else 0 }
 
     val mentionTint = MaterialTheme.colorScheme.primary.copy(alpha = MENTION_TINT_ALPHA)
 
@@ -252,7 +263,7 @@ fun CordnMessageRow(
                 if (reactions.isEmpty()) {
                     null
                 } else {
-                    { CordnReactionChips(reactions, reactionEmoji, me, accountViewModel, nav, onReact) }
+                    { CordnReactionChips(reactions, reactionEmoji, annotations, room, me, accountViewModel, nav, onReact) }
                 },
             // Mirrors chatFooterHasMeta: the footer earns its row on the last message
             // of a burst (for the time) or on any message carrying a marker of its own.
@@ -292,6 +303,8 @@ fun CordnMessageRow(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onScrollToMessage = onScrollToMessage,
+                onVote = onVote,
+                onRsvp = onRsvp,
             )
         }
     }
@@ -315,6 +328,8 @@ private fun CordnBubbleContents(
     accountViewModel: AccountViewModel,
     nav: INav,
     onScrollToMessage: (HexKey) -> Unit,
+    onVote: (List<String>) -> Unit,
+    onRsvp: ((CordnCalendar.RsvpStatus) -> Unit)?,
 ) {
     val thread = remember(message.envelope.id) { CordnMessageReferences.thread(message.envelope.tags) }
     val parent = thread?.let { annotations.byId[it.parentId] }
@@ -337,6 +352,24 @@ private fun CordnBubbleContents(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+        // A poll is its card: the question, the options, the tally and the vote (CordnPolls).
+        message.envelope.kind == CordnMessageKinds.POLL -> CordnPollCard(message, annotations, me, onVote)
+
+        // A calendar event the fold accepts is its card, with its RSVPs; one that fails
+        // validation keeps the label text, as cordn-web's "unsupported event" does.
+        CordnMessageKinds.isCalendarEvent(message.envelope.kind) && !annotations.isUnsupportedEvent(message.envelope.id) -> {
+            val calendar by room.calendar.collectAsStateWithLifecycle()
+            CordnCalendarCard(
+                message = message,
+                annotations = annotations,
+                attendees = calendar.attendees[message.envelope.id],
+                me = me,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onRsvp = onRsvp,
+            )
+        }
 
         // Emoji-only messages render bare and large, over a transparent bubble.
         jumboCount > 0 -> Text(text = text.trim(), fontSize = jumboEmojiFontSize(jumboCount))
@@ -419,15 +452,18 @@ private fun CordnAuthorLine(
 private fun CordnReactionChips(
     reactions: Map<String, Set<HexKey>>,
     customEmoji: Map<String, CordnCustomEmoji>,
+    annotations: CordnAnnotationIndex,
+    room: CordnGroupChatroom,
     me: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
     onReact: (String) -> Unit,
 ) {
+    val glyphs = rememberCordnReactionGlyphs(customEmoji, annotations, room, accountViewModel)
     val chips =
-        remember(reactions, customEmoji, me) {
+        remember(reactions, glyphs, me) {
             reactions
-                .map { (emoji, who) -> ReactionChip(emoji, who.size, me in who, reactionGlyph(emoji, customEmoji)) }
+                .map { (emoji, who) -> ReactionChip(emoji, who.size, me in who, glyphs[emoji]?.glyph ?: emoji) }
                 .sortedByDescending { it.count }
         }
 
@@ -436,7 +472,7 @@ private fun CordnReactionChips(
     if (showWho) {
         CordnReactionDetailSheet(
             reactions = reactions,
-            customEmoji = customEmoji,
+            glyphs = glyphs,
             accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = { showWho = false },
@@ -447,9 +483,10 @@ private fun CordnReactionChips(
         chips.forEach { chip ->
             ReactionChipView(
                 chip = chip,
-                // The glyph, not the key: a custom emoji's `:name:url` is what the send path needs
-                // to send the same picture again.
-                onClick = { onReact(chip.glyph) },
+                // A public custom emoji goes again as its `:name:url`, which the send path turns
+                // into `:name:` plus its `emoji` tag; an encrypted one as its bare `:name:`, which
+                // joins the same chip and keeps the picture the first reaction carried.
+                onClick = { onReact(glyphs[chip.type]?.sendAs ?: chip.type) },
                 // Long press opens who reacted, as the DM strip does.
                 onLongClick = { showWho = true },
             )
@@ -457,16 +494,71 @@ private fun CordnReactionChips(
     }
 }
 
+/** What a chip draws for a custom-emoji reaction, and what tapping it sends. */
+private class CordnReactionGlyph(
+    /** The app's `:name:url` form, which a chip renders as the picture. */
+    val glyph: String,
+    val sendAs: String,
+)
+
 /**
- * What a reaction chip draws for [reaction]: a custom emoji (`:name:` content with an `emoji` tag,
- * CordnAnnotationIndex.customEmojiOf) as the app's `:name:url` form, which the chip renders as the
- * picture; anything else as itself. An `emoji-media` picture is encrypted into the group and has
- * no public URL, so it stays the `:name:` text.
+ * The pictures of a message's custom-emoji reactions (CordnAnnotationIndex.customEmojiOf), keyed
+ * by the reaction's `:name:` content.
+ *
+ * A NIP-30 `emoji` is a public URL and draws as it is. An `emoji-media` picture is encrypted into
+ * the group (`encrypted-media.md`, the same cipher as an attachment) under the media key of the
+ * epoch that carried the reaction, so its blob URL is registered with that key, exactly as
+ * [CordnAttachment] registers an attachment, and the download is decrypted in flight. Until it
+ * could be, a chip said `:party:` where cordn-web showed the picture.
  */
-private fun reactionGlyph(
-    reaction: String,
+@Composable
+private fun rememberCordnReactionGlyphs(
     customEmoji: Map<String, CordnCustomEmoji>,
-): String = customEmoji[reaction]?.url?.let { ":${customEmoji.getValue(reaction).name}:$it" } ?: reaction
+    annotations: CordnAnnotationIndex,
+    room: CordnGroupChatroom,
+    accountViewModel: AccountViewModel,
+): Map<String, CordnReactionGlyph> {
+    // Pure: which picture each chip draws, and the key that opens each encrypted one. The carrier
+    // comes from the room's map, built once per update, not from a scan of every message per card.
+    val resolved =
+        remember(customEmoji, annotations) {
+            val manager =
+                accountViewModel.account.cordnRuntime
+                    ?.sessionOrNull(room.coordinatorPubKey)
+                    ?.manager
+            val keys = mutableListOf<Pair<CordnMediaAttachment, ByteArray>>()
+            val glyphs =
+                customEmoji
+                    .mapNotNull { (reaction, emoji) ->
+                        val url = emoji.url
+                        val media = emoji.media
+                        when {
+                            url != null -> reaction to CordnReactionGlyph(":${emoji.name}:$url", ":${emoji.name}:$url")
+                            media != null -> {
+                                // The reaction that carried this picture: its epoch's key opens it.
+                                val carrier = room.reactionCarrierOf(media)
+                                val key = carrier?.let { manager?.mediaKeyFor(room.gid, it) ?: it.mediaKey } ?: return@mapNotNull null
+                                keys += media to key
+                                reaction to CordnReactionGlyph(":${emoji.name}:${media.url}", reaction)
+                            }
+                            else -> null
+                        }
+                    }.toMap()
+            ResolvedGlyphs(glyphs, keys)
+        }
+    // The keys are handed to the image loader after the composition commits, outside remember.
+    SideEffect {
+        resolved.keys.forEach { (media, key) ->
+            accountViewModel.account.encryptionKeyCache.add(media.url, CordnMediaCipher(key, media), media.mimeType)
+        }
+    }
+    return resolved.glyphs
+}
+
+private class ResolvedGlyphs(
+    val glyphs: Map<String, CordnReactionGlyph>,
+    val keys: List<Pair<CordnMediaAttachment, ByteArray>>,
+)
 
 /**
  * Who reacted, and with what.
@@ -479,7 +571,7 @@ private fun reactionGlyph(
 @Composable
 private fun CordnReactionDetailSheet(
     reactions: Map<String, Set<HexKey>>,
-    customEmoji: Map<String, CordnCustomEmoji>,
+    glyphs: Map<String, CordnReactionGlyph>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
@@ -504,7 +596,7 @@ private fun CordnReactionDetailSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    ChipReactionGlyph(reactionGlyph(emoji, customEmoji))
+                    ChipReactionGlyph(glyphs[emoji]?.glyph ?: emoji)
                     Text(
                         text = who.size.toString(),
                         style = MaterialTheme.typography.labelMedium,
