@@ -237,6 +237,26 @@ object ConcordModeration {
     }
 
     /**
+     * The 1-based slot among the other live Roles ([rankKeyFor]) that a fold [position] asks for.
+     *
+     * A v2 fold numbers Roles densely over every marked edition's rank key, superseded editions
+     * and Tenures included (CORD-04 §3, `RankKey.denseRanks`), so the live positions have gaps
+     * (1, 3, 4, …) and are no index into the live keys. A role moving down from [currentPosition]
+     * goes below every other Role the fold places at or above [position], taking the place of the
+     * one it lands on; a new role, or one moving up, goes above every Role at [position] or below.
+     */
+    fun liveSlotOf(
+        position: Long,
+        currentPosition: Long?,
+        othersPositions: List<Long?>,
+    ): Long {
+        val known = othersPositions.filterNotNull().distinct()
+        val movingDown = currentPosition != null && currentPosition < position
+        val above = if (movingDown) known.count { it <= position } else known.count { it < position }
+        return above + 1L
+    }
+
+    /**
      * Writes [role] as a Roles v2 Role (vsk 13, CORD-04 §2): `role_id`, `name`, a `rank` key placed
      * by [RoleEntity.position] among the live Roles ([rankKeyFor]), and `permissions`, over whatever
      * else the current head carries; a deletion carries `deleted` alone.
@@ -258,12 +278,23 @@ object ConcordModeration {
             if (role.deleted) {
                 JsonObject(mapOf("role_id" to JsonPrimitive(id), "deleted" to JsonPrimitive(true)))
             } else {
-                val authority = ConcordCommunityState.fold(current, communityId, owner).authority
-                val others = rankedRoleKeys(current, communityId, owner, id)
+                val folded = ConcordCommunityState.fold(current, communityId, owner)
+                val authority = folded.authority
+                val live = rankedRoleKeys(current, communityId, owner, except = "")
+                val others = live.filter { it.first != id }
+                val currentRank = live.firstOrNull { it.first == id }?.second
                 val mine = authority.rolesOf(actor.pubKey)
                 val actorKey = if (authority.isOwner(actor.pubKey)) null else others.filter { it.first in mine }.minOfOrNull { it.second }
                 require(authority.isOwner(actor.pubKey) || actorKey != null) { "only the owner or a role holder can place a Roles v2 role" }
-                val rank = rankKeyFor(role.position, others, actorKey) ?: error("no rank key fits at position ${role.position}")
+                val currentPosition = folded.roles[id]?.position
+                val rank =
+                    if (currentRank != null && currentPosition == role.position && (actorKey == null || currentRank > actorKey)) {
+                        // The position the editor showed, unchanged: the role keeps its key, and its place.
+                        currentRank
+                    } else {
+                        val slot = liveSlotOf(role.position, currentPosition, others.map { folded.roles[it.first]?.position })
+                        rankKeyFor(slot, others, actorKey) ?: error("no rank key fits at position ${role.position}")
+                    }
                 val previous =
                     head?.content?.let {
                         try {
