@@ -371,6 +371,9 @@ enum class ToolKind {
 
     /** Keeping the agent's own task list: shown as the task card, not as rows of the chat. */
     PLAN,
+
+    /** Questions the agent asked the user: each on a row of its own, with the answers. */
+    QUESTION,
     OTHER,
     ;
 
@@ -395,6 +398,8 @@ enum class ToolKind {
                 "WebFetch", "WebSearch" -> WEB
                 "Task", "Agent", "Workflow" -> AGENT
                 "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TodoWrite" -> PLAN
+                // Claude Code's, and the row Codex's client keeps for its own.
+                "AskUserQuestion", "request_user_input" -> QUESTION
                 else -> OTHER
             }
     }
@@ -402,8 +407,8 @@ enum class ToolKind {
 
 /**
  * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
- * its own row, so a turn that runs one command still shows it. Edits are never folded: what a
- * turn changed is what the user reads it for, so each edit keeps its own row. Calls that keep the
+ * its own row, so a turn that runs one command still shows it. Edits and questions are never
+ * folded: what a turn changed, and what the user was asked, is what the chat is read for. Calls that keep the
  * agent's task list are left out, unless refused: the task card shows what they did.
  */
 fun List<ChatItem>.toChatRows(): List<ChatRow> {
@@ -421,7 +426,7 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
     forEach { item ->
         // A refused one stays: it did nothing to the card, and the user should see that it failed.
         if (item is ChatItem.ToolCall && !item.isError && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
-        if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.EDIT) {
+        if (item is ChatItem.ToolCall && (ToolKind.of(item.name) == ToolKind.EDIT || ToolKind.of(item.name) == ToolKind.QUESTION)) {
             flush()
             rows.add(ChatRow.Single(item))
         } else if (item is ChatItem.ToolCall) {

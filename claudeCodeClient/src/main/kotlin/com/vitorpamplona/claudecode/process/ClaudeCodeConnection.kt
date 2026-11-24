@@ -35,6 +35,7 @@ import com.vitorpamplona.claudecode.protocol.ClaudeEvents
 import com.vitorpamplona.claudecode.protocol.ClaudeInfo
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.ClaudeQuestions
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -80,6 +81,11 @@ class ClaudeCodeConnection(
     private val openPrompts = ConcurrentHashMap<String, PermissionRequest>()
     private val ids = AtomicLong()
 
+    /** What the CLI said it supports in its last `init` (`capabilities`). */
+    @Volatile
+    var capabilities: Set<String> = emptySet()
+        private set
+
     /** Every message, once. Collect it, or [events], from one place. */
     val messages: Flow<ClaudeMessage> = output.receiveAsFlow()
 
@@ -109,6 +115,7 @@ class ClaudeCodeConnection(
 
     private suspend fun handle(message: ClaudeMessage) {
         when (message) {
+            is ClaudeMessage.Init -> capabilities = message.capabilities.toSet()
             is ClaudeMessage.ControlResponse -> pending.remove(message.requestId)?.complete(message)
             is ClaudeMessage.ControlCancel -> openPrompts.remove(message.requestId)
             is ClaudeMessage.ControlRequest -> {
@@ -181,7 +188,7 @@ class ClaudeCodeConnection(
         decision: PermissionDecision,
     ) {
         openPrompts.remove(request.requestId)
-        write(ClaudeInput.permissionResponse(request, decision))
+        write(ClaudeInput.permissionResponse(request, decision, unansweredNotes = ClaudeQuestions.UNANSWERED_CAPABILITY in capabilities))
     }
 
     /** Stops the running turn. */

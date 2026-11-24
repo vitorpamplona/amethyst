@@ -43,6 +43,8 @@ sealed interface ClaudeMessage {
         val tools: List<String>,
         val claudeCodeVersion: String?,
         override val raw: JsonObject,
+        /** Protocol features this CLI supports (`ask_user_question_unanswered_v1`, ...). */
+        val capabilities: List<String> = emptyList(),
     ) : ClaudeMessage
 
     /** `session_state_changed`: whether the session is idle, running or waiting on an answer. */
@@ -147,8 +149,8 @@ sealed interface ClaudeMessage {
         val request: JsonObject,
         override val raw: JsonObject,
     ) : ClaudeMessage {
-        /** Set when this is a permission prompt (`can_use_tool`). */
-        val permission: PermissionRequest? get() = if (subtype == "can_use_tool") ClaudePermissions.request(requestId, request) else null
+        /** Set when this is a permission prompt (`can_use_tool`). Read once: the connection and the chat's events both ask. */
+        val permission: PermissionRequest? by lazy { if (subtype == "can_use_tool") ClaudePermissions.request(requestId, request) else null }
     }
 
     /** The answer to a control request the host sent. */
@@ -202,6 +204,7 @@ sealed interface ClaudeMessage {
                                 tools = obj.strings("tools"),
                                 claudeCodeVersion = obj.string("claude_code_version"),
                                 raw = obj,
+                                capabilities = obj.strings("capabilities"),
                             )
                         "session_state_changed" -> SessionState(sessionId, obj.string("state") ?: "", obj)
                         else -> System(subtype, sessionId, obj)
