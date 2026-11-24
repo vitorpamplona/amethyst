@@ -44,7 +44,7 @@ class ConcordChannelDissolvedTest {
         eid: String,
         content: String,
         author: String = owner,
-    ) = ControlEdition(kind, eid.hexToByteArray(), 0, null, null, content, author, "r-$eid", 0)
+    ) = ControlEdition(kind, eid.hexToByteArray(), 1, null, null, content, author, "r-$eid", 0)
 
     // The tombstone lives on its own plane (CORD-02 §9); the session sets the flag from there.
     private fun state(dissolved: Boolean): ConcordCommunityState =

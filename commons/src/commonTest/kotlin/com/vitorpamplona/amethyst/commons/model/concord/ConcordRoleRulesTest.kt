@@ -54,7 +54,7 @@ class ConcordRoleRulesTest {
         kind: ControlEntityKind,
         eid: String,
         content: String,
-    ) = ControlEdition(kind, eid.hexToByteArray(), 0, null, null, content, owner, "r-$eid", 0)
+    ) = ControlEdition(kind, eid.hexToByteArray(), 1, null, null, content, owner, "r-$eid", 0)
 
     private fun role(
         id: String,
