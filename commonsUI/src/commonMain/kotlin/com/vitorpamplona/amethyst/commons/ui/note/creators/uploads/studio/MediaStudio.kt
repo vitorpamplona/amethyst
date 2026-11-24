@@ -83,6 +83,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -106,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_suggested
 import com.vitorpamplona.amethyst.commons.resources.media_studio_caption_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_compare_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_gif_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_h265
 import com.vitorpamplona.amethyst.commons.resources.media_studio_h265_description
@@ -351,19 +353,20 @@ fun MediaStudio(
                     }
                 }
                 if (canTrim) rememberVideoDuration(current, uploader)
+                // One file and a Cancel in the corner: removing it is the same as cancelling, so
+                // only a batch (or a reopened file, which has no Cancel) gets its own remove.
+                val removable = items.size > 1 || !canCancel
                 if (tool == StudioTool.TRIM) {
                     StudioTrimStage(current, uploader, trimSession)
                 } else if (tool == StudioTool.CROP) {
-                    StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
+                    // The frame's top corners would sit under the remove button: the picture starts below it.
+                    StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading, topClearance = if (removable) REMOVE_BUTTON_BOTTOM else 0.dp)
                 } else {
-                    // One file and a Cancel in the corner: removing it is the same as cancelling, so
-                    // only a batch (or a reopened file, which has no Cancel) gets its own remove.
-                    val removable = items.size > 1 || !canCancel
                     StudioPreview(current, previews, cropped, uploader, holdingOriginal, badgeEndInset = if (removable) REMOVE_BUTTON_INSET else 0.dp)
-                    if (removable) {
-                        // The touch target overhangs the circle, so it sits closer to the corner than the badges.
-                        RemoveFileButton(enabled = !isUploading, onClick = { onRemove(current) }, modifier = Modifier.align(Alignment.TopEnd).padding(STAGE_OVERLAY_PADDING - REMOVE_BUTTON_OVERHANG))
-                    }
+                }
+                if (removable) {
+                    // The touch target overhangs the circle, so it sits closer to the corner than the badges.
+                    RemoveFileButton(enabled = !isUploading, onClick = { onRemove(current) }, modifier = Modifier.align(Alignment.TopEnd).padding(STAGE_OVERLAY_PADDING - REMOVE_BUTTON_OVERHANG))
                 }
                 UploadOverlay(current)
             }
@@ -586,6 +589,7 @@ private fun CompressedImagePreview(
     var holding by remember(item) { mutableStateOf(false) }
     val showOriginal = holding || forceOriginal || preview == null
     val zoomState = rememberZoomState()
+    val compareLabel = stringRes(Res.string.media_studio_compare_original)
 
     // Pan limits follow the picture, not the letterboxed screen around it.
     LaunchedEffect(original) {
@@ -605,8 +609,19 @@ private fun CompressedImagePreview(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .then(if (preview != null) Modifier.holdToShowOriginal { holding = it } else Modifier)
-                    .zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+                    .then(
+                        if (preview != null) {
+                            // A screen reader can't hold a finger on the picture: its long-press action flips instead.
+                            Modifier.holdToShowOriginal { holding = it }.semantics {
+                                onLongClick(compareLabel) {
+                                    holding = !holding
+                                    true
+                                }
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
         )
 
         val stats = if (showOriginal) original else preview.compressed
@@ -619,7 +634,7 @@ private fun CompressedImagePreview(
                     stats.bytes?.let { formatFileSize(it) },
                 )
             // Vertically centred on the remove button's row, which sits at the same top padding.
-            MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(start = STAGE_OVERLAY_PADDING, top = STAGE_OVERLAY_PADDING + 6.dp))
+            MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(start = STAGE_OVERLAY_PADDING, top = STAGE_PILL_TOP))
         }
 
         if (loading) WorkingBadge(Modifier.align(Alignment.TopEnd).padding(top = STAGE_OVERLAY_PADDING, end = STAGE_OVERLAY_PADDING + badgeEndInset))
@@ -649,8 +664,14 @@ private suspend fun AwaitPointerEventScope.awaitReleaseOrMove(down: PointerInput
     }
 }
 
-private val STAGE_OVERLAY_PADDING = 12.dp
+internal val STAGE_OVERLAY_PADDING = 12.dp
 private val REMOVE_BUTTON_SIZE = 32.dp
+
+/** A pill's top on the stage (a 22 dp line), centred on the remove button's circle. */
+internal val STAGE_PILL_TOP = STAGE_OVERLAY_PADDING + 5.dp
+
+/** Where the remove button's circle ends, from the stage's top. */
+private val REMOVE_BUTTON_BOTTOM = STAGE_OVERLAY_PADDING + REMOVE_BUTTON_SIZE
 
 /** How far the remove button's 48 dp touch target reaches past its circle on each side. */
 private val REMOVE_BUTTON_OVERHANG = (48.dp - REMOVE_BUTTON_SIZE) / 2

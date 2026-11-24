@@ -10356,6 +10356,7 @@
     <string name="nip_catalog_empty">No NIPs match your search.</string>
     <string name="media_studio_add">Add</string>
     <string name="media_studio_position">%1$d of %2$d</string>
+    <string name="media_studio_compare_original">Compare with the original</string>
     <string name="media_studio_tool_quality">Quality</string>
     <string name="media_studio_tool_alt">Alt text</string>
     <string name="media_studio_tool_privacy">Privacy</string>
