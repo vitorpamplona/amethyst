@@ -10048,7 +10048,6 @@
     <string name="nip_catalog_empty">Geen NIPs komen overeen met je zoekopdracht.</string>
     <string name="media_studio_add">Toevoegen</string>
     <string name="media_studio_position">%1$d van %2$d</string>
-    <string name="media_studio_hold_original">Vasthouden voor origineel</string>
     <string name="media_studio_tool_quality">Kwaliteit</string>
     <string name="media_studio_tool_alt">Alt-tekst</string>
     <string name="media_studio_tool_privacy">Privacy</string>

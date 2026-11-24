@@ -9760,7 +9760,6 @@
     <string name="nip_catalog_empty">検索に一致する NIP はありません。</string>
     <string name="media_studio_add">追加</string>
     <string name="media_studio_position">%2$d 件中 %1$d 件目</string>
-    <string name="media_studio_hold_original">長押しでオリジナルを表示</string>
     <string name="media_studio_tool_quality">画質</string>
     <string name="media_studio_tool_alt">代替テキスト</string>
     <string name="media_studio_tool_privacy">プライバシー</string>

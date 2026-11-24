@@ -10132,7 +10132,6 @@
     <string name="nip_catalog_empty">Aucun NIP ne correspond à votre recherche.</string>
     <string name="media_studio_add">Ajouter</string>
     <string name="media_studio_position">%1$d sur %2$d</string>
-    <string name="media_studio_hold_original">Maintenir pour l'original</string>
     <string name="media_studio_tool_quality">Qualité</string>
     <string name="media_studio_tool_alt">Texte alternatif</string>
     <string name="media_studio_tool_privacy">Confidentialité</string>

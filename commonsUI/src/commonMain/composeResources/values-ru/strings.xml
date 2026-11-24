@@ -10876,7 +10876,6 @@
     <string name="nip_catalog_empty">Нет NIP, подходящих под запрос.</string>
     <string name="media_studio_add">Добавить</string>
     <string name="media_studio_position">%1$d из %2$d</string>
-    <string name="media_studio_hold_original">Удерживайте для оригинала</string>
     <string name="media_studio_tool_quality">Качество</string>
     <string name="media_studio_tool_alt">Альт-текст</string>
     <string name="media_studio_tool_privacy">Приватность</string>
