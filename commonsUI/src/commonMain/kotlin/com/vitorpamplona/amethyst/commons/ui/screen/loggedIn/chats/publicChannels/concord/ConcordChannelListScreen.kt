@@ -433,7 +433,8 @@ fun ConcordChannelListScreen(
                                     minting = true
                                     scope.launch {
                                         try {
-                                            inviteLink = account.concord.mintConcordInvite(communityId)
+                                            // Reports why when no link comes back, and never throws past cancellation.
+                                            inviteLink = accountViewModel.mintConcordInvite(communityId)
                                         } finally {
                                             // Always clear the flag — a thrown mint would otherwise leave the
                                             // item disabled until the screen is recreated.

@@ -5242,6 +5242,7 @@
     <string name="concord_invite_failed_revoked">Este enlace de invitación fue revocado y ya no se puede usar. Pide uno nuevo.</string>
     <string name="concord_invite_links_action">Enlaces de invitación…</string>
     <string name="concord_invite_links_title">Enlaces de invitación</string>
+    <string name="concord_invite_mint_failed">No se pudo crear el enlace de invitación. Puede que no tengas permiso para invitar a esta comunidad o que el enlace no se haya podido guardar en tus relés. Inténtalo de nuevo en un momento.</string>
     <string name="concord_invite_revoked_failed">No se pudo revocar el enlace. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="concord_invite_revoked_ok">Enlace de invitación revocado.</string>
     <string name="concord_invite_title">Enlace de invitación</string>

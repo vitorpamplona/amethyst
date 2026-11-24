@@ -212,7 +212,8 @@ fun ConcordInviteLinksScreen(
                                 minting = true
                                 scope.launch {
                                     try {
-                                        minted = account.concord.mintConcordInvite(communityId)
+                                        // Reports why when no link comes back, and never throws past cancellation.
+                                        minted = accountViewModel.mintConcordInvite(communityId)
                                     } finally {
                                         minting = false
                                         reloads++

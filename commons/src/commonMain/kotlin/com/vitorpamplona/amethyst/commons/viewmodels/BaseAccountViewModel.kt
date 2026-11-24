@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
+import com.vitorpamplona.amethyst.commons.model.concord.mintConcordInviteReporting
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
@@ -662,6 +663,9 @@ open class BaseAccountViewModel(
             else -> notices.notify(ConcordNotice.PinFailed(outcome))
         }
     }
+
+    /** A new invite link for [communityId] (CORD-05), or null once the user has been told why not. */
+    suspend fun mintConcordInvite(communityId: String): String? = mintConcordInviteReporting(notices, account.isWriteable()) { account.concord.mintConcordInvite(communityId) }
 
     /** Dissolve [communityId] for good (CORD-02 §9, owner only); a refusal surfaces as a toast. */
     fun dissolveConcordCommunity(communityId: String) =
