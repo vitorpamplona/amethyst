@@ -140,7 +140,9 @@ class ConcordPendingJoinTest {
             val fragment = events.filterIsInstance<ConcordCommunityListFragmentEvent>().single()
             state.cache.getOrCreateAddressableNote(fragment.address()).loadEvent(fragment, author, emptyList())
 
-            withTimeout(5000) { while (state.entries().isEmpty()) yield() }
+            // liveCommunities combines the List read on Dispatchers.IO with the pending joins, and
+            // says nothing until that read has come once: a slow runner gets here first.
+            withTimeout(5000) { while (state.entries().isEmpty() || state.liveCommunities.value.isEmpty()) yield() }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id })
 
             state.dropPendingJoin(alpha)
