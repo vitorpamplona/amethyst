@@ -71,6 +71,35 @@ class CordnGroupChatroomTest {
     )
 
     @Test
+    fun `an encrypted custom emoji is found by the first reaction that carried it`() {
+        val room = room()
+        val text = message("m1", at = 100, cursor = 1)
+        val media = arrayOf("emoji-media", "name party", "url https://blossom.example/p", "m image/png", "filename p.png", "x " + "1".repeat(64), "n " + "2".repeat(24), "v cordn-media-v1")
+
+        fun react(
+            id: String,
+            cursor: Long,
+            author: HexKey,
+        ) = message(
+            id,
+            at = 100 + cursor,
+            cursor = cursor,
+            author = author,
+            content = ":party:",
+            kind = CordnMessageKinds.REACTION,
+            tags = CordnMessageReferences.reactionTags(target("m1", alice)) + arrayOf(media),
+        )
+
+        room.addAll(listOf(text, react("r1", 2, bob), react("r2", 3, alice)))
+
+        val emoji =
+            room.annotations.value
+                .customEmojiOf(text.envelope.id)
+                .getValue(":party:")
+        assertEquals("r1".padEnd(64, '0'), room.reactionCarrierOf(emoji.media!!)?.envelope?.id)
+    }
+
+    @Test
     fun `a calendar event's RSVPs fold onto it and are not rows of their own`() {
         val room = room()
         val event =

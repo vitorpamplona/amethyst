@@ -37,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -120,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnMentions
@@ -515,33 +517,48 @@ private fun rememberCordnReactionGlyphs(
     annotations: CordnAnnotationIndex,
     room: CordnGroupChatroom,
     accountViewModel: AccountViewModel,
-): Map<String, CordnReactionGlyph> =
-    remember(customEmoji, annotations) {
-        val manager =
-            accountViewModel.account.cordnRuntime
-                ?.sessionOrNull(room.coordinatorPubKey)
-                ?.manager
-        customEmoji
-            .mapNotNull { (reaction, emoji) ->
-                val url = emoji.url
-                val media = emoji.media
-                when {
-                    url != null -> reaction to CordnReactionGlyph(":${emoji.name}:$url", ":${emoji.name}:$url")
-                    media != null -> {
-                        // The reaction that carried this picture: its epoch's key opens it.
-                        val carrier =
-                            annotations.byId.values.firstOrNull { message ->
-                                message.envelope.kind == CordnMessageKinds.REACTION &&
-                                    CordnCustomEmoji.ofReaction(message.envelope.content, message.envelope.tags)?.media == media
+): Map<String, CordnReactionGlyph> {
+    // Pure: which picture each chip draws, and the key that opens each encrypted one. The carrier
+    // comes from the room's map, built once per update, not from a scan of every message per card.
+    val resolved =
+        remember(customEmoji, annotations) {
+            val manager =
+                accountViewModel.account.cordnRuntime
+                    ?.sessionOrNull(room.coordinatorPubKey)
+                    ?.manager
+            val keys = mutableListOf<Pair<CordnMediaAttachment, ByteArray>>()
+            val glyphs =
+                customEmoji
+                    .mapNotNull { (reaction, emoji) ->
+                        val url = emoji.url
+                        val media = emoji.media
+                        when {
+                            url != null -> reaction to CordnReactionGlyph(":${emoji.name}:$url", ":${emoji.name}:$url")
+                            media != null -> {
+                                // The reaction that carried this picture: its epoch's key opens it.
+                                val carrier = room.reactionCarrierOf(media)
+                                val key = carrier?.let { manager?.mediaKeyFor(room.gid, it) ?: it.mediaKey } ?: return@mapNotNull null
+                                keys += media to key
+                                reaction to CordnReactionGlyph(":${emoji.name}:${media.url}", reaction)
                             }
-                        val key = carrier?.let { manager?.mediaKeyFor(room.gid, it) ?: it.mediaKey } ?: return@mapNotNull null
-                        accountViewModel.account.encryptionKeyCache.add(media.url, CordnMediaCipher(key, media), media.mimeType)
-                        reaction to CordnReactionGlyph(":${emoji.name}:${media.url}", reaction)
-                    }
-                    else -> null
-                }
-            }.toMap()
+                            else -> null
+                        }
+                    }.toMap()
+            ResolvedGlyphs(glyphs, keys)
+        }
+    // The keys are handed to the image loader after the composition commits, outside remember.
+    SideEffect {
+        resolved.keys.forEach { (media, key) ->
+            accountViewModel.account.encryptionKeyCache.add(media.url, CordnMediaCipher(key, media), media.mimeType)
+        }
     }
+    return resolved.glyphs
+}
+
+private class ResolvedGlyphs(
+    val glyphs: Map<String, CordnReactionGlyph>,
+    val keys: List<Pair<CordnMediaAttachment, ByteArray>>,
+)
 
 /**
  * Who reacted, and with what.

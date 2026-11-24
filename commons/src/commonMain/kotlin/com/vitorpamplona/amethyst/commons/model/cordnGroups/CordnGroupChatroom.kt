@@ -25,10 +25,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.cordn.groups.CordnCredential
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCustomEmoji
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
@@ -37,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.concurrent.Volatile
 
 /**
  * One cordn group, as a screen sees it.
@@ -119,6 +122,17 @@ class CordnGroupChatroom(
     val annotations: StateFlow<CordnAnnotationIndex> = _annotations.asStateFlow()
 
     private val _calendar = MutableStateFlow(CordnCalendar.fold(emptyList()))
+
+    /** Each group-encrypted custom-emoji picture, by the first reaction that carried it. Rebuilt in [recompute]. */
+    @Volatile
+    private var reactionMediaCarriers: Map<CordnMediaAttachment, CordnDeliveredMessage> = emptyMap()
+
+    /**
+     * The first reaction in the room whose `emoji-media` tag carried [media]: its epoch's key opens
+     * the picture. Built once per update, not searched per row: a chip asking for every picture of
+     * every visible card made a history load quadratic.
+     */
+    fun reactionCarrierOf(media: CordnMediaAttachment): CordnDeliveredMessage? = reactionMediaCarriers[media]
 
     /**
      * The group's calendar, folded (`calendar-events.md` §5-§7): who answered each event's
@@ -294,6 +308,8 @@ class CordnGroupChatroom(
 
         val everything = byId.values.toList()
         val index = CordnAnnotationIndex.of(everything)
+        // Before the index is published, so a row redrawn for it finds its carriers.
+        reactionMediaCarriers = reactionMediaCarriersOf(everything)
         _annotations.value = index
         _calendar.value = CordnCalendar.fold(everything)
 
@@ -312,6 +328,16 @@ class CordnGroupChatroom(
 
         _messages.value = visible
         setNewest(visible.lastOrNull())
+    }
+
+    private fun reactionMediaCarriersOf(everything: List<CordnDeliveredMessage>): Map<CordnMediaAttachment, CordnDeliveredMessage> {
+        val out = HashMap<CordnMediaAttachment, CordnDeliveredMessage>()
+        everything.forEach { message ->
+            if (message.envelope.kind != CordnMessageKinds.REACTION) return@forEach
+            val media = CordnCustomEmoji.ofReaction(message.envelope.content, message.envelope.tags)?.media ?: return@forEach
+            if (media !in out) out[media] = message
+        }
+        return out
     }
 
     /**
