@@ -54,7 +54,8 @@ class PublishToolServer(
                 REQUEST,
                 "Asks the user to open a pull request with your work in this workstream. You can't push or open pull requests " +
                     "yourself; this hands them a ready pull request (title and description) to review and open. Commit everything first. " +
-                    "Call it once per repository when the work is ready, then tell the user it is waiting on the Pull requests screen. " +
+                    "Call it only when the user asks for a pull request (or to publish, ship, or send the work), once per repository, " +
+                    "then tell the user it is waiting on the Pull requests screen. Finishing a task is not a request: when unsure, ask. " +
                     "Calling it again replaces the earlier request.",
                 Json
                     .parseToJsonElement(
@@ -124,7 +125,10 @@ class PublishToolServer(
         const val NAME = "amethyst-publish"
         const val REQUEST = "request_publish"
 
-        /** Added to the workstream's brief when the agent has the tool. */
-        const val BRIEF = "When the work is committed and ready, call request_publish: it hands the user a pull request to review and open."
+        /**
+         * Added to the workstream's brief when the agent has the tool. Only on the user's word: an
+         * agent told to call it "when the work is ready" asked for a pull request after every task.
+         */
+        const val BRIEF = "When the user asks for a pull request, commit the work and call request_publish: it hands them one to review and open. Don't call it otherwise."
     }
 }
