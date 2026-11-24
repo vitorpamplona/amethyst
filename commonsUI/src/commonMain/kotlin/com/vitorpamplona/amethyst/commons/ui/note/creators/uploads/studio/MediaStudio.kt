@@ -361,7 +361,8 @@ fun MediaStudio(
                     val removable = items.size > 1 || !canCancel
                     StudioPreview(current, previews, cropped, uploader, holdingOriginal, badgeEndInset = if (removable) REMOVE_BUTTON_INSET else 0.dp)
                     if (removable) {
-                        RemoveFileButton(enabled = !isUploading, onClick = { onRemove(current) }, modifier = Modifier.align(Alignment.TopEnd).padding(STAGE_OVERLAY_PADDING))
+                        // The touch target overhangs the circle, so it sits closer to the corner than the badges.
+                        RemoveFileButton(enabled = !isUploading, onClick = { onRemove(current) }, modifier = Modifier.align(Alignment.TopEnd).padding(STAGE_OVERLAY_PADDING - REMOVE_BUTTON_OVERHANG))
                     }
                 }
                 UploadOverlay(current)
@@ -641,13 +642,18 @@ private fun WorkingBadge(modifier: Modifier) {
 /** Waits until the press at [down] ends, moves past the touch slop or gains a finger; never returns otherwise. */
 private suspend fun AwaitPointerEventScope.awaitReleaseOrMove(down: PointerInputChange) {
     while (true) {
-        val pressed = awaitPointerEvent(PointerEventPass.Initial).changes.filter { it.pressed }
-        if (pressed.size != 1 || (pressed[0].position - down.position).getDistance() > viewConfiguration.touchSlop) return
+        val changes = awaitPointerEvent(PointerEventPass.Initial).changes
+        if (changes.count { it.pressed } != 1) return
+        val finger = changes.first { it.pressed }
+        if ((finger.position - down.position).getDistance() > viewConfiguration.touchSlop) return
     }
 }
 
 private val STAGE_OVERLAY_PADDING = 12.dp
 private val REMOVE_BUTTON_SIZE = 32.dp
+
+/** How far the remove button's 48 dp touch target reaches past its circle on each side. */
+private val REMOVE_BUTTON_OVERHANG = (48.dp - REMOVE_BUTTON_SIZE) / 2
 
 /** What a badge at the stage's top right moves left by to clear the remove button. */
 private val REMOVE_BUTTON_INSET = REMOVE_BUTTON_SIZE + 8.dp
@@ -661,13 +667,14 @@ private fun RemoveFileButton(
 ) {
     Box(
         modifier
-            .size(REMOVE_BUTTON_SIZE)
+            .size(REMOVE_BUTTON_SIZE + REMOVE_BUTTON_OVERHANG * 2)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.6f))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove), tint = Color.White, modifier = Modifier.size(18.dp))
+        Box(Modifier.size(REMOVE_BUTTON_SIZE).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove), tint = Color.White, modifier = Modifier.size(18.dp))
+        }
     }
 }
 
