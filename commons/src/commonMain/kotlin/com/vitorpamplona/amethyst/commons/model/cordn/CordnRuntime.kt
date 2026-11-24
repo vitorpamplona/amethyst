@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordn
 
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorListUnreadableException
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
@@ -191,6 +192,9 @@ class CordnRuntime(
 
     /** A coordinator that failed to open, being tried again ([retryOpening]). Under [retryLock]. */
     private val retries = mutableMapOf<HexKey, Job>()
+
+    /** The retry of a coordinator list that could not be read yet ([startFromStore]), guarded by [retryLock]. */
+    private var listRetry: Job? = null
     private val retryLock = Mutex()
 
     val coordinators = registry.coordinators
@@ -635,7 +639,51 @@ class CordnRuntime(
         // disk so the handoff can be undone, but a live sync loop would fetch,
         // decrypt and self-echo alongside the device that took over.
         if (handoff.handedOff.value) return
-        start(coordinatorStore.load())
+        startFromStore()
+    }
+
+    /**
+     * Opens the coordinators on disk. When the list is there but cannot be read yet (a keystore
+     * not unlocked, [CordnCoordinatorListUnreadableException]) the load is tried again with the
+     * same backoff as a coordinator that fails to open, until it reads, this device hands off, or
+     * [stop] ends it. Nothing is written meanwhile: every write of the list loads it first, so a
+     * read that fails also fails the write, and the coordinators on disk are never replaced by an
+     * empty list.
+     */
+    private suspend fun startFromStore() {
+        val configs =
+            try {
+                coordinatorStore.load()
+            } catch (e: CordnCoordinatorListUnreadableException) {
+                Log.w(TAG, "the coordinator list cannot be read yet; trying again", e)
+                retryLoadingList()
+                return
+            }
+        start(configs)
+    }
+
+    private suspend fun retryLoadingList() {
+        retryLock.withLock {
+            if (listRetry?.isActive == true) return
+            listRetry =
+                scope.launch {
+                    var wait = openRetryFirstMs
+                    while (true) {
+                        delay(wait)
+                        if (handoff.handedOff.value) return@launch
+                        val configs =
+                            try {
+                                coordinatorStore.load()
+                            } catch (e: CordnCoordinatorListUnreadableException) {
+                                Log.w(TAG, "the coordinator list still cannot be read", e)
+                                wait = (wait * 2).coerceAtMost(openRetryMaxMs)
+                                continue
+                            }
+                        start(configs)
+                        return@launch
+                    }
+                }
+        }
     }
 
     /**
@@ -696,6 +744,8 @@ class CordnRuntime(
             if (coordinatorPubKey == null) {
                 retries.values.forEach { it.cancel() }
                 retries.clear()
+                listRetry?.cancel()
+                listRetry = null
             } else {
                 retries.remove(coordinatorPubKey)?.cancel()
             }
@@ -916,7 +966,7 @@ class CordnRuntime(
     /** Takes this device back after a handoff that did not complete. */
     suspend fun cancelHandOff() {
         handoff.resume()
-        start(coordinatorStore.load())
+        startFromStore()
     }
 
     /**
