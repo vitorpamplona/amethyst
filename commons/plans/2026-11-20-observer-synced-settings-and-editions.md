@@ -90,20 +90,25 @@ The paper never leaves the reader's servers unencrypted unless publishing is on.
 (about a kilometre), private like every tag Amethyst writes. Set once per account from the
 Observer screen (Open-Meteo's place search), so every device prints the same city.
 
-- When a print starts, before anything is paid for, the printing device fetches Open-Meteo's
-  forecast for the place (now, today's high, low and rain, three more days; no sunrise or sunset; 10 s at most,
-  through the client the reader's network settings pick for public pages).
+- When a print starts, the printing device fetches Open-Meteo's forecast for the place (now,
+  today's high, low and rain, three more days; no sunrise or sunset; 10 s at most, through the
+  client the reader's network settings pick for public pages), alongside the relay pull rather
+  than before it. Only what reads as a date (`yyyy-MM-dd`) and a time (`HH:mm`) is kept.
 - It is a desk like the others (2026-11-23): the digest gives the writer a "Weather" section,
   written by the app and placed before the notice that everything below is other people's data.
   It holds the weather card ready made (`ObserverWeather.card`): a `.box.weather` with the place in
   its head, the reading now set large, today in a line, the next days in a small Day / Hi-Lo / Rain
   / Sky table, the time of the reading and the credit Open-Meteo asks for (CC BY 4.0). The writer
-  sets it as given at the top of a narrow column, never the lead; the house stylesheet draws it,
-  so it looks the same every morning. On a phone the fold puts the lead's column first, so the card
-  never stands between the nameplate and the news. (A first version drew it over the page at
-  display time, as a strip and then as a masthead ear; it was the wrong shape, and above the news.)
-- While the paper goes to the reader's public Observer site, the card's head is just "Weather":
-  the public page doesn't say where the reader lives.
+  sets it at the top of a narrow column, never the lead, keeping its markup, figures, place and
+  credit, and puts its other words in the paper's language. The page's stylesheet draws it; its
+  rules are app-only and left out of the writer's prompt. On a phone the fold puts the lead's
+  column first, so the card never stands between the nameplate and the news. (A first version drew
+  it over the page at display time, as a strip and then as a masthead ear; it was the wrong shape,
+  and above the news.)
+- **Only private papers carry it.** The forecast's figures alone hint at the region, so a paper
+  printed while publishing is on and confirmed (`ObserverPrefs.publishes`) has no Weather desk. A
+  paper printed with it is kept as `SavedEdition.namesPlace` and never published, even if
+  publishing is turned on later (`publishable`).
 - No place, or no answer in time: the paper prints without the desk. A printer that shows no
   weather (the Assistant) understands the param and prints as before.
 

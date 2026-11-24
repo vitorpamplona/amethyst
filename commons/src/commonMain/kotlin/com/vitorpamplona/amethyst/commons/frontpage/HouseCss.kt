@@ -56,7 +56,6 @@ internal const val HOUSE_CSS: String =
  *                      coming up, conditions)
  *   .cols5             a five-column band
  *   section.band.tinted   a band set apart from the network's own news
- *   div.box.weather    the weather card, as the Weather desk gives it
  */
 
 :root {
@@ -684,7 +683,10 @@ td.num {
   border-bottom-color: var(--rule);
 }
 
-/* THE WEATHER CARD: the Weather desk's box, made by the app and set as given at
+/* APP ONLY: the writer's prompt leaves this out ([houseCssForWriter]); the app
+ * writes this markup itself.
+ *
+ * THE WEATHER CARD: the Weather desk's box, made by the app and set as given at
  * the top of a narrow column. The place in its head, the reading now large,
  * today in a line, the next days in a small table, the credit last. */
 .box.weather {
@@ -727,6 +729,7 @@ td.num {
   font-size: 0.85rem;
   margin: 0;
 }
+/* END APP ONLY */
 
 /* THE LEAD SITS IN THE MIDDLE.
  *
@@ -736,22 +739,38 @@ td.num {
  * Desktop and tablet only: a phone reads the lead first. The borders follow
  * the order seen, not the order written. */
 @media (min-width: 721px) {
+  /* Every rule here starts from the same fold, so each later, narrower one
+   * outranks the "everything else" order: 3 (a shorter prefix lost to it, and
+   * the lead stayed where it was written). */
   .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col {
     order: 3;
   }
-  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head) {
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head) {
     order: 2;
     padding-left: 20px;
     border-left: 1px solid var(--rule);
   }
-  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head):first-child + .col,
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head):first-child + .col,
   .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:not(:has(.lead-head)):first-child {
     order: 1;
     padding-left: 0;
     border-left: 0;
   }
-  .fold:has(> .col:nth-child(3)) > .col:has(.lead-head):first-child + .col + .col {
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head):first-child + .col + .col {
     border-left: 1px solid var(--rule);
+  }
+}
+
+/* On a tablet the fold's narrow columns are half the width, two to a row: the
+ * lead goes across the top on its own and the other columns share the rows
+ * under it, so no column starts a row with a rule on its left. */
+@media (min-width: 721px) and (max-width: 1000px) {
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head) {
+    grid-column: span 12;
+    order: 0;
+    padding-left: 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--rule);
   }
 }
 
@@ -871,6 +890,13 @@ td.num {
   .reverse {
     padding: 20px 16px;
   }
+  /* The lead moved first: the rules between columns follow the order seen. */
+  .fold > .col:has(.lead-head):last-child:not(:first-child) {
+    border-bottom: 1px solid var(--rule);
+  }
+  .fold:has(> .col:last-child .lead-head) > .col:nth-last-child(2) {
+    border-bottom: 0;
+  }
 }
 """
 
@@ -881,9 +907,11 @@ td.num {
  */
 internal val HOUSE_CSS_FOR_WRITER: String by lazy { houseCssForWriter(HOUSE_CSS) }
 
-/** [css] with its comments gone, but for the layout list, and without the blank lines they leave. */
+/** [css] with its comments and its app-only rules gone, but for the layout list, and without the blank lines they leave. */
 internal fun houseCssForWriter(css: String): String =
     css
+        // What the app writes itself (the weather card) the writer never styles: not worth its tokens.
+        .replace(Regex("/\\* APP ONLY:[\\s\\S]*?/\\* END APP ONLY \\*/")) { "" }
         .replace(Regex("/\\*[\\s\\S]*?\\*/")) { comment ->
             val at = comment.value.indexOf(LAYOUTS_MARKER)
             if (at < 0) "" else "/* " + comment.value.substring(at).trimEnd()

@@ -170,8 +170,11 @@ object ObserverWeather {
         val lows = daily.numbers("temperature_2m_min")
         val rain = daily.numbers("precipitation_probability_max")
         val codes = daily.numbers("weather_code")
+        // Only what reads as a date and a time goes on: these land in the app's own part of the
+        // digest, and on the page.
         val days =
-            dates.mapIndexed { i, date ->
+            dates.mapIndexedNotNull { i, date ->
+                if (!DATE.matches(date)) return@mapIndexedNotNull null
                 WeatherDay(
                     date = date,
                     high = highs.getOrNull(i)?.roundToInt(),
@@ -180,10 +183,11 @@ object ObserverWeather {
                     code = codes.getOrNull(i)?.roundToInt(),
                 )
             }
+        if (days.isEmpty()) return null
         return WeatherReport(
             place = place.name,
             fahrenheit = place.fahrenheit,
-            asOf = current?.string("time")?.substringAfter('T', "")?.takeIf { it.length == 5 },
+            asOf = current?.string("time")?.substringAfter('T', "")?.takeIf { TIME.matches(it) },
             now = current?.double("temperature_2m")?.roundToInt(),
             nowCode = current?.double("weather_code")?.roundToInt(),
             days = days,
@@ -216,30 +220,27 @@ object ObserverWeather {
 
     private val WEEKDAYS = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
+    private val DATE = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+    private val TIME = Regex("^\\d{2}:\\d{2}$")
+
     /**
-     * The paper's Weather desk, as the digest gives it to the writer: the weather card, made here
-     * and set as given, and where it runs. The writer only places it: the figures, the table and
-     * the credit Open-Meteo asks for (CC BY 4.0) are the same every morning, the box the house
-     * stylesheet draws as `.box.weather`. [namesPlace] is false while the paper goes to the
-     * reader's public Observer site: then the card names no place, so the page can't say where the
-     * reader lives.
+     * The paper's Weather desk, as the digest gives it to the writer: the weather card, made here,
+     * and where it runs. The writer places it and puts its words in the paper's language; the
+     * figures, the place and the credit Open-Meteo asks for (CC BY 4.0) stay as written, in the box
+     * the house stylesheet draws as `.box.weather`. Only a paper that stays private carries it
+     * ([SavedEdition.namesPlace]): it names where the reader lives.
      */
-    fun desk(
-        report: WeatherReport,
-        namesPlace: Boolean,
-    ): List<String> =
+    fun desk(report: WeatherReport): List<String> =
         listOf(
-            "Set this card exactly as given, at the top of a narrow column of the fold: a box of its own, " +
-                "never the lead, never in the masthead, never twice. Change nothing in it and add nothing to it.",
-        ) + card(report, namesPlace)
+            "Set this card at the top of a narrow column of the fold: a box of its own, never the lead, never in the masthead, never twice. " +
+                "Keep its markup, its figures, the place and the credit line exactly as written; if the paper is not in English, " +
+                "put its other words (the labels, the days, the sky) in the paper's language. Add nothing to it.",
+        ) + card(report)
 
     /** The weather card's markup, line by line: escaped, and only the classes the house stylesheet styles. */
-    fun card(
-        report: WeatherReport,
-        namesPlace: Boolean,
-    ): List<String> {
+    fun card(report: WeatherReport): List<String> {
         val unit = if (report.fahrenheit) "°F" else "°C"
-        val head = if (namesPlace) "Weather · ${escape(report.place.substringBefore(',').trim())}" else "Weather"
+        val head = "Weather · ${escape(report.place.substringBefore(',').trim())}"
         val out = mutableListOf("<div class=\"box weather\">", "<div class=\"box-head\">$head</div>")
         if (report.now != null) {
             val sky = words(report.nowCode)?.let { " ${capitalized(it)} now" }.orEmpty()
@@ -260,7 +261,7 @@ object ObserverWeather {
             out += "<thead><tr><th>Day</th><th>Hi / Lo</th><th>Rain</th><th>Sky</th></tr></thead>"
             out += "<tbody>"
             next.forEach { day ->
-                val name = dayOfWeek(day.date)?.let { "${WEEKDAYS[it - 1]} ${day.date.substringAfterLast('-').trimStart('0')}" } ?: day.date
+                val name = dayOfWeek(day.date)?.let { "${WEEKDAYS[it - 1]} ${day.date.substringAfterLast('-').trimStart('0')}" } ?: escape(day.date)
                 val hiLo = if (day.high != null && day.low != null) "${day.high} / ${day.low}" else "–"
                 val rain = day.rain?.let { "$it%" } ?: "–"
                 val sky = words(day.code)?.let(::capitalized) ?: "–"
@@ -269,7 +270,7 @@ object ObserverWeather {
             out += "</tbody>"
             out += "</table>"
         }
-        report.asOf?.let { out += "<p class=\"wx-note\">Forecast as of $it, local time.</p>" }
+        report.asOf?.let { out += "<p class=\"wx-note\">Forecast as of ${escape(it)}, local time.</p>" }
         out += "<p class=\"wx-credit\">$CREDIT</p>"
         out += "</div>"
         return out

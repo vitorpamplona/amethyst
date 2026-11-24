@@ -98,6 +98,8 @@ sealed interface PrintResult {
         val planned: Boolean = false,
         /** The Kitchen's recipe the page cites ([recipeAddress]), so the next editions don't run it again. */
         val recipe: String? = null,
+        /** The writer had the Weather desk, which names the reader's place: the paper never goes public. */
+        val namesPlace: Boolean = false,
     ) : PrintResult
 
     class Refused(
@@ -246,7 +248,9 @@ class FrontPagePress(
 
         val corpus = pull(observer, until, onStep, context.recentRecipes)
         log.add(PrintLogKind.READ, numbers = listOf(DESKS.size, corpus.events.size))
-        val digest = digest(corpus, clock = context.clock, weather = context.weather, weatherNamesPlace = context.weatherNamesPlace)
+        // Fetched while the relays were read; whatever came by now, or nothing.
+        val weather = context.weather?.await()
+        val digest = digest(corpus, clock = context.clock, weather = weather)
         val size = DaySize(corpus.events.size, corpus.events.mapTo(HashSet()) { it.pubKey }.size, keptInDigest(corpus))
         // The system brief and this prefix are first, and the same, in every call of the print.
         val prefix = corpusPrefix(digest, editionHeader(readerName, language, context, corpus, size))
@@ -283,7 +287,7 @@ class FrontPagePress(
             log.add(PrintLogKind.QUOTES, numbers = listOf(checked.quotes, checked.violations.count { it.kind == Violation.Kind.QUOTE }))
             if (checked.violations.isEmpty()) {
                 log.add(PrintLogKind.PASSED)
-                return PrintResult.Printed(checked.html, corpus, checked.changes, checked.quotes, usage, round, checked.headline, digest.length, planned = plan != null, recipe = citedRecipe(checked.html, corpus))
+                return PrintResult.Printed(checked.html, corpus, checked.changes, checked.quotes, usage, round, checked.headline, digest.length, planned = plan != null, recipe = citedRecipe(checked.html, corpus), namesPlace = weather != null)
             }
             if (round == 1 + MAX_REPAIR_ROUNDS) return PrintResult.Refused(checked.violations, checked.changes, corpus, usage).also { log.add(PrintLogKind.REFUSED, numbers = listOf(checked.violations.size)) }
             log.add(PrintLogKind.REPAIR, numbers = listOf(checked.violations.size))

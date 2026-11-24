@@ -177,7 +177,7 @@ class JsoupPaperBoundaryTest {
                 nowCode = 0,
                 days = listOf(WeatherDay("2026-11-20", 65, 36, 0, 3), WeatherDay("2026-11-21", 61, 36, 0, 3)),
             )
-        val card = ObserverWeather.card(report, namesPlace = true).joinToString("\n")
+        val card = ObserverWeather.card(report).joinToString("\n")
         assertEquals(emptyList(), kinds("<main>$card</main>"))
     }
 
