@@ -9738,8 +9738,7 @@
         <item quantity="one">%1$s has %2$d question</item>
         <item quantity="other">%1$s has %2$d questions</item>
     </plurals>
-    <string name="claude_code_question_other">Other</string>
-    <string name="claude_code_question_other_hint">Type your own answer</string>
+    <string name="claude_code_question_other_hint">Something else: type your answer</string>
     <string name="claude_code_question_text_hint">Type your answer</string>
     <string name="claude_code_question_pick_any">Pick any that apply</string>
     <string name="claude_code_question_add_note">Add a note</string>

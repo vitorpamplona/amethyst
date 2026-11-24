@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,21 +38,22 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -61,6 +65,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -68,8 +76,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.agents.PermissionDecision
@@ -80,6 +90,7 @@ import com.vitorpamplona.agents.UserQuestions
 import com.vitorpamplona.amethyst.commons.claudecode.AskedQuestions
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_add_note
@@ -90,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_question_keys
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_no_answer
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_note_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_number_value
-import com.vitorpamplona.amethyst.commons.resources.claude_code_question_other
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_other_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_pick_any
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_preview
@@ -200,7 +210,10 @@ internal fun QuestionCard(
                 Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(FormGap),
             ) {
-                drafts.forEach { draft -> QuestionBlock(draft, onEnter = { if (answered) submit(false) }) }
+                drafts.forEachIndexed { i, draft ->
+                    if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    QuestionBlock(draft, onEnter = { if (answered) submit(false) })
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { submit(false) }, enabled = answered) { Text(stringRes(Res.string.claude_code_question_submit)) }
@@ -229,11 +242,11 @@ private fun QuestionBlock(
     onEnter: () -> Unit,
 ) {
     val question = draft.question
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         question.header?.let {
             Text(it.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
         }
-        Text(question.question, style = MaterialTheme.typography.bodyLarge)
+        Text(question.question, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         val helper = question.description ?: if (question.multiSelect) stringRes(Res.string.claude_code_question_pick_any) else null
         helper?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
         when (question.kind) {
@@ -262,7 +275,7 @@ private fun ChoiceAnswer(
     // The preview shown is the hovered option's, else the one last picked, else the first one that has any.
     var hovered by remember { mutableStateOf<String?>(null) }
     var lastPicked by remember { mutableStateOf<String?>(null) }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         question.options.forEach { option ->
             val interaction = remember { MutableInteractionSource() }
             val isHovered by interaction.collectIsHoveredAsState()
@@ -273,28 +286,34 @@ private fun ChoiceAnswer(
                     hovered = null
                 }
             }
-            OptionRow(
+            OptionTile(
                 multi = question.multiSelect,
                 checked = option.label in draft.selected,
+                interaction = interaction,
                 onClick = {
                     draft.pick(option.label)
                     lastPicked = option.label
                 },
-                modifier = Modifier.hoverable(interaction),
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                    Text(option.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     option.description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
                 }
             }
         }
         if (question.allowsOther) {
-            OptionRow(
+            // The user's own answer is a tile like the others, typed into where its label would be.
+            val focus = remember { FocusRequester() }
+            OptionTile(
                 multi = question.multiSelect,
                 checked = draft.otherChosen,
-                onClick = { draft.chooseOther(!draft.otherChosen || !question.multiSelect) },
+                interaction = remember { MutableInteractionSource() },
+                onClick = {
+                    draft.chooseOther(!draft.otherChosen || !question.multiSelect)
+                    if (draft.otherChosen) focus.requestFocus()
+                },
             ) {
-                AnswerField(
+                BareTextField(
                     value = draft.text,
                     onValueChange = {
                         draft.text = it
@@ -302,10 +321,9 @@ private fun ChoiceAnswer(
                         if (it.isNotBlank() && !draft.otherChosen) draft.chooseOther(true)
                     },
                     placeholder = stringRes(Res.string.claude_code_question_other_hint),
-                    label = stringRes(Res.string.claude_code_question_other),
                     secret = question.secret,
                     onEnter = onEnter,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).focusRequester(focus),
                 )
             }
         }
@@ -313,54 +331,97 @@ private fun ChoiceAnswer(
     val withPreview = question.options.filter { it.preview != null }
     val shown = withPreview.firstOrNull { it.label == hovered } ?: withPreview.firstOrNull { it.label == lastPicked } ?: withPreview.firstOrNull { it.label in draft.selected } ?: withPreview.firstOrNull()
     shown?.let { current ->
-        Text(stringRes(Res.string.claude_code_question_preview, current.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
-                // Every preview is laid out, the others unseen, so the box is as tall as the tallest:
-                // a card that changed height on hover would move the options out from under the pointer.
-                withPreview.forEach { option ->
-                    RenderMarkdown(
-                        option.preview ?: "",
-                        rememberChatLinks(nav = null),
-                        Modifier.fillMaxWidth().alpha(if (option.label == current.label) 1f else 0f),
-                        style = rememberChatMarkdownStyle(),
-                        textStyle = MaterialTheme.typography.bodySmall,
-                    )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringRes(Res.string.claude_code_question_preview, current.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = TileShape, modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    // Every preview is laid out, the others unseen, so the box is as tall as the tallest:
+                    // a card that changed height on hover would move the options out from under the pointer.
+                    // The surface is the code block's box: the markdown draws none of its own inside it.
+                    val style = rememberChatMarkdownStyle(codeBackground = Color.Transparent)
+                    val onLink = rememberChatLinks(nav = null)
+                    withPreview.forEach { option ->
+                        RenderMarkdown(
+                            option.preview ?: "",
+                            onLink,
+                            Modifier.fillMaxWidth().alpha(if (option.label == current.label) 1f else 0f),
+                            style = style,
+                            textStyle = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** A choice: the whole row picks it, a radio button for one of many, a box to tick for any of many. */
+/** The tiles' corners, and the fields' and preview's that sit with them. */
+private val TileShape = RoundedCornerShape(12.dp)
+
+/**
+ * A choice as a tile: the whole tile picks it. Picked, it takes the primary color in its outline,
+ * a light tint and its mark: a filled dot for one of many, a check for any of many.
+ */
 @Composable
-private fun OptionRow(
+private fun OptionTile(
     multi: Boolean,
     checked: Boolean,
+    interaction: MutableInteractionSource,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val hoveredNow by interaction.collectIsHoveredAsState()
     val pick =
         if (multi) {
-            Modifier.toggleable(value = checked, role = Role.Checkbox, onValueChange = { onClick() })
+            Modifier.toggleable(value = checked, interactionSource = interaction, indication = ripple(), role = Role.Checkbox, onValueChange = { onClick() })
         } else {
-            Modifier.selectable(selected = checked, role = Role.RadioButton, onClick = onClick)
+            Modifier.selectable(selected = checked, interactionSource = interaction, indication = ripple(), role = Role.RadioButton, onClick = onClick)
         }
     Row(
-        modifier
+        Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(TileShape)
+            .background(
+                when {
+                    checked -> colors.primary.copy(alpha = 0.10f)
+                    hoveredNow -> colors.onSurface.copy(alpha = 0.04f)
+                    else -> Color.Transparent
+                },
+            ).border(1.dp, if (checked) colors.primary else colors.outlineVariant, TileShape)
+            .hoverable(interaction)
             .then(pick)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Dense {
-            // The row handles the click: the control only shows the state.
-            if (multi) Checkbox(checked = checked, onCheckedChange = null) else RadioButton(selected = checked, onClick = null)
-        }
-        Spacer(Modifier.width(PartGap))
+        ChoiceMark(multi, checked)
+        Spacer(Modifier.width(12.dp))
         content()
+    }
+}
+
+/** The mark of a tile: a ring that fills with a dot (one of many), or a rounded box that fills with a check (any of many). */
+@Composable
+private fun ChoiceMark(
+    multi: Boolean,
+    checked: Boolean,
+) {
+    val colors = MaterialTheme.colorScheme
+    val tint = if (checked) colors.primary else colors.outline
+    if (multi) {
+        Box(
+            Modifier
+                .size(18.dp)
+                .clip(RoundedCornerShape(5.dp))
+                .background(if (checked) colors.primary else Color.Transparent)
+                .border(1.5.dp, tint, RoundedCornerShape(5.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) Icon(MaterialSymbols.Check, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(14.dp))
+        }
+    } else {
+        Icon(if (checked) MaterialSymbols.RadioButtonChecked else MaterialSymbols.RadioButtonUnchecked, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -370,10 +431,11 @@ private fun NumberAnswer(draft: QuestionDraft) {
     val min = question.min ?: 0.0
     val max = (question.max ?: (min + 100.0)).coerceAtLeast(min + 1e-9)
     val step = question.step?.takeIf { it > 0 }
-    // A slider snaps to its steps when there are few enough of them to tell apart.
-    val stops = step?.let { ((max - min) / it).roundToInt() - 1 }?.takeIf { it in 0..200 } ?: 0
+    // Ticks only where there are few enough to read; past that the value still snaps to its steps.
+    val stops = step?.let { ((max - min) / it).roundToInt() - 1 }?.takeIf { it in 0..MAX_TICKS } ?: 0
     val value = draft.number
     Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(formatNumber(min), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
         Slider(
             value = (value ?: min).toFloat(),
             onValueChange = { raw ->
@@ -382,15 +444,21 @@ private fun NumberAnswer(draft: QuestionDraft) {
             },
             valueRange = min.toFloat()..max.toFloat(),
             steps = stops,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
         )
+        Text(formatNumber(max), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
         Spacer(Modifier.width(PartGap))
-        Text(
-            value?.let { v -> question.unit?.let { stringRes(Res.string.claude_code_question_number_value, formatNumber(v), it) } ?: formatNumber(v) }
-                ?: stringRes(Res.string.claude_code_question_no_answer),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (value == null) MaterialTheme.colorScheme.placeholderText else MaterialTheme.colorScheme.onSurface,
-        )
+        // The value in a tile of its own, as wide as the largest value would be: it doesn't jump as it changes.
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = TileShape) {
+            Text(
+                value?.let { v -> question.unit?.let { stringRes(Res.string.claude_code_question_number_value, formatNumber(v), it) } ?: formatNumber(v) }
+                    ?: stringRes(Res.string.claude_code_question_no_answer),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (value == null) MaterialTheme.colorScheme.placeholderText else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
     }
 }
 
@@ -399,22 +467,38 @@ private fun NoteField(
     draft: QuestionDraft,
     onEnter: () -> Unit,
 ) {
-    if (!draft.notesOpen) {
-        InlineAction(stringRes(Res.string.claude_code_question_add_note)) { draft.notesOpen = true }
-    }
-    AnimatedVisibility(draft.notesOpen) {
+    if (draft.notesOpen) {
+        val focus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focus.requestFocus() }
         AnswerField(
             value = draft.notes,
             onValueChange = { draft.notes = it },
             placeholder = stringRes(Res.string.claude_code_question_note_hint),
             secret = false,
             onEnter = onEnter,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            leading = MaterialSymbols.EditNote,
         )
+    } else {
+        // Quiet: every question has one, and most answers need none.
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { draft.notesOpen = true }
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.EditNote, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringRes(Res.string.claude_code_question_add_note), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)
+        }
     }
 }
 
-/** One line of the user's own words; Enter sends the answers once something is answered. */
+/**
+ * The user's own words in a field of the tiles' shape: a tonal fill, no outline until it has
+ * focus. Enter sends the answers once something is answered.
+ */
 @Composable
 private fun AnswerField(
     value: String,
@@ -423,16 +507,48 @@ private fun AnswerField(
     secret: Boolean,
     onEnter: () -> Unit,
     modifier: Modifier = Modifier,
-    label: String? = null,
+    leading: MaterialSymbol? = null,
 ) {
-    OutlinedTextField(
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier
+            .clip(TileShape)
+            .background(colors.surfaceContainerHighest)
+            .border(1.dp, if (focused) colors.primary else Color.Transparent, TileShape)
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        leading?.let {
+            Icon(it, contentDescription = null, tint = if (focused) colors.primary else colors.grayText, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+        }
+        BareTextField(value, onValueChange, placeholder, secret, onEnter, Modifier.weight(1f), interaction)
+    }
+}
+
+/** One line of text with its placeholder and nothing around it: the tile or field it sits in is its box. */
+@Composable
+private fun BareTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    secret: Boolean,
+    onEnter: () -> Unit,
+    modifier: Modifier = Modifier,
+    interaction: MutableInteractionSource = remember { MutableInteractionSource() },
+) {
+    val style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+    BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        label = label?.let { { Text(it) } },
-        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.placeholderText) },
+        textStyle = style,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
-        textStyle = MaterialTheme.typography.bodyMedium,
+        interactionSource = interaction,
         modifier =
             modifier.onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && !event.isShiftPressed) {
@@ -442,8 +558,17 @@ private fun AnswerField(
                     false
                 }
             },
+        decorationBox = { inner ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (value.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                inner()
+            }
+        },
     )
 }
+
+/** More stops than this and a slider's ticks run together. */
+private const val MAX_TICKS = 10
 
 /**
  * A question call in the chat: each question with the user's answer, from the call's result.
