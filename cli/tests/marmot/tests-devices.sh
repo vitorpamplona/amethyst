@@ -584,8 +584,11 @@ test_53_rename_fork_recovers() {
     sleep 2
   done
   [[ "$labels" == '["Fork-A","Fork-B"]' ]] || { record_result "$id" fail "the devices settled on $(printf '%s' "$labels" | tr '\n' ' ')"; return; }
+  # Both renames showing proves nothing unless they forked: one that applied after the other never
+  # had to be made again. Only a logged recovery shows the path under test ran.
   local recovered; recovered=$(grep -c 'lost a fork; making it again' "$LOG_FILE" 2>/dev/null || true)
-  record_result "$id" pass "all three show both renames (recoveries logged: ${recovered:-0})"
+  [[ "${recovered:-0}" -ge 1 ]] || { record_result "$id" fail "both renames show, but no fork was recovered (the two Commits did not race)"; return; }
+  record_result "$id" pass "all three show both renames (recoveries logged: $recovered)"
 }
 
 test_54_history_blossom_restart_attachment() {
@@ -685,9 +688,20 @@ devices_diag() {
   } >>"$LOG_FILE"
 }
 
+# Run from the harness's EXIT/INT/TERM/HUP trap too. Tests 52 and 54 freeze W (kill -STOP) for
+# minutes, and a stopped process acts on no TERM until it is resumed: resume it first, then TERM,
+# then KILL whatever is still there after 5 s.
 stop_device_daemons() {
-  local d
+  local d pid
   for d in "$W_DIR" "$W2_DIR"; do
-    [[ -f "$d/pid" ]] && kill "$(cat "$d/pid")" 2>/dev/null || true
+    [[ -f "$d/pid" ]] || continue
+    pid=$(cat "$d/pid" 2>/dev/null)
+    [[ -n "$pid" ]] || continue
+    kill -CONT "$pid" 2>/dev/null || continue
+    kill "$pid" 2>/dev/null
+    local _
+    for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
   done
+  return 0
 }
