@@ -38,7 +38,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assume.assumeTrue
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -578,17 +577,29 @@ class ClaudeChatTest {
                 val again = started[1]
                 assertTrue(again.commandGuard != null, "a resumed guarded session started unguarded")
                 // An older git (before 2.54) has no config hooks: the session gets the full block instead.
-                assumeTrue("git has no config hooks", again.environment.containsValue("hook.${PushGuard.GUARD_NAME}.command"))
-                val hook =
-                    again.environment.entries
-                        .single { it.value == "hook.${PushGuard.GUARD_NAME}.command" }
-                        .key
-                        .replace("KEY", "VALUE")
-                assertTrue(again.environment.getValue(hook).contains("own='agent/w'"), "the resumed session got a new scope")
+                // Which one is asked of git itself, not of the result under test, so a guard that stops
+                // being written on a git that can run it fails here instead of being skipped.
+                if (gitRunsConfigHooks(repo)) {
+                    val hook =
+                        again.environment.entries
+                            .single { it.value == "hook.${PushGuard.GUARD_NAME}.command" }
+                            .key
+                            .replace("KEY", "VALUE")
+                    assertTrue(again.environment.getValue(hook).contains("own='agent/w'"), "the resumed session got a new scope")
+                } else {
+                    val block = ClaudeChat.noPushEnvironment(emptyMap()).getValue("GIT_CONFIG_KEY_0")
+                    assertTrue(again.environment.containsValue(block), "a git without config hooks must get the full push block")
+                }
                 assertEquals(first, saved["s-1"])
                 chatScope.cancel()
             } finally {
                 repo.deleteRecursively()
             }
         }
+
+    /** Whether this machine's git runs a hook named in config, asked the way git documents it (`git hook list`). */
+    private fun gitRunsConfigHooks(repo: File): Boolean {
+        val probe = GitWorkspace.run(repo, listOf("git", "-c", "hook.amethyst-test-probe.command=true", "-c", "hook.amethyst-test-probe.event=pre-push", "hook", "list", "pre-push"))
+        return probe.code == 0 && probe.output.lines().any { it.trim() == "amethyst-test-probe" }
+    }
 }
