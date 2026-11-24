@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CommitBarrier
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -199,6 +200,8 @@ object MarmotDevicesCommands {
             ) {
                 return@withDevices Output.error("not_found", "no linked device in slot $target")
             }
+            // An interop test racing two renames holds this one's Commit until both are staged.
+            ctx.commitBarrier = CommitBarrier.fromEnv()
             if (!devices.renameDevice(slot, label)) return@withDevices Output.error("not_confirmed", "no relay confirmed the rename of $slot")
             Output.emit(render(devices.state.value) + mapOf("renamed" to slot))
             0

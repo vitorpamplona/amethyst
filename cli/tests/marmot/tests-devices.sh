@@ -24,7 +24,8 @@
 #       and D's own archive of a pinned chat unpins it.
 #   52  moving: amy M2 and M3 (K again) found a second device group; D moves into it with an
 #       ordinary confirmed link; W, left behind, cleans D's old entry up; D ends in M2's group.
-#   53  a rename that loses a fork comes back: D and M3 rename two devices at once.
+#   53  a rename that loses a fork comes back: D and M3 rename two devices at once, both Commits
+#       held at a barrier (AMY_TEST_COMMIT_BARRIER) until both are staged, so they always fork.
 #   54  history through Blossom, across restarts, with an attachment key: a fourth amy device M4
 #       links with M2 while Blossom is down, so the history M2 owes it stays owed across runs and
 #       goes once Blossom is back; M4 keeps the deliveries across a run that cannot fetch them,
@@ -562,36 +563,60 @@ test_52_move_amy_device() {
   record_result "$id" pass "D moved at ${moved_at}s; W cleaned D up; D, M2 and M3 list three devices"
 }
 
+# Each run of test 53 renames to labels of its own, so it can run more than once after 52.
+RUN_53=0
+
 test_53_rename_fork_recovers() {
   banner "Test 53 — two renames at once: the one that loses its fork is made again"
   local id="53 rename lost in a fork comes back"
   [[ $M_READY -eq 1 ]] || { record_result "$id" skip "no second device group"; return; }
+  RUN_53=$(( RUN_53 + 1 ))
+  local la="Fork-A" lb="Fork-B"
+  (( RUN_53 > 1 )) && { la="Fork-A$RUN_53"; lb="Fork-B$RUN_53"; }
   local m2_slot m3_slot
   m2_slot=$(amy_k M2 marmot devices list 2>/dev/null | jq -r '.this_slot')
   m3_slot=$(amy_k M3 marmot devices list 2>/dev/null | jq -r '.this_slot')
   amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
   amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
-  # Both from the same epoch: two Commits on one parent.
-  amy_d marmot devices rename "$m2_slot" "Fork-A" >>"$LOG_FILE" 2>&1 &
+  local log_from; log_from=$(wc -l <"$LOG_FILE")
+  # Two Commits on one parent, for certain: each rename syncs, stages its Commit, then holds it at
+  # the barrier (AMY_TEST_COMMIT_BARRIER) until both are staged, so neither saw the other's.
+  local barrier="$STATE_DIR/barrier-53-$RUN_53"
+  rm -rf "$barrier"; mkdir -p "$barrier"
+  AMY_TEST_COMMIT_BARRIER="$barrier" amy_d marmot devices rename "$m2_slot" "$la" >>"$LOG_FILE" 2>&1 &
   local p1=$!
-  amy_k M3 marmot devices rename self "Fork-B" >>"$LOG_FILE" 2>&1 &
+  AMY_TEST_COMMIT_BARRIER="$barrier" amy_k M3 marmot devices rename self "$lb" >>"$LOG_FILE" 2>&1 &
   local p2=$!
-  wait "$p1" "$p2"
-  local deadline=$(( $(date +%s) + 150 )) labels=""
+  local deadline=$(( $(date +%s) + 90 )) ready=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    amy_d marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
-    amy_k M3 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
-    amy_k M2 marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    ready=$(find "$barrier" -name 'ready-*' | wc -l)
+    (( ready >= 2 )) && break
+    kill -0 "$p1" 2>/dev/null || kill -0 "$p2" 2>/dev/null || break
+    sleep 0.2
+  done
+  touch "$barrier/go"
+  wait "$p1"; local r1=$?
+  wait "$p2"; local r2=$?
+  (( ready >= 2 )) || { record_result "$id" fail "the two renames never both staged a Commit ($ready ready; rc $r1/$r2)"; return; }
+  [[ $r1 -eq 0 && $r2 -eq 0 ]] || { record_result "$id" fail "a rename failed after the barrier (rc $r1/$r2)"; return; }
+  local want; want=$(jq -cn --arg a "$la" --arg b "$lb" '[$a,$b]')
+  local labels=""
+  deadline=$(( $(date +%s) + 150 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    # --verbose: the recovery is a debug line ("lost a fork; making it again"), and stderr is the log.
+    amy_d --verbose marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    amy_k M3 --verbose marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
+    amy_k M2 --verbose marmot devices sync --timeout 3 >/dev/null 2>>"$LOG_FILE"
     labels=$(for a in D M2 M3; do amy_k "$a" marmot devices list 2>/dev/null | jq -c --arg a "$m2_slot" --arg b "$m3_slot" '[(.devices[] | select(.slot == $a) | .label), (.devices[] | select(.slot == $b) | .label)]'; done | sort -u)
-    [[ "$labels" == '["Fork-A","Fork-B"]' ]] && break
+    [[ "$labels" == "$want" ]] && break
     sleep 2
   done
-  [[ "$labels" == '["Fork-A","Fork-B"]' ]] || { record_result "$id" fail "the devices settled on $(printf '%s' "$labels" | tr '\n' ' ')"; return; }
+  [[ "$labels" == "$want" ]] || { record_result "$id" fail "the devices settled on $(printf '%s' "$labels" | tr '\n' ' ')"; return; }
   # Both renames showing proves nothing unless they forked: one that applied after the other never
-  # had to be made again. Only a logged recovery shows the path under test ran.
-  local recovered; recovered=$(grep -c 'lost a fork; making it again' "$LOG_FILE" 2>/dev/null || true)
-  [[ "${recovered:-0}" -ge 1 ]] || { record_result "$id" fail "both renames show, but no fork was recovered (the two Commits did not race)"; return; }
-  record_result "$id" pass "all three show both renames (recoveries logged: $recovered)"
+  # had to be made again. Only a recovery logged in this run of the test shows the path under test ran.
+  local recovered; recovered=$(tail -n +"$(( log_from + 1 ))" "$LOG_FILE" | grep -c 'lost a fork; making it again' || true)
+  [[ "${recovered:-0}" -ge 1 ]] || { record_result "$id" fail "both renames show, but no fork was recovered"; return; }
+  record_result "$id" pass "both Commits staged on one epoch; all three show both renames (recoveries logged: $recovered)"
 }
 
 test_54_history_blossom_restart_attachment() {

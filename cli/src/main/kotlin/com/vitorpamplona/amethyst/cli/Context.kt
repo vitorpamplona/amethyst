@@ -45,6 +45,7 @@ import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -94,6 +95,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -378,6 +380,10 @@ class Context(
         )
     }
 
+    /** Set by a verb that races its group Commit in an interop test ([CommitBarrier]); null otherwise. */
+    @Volatile
+    var commitBarrier: File? = null
+
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager by lazy {
         MarmotManager(
@@ -388,7 +394,10 @@ class Context(
             // Publish-before-apply: a group-state change becomes canonical only
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
-            MarmotPublisher { event, relays -> client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true) },
+            MarmotPublisher { event, relays ->
+                commitBarrier?.let { if (event.kind == GroupEvent.KIND) CommitBarrier.await(it) }
+                client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true)
+            },
             publishObligationStore,
             ingestDedupStore,
             deviceGroupConfig =
