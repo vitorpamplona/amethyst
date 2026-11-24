@@ -60,11 +60,13 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -578,6 +580,25 @@ private fun ConcordMessageComposer(
         }
     }
     val enterSends = rememberEnterSendsMessage()
+    // What the suggestion lists show, so Enter picks the first suggestion instead of sending the
+    // half-typed mention or shortcode.
+    var shownUsers by remember { mutableStateOf<List<User>>(emptyList()) }
+    var shownEmoji by remember { mutableStateOf<List<EmojiPackState.EmojiMedia>>(emptyList()) }
+    val pickFirstSuggestion: () -> Boolean = {
+        val user = shownUsers.firstOrNull()
+        val emoji = shownEmoji.firstOrNull()
+        when {
+            user != null -> {
+                newMessageModel.autocompleteWithUser(user)
+                true
+            }
+            emoji != null -> {
+                newMessageModel.autocompleteWithEmoji(emoji)
+                true
+            }
+            else -> false
+        }
+    }
 
     Column(modifier = EditFieldModifier) {
         newMessageModel.userSuggestions?.let {
@@ -586,6 +607,7 @@ private fun ConcordMessageComposer(
                 newMessageModel::autocompleteWithUser,
                 accountViewModel,
                 SuggestionListDefaultHeightChat,
+                onShown = { shown -> shownUsers = shown },
             )
         }
 
@@ -595,6 +617,7 @@ private fun ConcordMessageComposer(
                 newMessageModel::autocompleteWithEmoji,
                 newMessageModel::autocompleteWithEmoji,
                 SuggestionListDefaultHeightChat,
+                onShown = { shown -> shownEmoji = shown },
             )
         }
 
@@ -623,7 +646,13 @@ private fun ConcordMessageComposer(
                 Modifier
                     .fillMaxWidth()
                     .focusRequester(composerFocus)
-                    .sendOnEnter(enabled = enterSends, isActive = { newMessageModel.canPost() }, onSend = send),
+                    .sendOnEnter(
+                        enabled = enterSends,
+                        isActive = { newMessageModel.canPost() },
+                        onSend = send,
+                        isComposing = { newMessageModel.message.composition != null },
+                        onPickSuggestion = pickFirstSuggestion,
+                    ),
             shape = EditFieldBorder,
             placeholder = {
                 Text(

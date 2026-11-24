@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.use_direct_url
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ReportShown
 import org.jetbrains.compose.resources.stringResource
 
 private val DividerThickness = 0.25.dp
@@ -57,8 +58,10 @@ fun ShowEmojiSuggestionList(
     onSelect: (EmojiPackState.EmojiMedia) -> Unit,
     onFullSize: (EmojiPackState.EmojiMedia) -> Unit,
     modifier: Modifier = Modifier,
+    onShown: (List<EmojiPackState.EmojiMedia>) -> Unit = {},
 ) {
     val suggestions by emojiSuggestions.results.collectAsStateWithLifecycle(emptyList())
+    ReportShown(suggestions, onShown)
 
     if (suggestions.isNotEmpty()) {
         LazyColumn(
