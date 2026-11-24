@@ -616,7 +616,8 @@ kind:10040 out-of-band.
 
 | Command | What it does |
 |---|---|
-| `amy dm send RECIPIENT TEXT [--allow-fallback]` | Gift-wrap a kind:14 to RECIPIENT. Strict kind:10050 routing by default. |
+| `amy dm send RECIPIENT[,RECIPIENT…] TEXT [--subject S] [--allow-fallback]` | Gift-wrap a kind:14 to RECIPIENT (several make a group room). Strict kind:10050 routing by default. |
+| `amy dm send [RECIPIENT…] TEXT --reply-to EVENT_ID [--timeout SECS]` | Reply in the room of a DM in your inbox (searched for up to `--timeout`, default 8 s). Recipients may be left out; any given must be in that room, or the command fails with `bad_args` rather than leave them out. |
 | `amy dm send-file RECIPIENT --file PATH --server URL` | Encrypt a local file, upload to a Blossom server, publish a kind:15 referencing it. |
 | `amy dm send-file RECIPIENT URL --key HEX --nonce HEX` | Reference-mode: file already uploaded; just publish the kind:15. |
 | `amy dm list [USER] [--peer USER] [--since TS] [--limit N]` | Drain and decrypt gift wraps. Positional USER is an alternative to `--peer` (the flag wins). Default `--limit 50`. |
