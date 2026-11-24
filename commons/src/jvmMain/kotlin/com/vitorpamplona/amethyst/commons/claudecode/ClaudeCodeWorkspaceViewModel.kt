@@ -25,14 +25,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** One repository of the workspace on the pull requests screen. */
 @Immutable
@@ -80,10 +90,12 @@ class ClaudeCodeWorkspaceViewModel(
             ?.cwd
             ?.let { service.agentWorkspaces.of(File(it)) }
 
-    private val _rows = MutableStateFlow<List<WorkspaceRepoRow>>(emptyList())
+    // What the last look found, shown at once when the screen comes back while a new look runs.
+    private val _rows = MutableStateFlow(workspace?.let { lastRows[it.id] }.orEmpty())
     val rows: StateFlow<List<WorkspaceRepoRow>> = _rows.asStateFlow()
 
-    private val _loading = MutableStateFlow(true)
+    /** Only while there is nothing to show yet: a refresh over shown rows replaces them when it ends. */
+    private val _loading = MutableStateFlow(_rows.value.isEmpty())
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     private val _restoring = MutableStateFlow(false)
@@ -103,22 +115,77 @@ class ClaudeCodeWorkspaceViewModel(
     /** Whether the user's `gh` is installed: without it, pull requests can't be opened from here. */
     val hasGh: Boolean = GitHubPullRequests.find() != null
 
+    private var refreshing: Job? = null
+    private var generation = 0
+
+    /** Whether the workstream's clones are gone (freed): its checks wait for them to come back. */
+    private val freed = MutableStateFlow(false)
+
+    /** [repo]'s build gate: one per clone, the same one the Propose screen runs. */
+    private fun gateOf(repo: String): BuildGate? = workspace?.let { service.buildGateAt(File(it.dir, repo)) }
+
+    /** Each repository's checks, by folder, for the branch as it is now. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val gates: StateFlow<Map<String, GateState>> =
+        combine(_rows.map { rows -> rows.map { it.name } }, freed, ::Pair)
+            .distinctUntilChanged()
+            .flatMapLatest { (names, isFreed) ->
+                val gates = names.mapNotNull { name -> gateOf(name)?.let { name to it } }
+                if (gates.isEmpty()) {
+                    flowOf(emptyMap())
+                } else {
+                    combine(gates.map { (name, gate) -> gate.state.map { name to it } }) { states ->
+                        // Without its clone a repository shows no script: its checks are still to run.
+                        states.associate { (name, state) -> name to if (isFreed && state == GateState.None) GateState.NotRun else state }
+                    }
+                }
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Where [repo]'s last run of the checks wrote its whole output. */
+    fun gateLogFile(repo: String): StateFlow<File?> = gateOf(repo)?.logFile ?: MutableStateFlow(null)
+
+    /** [repo]'s last run of the checks, up to its last two million characters. */
+    fun fullGateLog(repo: String): String = gateOf(repo)?.fullLog().orEmpty()
+
+    /** Runs [repo]'s checks, in its clone: a freed workstream's come back first. */
+    fun runGate(repo: String) {
+        viewModelScope.launch {
+            if (!ensureClones()) return@launch
+            gateOf(repo)?.start()
+        }
+    }
+
+    /** Stops [repo]'s checks. */
+    fun cancelGate(repo: String) {
+        gateOf(repo)?.cancel()
+    }
+
     init {
         refresh()
     }
 
+    /** Reads each repository's state again; a refresh still running gives way to this one. */
     fun refresh() {
         val known = workspace ?: return
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                // As the service knows it now: it may have been freed, or brought back, since the screen opened.
-                val ws = service.workspaceAt(known.dir) ?: known
-                _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
-            } finally {
-                _loading.value = false
+        refreshing?.cancel()
+        val self = ++generation
+        refreshing =
+            viewModelScope.launch {
+                if (_rows.value.isEmpty()) _loading.value = true
+                try {
+                    // As the service knows it now: it may have been freed, or brought back, since the screen opened.
+                    val ws = service.workspaceAt(known.dir) ?: known
+                    // An equal list changes nothing on screen: StateFlow drops it.
+                    _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
+                    freed.value = ws.isFreed
+                    // A commit since the checks ran outdates their pass.
+                    if (!ws.isFreed) ws.repos.forEach { gateOf(it.name)?.recheck() }
+                    lastRows[known.id] = _rows.value
+                } finally {
+                    // A refresh that gave way leaves the bar to the one that replaced it.
+                    if (generation == self) _loading.value = false
+                }
             }
-        }
     }
 
     /** The repositories as their clones are now. */
@@ -229,6 +296,11 @@ class ClaudeCodeWorkspaceViewModel(
             try {
                 // A freed workstream pushes from its clones: they come back first.
                 if (!ensureClones()) return@launch
+                // Only work the checks passed on goes out. The buttons wait for a pass already;
+                // this looks again, for a commit since. The gate's card says what is missing.
+                val gate = gateOf(repo)
+                gate?.recheck()
+                if (gate != null && !gate.stateNow().allowsPublishing) return@launch
                 when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft, upstream = row.gitHub)) {
                     is GitHubPullRequests.Result.Failed -> {
                         _errors.update { it + (repo to PullRequestError(result.reason, result.pushed)) }
@@ -282,5 +354,8 @@ class ClaudeCodeWorkspaceViewModel(
             val answered = pr.isOpen || (pr.createdAt != null && pr.createdAt >= request.requestedAt)
             return request.takeIf { !answered }
         }
+
+        /** Each workspace's rows as last seen, by workspace id, for as long as the app runs. */
+        private val lastRows = ConcurrentHashMap<String, List<WorkspaceRepoRow>>()
     }
 }

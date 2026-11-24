@@ -30,17 +30,21 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -326,32 +330,6 @@ class ClaudeCodeChangesViewModel(
     }
 }
 
-/** The build gate: the repository's own pre-push checks, run in the worktree before publishing. */
-@Immutable
-sealed interface GateState {
-    /** The checkout has no gate script. */
-    data object None : GateState
-
-    data object NotRun : GateState
-
-    data class Running(
-        val tail: String,
-    ) : GateState
-
-    data class Passed(
-        val tail: String,
-    ) : GateState
-
-    data class Failed(
-        val tail: String,
-    ) : GateState
-
-    /** The user stopped it; publishing waits for a run that passes. */
-    data class Cancelled(
-        val tail: String,
-    ) : GateState
-}
-
 /** A title and description drafted for the proposal. */
 @Immutable
 data class ProposalDraft(
@@ -383,9 +361,15 @@ class ClaudeCodeProposeViewModel(
     private val service: ClaudeCodeService,
     private val key: String,
     /** A repository's folder in the chat's workspace, or null for the chat's folder itself. */
-    repo: String? = null,
+    private val repo: String? = null,
 ) : ViewModel() {
     val chat: ClaudeChat? = service.chat(key)
+
+    /** The workstream [repo] is in, when the chat works in one. */
+    private val workspace: AgentWorkspace? = repo?.let { service.workspaceAt(chat?.state?.value?.cwd) }
+
+    /** What the agent asked to publish ([PublishToolServer]): its title and description are the draft. */
+    private val request: PublishRequest? = repo?.let { workspace?.publishRequests?.get(it) }
     private val dir: File? =
         chat
             ?.state
@@ -415,10 +399,29 @@ class ClaudeCodeProposeViewModel(
 
     private var draftJob: Job? = null
 
-    private val _gate = MutableStateFlow<GateState>(GateState.NotRun)
-    val gate: StateFlow<GateState> = _gate.asStateFlow()
+    /** The checkout's build gate, shared with every other way of publishing it; found off the main thread. */
+    private val buildGate = MutableStateFlow<BuildGate?>(null)
 
-    private var gateJob: Job? = null
+    /** The checks' state for the branch as it is now. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val gate: StateFlow<GateState> = buildGate.flatMapLatest { it?.state ?: flowOf(GateState.NotRun) }.stateIn(viewModelScope, SharingStarted.Eagerly, GateState.NotRun)
+
+    /** Where the last run's whole output is, for an editor or a terminal. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val gateLogFile: StateFlow<File?> = buildGate.flatMapLatest { it?.logFile ?: flowOf(null) }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** The last run's output, up to its last two million characters. */
+    fun fullGateLog(): String = buildGate.value?.fullLog().orEmpty()
+
+    /** Runs the checks; one already running, from here or another screen, goes on. */
+    fun runGate() {
+        buildGate.value?.start()
+    }
+
+    /** Stops the running checks. */
+    fun cancelGate() {
+        buildGate.value?.cancel()
+    }
 
     private val _ngitAccount = MutableStateFlow<Ngit.Account?>(null)
 
@@ -435,130 +438,14 @@ class ClaudeCodeProposeViewModel(
             val dir = dir ?: return@launch
             val info = GitWorkspace.inspect(dir)
             _info.value = info
-            if (!gateScript(dir).isFile) _gate.value = GateState.None
-            // A first draft from the commits themselves, shown while the agent writes a better one.
-            if (_draft.value == null && info != null) _draft.value = draftFromCommits(info)
+            // A commit since the last run, here or elsewhere, outdates its pass.
+            buildGate.value = service.buildGate(dir).also { it.recheck() }
+            // The agent's own request, when it sent one: its words are the draft, and nothing is asked
+            // again. Otherwise a first draft from the commits, shown while the agent writes a better one.
+            if (_draft.value == null && info != null) _draft.value = request?.let { ProposalDraft(it.title, it.body) } ?: draftFromCommits(info)
             // A new proposal is described as the screen opens; an update keeps its description.
-            if (info != null && info.proposalId == null && info.commits.isNotEmpty()) draftWithAgent()
+            if (request == null && info != null && info.proposalId == null && info.commits.isNotEmpty()) draftWithAgent()
         }
-    }
-
-    private fun gateScript(dir: File) = File(GitWorkspace.git(dir, "rev-parse", "--show-toplevel")?.trim() ?: dir.path, ".git-hooks/pre-push")
-
-    private var gateProcess: Process? = null
-
-    /**
-     * The last [GATE_LOG_MAX] characters of the run, as lines. Old lines drop off the front one
-     * at a time, where trimming one big string moved all of it on every line.
-     */
-    private val gateLog = ArrayDeque<String>()
-    private var gateLogChars = 0
-
-    private fun appendGateLine(line: String) =
-        synchronized(gateLog) {
-            gateLog.addLast(line)
-            gateLogChars += line.length + 1
-            while (gateLogChars > GATE_LOG_MAX && gateLog.size > 1) gateLogChars -= gateLog.removeFirst().length + 1
-        }
-
-    /** The last [GATE_TAIL] characters, for the screen. */
-    private fun gateTail(): String =
-        synchronized(gateLog) {
-            val lines = ArrayList<String>()
-            var chars = 0
-            for (i in gateLog.indices.reversed()) {
-                val line = gateLog[i]
-                if (chars + line.length + 1 > GATE_TAIL && lines.isNotEmpty()) break
-                lines.add(line)
-                chars += line.length + 1
-            }
-            lines.asReversed().joinToString("\n", postfix = "\n")
-        }
-
-    private val _gateLogFile = MutableStateFlow<File?>(null)
-
-    /** Where the last run's whole output is, for an editor or a terminal. */
-    val gateLogFile: StateFlow<File?> = _gateLogFile.asStateFlow()
-
-    /** The last run's output, up to the last [GATE_LOG_MAX] characters. */
-    fun fullGateLog(): String = synchronized(gateLog) { gateLog.joinToString("\n", postfix = "\n") }
-
-    fun runGate() {
-        val dir = dir ?: return
-        if (gateJob?.isActive == true) return
-        _gate.value = GateState.Running("")
-        synchronized(gateLog) {
-            gateLog.clear()
-            gateLogChars = 0
-        }
-        gateJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                val script = gateScript(dir)
-                val root = script.parentFile.parentFile
-                // In the git dir: a build/ folder the repository does not ignore would show as a change.
-                val logFile = File(GitWorkspace.privateDir(root) ?: File(root, "build"), "claude-code-gate.log")
-                if (!logFile.parentFile.isDirectory && !logFile.parentFile.mkdirs()) Log.w(TAG) { "could not create ${logFile.parentFile}" }
-                _gateLogFile.value = logFile
-                val code =
-                    try {
-                        val process =
-                            ProcessBuilder("bash", script.absolutePath)
-                                .directory(root)
-                                .redirectErrorStream(true)
-                                .apply {
-                                    environment().putAll(AndroidSdk.environment())
-                                    environment()["PREPUSH_KMP_METADATA"] = "1"
-                                }.start()
-                        gateProcess = process
-                        // A pre-push hook reads the pushed refs on stdin; there are none.
-                        process.outputStream.close()
-                        logFile.bufferedWriter().use { log ->
-                            process.inputStream.bufferedReader().useLines { lines ->
-                                // A build prints thousands of lines a second: the screen gets the tail every so often.
-                                var shownAt = 0L
-                                lines.forEach { line ->
-                                    log.write(line)
-                                    log.newLine()
-                                    appendGateLine(line)
-                                    val now = System.currentTimeMillis()
-                                    if (now - shownAt >= GATE_SHOW_MS && _gate.value is GateState.Running) {
-                                        shownAt = now
-                                        _gate.value = GateState.Running(gateTail())
-                                    }
-                                }
-                            }
-                        }
-                        runInterruptible { process.waitFor() }
-                    } catch (e: IOException) {
-                        appendGateLine(e.message ?: "the checks could not run")
-                        -1
-                    } finally {
-                        gateProcess = null
-                    }
-                val tail = gateTail()
-                _gate.value =
-                    when {
-                        _gate.value is GateState.Cancelled -> GateState.Cancelled(tail)
-                        code == 0 -> GateState.Passed(tail)
-                        else -> GateState.Failed(tail)
-                    }
-            }
-    }
-
-    /** Stops the running gate and everything it started (Gradle and its workers included). */
-    fun cancelGate() {
-        val process = gateProcess ?: return
-        _gate.value = GateState.Cancelled((gate.value as? GateState.Running)?.tail.orEmpty())
-        // The script first, listing its children while they are still its own: stopped after them,
-        // it would see its Gradle end and go on to its next step.
-        val children = process.descendants().toList()
-        process.destroy()
-        children.forEach { it.destroy() }
-    }
-
-    override fun onCleared() {
-        cancelGate()
-        super.onCleared()
     }
 
     /** The user's own text. An agent draft still being written stops: what was typed stays. */
@@ -590,7 +477,10 @@ class ClaudeCodeProposeViewModel(
             viewModelScope.launch(start = CoroutineStart.LAZY) {
                 try {
                     val prompt = draftPrompt(dir, info)
-                    val draft = service.askAside(key, prompt)?.let(::parseDraftAnswer)
+                    val answer = service.askAside(key, prompt)
+                    val draft = answer?.let(::parseDraftAnswer)
+                    // No answer is logged where it failed; an answer without the JSON, here.
+                    if (answer != null && draft == null) Log.w(TAG) { "The draft answer had no {title, description}: ${answer.take(DRAFT_LOG_CHARS)}" }
                     if (draft != null) _draft.value = draft else _draftFailed.value = true
                 } finally {
                     // A newer draft took over: it says when it is done.
@@ -687,17 +577,18 @@ class ClaudeCodeProposeViewModel(
             } catch (e: IOException) {
                 Log.w(TAG, "Could not link the proposal to $branch", e)
             }
+            // The agent's request is answered: its card leaves the Pull requests screen.
+            val ws = workspace
+            if (ws != null && repo != null && request != null) service.recordPublishRequest(ws.id, repo, null)
             chat?.refreshGit()
         }
     }
 
     companion object {
         private const val TAG = "ClaudeCodePropose"
-        private const val GATE_TAIL = 6_000
-        private const val GATE_LOG_MAX = 2_000_000
-        private const val GATE_SHOW_MS = 100L
         private const val DRAFT_DIFF_CHARS = 60_000
         private const val TEMPLATE_CHARS = 20_000
+        private const val DRAFT_LOG_CHARS = 500
 
         fun draftFromCommits(info: GitWorkInfo): ProposalDraft {
             val first = info.commits.lastOrNull()

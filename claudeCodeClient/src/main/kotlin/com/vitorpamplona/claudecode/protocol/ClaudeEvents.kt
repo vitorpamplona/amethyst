@@ -21,6 +21,7 @@
 package com.vitorpamplona.claudecode.protocol
 
 import com.vitorpamplona.agents.AgentEvent
+import com.vitorpamplona.agents.ContentBlock
 
 /** What each of Claude Code's messages means for the chat, as an [AgentEvent]; null for what the chat doesn't use. */
 object ClaudeEvents {
@@ -30,9 +31,16 @@ object ClaudeEvents {
             is ClaudeMessage.Assistant ->
                 message.parentToolUseId?.let { AgentEvent.Subagent(it, message.content, fromAgent = true) }
                     ?: AgentEvent.Reply(message.content, message.contextTokens)
-            is ClaudeMessage.User ->
-                message.parentToolUseId?.let { AgentEvent.Subagent(it, message.content, fromAgent = false) }
-                    ?: AgentEvent.ToolResults(message.content)
+            is ClaudeMessage.User -> {
+                // The CLI writes a skill's whole SKILL.md (and its other notes for the model) as a synthetic
+                // user message: it is the model's context, not the chat's. Only tool results in it count.
+                val content = if (message.isSynthetic) message.content.filterIsInstance<ContentBlock.ToolResult>() else message.content
+                when {
+                    message.isSynthetic && content.isEmpty() -> null
+                    message.parentToolUseId != null -> AgentEvent.Subagent(message.parentToolUseId, content, fromAgent = false)
+                    else -> AgentEvent.ToolResults(content)
+                }
+            }
             is ClaudeMessage.StreamEvent ->
                 when {
                     // A subagent's reply streams too; the chat shows its messages once they are whole.

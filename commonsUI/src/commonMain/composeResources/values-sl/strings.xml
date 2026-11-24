@@ -10170,7 +10170,6 @@
     <string name="claude_code_fork_hint">Kopija seje. Tvoje prvo sporočilo jo začne kot samostojno sejo; izvirnik ostane, kot je.</string>
     <string name="claude_code_notify_needs_you">%1$s potrebuje tvojo odobritev</string>
     <string name="claude_code_notify_finished">%1$s: končano</string>
-    <string name="claude_code_section_needs_you">Potrebuje tebe</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Arhivirano · %1$d seja</item>
         <item quantity="two">Arhivirano · %1$d seji</item>

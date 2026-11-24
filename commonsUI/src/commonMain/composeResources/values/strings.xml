@@ -9675,6 +9675,7 @@
     <string name="claude_code_gate_passed">The checks passed.</string>
     <string name="claude_code_gate_failed">The checks failed. Ask Claude to fix them, then run them again.</string>
     <string name="claude_code_gate_cancelled">Stopped. Run the checks again before publishing.</string>
+    <string name="claude_code_gate_outdated">The branch changed since the checks last ran. Run them again before publishing.</string>
     <string name="claude_code_gate_full_log">Full log</string>
     <string name="claude_code_close">Close</string>
     <string name="claude_code_gate_run">Run</string>
@@ -9740,7 +9741,6 @@
     <string name="claude_code_notify_needs_you">%1$s needs your approval</string>
     <string name="claude_code_notify_finished">%1$s finished</string>
     <string name="claude_code_notify_publish">%1$s asks you to open a pull request</string>
-    <string name="claude_code_section_needs_you">Needs you</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archived · %1$d session</item>
         <item quantity="other">Archived · %1$d sessions</item>
@@ -9790,6 +9790,10 @@
     <string name="claude_code_pr_open">Push and open pull request</string>
     <string name="claude_code_pr_open_draft">Open as draft</string>
     <string name="claude_code_pr_view">View on GitHub</string>
+    <string name="claude_code_pr_panel_number">%1$s #%2$d</string>
+    <string name="claude_code_pr_panel_details">Open full page</string>
+    <string name="claude_code_pr_panel_create">Create PR</string>
+    <string name="claude_code_pr_panel_more">More actions for %1$s</string>
     <string name="claude_code_pr_state_open">Pull request open</string>
     <string name="claude_code_pr_state_draft">Draft pull request</string>
     <string name="claude_code_pr_state_merged">Merged</string>

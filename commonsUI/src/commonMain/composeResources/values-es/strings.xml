@@ -9534,7 +9534,6 @@
     <string name="claude_code_fork_hint">Una copia de la sesión. Tu primer mensaje la inicia como una sesión propia; la original se queda como está.</string>
     <string name="claude_code_notify_needs_you">%1$s necesita tu aprobación</string>
     <string name="claude_code_notify_finished">%1$s terminó</string>
-    <string name="claude_code_section_needs_you">Te necesitan</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archivadas · %1$d sesión</item>
         <item quantity="other">Archivadas · %1$d sesiones</item>

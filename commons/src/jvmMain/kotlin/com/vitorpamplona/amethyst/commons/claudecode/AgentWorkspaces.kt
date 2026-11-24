@@ -213,6 +213,9 @@ data class WorkspaceRepoStatus(
     val repo: WorkspaceRepo,
     val ahead: Int,
     val uncommitted: Int,
+    /** Lines the branch changed since its base, uncommitted work included. */
+    val insertions: Int = 0,
+    val deletions: Int = 0,
 )
 
 /**
@@ -509,7 +512,8 @@ class AgentWorkspaces(
                 val dir = File(workspace.dir, repo.name)
                 val ahead = GitWorkspace.git(dir, "rev-list", "--count", "origin/${repo.baseBranch}..HEAD")?.trim()?.toIntOrNull() ?: 0
                 val uncommitted = GitWorkspace.git(dir, "status", "--porcelain")?.lines()?.count { it.isNotBlank() } ?: 0
-                WorkspaceRepoStatus(repo, ahead, uncommitted)
+                val (insertions, deletions) = GitWorkspace.lineStat(dir, "origin/${repo.baseBranch}")
+                WorkspaceRepoStatus(repo, ahead, uncommitted, insertions, deletions)
             }
         }
 
