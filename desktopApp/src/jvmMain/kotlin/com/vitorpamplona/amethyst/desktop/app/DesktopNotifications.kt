@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotific
 import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_asks
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_publish
@@ -154,6 +155,7 @@ class DesktopNotifications(
                     loadStringRes(
                         when (event.kind) {
                             ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
+                            ChatAttention.Kind.ASKS -> Res.string.claude_code_notify_asks
                             ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
                             ChatAttention.Kind.REQUESTS_PUBLISH -> Res.string.claude_code_notify_publish
                         },

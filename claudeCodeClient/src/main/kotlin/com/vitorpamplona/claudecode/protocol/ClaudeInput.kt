@@ -128,10 +128,14 @@ object ClaudeInput {
             )
         }
 
-    /** The answer to a `can_use_tool` request. */
+    /**
+     * The answer to a `can_use_tool` request. [unansweredNotes]: the session advertised
+     * [ClaudeQuestions.UNANSWERED_CAPABILITY], so answered questions may say why one wasn't.
+     */
     fun permissionResponse(
         request: PermissionRequest,
         decision: PermissionDecision,
+        unansweredNotes: Boolean = false,
     ): JsonObject =
         controlSuccess(
             request.requestId,
@@ -142,6 +146,13 @@ object ClaudeInput {
                         // Sent even when unchanged: older CLIs read the input to run from here.
                         put("updatedInput", decision.updatedInput ?: request.input)
                         decision.updatedPermissions?.takeIf { it.isNotEmpty() }?.let { put("updatedPermissions", it) }
+                        request.toolUseId?.let { put("toolUseID", it) }
+                    }
+                is PermissionDecision.Answer ->
+                    buildJsonObject {
+                        put("behavior", "allow")
+                        val questions = request.questions
+                        put("updatedInput", if (questions != null) ClaudeQuestions.answeredInput(request.input, questions, decision, unansweredNotes) else request.input)
                         request.toolUseId?.let { put("toolUseID", it) }
                     }
                 is PermissionDecision.Deny ->

@@ -9577,6 +9577,7 @@
     <string name="claude_code_status_starting">Starting</string>
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
+    <string name="claude_code_status_asks">Has a question</string>
     <string name="claude_code_status_your_turn">Your turn</string>
     <string name="claude_code_status_finished">Finished, your turn</string>
     <string name="claude_code_status_failed">Failed</string>
@@ -9749,6 +9750,26 @@
     <string name="claude_code_permission_run">%1$s wants to run a command</string>
     <string name="claude_code_permission_keys">Enter allows · Esc denies</string>
     <string name="claude_code_permission_keys_deny">Enter or Esc denies</string>
+    <string name="claude_code_question_title">%1$s has a question</string>
+    <plurals name="claude_code_questions_title">
+        <item quantity="one">%1$s has %2$d question</item>
+        <item quantity="other">%1$s has %2$d questions</item>
+    </plurals>
+    <string name="claude_code_question_other_hint">Something else: type your answer</string>
+    <string name="claude_code_question_text_hint">Type your answer</string>
+    <string name="claude_code_question_pick_any">Pick any that apply</string>
+    <string name="claude_code_question_add_note">Add a note</string>
+    <string name="claude_code_question_note_hint">A note to go with your answer</string>
+    <string name="claude_code_question_preview">Preview of %1$s</string>
+    <string name="claude_code_question_submit">Send answers</string>
+    <string name="claude_code_question_ask_more">Ask me more</string>
+    <string name="claude_code_question_ask_more_tooltip">Send what you answered and ask %1$s for more questions before it starts</string>
+    <string name="claude_code_question_dismiss">Dismiss</string>
+    <string name="claude_code_question_keys">Or write a reply below · Esc dismisses</string>
+    <string name="claude_code_question_keys_reply">Or write a reply below</string>
+    <string name="claude_code_question_no_answer">No answer</string>
+    <string name="claude_code_question_waiting">Waiting for your answer</string>
+    <string name="claude_code_question_number_value">%1$s %2$s</string>
     <string name="claude_code_context_used">%1$d% of context</string>
     <string name="claude_code_context_tooltip">%1$s of %2$s tokens in use. Near full, Claude Code summarizes the conversation to go on.</string>
     <string name="claude_code_open_elsewhere_readonly">Another Claude Code has this session open. Messages from here would mix with its turns.</string>
@@ -9756,6 +9777,7 @@
     <string name="claude_code_folder_gone">This session's folder is gone, so it can be read but not continued.</string>
     <string name="claude_code_fork_hint">A copy of the session. Your first message starts it as a session of its own; the original stays as it is.</string>
     <string name="claude_code_notify_needs_you">%1$s needs your approval</string>
+    <string name="claude_code_notify_asks">%1$s has a question for you</string>
     <string name="claude_code_notify_finished">%1$s finished</string>
     <string name="claude_code_notify_publish">%1$s asks you to open a pull request</string>
     <plurals name="claude_code_section_archived">

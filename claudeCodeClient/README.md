@@ -36,6 +36,14 @@ Claude Code runs as `claude --print --input-format stream-json --output-format s
   `{"behavior":"allow","updatedInput":…}` or `{"behavior":"deny","message":…}`.
 - Without `--permission-prompt-tool stdio` the CLI never asks: anything that would prompt is
   denied.
+- `AskUserQuestion` comes as a `can_use_tool` prompt too (`protocol/ClaudeQuestions`). The host
+  allows it with the input unchanged plus `answers` (question text to label, an array for a
+  multi-select, or typed text), `annotations` (`notes`, the picked `preview`, and `unanswered` when
+  `init`'s `capabilities` lists `ask_user_question_unanswered_v1`), `response` (a reply instead) and
+  `followUp`; the CLI refuses an answer that changes the input. `CLAUDE_CODE_QUESTION_PREVIEW_FORMAT`,
+  `CLAUDE_CODE_QUESTION_EXTENDED` and `CLAUDE_CODE_QUESTION_OPTIONAL_DESCRIPTIONS` in the process's
+  environment turn on markdown previews and the extended form (a `title`, `text` and `number`
+  questions, `followUp`).
 - A prompt with images sends `content` as blocks: `{"type":"image","source":{"type":"base64",
   "media_type":…,"data":…}}` first, then `{"type":"text",…}`. A prompt that starts with `/` runs
   that slash command; its output comes back as an ordinary reply.
