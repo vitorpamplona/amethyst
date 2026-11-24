@@ -110,9 +110,10 @@ internal fun rememberToolView(
 internal fun FileChangeDiff(
     change: ToolView.FileChange,
     modifier: Modifier = Modifier,
+    startFolded: Boolean = false,
 ) {
     // Parsed when the view was made, off the main thread (ToolViews.cached).
-    GitDiffView(change.patch, modifier, showSummary = false)
+    GitDiffView(change.patch, modifier, showSummary = false, startFolded = startFolded)
 }
 
 /** A tool's name for the chat: an in-app tool's own name (`search settings`), not `mcp__server__tool`. */
@@ -145,7 +146,7 @@ internal fun toolLabel(
     }
 
 /**
- * An edit or a write, on its own row: the file's diff, as it landed. A failed one says why
+ * An edit or a write, on its own row: the file's card, folded, with its diff as it landed. A failed one says why
  * instead, since nothing changed.
  */
 @Composable
@@ -159,7 +160,8 @@ internal fun FileChangeRow(
     val view = rememberToolView(call.name, call.input, cwd, pending = !call.isDone)
     val change = view as? ToolView.FileChange
     if (change != null && call.isDone && !call.isError) {
-        FileChangeDiff(change)
+        // Folded to the file's card: a turn of edits reads as a list of files, each opened on a click.
+        FileChangeDiff(change, startFolded = true)
     } else {
         ToolCallRow(call, cwd, turnRunning)
     }

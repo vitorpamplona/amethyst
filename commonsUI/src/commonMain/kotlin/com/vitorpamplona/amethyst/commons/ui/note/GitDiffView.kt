@@ -123,6 +123,8 @@ fun GitDiffView(
     hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
     /** The "N files changed" line and the unified/split switch; off where the diff sits inside something that already says so. */
     showSummary: Boolean = true,
+    /** Every file starts folded to its header, not just the long ones: where the diff is one entry among many. */
+    startFolded: Boolean = false,
 ) {
     if (!parsed.hasDiff) return
     // Side by side needs the width of a large window; a phone keeps the unified view.
@@ -133,7 +135,7 @@ fun GitDiffView(
         if (showSummary) GitDiffHeader(parsed, split) { split = it }
         val highlighted = rememberDiffHighlights(parsed)
         parsed.files.forEachIndexed { index, file ->
-            DiffFileCard(file, split && wide, highlighted[index], onLineClick, lineAnnotations, hasAnnotations)
+            DiffFileCard(file, split && wide, highlighted[index], onLineClick, lineAnnotations, hasAnnotations, startFolded)
         }
     }
 }
@@ -230,9 +232,10 @@ private fun DiffFileCard(
     onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
     lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)?,
     hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean,
+    startFolded: Boolean = false,
 ) {
     // A long file starts folded, so one generated lockfile doesn't bury the rest of the change.
-    var expanded by rememberSaveable(file.displayPath) { mutableStateOf(file.hunks.sumOf { it.lines.size } <= FOLD_LINES) }
+    var expanded by rememberSaveable(file.displayPath) { mutableStateOf(!startFolded && file.hunks.sumOf { it.lines.size } <= FOLD_LINES) }
     val language = remember(file.displayPath) { CodeHighlighter.languageForFile(file.displayPath) }
     // The app's theme, not the system's: they differ when the user picks one in Settings, and
     // the highlighter paints plain code and punctuation for the background it is told about.
