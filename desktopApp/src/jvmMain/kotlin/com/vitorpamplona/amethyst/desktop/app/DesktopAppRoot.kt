@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
+import com.vitorpamplona.amethyst.commons.ui.app.RedialRelaysOnReturn
 import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
@@ -111,10 +112,14 @@ class DesktopAppRoot(
             host = host,
         ).also { host.notices.target = it.toastManager }
 
-    /** Keeps the relay pool and the HTTP clients alive while the window is open. */
+    /**
+     * Keeps the relay pool and the HTTP clients alive while the window is open, and redials the
+     * relays that dropped while it was minimized once it is restored.
+     */
     @Composable
     override fun AppEffects() {
         modules.relayProxyClientConnector.relayServices.collectAsState()
+        RedialRelaysOnReturn(modules.relayProxyClientConnector.foreground)
         modules.okHttpClients.defaultHttpClient.collectAsState()
         modules.okHttpClients.defaultHttpClientWithoutProxy.collectAsState()
 
