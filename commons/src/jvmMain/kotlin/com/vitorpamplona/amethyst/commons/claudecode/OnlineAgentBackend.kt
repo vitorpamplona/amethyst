@@ -561,6 +561,8 @@ class OnlineAgentConnection(
                     if (decision.interrupt) return null
                     return HostToolResult("The user declined. ${decision.message}".trim(), isError = true)
                 }
+                // Answers are for an agent's questions; these requests ask none, so one never approves a call.
+                is PermissionDecision.Answer -> return HostToolResult("The call wasn't approved.", isError = true)
             }
         }
         return server.call(tool, arguments)
