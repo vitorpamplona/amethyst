@@ -427,6 +427,40 @@ class CordnRuntimeTest {
         }
 
     @Test
+    fun `a coordinator list that cannot be read yet is kept and read once it can`() =
+        runBlocking {
+            // A locked keystore at login: the list used to load as empty, and the next write merged
+            // that nothing over the coordinators we could not read, losing them and their groups.
+            val first = runtime(runtimeScope())
+            first.createGroup(configFor(keyA), CordnGroupMetadata(name = "Kept"), gid = "kept")
+            settle()
+            first.stop()
+
+            val cipher = LockableCipher().apply { locked = true }
+            val relaunched =
+                CordnRuntime(
+                    accountSigner = signer,
+                    client = EmptyNostrClient(),
+                    filesDir = root.toOkioPath(),
+                    scope = runtimeScope(),
+                    cipher = cipher,
+                    links = links,
+                    openRetryFirstMs = 50,
+                    openRetryMaxMs = 200,
+                )
+            relaunched.restore()
+            settle()
+            assertTrue("a list that could not be read opened something", relaunched.sessionOrNull(keyA) == null)
+
+            cipher.locked = false
+            awaitUntil("the coordinator to open once the list can be read") { relaunched.sessionOrNull(keyA) != null }
+            awaitUntil("its group to come back") {
+                relaunched.groups.all.value
+                    .any { it.gid == "kept" }
+            }
+        }
+
+    @Test
     fun `a forgotten coordinator stays forgotten across a relaunch`() =
         runBlocking {
             // `remember()` merges the open sessions over what is on disk rather
