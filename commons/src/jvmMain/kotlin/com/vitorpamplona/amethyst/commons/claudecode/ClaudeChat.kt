@@ -170,6 +170,9 @@ data class ClaudeChatState(
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 
+    /** What the agent waits on is an answer to its questions, not an approval. */
+    val isAsking: Boolean get() = pendingPermissions.firstOrNull()?.questions != null
+
     val needsUser: Boolean get() = needsUser(status, unseenFinish)
 }
 

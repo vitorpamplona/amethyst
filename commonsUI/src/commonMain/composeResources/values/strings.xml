@@ -9560,6 +9560,7 @@
     <string name="claude_code_status_starting">Starting</string>
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
+    <string name="claude_code_status_asks">Has a question</string>
     <string name="claude_code_status_your_turn">Your turn</string>
     <string name="claude_code_status_finished">Finished, your turn</string>
     <string name="claude_code_status_failed">Failed</string>
@@ -9759,6 +9760,7 @@
     <string name="claude_code_folder_gone">This session's folder is gone, so it can be read but not continued.</string>
     <string name="claude_code_fork_hint">A copy of the session. Your first message starts it as a session of its own; the original stays as it is.</string>
     <string name="claude_code_notify_needs_you">%1$s needs your approval</string>
+    <string name="claude_code_notify_asks">%1$s has a question for you</string>
     <string name="claude_code_notify_finished">%1$s finished</string>
     <string name="claude_code_notify_publish">%1$s asks you to open a pull request</string>
     <plurals name="claude_code_section_archived">

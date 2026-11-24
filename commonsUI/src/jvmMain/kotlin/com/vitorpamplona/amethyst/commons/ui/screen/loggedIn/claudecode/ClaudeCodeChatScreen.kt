@@ -194,6 +194,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
+import com.vitorpamplona.amethyst.commons.resources.claude_code_question_waiting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree_failed
@@ -1045,7 +1046,7 @@ private fun LiveStatus(state: ClaudeChatState) {
         Spacer(Modifier.width(10.dp))
         Text(
             if (waiting) {
-                stringRes(Res.string.claude_code_waiting_approval)
+                stringRes(if (state.isAsking) Res.string.claude_code_question_waiting else Res.string.claude_code_waiting_approval)
             } else {
                 listOfNotNull(state.activity ?: stringRes(Res.string.claude_code_working), seconds?.let { elapsed(it) }).joinToString(" · ")
             },

@@ -59,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -311,17 +312,21 @@ private fun ChoiceAnswer(
     }
     val withPreview = question.options.filter { it.preview != null }
     val shown = withPreview.firstOrNull { it.label == hovered } ?: withPreview.firstOrNull { it.label == lastPicked } ?: withPreview.firstOrNull { it.label in draft.selected } ?: withPreview.firstOrNull()
-    shown?.preview?.let { preview ->
-        Text(stringRes(Res.string.claude_code_question_preview, shown.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
+    shown?.let { current ->
+        Text(stringRes(Res.string.claude_code_question_preview, current.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
-                RenderMarkdown(
-                    preview,
-                    rememberChatLinks(nav = null),
-                    Modifier.fillMaxWidth(),
-                    style = rememberChatMarkdownStyle(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                )
+                // Every preview is laid out, the others unseen, so the box is as tall as the tallest:
+                // a card that changed height on hover would move the options out from under the pointer.
+                withPreview.forEach { option ->
+                    RenderMarkdown(
+                        option.preview ?: "",
+                        rememberChatLinks(nav = null),
+                        Modifier.fillMaxWidth().alpha(if (option.label == current.label) 1f else 0f),
+                        style = rememberChatMarkdownStyle(),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }
