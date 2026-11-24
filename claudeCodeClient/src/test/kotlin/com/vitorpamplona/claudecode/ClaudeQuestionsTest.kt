@@ -175,6 +175,50 @@ class ClaudeQuestionsTest {
         }
 
     @Test
+    fun aLongAnswerStaysWithinWhatTheCliTakesLabelsIncluded() {
+        // The CLI refuses the whole answer when answers, notes and the reply pass 32,768 characters,
+        // the picked labels counted with the typed text.
+        val label = "L".repeat(1_000)
+        val input =
+            obj(
+                """{"questions":[{"question":"Which?","header":"Pick","multiSelect":true,"options":[{"label":"$label","description":"a"},{"label":"B","description":"b"}]},""" +
+                    """{"question":"Why?","header":"Why","multiSelect":false,"options":[{"label":"X","description":"x"},{"label":"Y","description":"y"}]}]}""",
+            )
+        val questions = ClaudeQuestions.parse(input)!!
+        val sent =
+            ClaudeQuestions.answeredInput(
+                input,
+                questions,
+                PermissionDecision.Answer(
+                    mapOf(
+                        "Which?" to QuestionAnswer(listOf(label, "B"), text = "t".repeat(40_000), notes = "n".repeat(9_000)),
+                        "Why?" to QuestionAnswer(listOf("X"), notes = "m".repeat(9_000)),
+                    ),
+                    reply = "r".repeat(5_000),
+                ),
+                unansweredNotes = false,
+            )
+        val answers = sent["answers"]!!.jsonObject
+        // As the CLI counts it: an array answer joined with ", ".
+        val answerChars =
+            answers.values.sumOf { value ->
+                if (value is JsonArray) value.joinToString(", ") { it.jsonPrimitive.content }.length else value.jsonPrimitive.content.length
+            }
+        val noteChars =
+            sent["annotations"]!!.jsonObject.values.sumOf {
+                it.jsonObject["notes"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?.length ?: 0
+            }
+        val replyChars = sent["response"]?.jsonPrimitive?.content?.length ?: 0
+        assertTrue(answerChars + noteChars + replyChars <= 32_768, "${answerChars + noteChars + replyChars}")
+        // The picks themselves always go: only typed text is cut.
+        assertEquals(label, (answers["Which?"] as JsonArray)[0].jsonPrimitive.content)
+        assertEquals("X", answers["Why?"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun theHostAsksForTheWholeForm() {
         assertEquals("markdown", ClaudeQuestions.HOST_ENVIRONMENT["CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"])
         assertEquals("1", ClaudeQuestions.HOST_ENVIRONMENT["CLAUDE_CODE_QUESTION_EXTENDED"])

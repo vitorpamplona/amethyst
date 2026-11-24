@@ -149,8 +149,8 @@ sealed interface ClaudeMessage {
         val request: JsonObject,
         override val raw: JsonObject,
     ) : ClaudeMessage {
-        /** Set when this is a permission prompt (`can_use_tool`). */
-        val permission: PermissionRequest? get() = if (subtype == "can_use_tool") ClaudePermissions.request(requestId, request) else null
+        /** Set when this is a permission prompt (`can_use_tool`). Read once: the connection and the chat's events both ask. */
+        val permission: PermissionRequest? by lazy { if (subtype == "can_use_tool") ClaudePermissions.request(requestId, request) else null }
     }
 
     /** The answer to a control request the host sent. */

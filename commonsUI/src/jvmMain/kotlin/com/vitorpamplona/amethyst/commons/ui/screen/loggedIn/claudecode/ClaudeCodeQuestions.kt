@@ -57,24 +57,28 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -83,7 +87,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.agents.PermissionDecision
-import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.QuestionAnswer
 import com.vitorpamplona.agents.UserQuestion
 import com.vitorpamplona.agents.UserQuestions
@@ -98,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_question_ask_mor
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_ask_more_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_dismiss
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_keys
+import com.vitorpamplona.amethyst.commons.resources.claude_code_question_keys_reply
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_no_answer
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_note_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_number_value
@@ -120,9 +124,28 @@ import java.math.RoundingMode
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+/**
+ * What the user has filled in on the card for one request, kept by the screen: its key handler
+ * reads it, so Esc never throws away a form the user has started.
+ */
+@Stable
+internal class QuestionForm(
+    val questions: UserQuestions,
+) {
+    internal val drafts = questions.questions.map { QuestionDraft(it) }
+
+    /** Something is answered: the answers can be sent. */
+    val canSend: Boolean by derivedStateOf { drafts.any { it.isAnswered } }
+
+    /** The user picked, typed or noted anything: dismissing would lose it. */
+    val hasInput: Boolean by derivedStateOf { drafts.any { it.hasInput } }
+
+    fun answers(askMore: Boolean) = PermissionDecision.Answer(drafts.associate { it.question.id to it.answer() }, askMore = askMore)
+}
+
 /** What the user has chosen and typed for one question, while the card is open. */
 @Stable
-private class QuestionDraft(
+internal class QuestionDraft(
     val question: UserQuestion,
 ) {
     var selected by mutableStateOf(emptySet<String>())
@@ -152,6 +175,19 @@ private class QuestionDraft(
         if (chosen && !question.multiSelect) selected = emptySet()
     }
 
+    /** [answer] has something in it, read without building it. */
+    val isAnswered: Boolean
+        get() =
+            when (question.kind) {
+                UserQuestion.Kind.CHOICE -> selected.isNotEmpty() || (otherChosen && text.isNotBlank())
+                UserQuestion.Kind.TEXT -> text.isNotBlank()
+                UserQuestion.Kind.NUMBER -> number != null
+            }
+
+    /** The user touched it: a pick, a typed word or a note. A number's starting value isn't theirs. */
+    val hasInput: Boolean
+        get() = selected.isNotEmpty() || text.isNotBlank() || notes.isNotBlank() || (question.kind == UserQuestion.Kind.NUMBER && number != question.defaultValue)
+
     fun answer(): QuestionAnswer =
         when (question.kind) {
             UserQuestion.Kind.CHOICE ->
@@ -173,17 +209,23 @@ private class QuestionDraft(
  */
 @Composable
 internal fun QuestionCard(
-    request: PermissionRequest,
-    questions: UserQuestions,
+    form: QuestionForm,
     onAnswer: (PermissionDecision.Answer) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val drafts = remember(request.requestId) { questions.questions.map { QuestionDraft(it) } }
-    val answered = drafts.any { it.answer().isAnswered }
-    val submit = { askMore: Boolean ->
-        onAnswer(PermissionDecision.Answer(drafts.associate { it.question.id to it.answer() }, askMore = askMore))
-    }
+    val questions = form.questions
+    val drafts = form.drafts
+    // Read through the form's derived states, so typing recomposes the field and the Send button, not every question.
+    val currentOnAnswer by rememberUpdatedState(onAnswer)
+    val onEnter = remember(form) { { if (form.canSend) currentOnAnswer(form.answers(askMore = false)) } }
     val agent = LocalAgentName.current
+    // A short window keeps room for the conversation: the questions scroll within at most two fifths of it.
+    val windowHeight =
+        with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.height
+                .toDp()
+        }
+    val questionsMax = (windowHeight * 0.4f).coerceIn(200.dp, 520.dp)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
@@ -207,25 +249,26 @@ internal fun QuestionCard(
             }
             // Four questions with previews can be taller than the window: the questions scroll, the buttons stay.
             Column(
-                Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                Modifier.heightIn(max = questionsMax).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(FormGap),
             ) {
                 drafts.forEachIndexed { i, draft ->
                     if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    QuestionBlock(draft, onEnter = { if (answered) submit(false) })
+                    QuestionBlock(draft, onEnter)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { submit(false) }, enabled = answered) { Text(stringRes(Res.string.claude_code_question_submit)) }
+                Button(onClick = { onAnswer(form.answers(askMore = false)) }, enabled = form.canSend) { Text(stringRes(Res.string.claude_code_question_submit)) }
                 if (questions.acceptsAskMore) {
                     HoverTooltip(stringRes(Res.string.claude_code_question_ask_more_tooltip, agent)) {
-                        OutlinedButton(onClick = { submit(true) }) { Text(stringRes(Res.string.claude_code_question_ask_more)) }
+                        OutlinedButton(onClick = { onAnswer(form.answers(askMore = true)) }) { Text(stringRes(Res.string.claude_code_question_ask_more)) }
                     }
                 }
                 TextButton(onClick = onDismiss) { Text(stringRes(Res.string.claude_code_question_dismiss)) }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    stringRes(Res.string.claude_code_question_keys),
+                    // Esc dismisses only a form with nothing in it (the screen's key handler).
+                    stringRes(if (form.hasInput) Res.string.claude_code_question_keys_reply else Res.string.claude_code_question_keys),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
@@ -328,11 +371,23 @@ private fun ChoiceAnswer(
             }
         }
     }
-    val withPreview = question.options.filter { it.preview != null }
-    val shown = withPreview.firstOrNull { it.label == hovered } ?: withPreview.firstOrNull { it.label == lastPicked } ?: withPreview.firstOrNull { it.label in draft.selected } ?: withPreview.firstOrNull()
-    shown?.let { current ->
+    val withPreview = remember(question) { question.options.filter { it.preview != null } }
+    if (withPreview.isEmpty()) return
+    // Which preview shows changes on hover: read in the draw phase and in the label, never by the markdown.
+    val shown =
+        remember(withPreview, draft) {
+            derivedStateOf {
+                (
+                    withPreview.firstOrNull { it.label == hovered }
+                        ?: withPreview.firstOrNull { it.label == lastPicked }
+                        ?: withPreview.firstOrNull { it.label in draft.selected }
+                        ?: withPreview.first()
+                ).label
+            }
+        }
+    run {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringRes(Res.string.claude_code_question_preview, current.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
+            Text(stringRes(Res.string.claude_code_question_preview, shown.value), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
             Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = TileShape, modifier = Modifier.fillMaxWidth()) {
                 Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
                     // Every preview is laid out, the others unseen, so the box is as tall as the tallest:
@@ -344,7 +399,7 @@ private fun ChoiceAnswer(
                         RenderMarkdown(
                             option.preview ?: "",
                             onLink,
-                            Modifier.fillMaxWidth().alpha(if (option.label == current.label) 1f else 0f),
+                            Modifier.fillMaxWidth().graphicsLayer { alpha = if (option.label == shown.value) 1f else 0f },
                             style = style,
                             textStyle = MaterialTheme.typography.bodySmall,
                         )
@@ -572,11 +627,12 @@ private const val MAX_TICKS = 10
 @Composable
 internal fun QuestionCallRow(
     call: ChatItem.ToolCall,
-    turnRunning: Boolean,
+    /** The chat is mid-turn: an unanswered call still waits. Otherwise it was cut off. */
+    waiting: Boolean,
 ) {
     val questions = remember(call.name, call.input) { AskedQuestions.questions(call.name, call.input) }
     if (questions == null) {
-        ToolCallRow(call, cwd = "", turnRunning = turnRunning)
+        ToolCallRow(call, cwd = "", turnRunning = waiting)
         return
     }
     val answers = remember(call.result, questions) { call.result?.let { AskedQuestions.answers(it, questions.questions) }.orEmpty() }
@@ -596,7 +652,7 @@ internal fun QuestionCallRow(
         }
         Column(Modifier.padding(start = 26.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // Nothing answered (a reply instead, or dismissed): the questions once, then what happened, in the agent's words.
-            val noneAnswered = call.isDone && answers.isEmpty()
+            val noneAnswered = (call.isDone || !waiting) && answers.isEmpty()
             questions.questions.forEach { question ->
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(question.question, style = MaterialTheme.typography.bodyMedium, color = if (noneAnswered) MaterialTheme.colorScheme.grayText else Color.Unspecified)
@@ -605,7 +661,7 @@ internal fun QuestionCallRow(
                         Text(
                             when {
                                 answer != null -> if (question.secret) "•••" else answer
-                                !call.isDone -> stringRes(Res.string.claude_code_question_waiting)
+                                !call.isDone && waiting -> stringRes(Res.string.claude_code_question_waiting)
                                 else -> stringRes(Res.string.claude_code_question_no_answer)
                             },
                             style = MaterialTheme.typography.bodyMedium,

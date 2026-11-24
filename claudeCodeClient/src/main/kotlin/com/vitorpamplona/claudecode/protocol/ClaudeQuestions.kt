@@ -121,13 +121,20 @@ object ClaudeQuestions {
         answer: PermissionDecision.Answer,
         unansweredNotes: Boolean,
     ): JsonObject {
-        var budget = MAX_TYPED
+        // The CLI counts the picked labels against the same limit as typed text (a multi-select's
+        // joined with ", "): they always go, so they come off the budget first.
+        var budget =
+            MAX_TYPED -
+                questions.questions.sumOf { question ->
+                    val picked = question.options.map { it.label }.filter { it in (answer.answers[question.id]?.selected ?: emptyList()) }
+                    picked.sumOf { it.length + 2 }
+                }
 
         fun take(
             text: String,
             max: Int = MAX_TYPED,
         ): String {
-            val kept = text.take(minOf(max, budget))
+            val kept = text.take(minOf(max, budget).coerceAtLeast(0))
             budget -= kept.length
             return kept
         }
@@ -182,7 +189,7 @@ object ClaudeQuestions {
                 val known = question.options.map { it.label }
                 val picked = known.filter { it in given.selected }
                 if (question.multiSelect) {
-                    val all = picked + listOfNotNull(typed?.let { take(it, MAX_TYPED) })
+                    val all = picked + listOfNotNull(typed?.let { take(it, MAX_TYPED - 2) }?.takeIf { it.isNotEmpty() })
                     if (all.isEmpty()) null else JsonArray(all.map(::JsonPrimitive))
                 } else {
                     (picked.firstOrNull() ?: typed?.let { take(it, MAX_TYPED) })?.let(::JsonPrimitive)

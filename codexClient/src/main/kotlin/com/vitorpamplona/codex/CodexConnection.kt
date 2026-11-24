@@ -171,6 +171,9 @@ class CodexConnection(
     /** Approvals waiting on the user: Codex's request id, by the id the chat knows. */
     private val openApprovals = ConcurrentHashMap<String, JsonElement>()
 
+    /** Questions waiting on the user: the chat row each one has, by the id the chat knows. */
+    private val openQuestions = ConcurrentHashMap<String, String>()
+
     init {
         scope.launch {
             try {
@@ -292,6 +295,10 @@ class CodexConnection(
                 // Answered elsewhere, or no longer needed.
                 val requestId = params["requestId"]?.toString()?.trim('"') ?: return
                 if (openApprovals.remove(requestId) != null) output.send(AgentEvent.ApprovalWithdrawn(requestId))
+                // Questions Codex settled itself (timed out, answered elsewhere): their row gets an end.
+                openQuestions.remove(requestId)?.let { row ->
+                    output.send(AgentEvent.ToolResults(listOf(ContentBlock.ToolResult(row, CodexQuestions.NO_LONGER_NEEDED, isError = false))))
+                }
             }
         }
     }
@@ -329,7 +336,11 @@ class CodexConnection(
         }
         openApprovals[key] = request.id
         // Codex keeps no item for its questions: the chat gets a row for them, answered in [respond].
-        if (asked.questions != null) showCall(ContentBlock.ToolUse(asked.toolUseId ?: key, CodexQuestions.TOOL, request.params))
+        if (asked.questions != null) {
+            val row = asked.toolUseId ?: key
+            openQuestions[key] = row
+            showCall(ContentBlock.ToolUse(row, CodexQuestions.TOOL, request.params))
+        }
         output.send(AgentEvent.ApprovalRequested(asked))
     }
 
@@ -389,6 +400,7 @@ class CodexConnection(
         val id = openApprovals.remove(request.requestId) ?: return
         val questions = request.questions
         if (questions != null) {
+            openQuestions.remove(request.requestId)
             // Refused questions get no answers: Codex goes on without them.
             rpc.reply(id, CodexQuestions.response(questions, decision as? PermissionDecision.Answer))
             output.send(AgentEvent.ToolResults(listOf(ContentBlock.ToolResult(request.toolUseId ?: request.requestId, CodexQuestions.summary(questions, decision), isError = decision is PermissionDecision.Deny))))

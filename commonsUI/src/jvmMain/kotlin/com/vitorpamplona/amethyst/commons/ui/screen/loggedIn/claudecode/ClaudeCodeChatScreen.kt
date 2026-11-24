@@ -356,6 +356,8 @@ fun ClaudeCodeChatScreen(
     // Typing goes straight to the composer, and the keys below work, without a click first.
     LaunchedEffect(Unit) { composerFocus.requestFocus() }
     val pending = state.pendingPermissions.firstOrNull()
+    // The answers being filled in for [pending]'s questions: the key handler reads them too.
+    val questionForm = remember(pending?.requestId) { pending?.questions?.let { QuestionForm(it) } }
     // Sends the failed message again; a saved session's message with images can't be, so its text
     // goes back into the composer to send with them by hand.
     val retry: (() -> Unit)? =
@@ -379,9 +381,10 @@ fun ClaudeCodeChatScreen(
                     switching = true
                     true
                 }
-                // Questions wait: Esc dismisses them. Enter belongs to the card's own fields.
+                // Questions wait: Esc dismisses them, unless the user has started answering. Enter
+                // belongs to the card's own fields.
                 pending?.questions != null && event.key == Key.Escape -> {
-                    viewModel.dismissQuestions(pending)
+                    if (questionForm?.hasInput != true) viewModel.dismissQuestions(pending)
                     true
                 }
                 // An approval waits: Esc denies; Enter, with nothing typed, gives the default answer.
@@ -544,11 +547,9 @@ fun ClaudeCodeChatScreen(
                             )
 
                             state.pendingPermissions.firstOrNull()?.let { request ->
-                                val questions = request.questions
-                                if (questions != null) {
+                                if (questionForm != null && request.requestId == pending?.requestId) {
                                     QuestionCard(
-                                        request = request,
-                                        questions = questions,
+                                        form = questionForm,
                                         onAnswer = { viewModel.answerQuestions(request, it) },
                                         onDismiss = { viewModel.dismissQuestions(request) },
                                     )
@@ -859,7 +860,7 @@ private fun Messages(
                             is ChatItem.ToolCall ->
                                 when (ToolKind.of(item.name)) {
                                     ToolKind.EDIT -> FileChangeRow(item, state.cwd, turnRunning)
-                                    ToolKind.QUESTION -> QuestionCallRow(item, turnRunning)
+                                    ToolKind.QUESTION -> QuestionCallRow(item, waiting = busy)
                                     else -> ToolCallRow(item, state.cwd, turnRunning)
                                 }
                             is ChatItem.Notice -> NoticeRow(item, onRetry = onRetry?.takeIf { !busy && item === state.items.lastOrNull() })

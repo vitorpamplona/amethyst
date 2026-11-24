@@ -9749,6 +9749,7 @@
     <string name="claude_code_question_ask_more_tooltip">Send what you answered and ask %1$s for more questions before it starts</string>
     <string name="claude_code_question_dismiss">Dismiss</string>
     <string name="claude_code_question_keys">Or write a reply below · Esc dismisses</string>
+    <string name="claude_code_question_keys_reply">Or write a reply below</string>
     <string name="claude_code_question_no_answer">No answer</string>
     <string name="claude_code_question_waiting">Waiting for your answer</string>
     <string name="claude_code_question_number_value">%1$s %2$s</string>

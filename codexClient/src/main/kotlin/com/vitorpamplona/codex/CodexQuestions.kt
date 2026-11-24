@@ -51,6 +51,9 @@ object CodexQuestions {
 
     private const val NOTE_PREFIX = "user_note: "
 
+    /** The row's result when Codex settles the questions without the user (they timed out). */
+    const val NO_LONGER_NEEDED = "Codex went on without the answers."
+
     fun parse(params: JsonObject): UserQuestions? {
         val questions =
             (params["questions"] as? JsonArray).orEmpty().mapNotNull { element ->

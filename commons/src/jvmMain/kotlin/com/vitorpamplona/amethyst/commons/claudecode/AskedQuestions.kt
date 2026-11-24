@@ -29,8 +29,29 @@ import kotlinx.serialization.json.JsonObject
 
 /** A question call in the chat, read back: what the agent asked, and what the user answered. */
 object AskedQuestions {
+    /**
+     * Questions already read, by call: a row scrolled back into view would otherwise parse its
+     * input again on the main thread. Least recently used first.
+     */
+    private val cache = LinkedHashMap<String, UserQuestions?>(16, 0.75f, true)
+
     /** The questions in a call to an agent's question tool, or null for any other call. */
     fun questions(
+        toolName: String,
+        input: String,
+    ): UserQuestions? {
+        if (toolName != ClaudeQuestions.TOOL && toolName != CodexQuestions.TOOL) return null
+        val key = toolName + "\u0000" + input
+        synchronized(cache) { if (cache.containsKey(key)) return cache[key] }
+        val parsed = parse(toolName, input)
+        synchronized(cache) {
+            cache[key] = parsed
+            if (cache.size > CACHE_SIZE) cache.remove(cache.keys.first())
+        }
+        return parsed
+    }
+
+    private fun parse(
         toolName: String,
         input: String,
     ): UserQuestions? {
@@ -79,4 +100,6 @@ object AskedQuestions {
             }
         }
     }
+
+    private const val CACHE_SIZE = 64
 }

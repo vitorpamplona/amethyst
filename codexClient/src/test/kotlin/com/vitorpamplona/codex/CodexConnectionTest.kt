@@ -294,6 +294,33 @@ class CodexConnectionTest {
         }
 
     @Test
+    fun questionsCodexResolvesItselfEndTheirRow() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w")))
+            server.push(
+                """{"id":12,"method":"item/tool/requestUserInput","params":{"threadId":"t1","turnId":"turn-1","itemId":"q2","isBlocking":false,"autoResolutionMs":1000,"questions":[""" +
+                    """{"id":"db","header":"Database","question":"Which database?","isOther":false,"isSecret":false,"options":[{"label":"A","description":"a"},{"label":"B","description":"b"}]}]}}""",
+            )
+            withTimeout(5_000) { codex.events.first { it is AgentEvent.ApprovalRequested } }
+            // Timed out on Codex's side: the card goes, and the row says it is over rather than wait for good.
+            server.push("""{"method":"serverRequest/resolved","params":{"threadId":"t1","requestId":12}}""")
+            val withdrawn = mutableListOf<AgentEvent>()
+            withTimeout(5_000) {
+                codex.events.first {
+                    withdrawn.add(it)
+                    it is AgentEvent.ToolResults
+                }
+            }
+            assertTrue(withdrawn.any { it is AgentEvent.ApprovalWithdrawn })
+            val result = (withdrawn.last() as AgentEvent.ToolResults).content.single() as ContentBlock.ToolResult
+            assertEquals("q2", result.toolUseId)
+            scope.cancel()
+        }
+
+    @Test
     fun aCopyForksThroughTheTurnBeforeTheMessage() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
