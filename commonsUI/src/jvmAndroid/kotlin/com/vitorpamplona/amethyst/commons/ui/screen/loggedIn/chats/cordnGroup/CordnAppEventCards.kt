@@ -110,9 +110,10 @@ import java.time.format.FormatStyle
  * A cordn poll (NIP-88 kind 1068, [CordnPolls]) drawn as a card in its bubble: the question, each
  * option with its share of the votes, the reader's own pick, and voting while it is open.
  *
- * The tally is [CordnPolls.tally] over the whole room, so which votes count (one per account, the
- * latest the coordinator sequenced, none after the deadline) is cordn-kmp's rule and cordn-web's,
- * never this screen's. A vote is the voter's whole selection: changing it sends a new one.
+ * The tally comes from the room's one fold of every poll's votes ([CordnAnnotationIndex.tallyOf]),
+ * so which votes count (one per account, the latest the coordinator sequenced, none after the
+ * deadline) is cordn-kmp's rule and cordn-web's, never this screen's, and a card does not walk the
+ * whole room for its own poll. A vote is the voter's whole selection: changing it sends a new one.
  */
 @Composable
 fun CordnPollCard(
@@ -123,7 +124,7 @@ fun CordnPollCard(
 ) {
     val endsAt = remember(message.envelope) { CordnPolls.definition(message.envelope.kind, message.envelope.content, message.envelope.tags)?.endsAt }
     val now = rememberNowUntil(endsAt)
-    val tally = remember(annotations, message.envelope.id, me, now) { CordnPolls.tally(annotations.byId.values, message.envelope.id, me, now) }
+    val tally = remember(annotations, message.envelope.id, me, now) { annotations.tallyOf(message.envelope.id, me, now) }
 
     if (tally == null) {
         Text(
