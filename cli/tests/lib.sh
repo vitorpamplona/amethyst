@@ -51,6 +51,11 @@ info() { printf '%s  %s%s\n' "$C_GREY" "$1" "$C_RESET" >&2; printf '  %s\n' "$1"
 warn() { printf '%s!%s %s\n' "$C_YELLOW" "$C_RESET" "$1" >&2; printf '! %s\n' "$1" >>"$LOG_FILE"; }
 pass_msg() { printf '%s\u2713 PASS%s %s\n' "$C_GREEN" "$C_RESET" "$1" >&2; printf 'PASS %s\n' "$1" >>"$LOG_FILE"; }
 fail_msg() { printf '%s\u2717 FAIL%s %s\n' "$C_RED" "$C_RESET" "$1" >&2;   printf 'FAIL %s\n' "$1" >>"$LOG_FILE"; }
+# port_in_use PORT → 0 when something already listens on 127.0.0.1:PORT. A harness checks its ports
+# before it boots a relay, so it never talks to a stale one left by an earlier run.
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+# version_at_least HAVE WANT → 0 when HAVE >= WANT (dotted versions).
+version_at_least() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 skip_msg() { printf '%s- SKIP%s %s\n' "$C_YELLOW" "$C_RESET" "$1" >&2;     printf 'SKIP %s\n' "$1" >>"$LOG_FILE"; }
 
 # ------- result tracking ------------------------------------------------------

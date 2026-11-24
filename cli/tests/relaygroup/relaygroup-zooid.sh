@@ -113,8 +113,9 @@ jqo() { printf '%s' "$OUT" | jq -r "$@" 2>/dev/null; }
 check() { # check ID COND-EXIT-STATUS PASS-DETAIL FAIL-DETAIL
   if [[ "$2" -eq 0 ]]; then pass_msg "$1: $3"; record_result "$1" pass "$3"; else fail_msg "$1: $4"; record_result "$1" fail "$4"; fi
 }
-# info GID → OUT holds `relaygroup info` as A (a member, authenticated).
-info() { amy_as A relaygroup info "$RELAY" "$1" --timeout 4; }
+# group_info GID → OUT holds `relaygroup info` as A (a member, authenticated). Not `info`: that is
+# lib.sh's log line, which the boot messages below still use.
+group_info() { amy_as A relaygroup info "$RELAY" "$1" --timeout 4; }
 # relay-issued KIND GID PUBKEY → 0 when zooid signed a KIND naming PUBKEY in GID.
 relay_issued() {
   amy_as A fetch --relay "$RELAY" --kind "$1" --tag "h=$2" --timeout 4
@@ -138,6 +139,9 @@ docker run -d --name "$PG_NAME" -p "127.0.0.1:$PG_PORT:5432" --tmpfs /var/lib/po
 for _ in $(seq 1 60); do docker exec "$PG_NAME" pg_isready -U zooid >/dev/null 2>&1 && break; sleep 0.5; done
 
 step "boot zooid"
+for p in "$PORT" "$((PORT + 1))"; do
+  port_in_use "$p" && { fail_msg "127.0.0.1:$p is already in use (a relay from an earlier run?); pass --port"; exit 1; }
+done
 RELAY_SK=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
 mkdir -p "$STATE_DIR/zooid-config" "$STATE_DIR/zooid-media"
 cat >"$STATE_DIR/zooid-config/interop.toml" <<TOML
@@ -162,6 +166,8 @@ TOML
 RELAY_PID=$!
 for _ in $(seq 1 60); do curl -sf -m 1 -H 'Accept: application/nostr+json' "http://127.0.0.1:$PORT/" >/dev/null 2>&1 && break; sleep 0.5; done
 RELAY_PK=$(curl -s -H 'Accept: application/nostr+json' "http://127.0.0.1:$PORT/" | jq -r '.self // empty')
+# The relay answering is the one just started: alive, and announcing the key this run gave it.
+kill -0 "$RELAY_PID" 2>/dev/null || RELAY_PK=""
 [[ -n "$RELAY_PK" ]] || { fail_msg "zooid did not start (see $LOG_DIR/zooid.log)"; tail -20 "$LOG_DIR/zooid.log" >&2; exit 1; }
 info "zooid self $RELAY_PK"
 
@@ -177,7 +183,7 @@ GID=$(jqo '.group_id // empty')
 [[ -n "$GID" && "$(jqo .published)" == "true" ]]
 check zg-01-create $? "the owner created $GID" "create: $OUT"
 [[ -n "$GID" ]] || { print_summary; exit 1; }
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .name)" == "Pizza Lovers" && "$(jqo .about)" == "a group for people who love pizza" && "$(jqo .private)" == "false" ]]
 check zg-01-metadata $? "39000 carries our 9002's name and about" "39000: $OUT"
 [[ "$(jqo --arg a "${HEX[A]}" '[.admins[] | select(.pubkey == $a)] | length')" == "1" ]]
@@ -190,7 +196,7 @@ check zg-01-relay-signed $? "the state events are signed by zooid's NIP-11 self 
 amy_as B relaygroup join "$RELAY" "$GID"
 relay_issued 9000 "$GID" "${HEX[B]}"
 check zg-02-admitted $? "zooid signed a 9000 putting B in" "no relay-signed 9000 for B: $OUT"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg b "${HEX[B]}" '[.members[] | select(. == $b)] | length')" == "1" ]]
 check zg-02-members $? "39002 lists B" "39002: $OUT"
 amy_as B relaygroup message "$RELAY" "$GID" "hello from B"
@@ -204,7 +210,7 @@ check zg-03-member-cannot-moderate $? "B's 9000 is refused (only zooid's manager
 
 # --- zg-04 private + closed ----------------------------------------------------------------
 amy_as A relaygroup edit "$RELAY" "$GID" --private --closed
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .private)" == "true" && "$(jqo .closed)" == "true" && "$(jqo .name)" == "Pizza Lovers" ]]
 check zg-04-private-closed $? "39000 is private and closed, the name kept" "39000: $OUT"
 amy_as C fetch --relay "$RELAY" --kind 9 --tag "h=$GID" --timeout 4
@@ -216,20 +222,20 @@ check zg-04-member-reads $? "a member still reads them" "B's read: rc=$RC $OUT"
 
 # --- zg-05 closed: no code, no entry; an invite code lets C in -----------------------------
 amy_as C relaygroup join "$RELAY" "$GID"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg c "${HEX[C]}" '[.members[] | select(. == $c)] | length')" == "0" ]]
 check zg-05-closed-join-ignored $? "C's join without a code admits nobody" "members: $OUT"
 amy_as A relaygroup invite "$RELAY" "$GID" --code pizza-night
 [[ "$RC" -eq 0 && "$(jqo .published)" == "true" ]]
 check zg-05-invite $? "the owner's 9009 create-invite is accepted" "invite: rc=$RC $OUT"
 amy_as C relaygroup join "$RELAY" "$GID" --code pizza-night
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg c "${HEX[C]}" '[.members[] | select(. == $c)] | length')" == "1" ]]
 check zg-05-code-admits $? "C's 9021 with the code is admitted" "members: $OUT"
 
 # --- zg-06 back to public and open (a 9002 without the flags) ---------------------------------
 amy_as A relaygroup edit "$RELAY" "$GID" --public --open
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .private)" == "false" && "$(jqo .closed)" == "false" ]]
 check zg-06-public-open $? "39000 is public and open again" "39000: $OUT"
 
@@ -240,9 +246,16 @@ amy_as A fetch --relay "$RELAY" --kind 39000 --tag "d=$GID" --timeout 4
 [[ "$(jqo '[.events[0].tags[] | select(.[0] == "hidden")] | length')" == "1" && "$(jqo '[.events[0].tags[] | select(.[0] == "name") | .[1]] | join(",")')" == "Pizza Fans" ]]
 check zg-07-hidden-carried $? "amy's rename carried the hidden flag it has no switch for" "39000: $OUT"
 amy_as B relaygroup leave "$RELAY" "$GID"
+# Not vacuous: a public control group shows in the same browse, and the hidden one still exists.
+amy_as A relaygroup create "$RELAY" --name "Control" --about "a public group the browse must list"
+CONTROL=$(jqo '.group_id // empty')
+group_info "$GID"
+HIDDEN_EXISTS=$([[ "$RC" -eq 0 && "$(jqo .name)" == "Pizza Fans" ]] && echo 1 || echo 0)
 amy_as B relaygroup browse "$RELAY" --timeout 4
-[[ "$(jqo --arg g "$GID" '[.groups[] | select(.group_id == $g)] | length')" == "0" ]]
-check zg-07-hidden-from-outsiders $? "the hidden group is not listed to a non-member" "browse: $OUT"
+[[ "$RC" -eq 0 && -n "$CONTROL" && "$HIDDEN_EXISTS" == 1 \
+  && "$(jqo --arg g "$CONTROL" '[.groups[] | select(.group_id == $g)] | length')" == "1" \
+  && "$(jqo --arg g "$GID" '[.groups[] | select(.group_id == $g)] | length')" == "0" ]]
+check zg-07-hidden-from-outsiders $? "the hidden group exists for its members but is not listed to a non-member (the public one is)" "control=$CONTROL hidden-exists=$HIDDEN_EXISTS browse: $OUT"
 relay_issued 9001 "$GID" "${HEX[B]}"
 check zg-07-leave $? "B's 9022 made zooid sign a 9001" "no relay-signed 9001 for B: $OUT"
 
@@ -255,8 +268,9 @@ amy_as A fetch --relay "$RELAY" --kind 9 --tag "h=$GID" --timeout 4
 check zg-08-delete-event $? "the owner's 9005 removed C's message" "messages: $OUT"
 amy_as A event --kind 9008 --relay "$RELAY" --tags "[[\"h\",\"$GID\"]]"
 amy_as A relaygroup info "$RELAY" "$GID" --timeout 4
-[[ "$RC" -ne 0 ]]
-check zg-08-delete-group $? "after the 9008 info finds no group" "info: rc=$RC $OUT"
+# The group's own absence, not any failure (a dead relay, a timeout): amy's not_found.
+refused_with '"error":"not_found"'
+check zg-08-delete-group $? "after the 9008 info finds no group (not_found)" "info: rc=$RC $OUT $(cat "$LOG_DIR/last.err")"
 
 print_summary
 awk -F'\t' '$2=="fail"{f=1} END{exit f}' "$RESULTS_FILE"

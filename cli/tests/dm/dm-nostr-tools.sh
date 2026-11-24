@@ -266,8 +266,11 @@ check dm-nt-07-reply-stays-in-room $? "amy's reply to a group message stays in i
 # --- dm-nt-08 rumor integrity -------------------------------------------------------------
 peer N read --wait 4
 BAD=$(printf '%s\n' "$OUT" | jq -c 'select(.error != null)' | head -3)
-[[ -z "$BAD" ]]
-check dm-nt-08-every-wrap-opens $? "every wrap amy sent N passes nostr-tools' unwrapEvent checks (seal signature, seal pubkey = rumor pubkey)" "unwrap errors: $BAD"
+# Not vacuous: N opened every rumor amy sent it above (hello, reply, subject, file, room, room reply).
+AMY_TO_N=6
+OPENED=$(printf '%s\n' "$OUT" | jq -r --arg a "${HEX[A]}" 'select(.rumor.pubkey == $a) | .rumor.id' 2>/dev/null | sort -u | grep -c .)
+[[ -z "$BAD" && "$OPENED" -ge "$AMY_TO_N" ]]
+check dm-nt-08-every-wrap-opens $? "every wrap amy sent N passes nostr-tools' unwrapEvent checks (seal signature, seal pubkey = rumor pubkey): $OPENED rumors" "opened $OPENED of $AMY_TO_N, unwrap errors: $BAD"
 
 print_summary
 awk -F'\t' '$2=="fail"{f=1} END{exit f}' "$RESULTS_FILE"

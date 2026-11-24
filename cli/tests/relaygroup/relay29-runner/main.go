@@ -8,7 +8,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/fiatjaf/eventstore/slicestore"
@@ -62,8 +64,14 @@ func main() {
 	)
 	pk, _ := nostr.GetPublicKey(*sk)
 	log.Printf("relay29 pubkey %s", pk)
-	log.Printf("listening on ws://%s", domain)
-	if err := http.ListenAndServe(domain, relay); err != nil {
+	// Bind first, then say so: the harness waits for "listening", and a port another process still
+	// holds must fail here rather than leave the harness talking to that one.
+	ln, err := net.Listen("tcp", domain)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("listening on ws://%s (pid %d)", domain, os.Getpid())
+	if err := http.Serve(ln, relay); err != nil {
 		log.Fatal(err)
 	}
 }

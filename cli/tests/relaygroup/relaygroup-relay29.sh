@@ -120,8 +120,9 @@ jqo() { printf '%s' "$OUT" | jq -r "$@" 2>/dev/null; }
 check() { # check ID COND-EXIT-STATUS PASS-DETAIL FAIL-DETAIL
   if [[ "$2" -eq 0 ]]; then pass_msg "$1: $3"; record_result "$1" pass "$3"; else fail_msg "$1: $4"; record_result "$1" fail "$4"; fi
 }
-# info GID → OUT holds `relaygroup info` as A (a member, authenticated).
-info() { amy_as A relaygroup info "$RELAY" "$1" --timeout 4; }
+# group_info GID → OUT holds `relaygroup info` as A (a member, authenticated). Not `info`: that is
+# lib.sh's log line, which the boot messages below still use.
+group_info() { amy_as A relaygroup info "$RELAY" "$1" --timeout 4; }
 # relay-issued KIND GID PUBKEY → 0 when relay29 signed a KIND naming PUBKEY in GID.
 relay_issued() {
   amy_as A fetch --relay "$RELAY" --kind "$1" --tag "h=$2" --timeout 4
@@ -131,9 +132,14 @@ relay_issued() {
 banner "NIP-29 interop: amy vs fiatjaf/relay29 on $RELAY"
 
 step "boot relay29"
+for p in "$PORT" "$((PORT + 1))"; do
+  port_in_use "$p" && { fail_msg "127.0.0.1:$p is already in use (a relay from an earlier run?); pass --port"; exit 1; }
+done
 "$RELAY29_BIN" -port "$PORT" >"$LOG_DIR/relay29.log" 2>&1 &
 RELAY_PID=$!
-for _ in $(seq 1 40); do grep -q "listening" "$LOG_DIR/relay29.log" 2>/dev/null && break; sleep 0.25; done
+# The runner says "listening" only once it holds the port, naming its pid: the relay answering is ours.
+for _ in $(seq 1 40); do grep -q "listening on .* (pid $RELAY_PID)" "$LOG_DIR/relay29.log" 2>/dev/null && break; kill -0 "$RELAY_PID" 2>/dev/null || break; sleep 0.25; done
+grep -q "listening on .* (pid $RELAY_PID)" "$LOG_DIR/relay29.log" 2>/dev/null || { fail_msg "relay29 did not start (see $LOG_DIR/relay29.log)"; exit 1; }
 RELAY_PK=$(sed -n 's/.*relay29 pubkey \([0-9a-f]\{64\}\).*/\1/p' "$LOG_DIR/relay29.log")
 [[ -n "$RELAY_PK" ]] || { fail_msg "relay29 did not start (see $LOG_DIR/relay29.log)"; exit 1; }
 info "relay29 pubkey $RELAY_PK"
@@ -158,7 +164,7 @@ GID=$(jqo '.group_id // empty')
 check rg-01-create $? "created $GID" "create was not accepted: $OUT"
 [[ -n "$GID" ]] || { print_summary; exit 1; }
 
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .name)" == "Pizza Lovers" && "$(jqo .about)" == "a group for people who love pizza" && "$(jqo .private)" == "false" && "$(jqo .closed)" == "false" ]]
 check rg-01-metadata $? "39000 carries the name and about of our 9002, public and open" "39000 read back: $OUT"
 [[ "$(jqo --arg a "${HEX[A]}" '[.admins[] | select(.pubkey == $a) | .roles[]] | join(",")')" == "admin" && "$(jqo '.members | length')" == "1" ]]
@@ -182,7 +188,7 @@ check rg-03-join $? "B's 9021 accepted and the group added to B's kind 10009" "j
 amy_as D relaygroup join "$RELAY" "$GID"
 relay_issued 9000 "$GID" "${HEX[B]}"
 check rg-03-admitted $? "relay29 signed a 9000 putting B in" "no relay-signed 9000 for B: $OUT"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg b "${HEX[B]}" --arg d "${HEX[D]}" '[.members[] | select(. == $b or . == $d)] | length')" == "2" ]]
 check rg-03-members $? "39002 now lists B and D" "members: $OUT"
 amy_as B relaygroup list
@@ -199,17 +205,17 @@ check rg-04-outsider-refused $? "an outsider's kind 9 is refused with relay29's 
 
 # --- rg-05 put-user with a role ----------------------------------------------------
 amy_as A relaygroup put-user "$RELAY" "$GID" "${HEX[B]}" --role moderator
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg b "${HEX[B]}" '[.admins[] | select(.pubkey == $b) | .roles[]] | join(",")')" == "moderator" ]]
 check rg-05-promote $? "A's 9000 with role moderator shows in 39001" "admins: $OUT"
 
 # --- rg-06 remove-user by a moderator; removed users stay out ----------------------
 amy_as B relaygroup remove-user "$RELAY" "$GID" "${HEX[D]}"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg d "${HEX[D]}" '[.members[] | select(. == $d)] | length')" == "0" ]]
 check rg-06-remove $? "the moderator's 9001 drops D from 39002" "members: $OUT"
 amy_as D relaygroup join "$RELAY" "$GID"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg d "${HEX[D]}" '[.members[] | select(. == $d)] | length')" == "0" ]]
 check rg-06-no-rejoin $? "relay29 ignores a removed user's new join request (its policy)" "members: $OUT"
 
@@ -218,7 +224,7 @@ amy_as B relaygroup edit "$RELAY" "$GID" --name "B renames it"
 refused_with "insufficient permissions"
 check rg-07-moderator-cannot-edit $? "the moderator's 9002 is refused (insufficient permissions)" "B's edit: rc=$RC $OUT"
 amy_as A relaygroup edit "$RELAY" "$GID" --name "Pizza Fans"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .name)" == "Pizza Fans" && "$(jqo .about)" == "a group for people who love pizza" ]]
 check rg-07-admin-edits $? "the admin's 9002 renames it and keeps the about" "39000: $OUT"
 
@@ -234,7 +240,7 @@ check rg-08-deleted $? "the deleted message is gone, the other one stays" "messa
 
 # --- rg-09 private + closed -----------------------------------------------------------
 amy_as A relaygroup edit "$RELAY" "$GID" --private --closed
-info "$GID"
+group_info "$GID"
 [[ "$(jqo .private)" == "true" && "$(jqo .closed)" == "true" && "$(jqo .name)" == "Pizza Fans" ]]
 check rg-09-private-closed $? "39000 is private and closed, the name kept" "39000: $OUT"
 amy_as C fetch --relay "$RELAY" --kind 9 --tag "h=$GID" --timeout 4
@@ -249,7 +255,7 @@ check rg-09-hidden-from-browse $? "an outsider's browse no longer lists it" "bro
 
 # --- rg-10 a closed group ignores join requests ------------------------------------
 amy_as C relaygroup join "$RELAY" "$GID"
-info "$GID"
+group_info "$GID"
 [[ "$(jqo --arg c "${HEX[C]}" '[.members[] | select(. == $c)] | length')" == "0" ]]
 check rg-10-closed-join-ignored $? "C's join to the closed group admits nobody" "members: $OUT"
 
@@ -262,10 +268,19 @@ check rg-11-invite-unsupported $? "relay29 refuses the 9009 and amy reports its 
 # NIP-29 "Group state": a 9002 carries "all the fields of group-metadata", so a 9002 without
 # `private` makes the group public. relay29 only flips back on an explicit legacy `public`/`open`
 # tag; quartz > 2.24.0 adds those when an edit lifts the flag (GroupEditMetadataEvent.buildEdit).
+# Before 2.25.0 a failure here is that missing tag, not a regression: recorded as a skip.
+QUARTZ_PIN=$(sed -n 's/^quartzKmp = "\(.*\)"/\1/p' "$REPO_ROOT/gradle/libs.versions.toml")
+QUARTZ_VERSION="${QUARTZ_VERSION:-$QUARTZ_PIN}"   # set it when amy was built with -PquartzDir
 amy_as A relaygroup edit "$RELAY" "$GID" --public --open
-info "$GID"
-[[ "$(jqo .private)" == "false" && "$(jqo .closed)" == "false" ]]
-check rg-12-public-open $? "39000 is public and open again" "39000 still: $OUT (needs quartz > 2.24.0)"
+group_info "$GID"
+if [[ "$(jqo .private)" == "false" && "$(jqo .closed)" == "false" ]]; then
+  check rg-12-public-open 0 "39000 is public and open again" ""
+elif version_at_least "$QUARTZ_VERSION" 2.25.0; then
+  check rg-12-public-open 1 "" "39000 still: $OUT"
+else
+  skip_msg "rg-12-public-open: needs quartz 2.25.0 (amy is on $QUARTZ_VERSION)"
+  record_result rg-12-public-open skip "needs quartz 2.25.0 (amy is on $QUARTZ_VERSION; set QUARTZ_VERSION for a -PquartzDir build)"
+fi
 
 # --- rg-13 leave: relay29 issues the 9001 -------------------------------------------
 amy_as B relaygroup leave "$RELAY" "$GID"
@@ -282,8 +297,9 @@ amy_as A event --kind 9008 --relay "$RELAY" --tags "[[\"h\",\"$GID\"]]"
 [[ "$(jqo .published)" == "true" ]]
 check rg-14-delete-group $? "A's 9008 accepted" "9008: $OUT"
 amy_as A relaygroup info "$RELAY" "$GID" --timeout 4
-[[ "$RC" -ne 0 ]]
-check rg-14-gone $? "info finds no group any more" "info: rc=$RC $OUT"
+# The group's own absence, not any failure (a dead relay, a timeout): amy's not_found.
+refused_with '"error":"not_found"'
+check rg-14-gone $? "info finds no group any more (not_found)" "info: rc=$RC $OUT $(cat "$LOG_DIR/last.err")"
 
 print_summary
 awk -F'\t' '$2=="fail"{f=1} END{exit f}' "$RESULTS_FILE"
