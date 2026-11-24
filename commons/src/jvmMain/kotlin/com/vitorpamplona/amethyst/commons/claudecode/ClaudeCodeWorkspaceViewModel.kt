@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** One repository of the workspace on the pull requests screen. */
 @Immutable
@@ -80,10 +82,12 @@ class ClaudeCodeWorkspaceViewModel(
             ?.cwd
             ?.let { service.agentWorkspaces.of(File(it)) }
 
-    private val _rows = MutableStateFlow<List<WorkspaceRepoRow>>(emptyList())
+    // What the last look found, shown at once when the screen comes back while a new look runs.
+    private val _rows = MutableStateFlow(workspace?.let { lastRows[it.id] }.orEmpty())
     val rows: StateFlow<List<WorkspaceRepoRow>> = _rows.asStateFlow()
 
-    private val _loading = MutableStateFlow(true)
+    /** Only while there is nothing to show yet: a refresh over shown rows replaces them when it ends. */
+    private val _loading = MutableStateFlow(_rows.value.isEmpty())
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     private val _restoring = MutableStateFlow(false)
@@ -103,22 +107,32 @@ class ClaudeCodeWorkspaceViewModel(
     /** Whether the user's `gh` is installed: without it, pull requests can't be opened from here. */
     val hasGh: Boolean = GitHubPullRequests.find() != null
 
+    private var refreshing: Job? = null
+    private var generation = 0
+
     init {
         refresh()
     }
 
+    /** Reads each repository's state again; a refresh still running gives way to this one. */
     fun refresh() {
         val known = workspace ?: return
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                // As the service knows it now: it may have been freed, or brought back, since the screen opened.
-                val ws = service.workspaceAt(known.dir) ?: known
-                _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
-            } finally {
-                _loading.value = false
+        refreshing?.cancel()
+        val self = ++generation
+        refreshing =
+            viewModelScope.launch {
+                if (_rows.value.isEmpty()) _loading.value = true
+                try {
+                    // As the service knows it now: it may have been freed, or brought back, since the screen opened.
+                    val ws = service.workspaceAt(known.dir) ?: known
+                    // An equal list changes nothing on screen: StateFlow drops it.
+                    _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
+                    lastRows[known.id] = _rows.value
+                } finally {
+                    // A refresh that gave way leaves the bar to the one that replaced it.
+                    if (generation == self) _loading.value = false
+                }
             }
-        }
     }
 
     /** The repositories as their clones are now. */
@@ -282,5 +296,8 @@ class ClaudeCodeWorkspaceViewModel(
             val answered = pr.isOpen || (pr.createdAt != null && pr.createdAt >= request.requestedAt)
             return request.takeIf { !answered }
         }
+
+        /** Each workspace's rows as last seen, by workspace id, for as long as the app runs. */
+        private val lastRows = ConcurrentHashMap<String, List<WorkspaceRepoRow>>()
     }
 }

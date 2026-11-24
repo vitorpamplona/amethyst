@@ -9790,6 +9790,10 @@
     <string name="claude_code_pr_open">Push and open pull request</string>
     <string name="claude_code_pr_open_draft">Open as draft</string>
     <string name="claude_code_pr_view">View on GitHub</string>
+    <string name="claude_code_pr_panel_number">%1$s #%2$d</string>
+    <string name="claude_code_pr_panel_details">Open full page</string>
+    <string name="claude_code_pr_panel_create">Create PR</string>
+    <string name="claude_code_pr_panel_more">More actions for %1$s</string>
     <string name="claude_code_pr_state_open">Pull request open</string>
     <string name="claude_code_pr_state_draft">Draft pull request</string>
     <string name="claude_code_pr_state_merged">Merged</string>

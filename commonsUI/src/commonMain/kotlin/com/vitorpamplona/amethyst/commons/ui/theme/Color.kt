@@ -28,6 +28,10 @@ val Purple200 = Color(0xFFBB86FC)
 val Purple500 = Color(0xFF6200EE)
 val Teal200 = Color(0xFF03DAC5)
 
+// The purple theme's secondary on light backgrounds. Teal200 is a dark-theme tone: on near-white
+// it reads at ~1.8:1, too faint for text. Material's Teal 700 reads at ~5.3:1.
+val Teal700 = Color(0xFF00796B)
+
 // Accent palette options selected through Settings -> Accent Color.
 // Each accent ships a brighter variant for the dark theme and a deeper variant for the light theme.
 val AccentBlueDark = Color(0xFF82B1FF)

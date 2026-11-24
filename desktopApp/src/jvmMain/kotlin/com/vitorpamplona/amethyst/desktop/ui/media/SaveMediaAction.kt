@@ -31,6 +31,8 @@ import okhttp3.coroutines.executeAsync
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.io.IOException
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -58,6 +60,21 @@ object SaveMediaAction {
                 val dir = dialog.directory ?: return@withContext null
                 File(dir, dialog.file ?: return@withContext null)
             } ?: return null
+
+        // A file on this computer (an image sent to a coding agent): copied, not downloaded.
+        if (url.startsWith("file:")) {
+            return withContext(Dispatchers.IO) {
+                try {
+                    File(URI(url)).copyTo(file, overwrite = true)
+                } catch (e: IOException) {
+                    Log.w("SaveMediaAction", "Could not save $url", e)
+                    null
+                } catch (e: IllegalArgumentException) {
+                    Log.w("SaveMediaAction", "Not a file URL: $url", e)
+                    null
+                }
+            }
+        }
 
         // Download on IO, beside the target: an existing file there is only replaced once the
         // download is complete, never truncated by one that fails halfway.

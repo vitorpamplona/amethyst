@@ -193,6 +193,26 @@ object GitWorkspace {
             )
         }
 
+    /**
+     * Lines added and removed since where HEAD left [base], uncommitted work included, as the
+     * Changes screen counts them. Zero and zero when git can't say.
+     */
+    fun lineStat(
+        dir: File,
+        base: String,
+    ): Pair<Int, Int> {
+        val mergeBase = git(dir, "merge-base", base, "HEAD")?.trim()?.takeIf { it.isNotEmpty() } ?: "HEAD"
+        val stat = git(dir, "diff", "--shortstat", mergeBase).orEmpty()
+        val count = { regex: Regex ->
+            regex
+                .find(stat)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull() ?: 0
+        }
+        return count(SHORTSTAT_INS) to count(SHORTSTAT_DEL)
+    }
+
     /** The diff of everything the branch changed since its base, uncommitted work included. */
     suspend fun diff(dir: File): String =
         withContext(Dispatchers.IO) {

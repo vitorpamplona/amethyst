@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -48,7 +49,11 @@ fun HoverTooltip(
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-        tooltip = { PlainTooltip { Text(text) } },
+        // Never part of a selection around [content]: the tooltip is a popup, another layout
+        // hierarchy, and a press while it shows inside a SelectionContainer (the coding-agent chat)
+        // crashed the window sorting it with the selectable text ("layouts are not part of the
+        // same hierarchy").
+        tooltip = { PlainTooltip { DisableSelection { Text(text) } } },
         state = rememberTooltipState(),
         enableUserInput = LocalScreenLayout.current.isLargeScreen,
         content = content,

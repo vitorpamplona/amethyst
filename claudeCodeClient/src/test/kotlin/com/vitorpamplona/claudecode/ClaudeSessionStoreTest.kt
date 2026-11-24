@@ -181,13 +181,30 @@ class ClaudeSessionStoreTest {
         file.setLastModified(file.lastModified() + 2_000)
         assertEquals("Halfway", store.session(id)?.title)
 
-        // What was read before stays: the first prompt; what comes later wins: the folder.
+        // What was read before stays: the first prompt, and the folder it started in.
         file.appendText("""{"type":"assistant","uuid":"a1","parentUuid":"u1","cwd":"/elsewhere","message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}""" + "\n")
         file.setLastModified(file.lastModified() + 2_000)
         val info = store.session(id)!!
         assertEquals("first question", info.firstPrompt)
-        assertEquals("/elsewhere", info.cwd)
+        assertEquals("/work", info.cwd)
         assertEquals("Halfway", info.title)
+    }
+
+    @Test
+    fun aSessionStaysInTheFolderItStartedInWhenItsShellMovesOn() {
+        // Claude Code stamps each message with its shell's folder: an agent that `cd`s into one of
+        // a workstream's repositories still has its session (and its project folder) where it began.
+        val project = File(config, "projects/-ws").also { check(it.mkdirs()) }
+        val id = "33333333-2222-3333-4444-555555555555"
+        File(project, "$id.jsonl").writeText(
+            listOf(
+                """{"type":"user","uuid":"u1","parentUuid":null,"cwd":"/ws","message":{"role":"user","content":"look at the UI"}}""",
+                """{"type":"assistant","uuid":"a1","parentUuid":"u1","cwd":"/ws/Brainstorm-UI/client/src","message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}""",
+                """{"type":"user","uuid":"u2","parentUuid":"a1","cwd":"/ws/Brainstorm-UI","message":{"role":"user","content":"and now?"}}""",
+            ).joinToString("\n", postfix = "\n"),
+        )
+        assertEquals("/ws", store.session(id)?.cwd)
+        assertEquals(listOf(id), store.listSessions(cwd = "/ws").map { it.sessionId })
     }
 
     @Test

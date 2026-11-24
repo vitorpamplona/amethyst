@@ -47,7 +47,7 @@ fun contentColorOnAccent(color: Color): Color = onAccent(color)
 // Black or white — whichever has the higher WCAG contrast ratio against a solid accent fill
 // (primary/secondary/tertiary). Runs once per scheme build (not on a render path), so the
 // luminance() cost is irrelevant here. Picks black on the light pastel accents used in the dark
-// theme and on the purple theme's bright teal secondary, white on the deep accents used in light.
+// theme and on the dark purple theme's bright teal secondary, white on the deep accents used in light.
 private fun onAccent(color: Color): Color {
     val luminance = color.luminance()
     val contrastOnBlack = (luminance + 0.05f) / 0.05f
@@ -167,7 +167,7 @@ fun amethystLightColorScheme(
 // The default (purple) palettes. The derived tints below are frozen from these at class
 // load; the accent only changes primary/secondary, never the neutral ramp they read.
 internal val DarkColorPalette = amethystDarkColorScheme(Purple200, Teal200, Purple500)
-internal val LightColorPalette = amethystLightColorScheme(Purple500, Teal200, Purple200)
+internal val LightColorPalette = amethystLightColorScheme(Purple500, Teal700, Purple200)
 
 internal val DarkTransparentBackground = DarkColorPalette.background.copy(0.32f)
 internal val LightTransparentBackground = LightColorPalette.background.copy(0.32f)
