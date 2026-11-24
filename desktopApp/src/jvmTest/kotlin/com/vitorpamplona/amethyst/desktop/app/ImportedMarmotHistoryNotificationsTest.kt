@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -84,6 +85,12 @@ class ImportedMarmotHistoryNotificationsTest {
     /** Every chat whose shown notifications the Marmot path asked to take down. */
     private val cleared: MutableList<String> = Collections.synchronizedList(ArrayList())
 
+    /** The system shade: what each chat still shows. */
+    private val shade: MutableMap<String, MutableSet<String>> = Collections.synchronizedMap(HashMap())
+
+    /** When set, a take-down waits for it after taking the chat's notifications down: a slow clear. */
+    @Volatile private var clearGate: CompletableDeferred<Unit>? = null
+
     private val account =
         Account(
             settings = AccountSettings(keyPair = me),
@@ -114,6 +121,7 @@ class ImportedMarmotHistoryNotificationsTest {
                         account: Account,
                     ) {
                         notified.add(innerEvent.id)
+                        shade.getOrPut(nostrGroupId) { Collections.synchronizedSet(HashSet()) }.add(innerEvent.id)
                     }
 
                     override suspend fun clearGroupNotifications(
@@ -121,6 +129,8 @@ class ImportedMarmotHistoryNotificationsTest {
                         account: Account,
                     ) {
                         cleared.add(nostrGroupId)
+                        shade.remove(nostrGroupId)
+                        clearGate?.await()
                     }
                 }
             },
@@ -196,5 +206,60 @@ class ImportedMarmotHistoryNotificationsTest {
             account.marmot.setMarmotChatSetting(chat, MarmotChatSetting.PIN, true)
             delay(300)
             assertEquals(2, cleared.count { it == chat })
+        }
+
+    /**
+     * A chat muted again while the take-down of its last mute is still running is taken down
+     * again: the settings flow is conflated, and the state after unmute + mute equals the one the
+     * take-down started from, so watching that flow alone saw no new mute and left the notification
+     * shown in between in the shade.
+     */
+    @Test
+    fun aChatMutedAgainWhileTheLastTakeDownRunsIsTakenDownAgain() =
+        runBlocking {
+            account.marmotGroupList.getOrCreateGroup(chat)
+            val gate = CompletableDeferred<Unit>()
+            clearGate = gate
+            account.marmot.setMarmotChatSetting(chat, MarmotChatSetting.MUTE, true)
+            withTimeout(5_000) { while (chat !in cleared) delay(20) }
+
+            // While that take-down still runs: unmuted, a message is shown, muted again.
+            account.marmot.setMarmotChatSetting(chat, MarmotChatSetting.MUTE, false)
+            val shown = message(TimeUtils.now(), "between")
+            account.marmot.notifyMarmotGroupMessage(chat, shown)
+            assertEquals(setOf(shown.id), shade[chat]?.toSet(), "an unmuted chat notifies")
+            account.marmot.setMarmotChatSetting(chat, MarmotChatSetting.MUTE, true)
+            clearGate = null
+            gate.complete(Unit)
+
+            withTimeout(5_000) { while (cleared.count { it == chat } < 2) delay(20) }
+            assertEquals(null, shade[chat], "the muted chat leaves nothing in the shade")
+        }
+
+    /**
+     * A mute with an end (a linked device's "mute for a while") that ran out is no mute: messages
+     * notify again, and muting the chat again takes those notifications down.
+     */
+    @Test
+    fun aMuteThatRanOutAndIsSetAgainTakesDownWhatWasShownMeanwhile() =
+        runBlocking {
+            account.marmotGroupList.getOrCreateGroup(chat)
+            account.marmotChatSettings.applyRemote(chat, MarmotChatSetting.MUTE, (TimeUtils.now() + 2).toString())
+            withTimeout(5_000) { while (chat !in cleared) delay(20) }
+            withTimeout(5_000) {
+                while (account.marmotChatSettings.state.value
+                        .isMuted(chat)
+                ) {
+                    delay(50)
+                }
+            }
+
+            val shown = message(TimeUtils.now(), "after the mute ran out")
+            account.marmot.notifyMarmotGroupMessage(chat, shown)
+            assertEquals(setOf(shown.id), shade[chat]?.toSet(), "a mute that ran out notifies again")
+
+            account.marmot.setMarmotChatSetting(chat, MarmotChatSetting.MUTE, true)
+            withTimeout(5_000) { while (cleared.count { it == chat } < 2) delay(20) }
+            assertEquals(null, shade[chat], "the muted chat leaves nothing in the shade")
         }
 }

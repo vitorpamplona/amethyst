@@ -29,9 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -128,6 +131,17 @@ class MarmotChatSettings(
     val state: StateFlow<MarmotChatSettingsSnapshot> = _state.asStateFlow()
     private var loaded = false
 
+    private val mutes = Channel<HexKey>(Channel.UNLIMITED)
+
+    /**
+     * Each chat at the moment it became muted, here or from a linked device: once per mute, in
+     * order, none lost. A chat that was not muted by the clock (never muted, unmuted, or its mute
+     * ran out) and now is. [state] cannot say this: it is conflated and equal states do not emit,
+     * so an unmute and a mute back to back, or a mute that ran out and was set again, look like
+     * no change there. One collector (the account's).
+     */
+    val newlyMuted: Flow<HexKey> = mutes.receiveAsFlow()
+
     @Serializable
     private class Stored(
         val pinned: List<String> = emptyList(),
@@ -209,7 +223,9 @@ class MarmotChatSettings(
         value: String,
     ): List<Pair<MarmotChatSetting, String>> {
         var applied: List<Pair<MarmotChatSetting, String>> = emptyList()
+        var muted = false
         _state.update { before ->
+            muted = false
             val changes = ArrayList<Pair<MarmotChatSetting, String>>(2)
             // An archived chat is never pinned: the pin waits until the chat is unarchived.
             if (setting == MarmotChatSetting.PIN && value == "true" && before.isArchived(nostrGroupId)) {
@@ -223,8 +239,13 @@ class MarmotChatSettings(
                 changes.add(MarmotChatSetting.PIN to "false")
             }
             applied = changes
+            if (setting == MarmotChatSetting.MUTE) {
+                val now = TimeUtils.now()
+                muted = !before.isMuted(nostrGroupId, now) && after.isMuted(nostrGroupId, now)
+            }
             after
         }
+        if (muted) mutes.trySend(nostrGroupId)
         if (applied.isNotEmpty()) save()
         return applied
     }

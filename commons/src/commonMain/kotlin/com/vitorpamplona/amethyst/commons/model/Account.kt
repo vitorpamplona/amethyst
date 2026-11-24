@@ -4607,17 +4607,14 @@ class Account(
 
         nwcBackup.start()
 
-        // A Marmot chat muted here or on a linked device leaves nothing in the system shade.
+        // A Marmot chat muted here or on a linked device leaves nothing in the system shade. Every
+        // mute counts, not only the ones a look at the conflated settings state would tell apart:
+        // an unmute and a mute back to back, or a mute that ran out and was set again, may have
+        // let a notification through in between.
         scope.launch(Dispatchers.IO) {
-            var mutedBefore: Set<HexKey>? = null
-            marmotChatSettings.state.collect { settings ->
-                val muted = settings.muted.keys.filterTo(HashSet()) { settings.isMuted(it) }
-                val newly = mutedBefore?.let { before -> muted - before }.orEmpty()
-                mutedBefore = muted
-                newly.forEach { id ->
-                    runCatchingCancellable { marmotNotifier().clearGroupNotifications(id, this@Account) }
-                        .onFailure { Log.w("Account", "could not clear the notifications of a muted chat", it) }
-                }
+            marmotChatSettings.newlyMuted.collect { id ->
+                runCatchingCancellable { marmotNotifier().clearGroupNotifications(id, this@Account) }
+                    .onFailure { Log.w("Account", "could not clear the notifications of a muted chat", it) }
             }
         }
 

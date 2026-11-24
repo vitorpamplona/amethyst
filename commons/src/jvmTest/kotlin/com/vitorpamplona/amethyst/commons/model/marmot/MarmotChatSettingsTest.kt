@@ -23,7 +23,11 @@ package com.vitorpamplona.amethyst.commons.model.marmot
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -111,5 +115,26 @@ class MarmotChatSettingsTest {
             settings.applyRemote(b, MarmotChatSetting.ARCHIVE, "false")
             settings.applyRemote(b, MarmotChatSetting.PIN, "true")
             assertTrue(settings.state.value.isPinned(b))
+        }
+
+    @Test
+    fun everyMuteIsReportedOnceEvenWhenTheStateEndsWhereItStarted() =
+        runBlocking {
+            val settings = MarmotChatSettings(MemoryBlobs())
+            settings.load()
+            settings.set(a, MarmotChatSetting.MUTE, true)
+            // Unmuted and muted again: the state equals the one before, and it is still a new mute.
+            settings.set(a, MarmotChatSetting.MUTE, false)
+            settings.set(a, MarmotChatSetting.MUTE, true)
+            // Muted again while muted, a pin, an archive: no new mute.
+            settings.set(a, MarmotChatSetting.MUTE, true)
+            settings.applyRemote(a, MarmotChatSetting.MUTE, (TimeUtils.now() + 3600).toString())
+            settings.set(a, MarmotChatSetting.PIN, true)
+            settings.set(b, MarmotChatSetting.ARCHIVE, true)
+            // A mute that already ran out is none; muting the chat after it is.
+            settings.applyRemote(b, MarmotChatSetting.MUTE, "1000")
+            settings.set(b, MarmotChatSetting.MUTE, true)
+
+            assertEquals(listOf(a, a, b), withTimeout(5_000) { settings.newlyMuted.take(3).toList() })
         }
 }

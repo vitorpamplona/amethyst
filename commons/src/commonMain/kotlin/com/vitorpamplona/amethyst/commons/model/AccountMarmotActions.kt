@@ -1313,6 +1313,24 @@ class AccountMarmotActions(
     }
 
     /**
+     * [innerEvent] is new in [nostrGroupId]: a system notification, unless it is no chat
+     * ([MarmotGroupNotifier.notifies]), an admin removed it, or the chat is muted.
+     */
+    suspend fun notifyMarmotGroupMessage(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        if (!MarmotGroupNotifier.notifies(innerEvent)) return
+        if (account.marmotGroupList.isAdminRemoved(nostrGroupId, innerEvent.id)) return
+        if (account.marmotChatSettings.state.value
+                .isMuted(nostrGroupId)
+        ) {
+            return
+        }
+        account.marmotNotifier().notifyGroupMessage(innerEvent, nostrGroupId, account)
+    }
+
+    /**
      * The user pins, mutes or archives [nostrGroupId] on this device (or undoes it). With device
      * groups on and this device linked, the change also goes to the account's other devices
      * (`account-sync.md` "Small state"), which apply it to their copy of the chat. Archiving unpins
