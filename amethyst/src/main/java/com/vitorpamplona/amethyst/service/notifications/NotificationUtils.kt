@@ -234,6 +234,9 @@ object NotificationUtils {
     /** The extra holding the npub of the account a notification is for. */
     const val EXTRA_ACCOUNT_NPUB = "com.vitorpamplona.amethyst.notification.ACCOUNT_NPUB"
 
+    /** The Marmot chat (Nostr group id) a group-message notification belongs to. */
+    const val EXTRA_MARMOT_GROUP = "com.vitorpamplona.amethyst.notification.MARMOT_GROUP"
+
     fun notificationAccountFor(account: Account) =
         NotificationAccount(
             npub = NotificationRoutes.accountNpub(account),
@@ -381,6 +384,8 @@ object NotificationUtils {
         summaryId: Int = category.summaryId,
         /** Which account this is for ([notificationAccountFor]). */
         forAccount: NotificationAccount? = null,
+        /** The Marmot chat a group message belongs to, so muting it can take this down ([cancelMarmotGroup]). */
+        marmotGroupId: String? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
         // running — don't resurrect it (and skip the bitmap work).
@@ -490,6 +495,7 @@ object NotificationUtils {
         }
         builder.addPerson(sender)
         builder.stampAccount(forAccount)
+        if (marmotGroupId != null) builder.addExtras(Bundle().apply { putString(EXTRA_MARMOT_GROUP, marmotGroupId) })
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
@@ -834,6 +840,19 @@ object NotificationUtils {
         val gone =
             activeNotifications
                 .filter { it.notification.extras.getString(EXTRA_ACCOUNT_NPUB) == npub }
+                .onEach { cancel(it.tag, it.id) }
+                .mapTo(HashSet()) { it.id }
+        if (gone.isNotEmpty()) cancelChildlessGroupSummaries(gone)
+    }
+
+    /**
+     * Takes down every group-message notification of the Marmot chat [nostrGroupId] (the user muted
+     * it, here or on a linked device), and the summaries left without children.
+     */
+    fun NotificationManager.cancelMarmotGroup(nostrGroupId: String) {
+        val gone =
+            activeNotifications
+                .filter { it.notification.extras.getString(EXTRA_MARMOT_GROUP) == nostrGroupId }
                 .onEach { cancel(it.tag, it.id) }
                 .mapTo(HashSet()) { it.id }
         if (gone.isNotEmpty()) cancelChildlessGroupSummaries(gone)

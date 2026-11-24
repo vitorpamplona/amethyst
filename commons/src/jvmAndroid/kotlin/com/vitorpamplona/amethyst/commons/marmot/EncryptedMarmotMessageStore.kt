@@ -84,6 +84,7 @@ class EncryptedMarmotMessageStore(
                     return@withLock
                 }
                 log.append(file.toOkioPath(), innerEventJson)
+                Event.fromJsonOrNull(innerEventJson)?.createdAt?.let { recordNewest(nostrGroupId, it) }
                 Log.d(TAG) {
                     "appendMessage($nostrGroupId): now ${log.readAll(file.toOkioPath()).size} message(s) persisted"
                 }
@@ -109,11 +110,56 @@ class EncryptedMarmotMessageStore(
             }
         }
 
+    /**
+     * The newest inner `created_at` the group's log holds, read on every start to resume the
+     * group's subscription. Kept in its own small encrypted file as messages are appended, so a
+     * start decrypts no message log. A log written before that file existed is read once, and the
+     * answer stored.
+     */
+    override suspend fun newestMessageCreatedAt(nostrGroupId: String): Long? =
+        withContext(Dispatchers.IO) {
+            try {
+                logMutex.withLock { newestFor(nostrGroupId) }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "newestMessageCreatedAt($nostrGroupId) FAILED", e)
+                null
+            }
+        }
+
+    private fun newestFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "newest")
+
+    // Guarded by [logMutex]: each group's newest created_at once read, null for a group with none.
+    private val newest = mutableMapOf<String, Long?>()
+
+    private fun newestFor(nostrGroupId: String): Long? {
+        if (nostrGroupId in newest) return newest[nostrGroupId]
+        val stored = readAllFrom(newestFile(nostrGroupId)).firstOrNull()?.trim()?.toLongOrNull()
+        val value =
+            stored ?: readAll(nostrGroupId)
+                .maxOfOrNull { json -> Event.fromJsonOrNull(json)?.createdAt ?: 0L }
+                ?.also { writeAllTo(newestFile(nostrGroupId), listOf(it.toString())) }
+        newest[nostrGroupId] = value
+        return value
+    }
+
+    /** Guarded by [logMutex]. */
+    private fun recordNewest(
+        nostrGroupId: String,
+        createdAt: Long,
+    ) {
+        val current = newestFor(nostrGroupId)
+        if (current != null && current >= createdAt) return
+        writeAllTo(newestFile(nostrGroupId), listOf(createdAt.toString()))
+        newest[nostrGroupId] = createdAt
+    }
+
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             logMutex.withLock {
                 expiries.remove(nostrGroupId)
-                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId), mediaSecretsFile(nostrGroupId), epochAdminsFile(nostrGroupId), verdictsFile(nostrGroupId))) {
+                newest.remove(nostrGroupId)
+                for (file in listOf(newestFile(nostrGroupId), messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId), mediaSecretsFile(nostrGroupId), epochAdminsFile(nostrGroupId), verdictsFile(nostrGroupId))) {
                     log.forget(file.toOkioPath())
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }

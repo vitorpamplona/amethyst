@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -624,6 +625,8 @@ class DesktopAppModules(
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
+            // Long device-group histories go through the account's Blossom servers, on the app's HTTP routes.
+            marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
@@ -786,6 +789,13 @@ class DesktopAppModules(
             val account = sessionManager.accountContent.mapNotNull { (it as? AccountState.LoggedIn)?.account }.first()
             account.saveLocalRelayList((account.localRelayList.flow.value + relays).toList())
             Log.i("DesktopAppModules") { "Local relays of ${account.pubKey.take(8)}: ${account.localRelayList.flow.value.joinToString { it.url }}" }
+        }
+    }
+
+    /** Writes every account's Marmot receive state; bounded, for the shutdown hook. */
+    fun flushMarmotReceivedState() {
+        runBlocking {
+            withTimeoutOrNull(FLUSH_TIMEOUT_MS) { accountsCache.flushMarmotReceivedState() }
         }
     }
 

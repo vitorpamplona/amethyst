@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -41,7 +42,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *          rule, which nak and nostr-tools apply to every gift wrap);
  *          `--no-backdate` stamps both with the current time instead.
  *   unwrap decrypts a kind:1059 gift wrap with the active account's key,
- *          unseals it, and prints the inner event.
+ *          unseals it, and prints the inner event, with `verified`: whether
+ *          the seal (or a signed event the wrap carries bare) has a valid id
+ *          and signature. It prints the event either way.
  *
  * Inner/wrap JSON comes from the positional argument or stdin (`-`).
  *
@@ -58,7 +61,8 @@ object GiftCommands {
         |       [--no-backdate]                         seal and wrap are dated at random up to two
         |                                               days back, --no-backdate dates them now
         |  gift unwrap [GIFTWRAP-JSON]                 decrypt + unseal a kind:1059 wrap addressed
-        |                                               to the active account
+        |                                               to the active account; `verified` says
+        |                                               whether its seal's signature checks out
         """.trimMargin()
 
     suspend fun dispatch(
@@ -146,7 +150,16 @@ object GiftCommands {
                 }
             // The wrap holds a seal (kind:13); unseal it to recover the rumor.
             val inner = if (unwrapped is SealEvent) unwrapped.unsealThrowing(ctx.signer) else unwrapped
-            Output.emit(mapOf("event" to CliJson.parse(inner.toJson())))
+            // Unwrapping does not check what the wrap held (quartz leaves that to the caller): say
+            // whether the seal, or the signed event a wrap carries bare, has a valid id and signature,
+            // and print it either way. A rumor is unsigned; its author is the seal's to vouch for.
+            Output.emit(
+                mapOf(
+                    "event" to CliJson.parse(inner.toJson()),
+                    "verified" to unwrapped.verify(),
+                    "layer" to if (unwrapped is SealEvent) "seal" else "event",
+                ),
+            )
             return 0
         }
     }

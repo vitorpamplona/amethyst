@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.BlossomHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
@@ -83,6 +84,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
@@ -413,10 +415,29 @@ class Context(
             transport = CliMarmotDevicesTransport(this),
             keyPackageRelays = { keyPackageRelays() },
             signInAnswers = deviceGroupBlobs,
-            onSmallState = { state -> marmotChatSettings.applySmallState(state, marmot, skip = { id -> marmotDevices?.isDeviceGroup(id) == true }) },
+            onSmallState = { state ->
+                marmotChatSettings.applySmallState(
+                    state,
+                    marmot,
+                    skip = { id -> marmotDevices?.isDeviceGroup(id) == true },
+                    // A sibling's archive unpins here too, and that unpin goes back to the siblings.
+                    onLocalChange = { id, setting, value -> marmotDevices?.changeSetting(id, setting, value) },
+                )
+            },
             // Imported history is already in the message store, which every `marmot message` verb reads.
             onHistoryImported = { imports -> System.err.println("imported history: ${imports.sumOf { it.events.size }} message(s) in ${imports.size} chat(s)") },
+            // Long histories go through the account's Blossom servers (kind 10063), on [okhttp], so
+            // `AMY_LOCAL_ONLY` keeps them on loopback too.
+            historyBlobs = BlossomHistoryBlobs({ accountBlossomServers() }, signer) { okhttp },
         )
+    }
+
+    /** This account's Blossom servers (its kind 10063), from its outbox relays, in its order. */
+    suspend fun accountBlossomServers(timeoutMs: Long = 4_000): List<String> {
+        val self = identity.pubKeyHex
+        val filter = Filter(kinds = listOf(BlossomServersEvent.KIND), authors = listOf(self), limit = 1)
+        drain(outboxRelays().associateWith { listOf(filter) }, timeoutMs)
+        return (latestReplaceable(self, BlossomServersEvent.KIND) as? BlossomServersEvent)?.servers().orEmpty()
     }
 
     /** This account's own device-group records and chat settings, owner-only files. */

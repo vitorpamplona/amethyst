@@ -782,6 +782,8 @@ class GroupEventHandler(
 
         try {
             receiver.receive(event)
+            // The receive ratchets this moved are written once the burst ends, not every 32 messages.
+            account.marmotReceiveFlusher?.request()
             // Device-group answers queued by this event (hand-offs, small state) go out now.
             account.marmotDevices?.afterIngest(groupId)
         } catch (e: Exception) {

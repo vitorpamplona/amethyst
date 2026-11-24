@@ -527,7 +527,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnHub> { CordnHubScreen(accountViewModel, nav) }
     composableFromEnd<Route.MarmotDevicesSettings> { MarmotDevicesScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.MarmotDeviceLink> { MarmotDeviceLinkScreen(it.asNewDevice, it.sessionId, accountViewModel, nav) }
+    composableFromEndArgs<Route.MarmotDeviceLink> { MarmotDeviceLinkScreen(it.asNewDevice, it.sessionId, accountViewModel, nav, move = it.move) }
     composableFromEnd<Route.CordnMigrate> { CordnMigrateScreen(accountViewModel, nav) }
     composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
     composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }

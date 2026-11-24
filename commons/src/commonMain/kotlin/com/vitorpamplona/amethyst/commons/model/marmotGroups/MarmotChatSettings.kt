@@ -114,6 +114,11 @@ data class MarmotChatSettingsSnapshot(
  * the chat screen and notifications read, persisted in [blobs] (encrypted at rest by the app) so it
  * survives a restart with or without device groups. With device groups on, the user's changes also
  * go to the account's other devices, and theirs arrive here through [applyRemote].
+ *
+ * An archived chat is never pinned, as in White Noise (MDK `chat_list`): archiving unpins it, here
+ * or when the archive comes from a linked device, and that unpin is this device's own change, which
+ * goes on to the siblings; pinning an archived chat changes nothing, and a pin a sibling settles on
+ * while the chat is archived waits until it is unarchived.
  */
 class MarmotChatSettings(
     private val blobs: DeviceGroupBlobs?,
@@ -159,19 +164,34 @@ class MarmotChatSettings(
             }
         }
 
-    /** The user turned [setting] of [nostrGroupId] on or off here. True when it changed. */
+    /** The user turned [setting] of [nostrGroupId] on or off here. True when anything changed. */
     suspend fun set(
         nostrGroupId: HexKey,
         setting: MarmotChatSetting,
         on: Boolean,
-    ): Boolean = change(nostrGroupId, setting, on.toString())
+    ): Boolean = setAll(nostrGroupId, setting, on).isNotEmpty()
 
-    /** A value the account's device group settled on ([value]: its small-state token). True when it changed. */
+    /**
+     * The user turned [setting] of [nostrGroupId] on or off here: every setting that changed with
+     * it, as `(setting, token)`, for the caller to share with linked devices. Archiving a pinned
+     * chat changes two (the archive and the unpin); pinning an archived chat changes none.
+     */
+    suspend fun setAll(
+        nostrGroupId: HexKey,
+        setting: MarmotChatSetting,
+        on: Boolean,
+    ): List<Pair<MarmotChatSetting, String>> = change(nostrGroupId, setting, on.toString())
+
+    /**
+     * A value the account's device group settled on ([value]: its small-state token). Returns the
+     * changes this device made because of it beyond the value itself (the unpin an archive brings),
+     * which are this device's own and go on to the siblings.
+     */
     suspend fun applyRemote(
         nostrGroupId: HexKey,
         setting: MarmotChatSetting,
         value: String,
-    ): Boolean = change(nostrGroupId, setting, value)
+    ): List<Pair<MarmotChatSetting, String>> = change(nostrGroupId, setting, value).filter { it.first != setting }
 
     /** A chat this device left: its settings go with it. */
     suspend fun forget(nostrGroupId: HexKey) {
@@ -187,13 +207,26 @@ class MarmotChatSettings(
         nostrGroupId: HexKey,
         setting: MarmotChatSetting,
         value: String,
-    ): Boolean {
-        var changed = false
+    ): List<Pair<MarmotChatSetting, String>> {
+        var applied: List<Pair<MarmotChatSetting, String>> = emptyList()
         _state.update { before ->
-            before.with(nostrGroupId, setting, value).also { changed = it != before }
+            val changes = ArrayList<Pair<MarmotChatSetting, String>>(2)
+            // An archived chat is never pinned: the pin waits until the chat is unarchived.
+            if (setting == MarmotChatSetting.PIN && value == "true" && before.isArchived(nostrGroupId)) {
+                applied = changes
+                return@update before
+            }
+            var after = before.with(nostrGroupId, setting, value)
+            if (after != before) changes.add(setting to value)
+            if (setting == MarmotChatSetting.ARCHIVE && value == "true" && after.isPinned(nostrGroupId)) {
+                after = after.with(nostrGroupId, MarmotChatSetting.PIN, "false")
+                changes.add(MarmotChatSetting.PIN to "false")
+            }
+            applied = changes
+            after
         }
-        if (changed) save()
-        return changed
+        if (applied.isNotEmpty()) save()
+        return applied
     }
 
     private suspend fun save() {
@@ -220,11 +253,16 @@ class MarmotChatSettings(
      * read position goes to [onRead]. Items are keyed by MLS group id; chats [manager] does not hold, and
      * the ones [skip] names (the device group itself), are passed over: their items stay in the device
      * group's state until the chat arrives.
+     *
+     * Archives are applied before pins, so a pin settled with its chat's unarchive applies, and one
+     * settled while the chat stays archived waits. The unpin an archive brings is this device's own
+     * change: [onLocalChange] gets it, for the caller to send to the siblings.
      */
     suspend fun applySmallState(
         state: AccountSyncState,
         manager: MarmotManager,
         skip: (HexKey) -> Boolean = { false },
+        onLocalChange: suspend (nostrGroupId: HexKey, setting: MarmotChatSetting, value: String) -> Unit = { _, _, _ -> },
         onRead: suspend (nostrGroupId: HexKey, read: SmallStateItem.Read) -> Unit = { _, _ -> },
     ) {
         val byMlsId = HashMap<HexKey, HexKey>()
@@ -235,12 +273,16 @@ class MarmotChatSettings(
                 ?.toHexKey()
                 ?.let { byMlsId[it] = nostrId }
         }
-        for (item in state.items) {
+        val ordered = state.items.sortedBy { if (it is SmallStateItem.Versioned && it.name == MarmotChatSetting.ARCHIVE.wireName) 0 else 1 }
+        for (item in ordered) {
             val nostrId = byMlsId[item.chat] ?: continue
             if (skip(nostrId)) continue
             when (item) {
                 is SmallStateItem.Read -> onRead(nostrId, item)
-                is SmallStateItem.Versioned -> MarmotChatSetting.of(item.name)?.let { applyRemote(nostrId, it, item.value) }
+                is SmallStateItem.Versioned ->
+                    MarmotChatSetting.of(item.name)?.let { setting ->
+                        applyRemote(nostrId, setting, item.value).forEach { (other, value) -> onLocalChange(nostrId, other, value) }
+                    }
                 is SmallStateItem.Invite -> {}
             }
         }

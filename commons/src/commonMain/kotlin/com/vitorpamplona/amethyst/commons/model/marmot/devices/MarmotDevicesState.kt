@@ -216,4 +216,14 @@ data class MarmotDevicesSnapshot(
     /** While a fresh link catches up: how many chats the approver said to expect that have not arrived. */
     val remainingChats: Long? = null,
     val signIns: List<SignIn> = emptyList(),
+    /**
+     * This device joined another device group through a confirmed link and waits for its first
+     * Commit there to stand (`device-group.md` "Moving between device groups"); the old group stays
+     * trusted until then.
+     */
+    val moving: Boolean = false,
+    /** Histories this device owes siblings it added to chats, not sent yet (an upload failed, say). */
+    val owedHistories: Int = 0,
+    /** History deliveries read that wait for their chat or their Blossom blob. */
+    val keptDeliveries: Int = 0,
 )

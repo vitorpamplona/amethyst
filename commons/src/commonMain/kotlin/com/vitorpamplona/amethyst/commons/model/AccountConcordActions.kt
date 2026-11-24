@@ -2855,6 +2855,7 @@ class AccountConcordActions(
                         communityId = entry.id,
                         priorRoot = entry.root.hexToByteArray(),
                         rootEpoch = entry.rootEpoch,
+                        open = session.wrapOpener,
                         accept = honored,
                     )
                 if (received != null && received.newEpoch > entry.rootEpoch) {
@@ -2888,6 +2889,7 @@ class AccountConcordActions(
                     communityId = entry.id,
                     priorRoot = prior.key.hexToByteArray(),
                     rootEpoch = prior.epoch,
+                    open = session.wrapOpener,
                     accept = honored,
                 ) ?: continue
             val healed = ConcordReceive.withHealedRoot(entry, sibling) ?: continue
@@ -3394,7 +3396,7 @@ class AccountConcordActions(
             val wraps = session.pendingChannelRekeyWraps()
             if (wraps.isEmpty()) continue
             val entry = session.entry
-            val outcomes = ConcordPrivateChannels.receive(entry, wraps, session.controlEditions(), state.authority, account.signer)
+            val outcomes = ConcordPrivateChannels.receive(entry, wraps, session.controlEditions(), state.authority, account.signer, session.wrapOpener)
             if (outcomes.isEmpty()) continue
             val fromEpochs = entry.privateChannels.associate { it.channelId.lowercase() to it.epoch }
             if (updateConcordEntry(entry.id) { cur -> ConcordPrivateChannels.applyOutcome(cur, outcomes, fromEpochs) }) {

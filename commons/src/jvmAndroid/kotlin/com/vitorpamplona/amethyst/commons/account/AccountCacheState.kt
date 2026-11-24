@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
@@ -140,6 +141,11 @@ class AccountCacheState(
     val trustNetworkClientBuilder: (() -> INostrClient)?,
     /** False on a metered network: background Web of Trust downloads then wait. */
     val canDownloadLargeFiles: () -> Boolean,
+    /**
+     * Blossom for Marmot device-group history bundles, over the app's HTTP routes
+     * (`marmotHistoryBlobsOf`); null where there is none.
+     */
+    val marmotHistoryBlobs: ((Account) -> MarmotHistoryBlobs?)?,
     /** Where the pages NIP-46 signers send with `auth_url` challenges wait for the user. */
     val remoteSignerAuthPrompts: RemoteSignerAuthPrompts? = null,
 ) : AccountCache {
@@ -166,6 +172,18 @@ class AccountCacheState(
         }
 
     override fun loadedAccount(pubkey: HexKey): Account? = accounts.value[pubkey]
+
+    /** Writes every loaded account's Marmot receive state ([Account.flushMarmotReceivedState]): the app is going to the background or away. */
+    suspend fun flushMarmotReceivedState() {
+        accounts.value.values.forEach { account ->
+            try {
+                account.flushMarmotReceivedState()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountCacheState", "could not write the Marmot receive state of ${account.signer.pubKey.take(8)}", e)
+            }
+        }
+    }
 
     override fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
@@ -510,6 +528,7 @@ class AccountCacheState(
             marmotDeviceGroupSwitch = marmotDeviceGroupSwitch,
             marmotLocalBlobs = marmotLocalBlobs,
             marmotDevicePlatform = MarmotDevicePlatform.name(),
+            marmotHistoryBlobs = marmotHistoryBlobs,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
             signerPermissionStore = signerPermissionStore,

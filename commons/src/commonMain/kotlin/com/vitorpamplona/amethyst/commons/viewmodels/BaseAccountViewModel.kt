@@ -52,6 +52,9 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.mintConcordInviteReporting
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmot.marmotChatReadPositions
+import com.vitorpamplona.amethyst.commons.model.marmot.newestNotificationNews
+import com.vitorpamplona.amethyst.commons.model.marmot.notificationHasNews
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotMentionTags
@@ -114,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.amethyst.commons.wot.sortedKeysByFollowsThenTrust
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupIconChange
@@ -396,19 +400,19 @@ open class BaseAccountViewModel(
             .flatMapLatest { isSplit ->
                 val source =
                     if (isSplit) feedStates.notificationsFollowing else feedStates.notifications
-                combineTransform(
+                // Marmot messages the chat already read (imported history among them) stay listed but
+                // are no news, so they light no badge; reading a Marmot chat recomputes it.
+                notificationHasNews(
                     account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY),
-                    source.feedContent
-                        .flatMapLatest {
-                            if (it is CardFeedState.Loaded) {
-                                it.feed
-                            } else {
-                                MutableStateFlow(null)
-                            }
-                        }.map { it?.list?.firstOrNull()?.createdAt() },
-                ) { lastRead, newestItemCreatedAt ->
-                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
-                }
+                    source.feedContent.flatMapLatest {
+                        if (it is CardFeedState.Loaded) {
+                            it.feed
+                        } else {
+                            MutableStateFlow(null)
+                        }
+                    },
+                    marmotChatReadPositions(account.settings.lastReadPerRoute),
+                ) { feed -> account.newestNotificationNews(feed.list)?.createdAt() }
             }.onStart {
                 val source =
                     if (account.settings.splitNotificationsEnabled.value) {
@@ -419,10 +423,7 @@ open class BaseAccountViewModel(
                 val lastRead = account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).value
                 val cards = source.feedContent.value
                 if (cards is CardFeedState.Loaded) {
-                    val newestItemCreatedAt =
-                        cards.feed.value.list
-                            .firstOrNull()
-                            ?.createdAt()
+                    val newestItemCreatedAt = account.newestNotificationNews(cards.feed.value.list)?.createdAt()
                     emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
                 }
             }
@@ -2643,6 +2644,16 @@ open class BaseAccountViewModel(
         nostrGroupId: String,
         innerEventId: String,
     ): ByteArray? = account.marmotManager?.mediaSecretForMessage(nostrGroupId, innerEventId)
+
+    /**
+     * The cipher for [reference], an `encrypted-media-v2` attachment of [innerEventId]: under the
+     * media key of its epoch, or under the file key a linked device's history gave for it.
+     */
+    suspend fun marmotMediaCipherForMessage(
+        nostrGroupId: String,
+        innerEventId: String,
+        reference: EncryptedMediaReferenceV2,
+    ): EncryptedMediaV2Cipher? = account.marmotManager?.mediaCipherForMessage(nostrGroupId, innerEventId, reference)
 
     /**
      * True when this group carries the `encrypted-media-v2` policy (`0x800b`)

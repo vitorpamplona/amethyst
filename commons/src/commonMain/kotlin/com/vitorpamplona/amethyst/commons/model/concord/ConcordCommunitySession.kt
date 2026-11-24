@@ -270,6 +270,13 @@ class ConcordCommunitySession(
     private val editionByWrapId = HashMap<HexKey, ControlEdition?>()
 
     /**
+     * Opens the rekey wraps ([pendingBaseRekeyWraps], [pendingSiblingRekeyWraps],
+     * [pendingChannelRekeyWraps]) for the account's drains, each once: the drains re-judge the
+     * whole buffer on every revision tick. See [ConcordWrapOpenCache].
+     */
+    val wrapOpener = ConcordWrapOpenCache()
+
+    /**
      * Guestbook wraps opened into entries, memoized by wrap id — the guestbook analogue of
      * [editionByWrapId]. [refoldGuestbook] runs on *every* arriving guestbook wrap and re-projects
      * the whole buffer, so without this the nth arrival re-opens all n wraps and a boot costs

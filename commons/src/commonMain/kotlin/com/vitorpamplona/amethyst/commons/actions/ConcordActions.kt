@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.concord.envelope.StreamWrapOpener
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -1230,6 +1231,7 @@ object ConcordActions {
         communityId: HexKey,
         priorRoot: ByteArray,
         rootEpoch: Long,
+        open: StreamWrapOpener = StreamWrapOpener.DIRECT,
         accept: (ReceivedRefounding) -> Boolean = { true },
-    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept = accept)
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, open, accept = accept)
 }

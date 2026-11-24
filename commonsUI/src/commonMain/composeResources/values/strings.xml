@@ -10571,6 +10571,9 @@
     <string name="marmot_devices_link_new_desc">This device approves another one of yours</string>
     <string name="marmot_devices_link_this">Link this device to an existing one</string>
     <string name="marmot_devices_link_this_desc">Approve it on a device that already has your chats</string>
+    <string name="marmot_devices_move_this">Move this device to another group of your devices</string>
+    <string name="marmot_devices_move_this_desc">Approve it on a device of that group; this device leaves its current group once the move is done</string>
+    <string name="marmot_devices_moving">This device is moving to another group of your devices. It stays in its current group until the move is done.</string>
     <string name="marmot_devices_section_sign_ins">Other sign-ins</string>
     <string name="marmot_devices_sign_in_new">New sign-in %1$s</string>
     <string name="marmot_devices_sign_in_earlier">Signed in before this device, %1$s</string>
@@ -10582,6 +10585,7 @@
     <string name="marmot_devices_failed_action">That did not work. Try again.</string>
     <string name="marmot_devices_switch_off_while_linked">This device is linked to your other devices, so this stays on. To unlink it, remove it from one of your other devices, or log out of this account here.</string>
     <string name="marmot_link_title_new">Link this device</string>
+    <string name="marmot_link_title_move">Move this device</string>
     <string name="marmot_link_title_existing">Link a new device</string>
     <string name="marmot_link_starting">Sending the link request…</string>
     <string name="marmot_link_waiting_answer">Waiting for one of your other devices. Open Amethyst or White Noise on it: it will ask to link this one.</string>

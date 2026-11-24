@@ -102,6 +102,18 @@ class MarmotDevices(
      * the lock.
      */
     private val onChatsJoined: (suspend (List<HexKey>) -> Unit)? = null,
+    /**
+     * Where imported history is written down as read the moment it is taken from the device group,
+     * before [onHistoryImported] runs, so a process death in between cannot restore it as unread.
+     */
+    private val importedReads: MarmotImportedHistoryReads? = null,
+    /**
+     * Where bundles too long for inline deliveries go and come from (Blossom, the account's
+     * servers), from the front end's HTTP client. Without it long histories send their newest
+     * inline bundles and Blossom deliveries wait until they expire. Given at construction, so it
+     * holds from the first ingest whether or not a screen is open.
+     */
+    historyBlobs: MarmotHistoryBlobs? = null,
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
@@ -152,8 +164,20 @@ class MarmotDevices(
     private var lastRetag = 0L
     private var lastSignInCheck = 0L
 
-    /** Whether [nostrGroupId] is this account's hidden device group: no chatroom, no notification. */
-    fun isDeviceGroup(nostrGroupId: HexKey): Boolean = groups.isTrustedDeviceGroup(nostrGroupId)
+    /**
+     * Whether [nostrGroupId] is one of this account's hidden device groups (the trusted one, a move's
+     * destination or the group a move left, or any group carrying a device roster): no chatroom, no
+     * notification.
+     */
+    fun isDeviceGroup(nostrGroupId: HexKey): Boolean = groups.isOwnDeviceGroup(nostrGroupId)
+
+    init {
+        // The device group's own fields are volatile: set once, here, before any ingest reads them.
+        if (historyBlobs != null) {
+            groups.historyBlobUploader = { ciphertext -> historyBlobs.upload(ciphertext) }
+            groups.historyBlobFetcher = { url, maxBytes -> historyBlobs.fetch(url, maxBytes) }
+        }
+    }
 
     /**
      * Loads trust; with [announce], also broadcasts this device's small state and asks its siblings
@@ -244,8 +268,8 @@ class MarmotDevices(
         val mine = newDevice
         if (mine != null && message.sessionId == mine.sessionId) {
             onNewDeviceMessage(mine, message, now)
-        } else if (mine == null || message !is PairingMessage.Request) {
-            // A device linking itself answers no one else's request; everything else may be ours.
+        } else if ((mine == null && !groups.isMoving()) || message !is PairingMessage.Request) {
+            // A device linking itself, or moving, answers no one else's request; everything else may be ours.
             onExistingDeviceMessage(message, createdAt, now)
         }
     }
@@ -272,10 +296,15 @@ class MarmotDevices(
             refreshState()
         }
 
-    /** Hands the app the history imported since the last call, after the lock is released. */
-    private fun queueImportedHistory() {
+    /**
+     * Hands the app the history imported since the last call, after the lock is released. Written
+     * down as read first ([importedReads]): the messages are in the store already, and the show is
+     * only queued.
+     */
+    private suspend fun queueImportedHistory() {
         val imported = groups.drainImportedHistory()
         if (imported.isEmpty()) return
+        importedReads?.record(imported, clock())
         val show = onHistoryImported ?: return
         sends.add { show(imported) }
     }
@@ -293,19 +322,19 @@ class MarmotDevices(
     private var lastSmallState: List<SmallStateItem>? = null
 
     private suspend fun firstCommitIfJoined() {
-        val t = groups.trust()
-        if (!t.trustsDeviceGroup || t.unlinked) return
-        val own = groups.roster()?.device(t.ownSlot) ?: return
-        if (own.tagSignatureKey != null) {
-            if (newDeviceState == NewDeviceLinkState.Joining) newDeviceState = NewDeviceLinkState.Linked
+        if (!groups.firstCommitDue()) {
+            val t = groups.trust()
+            if (newDeviceState == NewDeviceLinkState.Joining && t.trustsDeviceGroup && !t.unlinked && t.move == null) newDeviceState = NewDeviceLinkState.Linked
             return
         }
-        Log.d(TAG) { "joined the device group: sending the first Commit" }
+        val moving = groups.isMoving()
+        Log.d(TAG) { if (moving) "joined the device group this device moves to: sending the first Commit" else "joined the device group: sending the first Commit" }
         groups.applyStaged(groups.stageFirstCommit())
         newDeviceState = NewDeviceLinkState.Linked
         newDevice = null
-        // Hand the siblings private KeyPackages right away, so they can add this device to chats.
-        publishAll(groups.topUpSiblings(clock()))
+        // Hand the siblings private KeyPackages right away, so they can add this device to chats
+        // (a moving device does once its move is made and the destination is the trusted group).
+        if (!groups.isMoving()) publishAll(groups.topUpSiblings(clock()))
     }
 
     // =============================================================================================
@@ -319,8 +348,9 @@ class MarmotDevices(
     suspend fun startLinkAsNewDevice(): NewDeviceLinkState =
         locked {
             check(started) { "start() first" }
-            val t = groups.trust()
-            check(!t.trustsDeviceGroup) { "This device is already linked" }
+            // A linked device may link again: that moves it to the answering device's group
+            // (`device-group.md` "Moving between device groups"), one move at a time.
+            check(!groups.isMoving()) { "This device is already moving to another device group" }
             newDevice?.cancel()?.let { publishPairing(it) }
             val relays = keyPackageRelays()
             val event = manager.generateKeyPackageEvent(relays.toList())
@@ -624,6 +654,11 @@ class MarmotDevices(
                     queueImportedHistory()
                 }
                 runStep("own entry") { groups.stageOwnEntryRefresh()?.let { groups.applyStaged(it) } }
+                // A rename a fork dropped is made again; a move made finishes in both groups; a
+                // sibling that moved away leaves this roster.
+                runStep("rename recovery") { groups.stageEditRecovery()?.let { groups.applyStaged(it) } }
+                runStep("move") { groups.stageMoveFollowUp()?.let { groups.applyStaged(it) } }
+                runStep("moved sibling") { groups.stageMovedCleanup()?.let { groups.applyStaged(it) } }
                 runStep("sibling welcome repairs") { publishAll(groups.siblingWelcomeRepairs(now)) }
                 runStep("broadcast") { publishAll(groups.broadcastDue(now)) }
                 if (now - lastRetag > RETAG_EVERY_SECS) {
@@ -1004,6 +1039,9 @@ class MarmotDevices(
                 remainingChats = if (t.trustsDeviceGroup) groups.remainingExpectedChats() else null,
                 // A sign-in whose device has linked since the last check is one of the devices now.
                 signIns = lastSignIns.filter { signIn -> devices.none { it.slot == signIn.slot } },
+                moving = t.move != null,
+                owedHistories = groups.owedHistoryCount(),
+                keptDeliveries = groups.keptHistoryCount(),
             )
     }
 

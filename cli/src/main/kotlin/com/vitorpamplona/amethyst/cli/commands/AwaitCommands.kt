@@ -120,7 +120,8 @@ object AwaitCommands {
                             "event_id" to event.id,
                             "author" to event.pubKey,
                             "kind" to event.kind,
-                            "found_on" to lookup.relays.map { it.url },
+                            "found_on" to lookup.foundOn(event).map { it.url },
+                            "asked" to lookup.relays.map { it.url },
                         ),
                     )
                     return 0

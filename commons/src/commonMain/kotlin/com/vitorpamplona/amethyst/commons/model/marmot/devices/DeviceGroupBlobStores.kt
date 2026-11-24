@@ -24,6 +24,8 @@ import com.vitorpamplona.marmot.features.accountSync.AccountSyncState
 import com.vitorpamplona.marmot.features.accountSync.AccountSyncStore
 import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrust
 import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrustStore
+import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupWork
+import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupWorkStore
 import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupConfig
 import com.vitorpamplona.marmot.features.deviceGroup.PrivateKeyPackageStore
 import com.vitorpamplona.marmot.features.deviceGroup.PrivateKeyPackages
@@ -44,7 +46,7 @@ interface DeviceGroupBlobs {
     )
 }
 
-/** marmot-kmp's three device-group stores over [blobs], one blob each. */
+/** marmot-kmp's device-group stores over [blobs], one blob each. */
 class DeviceGroupBlobStores(
     val blobs: DeviceGroupBlobs,
 ) {
@@ -70,6 +72,17 @@ class DeviceGroupBlobStores(
         }
 
     /**
+     * Owed histories, deliveries waiting for their chat or blob, roster edits a fork may undo and
+     * imported attachment keys, so a restart keeps them (marmot-kmp's versioned `DeviceGroupWork`).
+     */
+    val work: DeviceGroupWorkStore =
+        object : DeviceGroupWorkStore {
+            override suspend fun load(): DeviceGroupWork? = blobs.load(WORK)?.let { DeviceGroupWork.decode(it) }
+
+            override suspend fun save(work: DeviceGroupWork) = blobs.save(WORK, work.encode())
+        }
+
+    /**
      * The config a `MarmotManager` takes. A device group this device creates lives on
      * [relayProvider]'s relays as they are then (the account's lists load after the account is
      * built), or on [relays] when it names none. [client] and [platform] go in this device's own
@@ -80,11 +93,12 @@ class DeviceGroupBlobStores(
         relayProvider: (suspend () -> List<String>)? = null,
         client: String = "",
         platform: String = "",
-    ) = MarmotDeviceGroupConfig(trust, privateKeyPackages, relays, accountSync, relayProvider, client, platform)
+    ) = MarmotDeviceGroupConfig(trust, privateKeyPackages, relays, accountSync, relayProvider, client, platform, work)
 
     companion object {
         const val TRUST = "device_group_trust"
         const val PRIVATE_KEY_PACKAGES = "private_key_packages"
         const val ACCOUNT_SYNC = "account_sync"
+        const val WORK = "device_group_work"
     }
 }
