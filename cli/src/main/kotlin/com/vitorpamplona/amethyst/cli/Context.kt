@@ -426,11 +426,10 @@ class Context(
             },
             // Imported history is already in the message store, which every `marmot message` verb reads.
             onHistoryImported = { imports -> System.err.println("imported history: ${imports.sumOf { it.events.size }} message(s) in ${imports.size} chat(s)") },
-        ).also { devices ->
             // Long histories go through the account's Blossom servers (kind 10063), on [okhttp], so
             // `AMY_LOCAL_ONLY` keeps them on loopback too.
-            devices.historyBlobs = BlossomHistoryBlobs({ accountBlossomServers() }, signer) { okhttp }
-        }
+            historyBlobs = BlossomHistoryBlobs({ accountBlossomServers() }, signer) { okhttp },
+        )
     }
 
     /** This account's Blossom servers (its kind 10063), from its outbox relays, in its order. */

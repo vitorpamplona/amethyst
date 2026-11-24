@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotEmojiMediaPortOf
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.notices.ui.ResUserNoticeResolver
@@ -70,12 +69,6 @@ class AccountViewModel(
         // through this account's own HTTP routes (proxy, Tor).
         if (account.marmot.emojiMediaPort == null) {
             account.marmot.emojiMediaPort = marmotEmojiMediaPortOf(account, httpClientBuilder)
-        }
-
-        // Lets a long chat history reach a newly linked device through the account's Blossom
-        // servers, by the same HTTP routes.
-        account.marmotDevices?.let { devices ->
-            if (devices.historyBlobs == null) devices.historyBlobs = marmotHistoryBlobsOf(account, httpClientBuilder)
         }
     }
 

@@ -33,9 +33,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 actual fun marmotHistoryBlobsOf(
     account: Account,
@@ -78,33 +84,74 @@ class BlossomHistoryBlobs(
         return held.ifEmpty { null }
     }
 
+    /**
+     * The blob at [url], at most [maxBytes] of it. Cancellable to the socket: cancelling the caller
+     * cancels the HTTP call, whether it is still connecting or already reading the body.
+     */
     override suspend fun fetch(
         url: String,
         maxBytes: Long,
     ): ByteArray? =
-        withContext(Dispatchers.IO) {
-            try {
-                val request =
-                    Request
-                        .Builder()
-                        .url(url)
-                        .get()
-                        .build()
-                clientFor(url).newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext null
-                    val body = response.body
-                    if (body.contentLength() > maxBytes) return@withContext null
-                    // Capped while reading: a server that streams forever does not fill the heap.
-                    val source = body.source()
-                    if (source.request(maxBytes + 1)) return@withContext null
-                    source.buffer.readByteArray()
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.d(TAG) { "could not fetch a history bundle from $url: ${e.message}" }
-                null
-            }
+        try {
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .get()
+                    .build()
+            clientFor(url).newCall(request).readCapped(maxBytes)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "could not fetch a history bundle from $url", e)
+            null
         }
+
+    /**
+     * Runs the call on OkHttp's dispatcher and reads its body there, at most [maxBytes]; null for an
+     * unsuccessful answer or a longer body. A cancelled coroutine cancels the call, which also ends
+     * a read in progress.
+     */
+    private suspend fun Call.readCapped(maxBytes: Long): ByteArray? =
+        suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { cancel() }
+            enqueue(
+                object : Callback {
+                    override fun onFailure(
+                        call: Call,
+                        e: IOException,
+                    ) {
+                        if (continuation.isActive) continuation.resumeWithException(e)
+                    }
+
+                    override fun onResponse(
+                        call: Call,
+                        response: Response,
+                    ) {
+                        val bytes =
+                            try {
+                                response.use { readCapped(it, maxBytes) }
+                            } catch (e: IOException) {
+                                if (continuation.isActive) continuation.resumeWithException(e)
+                                return
+                            }
+                        if (continuation.isActive) continuation.resume(bytes)
+                    }
+                },
+            )
+        }
+
+    private fun readCapped(
+        response: Response,
+        maxBytes: Long,
+    ): ByteArray? {
+        if (!response.isSuccessful) return null
+        val body = response.body
+        if (body.contentLength() > maxBytes) return null
+        // Capped while reading: a server that streams forever does not fill the heap.
+        val source = body.source()
+        if (source.request(maxBytes + 1)) return null
+        return source.buffer.readByteArray()
+    }
 
     companion object {
         private const val TAG = "BlossomHistoryBlobs"

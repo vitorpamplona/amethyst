@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -619,6 +620,8 @@ class DesktopAppModules(
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
+            // Long device-group histories go through the account's Blossom servers, on the app's HTTP routes.
+            marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA

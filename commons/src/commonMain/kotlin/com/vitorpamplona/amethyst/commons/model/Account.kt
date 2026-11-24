@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobSt
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotImportedHistoryReads
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
@@ -536,6 +537,11 @@ class Account(
     val marmotLocalBlobs: DeviceGroupBlobs? = null,
     /** This device's platform for its device-group roster entry (`Android`, `Linux`, …); empty when unknown. */
     val marmotDevicePlatform: String = "",
+    /**
+     * Blossom for device-group history bundles too long to travel inline, over the app's HTTP
+     * routes; null on a front end without one. Built with the account, not with a screen.
+     */
+    marmotHistoryBlobs: ((Account) -> MarmotHistoryBlobs?)? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -1345,6 +1351,7 @@ class Account(
                 onHistoryImported = { imports -> marmot.indexImportedMarmotHistory(imports) },
                 onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
                 importedReads = marmotImportedHistoryReads,
+                historyBlobs = marmotHistoryBlobs?.invoke(this),
             )
         }
 

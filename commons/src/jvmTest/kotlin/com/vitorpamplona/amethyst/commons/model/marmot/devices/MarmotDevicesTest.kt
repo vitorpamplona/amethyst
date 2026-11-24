@@ -338,6 +338,24 @@ class MarmotDevicesTest {
             )
         }
 
+    /** Built with the account, so a device with no screen open still sends and fetches Blossom history. */
+    @Test
+    fun historyBlobsGivenAtConstructionReachTheDeviceGroup() {
+        val device = Device(KeyPair(), folder.newFolder())
+        assertTrue("none by default", device.devices.groups.historyBlobFetcher == null)
+        val blobs =
+            object : MarmotHistoryBlobs {
+                override suspend fun upload(ciphertext: ByteArray) = listOf("https://blossom.invalid")
+
+                override suspend fun fetch(
+                    url: String,
+                    maxBytes: Long,
+                ) = byteArrayOf(1)
+            }
+        val withBlobs = MarmotDevices(device.manager, device.signer, device.transport, { emptySet() }, { clock }, historyBlobs = blobs)
+        assertTrue(withBlobs.groups.historyBlobFetcher != null && withBlobs.groups.historyBlobUploader != null)
+    }
+
     @Test
     fun aReadPositionReachesTheOtherDevice() =
         runBlocking<Unit> {

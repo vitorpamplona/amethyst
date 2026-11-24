@@ -107,6 +107,13 @@ class MarmotDevices(
      * before [onHistoryImported] runs, so a process death in between cannot restore it as unread.
      */
     private val importedReads: MarmotImportedHistoryReads? = null,
+    /**
+     * Where bundles too long for inline deliveries go and come from (Blossom, the account's
+     * servers), from the front end's HTTP client. Without it long histories send their newest
+     * inline bundles and Blossom deliveries wait until they expire. Given at construction, so it
+     * holds from the first ingest whether or not a screen is open.
+     */
+    historyBlobs: MarmotHistoryBlobs? = null,
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
@@ -164,17 +171,13 @@ class MarmotDevices(
      */
     fun isDeviceGroup(nostrGroupId: HexKey): Boolean = groups.isOwnDeviceGroup(nostrGroupId)
 
-    /**
-     * Where bundles too long for inline deliveries go and come from (Blossom, the account's
-     * servers). Set by a front end that has an HTTP client; without it long histories send their
-     * newest inline bundles and Blossom deliveries wait until they expire.
-     */
-    var historyBlobs: MarmotHistoryBlobs? = null
-        set(value) {
-            field = value
-            groups.historyBlobUploader = value?.let { blobs -> { ciphertext -> blobs.upload(ciphertext) } }
-            groups.historyBlobFetcher = value?.let { blobs -> { url, maxBytes -> blobs.fetch(url, maxBytes) } }
+    init {
+        // The device group's own fields are volatile: set once, here, before any ingest reads them.
+        if (historyBlobs != null) {
+            groups.historyBlobUploader = { ciphertext -> historyBlobs.upload(ciphertext) }
+            groups.historyBlobFetcher = { url, maxBytes -> historyBlobs.fetch(url, maxBytes) }
         }
+    }
 
     /**
      * Loads trust; with [announce], also broadcasts this device's small state and asks its siblings
