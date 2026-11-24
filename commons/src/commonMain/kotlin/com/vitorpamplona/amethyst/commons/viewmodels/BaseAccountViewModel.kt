@@ -51,7 +51,9 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmot.marmotChatReadPositions
 import com.vitorpamplona.amethyst.commons.model.marmot.newestNotificationNews
+import com.vitorpamplona.amethyst.commons.model.marmot.notificationHasNews
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettingsSnapshot
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.memberRows
@@ -396,21 +398,19 @@ open class BaseAccountViewModel(
             .flatMapLatest { isSplit ->
                 val source =
                     if (isSplit) feedStates.notificationsFollowing else feedStates.notifications
-                combineTransform(
+                // Marmot messages the chat already read (imported history among them) stay listed but
+                // are no news, so they light no badge; reading a Marmot chat recomputes it.
+                notificationHasNews(
                     account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY),
-                    source.feedContent
-                        .flatMapLatest {
-                            if (it is CardFeedState.Loaded) {
-                                it.feed
-                            } else {
-                                MutableStateFlow(null)
-                            }
-                            // Marmot messages the chat already read (imported history among them) stay
-                            // listed but are no news, so they light no badge.
-                        }.map { it?.list?.let { cards -> account.newestNotificationNews(cards) }?.createdAt() },
-                ) { lastRead, newestItemCreatedAt ->
-                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
-                }
+                    source.feedContent.flatMapLatest {
+                        if (it is CardFeedState.Loaded) {
+                            it.feed
+                        } else {
+                            MutableStateFlow(null)
+                        }
+                    },
+                    marmotChatReadPositions(account.settings.lastReadPerRoute),
+                ) { feed -> account.newestNotificationNews(feed.list)?.createdAt() }
             }.onStart {
                 val source =
                     if (account.settings.splitNotificationsEnabled.value) {
