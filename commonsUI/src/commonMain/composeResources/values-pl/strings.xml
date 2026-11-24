@@ -10170,7 +10170,6 @@
     <string name="claude_code_fork_hint">Kopia sesji. Twoja pierwsza wiadomość uruchomi ją jako osobną sesję; oryginał pozostanie bez zmian.</string>
     <string name="claude_code_notify_needs_you">%1$s wymaga Twojej zgody</string>
     <string name="claude_code_notify_finished">%1$s: gotowe</string>
-    <string name="claude_code_section_needs_you">Czeka na Ciebie</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Zarchiwizowane · %1$d sesja</item>
         <item quantity="few">Zarchiwizowane · %1$d sesje</item>

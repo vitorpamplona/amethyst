@@ -10553,7 +10553,6 @@
     <string name="claude_code_fork_hint">Kopie relace. Vaše první zpráva z ní udělá samostatnou relaci; původní zůstane, jak je.</string>
     <string name="claude_code_notify_needs_you">%1$s potřebuje vaše schválení</string>
     <string name="claude_code_notify_finished">Hotovo: %1$s</string>
-    <string name="claude_code_section_needs_you">Čeká na vás</string>
     <string name="claude_code_status_in_terminal">otevřeno v terminálu</string>
     <string name="claude_code_starter_explain">Vysvětlete, jak je tento repozitář uspořádaný</string>
     <string name="claude_code_starter_tests">Spusťte testy a opravte, co selže</string>

@@ -9482,7 +9482,6 @@
     <string name="claude_code_fork_hint">Een kopie van de sessie. Je eerste bericht start hem als een eigen sessie; het origineel blijft zoals het is.</string>
     <string name="claude_code_notify_needs_you">%1$s wacht op je goedkeuring</string>
     <string name="claude_code_notify_finished">%1$s is klaar</string>
-    <string name="claude_code_section_needs_you">Wacht op jou</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Gearchiveerd · %1$d sessie</item>
         <item quantity="other">Gearchiveerd · %1$d sessies</item>

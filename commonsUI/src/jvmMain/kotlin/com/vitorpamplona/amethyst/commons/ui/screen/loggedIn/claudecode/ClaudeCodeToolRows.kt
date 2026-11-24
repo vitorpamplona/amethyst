@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -110,9 +111,10 @@ internal fun rememberToolView(
 internal fun FileChangeDiff(
     change: ToolView.FileChange,
     modifier: Modifier = Modifier,
+    startFolded: Boolean = false,
 ) {
     // Parsed when the view was made, off the main thread (ToolViews.cached).
-    GitDiffView(change.patch, modifier, showSummary = false)
+    GitDiffView(change.patch, modifier, showSummary = false, startFolded = startFolded)
 }
 
 /** A tool's name for the chat: an in-app tool's own name (`search settings`), not `mcp__server__tool`. */
@@ -145,7 +147,7 @@ internal fun toolLabel(
     }
 
 /**
- * An edit or a write, on its own row: the file's diff, as it landed. A failed one says why
+ * An edit or a write, on its own row: the file's card, folded, with its diff as it landed. A failed one says why
  * instead, since nothing changed.
  */
 @Composable
@@ -159,7 +161,8 @@ internal fun FileChangeRow(
     val view = rememberToolView(call.name, call.input, cwd, pending = !call.isDone)
     val change = view as? ToolView.FileChange
     if (change != null && call.isDone && !call.isError) {
-        FileChangeDiff(change)
+        // Folded to the file's card: a turn of edits reads as a list of files, each opened on a click.
+        FileChangeDiff(change, startFolded = true)
     } else {
         ToolCallRow(call, cwd, turnRunning)
     }
@@ -287,7 +290,12 @@ internal fun ToolLine(
     ) {
         // Dark enough to read as text (about 5:1 on the surface), still a step under the reply.
         val tint = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface65
-        Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
+        val style = MaterialTheme.typography.bodyMedium
+        // The icons' middles sit half an x-height over the label's baseline, level with its
+        // lowercase. Centred on the line box instead, they line up with the capitals and look high.
+        val halfXHeight = with(LocalDensity.current) { (style.fontSize * HALF_X_HEIGHT).roundToPx() }
+        val onLowercase = Modifier.alignBy { it.measuredHeight / 2 + halfXHeight }
+        Box(onLowercase.size(16.dp), contentAlignment = Alignment.Center) {
             if (running) {
                 CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
             } else {
@@ -297,24 +305,27 @@ internal fun ToolLine(
         Spacer(Modifier.width(10.dp))
         Text(
             text,
-            style = MaterialTheme.typography.bodyMedium,
+            style = style,
             color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             // Not filling: the chevron follows the label instead of sitting at the far edge.
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
         )
         errorSuffix?.let {
-            Text(" · $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
+            Text(" · $it", style = style, color = MaterialTheme.colorScheme.error, maxLines = 1, modifier = Modifier.alignByBaseline())
         }
         Spacer(Modifier.width(4.dp))
         Icon(
             if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.size(16.dp),
+            modifier = onLowercase.size(16.dp),
         )
     }
 }
+
+/** Half a sans-serif face's x-height, as a share of its size (about 0.53 em in the app's faces). */
+private const val HALF_X_HEIGHT = 0.27f
 
 private const val RESULT_SHOWN = 20_000

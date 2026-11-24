@@ -1205,9 +1205,33 @@ class ClaudeCodeService(
     @Volatile
     private var settingsAssistantKey: String? = null
 
+    private val gates = ConcurrentHashMap<String, BuildGate>()
+
+    /**
+     * The build gate of the checkout whose top folder is [root]: one per checkout, whichever screen
+     * asks, so a run goes on when its screen closes and its result counts for every way of publishing.
+     */
+    fun buildGateAt(root: File): BuildGate {
+        // By the real path: git names a checkout behind a symlink (macOS's /var) by where it leads.
+        val path =
+            try {
+                root.canonicalPath
+            } catch (_: IOException) {
+                root.absoluteFile.normalize().path
+            }
+        return gates.computeIfAbsent(path) { BuildGate(File(it), scope) }
+    }
+
+    /** The build gate of the checkout [dir] is in, anywhere inside it. */
+    suspend fun buildGate(dir: File): BuildGate {
+        val root = withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--show-toplevel") }?.trim()?.takeIf { it.isNotEmpty() }
+        return buildGateAt(root?.let(::File) ?: dir)
+    }
+
     /** Stops every process this app started. */
     fun shutdown() {
         chats.value.values.forEach { it.kill() }
+        gates.values.forEach { it.cancel() }
     }
 
     @Synchronized

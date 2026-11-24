@@ -9482,7 +9482,6 @@
     <string name="claude_code_fork_hint">सत्र की एक प्रति। आपका प्रथम सन्देश इसे एक स्वतन्त्र सत्र के रूप में आरम्भ करता है। मूल यथावत रहता है।</string>
     <string name="claude_code_notify_needs_you">%1$s को आपकी अनुमति आवश्यक</string>
     <string name="claude_code_notify_finished">%1$s पूर्ण हुआ</string>
-    <string name="claude_code_section_needs_you">आपकी आवश्यकता</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">संगृहीत · %1$d सत्र</item>
         <item quantity="other">संगृहीत · %1$d सत्र</item>

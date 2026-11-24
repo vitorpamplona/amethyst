@@ -10224,7 +10224,6 @@
     <string name="claude_code_fork_hint">Копия сессии. Ваше первое сообщение запустит её как отдельную сессию; оригинал останется как есть.</string>
     <string name="claude_code_notify_needs_you">%1$s ждёт вашего одобрения</string>
     <string name="claude_code_notify_finished">%1$s закончил</string>
-    <string name="claude_code_section_needs_you">Ждут вас</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Архив · %1$d сессия</item>
         <item quantity="few">Архив · %1$d сессии</item>

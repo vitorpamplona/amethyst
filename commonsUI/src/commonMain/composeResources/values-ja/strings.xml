@@ -9189,7 +9189,6 @@
     <string name="claude_code_fork_hint">セッションのコピーです。最初のメッセージで独立したセッションとして開始し、元のセッションはそのまま残ります。</string>
     <string name="claude_code_notify_needs_you">%1$s があなたの承認を必要としています</string>
     <string name="claude_code_notify_finished">%1$s が完了しました</string>
-    <string name="claude_code_section_needs_you">対応が必要</string>
     <plurals name="claude_code_section_archived">
         <item quantity="other">アーカイブ · %1$d セッション</item>
     </plurals>
