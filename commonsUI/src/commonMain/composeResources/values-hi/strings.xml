@@ -10048,7 +10048,6 @@
     <string name="nip_catalog_empty">कोई निप आपकी खोज से मेल नहीं खाता।</string>
     <string name="media_studio_add">जोडें</string>
     <string name="media_studio_position">%2$d में से %1$d</string>
-    <string name="media_studio_hold_original">मूल देखने के लिए दबाए रखें</string>
     <string name="media_studio_tool_quality">गुणवत्ता</string>
     <string name="media_studio_tool_alt">वैकल्पिक लेख</string>
     <string name="media_studio_tool_privacy">गोपनीयता</string>

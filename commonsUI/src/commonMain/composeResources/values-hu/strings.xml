@@ -10048,7 +10048,6 @@
     <string name="nip_catalog_empty">Egyetlen NIP sem felel meg a keresésnek.</string>
     <string name="media_studio_add">Hozzáadás</string>
     <string name="media_studio_position">%1$d / %2$d</string>
-    <string name="media_studio_hold_original">Tartsa nyomva az eredetihez</string>
     <string name="media_studio_tool_quality">Minőség</string>
     <string name="media_studio_tool_alt">Helyettesítő szöveg</string>
     <string name="media_studio_tool_privacy">Adatvédelem</string>

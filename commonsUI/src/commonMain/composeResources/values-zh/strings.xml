@@ -9797,7 +9797,6 @@
     <string name="nip_catalog_empty">没有与您的搜索匹配的 NIP。</string>
     <string name="media_studio_add">添加</string>
     <string name="media_studio_position">%1$d / %2$d</string>
-    <string name="media_studio_hold_original">按住查看原图</string>
     <string name="media_studio_tool_quality">质量</string>
     <string name="media_studio_tool_alt">替代文本</string>
     <string name="media_studio_tool_privacy">隐私</string>

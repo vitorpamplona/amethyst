@@ -269,7 +269,7 @@ internal fun StudioTrimStage(
             modifier =
                 Modifier
                     .align(Alignment.TopStart)
-                    .padding(12.dp)
+                    .padding(start = STAGE_OVERLAY_PADDING, top = STAGE_PILL_TOP)
                     .clip(RoundedCornerShape(6.dp))
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(horizontal = 8.dp, vertical = 3.dp),

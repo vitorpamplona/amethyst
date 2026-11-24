@@ -10790,7 +10790,6 @@
     <string name="nip_catalog_empty">Żaden NIP nie pasuje do wyszukiwania.</string>
     <string name="media_studio_add">Dodaj</string>
     <string name="media_studio_position">%1$d z %2$d</string>
-    <string name="media_studio_hold_original">Przytrzymaj, aby zobaczyć oryginał</string>
     <string name="media_studio_tool_quality">Jakość</string>
     <string name="media_studio_tool_alt">Tekst alternatywny</string>
     <string name="media_studio_tool_privacy">Prywatność</string>
