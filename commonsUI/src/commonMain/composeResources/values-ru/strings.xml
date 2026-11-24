@@ -10350,7 +10350,6 @@
     <string name="claude_code_mode_short_plan">План</string>
     <string name="claude_code_mode_short_auto">Авто</string>
     <string name="claude_code_propose_description_hint">Что меняется, зачем и как вы это проверили</string>
-    <string name="claude_code_settings_assistant">Ассистент настроек</string>
     <string name="claude_code_context_used_little">меньше 1% контекста</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">настройки просмотрены %1$d раз</item>
@@ -10358,8 +10357,6 @@
         <item quantity="many">настройки просмотрены %1$d раз</item>
         <item quantity="other">настройки просмотрены %1$d раза</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Спросите, что делает настройка или что изменить, чтобы получить нужное. Claude видит только настройки Amethyst, и каждое изменение ждёт вашего одобрения. Ключи, кошельки, relay и платежи ему недоступны.</string>
-    <string name="claude_code_settings_assistant_card">Не можете что-то найти? Спросите ассистента настроек.</string>
     <string name="claude_code_settings_assistant_ask">Спросить ассистента о «%1$s»</string>
     <string name="claude_code_permission_setting">Claude хочет изменить настройку</string>
     <string name="claude_code_settings_starter_data">Почему Amethyst расходует так много мобильного трафика?</string>

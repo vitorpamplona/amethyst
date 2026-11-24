@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAss
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
@@ -139,6 +140,7 @@ fun routeTitle(
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         is Route.ClaudeCodePropose -> return stringRes(Res.string.claude_code_create_pr)
+        is Route.ClaudeCodeSettingsAssistant -> return stringRes(Res.string.amethyst_assistant)
         // Short enough for a tab: "Agentic Coding changes" was cut to "Agentic Coding chan…".
         is Route.ClaudeCodeChanges -> return stringRes(Res.string.claude_code_changes)
         is Route.ClaudeCodePullRequests -> return stringRes(Res.string.claude_code_pull_requests)

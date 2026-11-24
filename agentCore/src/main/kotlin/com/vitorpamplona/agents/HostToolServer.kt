@@ -59,6 +59,12 @@ interface HostToolServer {
         arguments: JsonObject,
     ): String? = null
 
+    /**
+     * [tool] asks the user every time, whatever they answered before: posting, paying. The chat
+     * then offers no "don't ask again" for it and makes No the default answer.
+     */
+    fun alwaysAsks(tool: String): Boolean = false
+
     /** `mcp__<server>__<tool>`: how the chat names [tool], whichever agent calls it. */
     fun qualifiedName(tool: String) = "mcp__${name}__$tool"
 }

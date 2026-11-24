@@ -61,10 +61,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_card
 import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_ask
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_card
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
@@ -247,8 +247,8 @@ private fun SettingsAssistantCard(onClick: () -> Unit) {
             Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text(stringRes(Res.string.claude_code_settings_assistant_card), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(stringRes(Res.string.amethyst_assistant), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(stringRes(Res.string.amethyst_assistant_card), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
     }

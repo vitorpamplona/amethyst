@@ -34,11 +34,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.OnlineAgentBackend
 import com.vitorpamplona.amethyst.commons.claudecode.SettingsToolServer
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.settings.registry.AmethystSettings
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -49,8 +51,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * The settings assistant: Claude Code with Amethyst's settings as its only tools. It reads
- * settings freely; every change waits for the user's approval on the chat's approval card. It is
+ * The Amethyst assistant: an agent whose only tools are Amethyst's settings and the user's
+ * account. It reads freely; every change, post and payment waits for the user's approval on the
+ * chat's approval card. It is
  * one conversation that outlives the app: the chat resumes where it was, and a [question] asked
  * from Settings goes into it.
  */
@@ -60,9 +63,11 @@ fun ClaudeCodeSettingsAssistantScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val title = stringRes(Res.string.claude_code_settings_assistant)
+    val title = stringRes(Res.string.amethyst_assistant)
     val tools = rememberSettingsTools(accountViewModel, nav)
-    val chat by produceState<ClaudeChat?>(null, tools) { value = ClaudeCodeService.shared.settingsAssistant(tools, title) }
+    val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
+    val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
+    val chat by produceState<ClaudeChat?>(null, tools, accountTools) { value = ClaudeCodeService.shared.settingsAssistant(tools, title, accountTools, access) }
     // Asked once per visit to this screen: coming back to it must not ask again.
     var asked by rememberSaveable(question) { mutableStateOf(false) }
     LaunchedEffect(chat, question) {
@@ -96,12 +101,14 @@ fun rememberSettingsTools(
 
 /** Points the assistant's chats at this screen's account and navigation while it shows one. */
 @Composable
-fun BindSettingsTools(
+fun BindAssistantTools(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val tools = rememberSettingsTools(accountViewModel, nav)
-    SideEffect { ClaudeCodeService.shared.bindSettings(tools) }
+    val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
+    val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
+    SideEffect { ClaudeCodeService.shared.bindAssistant(tools, accountTools, access) }
 }
 
 private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

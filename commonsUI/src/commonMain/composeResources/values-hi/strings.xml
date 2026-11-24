@@ -9592,14 +9592,11 @@
     <string name="claude_code_mode_short_plan">योजना</string>
     <string name="claude_code_mode_short_auto">स्वचालित</string>
     <string name="claude_code_propose_description_hint">यह क्या परिवर्तित करता है। क्यों। तथा आपने इसका परीक्षण कैसे किया</string>
-    <string name="claude_code_settings_assistant">स्थापना विकल्प सहायक</string>
     <string name="claude_code_context_used_little">प्रसंग का १% से न्यून</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">%1$d बार स्थापना विकल्प देखे</item>
         <item quantity="other">%1$d बार स्थापना विकल्प देखे</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">पूछें कि कोई स्थापना विकल्प क्या करता है अथवा जो आप चाहते हैं उसके लिए क्या परिवर्तित करें। Claude केवल Amethyst के स्थापना विकल्प देखता है तथा प्रत्येक परिवर्तन आपकी अनुमति की प्रतीक्षा करता है। कुंचिकाएँ धनकोष पुनःप्रसारक तथा भुगतान उसकी पहुँच से बाहर रहते हैं।</string>
-    <string name="claude_code_settings_assistant_card">निश्चित नहीं कि कुछ कहाँ है। स्थापना विकल्प सहायक से पूछें।</string>
     <string name="claude_code_settings_assistant_ask">“%1$s” के विषय में सहायक से पूछें</string>
     <string name="claude_code_permission_setting">Claude एक स्थापना विकल्प परिवर्तित करना चाहता है</string>
     <string name="claude_code_settings_starter_data">Amethyst इतना अधिक चलदूरभाष तथ्यांश क्यों उपयोग करता है?</string>

@@ -10631,10 +10631,7 @@
     <string name="claude_code_mode_short_plan">Plán</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Co mění, proč a jak jste to otestovali</string>
-    <string name="claude_code_settings_assistant">Asistent nastavení</string>
     <string name="claude_code_context_used_little">méně než 1 % kontextu</string>
-    <string name="claude_code_settings_assistant_desc">Zeptejte se, co nějaké nastavení dělá nebo co změnit, abyste dosáhli toho, co chcete. Claude vidí jen nastavení Amethystu a každá změna čeká na vaše schválení. Klíče, peněženky, relé a platby zůstávají mimo jeho dosah.</string>
-    <string name="claude_code_settings_assistant_card">Nevíte, kde něco najít? Zeptejte se asistenta nastavení.</string>
     <string name="claude_code_settings_assistant_ask">Zeptat se asistenta na „%1$s“</string>
     <string name="claude_code_permission_setting">Claude chce změnit nastavení</string>
     <string name="claude_code_settings_starter_data">Proč Amethyst spotřebovává tolik mobilních dat?</string>

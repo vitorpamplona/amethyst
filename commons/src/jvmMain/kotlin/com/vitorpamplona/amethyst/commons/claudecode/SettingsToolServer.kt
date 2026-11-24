@@ -157,31 +157,36 @@ class SettingsToolServer(
             )
 
         /**
-         * What the settings assistant is for, added to Claude Code's own prompt. It has no
-         * other tools: no files, no shell.
+         * What the Amethyst assistant is for, added to the agent's own prompt. It has no files,
+         * shell or web: only Amethyst's settings ([NAME]) and the user's account ([AccountToolServer.NAME]).
          */
         const val SYSTEM_PROMPT =
-            "You are the settings assistant inside Amethyst, a Nostr client. You help the user understand what Amethyst's " +
-                "settings do and change them. You have no files, shell or web here: only the amethyst-settings tools. " +
+            "You are the Amethyst assistant, inside Amethyst, a Nostr client. You do in the app what the user asks: explain and " +
+                "change settings, read notes, post, reply, upload files, zap, pay Lightning invoices and sync their events across relays. " +
+                "You have no files, shell or web here: only the amethyst-settings and amethyst-account tools. " +
                 "Look settings up with search_settings and get_setting before answering; never guess what a setting does. " +
-                "Explain in plain words, in the user's language, without jargon. Propose one change at a time with change_setting " +
-                "and say why; the user approves each one. For settings marked careful, explain the trade-off first. " +
-                "When something isn't in the tools (keys, signer, wallets, relays, payments), say so and offer open_settings_screen " +
-                "or point the user to Settings. Keep answers short."
+                "Explain in plain words, in the user's language, without jargon. Propose one change at a time and say why. " +
+                "Posting, replying, uploading, zapping, paying and syncing act as the user in public or spend their money: the user " +
+                "approves each one on a card, so show the exact text or amount first and never call these unasked. " +
+                "Before a zap or a payment, check wallet_status. Never claim something was sent or paid unless the tool said so. " +
+                "When something isn't in the tools (keys, signer, relay lists, follows, messages), say so and offer open_settings_screen " +
+                "or point the user to the right screen. Keep answers short."
     }
 }
 
 /**
- * The settings tools the assistant's chats talk to: whichever [SettingsToolServer] a screen bound
- * last ([target]), so a session reopened from the list, or after a restart, reaches the account
- * and navigation of now rather than those of the screen that first started it.
+ * Tools the assistant's chats talk to, bound late: whichever server a screen bound last
+ * ([target]), so a session reopened from the list, or after a restart, reaches the account and
+ * navigation of now rather than those of the screen that first started it. [tools] and
+ * [alwaysAsking] are fixed: a session resumed later finds what it was started with.
  */
-class BoundSettingsTools : HostToolServer {
+class BoundToolServer(
+    override val name: String,
+    override val tools: List<HostTool>,
+    private val alwaysAsking: Set<String> = emptySet(),
+) : HostToolServer {
     @Volatile
-    var target: SettingsToolServer? = null
-
-    override val name = SettingsToolServer.NAME
-    override val tools = SettingsToolServer.TOOLS
+    var target: HostToolServer? = null
 
     override suspend fun call(
         tool: String,
@@ -193,7 +198,9 @@ class BoundSettingsTools : HostToolServer {
         arguments: JsonObject,
     ): String? = target?.describe(tool, arguments)
 
+    override fun alwaysAsks(tool: String): Boolean = tool in alwaysAsking || target?.alwaysAsks(tool) == true
+
     companion object {
-        const val UNBOUND = "Amethyst's settings are not reachable right now. Ask the user to open this chat again from Settings."
+        const val UNBOUND = "Amethyst is not reachable from this chat right now. Ask the user to open the assistant again from Settings."
     }
 }

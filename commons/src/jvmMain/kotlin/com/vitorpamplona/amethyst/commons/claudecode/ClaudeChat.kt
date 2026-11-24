@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -759,12 +760,20 @@ class ClaudeChat internal constructor(
                 }
             }
             is AgentEvent.ApprovalRequested -> {
-                val permission = event.request
+                val asked = event.request
                 // A call to one of this chat's own tools: say what it would do, from the tool itself.
-                val note =
+                val own =
                     mcpServers.firstNotNullOfOrNull { server ->
                         val prefix = server.qualifiedName("")
-                        if (permission.toolName.startsWith(prefix)) server.describe(permission.toolName.removePrefix(prefix), permission.input) else null
+                        if (asked.toolName.startsWith(prefix)) server to asked.toolName.removePrefix(prefix) else null
+                    }
+                val note = own?.let { (server, tool) -> server.describe(tool, asked.input) }
+                // A post or a payment is asked about each time: no "don't ask again", and No by default.
+                val permission =
+                    if (own != null && own.first.alwaysAsks(own.second)) {
+                        asked.copy(suggestions = JsonArray(emptyList()), parsedSuggestions = emptyList(), suppressAlwaysAllow = true, defaultToNo = true)
+                    } else {
+                        asked
                     }
                 publish {
                     it.copy(

@@ -9592,14 +9592,11 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Wat het wijzigt, waarom, en hoe je het hebt getest</string>
-    <string name="claude_code_settings_assistant">Instellingenassistent</string>
     <string name="claude_code_context_used_little">minder dan 1% van de context</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">instellingen één keer opgezocht</item>
         <item quantity="other">instellingen %1$d keer opgezocht</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Vraag wat een instelling doet, of wat je moet wijzigen om te krijgen wat je wilt. Claude ziet alleen de instellingen van Amethyst, en elke wijziging wacht op je goedkeuring. Sleutels, wallets, relays en betalingen blijven buiten bereik.</string>
-    <string name="claude_code_settings_assistant_card">Weet je niet waar iets staat? Vraag het de instellingenassistent.</string>
     <string name="claude_code_settings_assistant_ask">Vraag de assistent naar “%1$s”</string>
     <string name="claude_code_permission_setting">Claude wil een instelling wijzigen</string>
     <string name="claude_code_settings_starter_data">Waarom gebruikt Amethyst zoveel mobiele data?</string>

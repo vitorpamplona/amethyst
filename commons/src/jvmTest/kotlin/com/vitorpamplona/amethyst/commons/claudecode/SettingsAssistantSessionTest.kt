@@ -140,7 +140,7 @@ class SettingsAssistantSessionTest {
     @Test
     fun toolsReachWhicheverScreenBoundThemLast() =
         runBlocking {
-            val bound = BoundSettingsTools()
+            val bound = BoundToolServer(SettingsToolServer.NAME, SettingsToolServer.TOOLS)
             val search = JsonObject(mapOf("query" to JsonPrimitive("dark mode")))
             val unbound = bound.call(SettingsToolServer.SEARCH, search)
             assertTrue(unbound.isError)
