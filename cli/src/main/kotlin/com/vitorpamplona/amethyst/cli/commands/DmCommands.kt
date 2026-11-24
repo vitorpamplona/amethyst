@@ -67,8 +67,11 @@ object DmCommands {
         |Direct messages (NIP-17):
         |  dm send RECIPIENT[,RECIPIENT…] TEXT        send a gift-wrapped DM (kind:14); several
         |    [--subject S]                            recipients make a group room; --reply-to
-        |    [--reply-to EVENT_ID]                    answers a DM in your inbox, in its room
-        |    [--allow-fallback]                       (default: only deliver to recipient's kind:10050)
+        |    [--reply-to EVENT_ID]                    answers a DM in your inbox, in its room: the
+        |    [--timeout SECS]                         recipients may be left out, and any given must
+        |    [--allow-fallback]                       be in that room (else bad_args); --timeout
+        |                                             bounds the inbox search (default 8s)
+        |                                             (default: only deliver to recipient's kind:10050)
         |  dm react EVENT_ID EMOJI                    react (kind:7) to a DM in your inbox, wrapped
         |    [--timeout SECS] [--allow-fallback]      to everyone in its room
         |  dm send-file RECIPIENT --file PATH         encrypt + upload to Blossom + publish kind:15
@@ -116,27 +119,52 @@ object DmCommands {
         val replyTo = args.flag("reply-to")
         val timeoutSecs = args.longFlag("timeout", 8)
         args.rejectUnknown()
-        val usage = "dm send <recipient>[,<recipient>…] <text> [--subject S] [--reply-to EVENT_ID] [--allow-fallback]"
-        if (args.positional.size < 2) return Output.error("bad_args", usage)
-        val recipientInput = args.positional(0, "recipient")
-        val text = args.positional(1, "text")
+        val usage = "dm send <recipient>[,<recipient>…] <text> [--subject S] [--reply-to EVENT_ID [--timeout SECS]] [--allow-fallback]"
+        // A reply's room is the replied message's, so its recipients may be left out: `dm send --reply-to ID TEXT`.
+        val recipientInput: String?
+        val text: String
+        when {
+            args.positional.size >= 2 -> {
+                recipientInput = args.positional(0, "recipient")
+                text = args.positional(1, "text")
+            }
+
+            replyTo != null && args.positional.size == 1 -> {
+                recipientInput = null
+                text = args.positional(0, "text")
+            }
+
+            else -> {
+                return Output.error("bad_args", usage)
+            }
+        }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recipients =
                 recipientInput
-                    .split(',')
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .map { ctx.requireUserHex(it) }
-                    .distinct()
-            if (recipients.isEmpty()) return Output.error("bad_args", usage)
+                    ?.split(',')
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() }
+                    ?.map { ctx.requireUserHex(it) }
+                    ?.distinct()
+                    .orEmpty()
+            if (recipientInput != null && recipients.isEmpty()) return Output.error("bad_args", usage)
             val template =
                 if (replyTo != null) {
                     // A reply goes to the room of the message it answers (ChatMessageEvent.reply), as in the app.
                     val target =
                         findRumor(ctx, replyTo, timeoutSecs) as? BaseDMGroupEvent
                             ?: return Output.error("not_found", "no DM $replyTo in your inbox")
+                    // Never dropped silently: a recipient outside that room would be a different chat.
+                    val outside = recipients - target.groupMembers()
+                    if (outside.isNotEmpty()) {
+                        return Output.error(
+                            "bad_args",
+                            "--reply-to answers in the room of $replyTo; not in it: ${outside.joinToString(",")}",
+                            mapOf("room" to target.groupMembers().sorted()),
+                        )
+                    }
                     ChatMessageEvent.reply(text, EventHintBundle(target)) { subject?.let { changeSubject(it) } }
                 } else {
                     ChatMessageEvent.build(text, recipients.map { PTag(it) }) { subject?.let { changeSubject(it) } }
