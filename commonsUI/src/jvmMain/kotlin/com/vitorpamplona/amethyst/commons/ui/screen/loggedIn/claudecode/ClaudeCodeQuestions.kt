@@ -371,7 +371,6 @@ private fun OptionTile(
     content: @Composable RowScope.() -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val hoveredNow by interaction.collectIsHoveredAsState()
     val pick =
         if (multi) {
             Modifier.toggleable(value = checked, interactionSource = interaction, indication = ripple(), role = Role.Checkbox, onValueChange = { onClick() })
@@ -382,13 +381,9 @@ private fun OptionTile(
         Modifier
             .fillMaxWidth()
             .clip(TileShape)
-            .background(
-                when {
-                    checked -> colors.primary.copy(alpha = 0.10f)
-                    hoveredNow -> colors.onSurface.copy(alpha = 0.04f)
-                    else -> Color.Transparent
-                },
-            ).border(1.dp, if (checked) colors.primary else colors.outlineVariant, TileShape)
+            // Hover is the ripple's own layer, from [interaction].
+            .background(if (checked) colors.primary.copy(alpha = 0.10f) else Color.Transparent)
+            .border(1.dp, if (checked) colors.primary else colors.outlineVariant, TileShape)
             .hoverable(interaction)
             .then(pick)
             .heightIn(min = 44.dp)
@@ -600,24 +595,27 @@ internal fun QuestionCallRow(
             )
         }
         Column(Modifier.padding(start = 26.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Nothing answered (a reply instead, or dismissed): the questions once, then what happened, in the agent's words.
+            val noneAnswered = call.isDone && answers.isEmpty()
             questions.questions.forEach { question ->
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(question.question, style = MaterialTheme.typography.bodyMedium)
+                    Text(question.question, style = MaterialTheme.typography.bodyMedium, color = if (noneAnswered) MaterialTheme.colorScheme.grayText else Color.Unspecified)
                     val answer = answers[question.id]
-                    Text(
-                        when {
-                            answer != null -> if (question.secret) "•••" else answer
-                            !call.isDone -> stringRes(Res.string.claude_code_question_waiting)
-                            else -> stringRes(Res.string.claude_code_question_no_answer)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (answer != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText,
-                    )
+                    if (!noneAnswered) {
+                        Text(
+                            when {
+                                answer != null -> if (question.secret) "•••" else answer
+                                !call.isDone -> stringRes(Res.string.claude_code_question_waiting)
+                                else -> stringRes(Res.string.claude_code_question_no_answer)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (answer != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
                 }
             }
-            // A reply instead of answers, or questions dismissed: the result says so in its own words.
-            call.result?.takeIf { answers.isEmpty() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = if (call.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText)
+            if (noneAnswered) {
+                call.result?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
             }
         }
     }
