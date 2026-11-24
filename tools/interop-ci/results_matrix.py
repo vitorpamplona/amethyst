@@ -18,6 +18,11 @@ suite's `rules`, and then for the feature the harness section (its last banner) 
 for the direction what the id says ("amy->wn", "armada-to-amy", "A<->B", "amy-reads-…"),
 then the suite's `default_direction`.
 
+A `"status":"aborted"` line is the row run-suite.sh files when a harness stopped early
+(non-zero exit with no failure recorded, a timeout, no result at all). It marks the suite
+🛑, counts as an error in JUnit, and is listed under "Aborted runs" with its exit code
+and the last test the harness reached.
+
 Exit status is 0 unless an input cannot be read; pass/fail is the workflow's call.
 """
 
@@ -35,7 +40,7 @@ CHANNELS = ("pinned", "latest")
 DIR_LABELS = OrderedDict(
     [("amy→cp", "amy→"), ("cp→amy", "→amy"), ("both", "↔"), ("amy", "amy only"), ("", "—")]
 )
-ICON = {"pass": "✅", "fail": "❌", "gap": "⚠️", "skip": "➖"}
+ICON = {"pass": "✅", "fail": "❌", "aborted": "🛑", "gap": "⚠️", "skip": "➖"}
 
 ARROW = re.compile(r"<->|↔|->|→|[A-Za-z0-9_]+")
 CONSUMER_VERBS = {
@@ -104,7 +109,7 @@ def classify(rec: dict, suite: dict) -> tuple[str, str]:
 
 
 def worst(statuses: list[str]) -> str:
-    for s in ("fail", "gap", "pass", "skip"):
+    for s in ("aborted", "fail", "gap", "pass", "skip"):
         if s in statuses:
             return s
     return "skip"
@@ -135,7 +140,7 @@ def read_results(root: Path, registry: OrderedDict) -> dict:
 
 
 def counts(records: list[dict]) -> dict:
-    c = {"pass": 0, "fail": 0, "gap": 0, "skip": 0}
+    c = {"pass": 0, "fail": 0, "aborted": 0, "gap": 0, "skip": 0}
     for r in records:
         st = r.get("status", "skip")
         c[st if st in c else "skip"] += 1
@@ -156,15 +161,29 @@ def render_channel(channel: str, suites: OrderedDict) -> list[str]:
         meta, suite = run["meta"], run["suite"]
         if not run["records"]:
             icon = "❔"  # still running, or died before the run step filed anything
+        elif c["aborted"]:
+            icon = ICON["aborted"]
         else:
             icon = ICON["fail"] if c["fail"] else ICON["pass"]
         secs = meta.get("seconds")
+        # An aborted run did not finish, so its pass count is a floor, not a result.
+        fail_cell = f"{c['fail']} + aborted" if c["aborted"] else str(c["fail"])
         out.append(
             f"| {icon} {md_cell(suite.get('name', sid))} | {md_cell(suite.get('counterpart', ''))} | "
-            f"{md_cell(meta.get('version', '?'))} | {c['pass']} | {c['fail']} | {c['gap']} | {c['skip']} | "
+            f"{md_cell(meta.get('version', '?'))} | {c['pass']} | {fail_cell} | {c['gap']} | {c['skip']} | "
             f"{'' if secs is None else f'{secs // 60}m{secs % 60:02d}s'} |"
         )
     out.append("")
+
+    aborted = [(sid, r) for sid, run in suites.items() for r in run["records"] if r.get("status") == "aborted"]
+    if aborted:
+        out += [f"### {ICON['aborted']} Aborted runs", "",
+                "These harnesses stopped before their last scenario: what they did not reach was not tested.", "",
+                "| Suite | Exit | Last test reached | Note |", "|---|---:|---|---|"]
+        for sid, r in aborted:
+            out.append(f"| {sid} | {r.get('exit', '?')} | {md_cell(r.get('last_test') or '(none)')} | "
+                       f"{md_cell((r.get('note') or '')[:300])} |")
+        out.append("")
 
     # feature x counterpart, directions inside the cell
     columns = [(sid, run["suite"].get("counterpart", sid)) for sid, run in suites.items()]
@@ -176,7 +195,8 @@ def render_channel(channel: str, suites: OrderedDict) -> list[str]:
         out += ["### Feature × counterpart × direction", ""]
         out.append("Each cell: direction (amy→ = amy sends, the counterpart receives; →amy = the reverse; "
                    "↔ = both in one scenario), then the worst outcome and the scenario count. "
-                   f"{ICON['pass']} pass · {ICON['fail']} fail · {ICON['gap']} known gap · {ICON['skip']} skipped.")
+                   f"{ICON['pass']} pass · {ICON['fail']} fail · {ICON['aborted']} harness aborted · "
+                   f"{ICON['gap']} known gap · {ICON['skip']} skipped.")
         out.append("")
         out.append("| Feature | " + " | ".join(md_cell(name) for _, name in columns) + " |")
         out.append("|---|" + "---|" * len(columns))
@@ -197,7 +217,7 @@ def render_channel(channel: str, suites: OrderedDict) -> list[str]:
             out.append("| " + " | ".join(row) + " |")
         out.append("")
 
-    failures = [(sid, r) for sid, run in suites.items() for r in run["records"] if r.get("status") == "fail"]
+    failures = [(sid, r) for sid, run in suites.items() for r in run["records"] if r.get("status") in ("fail", "aborted")]
     if failures:
         out += ["### Failures", "", "| Suite | Scenario | Direction | Note |", "|---|---|---|---|"]
         for sid, r in failures:
@@ -239,11 +259,11 @@ def write_junit(runs: dict, junit_dir: Path) -> None:
             total_time = sum(int(r.get("elapsed_s") or 0) for r in recs)
             lines = ['<?xml version="1.0" encoding="UTF-8"?>',
                      f'<testsuite name={quoteattr(name)} tests="{len(recs)}" failures="{c["fail"]}" '
-                     f'skipped="{c["skip"] + c["gap"]}" errors="0" time="{total_time}">']
+                     f'skipped="{c["skip"] + c["gap"]}" errors="{c["aborted"]}" time="{total_time}">']
             meta = run["meta"]
             if meta:
                 lines.append("  <properties>")
-                for k in ("counterpart", "version", "ref", "isolation", "exit"):
+                for k in ("counterpart", "version", "ref", "isolation", "exit", "aborted", "last_test"):
                     if k in meta:
                         lines.append(f"    <property name={quoteattr(k)} value={quoteattr(str(meta[k]))}/>")
                 lines.append("  </properties>")
@@ -256,6 +276,8 @@ def write_junit(runs: dict, junit_dir: Path) -> None:
                 st = r.get("status")
                 if st == "fail":
                     lines.append(f"    <failure message={quoteattr(note[:500])}>{escape(note)}</failure>")
+                elif st == "aborted":
+                    lines.append(f"    <error message={quoteattr(note[:500])}>{escape(note)}</error>")
                 elif st in ("skip", "gap"):
                     lines.append(f"    <skipped message={quoteattr((('GAP: ' if st == 'gap' else '') + note)[:500])}/>")
                 lines.append("  </testcase>")

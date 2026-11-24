@@ -464,12 +464,16 @@ suites and the channel). Everything it needs is in `tools/interop-ci/`:
   to be cut off before the harness starts; needs `iproute2` and root or
   passwordless sudo) or, for a suite that needs Docker-published ports, on the
   host with `AMY_LOCAL_ONLY=1`. Results go to `build/interop-ci/<channel>/<suite>.jsonl`;
-  a harness that dies before recording anything is filed as a failed `harness`
-  scenario, so it cannot pass by saying nothing.
+  a harness that aborts (dies before recording anything, exits non-zero with no
+  failure recorded, or runs past `INTEROP_TIMEOUT`) is filed as a
+  `"status":"aborted"` row naming its exit code and the last test it reached, and
+  fails the run, so a suite that stopped halfway cannot pass on the results it
+  recorded before it stopped. `test-run-suite.sh` checks this against fake suites
+  (offline, a few seconds; the workflow's `plan` job runs it).
 - `results_matrix.py --results build/interop-ci [--markdown m.md] [--junit-dir d]`
   — turns those files into the feature × counterpart × direction matrix (per
-  channel: an overview, the matrix, failures, known gaps, suites not run) and
-  JUnit XML. A test can name its own feature and direction by setting
+  channel: an overview, the aborted runs, the matrix, failures, known gaps,
+  suites not run) and JUnit XML, where an abort is an error. A test can name its own feature and direction by setting
   `RESULT_FEATURE` / `RESULT_DIRECTION` before `record_result`.
 
 Adding a suite: write the harness so it records through `lib.sh`, add

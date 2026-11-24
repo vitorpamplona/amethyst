@@ -58,6 +58,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # The runner's verdict is what makes a suite red: an aborted harness must not read as a pass.
+      - name: Self-test the suite runner and the matrix
+        run: tools/interop-ci/test-run-suite.sh
+
       - name: Build the matrices from tools/interop-ci/suites.json
         id: matrix
         env:
