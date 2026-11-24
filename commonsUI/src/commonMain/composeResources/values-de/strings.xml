@@ -9859,7 +9859,6 @@
     <string name="claude_code_fork_hint">Eine Kopie der Sitzung. Deine erste Nachricht startet sie als eigene Sitzung; das Original bleibt, wie es ist.</string>
     <string name="claude_code_notify_needs_you">%1$s braucht deine Freigabe</string>
     <string name="claude_code_notify_finished">%1$s ist fertig</string>
-    <string name="claude_code_section_needs_you">Braucht dich</string>
     <string name="claude_code_status_in_terminal">in einem Terminal geöffnet</string>
     <string name="claude_code_starter_explain">Erkläre, wie dieses Repository aufgebaut ist</string>
     <string name="claude_code_starter_tests">Führe die Tests aus und behebe, was fehlschlägt</string>

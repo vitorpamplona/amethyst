@@ -987,13 +987,15 @@ private fun IconRowWithBadge(
             modifier = Size22ModifierWith4Padding,
             tint = tint,
         )
+        // The count reads as part of the label: share its baseline rather than centering on the
+        // row, which the label's line height pushes off the glyphs, and keep it off the last letter.
         Text(
-            modifier = IconRowTextModifier,
+            modifier = IconRowTextModifier.alignByBaseline(),
             text = titleStr,
             fontSize = LocalDrawerMetrics.current.itemText,
         )
         if (badgeCount > 0) {
-            Badge { Text(badgeCount.toString()) }
+            Badge(Modifier.padding(start = 8.dp).alignByBaseline()) { Text(badgeCount.toString()) }
         }
     }
 }

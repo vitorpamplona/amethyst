@@ -28,6 +28,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import java.io.File
 import java.time.Instant
 import java.time.format.DateTimeParseException
@@ -41,6 +42,11 @@ data class PullRequestInfo(
     val isDraft: Boolean,
     /** When it was opened, when `gh` said. */
     val createdAt: Long? = null,
+    /** What GitHub knows of it beyond its state, when `gh` said: for the Changes panel's line. */
+    val title: String? = null,
+    val number: Int? = null,
+    val additions: Int? = null,
+    val deletions: Int? = null,
 ) {
     val isOpen get() = state == "OPEN"
     val isMerged get() = state == "MERGED"
@@ -203,9 +209,9 @@ object GitHubPullRequests {
             val owners = if (knownUrl == null && upstream != null) headOwners(dir, upstream) else null
             val command =
                 when {
-                    knownUrl != null -> listOf(gh.path, "pr", "view", knownUrl, "--json", "url,state,isDraft,createdAt")
-                    upstream != null -> listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "30", "--json", "url,state,isDraft,createdAt,headRepositoryOwner")
-                    else -> listOf(gh.path, "pr", "view", branch, "--json", "url,state,isDraft,createdAt")
+                    knownUrl != null -> listOf(gh.path, "pr", "view", knownUrl, "--json", PR_FIELDS)
+                    upstream != null -> listOf(gh.path, "pr", "list", "--repo", upstream, "--head", branch, "--state", "all", "--limit", "30", "--json", "$PR_FIELDS,headRepositoryOwner")
+                    else -> listOf(gh.path, "pr", "view", branch, "--json", PR_FIELDS)
                 }
             val result = runGh(dir, command, 60)
             if (result.code != 0) null else parseState(result.output, owners)
@@ -238,6 +244,7 @@ object GitHubPullRequests {
 
     private fun headOwnerOf(pr: JsonObject): String? = ((pr["headRepositoryOwner"] as? JsonObject)?.get("login") as? JsonPrimitive)?.content
 
+    private const val PR_FIELDS = "url,state,isDraft,createdAt,title,number,additions,deletions"
     private const val FORK_REMOTE = "fork"
     private val PUSH_PERMISSIONS = setOf("ADMIN", "MAINTAIN", "WRITE")
 
@@ -279,6 +286,15 @@ object GitHubPullRequests {
                     null
                 }
             }
-        return PullRequestInfo(url, (obj["state"] as? JsonPrimitive)?.content ?: "OPEN", (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false, createdAt)
+        return PullRequestInfo(
+            url = url,
+            state = (obj["state"] as? JsonPrimitive)?.content ?: "OPEN",
+            isDraft = (obj["isDraft"] as? JsonPrimitive)?.booleanOrNull ?: false,
+            createdAt = createdAt,
+            title = (obj["title"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() },
+            number = (obj["number"] as? JsonPrimitive)?.intOrNull,
+            additions = (obj["additions"] as? JsonPrimitive)?.intOrNull,
+            deletions = (obj["deletions"] as? JsonPrimitive)?.intOrNull,
+        )
     }
 }

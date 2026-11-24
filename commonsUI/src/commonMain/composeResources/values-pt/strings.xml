@@ -9858,7 +9858,6 @@
     <string name="claude_code_fork_hint">Uma cópia da sessão. Sua primeira mensagem a inicia como uma sessão independente; a original continua como está.</string>
     <string name="claude_code_notify_needs_you">%1$s precisa da sua aprovação</string>
     <string name="claude_code_notify_finished">%1$s terminou</string>
-    <string name="claude_code_section_needs_you">Precisam de você</string>
     <string name="claude_code_status_in_terminal">aberta em um terminal</string>
     <string name="claude_code_starter_explain">Explique como este repositório está organizado</string>
     <string name="claude_code_starter_tests">Execute os testes e corrija o que falhar</string>

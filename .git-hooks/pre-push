@@ -19,6 +19,24 @@ echo ""
 echo "Java Version: "
 echo "$JAVA_HOME"
 echo "$(java -version)"
+# The source checks CI runs (and the agents' own pre-push hooks): seconds, so first, and a failure
+# stops here instead of after a long build. They read files only.
+if command -v python3 >/dev/null 2>&1; then
+    echo "Running source checks... "
+    checks_status=0
+    for check in orphan_strings_check locale_layout_check compose_escaping_check agent_config_check; do
+        if [ -f "tools/agent-hooks/$check.py" ]; then
+            python3 "tools/agent-hooks/$check.py" </dev/null || checks_status=1
+        fi
+    done
+    if [ "$checks_status" != 0 ]; then
+        echo 1>&2 "A source check above failed. Fix it and push again."
+        exit 1
+    fi
+else
+    echo "python3 not found: skipping the source checks (CI still runs them)."
+fi
+
 echo "Running test... "
 
 # Single-variant pre-push tests. `./gradlew test` would compile six Android
@@ -34,6 +52,8 @@ echo "Running test... "
 # build), but this hook stays explicit: a bare `test` would also pull in :desktopApp:test,
 # which needs a display server and is deliberately skipped on CLAUDE_CODE_REMOTE below.
 TASKS=(
+    # CI's formatting check: the formatters spotlessApply runs, verifying only.
+    spotlessCheck
     # The CI lint job's source scan for JVM-only APIs in iOS-targeted code. It reads files, so it
     # costs seconds.
     :commons:verifyKmpPurity

@@ -132,7 +132,8 @@ class AgentWorkspacesTest {
             assertEquals(1, workspaces.status(first).single().uncommitted)
             git(app, "add", ".")
             git(app, "commit", "--quiet", "-m", "fix")
-            assertEquals(WorkspaceRepoStatus(first.repos.single(), ahead = 1, uncommitted = 0), workspaces.status(first).single())
+            // The commit adds fix.txt's one line.
+            assertEquals(WorkspaceRepoStatus(first.repos.single(), ahead = 1, uncommitted = 0, insertions = 1), workspaces.status(first).single())
             // The user's push goes to the remote; the branch lands there.
             git(app, "push", "--quiet", "--set-upstream", "origin", "agent/one")
             // A new session fetches the mirror first, so it starts from what the remote has now.

@@ -39,9 +39,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -68,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeProposeViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
-import com.vitorpamplona.amethyst.commons.claudecode.GateState
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.Ngit
 import com.vitorpamplona.amethyst.commons.claudecode.ProposalDraft
@@ -82,25 +79,14 @@ import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalResult
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ask_to_commit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_check_read_diff
 import com.vitorpamplona.amethyst.commons.resources.claude_code_check_tested
-import com.vitorpamplona.amethyst.commons.resources.claude_code_close
 import com.vitorpamplona.amethyst.commons.resources.claude_code_commit_prompt
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_drafting
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_cancelled
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_desc
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_failed
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_full_log
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_none
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_passed
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_run
-import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_running
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_desc_no_grasp
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_description
@@ -141,7 +127,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * Publishes a session's branch as a NIP-34 proposal, signed by the user: the step an agent must
@@ -242,7 +227,7 @@ private fun ProposeForm(
             }
         }
     }
-    val gateOk = gate is GateState.Passed || gate is GateState.None
+    val gateOk = gate.allowsPublishing
     val title = draft?.title.orEmpty()
     val pushReady = !noGrasp || (remote != null && cloneUrl.isNotBlank())
     val commitPrompt = stringRes(Res.string.claude_code_commit_prompt)
@@ -522,87 +507,6 @@ private fun PushSection(
         }
     }
 }
-
-@Composable
-private fun GateSection(
-    gate: GateState,
-    logFile: File?,
-    fullLog: () -> String,
-    onRun: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    var showLog by remember { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val (icon, tint) =
-                    when (gate) {
-                        is GateState.Passed -> MaterialSymbols.Check to AddedColor
-                        is GateState.Failed -> MaterialSymbols.Error to MaterialTheme.colorScheme.error
-                        else -> MaterialSymbols.Security to MaterialTheme.colorScheme.grayText
-                    }
-                if (gate is GateState.Running) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringRes(Res.string.claude_code_gate), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        stringRes(
-                            when (gate) {
-                                GateState.None -> Res.string.claude_code_gate_none
-                                GateState.NotRun -> Res.string.claude_code_gate_desc
-                                is GateState.Running -> Res.string.claude_code_gate_running
-                                is GateState.Passed -> Res.string.claude_code_gate_passed
-                                is GateState.Failed -> Res.string.claude_code_gate_failed
-                                is GateState.Cancelled -> Res.string.claude_code_gate_cancelled
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.grayText,
-                    )
-                }
-                when (gate) {
-                    GateState.None -> {}
-                    is GateState.Running -> OutlinedButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
-                    else -> OutlinedButton(onClick = onRun) { Text(stringRes(Res.string.claude_code_gate_run)) }
-                }
-            }
-            val tail =
-                when (gate) {
-                    is GateState.Running -> gate.tail
-                    is GateState.Failed -> gate.tail
-                    is GateState.Cancelled -> gate.tail
-                    else -> ""
-                }
-            if (tail.isNotBlank()) CodeBlock(tail.lines().takeLast(GATE_LINES_SHOWN).joinToString("\n"), maxHeight = 220)
-            if (logFile != null && gate !is GateState.None && gate !is GateState.NotRun) {
-                TextButton(onClick = { showLog = true }) { Text(stringRes(Res.string.claude_code_gate_full_log)) }
-            }
-        }
-    }
-    if (showLog && logFile != null) {
-        AlertDialog(
-            onDismissRequest = { showLog = false },
-            title = { Text(stringRes(Res.string.claude_code_gate)) },
-            text = {
-                Column(Modifier.widthIn(min = 560.dp, max = 1000.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SelectionContainer {
-                        Text(logFile.absolutePath, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                    }
-                    // The newest part: a whole Gradle run is too long to lay out as one text.
-                    CodeBlock(remember(gate) { fullLog().takeLast(FULL_LOG_SHOWN) }, maxHeight = 560)
-                }
-            },
-            confirmButton = { TextButton(onClick = { showLog = false }) { Text(stringRes(Res.string.claude_code_close)) } },
-        )
-    }
-}
-
-private const val GATE_LINES_SHOWN = 12
-private const val FULL_LOG_SHOWN = 200_000
 
 /**
  * Who ngit signs as, by the name Amethyst knows for that key (its profile, loaded or cached), so

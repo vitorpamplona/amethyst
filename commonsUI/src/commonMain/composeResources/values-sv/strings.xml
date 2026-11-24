@@ -9857,7 +9857,6 @@
     <string name="claude_code_fork_hint">En kopia av sessionen. Ditt första meddelande startar den som en egen session; originalet förblir som det är.</string>
     <string name="claude_code_notify_needs_you">%1$s behöver ditt godkännande</string>
     <string name="claude_code_notify_finished">%1$s är klar</string>
-    <string name="claude_code_section_needs_you">Behöver dig</string>
     <string name="claude_code_status_in_terminal">öppen i en terminal</string>
     <string name="claude_code_starter_explain">Förklara hur det här repositoryt är organiserat</string>
     <string name="claude_code_starter_tests">Kör testerna och åtgärda det som misslyckas</string>
