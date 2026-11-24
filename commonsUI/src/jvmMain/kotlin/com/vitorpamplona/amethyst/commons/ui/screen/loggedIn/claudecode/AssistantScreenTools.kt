@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
 import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ScreenToolServer
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.OnScreenNavs
@@ -77,38 +78,48 @@ private val routeJson = Json { encodeDefaults = false }
 
 private fun describe(route: Route): String {
     val text = routeJson.encodeToString(Route.serializer(), route).replace(ROUTE_PACKAGE, "")
-    // The assistant's own chat is on screen too; say so rather than make it read itself.
-    return if (route is Route.ClaudeCodeSettingsAssistant) "$text (this chat)" else text
+    // The assistant's own chat is on screen too, however it was opened; say so rather than make it read itself.
+    val isAssistant = route is Route.ClaudeCodeSettingsAssistant || (route is Route.ClaudeCodeChat && ClaudeCodeService.shared.isAssistantChat(route.key))
+    return if (isAssistant) "$text (this chat)" else text
 }
 
 private val ROUTE_PACKAGE = Route::class.qualifiedName + "."
 
 /**
  * Every Amethyst window, drawn by Skia into a picture, as its own layer has it: no OS permission
- * to record the screen, and nothing from other apps. On the main thread, where Skia draws.
+ * to record the screen, and nothing from other apps. Only the copy runs on the main thread, where
+ * Skia draws; shrinking and encoding a window-sized picture would stall the UI there.
  */
-private suspend fun captureWindows(): List<ImageInput> =
-    withContext(Dispatchers.Main) {
-        Window
-            .getWindows()
-            .filter { it.isShowing }
-            .sortedByDescending { it.isFocused }
-            .mapNotNull { window -> skiaLayerOf(window) }
-            .take(MAX_WINDOWS)
-            .mapIndexedNotNull { index, layer ->
-                try {
-                    // Null before the layer's first frame.
-                    val bitmap = layer.screenshot() ?: return@mapIndexedNotNull null
-                    ImageInput.fromImage("amethyst-window-${index + 1}.png", bitmap.toBufferedImage())
-                } catch (e: IOException) {
-                    Log.w("AssistantScreenTools", "Could not shrink the window's picture", e)
-                    null
-                } catch (e: RuntimeException) {
-                    Log.w("AssistantScreenTools", "Could not capture the window", e)
-                    null
+private suspend fun captureWindows(): List<ImageInput> {
+    val pictures =
+        withContext(Dispatchers.Main) {
+            Window
+                .getWindows()
+                .filter { it.isShowing }
+                .sortedByDescending { it.isFocused }
+                .mapNotNull { window -> skiaLayerOf(window) }
+                .take(MAX_WINDOWS)
+                .mapNotNull { layer ->
+                    try {
+                        // Null before the layer's first frame.
+                        layer.screenshot()?.toBufferedImage()
+                    } catch (e: RuntimeException) {
+                        Log.w("AssistantScreenTools", "Could not capture the window", e)
+                        null
+                    }
                 }
+        }
+    return withContext(Dispatchers.Default) {
+        pictures.mapIndexedNotNull { index, picture ->
+            try {
+                ImageInput.fromImage("amethyst-window-${index + 1}.png", picture)
+            } catch (e: IOException) {
+                Log.w("AssistantScreenTools", "Could not shrink the window's picture", e)
+                null
             }
+        }
     }
+}
 
 private fun skiaLayerOf(container: Container): SkiaLayer? {
     if (container is SkiaLayer) return container

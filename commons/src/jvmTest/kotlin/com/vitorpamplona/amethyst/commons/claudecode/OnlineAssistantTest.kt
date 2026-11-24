@@ -36,7 +36,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -240,6 +244,51 @@ class OnlineAssistantTest {
             )
             assertTrue(provider.sent.last().contains("Main window"), provider.sent.last())
         }
+
+    @Test
+    fun aCallStoppedBeforeItRanIsAnsweredSoTheNextTurnWorks() =
+        runBlocking {
+            val provider = ScriptedProvider(postCall, done)
+            val chat = service().settingsAssistant(tools, "Amethyst assistant", null, OnlineAgentBackend.Access({ key }, provider))
+            chat.send("post gm")
+            waitFor {
+                chat.state.value.pendingPermissions
+                    .isNotEmpty()
+            }
+
+            chat.interrupt()
+            waitFor { chat.state.value.status == ChatStatus.READY }
+
+            chat.send("never mind")
+            waitFor { provider.sent.size == 2 && chat.state.value.status == ChatStatus.READY }
+            // The stopped call has its answer before the next message, or the provider refuses the history.
+            val next = provider.sent.last()
+            assertTrue(next.indexOf("\"tool_call_id\":\"c1\"") in 0 until next.indexOf("never mind"), next)
+            assertEquals(
+                "Done.",
+                chat.state.value.items
+                    .filterIsInstance<ChatItem.AssistantText>()
+                    .last()
+                    .text,
+            )
+        }
+
+    @Test
+    fun answeredLeavesACompleteHistoryAlone() {
+        val history =
+            listOf(postCall, done).map { (Json.parseToJsonElement(it).jsonObject["choices"] as JsonArray)[0].jsonObject["message"]!!.jsonObject }
+        val withResult =
+            listOf(
+                history[0],
+                JsonObject(mapOf("role" to JsonPrimitive("tool"), "tool_call_id" to JsonPrimitive("c1"), "content" to JsonPrimitive("ok"))),
+                history[1],
+            )
+        assertEquals(withResult, answered(withResult))
+        // Without its result, the call gets one right after it.
+        val fixed = answered(listOf(history[0], history[1]))
+        assertEquals(3, fixed.size)
+        assertEquals("c1", (fixed[1]["tool_call_id"] as JsonPrimitive).content)
+    }
 
     @Test
     fun withoutAKeyTheAssistantStaysOnClaudeCode() =

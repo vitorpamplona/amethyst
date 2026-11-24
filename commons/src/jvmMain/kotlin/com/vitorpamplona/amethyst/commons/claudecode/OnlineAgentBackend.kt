@@ -71,6 +71,7 @@ import java.io.File
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * An OpenAI-compatible chat-completions endpoint: what the user's AI key (NIP-FA) reaches.
@@ -269,12 +270,26 @@ class OnlineSessionStore(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun list(): List<AgentSessionInfo> =
-        dir
-            .listFiles { f -> f.isFile && f.name.endsWith(SUFFIX) }
-            .orEmpty()
-            .mapNotNull { load(it.name.removeSuffix(SUFFIX))?.info() }
-            .sortedByDescending { it.lastModified }
+    private class Listed(
+        val length: Long,
+        val modified: Long,
+        val info: AgentSessionInfo?,
+    )
+
+    /** What [list] read of each file, kept while the file stays the same: the list polls every few seconds. */
+    private val listed = ConcurrentHashMap<String, Listed>()
+
+    fun list(): List<AgentSessionInfo> {
+        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(SUFFIX) }.orEmpty()
+        listed.keys.retainAll(files.mapTo(HashSet()) { it.name })
+        return files
+            .mapNotNull { file ->
+                val length = file.length()
+                val modified = file.lastModified()
+                val cached = listed[file.name]?.takeIf { it.length == length && it.modified == modified }
+                cached?.info ?: load(file.name.removeSuffix(SUFFIX))?.info().also { listed[file.name] = Listed(length, modified, it) }
+            }.sortedByDescending { it.lastModified }
+    }
 
     fun load(id: String): OnlineSession? {
         if (!SAFE_ID.matches(id)) return null
@@ -360,9 +375,12 @@ class OnlineAgentConnection(
 
     private val turns = Mutex()
 
-    @Volatile
-    private var turn: Job? = null
+    /** The turn running and the ones queued behind it: Stop ends them all. */
+    private val jobs: MutableSet<Job> = ConcurrentHashMap.newKeySet()
     private val answers = ConcurrentHashMap<String, CompletableDeferred<PermissionDecision>>()
+
+    /** Set once the running turn has said it ended: a stop that races its own end says so once. */
+    private val ended = AtomicBoolean(false)
 
     @Volatile
     private var lastError = ""
@@ -371,13 +389,20 @@ class OnlineAgentConnection(
         text: String,
         images: List<ImageInput>,
     ) {
-        turn =
+        val job =
             scope.launch(Dispatchers.IO) {
                 turns.withLock { runTurn(text) }
             }
+        jobs += job
+        job.invokeOnCompletion { jobs -= job }
+    }
+
+    private suspend fun endTurn(event: AgentEvent.TurnEnded) {
+        if (ended.compareAndSet(false, true)) out.send(event)
     }
 
     private suspend fun runTurn(text: String) {
+        ended.set(false)
         out.send(AgentEvent.SessionStarted(session.id, session.model, PermissionMode.DEFAULT))
         append(
             buildJsonObject {
@@ -393,12 +418,16 @@ class OnlineAgentConnection(
                 val calls = (message["tool_calls"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
                 out.send(AgentEvent.Reply(assistantBlocks(message), reply.second))
                 if (calls.isEmpty()) {
-                    out.send(AgentEvent.TurnEnded(interrupted = false, failure = null))
+                    endTurn(AgentEvent.TurnEnded(interrupted = false, failure = null))
                     return
                 }
                 val pictures = mutableListOf<ImageInput>()
                 for (call in calls) {
-                    val result = runCall(call) ?: return
+                    val result =
+                        runCall(call) ?: run {
+                            endTurn(AgentEvent.TurnEnded(interrupted = true, failure = null))
+                            return
+                        }
                     append(
                         buildJsonObject {
                             put("role", "tool")
@@ -413,9 +442,9 @@ class OnlineAgentConnection(
                 // A tool message takes only text: the pictures a tool gave go in a user message after it.
                 if (pictures.isNotEmpty()) append(imagesMessage(pictures))
             }
-            out.send(AgentEvent.TurnEnded(interrupted = false, failure = "Stopped after $MAX_STEPS steps without an answer."))
+            endTurn(AgentEvent.TurnEnded(interrupted = false, failure = "Stopped after $MAX_STEPS steps without an answer."))
         } catch (e: CancellationException) {
-            out.trySend(AgentEvent.TurnEnded(interrupted = true, failure = null))
+            if (ended.compareAndSet(false, true)) out.trySend(AgentEvent.TurnEnded(interrupted = true, failure = null))
             throw e
         } catch (e: IOException) {
             lastError = e.message.orEmpty()
@@ -440,7 +469,7 @@ class OnlineAgentConnection(
                                 },
                             )
                         }
-                        session.messages.forEach { add(wireMessage(it)) }
+                        answered(session.messages).forEach { add(wireMessage(it)) }
                     },
                 )
                 if (tools.isNotEmpty()) {
@@ -529,10 +558,7 @@ class OnlineAgentConnection(
             when (val decision = answer.await()) {
                 is PermissionDecision.Allow -> decision.updatedInput?.let { arguments = it }
                 is PermissionDecision.Deny -> {
-                    if (decision.interrupt) {
-                        out.send(AgentEvent.TurnEnded(interrupted = true, failure = null))
-                        return null
-                    }
+                    if (decision.interrupt) return null
                     return HostToolResult("The user declined. ${decision.message}".trim(), isError = true)
                 }
             }
@@ -563,7 +589,7 @@ class OnlineAgentConnection(
     override suspend fun interrupt() {
         answers.values.forEach { it.complete(PermissionDecision.Deny("Stopped by the user.", interrupt = true)) }
         answers.clear()
-        turn?.cancel()
+        jobs.forEach { it.cancel() }
     }
 
     override suspend fun setPermissionMode(mode: PermissionMode) {}
@@ -579,14 +605,14 @@ class OnlineAgentConnection(
     }
 
     override suspend fun close(): Int? {
-        turn?.join()
+        jobs.toList().forEach { it.join() }
         kill()
         return 0
     }
 
     override fun kill() {
         running = false
-        turn?.cancel()
+        jobs.forEach { it.cancel() }
         out.close()
     }
 
@@ -598,6 +624,51 @@ class OnlineAgentConnection(
         private const val MAX_OUTPUT_TOKENS = 4_096
     }
 }
+
+/**
+ * [messages] as an endpoint accepts them: a call the user stopped before it ran has no result, and
+ * the endpoints refuse a history whose tool calls go unanswered, so each such call gets one.
+ */
+internal fun answered(messages: List<JsonObject>): List<JsonObject> {
+    val out = ArrayList<JsonObject>(messages.size)
+    var pending = emptyList<String>()
+
+    fun closePending() {
+        pending.forEach { id ->
+            out +=
+                buildJsonObject {
+                    put("role", "tool")
+                    put("tool_call_id", id)
+                    put("content", STOPPED_CALL)
+                }
+        }
+        pending = emptyList()
+    }
+    messages.forEach { message ->
+        when (message.str("role")) {
+            "tool" -> {
+                pending = pending - message.str("tool_call_id").orEmpty()
+                out += message
+            }
+            // A tool's pictures sit between its result and the next call; they don't close the calls.
+            "user" -> {
+                if (PICTURES !in message) closePending()
+                out += message
+            }
+            else -> {
+                closePending()
+                out += message
+                if (message.str("role") == "assistant") {
+                    pending = (message["tool_calls"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.str("id") }.orEmpty()
+                }
+            }
+        }
+    }
+    closePending()
+    return out
+}
+
+private const val STOPPED_CALL = "The user stopped this call before it ran."
 
 /** A saved message as the endpoint takes it: the app's own marks stay home. */
 private fun wireMessage(message: JsonObject): JsonObject = if ("is_error" in message || PICTURES in message) JsonObject(message - "is_error" - PICTURES) else message

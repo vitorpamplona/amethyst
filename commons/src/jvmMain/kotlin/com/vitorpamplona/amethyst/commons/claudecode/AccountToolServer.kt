@@ -59,8 +59,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -196,17 +198,36 @@ class AccountToolServer(
     private suspend fun zap(arguments: JsonObject): HostToolResult {
         val sats = arguments.long("sats")?.takeIf { it > 0 } ?: return HostToolResult("Give a whole number of sats above zero.", isError = true)
         val note = note(arguments) ?: return unknownNote(arguments)
-        val outcome = CompletableDeferred<HostToolResult>()
+        val failed = CompletableDeferred<HostToolResult>()
+        val handedOver = CompletableDeferred<Unit>()
         accountViewModel.zap(
             note = note,
             amountInMillisats = sats * 1000,
             pollOption = null,
             message = arguments.string("comment").orEmpty(),
-            onError = { title, message, _ -> outcome.complete(HostToolResult("$title: $message", isError = true)) },
-            onProgress = { if (it >= 1f) outcome.complete(HostToolResult("Zapped $sats sats.")) },
-            onPayViaIntent = { outcome.complete(HostToolResult(NO_WALLET, isError = true)) },
+            onError = { title, message, _ -> failed.complete(HostToolResult("$title: $message", isError = true)) },
+            // Full progress means the invoices went to the wallet, not that it paid them: a refusal
+            // still comes later, on onError.
+            onProgress = { if (it >= 1f) handedOver.complete(Unit) },
+            onPayViaIntent = { failed.complete(HostToolResult(NO_WALLET, isError = true)) },
         )
-        return awaitPayment(outcome)
+        val early =
+            try {
+                withTimeout(PAYMENT_TIMEOUT_MS) {
+                    select<HostToolResult?> {
+                        failed.onAwait { it }
+                        handedOver.onAwait { null }
+                    }
+                }
+            } catch (_: TimeoutCancellationException) {
+                return HostToolResult(NO_ANSWER, isError = true)
+            }
+        if (early != null) return early
+        return withTimeoutOrNull(WALLET_REFUSAL_WINDOW_MS) { failed.await() }
+            ?: HostToolResult(
+                "Sent the zap of $sats sats to your wallet, and it raised no error in ${WALLET_REFUSAL_WINDOW_MS / 1000} s. " +
+                    "It counts on the note once the recipient's zap receipt arrives.",
+            )
     }
 
     private suspend fun pay(invoice: String?): HostToolResult {
@@ -490,6 +511,9 @@ class AccountToolServer(
         private const val FETCH_ID = "assistant-note"
         private const val FETCH_TIMEOUT_MS = 8_000L
         private const val PAYMENT_TIMEOUT_MS = 90_000L
+
+        /** How long a zap handed to the wallet waits for the wallet to refuse it. */
+        private const val WALLET_REFUSAL_WINDOW_MS = 10_000L
         private const val READ_ONLY = "This account can't sign: it was opened with a public key only. Nothing was sent."
         private const val NO_WALLET = "No wallet is connected, so nothing was paid. The user can connect one (Nostr Wallet Connect) in Settings › Zaps."
         private const val NO_ANSWER = "The wallet hasn't answered. The payment may or may not have gone through: check the wallet before trying again."

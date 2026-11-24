@@ -1191,7 +1191,8 @@ class ClaudeCodeService(
     ): ClaudeChat {
         bindAssistant(settings, account, access, screen)
         settingsAssistantKey?.let { key -> chats.value[key]?.let { return it } }
-        val agent = assistantAgent()
+        // Finding the agent program reads the disk (each PATH folder): not on the caller's thread.
+        val agent = withContext(Dispatchers.IO) { assistantAgent() }
         // Read here rather than from the last [refresh]: the assistant may open before the list ever has.
         val newest =
             withContext(Dispatchers.IO) {
@@ -1205,8 +1206,8 @@ class ClaudeCodeService(
         val chat =
             newest?.let { info ->
                 chats.value.values.firstOrNull { it.state.value.sessionId == info.sessionId }
-                    ?: openAssistant(info.sessionId, info.sessionId, info.title)
-            } ?: openAssistant("settings-${UUID.randomUUID()}", null, title)
+                    ?: openAssistant(info.sessionId, info.sessionId, info.title, agent)
+            } ?: openAssistant("settings-${UUID.randomUUID()}", null, title, agent)
         settingsAssistantKey = chat.key
         return chat
     }
@@ -1228,6 +1229,15 @@ class ClaudeCodeService(
         if (access != null) online.access = access
     }
 
+    /** Whether the chat [key] names is the assistant: open as one, or saved in its folder. */
+    fun isAssistantChat(key: String): Boolean {
+        chats.value[key]?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        chats.value.values
+            .firstOrNull { it.state.value.sessionId == key }
+            ?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        return saved.value.any { it.sessionId == key && isAssistantFolder(it.cwd) }
+    }
+
     /** Whether [cwd] is the assistant's own folder, where only its sessions run. */
     fun isAssistantFolder(cwd: String?): Boolean = cwd != null && File(cwd).absoluteFile.normalize() == assistantDir.absoluteFile.normalize()
 
@@ -1245,6 +1255,8 @@ class ClaudeCodeService(
         key: String,
         sessionId: String?,
         title: String?,
+        /** Who runs it; null: the agent that saved [sessionId]. */
+        chosen: AgentBackend? = null,
     ): ClaudeChat {
         if (!assistantDir.isDirectory && !assistantDir.mkdirs()) Log.w(TAG) { "Could not create $assistantDir" }
         return open(
@@ -1256,7 +1268,7 @@ class ClaudeCodeService(
             null,
             kind = ChatKind.SETTINGS,
             mcpServers = listOf(settingsTools, accountTools, screenTools),
-            agent = sessionId?.let { backendOf(it) }?.takeIf { it.capabilities.hostTools } ?: assistantAgent(),
+            agent = chosen ?: sessionId?.let { backendOf(it) }?.takeIf { it.capabilities.hostTools } ?: assistantAgent(),
             launchOptions = { options ->
                 options.copy(
                     onlyHostTools = true,
