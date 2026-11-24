@@ -315,6 +315,8 @@ fun ClaudeCodeChatScreen(
         return
     }
     val state by chat.state.collectAsStateWithLifecycle()
+    // However it was opened (the list, a notification, after a restart), the assistant reaches this account.
+    if (state.kind == ChatKind.SETTINGS) BindSettingsTools(accountViewModel, nav)
     val runningApp by viewModel.runningApp.collectAsStateWithLifecycle()
     val runError by viewModel.runError.collectAsStateWithLifecycle()
     val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
