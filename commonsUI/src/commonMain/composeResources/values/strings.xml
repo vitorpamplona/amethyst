@@ -9675,6 +9675,7 @@
     <string name="claude_code_gate_passed">The checks passed.</string>
     <string name="claude_code_gate_failed">The checks failed. Ask Claude to fix them, then run them again.</string>
     <string name="claude_code_gate_cancelled">Stopped. Run the checks again before publishing.</string>
+    <string name="claude_code_gate_outdated">The branch changed since the checks last ran. Run them again before publishing.</string>
     <string name="claude_code_gate_full_log">Full log</string>
     <string name="claude_code_close">Close</string>
     <string name="claude_code_gate_run">Run</string>
