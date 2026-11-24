@@ -37,6 +37,9 @@ W_DIR="$STATE_DIR/W"
 W2_DIR="$STATE_DIR/W2"
 W_SOCKET="${W_SOCKET:-$W_DIR/wnd.sock}"
 W2_SOCKET="${W2_SOCKET:-$W2_DIR/wnd.sock}"
+# Unix socket paths are capped at ~108 bytes: a deep checkout gets a short one under /tmp, as B and C do.
+W_SOCKET="$(short_socket_path "$W_SOCKET")"
+W2_SOCKET="$(short_socket_path "$W2_SOCKET")"
 K_NPUB=""
 K_HEX=""
 # K's nsec, in this shell's memory only (never exported or written): W and W2 log in with it.
