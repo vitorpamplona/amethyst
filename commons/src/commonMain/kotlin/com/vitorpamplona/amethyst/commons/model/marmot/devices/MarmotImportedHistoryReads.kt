@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.marmot.devices
 
 import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -32,11 +33,12 @@ import kotlinx.coroutines.sync.withLock
  * deliveries"): the newest imported message's `created_at`, never later than when it was imported.
  *
  * Imported history is old news: it stays in Notifications by its own dates, but lights no unread
- * badge and raises no notification. marmot-kmp writes it to the message store as it imports it, so
- * if this were only the chat's in-memory last-read time, a process death, a logout or a cancel
- * before the app shows the import would restore those messages as ordinary unread ones. Written
- * when [MarmotDevices] takes the import from the device group, before it lets go of its lock, and
- * applied to the chat's last-read time on every start.
+ * badge and raises no notification. If this were only the chat's in-memory last-read time, a
+ * process death, a logout or a cancel between marmot-kmp storing the messages and the app showing
+ * them would restore them as ordinary unread ones. So [MarmotDevices] has marmot-kmp call [record]
+ * ([MarmotDeviceGroupManager.beforeHistoryImport]) before it stores any message of an import, and
+ * a record that cannot be saved refuses the import, which marmot-kmp keeps to try again. Applied
+ * to the chat's last-read time on every start.
  *
  * Kept in [blobs] (encrypted at rest by the app) as one `<chat id> <read up to>` line per chat;
  * null keeps it for this run only.
@@ -50,20 +52,24 @@ class MarmotImportedHistoryReads(
     /** Each chat's read-up-to time, as saved. */
     suspend fun load(): Map<HexKey, Long> = mutex.withLock { readLocked().toMap() }
 
-    /** Moves each chat of [imports] to its newest imported message, clamped to [now], and saves. */
+    /**
+     * Moves [nostrGroupId] to the newest of [events], clamped to [now], and saves it before it
+     * returns. Throws when it cannot be saved, and then keeps nothing in memory either, so the
+     * import it was called for waits and the next try writes it again.
+     */
     suspend fun record(
-        imports: List<MarmotDeviceGroupManager.ImportedHistory>,
+        nostrGroupId: HexKey,
+        events: List<Event>,
         now: Long,
     ) = mutex.withLock {
+        val upTo = importedHistoryReadUpTo(events.map { it.createdAt }, now) ?: return@withLock
         val reads = readLocked()
-        var changed = false
-        for (history in imports) {
-            val upTo = importedHistoryReadUpTo(history.events.map { it.createdAt }, now) ?: continue
-            if ((reads[history.nostrGroupId] ?: 0L) >= upTo) continue
-            reads[history.nostrGroupId] = upTo
-            changed = true
-        }
-        if (changed) saveLocked(reads)
+        if ((reads[nostrGroupId] ?: 0L) >= upTo) return@withLock
+        val next = HashMap(reads)
+        next[nostrGroupId] = upTo
+        val text = next.entries.sortedBy { it.key }.joinToString("") { "${it.key} ${it.value}\n" }
+        blobs?.save(RECORD, text.encodeToByteArray())
+        loaded = next
     }
 
     private suspend fun readLocked(): MutableMap<HexKey, Long> {
@@ -84,17 +90,6 @@ class MarmotImportedHistoryReads(
         }
         loaded = reads
         return reads
-    }
-
-    private suspend fun saveLocked(reads: Map<HexKey, Long>) {
-        val target = blobs ?: return
-        val text = reads.entries.sortedBy { it.key }.joinToString("") { "${it.key} ${it.value}\n" }
-        try {
-            target.save(RECORD, text.encodeToByteArray())
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "could not save the imported history read times", e)
-        }
     }
 
     companion object {

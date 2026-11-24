@@ -103,8 +103,10 @@ class MarmotDevices(
      */
     private val onChatsJoined: (suspend (List<HexKey>) -> Unit)? = null,
     /**
-     * Where imported history is written down as read the moment it is taken from the device group,
-     * before [onHistoryImported] runs, so a process death in between cannot restore it as unread.
+     * Where imported history is written down as read before marmot-kmp stores any of it
+     * ([MarmotDeviceGroupManager.beforeHistoryImport]), so a process death before
+     * [onHistoryImported] runs cannot restore it as unread. A write that fails holds the import
+     * back; marmot-kmp keeps its delivery and tries again on a later pass.
      */
     private val importedReads: MarmotImportedHistoryReads? = null,
     /**
@@ -176,6 +178,9 @@ class MarmotDevices(
         if (historyBlobs != null) {
             groups.historyBlobUploader = { ciphertext -> historyBlobs.upload(ciphertext) }
             groups.historyBlobFetcher = { url, maxBytes -> historyBlobs.fetch(url, maxBytes) }
+        }
+        if (importedReads != null) {
+            groups.beforeHistoryImport = { nostrGroupId, events -> importedReads.record(nostrGroupId, events, clock()) }
         }
     }
 
@@ -297,14 +302,12 @@ class MarmotDevices(
         }
 
     /**
-     * Hands the app the history imported since the last call, after the lock is released. Written
-     * down as read first ([importedReads]): the messages are in the store already, and the show is
-     * only queued.
+     * Hands the app the history imported since the last call, after the lock is released. Already
+     * written down as read ([importedReads]) before marmot-kmp stored it.
      */
-    private suspend fun queueImportedHistory() {
+    private fun queueImportedHistory() {
         val imported = groups.drainImportedHistory()
         if (imported.isEmpty()) return
-        importedReads?.record(imported, clock())
         val show = onHistoryImported ?: return
         sends.add { show(imported) }
     }
