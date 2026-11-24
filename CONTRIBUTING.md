@@ -251,20 +251,36 @@ described in the proof-of-testing section.
 ## Interoperability tests
 
 Amethyst ships several cross-stack interop harnesses that drive our code
-against external reference implementations. They are **not run in CI** —
-they're slow, require Rust / bun / Docker / Chromium, and most PRs don't
-touch the code they cover. If your change *does* touch a covered area, you
-are expected to run the relevant suite locally and paste the result into
-the PR description. Reviewers may ask if you didn't.
+against external reference implementations. They are too slow for every PR
+(Rust / Node / Docker toolchains, counterparts built from source), so they run
+**nightly** instead: [`.github/workflows/interop-nightly.yml`](.github/workflows/interop-nightly.yml)
+([runs](https://github.com/vitorpamplona/amethyst/actions/workflows/interop-nightly.yml)).
+Each suite runs twice there: against the counterpart version we pin (blocking: red means a
+regression, or a pin someone must move on purpose) and against the counterpart's latest
+`main` (non-blocking, an early warning that the other side moved). Every run is fully local
+(a network namespace with only loopback, or `AMY_LOCAL_ONLY=1` with everything on
+127.0.0.1), and the `Interop matrix` job writes a feature × counterpart × direction table to
+the run summary (artifact `interop-matrix`), with per-scenario JUnit annotations and logs in
+each suite's artifact. You can start it from the Actions tab (`Run workflow`, optionally
+naming suites) on your branch.
 
-| Suite | Path | What it covers | When you must run it |
-|---|---|---|---|
-| **Marmot / MLS (White Noise)** | `cli/tests/marmot/` | Marmot MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation, agent-stream previews — Amethyst (or `amy`) ↔ MDK's `wn`/`wnd` Rust reference | A marmot-kmp or mls-kmp version bump, Marmot wiring in `commons/`, or the Marmot UI / group-chat flow |
-| **cordn** | `cli/tests/cordn/` | `amy` against the reference coordinator (`tier-b.sh`), against the reference client in one group (`interop-client.sh`), and a device handoff (`migrate.sh`), over a local geode relay. The coordinator image has no license: pull it by hand | A cordn-kmp or mls-kmp version bump, or cordn wiring in `commons/` (`CordnRuntime`, the file stores, `CordnMigration`) |
-| **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
-| **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
-| **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |
-| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any quic-kmp version bump (WebTransport, packet header protection, key updates, stream demux) |
+If your change touches a covered area, check the last nightly run on `main` and either run
+the relevant suite locally or start the workflow on your branch, and paste the result into
+the PR description. Reviewers may ask if you didn't. The nightly's suites, their pins and how
+to add one live in `tools/interop-ci/` (see [`cli/tests/README.md`](cli/tests/README.md),
+"Nightly CI").
+
+| Suite | Path | What it covers | When you must run it | Nightly |
+|---|---|---|---|---|
+| **Marmot / MLS (White Noise)** | `cli/tests/marmot/` | Marmot MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation, agent-stream previews — Amethyst (or `amy`) ↔ MDK's `wn`/`wnd` Rust reference | A marmot-kmp or mls-kmp version bump, Marmot wiring in `commons/`, or the Marmot UI / group-chat flow | pinned MDK + MDK `master` |
+| **cordn** | `cli/tests/cordn/` | `amy` against the reference coordinator (`tier-b.sh`), against the reference client in one group (`interop-client.sh`), and a device handoff (`migrate.sh`), over a local geode relay. The coordinator image has no license: pull it by hand | A cordn-kmp or mls-kmp version bump, or cordn wiring in `commons/` (`CordnRuntime`, the file stores, `CordnMigration`) | no: the reference coordinator is unlicensed |
+| **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` | yes |
+| **Concord (Armada)** | `cli/tests/concord/armada-interop.sh` | Communities, Direct Invites and links, messages, Roles v2 and legacy roles, kicks / bans / Refounding, private channels, pins, timers — `amy` ↔ Armada (soapbox.pub, AGPL, fetched as a separate program, never vendored) | Concord code in `quartz/` or `commons/` | pinned Armada + Armada `main` |
+| **Buzz relay** | `cli/tests/buzz/buzz-relay-interop.sh` | `amy`'s NIP-29 + Buzz verbs (AUTH, channels, roles, DMs, jobs, pins, invites) against upstream `buzz-relay` on Postgres / Redis / MinIO (Docker) | NIP-29 or Buzz code in `quartz/`, `commons/` or the `amy relaygroup` / `buzz` verbs | pinned Buzz + Buzz `main` |
+| **NIP-29 (amy ↔ geode)** | `cli/tests/relaygroup/relaygroup-headless.sh` | `amy relaygroup` create / message / join / list / browse against geode | NIP-29 client code | yes |
+| **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX | no: manual |
+| **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` | no |
+| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any quic-kmp version bump (WebTransport, packet header protection, key updates, stream demux) | no |
 
 ### Running them
 
@@ -278,9 +294,13 @@ front:
   [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (`quic/interop/` there).
 - **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): every
   relay-backed suite boots the embedded `amy serve` relay (geode) — no
-  external relay binary; only the Marmot suites additionally need `cargo`
-  for MDK's `wn`/`wnd`. The interactive Marmot variant prompts a human to
+  external relay binary except Buzz's; the Marmot and Buzz suites additionally
+  need `cargo` (MDK's `wn`/`wnd`, `buzz-relay`). The interactive Marmot variant prompts a human to
   drive the Android UI.
+- **The nightly's command line** runs locally too, and is the quickest way to
+  reproduce a red night: `./gradlew :cli:installDist`, then
+  `tools/interop-ci/run-suite.sh resolve|prepare|run <suite> pinned` (needs
+  `iproute2` and root or passwordless sudo for the network namespace).
 
 If a change is documentation-only, UI-only, build-script-only, or otherwise
 cannot affect wire bytes / decoded audio / MLS state / DM envelopes, skip

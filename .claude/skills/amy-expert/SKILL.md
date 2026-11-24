@@ -94,4 +94,6 @@ user agent gets HTTP 403) but serves Amethyst, and that once got a healthy relay
   `CliResult.kt`).
 - `cli/tests/`: shell harnesses (`lib.sh`, `headless/helpers.sh`, one directory per suite: `dm/`,
   `marmot/`, `notes/`, `cache/`, `git/`, …), most against an embedded `amy serve` relay with a fresh
-  `$HOME`. See `cli/tests/README.md`.
+  `$HOME`. See `cli/tests/README.md`. Record every scenario with `record_result` (it also writes the
+  JSON lines CI reads); the counterparty suites run nightly from `tools/interop-ci/suites.json`
+  (`.github/workflows/interop-nightly.yml`), so a new one is a driver plus a registry entry there.
