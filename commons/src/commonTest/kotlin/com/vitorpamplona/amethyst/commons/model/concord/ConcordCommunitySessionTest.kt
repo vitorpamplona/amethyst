@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatRules
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -63,7 +65,7 @@ class ConcordCommunitySessionTest {
                     name = "Nostrichs",
                 )
 
-            val captured = mutableListOf<com.vitorpamplona.quartz.nip01Core.core.Event>()
+            val captured = mutableListOf<Event>()
             val session = ConcordCommunitySession(entry, owner.pubKey) { _, _, rumor, _ -> captured += rumor }
 
             // Fold genesis so #general is known — historical planes are derived off the folded channels.
@@ -164,6 +166,43 @@ class ConcordCommunitySessionTest {
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))
             assertEquals(ConcordIngestOutcome.NOT_MINE, session.ingest(outsider.genesisWraps.first()))
+        }
+
+    @Test
+    fun aCustomEmojiReactionSendsItsShortcodeAndTheEmojiTag() =
+        runTest {
+            // The palette hands a custom emoji over as `:name:url`. Sent raw, its content carries a
+            // URL, which no Concord client tallies (audit 3): the content must be `:name:` and the
+            // picture must ride in the NIP-30 `emoji` tag.
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val captured = mutableListOf<Event>()
+            val session = ConcordCommunitySession(entryFor(community), owner.pubKey) { _, _, rumor, _ -> captured += rumor }
+            community.genesisWraps.forEach { session.ingest(it) }
+            val general = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch)
+            session.ingest(ConcordActions.buildChannelMessage(owner, general, community.generalChannelIdHex, community.rootEpoch, "gm", 2L))
+            val message = captured.single { it.kind == 9 }
+
+            val wrap = ConcordActions.buildChannelReaction(owner, general, community.generalChannelIdHex, community.rootEpoch, message, ":blob:https://e.example/blob.png", 3L)
+            session.ingest(wrap)
+            val reaction = captured.single { it.kind == 7 }
+            assertEquals(":blob:", reaction.content)
+            assertTrue(ConcordChatRules.isRenderableReaction(reaction.content))
+            assertEquals(listOf(listOf("emoji", "blob", "https://e.example/blob.png")), reaction.tags.filter { it[0] == "emoji" }.map { it.toList() })
+
+            // An emoji tag the caller already carries is not doubled.
+            val again =
+                ConcordActions.buildChannelReaction(
+                    owner,
+                    general,
+                    community.generalChannelIdHex,
+                    community.rootEpoch,
+                    message,
+                    ":blob:https://e.example/blob.png",
+                    4L,
+                    extraTags = arrayOf(arrayOf("emoji", "blob", "https://e.example/blob.png")),
+                )
+            session.ingest(again)
+            assertEquals(1, captured.last { it.kind == 7 }.tags.count { it[0] == "emoji" })
         }
 
     private fun entryFor(community: NewConcordCommunity) =
