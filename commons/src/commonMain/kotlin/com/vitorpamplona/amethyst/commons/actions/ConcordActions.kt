@@ -1218,5 +1218,5 @@ object ConcordActions {
         priorRoot: ByteArray,
         rootEpoch: Long,
         accept: (ReceivedRefounding) -> Boolean = { true },
-    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept)
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept = accept)
 }
