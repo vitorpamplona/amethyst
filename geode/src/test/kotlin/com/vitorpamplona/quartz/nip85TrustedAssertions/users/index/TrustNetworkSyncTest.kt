@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -248,18 +249,56 @@ class TrustNetworkSyncTest {
                 assertEquals(60, next.index.rankOf(single), next.detail)
                 assertEquals(0, negOpens.get(), next.detail)
 
+                // A kind 5 for someone the index never held: nothing to rebuild, the same index
+                // comes back (no rewrite, no feed rebuild), and the cursor moves past it.
+                var idsRead = 0
+                val stranger = later + 400
+                publish(listOf(deletion(stranger, hex())))
+                val ignored =
+                    assertNotNull(
+                        client.catchUpTrustNetwork(next.header, next.index, relay) {
+                            idsRead++
+                            next.ids
+                        },
+                    )
+                assertTrue(ignored.unchanged, ignored.detail)
+                assertSame(next.index, ignored.index)
+                assertEquals(stranger, ignored.header.syncCursor)
+                assertEquals(1, idsRead)
+
                 // A card signed at the cursor's second that reaches the relay only now: no REQ
                 // past the cursor sees it, so it waits for the weekly reconcile.
                 val late = hex()
-                publish(listOf(card(late, 30, later + 300)))
-                assertTrue(client.updateTrustNetwork(next.header, next.index, next.ids, relay).unchanged)
-                val weekly = assertNotNull(client.reconcileTrustNetwork(next.header, next.index, next.ids, relay))
+                publish(listOf(card(late, 30, stranger)))
+                assertTrue(client.updateTrustNetwork(ignored.header, ignored.index, ignored.ids, relay).unchanged)
+                val weekly = assertNotNull(client.reconcileTrustNetwork(ignored.header, ignored.index, ignored.ids, relay))
                 assertEquals(30, weekly.index.rankOf(late), weekly.detail)
                 assertEquals("need 1, gone 0", weekly.detail)
             } finally {
                 client.close()
                 server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
                 engine.close()
+            }
+        }
+
+    /** A relay that cannot be reached: the catch-up fails without reading the 12 MB id column. */
+    @Test
+    fun aCatchUpThatCannotReachTheRelayReadsNoIds() =
+        runBlocking {
+            val (index, ids) = TrustNetworkBuilder(provider.pubKey).apply { add(card(hex(), 50, batchTime)) }.build()
+            val header = TrustNetworkHeader(provider.pubKey, "ws://127.0.0.1:1/", batchTime, batchTime, batchTime)
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
+            var idsRead = 0
+            try {
+                assertFailsWith<TrustNetworkCatchUpException> {
+                    client.catchUpTrustNetwork(header, index, "ws://127.0.0.1:1/".normalizeRelayUrl()) {
+                        idsRead++
+                        ids
+                    }
+                }
+                assertEquals(0, idsRead)
+            } finally {
+                client.close()
             }
         }
 

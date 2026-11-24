@@ -1040,8 +1040,9 @@ class AppModules(
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
-            // Unknown (a cold start before the first callback) waits, like mobile data.
-            canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
+            // Unknown (a cold start before the first callback) asks the system for the active
+            // network; no network at all waits, like mobile data.
+            canDownloadLargeFiles = { !connManager.isMeteredOrMobileNow() },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
             // joined workspace relays (so the app knows which relays to sync as workspaces on cold
             // start — Buzz membership is server-side) and the starred channels. Per account: the

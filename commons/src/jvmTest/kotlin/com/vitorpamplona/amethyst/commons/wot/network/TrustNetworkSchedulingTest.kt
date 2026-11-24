@@ -124,8 +124,8 @@ class TrustNetworkSchedulingTest {
         /** Thrown by the download, as a phone's OutOfMemoryError was. */
         var downloadError: Throwable? = null
 
-        /** The catch-up finds nothing new but learns the held counts (a version 3 file lacks one). */
-        var updateLearnsCounts = false
+        /** The full check reconciles and agrees with the relay. */
+        var reconcileAgrees = false
 
         /** Cards each download was asked to resume from (0 = from scratch). */
         val resumedFrom = CopyOnWriteArrayList<Int>()
@@ -163,11 +163,8 @@ class TrustNetworkSchedulingTest {
                         calls.add("update")
                         newsGate?.await()
                         if (!news.any) return null
-                        val held = ids()
+                        ids()
                         calls.add("ids")
-                        if (updateLearnsCounts) {
-                            return TrustNetworkSyncResult(header.copy(lastUpdate = now, heldAfterCursor = 0), index, held, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
-                        }
                         return result(provider)
                     }
 
@@ -179,7 +176,8 @@ class TrustNetworkSchedulingTest {
                         progress: TrustNetworkProgress,
                     ): TrustNetworkSyncResult? {
                         calls.add("reconcile")
-                        return null
+                        if (!reconcileAgrees) return null
+                        return TrustNetworkSyncResult(header.copy(lastFullCheck = now, lastUpdate = now), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
                     }
                 },
             )
@@ -370,26 +368,24 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
-    fun countsLearnedByAnUnchangedUpdateAreSaved() =
+    fun aFullCheckThatAgreesWritesOnlyItsTimes() =
         runBlocking {
-            // A file written before heldAfterCursor existed: the counts can't answer, so the update
-            // reconciles. It finds nothing, but now knows the count: saving it is what keeps the
-            // next process start from reconciling the whole batch again.
-            writeIndex(providerA)
-            assertNull(store.readIndex()!!.header.heldAfterCursor)
-            val source =
-                FakeSource().apply {
-                    news = TrustNetworkNews(cards = true)
-                    updateLearnsCounts = true
-                }
+            writeIndex(providerA, fullCheckAgo = TrustNetworkState.FULL_CHECK_EVERY_SECS)
+            val indexBytes = FileSystem.SYSTEM.read(dir / TrustNetworkStore.INDEX_FILE) { readByteArray() }
+            val source = FakeSource().apply { reconcileAgrees = true }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
             wot.awaitReady()
-            val loaded = wot.network.value!!.index
+            wot.awaitIdle()
+            assertEquals(listOf("reconcile"), source.calls.toList())
+            assertTrue(indexBytes.contentEquals(FileSystem.SYSTEM.read(dir / TrustNetworkStore.INDEX_FILE) { readByteArray() }), "the index file is not rewritten")
+            assertEquals(now, store.readIndex()?.header?.lastFullCheck, "the date is on disk")
 
-            val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
-            assertIs<TrustNetworkOutcome.Unchanged>(run.outcome)
-            assertSame(loaded, wot.network.value!!.index, "still the same index: feeds do not rebuild")
-            assertEquals(0, store.readIndex()!!.header.heldAfterCursor, "the learned count is on disk")
+            // A new process: the weekly check is not due again.
+            val again = FakeSource().apply { reconcileAgrees = true }
+            val next = state(MutableStateFlow(ResolvedProvider(providerA)), again)
+            next.awaitReady()
+            next.awaitIdle()
+            assertTrue(again.calls.isEmpty(), "calls: ${again.calls}")
         }
 
     @Test
@@ -481,6 +477,7 @@ class TrustNetworkSchedulingTest {
             wot.awaitIdle()
             assertEquals(listOf("update"), first.calls.toList(), "one REQ, nothing new")
             assertEquals(now, store.readIndex()?.header?.lastUpdate, "the time is on disk, the index untouched")
+            assertTrue(FileSystem.SYSTEM.exists(dir / TrustNetworkStore.TIMES_FILE))
 
             // A new process: the hourly gate holds, nothing runs.
             val second = FakeSource()

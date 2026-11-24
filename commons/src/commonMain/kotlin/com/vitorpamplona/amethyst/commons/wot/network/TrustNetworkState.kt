@@ -493,7 +493,7 @@ class TrustNetworkState(
 
         // The hourly catch-up: a REQ for what is newer than the cursor. The common case is that
         // nothing is: then the ids file (12 MB at 300k) is never read, and only the update's time
-        // is written (see TrustNetworkStore.UPDATE_FILE).
+        // is written (see TrustNetworkStore.TIMES_FILE).
         val caughtUp =
             if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null) {
                 try {
@@ -624,26 +624,13 @@ class TrustNetworkState(
     ): TrustNetworkRun =
         commitLock.withLock {
             if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
-            // Same index instance: feeds keyed on it do not rebuild. Only a finished full check
-            // is saved (its date decides when the next one runs), or held counts the saved
-            // header lacked (a file from before they existed would otherwise make every process
-            // start reconcile again); an update's lastUpdate is not, which only means the next
-            // process start asks again.
-            val countsLearned =
-                header.heldAtCursor != current.header.heldAtCursor ||
-                    header.heldAfterCursor != current.header.heldAfterCursor ||
-                    header.heldTotal != current.header.heldTotal
-            // A kind 5 that changed nothing still moves the cursor past it, or every update finds it again.
+            // Same index instance: feeds keyed on it do not rebuild, and the index files on disk
+            // are already this index. Only the times move (the cursor past a kind 5 that changed
+            // nothing, a full check that agreed, the update's time): a few bytes, not the MBs.
             val cursorMoved = header.syncCursor != current.header.syncCursor
-            val saved =
-                if (result != null && (header.lastFullCheck != current.header.lastFullCheck || countsLearned || cursorMoved)) {
-                    withContext(Dispatchers.IO) { store?.write(header, current.index, result.ids) }
-                } else {
-                    null
-                }
-            val published = saved ?: header.copy(generation = current.header.generation)
-            // Nothing written: keep its time, or every process start would update again.
-            if (saved == null && published.lastUpdate != current.header.lastUpdate) saveLastUpdate(published)
+            val published = header.copy(generation = current.header.generation)
+            val timesMoved = cursorMoved || published.lastFullCheck != current.header.lastFullCheck || published.lastUpdate != current.header.lastUpdate
+            if (timesMoved) saveTimes(published)
             _network.value = TrustNetwork(published, current.index)
             // Cards seen between syncs at or before the new cursor are the index's to answer now.
             if (cursorMoved) pruneOverlay(header.syncCursor)
@@ -659,12 +646,12 @@ class TrustNetworkState(
     /** The catch-up needed the id column and it was gone: the sync downloads instead. */
     private class IdsMissing : Exception()
 
-    /** Losing this only costs one more update after the next process start. */
-    private suspend fun saveLastUpdate(header: TrustNetworkHeader) {
+    /** Losing these only costs a sync the next process start runs again. */
+    private suspend fun saveTimes(header: TrustNetworkHeader) {
         try {
-            withContext(Dispatchers.IO) { store?.writeLastUpdate(header) }
+            withContext(Dispatchers.IO) { store?.writeTimes(header) }
         } catch (e: Exception) {
-            Log.w(TAG, "Could not save the trust network's update time", e)
+            Log.w(TAG, "Could not save the trust network's sync times", e)
         }
     }
 
