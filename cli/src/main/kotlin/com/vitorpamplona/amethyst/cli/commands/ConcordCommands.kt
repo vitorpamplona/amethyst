@@ -93,8 +93,14 @@ object ConcordCommands {
         |  concord channel rekey COMMUNITY CHANNEL     rotate a Private channel's key to exactly the
         |                                               members its Roles entitle today (CORD-06)
         |  concord send COMMUNITY CHANNEL TEXT         post a message (CHANNEL = general|name|id)
-        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
-        |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
+        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel as every client shows it (default
+        |          [--epoch N] [--root HEX]             50): edits, deletes, moderator hides, reactions;
+        |                                               --epoch/--root read a prior epoch's plane
+        |  concord edit COMMUNITY CHANNEL ID TEXT      edit one of your messages (kind 3302)
+        |  concord delete COMMUNITY CHANNEL ID[,ID…]   delete your own messages or reactions (kind 5)
+        |  concord react COMMUNITY CHANNEL ID [EMOJI]  react to a message (default +)
+        |  concord hide COMMUNITY CHANNEL ID[,ID…]     hide other members' messages for everyone
+        |                                               (MANAGE_MESSAGES and a higher rank, CORD-03 §3)
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
         |  concord invite COMMUNITY --to USER          send a Direct Invite (CORD-05 §6): the bundle
         |          [--expires-in SECS] [--relay URL,…]  giftwrapped to USER (npub|hex|nprofile|nip05),
@@ -109,6 +115,7 @@ object ConcordCommands {
         |                                               tombstone at its coordinate, then tombstones
         |                                               it in your invite list so it stays retired
         |  concord join URL                            redeem an invite link and save the community
+        |  concord leave COMMUNITY                     post a Guestbook Leave (CORD-02 §5) and forget it
         |  concord rekey [COMMUNITY]                   follow a Refounding we were re-keyed for:
         |                                               open our blob and adopt the new epoch; then
         |                                               follow each held private channel's rotations
@@ -155,7 +162,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|members|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|members|channels|channel|send|read|edit|delete|react|hide|invite|invites|accept|decline|revoke|join|leave|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -167,12 +174,17 @@ object ConcordCommands {
                     "channel" to { rest -> ConcordPrivateChannelCommands.channel(dataDir, rest) },
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
                     "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
+                    "edit" to { rest -> ConcordChatCommands.edit(dataDir, rest) },
+                    "delete" to { rest -> ConcordChatCommands.delete(dataDir, rest) },
+                    "react" to { rest -> ConcordChatCommands.react(dataDir, rest) },
+                    "hide" to { rest -> ConcordChatCommands.hide(dataDir, rest) },
                     "invite" to { rest -> invite(dataDir, rest) },
                     "invites" to { rest -> invites(dataDir, rest) },
                     "accept" to { rest -> accept(dataDir, rest) },
                     "decline" to { rest -> decline(dataDir, rest) },
                     "revoke" to { rest -> revoke(dataDir, rest) },
                     "join" to { rest -> join(dataDir, rest) },
+                    "leave" to { rest -> leave(dataDir, rest) },
                     "recover" to { rest -> recover(dataDir, rest) },
                     "rekey" to { rest -> rekey(dataDir, rest) },
                     "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
@@ -841,6 +853,40 @@ object ConcordCommands {
         ConcordInviteInboxStore(dataDir.concordInvitesFile).decline(wrapId)
         Output.emit(mapOf("declined" to wrapId))
         return 0
+    }
+
+    /**
+     * `amy concord leave COMMUNITY`: what the app's Leave does. A self-signed Guestbook LEAVE
+     * (CORD-02 §5) first, so members stop listing us and the next Refounding stops re-keying us,
+     * then the community is forgotten here. Forgotten even when no relay took the LEAVE (reported).
+     */
+    private suspend fun leave(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        args.rejectUnknown()
+        val store = ConcordStore(dataDir.concordFile)
+        val sc = store.find(handle) ?: return notFound(handle)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val guestbook = ConcordActions.guestbookPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+            val wrap = ConcordActions.buildGuestbookLeave(ctx.signer, guestbook, TimeUtils.now())
+            val relays = relaysFor(ctx, sc)
+            ctx.registerConcordStreamKeys(relays, listOf(guestbook.secretKey))
+            val ack = ctx.publish(wrap, relays)
+            store.remove(sc.communityId)
+            Output.emit(
+                mapOf(
+                    "left" to sc.communityId,
+                    "name" to sc.name,
+                    "event_id" to wrap.id,
+                    "announced" to ack.values.any { it.accepted },
+                ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
     }
 
     // ---- shared helpers (used by ConcordChannelCommands too) ------------------

@@ -545,6 +545,7 @@
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_links_created">Created %1$s</string>
     <string name="concord_invite_links_empty">You haven't created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_create">Create invite link</string>
     <string name="concord_invite_links_unreadable">Your invite links couldn't be loaded, so none can be revoked right now. Check your connection and try again.</string>
     <string name="concord_invite_revoke_action">Revoke link</string>
     <string name="concord_invite_revoke_title">Revoke this link?</string>
@@ -4337,6 +4338,7 @@
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_links_action">Invite links…</string>
     <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_mint_failed">The invite link couldn't be created. You may not be allowed to invite people to this community, or the link couldn't be saved to your relays. Try again in a moment.</string>
     <string name="concord_invite_revoked_failed">The link couldn't be revoked. Check your connection and try again.</string>
     <string name="concord_invite_revoked_ok">Invite link revoked.</string>
     <string name="concord_invite_title">Invite link</string>

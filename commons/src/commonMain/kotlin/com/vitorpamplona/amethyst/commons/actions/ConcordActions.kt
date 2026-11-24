@@ -45,7 +45,6 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
-import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
@@ -73,10 +72,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -704,19 +702,7 @@ object ConcordActions {
         citation: AuthorityCitation?,
         createdAt: Long,
     ): Event {
-        val delete = ChannelChat.delete(moderatorSigner.pubKey, channelId, epoch, targets, createdAt)
-        val rumor =
-            if (citation == null) {
-                delete
-            } else {
-                RumorAssembler.assembleRumor<DeletionRequestEvent>(
-                    pubKey = delete.pubKey,
-                    createdAt = delete.createdAt,
-                    kind = delete.kind,
-                    tags = delete.tags + arrayOf(VacTag.assemble(citation)),
-                    content = delete.content,
-                )
-            }
+        val rumor = ChannelChat.moderationHide(moderatorSigner.pubKey, channelId, epoch, targets, citation, createdAt)
         return wrapChat(rumor, channel, moderatorSigner)
     }
 
@@ -732,7 +718,19 @@ object ConcordActions {
         extraTags: Array<Array<String>> = emptyArray(),
         timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, withTimer(extraTags, ReactionEvent.KIND, createdAt, timerSecs))
+        // The palette hands a custom emoji over as `:name:url`. Sent like that, the content carries
+        // a URL and no Concord client tallies it (ConcordChatRules.isRenderableReaction): the
+        // content is the `:name:` shortcode and the picture rides in its NIP-30 `emoji` tag, as
+        // ReactionEvent.build writes a public one.
+        val custom = if (reaction.startsWith(":")) EmojiUrlTag.decode(reaction) else null
+        val content = custom?.toContentEncode() ?: reaction
+        val tags =
+            if (custom == null || extraTags.any { it.size > 1 && it[0] == EmojiUrlTag.TAG_NAME && it[1] == custom.code }) {
+                extraTags
+            } else {
+                extraTags + custom.toTagArray()
+            }
+        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, content, createdAt, withTimer(tags, ReactionEvent.KIND, createdAt, timerSecs))
         return wrapChat(rumor, channel, authorSigner)
     }
 
@@ -1233,5 +1231,5 @@ object ConcordActions {
         priorRoot: ByteArray,
         rootEpoch: Long,
         accept: (ReceivedRefounding) -> Boolean = { true },
-    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept)
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept = accept)
 }

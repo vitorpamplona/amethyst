@@ -52,7 +52,7 @@ fun Modifier.submitOnCtrlEnter(
     val currentOnSubmit = rememberUpdatedState(onSubmit)
     val latch = remember { SubmitLatch() }
     return onPreviewKeyEvent { event ->
-        latch.handle(event, { currentIsActive.value() }, { currentOnSubmit.value() })
+        latch.handle(event, { it.isSubmitChord() }, { currentIsActive.value() }, { currentOnSubmit.value() })
     }
 }
 
@@ -61,6 +61,7 @@ private class SubmitLatch {
 
     fun handle(
         event: KeyEvent,
+        isChord: (KeyEvent) -> Boolean,
         isActive: () -> Boolean,
         onSubmit: () -> Unit,
     ): Boolean {
@@ -68,7 +69,7 @@ private class SubmitLatch {
         if (event.type == KeyEventType.KeyUp) {
             armed = true
         }
-        if (!event.isSubmitChord()) return false
+        if (!isChord(event)) return false
         if (event.type == KeyEventType.KeyDown && armed) {
             armed = false
             if (isActive()) onSubmit()
@@ -80,3 +81,82 @@ private class SubmitLatch {
 }
 
 private fun KeyEvent.isSubmitChord(): Boolean = (isCtrlPressed || isMetaPressed) && !isAltPressed && !isShiftPressed
+
+/**
+ * A chat composer's Enter: when [enabled] (see [rememberEnterSendsMessage]), a plain Enter runs
+ * [onSend] when [isActive] says the Send button is enabled, and is swallowed either way so it never
+ * becomes a line break; Shift+Enter still starts a new line. Ctrl/Cmd+Enter sends too, as in the
+ * other composers ([submitOnCtrlEnter]). Put it on the composer's text field: it sees the key in the
+ * preview pass, before the field does. Held keys fire once.
+ *
+ * While a mention or emoji suggestion list is open, [onPickSuggestion] gets a plain Enter instead
+ * (it returns false when there is nothing to pick, and the Enter then does what it would have),
+ * and while [isComposing] says an input method holds uncommitted text, Enter is left to it.
+ */
+@Composable
+fun Modifier.sendOnEnter(
+    enabled: Boolean,
+    isActive: () -> Boolean,
+    onSend: () -> Unit,
+    isComposing: () -> Boolean = { false },
+    onPickSuggestion: () -> Boolean = { false },
+): Modifier {
+    val currentIsActive = rememberUpdatedState(isActive)
+    val currentOnSend = rememberUpdatedState(onSend)
+    val currentIsComposing = rememberUpdatedState(isComposing)
+    val currentOnPick = rememberUpdatedState(onPickSuggestion)
+    val latch = remember { SubmitLatch() }
+    val currentEnabled = rememberUpdatedState(enabled)
+    return onPreviewKeyEvent { event ->
+        val action =
+            if (event.key != Key.Enter && event.key != Key.NumPadEnter) {
+                EnterKeyAction.PASS
+            } else {
+                enterKeyAction(
+                    submitChord = event.isSubmitChord(),
+                    plainEnter = event.isPlainEnter(),
+                    enterSends = currentEnabled.value,
+                    composing = currentIsComposing.value(),
+                )
+            }
+        when (action) {
+            // Still seen by the latch, so a released Enter re-arms it.
+            EnterKeyAction.PASS -> latch.handle(event, { false }, { false }, {})
+            EnterKeyAction.SEND -> latch.handle(event, { true }, { currentIsActive.value() }, { currentOnSend.value() })
+            EnterKeyAction.PICK_OR_SEND ->
+                // Picking fires once per press like sending, so holding Enter never picks and then sends.
+                latch.handle(event, { true }, { true }, { if (!currentOnPick.value() && currentIsActive.value()) currentOnSend.value() })
+        }
+    }
+}
+
+/** What a composer does with an Enter key ([sendOnEnter]). */
+internal enum class EnterKeyAction {
+    /** Not ours: the field (or the input method) gets it. */
+    PASS,
+
+    /** Send, and swallow the key. */
+    SEND,
+
+    /** Pick the open suggestion if there is one, else send; swallow the key. */
+    PICK_OR_SEND,
+}
+
+/**
+ * [sendOnEnter]'s decision for one Enter: an input method composing text owns it, Ctrl/Cmd+Enter
+ * always sends, and a plain Enter picks a suggestion before it sends, when Enter sends at all.
+ */
+internal fun enterKeyAction(
+    submitChord: Boolean,
+    plainEnter: Boolean,
+    enterSends: Boolean,
+    composing: Boolean,
+): EnterKeyAction =
+    when {
+        composing -> EnterKeyAction.PASS
+        submitChord -> EnterKeyAction.SEND
+        plainEnter && enterSends -> EnterKeyAction.PICK_OR_SEND
+        else -> EnterKeyAction.PASS
+    }
+
+private fun KeyEvent.isPlainEnter(): Boolean = !isShiftPressed && !isCtrlPressed && !isMetaPressed && !isAltPressed

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
@@ -150,7 +151,8 @@ open class ConcordNewMessageViewModel : ViewModel() {
     fun editConcordMessage(note: Note) {
         replyTo.value = null
         editingMessage.value = note
-        message.setTextAndPlaceCursorAtEnd(note.event?.content ?: "")
+        // Starts from what the message shows now: its newest edit, else the original.
+        message.setTextAndPlaceCursorAtEnd(note.latestConcordEdit()?.event?.content ?: note.event?.content ?: "")
     }
 
     fun cancelEdit() {

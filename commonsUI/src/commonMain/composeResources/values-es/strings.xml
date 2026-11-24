@@ -3339,6 +3339,7 @@
     <string name="concord_redeeming_invite">Canjeando invitación…</string>
     <string name="concord_invite_links_created">Creado %1$s</string>
     <string name="concord_invite_links_empty">Aún no has creado enlaces de invitación para esta comunidad. Los enlaces que crearon otros administradores se gestionan en sus propios dispositivos.</string>
+    <string name="concord_invite_links_create">Crear enlace de invitación</string>
     <string name="concord_invite_links_unreadable">No se pudieron cargar tus enlaces de invitación, así que ahora no se puede revocar ninguno. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="concord_invite_revoke_action">Revocar enlace</string>
     <string name="concord_invite_revoke_title">¿Revocar este enlace?</string>
@@ -5256,6 +5257,7 @@
     <string name="concord_invite_failed_revoked">Este enlace de invitación fue revocado y ya no se puede usar. Pide uno nuevo.</string>
     <string name="concord_invite_links_action">Enlaces de invitación…</string>
     <string name="concord_invite_links_title">Enlaces de invitación</string>
+    <string name="concord_invite_mint_failed">No se pudo crear el enlace de invitación. Puede que no tengas permiso para invitar a esta comunidad o que el enlace no se haya podido guardar en tus relés. Inténtalo de nuevo en un momento.</string>
     <string name="concord_invite_revoked_failed">No se pudo revocar el enlace. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="concord_invite_revoked_ok">Enlace de invitación revocado.</string>
     <string name="concord_invite_title">Enlace de invitación</string>

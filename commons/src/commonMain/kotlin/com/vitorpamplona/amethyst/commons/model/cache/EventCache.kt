@@ -161,6 +161,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFrag
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatRules
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
@@ -1204,6 +1205,9 @@ open class EventCache :
         // only (CORD-02 Appendix B). Another plane's kind — a Control edition, a Guestbook motion, a
         // rekey blob — must never land in the store as if it came from its own plane.
         if (!ChannelChat.isChatKind(rumor.kind)) return
+        // A reaction a row can't show (a sentence, a link) is not tallied on any client (CORD-03,
+        // Quartz's ConcordChatRules): never stored, so it never lands on its target's chips.
+        if (rumor is ReactionEvent && !ConcordChatRules.isRenderableReaction(rumor.content)) return
 
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through

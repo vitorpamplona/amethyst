@@ -177,7 +177,8 @@ fun ChatReactionChips(
                 note.reactions.entries
                     .groupBy({ (type, _) -> marmotEmoji?.chipKey(type) ?: type }, { it.toPair() })
                     .map { (_, entries) ->
-                        val reactors = entries.flatMap { it.second }
+                        // One per reactor and key (NIP-25, Concord's tally rule): reacting twice is one reaction.
+                        val reactors = entries.flatMap { it.second }.distinctBy { it.author ?: it }
                         val mine =
                             if (myIdentities != null) {
                                 reactors.any { it.author?.pubkeyHex in myIdentities }

@@ -205,6 +205,11 @@ class DesktopAppModules(
      * so a test run reads and writes on a relay it started itself, like `amy serve`. See [addStartupLocalRelays].
      */
     private val startupLocalRelays: List<String> = emptyList(),
+    /**
+     * Relays a startup sign-up gives the new account in place of the defaults (`AMETHYST_SIGNUP_RELAYS`,
+     * comma-separated): every relay list it starts with names only these, and it publishes only to them.
+     */
+    private val startupSignUpRelays: List<String> = emptyList(),
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
 
@@ -733,15 +738,20 @@ class DesktopAppModules(
     }
 
     /**
-     * Signs up as the sign-up screen does with [name]: a new key, Amethyst's default relays and lists
+     * Signs up as the sign-up screen does with [name]: a new key, Amethyst's default relays (or
+     * [startupSignUpRelays] when set) and lists
      * published to the relays, and the follow import to start on. Transient like [startupLogin], so
      * no key prompt; the nsec goes to [SIGNUP_KEY_FILE] (owner-only) for a later run's
      * `AMETHYST_LOGIN` to open the same account.
      */
     private suspend fun startupSignUp(name: String) {
+        val relays = startupSignUpRelays.mapNotNull { it.normalizeRelayUrlOrNull() }.toSet()
+        if (relays.size != startupSignUpRelays.distinct().size) {
+            Log.w("DesktopAppModules") { "Ignoring unparsable sign-up relays in ${startupSignUpRelays.joinToString()}" }
+        }
         val account =
             try {
-                sessionManager.signUp(name, transientAccount = true)
+                sessionManager.signUp(name, transientAccount = true, relays = relays.ifEmpty { null })
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // signUp set the loading screen; without this it would stay there.

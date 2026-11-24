@@ -39,9 +39,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
@@ -88,6 +90,7 @@ fun ShowUserSuggestionList(
     itemColors: ListItemColors = ListItemDefaults.colors(),
     showDividers: Boolean = true,
     contentPadding: PaddingValues = SuggestionListPadding,
+    onShown: (List<User>) -> Unit = {},
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
@@ -108,7 +111,7 @@ fun ShowUserSuggestionList(
         }
     }
 
-    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty, trailingContent, itemColors, showDividers, contentPadding)
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty, trailingContent, itemColors, showDividers, contentPadding, onShown)
 }
 
 @Composable
@@ -135,8 +138,10 @@ fun WatchResponses(
     itemColors: ListItemColors = ListItemDefaults.colors(),
     showDividers: Boolean = true,
     contentPadding: PaddingValues = SuggestionListPadding,
+    onShown: (List<User>) -> Unit = {},
 ) {
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
+    ReportShown(suggestions, onShown)
 
     if (suggestions.isNotEmpty()) {
         // Snapshot once per result list, not per row.
@@ -262,4 +267,18 @@ private fun NonClickableObserveAndDisplayNIP05(
         maxLines = 1,
         overflow = TextOverflow.Visible,
     )
+}
+
+/**
+ * Tells [onShown] which suggestions a list shows, and that it shows none once it leaves the
+ * screen, so a composer can let Enter pick the first one ([sendOnEnter]).
+ */
+@Composable
+internal fun <T> ReportShown(
+    suggestions: List<T>,
+    onShown: (List<T>) -> Unit,
+) {
+    val current by rememberUpdatedState(onShown)
+    LaunchedEffect(suggestions) { current(suggestions) }
+    DisposableEffect(Unit) { onDispose { current(emptyList()) } }
 }

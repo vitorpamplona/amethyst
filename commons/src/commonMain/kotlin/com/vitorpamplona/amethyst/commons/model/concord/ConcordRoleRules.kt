@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 
 /**
  * What a legacy CORD-04 role editor may write. Every reader drops a role edition whose author does
@@ -31,6 +33,26 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
  * role exists to ask about: the positions it may offer and the bits it lists.
  */
 object ConcordRoleRules {
+    /**
+     * Rank order (CORD-04 §3): the lower position ranks higher; peers at one position (a Roles v2
+     * rank key two roles share) by role id, so every screen and every device lists them alike.
+     */
+    val rankOrder: Comparator<Map.Entry<String, RoleEntity>> =
+        compareBy<Map.Entry<String, RoleEntity>> { it.value.position }.thenBy { it.key.lowercase() }
+
+    /** The live (not deleted) [roles], highest-ranked first ([rankOrder]). */
+    fun byRank(roles: Map<String, RoleEntity>): List<Map.Entry<String, RoleEntity>> = roles.entries.filter { !it.value.deleted }.sortedWith(rankOrder)
+
+    /** The role a member's badge names: the highest-ranked one [member] holds ([rankOrder]), or null for none. */
+    fun badgeRole(
+        authority: AuthorityResolver,
+        member: String,
+    ): RoleEntity? {
+        val held = authority.rolesOf(member)
+        if (held.isEmpty()) return null
+        return byRank(authority.roles().filterKeys { it in held }).firstOrNull()?.value
+    }
+
     /** Whether an editor of rank [myRank] may move a role from [oldPosition] (null: a new role) to [newPosition]. */
     fun canPlace(
         myRank: Long,
