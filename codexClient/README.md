@@ -20,7 +20,9 @@ uses: `initialize` + `initialized`, `model/list`, `thread/start|resume|fork|read
 `thread/name/set`, `turn/start|interrupt`; notifications `turn/started|completed`, `item/started|completed`,
 `item/agentMessage/delta`, `thread/tokenUsage/updated`, `serverRequest/resolved`; and answers
 `item/commandExecution/requestApproval` and `item/fileChange/requestApproval` with `accept`,
-`acceptForSession`, `decline` or `cancel`. Codex's other requests are refused at once.
+`acceptForSession`, `decline` or `cancel`; and `item/tool/requestUserInput` (questions with an `id`,
+`options` or none, `isOther`, `isSecret`), answered with each id's list of strings: the label picked,
+then the typed text as `user_note: …` (`CodexQuestions`). Codex's other requests are refused at once.
 
 The chat's permission modes become an approval policy and a sandbox: ask (`untrusted`,
 `workspace-write`), accept edits (`on-request`, `workspace-write`), plan (`on-request`, `read-only`).

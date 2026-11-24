@@ -265,6 +265,7 @@ internal fun ToolKind.symbol(): MaterialSymbol =
         ToolKind.AGENT -> MaterialSymbols.Assistant
         ToolKind.SETTINGS -> MaterialSymbols.Settings
         ToolKind.PLAN -> MaterialSymbols.Checklist
+        ToolKind.QUESTION -> MaterialSymbols.Forum
         ToolKind.OTHER -> MaterialSymbols.Apps
     }
 

@@ -319,14 +319,17 @@ class CodexConnection(
                     val changes = items[itemId]?.get("changes") ?: JsonArray(emptyList())
                     approval(key, itemId, CodexItems.APPLY_PATCH, buildJsonObject { put("changes", changes) }, params.text("reason"), PermissionSuggestion.Rule(CodexItems.APPLY_PATCH, null))
                 }
+                CodexQuestions.METHOD -> CodexQuestions.parse(params)?.let { questions -> CodexQuestions.request(key, itemId, params, questions) }
                 else -> null
             }
         if (asked == null) {
-            // Codex asks for things this client doesn't offer (user input forms, logins): say so, so it never waits.
+            // Codex asks for things this client doesn't offer (MCP forms, logins): say so, so it never waits.
             rpc.replyError(request.id, "Not supported by this client: ${request.method}")
             return
         }
         openApprovals[key] = request.id
+        // Codex keeps no item for its questions: the chat gets a row for them, answered in [respond].
+        if (asked.questions != null) showCall(ContentBlock.ToolUse(asked.toolUseId ?: key, CodexQuestions.TOOL, request.params))
         output.send(AgentEvent.ApprovalRequested(asked))
     }
 
@@ -384,10 +387,20 @@ class CodexConnection(
         decision: PermissionDecision,
     ) {
         val id = openApprovals.remove(request.requestId) ?: return
+        val questions = request.questions
+        if (questions != null) {
+            // Refused questions get no answers: Codex goes on without them.
+            rpc.reply(id, CodexQuestions.response(questions, decision as? PermissionDecision.Answer))
+            output.send(AgentEvent.ToolResults(listOf(ContentBlock.ToolResult(request.toolUseId ?: request.requestId, CodexQuestions.summary(questions, decision), isError = decision is PermissionDecision.Deny))))
+            if ((decision as? PermissionDecision.Deny)?.interrupt == true) interrupt()
+            return
+        }
         val answer =
             when (decision) {
                 is PermissionDecision.Allow -> if (decision.updatedPermissions != null) "acceptForSession" else "accept"
                 is PermissionDecision.Deny -> if (decision.interrupt) "cancel" else "decline"
+                // Only a question request takes answers, and that one returned above.
+                is PermissionDecision.Answer -> "decline"
             }
         rpc.reply(id, buildJsonObject { put("decision", answer) })
     }

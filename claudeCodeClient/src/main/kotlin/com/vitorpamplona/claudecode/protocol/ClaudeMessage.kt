@@ -43,6 +43,8 @@ sealed interface ClaudeMessage {
         val tools: List<String>,
         val claudeCodeVersion: String?,
         override val raw: JsonObject,
+        /** Protocol features this CLI supports (`ask_user_question_unanswered_v1`, ...). */
+        val capabilities: List<String> = emptyList(),
     ) : ClaudeMessage
 
     /** `session_state_changed`: whether the session is idle, running or waiting on an answer. */
@@ -202,6 +204,7 @@ sealed interface ClaudeMessage {
                                 tools = obj.strings("tools"),
                                 claudeCodeVersion = obj.string("claude_code_version"),
                                 raw = obj,
+                                capabilities = obj.strings("capabilities"),
                             )
                         "session_state_changed" -> SessionState(sessionId, obj.string("state") ?: "", obj)
                         else -> System(subtype, sessionId, obj)

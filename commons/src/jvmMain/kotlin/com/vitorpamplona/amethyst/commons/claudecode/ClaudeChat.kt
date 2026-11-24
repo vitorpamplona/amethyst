@@ -496,6 +496,15 @@ class ClaudeChat internal constructor(
 
     fun deny(request: PermissionRequest) = answer(request, PermissionDecision.Deny("The user declined this tool call."))
 
+    /** Answers the agent's questions ([PermissionRequest.questions]). */
+    fun answerQuestions(
+        request: PermissionRequest,
+        answers: PermissionDecision.Answer,
+    ) = answer(request, answers)
+
+    /** Closes the agent's questions unanswered; the agent goes on without them. */
+    fun dismissQuestions(request: PermissionRequest) = answer(request, PermissionDecision.Deny("The user dismissed the questions without answering them."))
+
     private fun answer(
         request: PermissionRequest,
         decision: PermissionDecision,

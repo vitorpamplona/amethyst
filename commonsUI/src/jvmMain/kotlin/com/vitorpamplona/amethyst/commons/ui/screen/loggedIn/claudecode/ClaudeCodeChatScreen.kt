@@ -105,6 +105,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
@@ -377,12 +378,17 @@ fun ClaudeCodeChatScreen(
                     switching = true
                     true
                 }
+                // Questions wait: Esc dismisses them. Enter belongs to the card's own fields.
+                pending?.questions != null && event.key == Key.Escape -> {
+                    viewModel.dismissQuestions(pending)
+                    true
+                }
                 // An approval waits: Esc denies; Enter, with nothing typed, gives the default answer.
-                pending != null && event.key == Key.Escape -> {
+                pending != null && pending.questions == null && event.key == Key.Escape -> {
                     viewModel.deny(pending)
                     true
                 }
-                pending != null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
+                pending != null && pending.questions == null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
                     if (pending.defaultToNo) viewModel.deny(pending) else viewModel.approve(pending, always = false)
                     true
                 }
@@ -537,6 +543,16 @@ fun ClaudeCodeChatScreen(
                             )
 
                             state.pendingPermissions.firstOrNull()?.let { request ->
+                                val questions = request.questions
+                                if (questions != null) {
+                                    QuestionCard(
+                                        request = request,
+                                        questions = questions,
+                                        onAnswer = { viewModel.answerQuestions(request, it) },
+                                        onDismiss = { viewModel.dismissQuestions(request) },
+                                    )
+                                    return@let
+                                }
                                 PermissionCard(
                                     request = request,
                                     note = state.permissionNotes[request.requestId],
@@ -572,7 +588,13 @@ fun ClaudeCodeChatScreen(
                                     focusRequester = composerFocus,
                                     busy = state.isBusy,
                                     onSend = { text, images ->
-                                        if (images.isEmpty()) viewModel.send(text) else viewModel.send(text, images.map { it.input }, images.map { it.file })
+                                        val asking = pending?.takeIf { it.questions != null }
+                                        when {
+                                            // Open questions hold the turn: a message now is the reply to them, not the next prompt.
+                                            asking != null && images.isEmpty() && !text.startsWith("/") -> viewModel.answerQuestions(asking, PermissionDecision.Answer(emptyMap(), reply = text))
+                                            images.isEmpty() -> viewModel.send(text)
+                                            else -> viewModel.send(text, images.map { it.input }, images.map { it.file })
+                                        }
                                     },
                                     onStop = { viewModel.interrupt() },
                                 )
@@ -834,10 +856,10 @@ private fun Messages(
                                 }
                             is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = replyBlocks)
                             is ChatItem.ToolCall ->
-                                if (ToolKind.of(item.name) == ToolKind.EDIT) {
-                                    FileChangeRow(item, state.cwd, turnRunning)
-                                } else {
-                                    ToolCallRow(item, state.cwd, turnRunning)
+                                when (ToolKind.of(item.name)) {
+                                    ToolKind.EDIT -> FileChangeRow(item, state.cwd, turnRunning)
+                                    ToolKind.QUESTION -> QuestionCallRow(item, turnRunning)
+                                    else -> ToolCallRow(item, state.cwd, turnRunning)
                                 }
                             is ChatItem.Notice -> NoticeRow(item, onRetry = onRetry?.takeIf { !busy && item === state.items.lastOrNull() })
                         }
@@ -1253,7 +1275,7 @@ private fun ToolGroupRow(
                     ToolKind.AGENT -> Res.plurals.claude_code_tool_group_agent
                     ToolKind.SETTINGS -> Res.plurals.claude_code_tool_group_settings
                     // Left out of the rows (the task card shows them); counted as other tools if one slips in.
-                    ToolKind.PLAN, ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
+                    ToolKind.PLAN, ToolKind.QUESTION, ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
                 },
                 n,
                 n,
