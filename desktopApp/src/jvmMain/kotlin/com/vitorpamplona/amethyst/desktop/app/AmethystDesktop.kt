@@ -283,6 +283,7 @@ fun main(args: Array<String>) {
         Thread {
             runCatching { modules.flushUiPrefs() }
             runCatching { modules.flushAccountSettings() }
+            runCatching { modules.flushMarmotReceivedState() }
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
             modules.torManager.stopSync()
@@ -324,6 +325,13 @@ fun main(args: Array<String>) {
                     WindowState(size = defaultWindowSize(), position = WindowPosition.Aligned(Alignment.Center))
                 }
             }
+
+        // Minimized: the Marmot receive state goes to disk now, not 32 messages from now.
+        LaunchedEffect(windowState) {
+            snapshotFlow { windowState.isMinimized }
+                .filter { it }
+                .collect { withContext(Dispatchers.IO) { modules.accountsCache.flushMarmotReceivedState() } }
+        }
 
         // Saved as it changes, once the user stops dragging or resizing, so even a crash keeps it.
         LaunchedEffect(windowState) {
@@ -525,6 +533,8 @@ fun main(args: Array<String>) {
             key(windowGeneration) {
                 AppWindow(
                     onCloseRequest = {
+                        // Closing may only hide the window to the tray; either way the receive state is written.
+                        modules.applicationIOScope.launch { modules.accountsCache.flushMarmotReceivedState() }
                         windows.closeMainWindow(
                             root.navigator.stacks?.arrangement,
                             quit,

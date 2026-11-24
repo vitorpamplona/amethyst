@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotReceiveFlusher
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
@@ -1328,6 +1329,22 @@ class Account(
                     ),
             )
         }
+
+    /**
+     * Writes Marmot receive state after each burst of live events, which marmot-kmp otherwise writes
+     * only every 32 opened messages; [flushMarmotReceivedState] writes it at once.
+     */
+    val marmotReceiveFlusher: MarmotReceiveFlusher? =
+        marmotManager?.let { manager -> MarmotReceiveFlusher(scope, flush = { manager.flushReceivedState() }) }
+
+    /**
+     * Writes the receive state of every Marmot group whose ratchets moved since it was last written:
+     * call when the app goes to the background, before an account switch and on exit, so a restart
+     * neither opens those messages again nor finds their keys on disk.
+     */
+    suspend fun flushMarmotReceivedState() {
+        marmotReceiveFlusher?.flushNow()
+    }
 
     /** Pin, mute and archive of this account's Marmot chats, shared with its linked devices when device groups are on. */
     val marmotChatSettings = MarmotChatSettings(marmotLocalBlobs)

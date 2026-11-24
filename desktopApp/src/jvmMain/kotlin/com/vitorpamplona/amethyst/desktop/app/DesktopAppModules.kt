@@ -782,6 +782,13 @@ class DesktopAppModules(
         }
     }
 
+    /** Writes every account's Marmot receive state; bounded, for the shutdown hook. */
+    fun flushMarmotReceivedState() {
+        runBlocking {
+            withTimeoutOrNull(FLUSH_TIMEOUT_MS) { accountsCache.flushMarmotReceivedState() }
+        }
+    }
+
     /**
      * Saves every loaded account's settings now, as [flushUiPrefs] does the UI's: a last-read marker
      * or a setting changed in the last second before quitting is still in the account's debounce.

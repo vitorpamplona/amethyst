@@ -589,6 +589,8 @@ class AccountSessionManager(
         // Whatever the previous user had running (an audio room, a call) belongs to them, so it ends
         // before the swap. This is the real "account switch" hook; the Activity being destroyed is not.
         hooks.onSessionEnding()
+        // The account being left keeps its Marmot receive state on disk, not only in memory.
+        loggedInAccount()?.flushMarmotReceivedState()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
     }

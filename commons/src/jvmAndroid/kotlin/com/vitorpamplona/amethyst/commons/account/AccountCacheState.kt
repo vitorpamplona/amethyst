@@ -173,6 +173,18 @@ class AccountCacheState(
 
     override fun loadedAccount(pubkey: HexKey): Account? = accounts.value[pubkey]
 
+    /** Writes every loaded account's Marmot receive state ([Account.flushMarmotReceivedState]): the app is going to the background or away. */
+    suspend fun flushMarmotReceivedState() {
+        accounts.value.values.forEach { account ->
+            try {
+                account.flushMarmotReceivedState()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountCacheState", "could not write the Marmot receive state of ${account.signer.pubKey.take(8)}", e)
+            }
+        }
+    }
+
     override fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
