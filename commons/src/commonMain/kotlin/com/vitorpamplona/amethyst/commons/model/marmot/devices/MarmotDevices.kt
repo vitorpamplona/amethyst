@@ -102,6 +102,11 @@ class MarmotDevices(
      * the lock.
      */
     private val onChatsJoined: (suspend (List<HexKey>) -> Unit)? = null,
+    /**
+     * Where imported history is written down as read the moment it is taken from the device group,
+     * before [onHistoryImported] runs, so a process death in between cannot restore it as unread.
+     */
+    private val importedReads: MarmotImportedHistoryReads? = null,
 ) {
     val groups: MarmotDeviceGroupManager = checkNotNull(manager.deviceGroups) { "MarmotManager was built without device groups" }
 
@@ -288,10 +293,15 @@ class MarmotDevices(
             refreshState()
         }
 
-    /** Hands the app the history imported since the last call, after the lock is released. */
-    private fun queueImportedHistory() {
+    /**
+     * Hands the app the history imported since the last call, after the lock is released. Written
+     * down as read first ([importedReads]): the messages are in the store already, and the show is
+     * only queued.
+     */
+    private suspend fun queueImportedHistory() {
         val imported = groups.drainImportedHistory()
         if (imported.isEmpty()) return
+        importedReads?.record(imported, clock())
         val show = onHistoryImported ?: return
         sends.add { show(imported) }
     }

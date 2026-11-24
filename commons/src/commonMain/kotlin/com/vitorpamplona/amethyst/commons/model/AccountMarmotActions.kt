@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageReach
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.importedHistoryReadUpTo
 import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
@@ -780,6 +781,15 @@ class AccountMarmotActions(
         }
     }
 
+    /** Moves [groupId]'s last-read time to [upTo] unless it is already there. */
+    fun markMarmotChatReadUpTo(
+        groupId: HexKey,
+        upTo: Long,
+    ) {
+        val route = marmotGroupLastReadRoute(groupId)
+        if (account.loadLastRead(route) < upTo) account.markAsRead(route, upTo)
+    }
+
     /**
      * History a linked sibling delivered (`account-sync.md` "History deliveries"): already in the
      * message store, indexed here like a restored message. Importing is not reading, so it moves no
@@ -793,9 +803,9 @@ class AccountMarmotActions(
             val groupId = history.nostrGroupId
             val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
             // Read before indexing: a cache observer that sees the notes sees them as read already.
-            history.events.maxOfOrNull { it.createdAt }?.let { newest ->
-                val route = marmotGroupLastReadRoute(groupId)
-                if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
+            // Clamped to now (importedHistoryReadUpTo): a message dated ahead must not silence the chat.
+            importedHistoryReadUpTo(history.events.map { it.createdAt }, TimeUtils.now())?.let { upTo ->
+                markMarmotChatReadUpTo(groupId, upTo)
             }
             for (event in history.events) {
                 try {

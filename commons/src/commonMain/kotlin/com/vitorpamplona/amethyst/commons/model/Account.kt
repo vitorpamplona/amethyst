@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobSt
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotImportedHistoryReads
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
@@ -1325,6 +1326,9 @@ class Account(
     /** Pin, mute and archive of this account's Marmot chats, shared with its linked devices when device groups are on. */
     val marmotChatSettings = MarmotChatSettings(marmotLocalBlobs)
 
+    /** How far each chat's imported device-group history counts as read; applied on every start. */
+    val marmotImportedHistoryReads = MarmotImportedHistoryReads(marmotLocalBlobs)
+
     /**
      * Device groups for this account (linking its devices, the hidden device group, adding
      * siblings to chats), or null while the switch is off. See [MarmotDevices].
@@ -1340,6 +1344,7 @@ class Account(
                 onSmallState = { state -> marmot.applyMarmotSmallState(state) },
                 onHistoryImported = { imports -> marmot.indexImportedMarmotHistory(imports) },
                 onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
+                importedReads = marmotImportedHistoryReads,
             )
         }
 
@@ -4671,6 +4676,10 @@ class Account(
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
+
+                // Imported device-group history is read, even when the app died before showing it:
+                // its chats' last-read times move past it before any of it is indexed.
+                marmotImportedHistoryReads.load().forEach { (groupId, upTo) -> marmot.markMarmotChatReadUpTo(groupId, upTo) }
 
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.
