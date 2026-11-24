@@ -149,7 +149,6 @@ class FrontPageModels(
 @Immutable
 data class ShownEdition(
     val edition: SavedEdition,
-    /** The page as kept: what Download saves. The screen draws [SavedEdition.weather] over it ([ObserverWeather.withStrip]). */
     val html: String?,
 )
 

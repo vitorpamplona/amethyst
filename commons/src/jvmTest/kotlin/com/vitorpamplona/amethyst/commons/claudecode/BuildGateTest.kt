@@ -87,6 +87,43 @@ class BuildGateTest {
         return withTimeout(30_000) { state.first { it !is GateState.Running && it !is GateState.NotRun } }
     }
 
+    /** [state] as a pass, or a failure that says what the checks printed: a bare type mismatch tells nothing on a CI runner. */
+    private fun passed(state: GateState): GateState.Passed =
+        state as? GateState.Passed
+            ?: throw AssertionError("The checks didn't pass: $state")
+
+    /** An executable file at [path] under [dir], as a Git for Windows install has it. */
+    private fun exe(
+        dir: File,
+        path: String,
+    ): File =
+        File(dir, path).apply {
+            check(parentFile.isDirectory || parentFile.mkdirs()) { "could not create $parentFile" }
+            writeText("")
+            check(setExecutable(true)) { "could not make $this executable" }
+        }
+
+    @Test
+    fun onWindowsTheChecksRunInGitsOwnBash() {
+        // Git for Windows puts cmd\ on the PATH, with git.exe; its bash is in bin\.
+        val git = File(tmp, "Git")
+        exe(git, "cmd/git.exe")
+        val bash = exe(git, "bin/bash.exe")
+        assertEquals(bash.absolutePath, BuildGate.bash(windows = true, path = File(git, "cmd").absolutePath, windowsDir = null))
+
+        // A git with no bash beside it: a bash.exe on the PATH, but never the Windows folder's (WSL's launcher).
+        val system32 = File(tmp, "Windows/System32").apply { mkdirs() }
+        exe(system32, "bash.exe")
+        val other = File(tmp, "tools").apply { mkdirs() }
+        val otherBash = exe(other, "bash.exe")
+        val path = listOf(system32, other).joinToString(File.pathSeparator) { it.absolutePath }
+        assertEquals(otherBash.absolutePath, BuildGate.bash(windows = true, path = path, windowsDir = File(tmp, "Windows").absolutePath))
+
+        // Nothing found, or not Windows: plain bash.
+        assertEquals("bash", BuildGate.bash(windows = true, path = system32.absolutePath, windowsDir = File(tmp, "Windows").absolutePath))
+        assertEquals("bash", BuildGate.bash(windows = false, path = File(git, "cmd").absolutePath, windowsDir = null))
+    }
+
     @Test
     fun aPassCountsForTheWorkItChecked() =
         runBlocking<Unit> {
@@ -94,7 +131,7 @@ class BuildGateTest {
             gate.recheck()
             assertSame(GateState.NotRun, gate.stateNow())
 
-            val passed = assertIs<GateState.Passed>(gate.runToEnd())
+            val passed = passed(gate.runToEnd())
             assertTrue(passed.tail.contains("checking"), passed.tail)
             assertTrue(gate.stateNow().allowsPublishing)
         }
@@ -103,7 +140,7 @@ class BuildGateTest {
     fun aCommitAfterThePassOutdatesIt() =
         runBlocking<Unit> {
             val gate = BuildGate(repo, scope)
-            assertIs<GateState.Passed>(gate.runToEnd())
+            passed(gate.runToEnd())
 
             commit("more.txt", "new work\n")
             gate.recheck()
@@ -116,7 +153,7 @@ class BuildGateTest {
     fun anEditNotCommittedOutdatesItToo() =
         runBlocking<Unit> {
             val gate = BuildGate(repo, scope)
-            assertIs<GateState.Passed>(gate.runToEnd())
+            passed(gate.runToEnd())
 
             File(repo, "README.md").writeText("app, edited\n")
             gate.recheck()

@@ -167,6 +167,21 @@ class JsoupPaperBoundaryTest {
     private fun markup(body: String) = kinds(body).filter { it == Violation.Kind.MARKUP }
 
     @Test
+    fun theWeatherCardPassesAsTheDeskGivesIt() {
+        val report =
+            WeatherReport(
+                place = "Somerville, Massachusetts, United States",
+                fahrenheit = true,
+                asOf = "07:45",
+                now = 42,
+                nowCode = 0,
+                days = listOf(WeatherDay("2026-11-20", 65, 36, 0, 3), WeatherDay("2026-11-21", 61, 36, 0, 3)),
+            )
+        val card = ObserverWeather.card(report).joinToString("\n")
+        assertEquals(emptyList(), kinds("<main>$card</main>"))
+    }
+
+    @Test
     fun nestedCssRulesAreRefusedWhereverTheySit() {
         val quote = "<main><blockquote><p>The relay answered in <em>three seconds</em> flat</p></blockquote></main>"
         assertEquals(emptyList(), kinds(quote))

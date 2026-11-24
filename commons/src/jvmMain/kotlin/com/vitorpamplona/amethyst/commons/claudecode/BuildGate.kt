@@ -178,7 +178,7 @@ class BuildGate(
                 val code =
                     try {
                         val started =
-                            ProcessBuilder("bash", script.absolutePath)
+                            ProcessBuilder(bash(), script.absolutePath)
                                 .directory(root)
                                 .redirectErrorStream(true)
                                 .apply {
@@ -236,6 +236,35 @@ class BuildGate(
 
     companion object {
         private const val TAG = "BuildGate"
+
+        /**
+         * The bash that runs the checks. On Windows a bare `bash` is looked up in System32 before
+         * the PATH, where it can be WSL's launcher, which can't run a script at a Windows path:
+         * there it is Git for Windows' own bash, found from the `git` on [path] (`cmd\git.exe`,
+         * `bin\git.exe` or `mingw64\bin\git.exe`, with bash in `bin\` or `usr\bin\`), else a
+         * `bash.exe` on [path] outside the Windows folder. Elsewhere, and when none is found, `bash`.
+         */
+        internal fun bash(
+            windows: Boolean = System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true),
+            path: String? = System.getenv("PATH"),
+            windowsDir: String? = System.getenv("SystemRoot"),
+        ): String {
+            if (!windows) return "bash"
+            val git = PushGuard.gitOnPath(path)
+            val besideGit =
+                generateSequence(git?.parentFile) { it.parentFile }
+                    .take(3)
+                    .flatMap { dir -> sequenceOf(File(dir, "bin/bash.exe"), File(dir, "usr/bin/bash.exe")) }
+            val onPath =
+                path
+                    .orEmpty()
+                    .split(File.pathSeparator)
+                    .filter { it.isNotBlank() && (windowsDir == null || !it.startsWith(windowsDir, ignoreCase = true)) }
+                    .asSequence()
+                    .map { File(it, "bash.exe") }
+            return (besideGit + onPath).firstOrNull { it.isFile }?.absolutePath ?: "bash"
+        }
+
         private const val TAIL = 6_000
         private const val LOG_MAX = 2_000_000
         private const val SHOW_MS = 100L
