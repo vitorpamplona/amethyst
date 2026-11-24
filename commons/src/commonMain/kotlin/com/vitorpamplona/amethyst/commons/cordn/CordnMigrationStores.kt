@@ -39,15 +39,20 @@ import okio.Path
  * disagree about what a migration carries.
  */
 object CordnMigrationStores {
-    /** Collects every group on disk for [configs], including those whose session failed to open today. */
+    /**
+     * Collects every group on disk for [configs], including those whose session failed to open today.
+     * [guard] runs around each group's reads ([CordnLocalState.read]): a process with sessions open
+     * passes its registry's `whileIdle`, so no save lands between a group's state and its cursor.
+     */
     suspend fun read(
         root: Path,
         accountPubKey: HexKey,
         cipher: CordnBlobCipher,
         configs: List<CoordinatorConfig>,
         fileSystem: FileSystem = platformFileSystem,
+        guard: suspend (coordinatorPubKey: HexKey, gid: String, read: suspend () -> Unit) -> Unit = { _, _, read -> read() },
     ): CordnMigrationSnapshot {
-        val state = CordnLocalState.read(configs.map { it.pubKey }) { storesFor(root, accountPubKey, cipher, fileSystem, it) }
+        val state = CordnLocalState.read(configs.map { it.pubKey }, guard) { storesFor(root, accountPubKey, cipher, fileSystem, it) }
         return CordnMigrationSnapshot.of(accountPubKey, configs, state)
     }
 

@@ -763,7 +763,9 @@ class CordnRuntime(
      */
     suspend fun exportArchive(passphrase: String): ByteArray {
         val configs = coordinatorStore.load()
-        val state = withContext(Dispatchers.IO) { CordnLocalState.read(configs.map { it.pubKey }, ::storesFor) }
+        // Each group read under its lock: an open session saving it meanwhile cannot leave the
+        // archive with the state from before a Commit and the cursor from after it.
+        val state = withContext(Dispatchers.IO) { CordnLocalState.read(configs.map { it.pubKey }, registry::whileIdle) { storesFor(it) } }
         return CordnBackup.seal(CordnBackup.Archive.of(accountSigner.pubKey, configs, state), passphrase)
     }
 
@@ -819,7 +821,7 @@ class CordnRuntime(
      */
     suspend fun migrationSnapshot(): CordnMigrationSnapshot =
         withContext(Dispatchers.IO) {
-            CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load())
+            CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load(), guard = registry::whileIdle)
         }
 
     /**
