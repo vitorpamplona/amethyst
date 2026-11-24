@@ -196,6 +196,8 @@ class ClaudeChat internal constructor(
     private val workstreamOf: (File) -> AgentWorkspace? = { null },
     /** The push scope each session first started with, kept across app restarts. */
     private val pushScopes: PushScopeStore = PushScopeStore.NONE,
+    /** The push rules a guarded session starts with, for its repositories and its scope; tests replace it. */
+    private val pushRulesFor: (repos: List<File>, scope: PushScope) -> PushGuard.PushRules = { repos, scope -> PushGuard.environment(repos = repos, scope = scope) },
     /** What to tell the agent about the folder it works in (a workstream's clones), if anything. */
     private val folderBrief: (File) -> String? = { null },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
@@ -631,7 +633,7 @@ class ClaudeChat internal constructor(
                         val repos = repos(workDir)
                         val scope = PushGuard.scopeFor(known, current.sessionId, pushScopes) { PushGuard.capture(repos, workstream) }
                         pushScope = scope
-                        PushGuard.environment(repos = repos, scope = scope)
+                        pushRulesFor(repos, scope)
                     }
                 } else {
                     null

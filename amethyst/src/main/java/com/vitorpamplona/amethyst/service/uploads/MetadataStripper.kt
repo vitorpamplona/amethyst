@@ -25,6 +25,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import com.davotoula.lightcompressor.sanitizer.Mp4Sanitizer
+import com.davotoula.lightcompressor.sanitizer.SanitizeResult
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
@@ -262,8 +263,7 @@ object MetadataStripper {
 
     /**
      * Rewrites the MP4 at [uri] into a cache file through [Mp4Sanitizer]. A remux whose fast-start
-     * pass failed is still stripped, so it is returned with a warning; any failure returns [uri]
-     * unstripped. Cancelling the caller interrupts the remux, which the library then abandons.
+     * pass failed is still stripped (the library logs it); any failure returns [uri] unstripped.
      */
     private suspend fun sanitizeMp4(
         uri: Uri,
@@ -271,23 +271,42 @@ object MetadataStripper {
         kind: String,
         suffix: String,
     ): StrippingResult {
-        var tempFile: File? = null
-        return try {
-            val output = File.createTempFile("stripped_${kind}_", suffix, context.cacheDir)
-            tempFile = output
-            val result = runInterruptible(Dispatchers.IO) { Mp4Sanitizer.sanitize(context, uri, output) }
-            if (!result.fastStart) Log.w(TAG) { "Sanitized $kind is not fast-start: ${output.name}" }
-            Log.d(TAG) { "Stripped metadata from $kind" }
-            StrippingResult(output.toUri(), true)
+        val failure = "Failed to strip $kind metadata"
+        val output =
+            try {
+                File.createTempFile("stripped_${kind}_", suffix, context.cacheDir)
+            } catch (e: Exception) {
+                Log.w(TAG, failure, e)
+                return StrippingResult(uri, false)
+            }
+        runSanitizer(output, failure) { Mp4Sanitizer.sanitize(context, uri, output) } ?: return StrippingResult(uri, false)
+        Log.d(TAG) { "Stripped metadata from $kind" }
+        return StrippingResult(output.toUri(), true)
+    }
+
+    /**
+     * Runs [sanitize], an [Mp4Sanitizer] call writing [output], so that cancelling the caller
+     * interrupts the remux. Its result, or null when it failed ([failure] is logged); [output] is
+     * deleted on a failure or a cancellation. A cancelled caller gets the cancellation, not a null.
+     */
+    internal suspend fun runSanitizer(
+        output: File,
+        failure: String,
+        sanitize: () -> SanitizeResult,
+    ): SanitizeResult? {
+        var result: SanitizeResult? = null
+        try {
+            result = runInterruptible(Dispatchers.IO, sanitize)
         } catch (e: Exception) {
-            tempFile?.deleteOrWarn(TAG, TEMP_FILE_LABEL)
             if (e is CancellationException) throw e
             // An interrupted remux surfaces as InterruptedIOException, which runInterruptible does
-            // not turn into a cancellation: a cancelled upload stops here instead of asking the user.
+            // not turn into a cancellation: a cancelled upload stops here instead of failing.
             currentCoroutineContext().ensureActive()
-            Log.w(TAG, "Failed to strip $kind metadata", e)
-            StrippingResult(uri, false)
+            Log.w(TAG, failure, e)
+        } finally {
+            if (result == null) output.deleteOrWarn(TAG, TEMP_FILE_LABEL)
         }
+        return result
     }
 
     fun stripMp3Metadata(

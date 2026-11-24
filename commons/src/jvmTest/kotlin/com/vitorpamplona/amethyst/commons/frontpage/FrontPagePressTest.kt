@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -195,6 +196,22 @@ class FrontPagePressTest {
             assertTrue(prefix.contains("Edition: Vol. I \u00b7 No. 7"))
             assertTrue(prefix.contains("1 events read, 1 voices, 1 kept in the digest"))
             assertTrue(prefix.indexOf("Date:") < prefix.indexOf("<corpus>"))
+        }
+
+    @Test
+    fun theWeatherDeskComesWithTheForecastAndMarksThePaperPrivate() =
+        runBlocking {
+            val report = WeatherReport("Somerville, Massachusetts", fahrenheit = true, now = 42, nowCode = 0, days = listOf(WeatherDay("2026-11-09", 60, 40, 10, 3)))
+            val calls = mutableListOf<WriteCall>()
+            val withWeather = press(relayWithNotes(), mutableListOf(goodPage), calls).print(OBSERVER, "Alice", context = EditionContext(weather = CompletableDeferred(report)))
+            assertTrue(assertIs<PrintResult.Printed>(withWeather).namesPlace)
+            assertTrue(calls[0].messages[1].prefix!!.contains("<div class=\"box-head\">Weather · Somerville</div>"))
+
+            // A forecast that answered nothing: no desk, and nothing keeps the paper off the site.
+            val none = mutableListOf<WriteCall>()
+            val without = press(relayWithNotes(), mutableListOf(goodPage), none).print(OBSERVER, "Alice", context = EditionContext(weather = CompletableDeferred<WeatherReport?>(value = null)))
+            assertFalse(assertIs<PrintResult.Printed>(without).namesPlace)
+            assertFalse(none[0].messages[1].prefix!!.contains("## Weather"))
         }
 
     @Test

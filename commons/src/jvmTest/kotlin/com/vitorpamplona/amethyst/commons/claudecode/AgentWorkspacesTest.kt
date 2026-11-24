@@ -29,7 +29,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.runInterruptible
-import org.junit.Assume.assumeTrue
 import java.io.File
 import java.net.URI
 import java.nio.file.FileSystems
@@ -825,17 +824,6 @@ class AgentWorkspacesTest {
         git(File(tmp, "remotes/app.git"), "fetch", "--quiet", seed.absolutePath, "main:main")
     }
 
-    private fun isPosix() = "posix" in FileSystems.getDefault().supportedFileAttributeViews()
-
-    private fun chmod(
-        dir: File,
-        mode: String,
-    ) = Files.setPosixFilePermissions(
-        dir.toPath(),
-        java.nio.file.attribute.PosixFilePermissions
-            .fromString(mode),
-    )
-
     @Test
     fun commitsOnTheLocalBaseBranchComeBackAfterTheBaseMovedUpstream() =
         runBlocking {
@@ -861,53 +849,51 @@ class AgentWorkspacesTest {
     @Test
     fun aCloneThatCannotBeMovedAsideLeavesTheWorkspaceAsItWas() =
         runBlocking {
-            if (!isPosix()) return@runBlocking
-            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/k")
+            // The first clone moves into the trash, the second can't: free must put the first one back.
+            var moves = 0
+            val failing = AgentWorkspaces(File(tmp, "agents"), moveAside = { from, to -> ++moves < 2 && from.renameTo(to) })
+            val ws = failing.create(listOf(appUrl, libUrl), null, branch = "agent/k")
             val app = File(ws.dir, "app")
+            val lib = File(ws.dir, "lib")
             File(app, "k.txt").writeText("k\n")
             git(app, "add", ".")
             git(app, "commit", "--quiet", "-m", "k")
-            // Nothing in the workstream's folder can be renamed or removed.
-            chmod(File(ws.dir), "r-xr-xr-x")
-            try {
-                // Root ignores the mode bits, so the folder stays writable and the move succeeds.
-                assumeTrue("permissions don't bind this user (root)", !File(ws.dir).canWrite())
-                assertTrue(runCatching { workspaces.free(ws) }.isFailure)
-            } finally {
-                chmod(File(ws.dir), "rwxr-xr-x")
-            }
-            // Not freed, on disk as in the record: the clone is whole, and nothing was kept for it.
-            assertFalse(workspaces.list().single().isFreed)
+            assertTrue(runCatching { failing.free(ws) }.isFailure)
+            assertEquals(2, moves)
+            // Not freed, on disk as in the record: both clones are whole, and nothing was kept for them.
+            assertFalse(failing.list().single().isFreed)
             assertEquals("k\n", checkedOut(File(app, "k.txt")))
             assertEquals("", git(app, "status", "--porcelain"))
+            assertEquals("", git(lib, "status", "--porcelain"))
             assertFalse(File(tmp, "agents/meta/${ws.id}.freed").exists())
         }
 
     @Test
     fun aCloneThatCannotBeWhollyDeletedIsStillFreed() =
         runBlocking {
-            if (!isPosix()) return@runBlocking
-            val ws = workspaces.create(listOf(appUrl), null, branch = "agent/l")
+            // Emptying the trash fails partway: the clone moved there loses its .git, the rest stays.
+            val failing =
+                AgentWorkspaces(
+                    File(tmp, "agents"),
+                    emptyTrashDir = { trash ->
+                        File(trash, "app/.git").deleteRecursively()
+                        false
+                    },
+                )
+            val ws = failing.create(listOf(appUrl), null, branch = "agent/l")
             val app = File(ws.dir, "app")
-            File(app, ".gitignore").writeText("build/\n")
             File(app, "l.txt").writeText("l\n")
             git(app, "add", ".")
             git(app, "commit", "--quiet", "-m", "l")
-            // Build output whose files can't be removed: the delete fails partway.
-            val locked = File(app, "build/locked").apply { mkdirs() }
-            File(locked, "out.bin").writeText("x")
-            chmod(locked, "r-xr-xr-x")
-            try {
-                val freed = workspaces.free(ws)
-                assertTrue(freed.isFreed)
-                assertTrue(workspaces.list().single().isFreed)
-                // The clone left the workstream whole, whatever stayed behind in the trash.
-                assertFalse(app.exists())
-            } finally {
-                tmp.walkTopDown().filter { it.isDirectory }.forEach { chmod(it, "rwxr-xr-x") }
-            }
-            workspaces.restore(workspaces.list().single())
-            assertEquals("l\n", checkedOut(File(app, "l.txt")))
+            val freed = failing.free(ws)
+            assertTrue(freed.isFreed)
+            assertTrue(failing.list().single().isFreed)
+            // The clone left the workstream whole, whatever stayed behind in the trash.
+            assertFalse(app.exists())
+            // And the half-removed copy in the trash isn't what comes back: the bundle is.
+            val back = failing.restore(failing.list().single())
+            assertEquals("l\n", checkedOut(File(back.dir, "app/l.txt")))
+            assertEquals("agent/l", git(File(back.dir, "app"), "rev-parse", "--abbrev-ref", "HEAD").trim())
         }
 
     @Test

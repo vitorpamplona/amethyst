@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -173,6 +174,15 @@ fun gateOf(
         !hasLens -> FrontPageGate.NO_LENS
         else -> FrontPageGate.READY
     }
+
+/**
+ * The kept papers [FrontPagePrinter.publishPending] may put on the reader's public site: not yet
+ * there, and checked here. Another device's paper is that device's to publish (two publishers
+ * racing on one manifest can drop a day: the site's last write wins), and a paper with the
+ * Weather desk names where the reader lives: printed private, it stays so, whatever the setting
+ * becomes.
+ */
+internal fun publishable(kept: List<SavedEdition>): List<SavedEdition> = kept.filter { !it.published && it.sha256 != null && it.printedBy == null && !it.namesPlace }
 
 /**
  * One account's front page, owned by the account rather than a screen: a print runs on the
@@ -524,30 +534,11 @@ class FrontPagePrinter(
     @Volatile
     private var keptForAfter: Pair<SavedEdition, String>? = null
 
-    /**
-     * What follows a kept paper, none of which may lose it: the weather for the schedule's place,
-     * kept beside it ([forecast]), then the record and encrypted copy for the account's other
-     * devices ([shareWithDevices]).
-     */
+    /** What follows a kept paper, none of which may lose it: the record and encrypted copy for the account's other devices ([shareWithDevices]). */
     private suspend fun afterKept(
         kept: SavedEdition,
         html: String,
-    ) {
-        val edition =
-            forecast()?.let { weather ->
-                kept.copy(weather = weather).also {
-                    try {
-                        store.save(pubKey, it, html)
-                        refresh()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not keep the weather with the edition", e)
-                    }
-                }
-            } ?: kept
-        shareWithDevices(edition, html)
-    }
+    ) = shareWithDevices(kept, html)
 
     /**
      * Records the paper just kept in the account's schedule, for its other devices: an encrypted copy
@@ -588,7 +579,6 @@ class FrontPagePrinter(
                 key = copy?.key,
                 nonce = copy?.nonce,
                 headline = edition.headline,
-                weather = edition.weather,
             )
         try {
             val outcome = morning.recordEdition(account, record)
@@ -600,9 +590,15 @@ class FrontPagePrinter(
         }
     }
 
+    /** Whether the paper goes to the reader's public site: publishing on and confirmed, as [publishPending] reads it. */
+    private fun publishes(): Boolean =
+        account.observerSchedule.flow.value
+            .observerPrefs()
+            .publishes
+
     /**
-     * The forecast for the schedule's place ([ObserverWeather.place]), kept beside the paper just
-     * printed; null with no place, or when Open-Meteo doesn't answer in time: the paper is kept anyway.
+     * The forecast for the schedule's place ([ObserverWeather.place]), the paper's Weather desk; null
+     * with no place, or when Open-Meteo doesn't answer in time: the paper prints without it.
      */
     private suspend fun forecast(): WeatherReport? {
         val place = ObserverWeather.place(scheduledTask()) ?: return null
@@ -710,14 +706,22 @@ class FrontPagePrinter(
                 try {
                     _run.value = FrontPageRun.Running(PrintStep.Probe)
                     var shown: PrintStep = PrintStep.Probe
-                    val context = editionContext(printedAt)
                     val result =
-                        press(key, model, effort, boundary).print(pubKey, readerName(), readerLanguage(), logBook, context) { step ->
-                            // The stream reports every chunk; every observer recomposing per chunk is the cost.
-                            if (progressWorthShowing(shown, step)) {
-                                shown = step
-                                _run.value = FrontPageRun.Running(step)
-                                jobs.step(step)
+                        coroutineScope {
+                            // The forecast comes while the relays are read, not before them; and only
+                            // on a paper that stays private, as it names where the reader lives.
+                            val weather = if (publishes()) null else async { forecast() }
+                            try {
+                                press(key, model, effort, boundary).print(pubKey, readerName(), readerLanguage(), logBook, editionContext(printedAt, weather)) { step ->
+                                    // The stream reports every chunk; every observer recomposing per chunk is the cost.
+                                    if (progressWorthShowing(shown, step)) {
+                                        shown = step
+                                        _run.value = FrontPageRun.Running(step)
+                                        jobs.step(step)
+                                    }
+                                }
+                            } finally {
+                                weather?.cancel()
                             }
                         }
                     if (result is PrintResult.Printed) {
@@ -798,6 +802,7 @@ class FrontPagePrinter(
                 rounds = printed.rounds,
                 sha256 = publishedSha256(html),
                 recipe = printed.recipe,
+                namesPlace = printed.namesPlace,
             )
         try {
             store.save(pubKey, edition, html)
@@ -808,7 +813,7 @@ class FrontPagePrinter(
             Log.w(TAG, "Could not keep the edition", e)
         }
         if (trigger == PrintTrigger.SCHEDULED || watchers() == 0) notifier.paperReady(pubKey, edition)
-        // The weather and the copy for the other devices come after the paper is safe. A scheduled
+        // The copy for the other devices comes after the paper is safe. A scheduled
         // run does them once its `ran` is written ([printScheduled]): inside the run's budget they
         // could time it out with the paper kept and the morning never marked done.
         if (trigger == PrintTrigger.SCHEDULED) keptForAfter = edition to html else afterKept(edition, html)
@@ -846,10 +851,7 @@ class FrontPagePrinter(
         publishing.lock()
         try {
             val pending =
-                localEditions.value
-                    // Another device's paper is that device's to publish: two publishers racing on one
-                    // manifest can drop a day (the site's last write wins).
-                    .filter { !it.published && it.sha256 != null && it.printedBy == null }
+                publishable(localEditions.value)
                     .mapNotNull { kept -> store.html(pubKey, kept.day)?.let { kept to withPaperCsp(it) } }
                     .filter { (kept, html) -> ObserverPublisher.sha256Hex(html.encodeToByteArray()).equals(kept.sha256, ignoreCase = true) }
             if (pending.isEmpty()) return
@@ -913,7 +915,10 @@ class FrontPagePrinter(
      * reader's clock (the schedule's zone, else this device's). Never fails a print: what can't
      * be read is left out.
      */
-    private suspend fun editionContext(at: Long): EditionContext {
+    private suspend fun editionContext(
+        at: Long,
+        weather: Deferred<WeatherReport?>? = null,
+    ): EditionContext {
         val today = FrontPageClock.dayKey(at)
         val known = editions.value
         val pages =
@@ -938,6 +943,7 @@ class FrontPagePrinter(
             recent = recentHeadlines(known, today),
             clock = EditionClock.forReader(scheduledTask()?.tz),
             recentRecipes = recentRecipes(known, today),
+            weather = weather,
         )
     }
 
