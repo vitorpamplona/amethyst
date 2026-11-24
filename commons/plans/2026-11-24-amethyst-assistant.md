@@ -54,10 +54,18 @@ resumed session never acts on a stale account. Unbound, a tool answers that it i
 `wallet_status`, `start_relay_sync`, `relay_sync_status`, plus the settings tools; the online
 backend; the rename.
 
+## Second slice: search and summaries
+
+`search_notes` (NIP-50 on the search relays, plus `CacheSearch` over what the app holds),
+`search_people`, `read_thread` (`ThreadAssembler` after asking the relays for replies),
+`read_home_feed` and `read_notifications` (the screens' own `HomeNewThreadFeedFilter` and
+`NotificationFeedFilter` over the cache: what the app has loaded, mutes applied). All read-only,
+so no card. Each returns a page (30 by default, 50 at most, text cut at 500 characters): on the
+user's own key every note read is billed to them.
+
 ## Next
 
 - Zap a person (profile zap), reactions, reposts, follows, bookmarks, DMs (NIP-17), lists.
-- Reading feeds and notifications as tools ("what did I miss?").
 - A tool registry like `AmethystSettings`, so each screen's actions are declared once and the
   assistant's tools are generated from it.
 - Streaming replies on the online backend; model choice from the key's `/models`.

@@ -24,8 +24,12 @@ import com.vitorpamplona.agents.HostTool
 import com.vitorpamplona.agents.HostToolResult
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
+import com.vitorpamplona.amethyst.commons.actions.SearchActions
+import com.vitorpamplona.amethyst.commons.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.model.composer.messageTags
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
@@ -35,16 +39,25 @@ import com.vitorpamplona.amethyst.commons.viewmodels.BaseAccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -87,6 +100,11 @@ class AccountToolServer(
                 HostToolResult("Relay sync started. It copies your events to your outbox, mentions to your inbox and DMs to your DM relays. Ask ${RELAY_SYNC_STATUS_NAME} for progress.")
             }
             SYNC_STATUS -> HostToolResult(syncStatus(accountViewModel.eventSync.syncState.value))
+            SEARCH_NOTES -> searchNotes(arguments)
+            SEARCH_PEOPLE -> searchPeople(arguments)
+            READ_THREAD -> readThread(arguments)
+            READ_FEED -> readFeed(arguments, notifications = false)
+            READ_NOTIFICATIONS -> readFeed(arguments, notifications = true)
             else -> HostToolResult("No tool named $tool", isError = true)
         }
     }
@@ -220,6 +238,123 @@ class AccountToolServer(
             HostToolResult(NO_ANSWER, isError = true)
         }
 
+    /** Notes matching [arguments]' query: the relays that search (NIP-50), and what this app already holds. */
+    private suspend fun searchNotes(arguments: JsonObject): HostToolResult {
+        val limit = limitOf(arguments)
+        val since = arguments.long("hours")?.takeIf { it > 0 }?.let { TimeUtils.now() - it * HOUR }
+        val filter =
+            SearchActions.searchNotesFilter(arguments.string("query").orEmpty(), SEARCH_KINDS, limit = limit, since = since)
+                ?: return HostToolResult("Give something to search for.", isError = true)
+        fetch(account.searchOnlyRelays(), filter)
+        val found =
+            withContext(Dispatchers.Default) {
+                account.cache
+                    .findNotesMatching(listOf(filter), account.hiddenUsers.flow.value)
+                    .filter { note -> since == null || (note.event?.createdAt ?: 0) >= since }
+                    .sortedByDescending { it.event?.createdAt ?: 0 }
+                    .take(limit)
+            }
+        if (found.isEmpty()) return HostToolResult("No notes found for “${filter.search}”.")
+        return HostToolResult(found.joinToString("\n\n") { line(it) })
+    }
+
+    private suspend fun searchPeople(arguments: JsonObject): HostToolResult {
+        val query = arguments.string("query")?.trim().orEmpty()
+        val filter = SearchActions.searchProfilesFilter(query, limit = PEOPLE_LIMIT) ?: return HostToolResult("Give a name to search for.", isError = true)
+        fetch(account.searchOnlyRelays(), filter)
+        val people = withContext(Dispatchers.Default) { account.cache.search.findUsersStartingWith(query, account, PEOPLE_LIMIT) }
+        if (people.isEmpty()) return HostToolResult("No one found for “$query”.")
+        return HostToolResult(
+            people.joinToString("\n") { user ->
+                val about =
+                    user
+                        .metadataOrNull()
+                        ?.flow
+                        ?.value
+                        ?.info
+                        ?.about
+                        ?.let { " — " + oneLine(it).take(SNIPPET) } ?: ""
+                val follows = if (account.isFollowing(user.pubkeyHex)) " (you follow them)" else ""
+                "${user.toBestDisplayName()} ${user.pubkeyNpub()}$follows$about"
+            },
+        )
+    }
+
+    /** The whole conversation around a note, root first, after asking the relays for its replies. */
+    private suspend fun readThread(arguments: JsonObject): HostToolResult {
+        val note = note(arguments) ?: return unknownNote(arguments)
+        val root = ThreadAssembler(account.cache).findRoot(note.idHex) ?: note
+        val relays = (account.homeRelays.flow.value + account.defaultGlobalRelays.flow.value).take(MAX_FETCH_RELAYS).toSet()
+        fetch(relays, Filter(kinds = REPLY_KINDS, tags = mapOf("e" to listOf(root.idHex)), limit = MAX_THREAD))
+        fetch(relays, Filter(kinds = REPLY_KINDS, tags = mapOf("E" to listOf(root.idHex)), limit = MAX_THREAD))
+        val thread = withContext(Dispatchers.Default) { ThreadAssembler(account.cache).findThreadFor(root.idHex) }
+        val notes =
+            thread
+                ?.allNotes
+                ?.filter { note -> note.event != null && note.author?.let { account.isHidden(it) } != true }
+                ?.sortedBy { it.event?.createdAt ?: 0 }
+                ?.take(MAX_THREAD)
+                .orEmpty()
+        if (notes.isEmpty()) return HostToolResult(explain(note))
+        return HostToolResult("${notes.size} notes, oldest first:\n\n" + notes.joinToString("\n\n") { line(it) })
+    }
+
+    /**
+     * What the home feed or the notifications show now, newest first, over the last [arguments]
+     * hours: what this app has loaded, as the screens show it, the user's mutes applied.
+     */
+    private suspend fun readFeed(
+        arguments: JsonObject,
+        notifications: Boolean,
+    ): HostToolResult {
+        val limit = limitOf(arguments)
+        val hours = arguments.long("hours")?.takeIf { it > 0 } ?: DEFAULT_HOURS
+        val since = TimeUtils.now() - hours * HOUR
+        val notes =
+            withContext(Dispatchers.Default) {
+                val feed = if (notifications) NotificationFeedFilter(account).feed() else HomeNewThreadFeedFilter(account).feed()
+                feed.filter { (it.event?.createdAt ?: 0) >= since }.take(limit)
+            }
+        if (notes.isEmpty()) return HostToolResult("Nothing in the last $hours hours that the app has loaded. The app loads more while its feeds are open.")
+        return HostToolResult(notes.joinToString("\n\n") { line(it) })
+    }
+
+    private suspend fun fetch(
+        relays: Set<NormalizedRelayUrl>,
+        filter: Filter,
+    ) {
+        if (relays.isEmpty()) return
+        val events =
+            try {
+                account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = FETCH_TIMEOUT_MS)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Search on ${relays.size} relays failed", e)
+                emptyList()
+            }
+        events.forEach { account.cache.justConsume(it, null, wasVerified = false) }
+    }
+
+    /** One note for the model: id, author, when, what kind, and its text, shortened. */
+    private fun line(note: Note): String {
+        val event = note.event ?: return note.idHex
+        val ago = agoOf(event.createdAt)
+        val text = oneLine(event.content).let { if (it.length > NOTE_CHARS) it.take(NOTE_CHARS) + "…" else it }
+        return "${noteIdOf(event)} · ${note.author?.toBestDisplayName() ?: event.pubKey.take(8)} · $ago · kind ${event.kind}\n$text"
+    }
+
+    private fun agoOf(createdAt: Long): String {
+        val seconds = (TimeUtils.now() - createdAt).coerceAtLeast(0)
+        return when {
+            seconds < HOUR -> "${seconds / 60} min ago"
+            seconds < DAY -> "${seconds / HOUR} h ago"
+            else -> "${seconds / DAY} d ago"
+        }
+    }
+
+    private fun limitOf(arguments: JsonObject): Int = (arguments.long("limit") ?: DEFAULT_LIMIT.toLong()).toInt().coerceIn(1, MAX_LIMIT)
+
     private fun walletStatus(): String {
         val wallets = account.settings.nwcWallets.value
         return if (wallets.isEmpty()) {
@@ -277,13 +412,34 @@ class AccountToolServer(
         const val WALLET = "wallet_status"
         const val SYNC = "start_relay_sync"
         const val SYNC_STATUS = "relay_sync_status"
+        const val SEARCH_NOTES = "search_notes"
+        const val SEARCH_PEOPLE = "search_people"
+        const val READ_THREAD = "read_thread"
+        const val READ_FEED = "read_home_feed"
+        const val READ_NOTIFICATIONS = "read_notifications"
         private const val RELAY_SYNC_STATUS_NAME = SYNC_STATUS
+        private const val TAG = "AccountToolServer"
 
         /** Every call that publishes, sends a file away or moves money. */
         val ALWAYS_ASK = setOf(POST, REPLY, UPLOAD, ZAP, PAY, SYNC)
 
         /** The ones that only read: they run without asking. */
-        val READ_ONLY_TOOLS = listOf(GET_NOTE, WALLET, SYNC_STATUS)
+        val READ_ONLY_TOOLS = listOf(GET_NOTE, WALLET, SYNC_STATUS, SEARCH_NOTES, SEARCH_PEOPLE, READ_THREAD, READ_FEED, READ_NOTIFICATIONS)
+
+        /**
+         * What a read returns at most. Every note read goes to the model, and on the user's own AI
+         * key it is billed to them: a page of results, more only when asked.
+         */
+        private const val DEFAULT_LIMIT = 30
+        private const val MAX_LIMIT = 50
+        private const val NOTE_CHARS = 500
+        private const val PEOPLE_LIMIT = 15
+        private const val MAX_THREAD = 60
+        private const val DEFAULT_HOURS = 24L
+        private const val HOUR = 3_600L
+        private const val DAY = 86_400L
+        private val SEARCH_KINDS = listOf(TextNoteEvent.KIND, LongFormContentEvent.KIND, CommentEvent.KIND)
+        private val REPLY_KINDS = listOf(TextNoteEvent.KIND, CommentEvent.KIND)
 
         private const val SNIPPET = 80
         private const val MAX_CONTENT = 4_000
@@ -296,6 +452,8 @@ class AccountToolServer(
         private const val NO_ANSWER = "The wallet hasn't answered. The payment may or may not have gone through: check the wallet before trying again."
 
         private fun schema(json: String) = Json.parseToJsonElement(json).jsonObject
+
+        private const val LIMIT_ARG = """"limit":{"type":"integer","minimum":1,"maximum":50,"description":"At most this many (30 by default)"}"""
 
         private const val NOTE_ARG = """"note":{"type":"string","description":"The note's id: note1…, nevent1…, nostr:… or hex"}"""
 
@@ -326,6 +484,23 @@ class AccountToolServer(
                     schema("""{"type":"object","properties":{}}"""),
                 ),
                 HostTool(SYNC_STATUS, "Reports the relay sync's progress or result.", schema("""{"type":"object","properties":{}}""")),
+                HostTool(
+                    SEARCH_NOTES,
+                    "Searches notes and articles by words, on the user's search relays and in what the app has loaded. Returns up to `limit` notes, newest first: id, author, age, kind and text (shortened). Use read_thread or get_note for more of one.",
+                    schema("""{"type":"object","properties":{"query":{"type":"string"},"hours":{"type":"integer","minimum":1,"description":"Only notes from the last this many hours"},$LIMIT_ARG},"required":["query"]}"""),
+                ),
+                HostTool(SEARCH_PEOPLE, "Finds people by name or NIP-05 address: their name, npub, whether the user follows them, and their bio.", schema("""{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}""")),
+                HostTool(READ_THREAD, "Reads the whole conversation a note is part of, oldest first, asking the relays for replies the app hasn't loaded.", schema("""{"type":"object","properties":{$NOTE_ARG},"required":["note"]}""")),
+                HostTool(
+                    READ_FEED,
+                    "Reads the user's home feed (new posts from the people they follow) as the app shows it, newest first, over the last `hours` (24 by default). Only what the app has loaded.",
+                    schema("""{"type":"object","properties":{"hours":{"type":"integer","minimum":1},$LIMIT_ARG}}"""),
+                ),
+                HostTool(
+                    READ_NOTIFICATIONS,
+                    "Reads the user's notifications (replies, mentions, reactions, zaps, reposts) as the app shows them, newest first, over the last `hours` (24 by default).",
+                    schema("""{"type":"object","properties":{"hours":{"type":"integer","minimum":1},$LIMIT_ARG}}"""),
+                ),
             )
 
         /** A note id the tools take, as hex: `note1…`, `nevent1…`, `nostr:…` or hex. */
@@ -338,3 +513,5 @@ class AccountToolServer(
 private fun JsonObject.string(key: String) = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
 private fun JsonObject.long(key: String) = (this[key] as? JsonPrimitive)?.content?.toDoubleOrNull()?.toLong()
+
+private fun oneLine(text: String): String = text.replace(Regex("\\s+"), " ").trim()
