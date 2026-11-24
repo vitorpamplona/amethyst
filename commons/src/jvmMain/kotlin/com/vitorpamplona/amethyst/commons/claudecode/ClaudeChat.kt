@@ -171,6 +171,9 @@ data class ClaudeChatState(
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 
+    /** What the agent waits on is an answer to its questions, not an approval. */
+    val isAsking: Boolean get() = pendingPermissions.firstOrNull()?.questions != null
+
     val needsUser: Boolean get() = needsUser(status, unseenFinish)
 }
 
@@ -496,6 +499,15 @@ class ClaudeChat internal constructor(
     ) = answer(request, PermissionDecision.Allow(updatedPermissions = if (always) request.suggestions else null))
 
     fun deny(request: PermissionRequest) = answer(request, PermissionDecision.Deny("The user declined this tool call."))
+
+    /** Answers the agent's questions ([PermissionRequest.questions]). */
+    fun answerQuestions(
+        request: PermissionRequest,
+        answers: PermissionDecision.Answer,
+    ) = answer(request, answers)
+
+    /** Closes the agent's questions unanswered; the agent goes on without them. */
+    fun dismissQuestions(request: PermissionRequest) = answer(request, PermissionDecision.Deny("The user dismissed the questions without answering them."))
 
     private fun answer(
         request: PermissionRequest,

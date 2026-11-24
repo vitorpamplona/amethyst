@@ -51,6 +51,11 @@ data class PermissionRequest(
     val agentId: String?,
     /** [suggestions], read: what "don't ask again" would allow. */
     val parsedSuggestions: List<PermissionSuggestion> = emptyList(),
+    /**
+     * Set when the agent asks the user questions rather than for a tool call: answered with
+     * [PermissionDecision.Answer], or refused with [PermissionDecision.Deny].
+     */
+    val questions: UserQuestions? = null,
 ) {
     /** What the call does in one line: the command, the path or the URL when the input names one. */
     val summary: String get() = toolInputSummary(input) ?: description ?: input.toString()
@@ -65,6 +70,17 @@ sealed interface PermissionDecision {
     data class Allow(
         val updatedInput: JsonObject? = null,
         val updatedPermissions: JsonArray? = null,
+    ) : PermissionDecision
+
+    /**
+     * The user's answers to a request's [PermissionRequest.questions], by [UserQuestion.id]. A
+     * question left out was skipped. [reply] is a message the user wrote instead of answering;
+     * [askMore] asks the agent for another round of questions (when [UserQuestions.acceptsAskMore]).
+     */
+    data class Answer(
+        val answers: Map<String, QuestionAnswer>,
+        val reply: String? = null,
+        val askMore: Boolean = false,
     ) : PermissionDecision
 
     /** Refuse the call; [message] goes back to the model. [interrupt] also stops the turn. */

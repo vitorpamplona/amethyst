@@ -96,6 +96,8 @@ data class ClaudeSessionRow(
     val unseenFinish: Boolean = false,
     /** Its last turn here ended in an error. */
     val lastTurnFailed: Boolean = false,
+    /** It waits on the user's answers to its questions ([ChatState.isAsking]). */
+    val asking: Boolean = false,
 ) {
     /** The agent waits on the user: for an approval, or to read how its turn ended. */
     val needsYou: Boolean get() = needsUser(appStatus, unseenFinish)
@@ -112,6 +114,9 @@ data class ChatAttention(
 ) {
     enum class Kind {
         NEEDS_APPROVAL,
+
+        /** The agent asked the user questions. */
+        ASKS,
         FINISHED,
 
         /** The agent asked the user to open a pull request ([PublishToolServer]). */
@@ -908,7 +913,7 @@ class ClaudeCodeService(
                     .collect { status ->
                         val wasRunning = last == ChatStatus.WORKING || last == ChatStatus.NEEDS_APPROVAL
                         when {
-                            status == ChatStatus.NEEDS_APPROVAL -> ChatAttention.Kind.NEEDS_APPROVAL
+                            status == ChatStatus.NEEDS_APPROVAL -> if (chat.state.value.isAsking) ChatAttention.Kind.ASKS else ChatAttention.Kind.NEEDS_APPROVAL
                             wasRunning && (status == ChatStatus.READY || status == ChatStatus.ENDED) -> ChatAttention.Kind.FINISHED
                             else -> null
                         }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it, chat.backend.shortName)) }
@@ -1361,6 +1366,7 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     unseenFinish = chat?.state?.value?.unseenFinish == true,
                     lastTurnFailed = chat?.state?.value?.lastTurnFailed == true,
+                    asking = chat?.state?.value?.isAsking == true,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
@@ -1394,6 +1400,7 @@ class ClaudeCodeService(
                         appStatus = state.status,
                         unseenFinish = state.unseenFinish,
                         lastTurnFailed = state.lastTurnFailed,
+                        asking = state.isAsking,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),

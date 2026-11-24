@@ -27,7 +27,9 @@ import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PlanStep
+import com.vitorpamplona.agents.QuestionAnswer
 import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.agents.UserQuestion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,6 +44,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
@@ -238,9 +241,82 @@ class CodexConnectionTest {
             assertEquals("\"r9\"", reply["id"].toString())
             assertEquals("acceptForSession", reply["result"]!!.jsonObject["decision"]!!.jsonPrimitive.content)
             // A request this client doesn't handle is refused, not left waiting.
-            server.push("""{"id":10,"method":"item/tool/requestUserInput","params":{"threadId":"t1"}}""")
+            server.push("""{"id":10,"method":"mcpServer/elicitation/request","params":{"threadId":"t1"}}""")
             withTimeout(5_000) { while (server.written.none { it["id"]?.toString() == "10" }) kotlinx.coroutines.delay(10) }
             assertTrue(server.written.last { it["id"]?.toString() == "10" }.containsKey("error"))
+            scope.cancel()
+        }
+
+    @Test
+    fun questionsAreAskedAndAnsweredAsCodexsTuiAnswersThem() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w")))
+            server.push(
+                """{"id":11,"method":"item/tool/requestUserInput","params":{"threadId":"t1","turnId":"turn-1","itemId":"q1","isBlocking":true,"autoResolutionMs":null,"questions":[""" +
+                    """{"id":"db","header":"Database","question":"Which database?","isOther":true,"isSecret":false,"options":[{"label":"Postgres","description":"Relational"},{"label":"SQLite","description":"File"}]},""" +
+                    """{"id":"token","header":"Token","question":"Paste the API token","isOther":false,"isSecret":true,"options":null},""" +
+                    """{"id":"why","header":"Why","question":"Anything else?","isOther":false,"isSecret":false,"options":null}]}}""",
+            )
+            val asked = withTimeout(5_000) { codex.events.first { it is AgentEvent.ApprovalRequested } } as AgentEvent.ApprovalRequested
+            val questions = assertNotNull(asked.request.questions).questions
+            assertEquals(listOf("db", "token", "why"), questions.map { it.id })
+            assertEquals(UserQuestion.Kind.CHOICE, questions[0].kind)
+            assertTrue(questions[0].allowsOther)
+            assertEquals(UserQuestion.Kind.TEXT, questions[1].kind)
+            assertTrue(questions[1].secret)
+
+            codex.respond(
+                asked.request,
+                PermissionDecision.Answer(
+                    mapOf(
+                        "db" to QuestionAnswer(text = "MySQL"),
+                        "token" to QuestionAnswer(text = "s3cret"),
+                    ),
+                ),
+            )
+            val reply = server.written.last { it["id"]?.toString() == "11" }
+            val answers = reply["result"]!!.jsonObject["answers"]!!.jsonObject
+
+            fun list(id: String) = answers[id]!!.jsonObject["answers"]!!.jsonArray.map { it.jsonPrimitive.content }
+            // A typed answer to a choice is "None of the above" with the text as the note.
+            assertEquals(listOf(CodexQuestions.OTHER_LABEL, "user_note: MySQL"), list("db"))
+            assertEquals(listOf("user_note: s3cret"), list("token"))
+            assertEquals(emptyList(), list("why"))
+            // The chat keeps a row for the questions, and the secret stays out of it.
+            val result = withTimeout(5_000) { codex.events.first { it is AgentEvent.ToolResults } } as AgentEvent.ToolResults
+            val text = (result.content.single() as ContentBlock.ToolResult).text
+            assertTrue("MySQL" in text, text)
+            assertTrue("s3cret" !in text, text)
+            scope.cancel()
+        }
+
+    @Test
+    fun questionsCodexResolvesItselfEndTheirRow() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w")))
+            server.push(
+                """{"id":12,"method":"item/tool/requestUserInput","params":{"threadId":"t1","turnId":"turn-1","itemId":"q2","isBlocking":false,"autoResolutionMs":1000,"questions":[""" +
+                    """{"id":"db","header":"Database","question":"Which database?","isOther":false,"isSecret":false,"options":[{"label":"A","description":"a"},{"label":"B","description":"b"}]}]}}""",
+            )
+            withTimeout(5_000) { codex.events.first { it is AgentEvent.ApprovalRequested } }
+            // Timed out on Codex's side: the card goes, and the row says it is over rather than wait for good.
+            server.push("""{"method":"serverRequest/resolved","params":{"threadId":"t1","requestId":12}}""")
+            val withdrawn = mutableListOf<AgentEvent>()
+            withTimeout(5_000) {
+                codex.events.first {
+                    withdrawn.add(it)
+                    it is AgentEvent.ToolResults
+                }
+            }
+            assertTrue(withdrawn.any { it is AgentEvent.ApprovalWithdrawn })
+            val result = (withdrawn.last() as AgentEvent.ToolResults).content.single() as ContentBlock.ToolResult
+            assertEquals("q2", result.toolUseId)
             scope.cancel()
         }
 

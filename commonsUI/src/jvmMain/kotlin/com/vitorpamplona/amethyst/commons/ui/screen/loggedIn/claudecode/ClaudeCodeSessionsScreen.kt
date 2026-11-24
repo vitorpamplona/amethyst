@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_workspaces
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
+import com.vitorpamplona.amethyst.commons.resources.claude_code_status_asks
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_in_terminal
@@ -772,7 +773,7 @@ private fun statusLabel(row: ClaudeSessionRow): Pair<String, Color>? =
     when (row.appStatus) {
         ChatStatus.STARTING -> stringRes(Res.string.claude_code_status_starting) to MaterialTheme.colorScheme.primary
         ChatStatus.WORKING -> stringRes(Res.string.claude_code_status_working) to MaterialTheme.colorScheme.primary
-        ChatStatus.NEEDS_APPROVAL -> stringRes(Res.string.claude_code_status_needs_approval) to MaterialTheme.colorScheme.error
+        ChatStatus.NEEDS_APPROVAL -> stringRes(if (row.asking) Res.string.claude_code_status_asks else Res.string.claude_code_status_needs_approval) to MaterialTheme.colorScheme.error
         ChatStatus.READY, ChatStatus.ENDED, ChatStatus.NOT_STARTED, null ->
             when {
                 row.lastTurnFailed -> stringRes(Res.string.claude_code_status_failed) to MaterialTheme.colorScheme.error

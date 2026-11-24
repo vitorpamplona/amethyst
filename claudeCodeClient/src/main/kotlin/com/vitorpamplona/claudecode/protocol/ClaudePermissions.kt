@@ -34,13 +34,15 @@ object ClaudePermissions {
         request: JsonObject,
     ): PermissionRequest {
         val suggestions = request.array("permission_suggestions") ?: JsonArray(emptyList())
+        val toolName = request.string("tool_name") ?: ""
+        val input = request.obj("input") ?: JsonObject(emptyMap())
         return PermissionRequest(
             requestId = requestId,
-            toolName = request.string("tool_name") ?: "",
+            toolName = toolName,
             displayName = request.string("display_name"),
             description = request.string("description"),
             title = request.string("title"),
-            input = request.obj("input") ?: JsonObject(emptyMap()),
+            input = input,
             toolUseId = request.string("tool_use_id"),
             decisionReason = request.string("decision_reason")?.let(::stripAnsi),
             blockedPath = request.string("blocked_path"),
@@ -49,6 +51,7 @@ object ClaudePermissions {
             defaultToNo = request.boolean("default_to_no") ?: false,
             agentId = request.string("agent_id"),
             parsedSuggestions = suggestions.map { suggestion(it) },
+            questions = if (toolName == ClaudeQuestions.TOOL) ClaudeQuestions.parse(input) else null,
         )
     }
 
