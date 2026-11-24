@@ -152,7 +152,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_nost
 import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_uses
 import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
-import com.vitorpamplona.amethyst.commons.resources.claude_code_section_needs_you
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_workspaces
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_failed
@@ -452,12 +451,11 @@ private fun SessionList(
     onDeleteWorkspace: (ClaudeSessionRow) -> Unit,
     onArchive: (ClaudeSessionRow, Boolean) -> Unit,
 ) {
-    // Sessions waiting on the user first (an approval, then a turn they haven't seen end); then
-    // the ones in workspaces of their own, newest first; then a section per project, in the
-    // order of its newest session; sessions whose folder is gone last, folded.
-    val needsYou = remember(rows) { rows.filter { it.needsYou }.sortedByDescending { it.appStatus == ChatStatus.NEEDS_APPROVAL } }
-    val archived = remember(rows) { rows.filter { it.archived && !it.needsYou } }
-    val active = remember(rows) { rows.filter { !it.needsYou && !it.archived } }
+    // The sessions in workspaces of their own, newest first; then a section per project, in the
+    // order of its newest session; sessions whose folder is gone last, folded. One waiting on the
+    // user stays in its section: its row's mark and status say so.
+    val archived = remember(rows) { rows.filter { it.archived } }
+    val active = remember(rows) { rows.filter { !it.archived } }
     val inWorkspaces = remember(active) { active.filter { it.workspace != null } }
     val sections =
         remember(active) {
@@ -471,11 +469,10 @@ private fun SessionList(
     val listState = rememberForeverLazyListState("ClaudeCodeSessions")
     // Where the open chat's row sits in the list, headers counted, as laid out below.
     val selectedIndex =
-        remember(needsYou, inWorkspaces, sections, archived, showArchived, selectedKey) {
+        remember(inWorkspaces, sections, archived, showArchived, selectedKey) {
             selectedKey ?: return@remember -1
             val groups =
                 buildList {
-                    if (needsYou.isNotEmpty()) add(needsYou)
                     if (inWorkspaces.isNotEmpty()) add(inWorkspaces)
                     sections.forEach { add(it.second) }
                     if (archived.isNotEmpty()) add(if (showArchived) archived else emptyList())
@@ -515,11 +512,6 @@ private fun SessionList(
         var first = true
 
         fun headerTop(): Dp = (if (first) 8.dp else SectionHeaderTop).also { first = false }
-        if (needsYou.isNotEmpty()) {
-            val top = headerTop()
-            item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error, top = top) }
-            items(needsYou, key = { "needs-" + it.key }) { Item(it) }
-        }
         if (inWorkspaces.isNotEmpty()) {
             val top = headerTop()
             item(key = "section-workspaces") { SectionHeader(stringRes(Res.string.claude_code_section_workspaces), top = top) }

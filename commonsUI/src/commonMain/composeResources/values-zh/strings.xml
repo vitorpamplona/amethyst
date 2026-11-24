@@ -9226,7 +9226,6 @@
     <string name="claude_code_fork_hint">会话的副本。您的第一条消息会将其作为独立会话启动；原会话保持不变。</string>
     <string name="claude_code_notify_needs_you">%1$s 需要您批准</string>
     <string name="claude_code_notify_finished">%1$s 已完成</string>
-    <string name="claude_code_section_needs_you">需要您处理</string>
     <plurals name="claude_code_section_archived">
         <item quantity="other">已归档 · %1$d 个会话</item>
     </plurals>

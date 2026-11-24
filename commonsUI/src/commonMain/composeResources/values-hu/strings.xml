@@ -9482,7 +9482,6 @@
     <string name="claude_code_fork_hint">A munkamenet másolata. Az első üzenete önálló munkamenetként indítja el; az eredeti változatlan marad.</string>
     <string name="claude_code_notify_needs_you">%1$s az Ön jóváhagyására vár</string>
     <string name="claude_code_notify_finished">%1$s befejezte</string>
-    <string name="claude_code_section_needs_you">Önre vár</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archivált · %1$d munkamenet</item>
         <item quantity="other">Archivált · %1$d munkamenet</item>
