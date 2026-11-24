@@ -123,6 +123,58 @@ class EncryptedMarmotStoresTest {
             assertEquals("and the group blob is untouched", listOf<Byte>(1), reopened.load(groupId)?.toList())
         }
 
+    private fun innerEvent(
+        id: Char,
+        createdAt: Long,
+    ) = """{"id":"${id.toString().repeat(64)}","pubkey":"${"e".repeat(64)}","created_at":$createdAt,"kind":9,"tags":[],"content":"m","sig":""}"""
+
+    /**
+     * Read on every start for every group, so it must come from the newest time kept as messages are
+     * appended, not from decrypting the whole log: the log is gone here, and the answer stays.
+     */
+    @Test
+    fun theNewestMessageTimeSurvivesAReopenWithoutReadingTheLog() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val store = EncryptedMarmotMessageStore(dir, encryption)
+            assertNull(store.newestMessageCreatedAt(groupId))
+
+            store.appendMessage(groupId, innerEvent('1', 200))
+            store.appendMessage(groupId, innerEvent('2', 500))
+            store.appendMessage(groupId, innerEvent('3', 300))
+            assertEquals(500L, store.newestMessageCreatedAt(groupId))
+
+            assertTrue(File(dir, "mls_groups/$groupId/messages").delete())
+            assertEquals("kept apart from the log", 500L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+            assertNull("another group has none", EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(otherGroupId))
+        }
+
+    /** A log written before the newest time was kept: read once, then answered without it. */
+    @Test
+    fun aLogWithNoNewestTimeIsReadOnceAndTheAnswerKept() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val store = EncryptedMarmotMessageStore(dir, encryption)
+            store.appendMessage(groupId, innerEvent('1', 200))
+            store.appendMessage(groupId, innerEvent('2', 700))
+            File(dir, "mls_groups/$groupId/newest").delete()
+
+            assertEquals(700L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+            assertTrue(File(dir, "mls_groups/$groupId/messages").delete())
+            assertEquals(700L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+        }
+
+    @Test
+    fun deletingAGroupForgetsItsNewestMessageTime() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val store = EncryptedMarmotMessageStore(dir, encryption)
+            store.appendMessage(groupId, innerEvent('1', 200))
+            store.delete(groupId)
+            assertNull(store.newestMessageCreatedAt(groupId))
+            assertNull(EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+        }
+
     @Test
     fun appendedMessagesComeBackInOrderAfterAReopen() =
         runTest {
