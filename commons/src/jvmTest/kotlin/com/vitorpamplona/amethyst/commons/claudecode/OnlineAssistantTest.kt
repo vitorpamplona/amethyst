@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.settings.registry.AmethystSettings
@@ -36,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonPrimitive
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -187,6 +189,56 @@ class OnlineAssistantTest {
             waitFor { provider.sent.size == 2 && resumed.state.value.status == ChatStatus.READY }
             // The second turn carried the first one's history.
             assertTrue(provider.sent.last().contains("hello"), provider.sent.last())
+        }
+
+    @Test
+    fun aScreenshotAsksFirstReachesTheModelAsAPictureAndIsNotSaved() =
+        runBlocking {
+            val shot = """{"choices":[{"message":{"role":"assistant","content":"","tool_calls":[{"id":"s1","type":"function","function":{"name":"mcp__amethyst-screen__screenshot","arguments":"{}"}}]}}]}"""
+            val provider = ScriptedProvider(shot, done)
+            val picture = ImageInput.fromImage("window.png", BufferedImage(40, 20, BufferedImage.TYPE_INT_ARGB))
+            val screen = ScreenToolServer(onScreen = { "Main window:\n- Home" }, capture = { listOf(picture) })
+            val service = service()
+            val chat = service.settingsAssistant(tools, "Amethyst assistant", null, OnlineAgentBackend.Access({ key }, provider), screen)
+
+            chat.send("what does my screen look like?")
+            waitFor {
+                chat.state.value.pendingPermissions
+                    .isNotEmpty()
+            }
+            val card =
+                chat.state.value.pendingPermissions
+                    .single()
+            assertTrue(card.suppressAlwaysAllow && card.defaultToNo, "a screenshot must be asked about each time")
+            assertTrue(
+                chat.state.value.permissionNotes[card.requestId]!!
+                    .contains("picture of the Amethyst window"),
+            )
+
+            chat.approve(card, always = false)
+            waitFor { chat.state.value.status == ChatStatus.READY }
+            val sent = provider.sent.last()
+            assertTrue(sent.contains("\"image_url\"") && sent.contains("data:image/png;base64,${picture.base64}"), sent)
+            assertFalse(sent.contains("app_pictures"), "the app's own mark must not reach the provider")
+
+            val saved = File(root, "online").listFiles()!!.single().readText()
+            assertFalse(saved.contains(picture.base64), "a picture is never written to disk")
+        }
+
+    @Test
+    fun whatIsOnScreenRunsWithoutAsking() =
+        runBlocking {
+            val call = """{"choices":[{"message":{"role":"assistant","content":"","tool_calls":[{"id":"w1","type":"function","function":{"name":"mcp__amethyst-screen__what_is_on_screen","arguments":"{}"}}]}}]}"""
+            val provider = ScriptedProvider(call, done)
+            val screen = ScreenToolServer(onScreen = { "Main window:\n- {\"type\":\"Note\",\"id\":\"abc\"}" })
+            val chat = service().settingsAssistant(tools, "Amethyst assistant", null, OnlineAgentBackend.Access({ key }, provider), screen)
+            chat.send("summarize this")
+            waitFor { chat.state.value.status == ChatStatus.READY && provider.sent.size == 2 }
+            assertTrue(
+                chat.state.value.pendingPermissions
+                    .isEmpty(),
+            )
+            assertTrue(provider.sent.last().contains("Main window"), provider.sent.last())
         }
 
     @Test

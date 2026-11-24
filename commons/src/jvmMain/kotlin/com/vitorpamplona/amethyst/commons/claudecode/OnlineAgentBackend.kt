@@ -29,6 +29,7 @@ import com.vitorpamplona.agents.AgentNotInstalledException
 import com.vitorpamplona.agents.AgentSessionInfo
 import com.vitorpamplona.agents.AgentStartOptions
 import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.HostToolResult
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.agents.ModelChoice
@@ -254,7 +255,7 @@ data class OnlineSession(
         messages.mapIndexedNotNull { index, message ->
             val uuid = "$id-$index"
             when (message.str("role")) {
-                "user" -> TranscriptEntry(uuid, TranscriptEntry.Role.USER, listOf(ContentBlock.Text(message.str("content").orEmpty())), null, null)
+                "user" -> TranscriptEntry(uuid, TranscriptEntry.Role.USER, listOf(ContentBlock.Text(message.str("content") ?: PICTURES_SAVED)), null, null)
                 "assistant" -> TranscriptEntry(uuid, TranscriptEntry.Role.ASSISTANT, assistantBlocks(message), null, model)
                 "tool" -> TranscriptEntry(uuid, TranscriptEntry.Role.USER, listOf(ContentBlock.ToolResult(message.str("tool_call_id").orEmpty(), message.str("content").orEmpty(), message.str("is_error") == "true")), null, null)
                 else -> null
@@ -395,18 +396,22 @@ class OnlineAgentConnection(
                     out.send(AgentEvent.TurnEnded(interrupted = false, failure = null))
                     return
                 }
+                val pictures = mutableListOf<ImageInput>()
                 for (call in calls) {
                     val result = runCall(call) ?: return
                     append(
                         buildJsonObject {
                             put("role", "tool")
                             put("tool_call_id", call.str("id").orEmpty())
-                            put("content", result.second)
-                            if (result.first) put("is_error", "true")
+                            put("content", result.text)
+                            if (result.isError) put("is_error", "true")
                         },
                     )
-                    out.send(AgentEvent.ToolResults(listOf(ContentBlock.ToolResult(call.str("id").orEmpty(), result.second, result.first))))
+                    pictures += result.images
+                    out.send(AgentEvent.ToolResults(listOf(ContentBlock.ToolResult(call.str("id").orEmpty(), result.text, result.isError))))
                 }
+                // A tool message takes only text: the pictures a tool gave go in a user message after it.
+                if (pictures.isNotEmpty()) append(imagesMessage(pictures))
             }
             out.send(AgentEvent.TurnEnded(interrupted = false, failure = "Stopped after $MAX_STEPS steps without an answer."))
         } catch (e: CancellationException) {
@@ -480,8 +485,8 @@ class OnlineAgentConnection(
         return kept to tokens
     }
 
-    /** Runs one call, asking first when it must; (isError, text), or null when the user stopped the turn. */
-    private suspend fun runCall(call: JsonObject): Pair<Boolean, String>? {
+    /** Runs one call, asking first when it must; null when the user stopped the turn. */
+    private suspend fun runCall(call: JsonObject): HostToolResult? {
         val id = call.str("id") ?: UUID.randomUUID().toString()
         val function = call["function"] as? JsonObject
         val name = function?.str("name").orEmpty()
@@ -490,13 +495,13 @@ class OnlineAgentConnection(
                 function?.str("arguments")?.let { Json.parseToJsonElement(it) as? JsonObject } ?: JsonObject(emptyMap())
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                return true to "The arguments weren't valid JSON."
+                return HostToolResult("The arguments weren't valid JSON.", isError = true)
             }
         val (server, tool) =
             tools.firstNotNullOfOrNull { server ->
                 val prefix = server.qualifiedName("")
                 if (name.startsWith(prefix)) server to name.removePrefix(prefix) else null
-            } ?: return true to "No tool named $name."
+            } ?: return HostToolResult("No tool named $name.", isError = true)
         var arguments = input
         if (name !in preApproved || server.alwaysAsks(tool)) {
             val strict = server.alwaysAsks(tool)
@@ -528,12 +533,11 @@ class OnlineAgentConnection(
                         out.send(AgentEvent.TurnEnded(interrupted = true, failure = null))
                         return null
                     }
-                    return true to "The user declined. ${decision.message}".trim()
+                    return HostToolResult("The user declined. ${decision.message}".trim(), isError = true)
                 }
             }
         }
-        val result = server.call(tool, arguments)
-        return result.isError to result.text
+        return server.call(tool, arguments)
     }
 
     private suspend fun append(message: JsonObject) {
@@ -541,7 +545,7 @@ class OnlineAgentConnection(
         if (persist) {
             withContext(Dispatchers.IO) {
                 try {
-                    store.save(session)
+                    store.save(session.copy(messages = session.messages.map(::withoutPictures)))
                 } catch (e: IOException) {
                     Log.w("OnlineAgentConnection", "Could not save the session", e)
                 }
@@ -595,8 +599,49 @@ class OnlineAgentConnection(
     }
 }
 
-/** A saved message as the endpoint takes it: the app's own `is_error` mark stays home. */
-private fun wireMessage(message: JsonObject): JsonObject = if ("is_error" in message) JsonObject(message - "is_error") else message
+/** A saved message as the endpoint takes it: the app's own marks stay home. */
+private fun wireMessage(message: JsonObject): JsonObject = if ("is_error" in message || PICTURES in message) JsonObject(message - "is_error" - PICTURES) else message
+
+/** Marks the user message that carries a tool's pictures: saved without them, shown as a note. */
+private const val PICTURES = "app_pictures"
+private const val PICTURES_SAVED = "[A picture from a tool was shown here; it isn't kept.]"
+
+/** The pictures of a tool's result, as the OpenAI-compatible endpoints take images. */
+private fun imagesMessage(images: List<ImageInput>): JsonObject =
+    buildJsonObject {
+        put("role", "user")
+        put(PICTURES, true)
+        put(
+            "content",
+            buildJsonArray {
+                add(
+                    buildJsonObject {
+                        put("type", "text")
+                        put("text", "The picture the tool returned:")
+                    },
+                )
+                images.forEach { image ->
+                    add(
+                        buildJsonObject {
+                            put("type", "image_url")
+                            put("image_url", buildJsonObject { put("url", "data:${image.mediaType};base64,${image.base64}") })
+                        },
+                    )
+                }
+            },
+        )
+    }
+
+/** What is saved of [message]: a picture's bytes stay in memory, a line says where it was. */
+private fun withoutPictures(message: JsonObject): JsonObject =
+    if (PICTURES in message) {
+        buildJsonObject {
+            put("role", "user")
+            put("content", PICTURES_SAVED)
+        }
+    } else {
+        message
+    }
 
 /** The assistant message's text and tool calls, as the chat shows them. */
 internal fun assistantBlocks(message: JsonObject): List<ContentBlock> {

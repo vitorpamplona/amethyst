@@ -63,6 +63,18 @@ backend; the rename.
 so no card. Each returns a page (30 by default, 50 at most, text cut at 500 characters): on the
 user's own key every note read is billed to them.
 
+## Third slice: the screen
+
+`what_is_on_screen` (`ScreenToolServer`): the routes each registered navigation shows
+(`OnScreenNavs`: the window's `Nav` and each deck column's), the tabs and history behind them, and
+popped-out windows, as their saved JSON. Read-only. `screenshot`: each Amethyst window's
+`SkiaLayer.screenshot()`, shrunk like a pasted image, sent as MCP image content (Claude Code) or
+an `image_url` user message (online backend; never written to the saved session). Asks every time.
+`read_profile` reads a person the screen names.
+
+The assistant still opens as a tab, so "on screen" is mostly the tabs behind it. It belongs in a
+side panel beside the current screen, like the notification panel: see the next section.
+
 ## Next
 
 - Zap a person (profile zap), reactions, reposts, follows, bookmarks, DMs (NIP-17), lists.

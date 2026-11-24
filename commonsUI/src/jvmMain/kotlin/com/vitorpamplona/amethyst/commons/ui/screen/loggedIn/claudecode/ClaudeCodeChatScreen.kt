@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
+import com.vitorpamplona.amethyst.commons.claudecode.ScreenToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
@@ -146,6 +147,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -1420,6 +1422,7 @@ private fun PermissionCard(
                     when {
                         // A post, an upload or a payment from the assistant: it acts as the user, not on a setting.
                         note != null && request.toolName.startsWith(ACCOUNT_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_act, LocalAgentName.current)
+                        note != null && request.toolName.startsWith(SCREEN_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_screen, LocalAgentName.current)
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
                         view is ToolView.FileChange ->
                             // The diff below names the file: the question needn't say it again.
@@ -1881,3 +1884,4 @@ internal fun sentImagesToView(
 
 /** How the agent names the assistant's account tools: `mcp__amethyst-account__…`. */
 private val ACCOUNT_TOOLS_PREFIX = "mcp__${AccountToolServer.NAME}__"
+private val SCREEN_TOOLS_PREFIX = "mcp__${ScreenToolServer.NAME}__"

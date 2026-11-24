@@ -9873,6 +9873,7 @@
     <string name="claude_code_permission_create_this">%1$s wants to create this file</string>
     <string name="claude_code_permission_setting">Claude wants to change a setting</string>
     <string name="amethyst_assistant_permission_act">%1$s wants to act as you</string>
+    <string name="amethyst_assistant_permission_screen">%1$s wants to see your screen</string>
     <string name="claude_code_settings_starter_data">Why does Amethyst use so much mobile data?</string>
     <string name="claude_code_settings_starter_text">Make the text bigger and easier to read</string>
     <string name="claude_code_settings_starter_notifications">My notifications are too noisy. What can I change?</string>

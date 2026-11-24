@@ -39,12 +39,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.BaseAccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
@@ -103,6 +105,7 @@ class AccountToolServer(
             SEARCH_NOTES -> searchNotes(arguments)
             SEARCH_PEOPLE -> searchPeople(arguments)
             READ_THREAD -> readThread(arguments)
+            READ_PROFILE -> readProfile(arguments)
             READ_FEED -> readFeed(arguments, notifications = false)
             READ_NOTIFICATIONS -> readFeed(arguments, notifications = true)
             else -> HostToolResult("No tool named $tool", isError = true)
@@ -280,6 +283,45 @@ class AccountToolServer(
         )
     }
 
+    /** A person: their profile, and their latest notes from the relays and the cache. */
+    private suspend fun readProfile(arguments: JsonObject): HostToolResult {
+        val text =
+            arguments
+                .string("user")
+                ?.trim()
+                ?.removePrefix("nostr:")
+                .orEmpty()
+        val pubkey = decodePublicKeyAsHexOrNull(text) ?: return HostToolResult("Give the person's npub, nprofile or hex key. search_people finds it from a name.", isError = true)
+        val limit = limitOf(arguments)
+        val relays = (account.homeRelays.flow.value + account.defaultGlobalRelays.flow.value).take(MAX_FETCH_RELAYS).toSet()
+        fetch(relays, Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(pubkey), limit = 1))
+        val notesFilter = Filter(kinds = SEARCH_KINDS, authors = listOf(pubkey), limit = limit)
+        fetch(relays, notesFilter)
+        val user = account.cache.getOrCreateUser(pubkey)
+        val notes =
+            withContext(Dispatchers.Default) {
+                account.cache
+                    .findNotesMatching(listOf(notesFilter), account.hiddenUsers.flow.value)
+                    .sortedByDescending { it.event?.createdAt ?: 0 }
+                    .take(limit)
+            }
+        val info =
+            user
+                .metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+        return HostToolResult(
+            buildString {
+                appendLine("${user.toBestDisplayName()} ${user.pubkeyNpub()}" + if (account.isFollowing(pubkey)) " (you follow them)" else "")
+                info?.about?.let { appendLine("Bio: " + oneLine(it).take(NOTE_CHARS)) }
+                user.lnAddress()?.let { appendLine("Takes zaps at $it.") }
+                appendLine()
+                if (notes.isEmpty()) append("No notes found.") else append("Latest notes:\n\n" + notes.joinToString("\n\n") { line(it) })
+            },
+        )
+    }
+
     /** The whole conversation around a note, root first, after asking the relays for its replies. */
     private suspend fun readThread(arguments: JsonObject): HostToolResult {
         val note = note(arguments) ?: return unknownNote(arguments)
@@ -415,6 +457,7 @@ class AccountToolServer(
         const val SEARCH_NOTES = "search_notes"
         const val SEARCH_PEOPLE = "search_people"
         const val READ_THREAD = "read_thread"
+        const val READ_PROFILE = "read_profile"
         const val READ_FEED = "read_home_feed"
         const val READ_NOTIFICATIONS = "read_notifications"
         private const val RELAY_SYNC_STATUS_NAME = SYNC_STATUS
@@ -424,7 +467,7 @@ class AccountToolServer(
         val ALWAYS_ASK = setOf(POST, REPLY, UPLOAD, ZAP, PAY, SYNC)
 
         /** The ones that only read: they run without asking. */
-        val READ_ONLY_TOOLS = listOf(GET_NOTE, WALLET, SYNC_STATUS, SEARCH_NOTES, SEARCH_PEOPLE, READ_THREAD, READ_FEED, READ_NOTIFICATIONS)
+        val READ_ONLY_TOOLS = listOf(GET_NOTE, WALLET, SYNC_STATUS, SEARCH_NOTES, SEARCH_PEOPLE, READ_THREAD, READ_PROFILE, READ_FEED, READ_NOTIFICATIONS)
 
         /**
          * What a read returns at most. Every note read goes to the model, and on the user's own AI
@@ -490,6 +533,11 @@ class AccountToolServer(
                     schema("""{"type":"object","properties":{"query":{"type":"string"},"hours":{"type":"integer","minimum":1,"description":"Only notes from the last this many hours"},$LIMIT_ARG},"required":["query"]}"""),
                 ),
                 HostTool(SEARCH_PEOPLE, "Finds people by name or NIP-05 address: their name, npub, whether the user follows them, and their bio.", schema("""{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}""")),
+                HostTool(
+                    READ_PROFILE,
+                    "Reads a person: their name, bio, whether the user follows them, their Lightning address, and their latest notes.",
+                    schema("""{"type":"object","properties":{"user":{"type":"string","description":"npub1…, nprofile1… or hex key"},$LIMIT_ARG},"required":["user"]}"""),
+                ),
                 HostTool(READ_THREAD, "Reads the whole conversation a note is part of, oldest first, asking the relays for replies the app hasn't loaded.", schema("""{"type":"object","properties":{$NOTE_ARG},"required":["note"]}""")),
                 HostTool(
                     READ_FEED,

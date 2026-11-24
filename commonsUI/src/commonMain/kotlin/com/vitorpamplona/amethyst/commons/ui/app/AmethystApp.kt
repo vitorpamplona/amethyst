@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.RegisterOnScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnModifiedClick
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
@@ -315,6 +316,7 @@ private fun AppNavigation(
                 ?.let { NavBackStacks.decode(it) }
                 ?.takeIf { it.isSingleScreen && it.arrangement == layout.arrangement() }
         }
+    RegisterOnScreen("Main window", nav)
     LaunchedEffect(nav, layout) { nav.stacks.changeArrangement(layout.arrangement()) }
     LaunchedEffect(nav) {
         // A cheap copy on every change; the JSON only once they settle, off the main thread.

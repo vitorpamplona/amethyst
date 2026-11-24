@@ -1187,8 +1187,9 @@ class ClaudeCodeService(
         title: String,
         account: AccountToolServer? = null,
         access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
     ): ClaudeChat {
-        bindAssistant(settings, account, access)
+        bindAssistant(settings, account, access, screen)
         settingsAssistantKey?.let { key -> chats.value[key]?.let { return it } }
         val agent = assistantAgent()
         // Read here rather than from the last [refresh]: the assistant may open before the list ever has.
@@ -1219,9 +1220,11 @@ class ClaudeCodeService(
         settings: SettingsToolServer,
         account: AccountToolServer?,
         access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
     ) {
         settingsTools.target = settings
         accountTools.target = account
+        screenTools.target = screen
         if (access != null) online.access = access
     }
 
@@ -1252,14 +1255,15 @@ class ClaudeCodeService(
             PermissionMode.DEFAULT,
             null,
             kind = ChatKind.SETTINGS,
-            mcpServers = listOf(settingsTools, accountTools),
+            mcpServers = listOf(settingsTools, accountTools, screenTools),
             agent = sessionId?.let { backendOf(it) }?.takeIf { it.capabilities.hostTools } ?: assistantAgent(),
             launchOptions = { options ->
                 options.copy(
                     onlyHostTools = true,
                     preApprovedTools =
                         listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settingsTools::qualifiedName) +
-                            AccountToolServer.READ_ONLY_TOOLS.map(accountTools::qualifiedName),
+                            AccountToolServer.READ_ONLY_TOOLS.map(accountTools::qualifiedName) +
+                            ScreenToolServer.READ_ONLY_TOOLS.map(screenTools::qualifiedName),
                     instructions = SettingsToolServer.SYSTEM_PROMPT,
                 )
             },
@@ -1269,6 +1273,7 @@ class ClaudeCodeService(
     /** The tools of every assistant chat, bound to the screen that shows one ([bindAssistant]). */
     private val settingsTools = BoundToolServer(SettingsToolServer.NAME, SettingsToolServer.TOOLS)
     private val accountTools = BoundToolServer(AccountToolServer.NAME, AccountToolServer.TOOLS, AccountToolServer.ALWAYS_ASK)
+    private val screenTools = BoundToolServer(ScreenToolServer.NAME, ScreenToolServer.TOOLS, ScreenToolServer.ALWAYS_ASK)
 
     @Volatile
     private var settingsAssistantKey: String? = null

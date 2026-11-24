@@ -67,7 +67,8 @@ fun ClaudeCodeSettingsAssistantScreen(
     val tools = rememberSettingsTools(accountViewModel, nav)
     val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
     val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
-    val chat by produceState<ClaudeChat?>(null, tools, accountTools) { value = ClaudeCodeService.shared.settingsAssistant(tools, title, accountTools, access) }
+    val screenTools = remember { desktopScreenTools() }
+    val chat by produceState<ClaudeChat?>(null, tools, accountTools) { value = ClaudeCodeService.shared.settingsAssistant(tools, title, accountTools, access, screenTools) }
     // Asked once per visit to this screen: coming back to it must not ask again.
     var asked by rememberSaveable(question) { mutableStateOf(false) }
     LaunchedEffect(chat, question) {
@@ -108,7 +109,8 @@ fun BindAssistantTools(
     val tools = rememberSettingsTools(accountViewModel, nav)
     val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
     val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
-    SideEffect { ClaudeCodeService.shared.bindAssistant(tools, accountTools, access) }
+    val screenTools = remember { desktopScreenTools() }
+    SideEffect { ClaudeCodeService.shared.bindAssistant(tools, accountTools, access, screenTools) }
 }
 
 private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
