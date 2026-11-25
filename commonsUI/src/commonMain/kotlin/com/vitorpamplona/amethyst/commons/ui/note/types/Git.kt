@@ -37,11 +37,9 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,9 +53,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.commons.gitRepo.dal.isSeriesRoot
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -66,14 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
-import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
-import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
-import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeTargets
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
-import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitItemReference
@@ -91,10 +79,8 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberCanGitTriage
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitMerge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitReviewHooks
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
@@ -108,23 +94,15 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffStatSummary
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitPullRequestUpdateButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExternalNotice
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLastCommit
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoStatTiles
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
@@ -141,7 +119,6 @@ import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -283,6 +260,14 @@ private fun GitRepositoryBreadcrumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A front end without the repository screens still names the repository, just not as a link.
+    val repoRoute = remember(repository) { Route.GitRepository(repository) }
+    val sectionRoute =
+        remember(repository, section) {
+            if (section == GitItemSection.ISSUES) Route.GitRepositoryIssues(repository) else Route.GitRepositoryPulls(repository)
+        }
+    val repoLink = canOpen(repoRoute)
+    val sectionLink = canOpen(sectionRoute)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -302,7 +287,7 @@ private fun GitRepositoryBreadcrumb(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false).clip(ChipShape).clickable { nav.nav(Route.GitRepository(repository)) },
+                modifier = Modifier.weight(1f, fill = false).clip(ChipShape).clickable(enabled = repoLink) { nav.nav(repoRoute) },
             )
         }
         Text(text = "/", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.grayText)
@@ -311,10 +296,7 @@ private fun GitRepositoryBreadcrumb(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
-            modifier =
-                Modifier.clip(ChipShape).clickable {
-                    nav.nav(if (section == GitItemSection.ISSUES) Route.GitRepositoryIssues(repository) else Route.GitRepositoryPulls(repository))
-                },
+            modifier = Modifier.clip(ChipShape).clickable(enabled = sectionLink) { nav.nav(sectionRoute) },
         )
     }
 }
@@ -413,7 +395,7 @@ private fun GitCloneSection(cloneUrls: List<String>) {
  * A `git format-patch` message without its mail headers: the `From <sha>` line, `From:`, `Date:`
  * and the (possibly folded) `Subject:`, which the card already shows as the title.
  */
-private fun formatPatchBody(message: String): String {
+internal fun formatPatchBody(message: String): String {
     val lines = message.lines()
     var index = 0
     var inSubject = false
@@ -436,7 +418,7 @@ private fun formatPatchBody(message: String): String {
  * content ("# Title\n\n…"). The card already renders the subject as its own title, so
  * when the first line is a heading matching [subject], drop it from the body.
  */
-private fun stripDuplicatedSubject(
+internal fun stripDuplicatedSubject(
     content: String,
     subject: String?,
 ): String {
@@ -540,6 +522,7 @@ fun RenderGitPatchEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots = GitCardSlots.Portable,
 ) {
     val event = baseNote.event as? GitPatchEvent ?: return
     // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
@@ -558,6 +541,7 @@ fun RenderGitPatchEvent(
         editState,
         accountViewModel,
         nav,
+        slots,
     )
 }
 
@@ -572,6 +556,7 @@ private fun RenderGitPatchEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots,
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
@@ -627,10 +612,10 @@ private fun RenderGitPatchEvent(
         }
 
         if (!makeItShort && inThread) {
-            GitLocalCheckoutSection(note, null, emptyList(), null, patch = noteEvent.content)
+            slots.LocalCheckout(note, null, emptyList(), null, patch = noteEvent.content)
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
-            GitStatusActionsWithMerge(note, accountViewModel)
+            slots.StatusActions(note, accountViewModel)
         }
     }
 }
@@ -645,6 +630,7 @@ fun RenderGitIssueEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots = GitCardSlots.Portable,
 ) {
     val event = baseNote.event as? GitIssueEvent ?: return
     // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
@@ -663,6 +649,7 @@ fun RenderGitIssueEvent(
         editState,
         accountViewModel,
         nav,
+        slots,
     )
 }
 
@@ -677,6 +664,7 @@ private fun RenderGitIssueEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots,
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
@@ -702,7 +690,7 @@ private fun RenderGitIssueEvent(
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitTriageBar(note, accountViewModel)
-            GitStatusActions(note, accountViewModel)
+            slots.StatusActions(note, accountViewModel)
             noteEvent.repositoryAddress()?.let { WorkWithClaudeButton(it, nav, issueId = note.idHex) }
         }
     }
@@ -718,6 +706,7 @@ fun RenderGitPullRequestEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots = GitCardSlots.Portable,
 ) {
     val event = baseNote.event as? GitPullRequestEvent ?: return
     // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
@@ -736,6 +725,7 @@ fun RenderGitPullRequestEvent(
         editState,
         accountViewModel,
         nav,
+        slots,
     )
 }
 
@@ -750,6 +740,7 @@ private fun RenderGitPullRequestEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots,
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
@@ -804,14 +795,14 @@ private fun RenderGitPullRequestEvent(
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)
-            GitLocalCheckoutSection(note, source, cloneUrls, currentCommit)
-            GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
+            slots.LocalCheckout(note, source, cloneUrls, currentCommit, patch = null)
+            slots.PullRequestChanges(note, cloneUrls, currentCommit, mergeBase, accountViewModel, nav)
             val repositoryNote = remember(noteEvent) { noteEvent.repositoryAddress()?.let { LocalCache.getOrCreateAddressableNote(it) } }
-            GitPullRequestUpdateButton(note, repositoryNote, currentCommit, cloneUrls, accountViewModel, nav)
+            slots.PullRequestUpdateButton(note, repositoryNote, currentCommit, cloneUrls, accountViewModel, nav)
             noteEvent.repositoryAddress()?.let { WorkWithClaudeButton(it, nav, proposalId = note.idHex) }
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
-            GitStatusActionsWithMerge(note, accountViewModel)
+            slots.StatusActions(note, accountViewModel)
         }
     }
 }
@@ -901,10 +892,11 @@ fun RenderGitRepositoryEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots = GitCardSlots.Portable,
 ) {
     val event = baseNote.event as? GitRepositoryEvent ?: return
 
-    RenderGitRepositoryEvent(event, baseNote, accountViewModel, nav)
+    RenderGitRepositoryEvent(event, baseNote, accountViewModel, nav, slots)
 }
 
 @Composable
@@ -913,6 +905,7 @@ private fun RenderGitRepositoryEvent(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    slots: GitCardSlots,
 ) {
     val title = noteEvent.name() ?: noteEvent.dTag()
     val summary = noteEvent.description()
@@ -969,7 +962,7 @@ private fun RenderGitRepositoryEvent(
             )
         }
 
-        RepoSnapshotDashboard(noteEvent, note, accountViewModel, nav)
+        slots.RepositoryDashboard(noteEvent, note, accountViewModel, nav)
 
         if (topics.isNotEmpty()) {
             Spacer(modifier = HalfDoubleVertSpacer)
@@ -981,106 +974,4 @@ private fun RenderGitRepositoryEvent(
             }
         }
     }
-}
-
-/**
- * Loads a shallow snapshot of the repository over smart-HTTP and renders the same
- * stat tiles / language bar / last-commit strip used on the project home, in place of
- * the old web/clone links. Fetches lazily (once) when the card is composed.
- */
-@Composable
-private fun RepoSnapshotDashboard(
-    noteEvent: GitRepositoryEvent,
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    // A store per card: in the screen's store, every repo scrolled past kept its model and loaded
-    // snapshot until the screen was popped, around GitRepoSnapshotCache's deliberately small LRU.
-    // Scrolling back reads that cache first.
-    key(note.idHex) {
-        ScopedViewModelStore {
-            RepoSnapshotDashboardContent(noteEvent, note, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-private fun RepoSnapshotDashboardContent(
-    noteEvent: GitRepositoryEvent,
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val cacheKey = remember(noteEvent) { noteEvent.address().toValue() }
-    val browser: GitRepositoryBrowserViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoCardBrowser",
-            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview, GitPrivateRepositoryAuth(accountViewModel.account.signer)),
-        )
-    LaunchedEffect(noteEvent) { browser.loadOnce(noteEvent.clones(), cacheKey) }
-    val browserState by browser.state.collectAsStateWithLifecycle()
-    // Prefer the live state, but fall back to a cached snapshot so an already-fetched repo
-    // renders synchronously — including in the share-to-image capture, which won't wait for a
-    // fresh clone.
-    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) }
-    if (snapshot == null) {
-        // Repos we can't clone over http(s) (e.g. Iris's htree://) get an open-in-browser notice
-        // instead of an indefinitely-empty dashboard.
-        if (!repoHasFetchableClone(noteEvent)) {
-            Spacer(modifier = HalfDoubleVertSpacer)
-            RepoExternalNotice(noteEvent)
-        }
-        return
-    }
-
-    val fileNames = remember(snapshot) { snapshot.walkFileNames() }
-    val slices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
-
-    Spacer(modifier = HalfDoubleVertSpacer)
-    RepoStatTiles(
-        branches = snapshot.branches.size,
-        tags = snapshot.tags.size,
-        files = fileNames.size,
-        updatedEpochSec = snapshot.tipCommit?.authorTimeSec,
-    )
-    if (slices.isNotEmpty()) {
-        Spacer(modifier = HalfDoubleVertSpacer)
-        RepoLanguageBar(slices)
-    }
-    snapshot.tipCommit?.let { commit ->
-        Spacer(modifier = HalfDoubleVertSpacer)
-        RepoLastCommit(commit) { nav.nav(Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())) }
-    }
-}
-
-/**
- * [GitStatusActions] with the in-app merge for a pull request or a patch series' root; "Mark
- * merged" stays for a merge made with git.
- */
-@Composable
-private fun GitStatusActionsWithMerge(
-    note: Note,
-    accountViewModel: AccountViewModel,
-) {
-    val event = note.event
-    if (event !is GitPullRequestEvent && !(event is GitPatchEvent && event.isSeriesRoot())) {
-        GitStatusActions(note, accountViewModel)
-        return
-    }
-    val onMerge =
-        rememberGitMerge(note, accountViewModel) {
-            accountViewModel.launchSigner { accountViewModel.account.publishGitStatus(note, GitStatusEvent.KIND_APPLIED) }
-        }
-    // Offer the in-app merge only where it can land: a repository with a GRASP server.
-    val announcements = observeGitRepositoryAnnouncements(event)
-    val onGrasp =
-        remember(event, announcements) {
-            GitAuthority
-                .repositoriesOf(event)
-                .firstOrNull()
-                ?.let { LocalCache.gitAuthority.membership(it) }
-                ?.let { GitMergeTargets.of(it.confirmedAnnouncements).grasp.isNotEmpty() } ?: true
-        }
-    GitStatusActions(note, accountViewModel, onMerge.takeIf { onGrasp })
 }

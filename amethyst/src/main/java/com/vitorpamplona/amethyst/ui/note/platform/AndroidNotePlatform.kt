@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.note.types.JvmGitCardSlots
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWaveformPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -389,6 +390,7 @@ object AndroidNotePlatform : NotePlatform {
         baseNote = baseNote,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -410,6 +412,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -431,6 +434,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -452,6 +456,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
