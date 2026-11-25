@@ -41,7 +41,7 @@ internal fun Context.uriByteSize(uri: Uri): Long? {
     if (uri.scheme == ContentResolver.SCHEME_FILE) {
         return uri.path
             ?.let(::File)
-            ?.takeIf { it.exists() }
+            ?.takeIf { it.isFile }
             ?.length()
     }
     return contentResolver.querySize(uri) ?: contentResolver.statSize(uri)

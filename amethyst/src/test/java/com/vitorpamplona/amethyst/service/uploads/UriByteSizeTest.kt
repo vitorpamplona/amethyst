@@ -92,15 +92,36 @@ class UriByteSizeTest {
         val missing = File(tempFolder.root, "gone.mp4")
 
         assertNull(context.uriByteSize(uri("file", missing.absolutePath)))
+        verify(exactly = 0) { resolver.query(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a file uri to a directory or with no path is unknown`() {
+        assertNull(context.uriByteSize(uri("file", tempFolder.newFolder("dir").absolutePath)))
+        assertNull(context.uriByteSize(uri("file", null)))
     }
 
     @Test
     fun `a content uri is the provider's size`() {
         val content = uri("content")
-        every { resolver.query(content, any(), any(), any(), any()) } returns sizeCursor(1_234L)
+        val cursor = sizeCursor(1_234L)
+        every { resolver.query(content, any(), any(), any(), any()) } returns cursor
 
         assertEquals(1_234L, context.uriByteSize(content))
+        verify { cursor.close() }
         verify(exactly = 0) { resolver.openFileDescriptor(any(), any()) }
+    }
+
+    @Test
+    fun `a provider without a SIZE column falls through to the descriptor`() {
+        val content = uri("content")
+        val cursor: Cursor = mockk(relaxed = true) { every { getColumnIndex(OpenableColumns.SIZE) } returns -1 }
+        every { resolver.query(content, any(), any(), any(), any()) } returns cursor
+        val fd = descriptor(4_321L)
+        every { resolver.openFileDescriptor(content, "r") } returns fd
+
+        assertEquals(4_321L, context.uriByteSize(content))
+        verify { fd.close() }
     }
 
     @Test

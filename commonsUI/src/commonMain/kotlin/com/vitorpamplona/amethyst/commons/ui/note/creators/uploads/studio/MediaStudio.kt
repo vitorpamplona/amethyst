@@ -957,9 +957,14 @@ private fun ImageQuality(
     uploader: MediaUploader,
 ) {
     val original = media?.let { previews.anyOf(it) }?.original
-    // A content-resolver lookup on Android: off the main thread, until the previews measure it.
-    val fallbackBytes by produceState<Long?>(null, media, uploader) { value = media?.let { withContext(Dispatchers.IO) { uploader.fileSize(it.uri) } } }
-    val originalBytes = original?.bytes ?: fallbackBytes
+    // A content-resolver lookup on Android: off the main thread, and only until the previews measure it.
+    // produceState keeps its value across keys, so drop the last media's size before looking up the next.
+    val measuredBytes = original?.bytes
+    val fallbackBytes by produceState<Long?>(null, media, uploader, measuredBytes) {
+        value = null
+        if (measuredBytes == null) value = media?.let { withContext(Dispatchers.IO) { uploader.fileSize(it.uri) } }
+    }
+    val originalBytes = measuredBytes ?: fallbackBytes
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         CompressorQuality.sliderSteps.forEach { level ->
             val compressed = media?.let { previews[it, level] }?.compressed
