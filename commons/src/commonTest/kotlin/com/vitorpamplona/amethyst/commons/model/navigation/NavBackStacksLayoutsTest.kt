@@ -143,6 +143,20 @@ class NavBackStacksLayoutsTest {
     }
 
     @Test
+    fun aLinkToSomeoneElsesProfileLeavesTheBarsOwnProfileAlone() {
+        // The bar's Profile is the user's; a link to another profile is a tab of its own.
+        val stacks = tabs()
+        stacks.switchTab(Route.Profile("me"))
+        val mine = stacks.top
+
+        stacks.newStack(Route.Profile("bob"))
+
+        assertEquals(Route.Profile("me"), mine.route)
+        assertEquals(Route.Profile("bob"), stacks.topRoute)
+        assertEquals(listOf(Route.Home, Route.Profile("me"), Route.Profile("bob")), stacks.routes())
+    }
+
+    @Test
     fun aPushedScreenWithASectionsClassStillOpensItsOwnTab() {
         // Only a restart is a section's notification; a push keeps opening a screen of its own.
         val stacks = tabs()
