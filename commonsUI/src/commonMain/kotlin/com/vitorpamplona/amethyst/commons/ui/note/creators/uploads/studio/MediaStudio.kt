@@ -69,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -149,7 +150,10 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.MouseWheelZoom
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -953,7 +957,9 @@ private fun ImageQuality(
     uploader: MediaUploader,
 ) {
     val original = media?.let { previews.anyOf(it) }?.original
-    val originalBytes = original?.bytes ?: remember(media) { media?.let { uploader.fileSize(it.uri) } }
+    // A content-resolver lookup on Android: off the main thread, until the previews measure it.
+    val fallbackBytes by produceState<Long?>(null, media, uploader) { value = media?.let { withContext(Dispatchers.IO) { uploader.fileSize(it.uri) } } }
+    val originalBytes = original?.bytes ?: fallbackBytes
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         CompressorQuality.sliderSteps.forEach { level ->
             val compressed = media?.let { previews[it, level] }?.compressed

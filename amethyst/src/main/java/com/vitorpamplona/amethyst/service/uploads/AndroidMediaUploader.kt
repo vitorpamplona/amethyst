@@ -1064,7 +1064,7 @@ class AndroidMediaUploader(
         val width = bounds.outWidth.takeIf { it > 0 }
         val height = bounds.outHeight.takeIf { it > 0 }
         val sideways = runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees % 180 != 0 } }.getOrNull() == true
-        val bytes = appContext.uriByteSize(uri)
+        val bytes = fileSize(uri)
         return if (sideways) ImageFileStats(height, width, bytes) else ImageFileStats(width, height, bytes)
     }
 
