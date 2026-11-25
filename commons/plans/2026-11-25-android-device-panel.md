@@ -42,10 +42,47 @@ look, tap and read logcat on the same device the user is watching.
 - **Who gets the tools.** Coding chats with an agent that takes host tools, when an Android SDK is
   installed. The brief adds one paragraph about the panel.
 
+## Crashes reach the agent without asking
+
+Every device tool (but `select_device`, `stop_emulator`, `logcat`) reads the device's crash log
+before and after it acts (`Adb.crashes`: the `crash` buffer, plus `ActivityManager` errors in the
+system buffer for ANRs, parsed by `CrashLog`) and puts any crash or ANR the chat hasn't heard of at
+the top of its result: "AFTER THIS ACTION, AN APP CRASHED: …" with the exception and the top of
+the trace. A crash the last action caused after its result went back leads the next result. The
+app a chat opened (`launch_app`, `run_app`) is also watched: gone with nothing in the crash log, the
+next result says so once. `AndroidDevices.crashes` keeps one list; each reader (each chat's tools,
+the panel) keeps its own cursor, so both hear of every crash. The first read of a device only marks
+what is there: crashes from before anyone watched aren't news. The panel shows a crash banner (Copy,
+Dismiss) for crashes the user causes by hand too: it polls every 3 s while open.
+
+## Each workstream gets its own emulator
+
+The emulator runs several instances of one AVD only when every one is `-read-only` (its own message:
+"Another emulator instance is running. Please close it or run all emulators with -read-only
+flag."). So:
+
+- **A chat starts copies.** `start_emulator` and the panel's "Start a copy" pass an owner: the
+  chat's workstream id (`ClaudeCodeService.deviceOwner`), or the chat's key outside a workstream.
+  The copy is read-only: it boots from the AVD's saved quick-boot state and drops its changes when
+  it stops. The same owner starting again gets the copy it has; another owner gets its own. A
+  workstream's chats share its copy and its device pick.
+- **The Devices screen starts the AVD itself**, writable: that is where the user sets up the
+  starting state (log in, install, seed data), and its quick-boot save on shutdown becomes every
+  copy's start. It can't run while copies do, and copies can't start while it runs: the error says
+  which to stop.
+- **Reset.** `reset_device` and the panel's "Reset to its starting state" load `default_boot` over
+  the emulator's `SnapshotService` (gRPC): the copy goes back to its start without a restart.
+- **Cleanup.** Deleting a workstream, or freeing its clones when it idles, stops its copies
+  (`AndroidDevices.releaseOwner`). They also stop when the app quits.
+- Another workstream's copy is never a chat's device by default; the picker labels copies ("This
+  workstream's copy", "Copy for <title>") and `list_devices` tells the agent the same.
+
 ## Not done
 
 - JWT auth for emulators started elsewhere (Studio's): they fall back to adb.
 - Multi-display, foldables, XR. The panel shows display 0.
 - Audio, camera, sensors, location: the proto has them; nothing calls them yet.
-- Verifying the gRPC path on a real emulator: this container has no KVM. The framing is tested
+- Verifying the gRPC path on a real emulator: this container has no KVM. That covers reset
+  (`SnapshotService/LoadSnapshot` on a read-only instance) and two read-only copies of one AVD
+  running side by side, both read from the emulator's proto and messages, not run. The framing is tested
   against a real HTTP/2 server; the panel was checked with a scripted adb.

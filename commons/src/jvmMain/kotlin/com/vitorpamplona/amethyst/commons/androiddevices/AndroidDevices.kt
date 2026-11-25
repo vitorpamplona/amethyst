@@ -27,6 +27,7 @@ import com.vitorpamplona.androiddevice.CommandRunner
 import com.vitorpamplona.androiddevice.ProcessCommandRunner
 import com.vitorpamplona.androiddevice.adb.Adb
 import com.vitorpamplona.androiddevice.adb.AdbDevice
+import com.vitorpamplona.androiddevice.adb.DeviceCrash
 import com.vitorpamplona.androiddevice.avd.AvdInfo
 import com.vitorpamplona.androiddevice.avd.Avds
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
@@ -60,6 +61,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 enum class DeviceKind { EMULATOR, PHYSICAL }
 
@@ -92,6 +94,13 @@ data class DeviceInfo(
     val startedHere: Boolean = false,
     /** Whether agents may look at and drive it: every emulator; a phone once the user allows it. */
     val agentAllowed: Boolean = false,
+    /**
+     * The workstream (or chat) whose own copy this emulator is ([AndroidDevices.start] with an
+     * owner): a read-only instance that drops its changes when it stops. Null for a shared device.
+     */
+    val owner: String? = null,
+    /** What to call [owner] in the picker: the workstream's title. */
+    val ownerLabel: String? = null,
 ) {
     val isOnline: Boolean get() = status == DeviceStatus.ONLINE
 }
@@ -125,6 +134,24 @@ data class DeviceActivity(
     val at: Long = System.currentTimeMillis(),
 ) {
     enum class Kind { TAP, LONG_PRESS, SWIPE, KEY, TYPE, LOOK, APP }
+}
+
+/** A crash or ANR found in a device's log after the app started watching it; [seq] orders them across devices. */
+@Immutable
+data class SeenCrash(
+    val seq: Long,
+    val serial: String,
+    val crash: DeviceCrash,
+)
+
+/** An emulator this app is starting, before adb lists it. */
+private class Starting(
+    val avd: String,
+    val owner: String?,
+    val ownerLabel: String?,
+) {
+    @Volatile
+    var serial: String? = null
 }
 
 /**
@@ -161,9 +188,11 @@ class AndroidDevices(
 
     private val launched = ConcurrentHashMap<String, LaunchedEmulator>()
 
-    /** AVD name to the serial it got, once its discovery file said; null while it starts. */
-    private val starting = ConcurrentHashMap<String, String>()
-    private val startingAvds = ConcurrentHashMap.newKeySet<String>()
+    /** Starts in progress, by AVD and owner: two workstreams may each start a copy of one AVD. */
+    private val starting = ConcurrentHashMap<String, Starting>()
+
+    /** The emulators that are a workstream's own copy: serial to (owner, label). */
+    private val owners = ConcurrentHashMap<String, Pair<String, String?>>()
     private val booted = ConcurrentHashMap.newKeySet<String>()
     private val connections = ConcurrentHashMap<String, DeviceConnection>()
     private val refreshLock = Mutex()
@@ -280,21 +309,25 @@ class AndroidDevices(
                     liveStream = emulator != null && (emulator.grpcReachable || launched.containsKey(d.serial)),
                     startedHere = launched.containsKey(d.serial),
                     agentAllowed = kind == DeviceKind.EMULATOR || d.serial in allowedNow,
+                    owner = owners[d.serial]?.first,
+                    ownerLabel = owners[d.serial]?.second,
                 )
             }
         // Starting, not yet in adb's list.
         val pending =
-            startingAvds
-                .filter { avd -> listed.none { it.avdName == avd } }
-                .map { avd ->
+            starting.values
+                .filter { s -> listed.none { it.serial == s.serial } }
+                .map { s ->
                     DeviceInfo(
-                        serial = starting[avd] ?: "avd:$avd",
-                        name = avds.firstOrNull { it.name == avd }?.displayName ?: avd.replace('_', ' '),
+                        serial = s.serial ?: "avd:${s.avd}@${s.owner.orEmpty()}",
+                        name = avds.firstOrNull { it.name == s.avd }?.displayName ?: s.avd.replace('_', ' '),
                         kind = DeviceKind.EMULATOR,
                         status = DeviceStatus.STARTING,
-                        avdName = avd,
+                        avdName = s.avd,
                         startedHere = true,
                         agentAllowed = true,
+                        owner = s.owner,
+                        ownerLabel = s.ownerLabel,
                     )
                 }
         return listed + pending
@@ -305,49 +338,89 @@ class AndroidDevices(
     /**
      * Starts [avd] and returns its serial once Android has booted. Throws [IOException] when the
      * SDK has no emulator, or it exits or doesn't boot in [bootTimeoutMs].
+     *
+     * With an [owner] (a workstream, or a chat outside one), it is that owner's own copy: a
+     * read-only instance that boots from the AVD's saved state and drops its changes when it stops,
+     * so workstreams working at once don't share a device. One already running for [owner] is
+     * reused. Without one, it is the AVD itself, shared, saving its state when it shuts down.
      */
     suspend fun start(
         avd: String,
         options: LaunchOptions = LaunchOptions(),
         bootTimeoutMs: Long = 5 * 60_000,
+        owner: String? = null,
+        ownerLabel: String? = null,
     ): String {
         val emulator = tools().emulator ?: throw IOException("The Android SDK's emulator isn't installed")
+        refresh()
         _state.value.devices
-            .firstOrNull { it.avdName == avd && it.status != DeviceStatus.OFFLINE }
-            ?.let { running ->
-                if (running.status == DeviceStatus.ONLINE) return running.serial
-                if (running.status != DeviceStatus.STARTING) return waitForBoot(running.serial, bootTimeoutMs)
-            }
-        if (!startingAvds.add(avd)) throw IOException("$avd is already starting")
+            .firstOrNull { it.avdName == avd && it.owner == owner && it.status != DeviceStatus.OFFLINE && it.status != DeviceStatus.STARTING }
+            ?.let { running -> return if (running.status == DeviceStatus.ONLINE) running.serial else waitForBoot(running.serial, bootTimeoutMs) }
+        val key = owner?.let { "$avd@$it" } ?: avd
+        val entry = Starting(avd, owner, ownerLabel)
+        if (starting.putIfAbsent(key, entry) != null) throw IOException("$avd is already starting")
         _state.update { it.copy(startFailures = it.startFailures - avd) }
         try {
             refresh()
             if (!logDir.isDirectory && !logDir.mkdirs()) Log.w(TAG) { "Could not create $logDir" }
-            val launch = EmulatorLauncher(emulator, runner, discoveryDirs).launch(avd, options, File(logDir, "$avd.log"))
+            val launchOptions = if (owner != null) options.copy(readOnly = true) else options
+            val log = File(logDir, "${key.replace(Regex("[^A-Za-z0-9_.@-]"), "_")}.log")
+            val launch =
+                try {
+                    EmulatorLauncher(emulator, runner, discoveryDirs).launch(avd, launchOptions, log)
+                } catch (e: IOException) {
+                    throw explainInstanceLock(e, avd, owner)
+                }
             val serial = launch.info.serial
             launched[serial] = launch
-            starting[avd] = serial
+            if (owner != null) owners[serial] = owner to ownerLabel
+            entry.serial = serial
             refresh()
             return waitForBoot(serial, bootTimeoutMs)
         } catch (e: IOException) {
             _state.update { it.copy(startFailures = it.startFailures + (avd to (e.message ?: avd))) }
             throw e
         } finally {
-            startingAvds.remove(avd)
-            starting.remove(avd)
+            starting.remove(key)
             refresh()
         }
+    }
+
+    /**
+     * The emulator runs several instances of one AVD only when every one is read-only: a
+     * workstream's copy can't start while the AVD runs with its saved state, nor the other way.
+     */
+    private fun explainInstanceLock(
+        e: IOException,
+        avd: String,
+        owner: String?,
+    ): IOException {
+        if (e.message?.contains("Another emulator instance is running", ignoreCase = true) != true) return e
+        val name =
+            _state.value.avds
+                .firstOrNull { it.name == avd }
+                ?.displayName ?: avd
+        return IOException(
+            if (owner != null) {
+                "$name is running with its saved state (from the Devices screen or Android Studio). Shut it down to let workstreams run their own copies; what it saves becomes their starting point."
+            } else {
+                "Workstreams are running their own copies of $name. Stop them first, or use one of them."
+            },
+            e,
+        )
     }
 
     /** [start] in the background, for a button; a failure shows in [DevicesState.startFailures]. */
     fun startInBackground(
         avd: String,
         options: LaunchOptions = LaunchOptions(),
+        owner: String? = null,
+        ownerLabel: String? = null,
         onBooted: (String) -> Unit = {},
     ) {
         scope.launch {
             try {
-                onBooted(start(avd, options))
+                onBooted(start(avd, options, owner = owner, ownerLabel = ownerLabel))
             } catch (e: IOException) {
                 Log.w(TAG, "Could not start $avd", e)
             }
@@ -389,7 +462,41 @@ class AndroidDevices(
             }
         }
         connections.remove(serial)
+        owners.remove(serial)
         refresh()
+    }
+
+    /** Stops the copies [owner] started: its workstream was removed or its clones freed. */
+    fun releaseOwner(owner: String) {
+        val mine = owners.filterValues { it.first == owner }.keys
+        if (mine.isEmpty()) return
+        scope.launch {
+            mine.forEach { serial ->
+                try {
+                    stop(serial)
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not stop $serial", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Puts an emulator back to the state the AVD last saved (its quick-boot snapshot): a
+     * workstream's copy to where it started. Needs the emulator's gRPC endpoint (one this app started).
+     */
+    suspend fun reset(serial: String) {
+        val controller =
+            connection(serial).emulator
+                ?: throw IOException(
+                    if (launched.containsKey(serial)) {
+                        "Its control port didn't answer: restart it to drop its changes"
+                    } else {
+                        "Only an emulator started from here can be reset: restart it to drop its changes"
+                    },
+                )
+        controller.loadSnapshot()
+        booted += serial
     }
 
     fun stopInBackground(serial: String) {
@@ -450,12 +557,53 @@ class AndroidDevices(
         serial: String,
     ) = _selection.update { it + (chatKey to serial) }
 
-    /** The device [chatKey] works on: the one picked for it if still there, else the only one online. */
+    /**
+     * The device [chatKey] works on: the one picked for it if still there, else its own copy, else
+     * the only one online that isn't another workstream's copy.
+     */
     fun selected(chatKey: String?): DeviceInfo? {
         val devices = _state.value.devices
         chatKey?.let { key -> _selection.value[key]?.let { serial -> devices.firstOrNull { it.serial == serial }?.let { return it } } }
-        return devices.filter { it.isOnline }.singleOrNull()
+        chatKey?.let { key -> devices.firstOrNull { it.owner == key && it.status != DeviceStatus.OFFLINE }?.let { return it } }
+        return devices.filter { it.isOnline && (it.owner == null || it.owner == chatKey) }.singleOrNull()
     }
+
+    private val crashLock = Mutex()
+    private val crashesSeen = ConcurrentHashMap<String, MutableSet<String>>()
+    private val crashSeq = AtomicLong(0)
+    private val _crashes = MutableStateFlow<List<SeenCrash>>(emptyList())
+
+    /**
+     * The crashes and ANRs found since the app first looked at each device's log, oldest first.
+     * Each reader keeps its own place ([crashCursor]): the panel and an agent both hear of each one.
+     */
+    val crashes: StateFlow<List<SeenCrash>> = _crashes.asStateFlow()
+
+    /** Where the crash list ends now: a reader that starts here hears only of later crashes. */
+    fun crashCursor(): Long = crashSeq.get()
+
+    /**
+     * Reads [serial]'s crash log and adds what is new to [crashes]. The first read of a device
+     * only notes what is there: those crashes happened before anyone was watching.
+     */
+    suspend fun pollCrashes(serial: String): List<SeenCrash> =
+        crashLock.withLock {
+            val found = (adb() ?: return@withLock emptyList()).crashes(serial)
+            val known = crashesSeen[serial]
+            if (known == null) {
+                crashesSeen[serial] = found.mapTo(HashSet()) { it.id }
+                return@withLock emptyList()
+            }
+            val fresh = found.filter { known.add(it.id) }.map { SeenCrash(crashSeq.incrementAndGet(), serial, it) }
+            if (fresh.isNotEmpty()) _crashes.update { (it + fresh).takeLast(MAX_CRASHES) }
+            fresh
+        }
+
+    /** The crashes of [serial] after [cursor]. */
+    fun crashesSince(
+        serial: String,
+        cursor: Long,
+    ): List<SeenCrash> = _crashes.value.filter { it.serial == serial && it.seq > cursor }
 
     fun allowAgent(
         serial: String,
@@ -479,6 +627,7 @@ class AndroidDevices(
         private const val TAG = "AndroidDevices"
         private const val BOOT_POLL_MS = 2_000L
         private const val STOP_WAIT_S = 20L
+        private const val MAX_CRASHES = 50
 
         val shared: AndroidDevices by lazy {
             AndroidDevices().also { devices ->

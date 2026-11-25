@@ -109,6 +109,9 @@ class EmulatorDiscoveryTest {
     fun startsHiddenWithItsOwnTokenGuardedGrpcPort() {
         val args = EmulatorLauncher(File("/sdk/emulator/emulator")).arguments("Pixel", 8560, LaunchOptions(coldBoot = true))
         assertEquals(listOf("/sdk/emulator/emulator", "-avd", "Pixel", "-grpc", "8560", "-grpc-use-token", "-qt-hide-window", "-no-boot-anim", "-no-snapshot-load"), args)
+        // A workstream's copy: several of one AVD run at once only when all are read-only.
+        val copy = EmulatorLauncher(File("/sdk/emulator/emulator")).arguments("Pixel", 8562, LaunchOptions(readOnly = true))
+        assertEquals("-read-only", copy.last())
     }
 
     @Test

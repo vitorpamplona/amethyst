@@ -63,6 +63,14 @@ class DeviceToolServerTest {
     private inner class FakeAdb : CommandRunner {
         val commands = mutableListOf<String>()
 
+        /** What the crash and system buffers hold now. */
+        @Volatile
+        var crashLog = ""
+
+        /** What `pidof` answers: empty when the app isn't running. */
+        @Volatile
+        var pid = "4242"
+
         override suspend fun run(
             command: List<String>,
             timeoutMs: Long,
@@ -80,6 +88,8 @@ class DeviceToolServerTest {
                 line.endsWith("wm size") -> ok("Physical size: 1080x2400\n")
                 line.endsWith("exec-out uiautomator dump /dev/tty") -> ok(uiXml + "UI hierchary dumped to: /dev/tty")
                 line.endsWith("exec-out screencap -p") -> CommandResult(0, png, "")
+                line.contains("logcat -d -v threadtime -b crash") -> ok(crashLog)
+                line.contains("pidof") -> CommandResult(if (pid.isEmpty()) 1 else 0, pid.toByteArray(), "")
                 else -> ok("")
             }
         }
@@ -109,7 +119,7 @@ class DeviceToolServerTest {
             discoveryDirs = { emptyList() },
             avdHome = { File(sdk, "no-avds") },
         )
-    private val server = DeviceToolServer(devices, AndroidAppRunner(devices, adb), { "chat-1" }, sdk)
+    private val server = DeviceToolServer(devices, AndroidAppRunner(devices, adb), owner = { "chat-1" }, folder = sdk)
 
     private fun args(json: String): JsonObject = Json.parseToJsonElement(json).jsonObject
 
@@ -181,5 +191,47 @@ class DeviceToolServerTest {
             server.call(DeviceToolServer.SELECT, args("""{"device":"emulator-5554"}"""))
             assertEquals("emulator-5554", devices.selected("chat-1")?.serial)
             assertFalse(server.call(DeviceToolServer.UI_TREE, args("{}")).isError)
+        }
+
+    private fun crash(
+        time: String,
+        message: String,
+    ) = """
+        11-25 $time  4242  4242 E AndroidRuntime: FATAL EXCEPTION: main
+        11-25 $time  4242  4242 E AndroidRuntime: Process: com.example.app, PID: 4242
+        11-25 $time  4242  4242 E AndroidRuntime: java.lang.IllegalStateException: $message
+        11-25 $time  4242  4242 E AndroidRuntime: 	at com.example.app.Feed.load(Feed.kt:12)
+        """.trimIndent() + "\n"
+
+    @Test
+    fun aCrashAfterAnActionLeadsItsResult() =
+        runBlocking {
+            // A crash from before the agent looked is old news.
+            adb.crashLog = crash("05:00:00.000", "old")
+            val first = server.call(DeviceToolServer.TAP, args("""{"device":"emulator-5554","x":10,"y":10}"""))
+            assertFalse(first.text.contains("CRASHED"), first.text)
+
+            adb.crashLog += crash("05:01:00.000", "boom")
+            val second = server.call(DeviceToolServer.TAP, args("""{"device":"emulator-5554","x":10,"y":10}"""))
+            assertTrue(second.text.startsWith("SINCE YOUR LAST DEVICE ACTION, AN APP CRASHED:"), second.text)
+            assertTrue(second.text.contains("com.example.app crashed at 11-25 05:01:00.000: java.lang.IllegalStateException: boom"), second.text)
+            assertTrue(second.text.contains("at com.example.app.Feed.load(Feed.kt:12)"), second.text)
+
+            // Told once.
+            val third = server.call(DeviceToolServer.TAP, args("""{"device":"emulator-5554","x":10,"y":10}"""))
+            assertFalse(third.text.contains("CRASHED"), third.text)
+            // The panel keeps its own place: it still sees the crash the agent was told of.
+            assertEquals(listOf("java.lang.IllegalStateException: boom"), devices.crashesSince("emulator-5554", 0).map { it.crash.headline })
+        }
+
+    @Test
+    fun anAppThatDiesWithoutACrashIsNoticed() =
+        runBlocking {
+            server.call(DeviceToolServer.LAUNCH_APP, args("""{"device":"emulator-5554","package":"com.example.app","screenshot":false}"""))
+            adb.pid = ""
+            val result = server.call(DeviceToolServer.KEY, args("""{"device":"emulator-5554","key":"back"}"""))
+            assertTrue(result.text.startsWith("com.example.app IS NO LONGER RUNNING"), result.text)
+            // Said once, and not after stopping it on purpose.
+            assertFalse(server.call(DeviceToolServer.KEY, args("""{"device":"emulator-5554","key":"back"}""")).text.contains("NO LONGER"))
         }
 }

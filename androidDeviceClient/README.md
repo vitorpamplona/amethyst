@@ -19,6 +19,8 @@ The desktop app uses it for the device panel beside a coding chat and for the ag
 | Start an AVD hidden, with its own token-guarded gRPC port | `emulator/EmulatorLauncher` |
 | The emulator's screen stream, touches, keys, typing, clipboard | `emulator/EmulatorController` over `grpc/GrpcChannel` |
 | One live-view interface over both (frames + pointer + keys) | `device/DeviceScreen`: `EmulatorScreen`, `AdbScreen` |
+| Crashes and ANRs in the device log (`crash` buffer, `ActivityManager` ANRs) | `adb/CrashLog`, `Adb.crashes` |
+| Back to the AVD's saved state (`default_boot`) | `EmulatorController.loadSnapshot` (`SnapshotService`) |
 
 ## The emulator's gRPC endpoint, as observed
 
@@ -41,6 +43,11 @@ and its `-help`:
   `KeyboardEvent{eventType=2, key=4, text=5}`, `ClipData{text=1}`.
 - Touches are in the display panel's natural (unrotated) pixels; screenshots come turned the way
   the device is (`format.rotation`). `EmulatorScreen.toNatural` maps between them.
+- One AVD runs several times only when every instance is `-read-only` (`LaunchOptions.readOnly`):
+  each boots from the AVD's quick-boot snapshot and drops its changes on exit. A writable instance
+  beside them fails with "Another emulator instance is running…".
+- `SnapshotService/LoadSnapshot` takes `SnapshotPackage{snapshot_id=1}` and answers
+  `{success=3, err=4}`; `default_boot` is the quick-boot state.
 - `KeyboardEvent.text` types printable ASCII, `\n` and `\t` only: other text goes in through the
   clipboard and a paste key.
 

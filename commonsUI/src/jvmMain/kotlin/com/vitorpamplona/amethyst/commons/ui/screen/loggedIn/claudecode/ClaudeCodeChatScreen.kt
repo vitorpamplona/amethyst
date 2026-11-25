@@ -450,10 +450,12 @@ fun ClaudeCodeChatScreen(
     // An Android device beside the chat, for the user and the agent to try the app on: where an SDK is.
     val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
     val showDevice = canDevice && DevicePanelVisibility.isOpen(key)
+    // A workstream's chats share its device, and its emulator copies are its own.
+    val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
     if (canDevice) {
         // When the agent starts using this chat's device, the panel opens to show what it does.
-        LaunchedEffect(key) {
-            AndroidDevices.shared.activity.collect { a -> if (AndroidDevices.shared.selection.value[key] == a.serial) DevicePanelVisibility.set(key, true) }
+        LaunchedEffect(key, deviceOwner) {
+            AndroidDevices.shared.activity.collect { a -> if (AndroidDevices.shared.selection.value[deviceOwner] == a.serial) DevicePanelVisibility.set(key, true) }
         }
     }
     val scope = rememberCoroutineScope()
@@ -672,6 +674,8 @@ fun ClaudeCodeChatScreen(
                             chatKey = key,
                             folder = File(state.cwd),
                             agentName = chat.backend.shortName,
+                            owner = deviceOwner,
+                            ownerLabel = workspace?.title ?: shownTitle,
                             modifier = Modifier.width(deviceWidth),
                             onAttachScreenshot = { file -> scope.launch { attachments.add(listOf(file)) } },
                             onOpenFull = { nav.nav(Route.AndroidDevices(key)) },

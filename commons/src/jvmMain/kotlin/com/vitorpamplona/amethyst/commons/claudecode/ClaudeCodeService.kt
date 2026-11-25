@@ -363,6 +363,8 @@ class ClaudeCodeService(
         recountNeedsYou()
         agentWorkspaces.delete(workspace)
         workspacesState.update { list -> list.filter { it.id != workspace.id } }
+        // Its emulator copies held only its work.
+        AndroidDevices.shared.releaseOwner(workspace.id)
         if (thenRefresh) refresh()
     }
 
@@ -467,6 +469,8 @@ class ClaudeCodeService(
             try {
                 val freed = agentWorkspaces.free(current)
                 replaceWorkspace(freed)
+                // Idle long enough to give its disk back: its emulator copies go too.
+                AndroidDevices.shared.releaseOwner(freed.id)
                 workspaceSizes[freed.id] = 0L to System.currentTimeMillis()
                 true
             } catch (e: IOException) {
@@ -859,7 +863,7 @@ class ClaudeCodeService(
         // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
         val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
         // With an Android SDK here, a coding agent can drive the device panel's emulator or phone.
-        val device = if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, { key }, cwd) else null
+        val device = if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, owner = { deviceOwner(key, cwd.path) }, ownerLabel = { deviceOwnerLabel(key, cwd.path) }, folder = cwd) else null
         val preApproved = listOfNotNull(publish?.qualifiedName(PublishToolServer.REQUEST)) + device?.let { DeviceToolServer.PRE_APPROVED.map(it::qualifiedName) }.orEmpty()
         val chat =
             ClaudeChat(
@@ -934,6 +938,25 @@ class ClaudeCodeService(
             }
         return chat
     }
+
+    /**
+     * Whose device a chat uses: its workstream's, so the workstream's chats share one emulator copy
+     * and other workstreams get their own; a chat outside a workstream has its own.
+     */
+    fun deviceOwner(
+        key: String,
+        cwd: String?,
+    ): String = workspaceOf(cwd)?.id ?: key
+
+    /** What the device picker calls [deviceOwner]: the workstream's title, else the chat's. */
+    fun deviceOwnerLabel(
+        key: String,
+        cwd: String?,
+    ): String? =
+        workspaceOf(cwd)?.title ?: chats.value[key]
+            ?.state
+            ?.value
+            ?.let(::titleOf)
 
     /** The publish tool of the chat [key] working in [cwd]: its requests are saved with the workstream, and the user is told. */
     internal fun publishTool(

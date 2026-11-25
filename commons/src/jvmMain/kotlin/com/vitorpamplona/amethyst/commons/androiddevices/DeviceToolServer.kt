@@ -29,6 +29,7 @@ import com.vitorpamplona.androiddevice.emulator.LaunchOptions
 import com.vitorpamplona.androiddevice.ui.Bounds
 import com.vitorpamplona.androiddevice.ui.UiNode
 import com.vitorpamplona.androiddevice.ui.UiTree
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
@@ -56,8 +57,13 @@ import kotlin.math.roundToInt
 class DeviceToolServer(
     private val devices: AndroidDevices,
     private val apps: AndroidAppRunner,
-    /** The chat's key: which device the panel shows for it. */
-    private val chatKey: () -> String?,
+    /**
+     * Who the chat works for: its workstream, or the chat outside one. Its device pick, and the
+     * emulator copies it starts, are kept under this key, so a workstream's chats share a device.
+     */
+    private val owner: () -> String?,
+    /** What to call [owner] in the device picker: the workstream's title. */
+    private val ownerLabel: () -> String? = { null },
     /** The chat's folder: where `run_app` finds the build and `install_apk` the file. */
     private val folder: File,
 ) : HostToolServer {
@@ -66,6 +72,12 @@ class DeviceToolServer(
 
     /** The last UI tree of each device, for taps by element number. */
     private val trees = ConcurrentHashMap<String, UiTree>()
+
+    /** Where this chat is in each device's crash list: it hears of each crash once. */
+    private val crashCursors = ConcurrentHashMap<String, Long>()
+
+    /** The app this chat opened on each device, watched for dying without a crash. */
+    private val openedApp = ConcurrentHashMap<String, String>()
 
     override fun alwaysAsks(tool: String): Boolean = false
 
@@ -81,7 +93,7 @@ class DeviceToolServer(
             else -> null
         }
 
-    private fun deviceLabel(arguments: JsonObject): String = arguments.str("device") ?: devices.selected(chatKey())?.let { "${it.name} (${it.serial})" } ?: "the device"
+    private fun deviceLabel(arguments: JsonObject): String = arguments.str("device") ?: devices.selected(owner())?.let { "${it.name} (${it.serial})" } ?: "the device"
 
     override suspend fun call(
         tool: String,
@@ -118,8 +130,77 @@ class DeviceToolServer(
     ): HostToolResult {
         val serial = device.serial
         if (!device.isOnline && tool != STOP_EMULATOR) throw IOException("${device.name} is ${device.status.name.lowercase().replace('_', ' ')}, not ready")
-        val chat = chatKey()
+        val chat = owner()
         if (chat != null) devices.select(chat, serial)
+        if (tool in WITHOUT_CRASH_CHECK) return act(tool, device, args)
+        // A crash the last action caused after its result went back is told now.
+        val earlier = newCrashes(serial)
+        val result =
+            try {
+                act(tool, device, args)
+            } catch (e: IOException) {
+                HostToolResult(e.message ?: "The device didn't answer", isError = true)
+            }
+        val now = newCrashes(serial)
+        val notes =
+            listOfNotNull(
+                earlier.takeIf { it.isNotEmpty() }?.let { "SINCE YOUR LAST DEVICE ACTION, " + crashText(it) },
+                now.takeIf { it.isNotEmpty() }?.let { "AFTER THIS ACTION, " + crashText(it) },
+                appGone(tool, serial, earlier + now),
+            )
+        return if (notes.isEmpty()) result else result.copy(text = notes.joinToString("\n\n") + "\n\n" + result.text)
+    }
+
+    /** The crashes on [serial] this chat hasn't heard of. The first look only marks where it starts. */
+    private suspend fun newCrashes(serial: String): List<SeenCrash> {
+        val since = crashCursors.getOrPut(serial) { devices.crashCursor() }
+        try {
+            devices.pollCrashes(serial)
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not read the crash log of $serial", e)
+            return emptyList()
+        }
+        val fresh = devices.crashesSince(serial, since)
+        fresh.maxOfOrNull { it.seq }?.let { crashCursors[serial] = it }
+        return fresh
+    }
+
+    private fun crashText(crashes: List<SeenCrash>): String =
+        (if (crashes.size == 1) "AN APP CRASHED:\n" else "${crashes.size} APP CRASHES:\n") +
+            crashes.joinToString("\n") { it.crash.summary() }
+
+    /**
+     * The app this chat opened, gone with no crash in the log (killed, or it exited): said once.
+     * Nothing for the tools that stop it themselves.
+     */
+    private suspend fun appGone(
+        tool: String,
+        serial: String,
+        crashes: List<SeenCrash>,
+    ): String? {
+        val pkg = openedApp[serial] ?: return null
+        if (tool in STOPS_APP) return null
+        if (crashes.any { it.crash.packageName == pkg }) {
+            openedApp.remove(serial)
+            return null
+        }
+        val pid =
+            try {
+                devices.connection(serial).adb.pidOf(serial, pkg)
+            } catch (_: IOException) {
+                return null
+            }
+        if (pid != null) return null
+        openedApp.remove(serial)
+        return "$pkg IS NO LONGER RUNNING, with nothing in the crash log (it was killed, or it exited). logcat with package shows its last lines."
+    }
+
+    private suspend fun act(
+        tool: String,
+        device: DeviceInfo,
+        args: JsonObject,
+    ): HostToolResult {
+        val serial = device.serial
         return when (tool) {
             SELECT -> HostToolResult("Working on ${device.name} ($serial) from now on; the panel shows it.")
             STOP_EMULATOR -> {
@@ -144,22 +225,32 @@ class DeviceToolServer(
                 val apk = args.str("path")?.let { p -> File(p).takeIf { it.isAbsolute } ?: File(folder, p) } ?: throw IllegalArgumentException("path is required")
                 if (!apk.isFile) throw IOException("No APK at ${apk.path}")
                 val out = devices.connection(serial).adb.install(serial, apk)
+                // Installing over a running app ends its process.
+                openedApp.remove(serial)
                 HostToolResult("Installed ${apk.name} (${apps.packageName(apk)}): $out")
             }
             LAUNCH_APP -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
                 devices.connection(serial).adb.launch(serial, pkg)
+                openedApp[serial] = pkg
                 devices.report(DeviceActivity(serial, DeviceActivity.Kind.APP, label = pkg))
                 after(device, args, "Opened $pkg", defaultShot = true)
             }
             STOP_APP -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
                 devices.connection(serial).adb.forceStop(serial, pkg)
+                openedApp.remove(serial, pkg)
                 HostToolResult("Stopped $pkg")
             }
             CLEAR_DATA -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
+                openedApp.remove(serial, pkg)
                 HostToolResult("pm clear $pkg: ${devices.connection(serial).adb.clearData(serial, pkg)}")
+            }
+            RESET -> {
+                devices.reset(serial)
+                openedApp.remove(serial)
+                after(device, args, "${device.name} is back to the state it started from", defaultShot = true)
             }
             RUN_APP -> runApp(device, args)
             LOGCAT -> logcat(device, args)
@@ -176,7 +267,7 @@ class DeviceToolServer(
                 isError = true,
             )
         }
-        val selected = devices.selected(chatKey())?.serial
+        val selected = devices.selected(owner())?.serial
         val text =
             buildString {
                 if (state.devices.isEmpty()) {
@@ -191,6 +282,11 @@ class DeviceToolServer(
                                 .replace('_', ' '),
                         )
                         if (!d.agentAllowed) append(", the user hasn't allowed agents on it")
+                        when (d.owner) {
+                            null -> Unit
+                            owner() -> append(", this workstream's own copy")
+                            else -> append(", another workstream's copy").append(d.ownerLabel?.let { ": $it" }.orEmpty())
+                        }
                         append(')')
                         if (d.serial == selected) append(" ← this chat's device")
                     }
@@ -225,13 +321,19 @@ class DeviceToolServer(
                 avds.isEmpty() -> throw IOException("No virtual devices (AVDs) exist yet: create one with avdmanager, or in Android Studio's Device Manager")
                 else -> avds.maxBy { it.apiLevel ?: 0 }
             }
+        val mine = owner()
         val serial =
             devices.start(
                 avd.name,
                 LaunchOptions(coldBoot = args.bool("cold_boot") == true, wipeData = args.bool("wipe_data") == true),
+                owner = mine,
+                ownerLabel = ownerLabel(),
             )
-        chatKey()?.let { devices.select(it, serial) }
-        return HostToolResult("${avd.displayName} is booted as $serial and shows in the device panel. It is this chat's device now.")
+        mine?.let { devices.select(it, serial) }
+        return HostToolResult(
+            "${avd.displayName} is booted as $serial and shows in the device panel. It is this chat's own copy: it started from the state the AVD last saved, " +
+                "other workstreams don't touch it, and its changes go when it stops (reset_device goes back to that start without restarting).",
+        )
     }
 
     /** [arg] (a serial or a name) or, without one, the chat's device: the one it picked, else the only one online. */
@@ -244,11 +346,11 @@ class DeviceToolServer(
                 ?: all.firstOrNull { it.name.contains(arg, ignoreCase = true) }
                 ?: throw IOException("No device $arg. ${if (all.isEmpty()) "None is connected; start_emulator starts one." else "There are: " + all.joinToString { "${it.serial} (${it.name})" }}")
         }
-        devices.selected(chatKey())?.let { return it }
+        devices.selected(owner())?.let { return it }
         val online = all.filter { it.isOnline }
         throw IOException(
             when {
-                online.isEmpty() -> "No device is running. list_devices shows the virtual devices start_emulator can start."
+                online.isEmpty() -> "No device is running for this chat. start_emulator starts its own copy of a virtual device; list_devices shows them."
                 else -> "Several devices are online; pass device (one of ${online.joinToString { it.serial }}), or select_device."
             },
         )
@@ -462,6 +564,7 @@ class DeviceToolServer(
             }
         val variant = args.str("variant") ?: target.variants.first()
         val pkg = apps.run(target, variant, device.serial)
+        openedApp[device.serial] = pkg
         return after(device, args, "Built ${target.module} $variant, installed and opened $pkg on ${device.name}", defaultShot = true)
     }
 
@@ -513,6 +616,15 @@ class DeviceToolServer(
         const val CLEAR_DATA = "clear_app_data"
         const val RUN_APP = "run_app"
         const val LOGCAT = "logcat"
+        const val RESET = "reset_device"
+
+        /** The tools a crash check would only slow down: they don't touch the app. */
+        private val WITHOUT_CRASH_CHECK = setOf(SELECT, STOP_EMULATOR, LOGCAT)
+
+        /** The tools that end the app on purpose: its process going is no news. */
+        private val STOPS_APP = setOf(STOP_APP, CLEAR_DATA, INSTALL_APK, RESET, RUN_APP)
+
+        private const val TAG = "DeviceToolServer"
 
         private const val SETTLE_MS = 800
         private const val MAX_SETTLE_MS = 10_000
@@ -523,13 +635,15 @@ class DeviceToolServer(
         private const val MAX_LOG_CHARS = 24_000
 
         /** What runs without asking: looking, touching, typing on the device the user gave the chat. Building, installing, erasing and shutting down ask. */
-        val PRE_APPROVED = listOf(LIST, START_EMULATOR, SELECT, SCREENSHOT, UI_TREE, TAP, SWIPE, TYPE, KEY, ROTATE, WAIT_FOR, OPEN_URL, LAUNCH_APP, STOP_APP, LOGCAT)
+        val PRE_APPROVED = listOf(LIST, START_EMULATOR, SELECT, SCREENSHOT, UI_TREE, TAP, SWIPE, TYPE, KEY, ROTATE, WAIT_FOR, OPEN_URL, LAUNCH_APP, STOP_APP, LOGCAT, RESET)
 
         /** How the brief tells a coding agent about the device. */
         const val BRIEF =
             "An Android device panel sits beside this chat. The android-device tools (list_devices, start_emulator, run_app, screenshot, ui_tree, tap, " +
                 "type_text, swipe, press_key, wait_for, logcat) drive the emulator or phone it shows, and the user watches what you do there. " +
-                "To check an Android change: run_app (or build with Gradle and install_apk), then look with ui_tree or screenshot, act, and read logcat for crashes."
+                "To check an Android change: run_app (or build with Gradle and install_apk), then look with ui_tree or screenshot, and act. " +
+                "Every device tool's result starts with any crash or ANR since your last one, so a clean result means no app crashed. " +
+                "An emulator you start is this workstream's own copy; reset_device puts it back to where it started."
 
         private fun schema(json: String) = Json.parseToJsonElement(json).jsonObject
 
@@ -541,8 +655,14 @@ class DeviceToolServer(
                 HostTool(LIST, "Lists the Android devices: running emulators, connected phones, and the virtual devices (AVDs) start_emulator can start.", schema("""{"type":"object","properties":{}}""")),
                 HostTool(
                     START_EMULATOR,
-                    "Starts an Android emulator (an AVD) in the device panel and waits until Android has booted (up to a few minutes). Without avd, the only one, or the newest API.",
+                    "Starts this workstream's own copy of an Android emulator (an AVD) in the device panel and waits until Android has booted (up to a few minutes): " +
+                        "it boots from the state the AVD last saved and drops its changes when it stops; one already running for this workstream is reused. Without avd, the only one, or the newest API.",
                     schema("""{"type":"object","properties":{"avd":{"type":"string","description":"AVD name from list_devices"},"cold_boot":{"type":"boolean"},"wipe_data":{"type":"boolean","description":"Reset the device first"}}}"""),
+                ),
+                HostTool(
+                    RESET,
+                    "Puts an emulator back to the state its AVD last saved, as it was when this chat's copy started: logged-in accounts, installed apps and data as they were then. Returns a screenshot.",
+                    schema("""{"type":"object","properties":{$DEVICE,$SHOT}}"""),
                 ),
                 HostTool(STOP_EMULATOR, "Shuts an emulator down.", schema("""{"type":"object","properties":{$DEVICE}}""")),
                 HostTool(SELECT, "Makes a device this chat's device: the panel shows it, and the other tools use it when no device is given.", schema("""{"type":"object","properties":{$DEVICE},"required":["device"]}""")),

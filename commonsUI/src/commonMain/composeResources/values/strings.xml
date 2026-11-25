@@ -9672,6 +9672,14 @@
     <string name="android_device_did_type">typed “%1$s”</string>
     <string name="android_device_did_open">opened %1$s</string>
     <string name="android_device_open_full">Open the device on its own screen</string>
+    <string name="android_device_start_copy">Start a copy</string>
+    <string name="android_device_copy_hint">A chat starts its workstream’s own copy of a virtual device: it boots from what the device last saved, and its changes go when it stops. Set that starting state up from the Android devices screen.</string>
+    <string name="android_device_own_copy">This workstream’s copy</string>
+    <string name="android_device_other_copy">Copy for %1$s</string>
+    <string name="android_device_reset">Reset to its starting state</string>
+    <string name="android_device_crashed">%1$s crashed</string>
+    <string name="android_device_crashed_native">%1$s crashed in native code</string>
+    <string name="android_device_anr">%1$s stopped responding</string>
     <string name="android_device_type_hint">Click the screen, then type: keys go to the device</string>
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>

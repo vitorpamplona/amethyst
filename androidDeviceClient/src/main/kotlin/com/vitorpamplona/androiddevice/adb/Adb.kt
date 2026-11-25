@@ -283,6 +283,16 @@ class Adb(
         return checked(args, 20_000).text
     }
 
+    /**
+     * The crashes and ANRs the device's log still holds, oldest first: the `crash` buffer (Java
+     * and native crashes) and the system buffer's `ActivityManager` errors (ANRs), read in one
+     * shell call, since a busy system buffer would push the crash lines out of one merged tail.
+     */
+    suspend fun crashes(serial: String): List<DeviceCrash> {
+        val script = "logcat -d -v threadtime -b crash -t $CRASH_LINES; logcat -d -v threadtime -b system -t $ANR_LINES ActivityManager:E '*:S'"
+        return CrashLog.parse(checked(listOf("-s", serial, "shell", script), 20_000).text)
+    }
+
     /** Starts `adb logcat` streaming for [serial]; the caller reads and stops the process. */
     fun logcatStream(
         serial: String,
@@ -336,6 +346,8 @@ class Adb(
 
     companion object {
         private const val INSTALL_TIMEOUT_MS = 5 * 60_000L
+        private const val CRASH_LINES = 400
+        private const val ANR_LINES = 200
 
         fun parseDevices(out: String): List<AdbDevice> =
             out

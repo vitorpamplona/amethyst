@@ -38,6 +38,11 @@ data class LaunchOptions(
     val coldBoot: Boolean = false,
     /** Reset the device's data first. */
     val wipeData: Boolean = false,
+    /**
+     * A throwaway copy: boots from the AVD's saved state and drops every change when it exits. The
+     * emulator runs several instances of one AVD only when all of them are read-only.
+     */
+    val readOnly: Boolean = false,
 )
 
 /** An emulator this app started: its process and how to reach it. */
@@ -73,6 +78,7 @@ class EmulatorLauncher(
             add("-no-boot-anim")
             if (options.coldBoot) add("-no-snapshot-load")
             if (options.wipeData) add("-wipe-data")
+            if (options.readOnly) add("-read-only")
         }
 
     /**

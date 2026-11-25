@@ -58,7 +58,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,10 +82,14 @@ import com.vitorpamplona.amethyst.commons.resources.android_device
 import com.vitorpamplona.amethyst.commons.resources.android_device_agent_not_allowed
 import com.vitorpamplona.amethyst.commons.resources.android_device_allow_agent
 import com.vitorpamplona.amethyst.commons.resources.android_device_allow_agent_desc
+import com.vitorpamplona.amethyst.commons.resources.android_device_anr
 import com.vitorpamplona.amethyst.commons.resources.android_device_back
 import com.vitorpamplona.amethyst.commons.resources.android_device_booting
 import com.vitorpamplona.amethyst.commons.resources.android_device_building
 import com.vitorpamplona.amethyst.commons.resources.android_device_cold_boot
+import com.vitorpamplona.amethyst.commons.resources.android_device_copy_hint
+import com.vitorpamplona.amethyst.commons.resources.android_device_crashed
+import com.vitorpamplona.amethyst.commons.resources.android_device_crashed_native
 import com.vitorpamplona.amethyst.commons.resources.android_device_emulator
 import com.vitorpamplona.amethyst.commons.resources.android_device_home
 import com.vitorpamplona.amethyst.commons.resources.android_device_installing
@@ -101,12 +107,15 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_none
 import com.vitorpamplona.amethyst.commons.resources.android_device_offline
 import com.vitorpamplona.amethyst.commons.resources.android_device_open_full
 import com.vitorpamplona.amethyst.commons.resources.android_device_open_log
+import com.vitorpamplona.amethyst.commons.resources.android_device_other_copy
+import com.vitorpamplona.amethyst.commons.resources.android_device_own_copy
 import com.vitorpamplona.amethyst.commons.resources.android_device_phone
 import com.vitorpamplona.amethyst.commons.resources.android_device_phone_hint
 import com.vitorpamplona.amethyst.commons.resources.android_device_pick
 import com.vitorpamplona.amethyst.commons.resources.android_device_polled
 import com.vitorpamplona.amethyst.commons.resources.android_device_power
 import com.vitorpamplona.amethyst.commons.resources.android_device_recents
+import com.vitorpamplona.amethyst.commons.resources.android_device_reset
 import com.vitorpamplona.amethyst.commons.resources.android_device_rotate
 import com.vitorpamplona.amethyst.commons.resources.android_device_run
 import com.vitorpamplona.amethyst.commons.resources.android_device_run_done
@@ -114,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_run_failed
 import com.vitorpamplona.amethyst.commons.resources.android_device_run_variant
 import com.vitorpamplona.amethyst.commons.resources.android_device_screenshot_to_chat
 import com.vitorpamplona.amethyst.commons.resources.android_device_start
+import com.vitorpamplona.amethyst.commons.resources.android_device_start_copy
 import com.vitorpamplona.amethyst.commons.resources.android_device_start_failed
 import com.vitorpamplona.amethyst.commons.resources.android_device_starting
 import com.vitorpamplona.amethyst.commons.resources.android_device_stop
@@ -123,11 +133,14 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_virtual_devic
 import com.vitorpamplona.amethyst.commons.resources.android_device_volume_down
 import com.vitorpamplona.amethyst.commons.resources.android_device_volume_up
 import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.androiddevice.adb.DeviceCrash
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.avd.AvdInfo
 import kotlinx.coroutines.launch
@@ -153,13 +166,16 @@ fun DevicePanel(
     folder: File?,
     agentName: String,
     modifier: Modifier = Modifier,
+    /** Whose device it is: the chat's workstream, else the chat. Null on the Devices screen. */
+    owner: String? = chatKey,
+    ownerLabel: String? = null,
     onAttachScreenshot: ((File) -> Unit)? = null,
     onOpenFull: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
 ) {
     val viewModel =
-        rememberViewModel(key = "DevicePanel-$chatKey-${folder?.path}") {
-            DevicePanelViewModel(AndroidDevices.shared, AndroidDevices.apps, chatKey, folder)
+        rememberViewModel(key = "DevicePanel-$chatKey-$owner-${folder?.path}") {
+            DevicePanelViewModel(AndroidDevices.shared, AndroidDevices.apps, chatKey, folder, owner, ownerLabel)
         }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selected by viewModel.selected.collectAsStateWithLifecycle()
@@ -171,15 +187,17 @@ fun DevicePanel(
             state = state,
             selected = selected,
             viewModel = viewModel,
+            owner = owner,
             onOpenFull = onOpenFull,
             onClose = onClose,
         )
+        CrashBanner(viewModel)
         val device = selected
         when {
             !state.loaded -> Centered(stringRes(Res.string.android_device_looking), progress = true)
             !state.adbFound && state.sdkDir == null -> Centered(stringRes(Res.string.android_device_no_sdk))
             !state.adbFound -> Centered(stringRes(Res.string.android_device_no_adb, state.sdkDir?.path.orEmpty()))
-            device == null -> NoDevice(state, onStart = { viewModel.start(it.name) })
+            device == null -> NoDevice(state, startsCopies = viewModel.startsCopies, onStart = { viewModel.start(it.name) })
             device.status == DeviceStatus.STARTING -> Centered(stringRes(Res.string.android_device_starting, device.name), progress = true)
             device.status == DeviceStatus.BOOTING -> Centered(stringRes(Res.string.android_device_booting, device.name), progress = true)
             device.status == DeviceStatus.UNAUTHORIZED -> Centered(stringRes(Res.string.android_device_unauthorized, device.name))
@@ -204,7 +222,7 @@ fun DevicePanel(
                     )
                 } ?: Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 Text(
-                    stringRes(if (device.liveStream) Res.string.android_device_live else Res.string.android_device_polled) + " · " + stringRes(Res.string.android_device_type_hint),
+                    stringRes(if (connection?.emulator != null) Res.string.android_device_live else Res.string.android_device_polled) + " · " + stringRes(Res.string.android_device_type_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.grayText,
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -245,6 +263,7 @@ private fun Header(
     state: DevicesState,
     selected: DeviceInfo?,
     viewModel: DevicePanelViewModel,
+    owner: String?,
     onOpenFull: (() -> Unit)?,
     onClose: (() -> Unit)?,
 ) {
@@ -264,7 +283,16 @@ private fun Header(
                 state.devices.forEach { d ->
                     PickRow(
                         title = d.name,
-                        subtitle = "${stringRes(if (d.kind == DeviceKind.EMULATOR) Res.string.android_device_emulator else Res.string.android_device_phone)} · ${d.serial}",
+                        subtitle =
+                            listOfNotNull(
+                                stringRes(if (d.kind == DeviceKind.EMULATOR) Res.string.android_device_emulator else Res.string.android_device_phone),
+                                when {
+                                    d.owner == null -> null
+                                    d.owner == owner -> stringRes(Res.string.android_device_own_copy)
+                                    else -> stringRes(Res.string.android_device_other_copy, d.ownerLabel ?: d.owner)
+                                },
+                                d.serial,
+                            ).joinToString(" · "),
                         selected = d.serial == selected?.serial,
                         onClick = {
                             picking = false
@@ -272,11 +300,17 @@ private fun Header(
                         },
                     )
                 }
-                val stopped = state.avds.filter { avd -> state.devices.none { it.avdName == avd.name } }
-                if (stopped.isNotEmpty()) {
+                // A chat starts its own copy of any AVD it has none of; the Devices screen, AVDs not running at all.
+                val startable =
+                    if (viewModel.startsCopies) {
+                        state.avds.filter { avd -> state.devices.none { it.avdName == avd.name && it.owner == owner } }
+                    } else {
+                        state.avds.filter { avd -> state.devices.none { it.avdName == avd.name } }
+                    }
+                if (startable.isNotEmpty()) {
                     Text(stringRes(Res.string.android_device_virtual_devices), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    stopped.forEach { avd ->
-                        PickRow(title = avd.displayName, subtitle = avdLine(avd), action = stringRes(Res.string.android_device_start)) {
+                    startable.forEach { avd ->
+                        PickRow(title = avd.displayName, subtitle = avdLine(avd), action = stringRes(if (viewModel.startsCopies) Res.string.android_device_start_copy else Res.string.android_device_start)) {
                             picking = false
                             viewModel.start(avd.name)
                         }
@@ -310,6 +344,13 @@ private fun Header(
                         }
                     }
                     if (selected?.kind == DeviceKind.EMULATOR) {
+                        // Over the emulator's gRPC endpoint: an emulator this app started.
+                        if (selected.liveStream) {
+                            PickRow(title = stringRes(Res.string.android_device_reset)) {
+                                menu = false
+                                viewModel.reset()
+                            }
+                        }
                         selected.avdName?.let { avd ->
                             PickRow(title = stringRes(Res.string.android_device_cold_boot)) {
                                 menu = false
@@ -339,6 +380,52 @@ private fun Header(
         }
     }
 }
+
+/** The app crashed or stopped responding on the device shown: what, and the top of the trace. */
+@Composable
+private fun CrashBanner(viewModel: DevicePanelViewModel) {
+    val seen by viewModel.crash.collectAsStateWithLifecycle()
+    val crash = seen?.crash ?: return
+    val clipboard = LocalClipboardManager.current
+    val app = crash.packageName ?: "pid ${crash.pid}"
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp)) {
+            Text(
+                stringRes(
+                    when (crash.kind) {
+                        DeviceCrash.Kind.JAVA -> Res.string.android_device_crashed
+                        DeviceCrash.Kind.NATIVE -> Res.string.android_device_crashed_native
+                        DeviceCrash.Kind.ANR -> Res.string.android_device_anr
+                    },
+                    app,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            SelectionContainer {
+                Text(
+                    (listOf(crash.headline) + crash.details.take(CRASH_LINES)).joinToString("\n"),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    maxLines = CRASH_LINES + 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp, end = 8.dp),
+                )
+            }
+            Row(Modifier.align(Alignment.End)) {
+                TextButton(onClick = { clipboard.setText(AnnotatedString(crash.summary(maxLines = Int.MAX_VALUE))) }) { Text(stringRes(Res.string.copy)) }
+                TextButton(onClick = viewModel::dismissCrash) { Text(stringRes(Res.string.dismiss)) }
+            }
+        }
+    }
+}
+
+private const val CRASH_LINES = 6
 
 @Composable
 private fun avdLine(avd: AvdInfo): String = listOfNotNull(avd.apiLevel?.let { "API $it" }, avd.abi, avd.name).joinToString(" · ")
@@ -379,6 +466,7 @@ private fun Centered(
 @Composable
 private fun NoDevice(
     state: DevicesState,
+    startsCopies: Boolean,
     onStart: (AvdInfo) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -398,10 +486,11 @@ private fun NoDevice(
                                 Text(avdLine(avd), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 state.startFailures[avd.name]?.let { Text(stringRes(Res.string.android_device_start_failed, avd.displayName, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                             }
-                            FilledTonalButton(onClick = { onStart(avd) }) { Text(stringRes(Res.string.android_device_start)) }
+                            FilledTonalButton(onClick = { onStart(avd) }) { Text(stringRes(if (startsCopies) Res.string.android_device_start_copy else Res.string.android_device_start)) }
                         }
                     }
                 }
+                if (startsCopies) Text(stringRes(Res.string.android_device_copy_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             }
         }
         Text(stringRes(Res.string.android_device_phone_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)

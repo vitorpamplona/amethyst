@@ -64,6 +64,9 @@ fun AndroidDevicesScreen(
                 chatKey = chatKey,
                 folder = folder,
                 agentName = chat?.backend?.shortName ?: "Claude",
+                // From a chat, its workstream's device and copies; alone, the AVDs themselves.
+                owner = chatKey?.let { ClaudeCodeService.shared.deviceOwner(it, folder?.path) },
+                ownerLabel = chatKey?.let { ClaudeCodeService.shared.deviceOwnerLabel(it, folder?.path) },
                 modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().fillMaxHeight(),
             )
         }

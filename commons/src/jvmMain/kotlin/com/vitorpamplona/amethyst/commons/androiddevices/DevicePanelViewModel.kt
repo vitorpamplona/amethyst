@@ -54,13 +54,20 @@ class DevicePanelViewModel(
     /** The chat whose device this shows; null for the Devices screen, which keeps its own pick. */
     val chatKey: String?,
     private val folder: File?,
+    /**
+     * Whose device it is ([com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService.deviceOwner]):
+     * the chat's workstream, else the chat. An emulator started here is its own copy. Null for the
+     * Devices screen, which starts the AVD itself, saving its state.
+     */
+    private val owner: String? = chatKey,
+    private val ownerLabel: String? = null,
 ) : ViewModel() {
     private val release = devices.watch()
 
     val state: StateFlow<DevicesState> = devices.state
 
-    /** The key the device pick is kept under: the chat's, or the Devices screen's own. */
-    private val pickKey = chatKey ?: SCREEN_PICK
+    /** The key the device pick is kept under: the chat's workstream, or the Devices screen's own. */
+    private val pickKey = owner ?: SCREEN_PICK
 
     /**
      * The device shown: the one picked here, else the only one online, else the first online
@@ -71,7 +78,8 @@ class DevicePanelViewModel(
         combine(devices.state, devices.selection) { state, _ ->
             devices.selected(pickKey)
                 ?: state.devices
-                    .filter { it.isOnline }
+                    // Another workstream's copy is never a chat's by default; the Devices screen shows any.
+                    .filter { it.isOnline && (owner == null || it.owner == null) }
                     .sortedBy { it.kind != DeviceKind.EMULATOR }
                     .firstOrNull()
         }.stateIn(viewModelScope, SharingStarted.Eagerly, devices.selected(pickKey))
@@ -95,6 +103,19 @@ class DevicePanelViewModel(
 
     init {
         folder?.let { dir -> viewModelScope.launch(Dispatchers.IO) { _targets.value = AndroidAppTargets.find(dir) } }
+        // Crashes the user causes by hand show too, not only the ones an agent's tools find.
+        viewModelScope.launch {
+            while (true) {
+                selected.value?.takeIf { it.isOnline }?.let { device ->
+                    try {
+                        devices.pollCrashes(device.serial)
+                    } catch (e: IOException) {
+                        Log.w(TAG, "Could not read the crash log of ${device.serial}", e)
+                    }
+                }
+                delay(CRASH_POLL_MS)
+            }
+        }
         viewModelScope.launch {
             selected.collect { device ->
                 if (device != null && device.status != DeviceStatus.STARTING && devices.selection.value[pickKey] == null) devices.select(pickKey, device.serial)
@@ -107,7 +128,32 @@ class DevicePanelViewModel(
     fun start(
         avd: String,
         coldBoot: Boolean = false,
-    ) = devices.startInBackground(avd, LaunchOptions(coldBoot = coldBoot)) { serial -> select(serial) }
+    ) = devices.startInBackground(avd, LaunchOptions(coldBoot = coldBoot), owner = owner, ownerLabel = ownerLabel) { serial -> select(serial) }
+
+    /** Whether a start from here makes this chat's own copy (a chat) or starts the AVD itself (the Devices screen). */
+    val startsCopies: Boolean get() = owner != null
+
+    /** Back to the state the AVD last saved: a copy to where it started. */
+    fun reset() {
+        val serial = selected.value?.serial ?: return
+        act { devices.reset(serial) }
+    }
+
+    /**
+     * Where this panel is in the crash list: it shows the ones after it. Starts at now, so a crash
+     * from before the panel opened isn't news.
+     */
+    private val crashFloor = MutableStateFlow(devices.crashCursor())
+
+    /** The latest crash on the device shown since the panel opened or the user dismissed the last. */
+    val crash: StateFlow<SeenCrash?> =
+        combine(devices.crashes, selected, crashFloor) { crashes, device, floor ->
+            crashes.lastOrNull { it.serial == device?.serial && it.seq > floor }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun dismissCrash() {
+        crash.value?.let { crashFloor.value = it.seq }
+    }
 
     fun stop(serial: String) = devices.stopInBackground(serial)
 
@@ -227,5 +273,6 @@ class DevicePanelViewModel(
         private const val SCREEN_PICK = "devices-screen"
         private const val LOGCAT_LINES = 300
         private const val LOGCAT_POLL_MS = 2_000L
+        private const val CRASH_POLL_MS = 3_000L
     }
 }

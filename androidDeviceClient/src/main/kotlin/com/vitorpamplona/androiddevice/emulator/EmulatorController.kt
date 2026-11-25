@@ -31,6 +31,7 @@ import com.vitorpamplona.androiddevice.grpc.string
 import com.vitorpamplona.androiddevice.grpc.varint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 /** How the pixels of an [EmulatorImage] are laid out. */
 enum class PixelFormat(
@@ -175,6 +176,16 @@ class EmulatorController(
         call("setClipboard", ProtoWriter().string(1, text).bytes())
     }
 
+    /**
+     * Loads the snapshot [id] (`default_boot` is the quick-boot state the AVD saved when it last
+     * shut down): the device goes back to how it was then. Throws [IOException] when the emulator
+     * says it failed.
+     */
+    suspend fun loadSnapshot(id: String = DEFAULT_BOOT) {
+        val answer = ProtoReader.read(channel.unary("$SNAPSHOTS/LoadSnapshot", ProtoWriter().string(1, id).bytes()))
+        if (answer.varint(3) == 0L) throw IOException("The emulator couldn't load snapshot $id: ${answer.bytes(4).toString(Charsets.UTF_8).ifBlank { "no reason given" }}")
+    }
+
     private fun imageFormat(
         format: PixelFormat,
         maxWidth: Int,
@@ -190,6 +201,10 @@ class EmulatorController(
 
     companion object {
         const val SERVICE = "android.emulation.control.EmulatorController"
+        const val SNAPSHOTS = "android.emulation.control.SnapshotService"
+
+        /** The quick-boot snapshot the emulator saves on a normal exit and boots from. */
+        const val DEFAULT_BOOT = "default_boot"
 
         /** The nominal full pressure, `[0, 1024]` in the proto. */
         private const val PRESSURE = 1024
