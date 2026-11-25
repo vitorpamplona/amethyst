@@ -42,12 +42,15 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -201,7 +204,9 @@ class TrustNetworkSchedulingTest {
 
     @AfterTest
     fun cleanup() {
-        scope.cancel()
+        // Wait for the scope's IO work to stop before deleting: a sync still writing into [dir]
+        // after a bare cancel() makes deleteRecursively fail on the file it just created.
+        runBlocking { withTimeoutOrNull(5_000) { scope.coroutineContext.job.cancelAndJoin() } }
         FileSystem.SYSTEM.deleteRecursively(dir)
     }
 
