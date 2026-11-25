@@ -27,6 +27,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The epoch-admin, media-secret and verdict records are first write wins, so a record a crash cut
@@ -61,5 +63,39 @@ class FileStoresRecordTest {
             store.recordEpochAdmins(group, 12, setOf(adminA, adminB))
 
             assertEquals(mapOf(12L to setOf(adminA, adminB)), FileMarmotMessageStore(dir).loadEpochAdmins(group))
+        }
+
+    private fun innerEvent(
+        id: Char,
+        createdAt: Long,
+    ) = """{"id":"${id.toString().repeat(64)}","pubkey":"${"e".repeat(64)}","created_at":$createdAt,"kind":9,"tags":[],"content":"m","sig":""}"""
+
+    /** Read by every command for every group: kept as messages are appended, not read off the log. */
+    @Test
+    fun `the newest message time is kept apart from the log`() =
+        runBlocking {
+            val dir = tmp.newFolder("messages")
+            val store = FileMarmotMessageStore(dir)
+            assertNull(store.newestMessageCreatedAt(group))
+            store.appendMessage(group, innerEvent('1', 200))
+            store.appendMessage(group, innerEvent('2', 500))
+            store.appendMessage(group, innerEvent('3', 300))
+
+            assertTrue(File(dir, "$group.messages").delete())
+            assertEquals(500L, FileMarmotMessageStore(dir).newestMessageCreatedAt(group))
+        }
+
+    @Test
+    fun `a log with no newest time is read once and the answer kept`() =
+        runBlocking {
+            val dir = tmp.newFolder("messages")
+            val store = FileMarmotMessageStore(dir)
+            store.appendMessage(group, innerEvent('1', 200))
+            store.appendMessage(group, innerEvent('2', 700))
+            File(dir, "$group.newest").delete()
+
+            assertEquals(700L, FileMarmotMessageStore(dir).newestMessageCreatedAt(group))
+            assertTrue(File(dir, "$group.messages").delete())
+            assertEquals(700L, FileMarmotMessageStore(dir).newestMessageCreatedAt(group))
         }
 }

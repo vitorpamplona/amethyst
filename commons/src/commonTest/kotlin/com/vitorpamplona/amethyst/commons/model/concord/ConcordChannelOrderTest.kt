@@ -36,8 +36,23 @@ class ConcordChannelOrderTest {
     }
 
     @Test
-    fun nameIsCaseInsensitiveAndTheIdBreaksTies() {
+    fun namesCompareAsUtf8BytesAndTheIdBreaksTies() {
+        // CORD-03 §2: by name as UTF-8 bytes, so an upper-case name sorts before a lower-case one.
         val folded = channels("b" to "Zebra", "z" to "apple", "a" to "apple")
-        assertEquals(listOf("a", "z", "b"), ConcordChannelOrder.sorted(folded.entries).map { it.key })
+        assertEquals(listOf("b", "a", "z"), ConcordChannelOrder.sorted(folded.entries).map { it.key })
+    }
+
+    @Test
+    fun positionsComeFirstThenArmadasLegacyOrder() {
+        // The channel_order case of Quartz's Armada vectors: Armada lists positioned Channels first.
+        val folded =
+            linkedMapOf(
+                "9a" to FoldedChannel("9a", ChannelEntity(name = "general")),
+                "c3" to FoldedChannel("c3", ChannelEntity(name = "beta")),
+                "c2" to FoldedChannel("c2", ChannelEntity(name = "alpha"), armadaOrder = 1),
+                "c1" to FoldedChannel("c1", ChannelEntity(name = "zeta"), armadaOrder = 0),
+                "s1" to FoldedChannel("s1", ChannelEntity(name = "yak"), position = "V"),
+            )
+        assertEquals(listOf("s1", "c1", "c2", "c3", "9a"), ConcordChannelOrder.sorted(folded.entries).map { it.key })
     }
 }

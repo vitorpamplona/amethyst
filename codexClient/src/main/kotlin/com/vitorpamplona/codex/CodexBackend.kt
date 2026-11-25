@@ -29,6 +29,7 @@ import com.vitorpamplona.agents.AgentStartOptions
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.ProcessTransport
 import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.agents.putPathFirst
 import com.vitorpamplona.codex.CodexItems.long
 import com.vitorpamplona.codex.CodexItems.text
 import kotlinx.coroutines.CoroutineScope
@@ -83,7 +84,7 @@ class CodexBackend(
         options: AgentStartOptions,
         scope: CoroutineScope,
     ): AgentConnection {
-        val connection = launch(options.cwd, options.environment, scope)
+        val connection = launch(options.cwd, options.environment, options.pathFirst, scope)
         try {
             connection.open(options)
         } catch (e: IOException) {
@@ -96,6 +97,7 @@ class CodexBackend(
     private suspend fun launch(
         cwd: File,
         environment: Map<String, String>,
+        pathFirst: List<File>,
         scope: CoroutineScope,
     ): CodexConnection {
         val exe = executable() ?: throw AgentNotInstalledException("The codex executable was not found")
@@ -103,8 +105,10 @@ class CodexBackend(
             withContext(Dispatchers.IO) {
                 ProcessBuilder(exe.absolutePath, "app-server")
                     .directory(cwd.takeIf { it.isDirectory } ?: File(System.getProperty("user.home")))
-                    .apply { environment().putAll(environment) }
-                    .start()
+                    .apply {
+                        environment().putAll(environment)
+                        environment().putPathFirst(pathFirst)
+                    }.start()
             }
         return CodexConnection(ProcessTransport(process), scope)
     }
@@ -115,7 +119,7 @@ class CodexBackend(
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         return try {
             runBlocking {
-                val connection = launch(File(System.getProperty("user.home")), emptyMap(), scope)
+                val connection = launch(File(System.getProperty("user.home")), emptyMap(), emptyList(), scope)
                 try {
                     connection.open(AgentStartOptions(cwd = File(System.getProperty("user.home")), probeOnly = true))
                     block(connection)

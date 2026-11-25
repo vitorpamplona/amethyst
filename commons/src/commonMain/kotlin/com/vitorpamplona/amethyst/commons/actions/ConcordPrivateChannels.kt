@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRotationAuthority
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.StreamWrapOpener
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -334,6 +335,7 @@ object ConcordPrivateChannels {
         editions: Collection<ControlEdition>,
         authority: AuthorityResolver,
         recipient: NostrSigner,
+        open: StreamWrapOpener = StreamWrapOpener.DIRECT,
     ): Map<HexKey, ChannelRekeyOutcome> {
         if (wraps.isEmpty()) return emptyMap()
         val keys = watchKeys(entry)
@@ -343,7 +345,7 @@ object ConcordPrivateChannels {
         for (held in entry.privateChannels) {
             if (ConcordChannelKeyring.heldKey(entry, held.channelId) == null) continue
             val id = held.channelId.lowercase()
-            val rotations = ConcordChannelRekey.rotations(wraps, keys, id)
+            val rotations = ConcordChannelRekey.rotations(wraps, keys, id, open)
             if (rotations.isEmpty()) continue
             val outcome =
                 ConcordChannelRekey.walk(

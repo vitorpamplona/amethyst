@@ -68,6 +68,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.concurrent.Volatile
 
 /**
  * The rules `CordnRuntime` holds, made executable.
@@ -94,8 +95,8 @@ class CordnRuntimeTest {
     private val signer = NostrSignerInternal(KeyPair())
     private val account: HexKey get() = signer.pubKey
 
-    private val coordinatorA = StubCoordinator()
-    private val coordinatorB = StubCoordinator()
+    private val coordinatorA = StubCoordinator(signer.pubKey)
+    private val coordinatorB = StubCoordinator(signer.pubKey)
     private val keyA = "a".repeat(64)
     private val keyB = "b".repeat(64)
 
@@ -382,6 +383,83 @@ class CordnRuntimeTest {
             assertFalse("published without being asked", coordinatorA.published.isNotEmpty())
         }
 
+    /** [XorCipher] behind a keystore that can be locked: a locked one fails every read and write. */
+    private class LockableCipher : CordnBlobCipher {
+        @Volatile
+        var locked = false
+        private val xor = XorCipher()
+
+        override fun encrypt(bytes: ByteArray) = if (locked) error("keystore locked") else xor.encrypt(bytes)
+
+        override fun decrypt(bytes: ByteArray) = if (locked) error("keystore locked") else xor.decrypt(bytes)
+    }
+
+    @Test
+    fun `a coordinator whose stores cannot be read yet opens once they can`() =
+        runBlocking {
+            // cordn-kmp 1.7.0: a store read that fails (a keystore not unlocked yet) fails the open
+            // instead of hiding the groups. Logged and dropped, the coordinator and its rooms stayed
+            // gone until the next launch (audit 3).
+            runtime(runtimeScope()).createGroup(configFor(keyA), CordnGroupMetadata(name = "Kept"), gid = "kept")
+
+            val cipher = LockableCipher().apply { locked = true }
+            val relaunched =
+                CordnRuntime(
+                    accountSigner = signer,
+                    client = EmptyNostrClient(),
+                    filesDir = root.toOkioPath(),
+                    scope = runtimeScope(),
+                    cipher = cipher,
+                    links = links,
+                    openRetryFirstMs = 50,
+                    openRetryMaxMs = 200,
+                )
+            relaunched.start(listOf(configFor(keyA)))
+            settle()
+            assertTrue("a locked store opened", relaunched.sessionOrNull(keyA) == null)
+
+            cipher.locked = false
+            awaitUntil("the coordinator to open once the store can be read") { relaunched.sessionOrNull(keyA) != null }
+            awaitUntil("its group to come back") {
+                relaunched.groups.all.value
+                    .any { it.gid == "kept" }
+            }
+        }
+
+    @Test
+    fun `a coordinator list that cannot be read yet is kept and read once it can`() =
+        runBlocking {
+            // A locked keystore at login: the list used to load as empty, and the next write merged
+            // that nothing over the coordinators we could not read, losing them and their groups.
+            val first = runtime(runtimeScope())
+            first.createGroup(configFor(keyA), CordnGroupMetadata(name = "Kept"), gid = "kept")
+            settle()
+            first.stop()
+
+            val cipher = LockableCipher().apply { locked = true }
+            val relaunched =
+                CordnRuntime(
+                    accountSigner = signer,
+                    client = EmptyNostrClient(),
+                    filesDir = root.toOkioPath(),
+                    scope = runtimeScope(),
+                    cipher = cipher,
+                    links = links,
+                    openRetryFirstMs = 50,
+                    openRetryMaxMs = 200,
+                )
+            relaunched.restore()
+            settle()
+            assertTrue("a list that could not be read opened something", relaunched.sessionOrNull(keyA) == null)
+
+            cipher.locked = false
+            awaitUntil("the coordinator to open once the list can be read") { relaunched.sessionOrNull(keyA) != null }
+            awaitUntil("its group to come back") {
+                relaunched.groups.all.value
+                    .any { it.gid == "kept" }
+            }
+        }
+
     @Test
     fun `a forgotten coordinator stays forgotten across a relaunch`() =
         runBlocking {
@@ -653,7 +731,10 @@ class CordnRuntimeTest {
      * need is the `ICoordinator` surface the runtime talks to, with a way to
      * make it stop answering.
      */
-    private class StubCoordinator : ICoordinator {
+    private class StubCoordinator(
+        /** Whose packages these are: since cordn-kmp 1.7.0 upkeep tops up only where the listing names this account. */
+        private val owner: HexKey,
+    ) : ICoordinator {
         val published = mutableMapOf<String, String>()
         var failEverything = false
 
@@ -679,7 +760,7 @@ class CordnRuntimeTest {
 
         override suspend fun listKeyPackages(): List<AvailableKeyPackage> {
             guard()
-            return published.keys.map { AvailableKeyPackage(OWNER, it, false, clock) }
+            return published.keys.map { AvailableKeyPackage(owner, it, false, clock) }
         }
 
         override suspend fun takeKeyPackage(id: String): TakenKeyPackage? {
@@ -742,11 +823,6 @@ class CordnRuntimeTest {
             // Returning immediately turns `CordnSyncLoop` into a spin, which
             // on a virtual-time dispatcher is an unbounded one.
             delay(timeoutMs)
-        }
-
-        private companion object {
-            /** Whose packages these are. The runtime filters `kp_list` by account. */
-            const val OWNER = "owner"
         }
     }
 

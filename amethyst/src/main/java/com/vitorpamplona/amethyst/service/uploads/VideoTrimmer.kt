@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.media.MediaCodec
-import android.media.MediaExtractor
-import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
-import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import androidx.core.graphics.scale
+import com.davotoula.lightcompressor.sanitizer.Mp4Sanitizer
+import com.davotoula.lightcompressor.sanitizer.TrimRange
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCrop
 import com.vitorpamplona.amethyst.commons.service.uploads.PictureHeaders
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoTrim
@@ -39,135 +37,38 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.lang.ref.SoftReference
-import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * The Studio's video trim on Android, with the platform's own extractor and muxer: the audio and
- * video samples between the two times are copied into a fresh MP4, nothing decoded or re-encoded.
- * The cut starts at the key frame at or before the start, the result's clock starts at zero, and
- * the rotation hint carries over. Other tracks and the container's metadata do not.
+ * The Studio's video tools on Android. The trim is LightCompressor-enhanced's [Mp4Sanitizer]: one
+ * pass copies the audio and video samples of the kept part into a fresh MP4, nothing decoded or
+ * re-encoded, with the metadata stripped and the index in front (fast-start). The cut starts at
+ * the key frame at or before the start, the result's clock starts at zero, and the rotation hint
+ * carries over. The rest (duration, filmstrip frames, GIF edits) reads the file through the
+ * platform's retriever.
  */
 object VideoTrimmer {
     private const val TAG = "VideoTrimmer"
-    private const val DEFAULT_SAMPLE_BUFFER = 4 * 1024 * 1024
 
-    /** Writes [startMs]..[endMs] of [uri] to [out]; false when it could not (a track MP4 can't hold, no samples). */
-    fun trim(
+    /**
+     * Writes [startMs]..[endMs] (both kept) of [uri] to [out], already stripped of its metadata;
+     * false when it could not: an empty range, a start past the end of the video (of the audio,
+     * for a file with no video track), a track MP4 can't hold, more than one video track. [out]
+     * does not exist after a false or a cancellation. A cancelled caller interrupts the remux and
+     * gets the cancellation, not a false.
+     */
+    suspend fun trim(
         context: Context,
         uri: Uri,
         startMs: Long,
         endMs: Long,
         out: File,
-    ): Boolean {
-        val extractor = MediaExtractor()
-        var muxer: MediaMuxer? = null
-        var started = false
-        return try {
-            extractor.setDataSource(context, uri, null)
-            val mux = MediaMuxer(out.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-            muxer = mux
-            val tracks = HashMap<Int, Int>()
-            var videoTrack = -1
-            var bufferSize = DEFAULT_SAMPLE_BUFFER
-            for (i in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(i)
-                val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
-                if (!mime.startsWith("video/") && !mime.startsWith("audio/")) continue
-                tracks[i] = mux.addTrack(format)
-                extractor.selectTrack(i)
-                if (mime.startsWith("video/") && videoTrack < 0) videoTrack = i
-                if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) bufferSize = max(bufferSize, format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE))
-            }
-            if (tracks.isEmpty()) return false
-            rotationOf(context, uri)?.let(mux::setOrientationHint)
-            mux.start()
-            started = true
-
-            val endUs = endMs * 1000
-            extractor.seekTo(startMs * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-            val buffer = ByteBuffer.allocate(bufferSize)
-            val info = MediaCodec.BufferInfo()
-            // Video frames past the end, in decode order, that a frame still before the end may
-            // reference (a B-frame decodes after the frame it points forward to): written only if
-            // such a frame follows, so the last frames kept still decode.
-            val held = ArrayList<HeldSample>()
-            // The clock starts at the first video key frame kept; audio before it is dropped.
-            var baseUs = -1L
-            var written = 0
-            while (true) {
-                val track = extractor.sampleTrackIndex
-                if (track < 0) break
-                val time = extractor.sampleTime
-                val sync = extractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0
-                if (baseUs < 0) {
-                    if (videoTrack >= 0 && track != videoTrack) {
-                        extractor.advance()
-                        continue
-                    }
-                    baseUs = time
-                }
-                if (time < baseUs) {
-                    extractor.advance()
-                    continue
-                }
-                if (time > endUs) {
-                    if (track == videoTrack && !sync && held.size < MAX_HELD_FRAMES) {
-                        val size = extractor.readSampleData(buffer, 0)
-                        if (size < 0) break
-                        held.add(HeldSample(ByteArray(size).also { buffer.duplicate().apply { position(0).limit(size) }.get(it) }, time))
-                        extractor.advance()
-                    } else {
-                        // Past the end on this track; for video, a key frame or a run no frame
-                        // before the end came back for. Samples come roughly in time order.
-                        if (track == videoTrack) held.clear()
-                        extractor.unselectTrack(track)
-                    }
-                    continue
-                }
-                if (track == videoTrack && held.isNotEmpty()) {
-                    held.forEach { sample ->
-                        info.set(0, sample.bytes.size, sample.timeUs - baseUs, 0)
-                        mux.writeSampleData(tracks.getValue(track), ByteBuffer.wrap(sample.bytes), info)
-                        written++
-                    }
-                    held.clear()
-                }
-                val size = extractor.readSampleData(buffer, 0)
-                if (size < 0) break
-                info.set(0, size, time - baseUs, if (sync) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
-                mux.writeSampleData(tracks.getValue(track), buffer, info)
-                written++
-                extractor.advance()
-            }
-            // Finished here, not in finally: a file the muxer could not close has no index and
-            // would go up as a video nothing plays.
-            started = false
-            mux.stop()
-            written > 0
-        } catch (e: Exception) {
-            Log.w(TAG, "Trim of $uri failed", e)
-            false
-        } finally {
-            extractor.release()
-            try {
-                if (started) muxer?.stop()
-            } catch (e: Exception) {
-                Log.w(TAG, "Muxer stop failed", e)
-            }
-            muxer?.release()
-        }
-    }
-
-    /** A video sample read past the trim's end and held in case a frame before the end needs it. */
-    private class HeldSample(
-        val bytes: ByteArray,
-        val timeUs: Long,
-    )
-
-    /** The most frames held past the end: deeper than any B-frame reordering a camera writes. */
-    private const val MAX_HELD_FRAMES = 8
+    ): Boolean =
+        // An empty range fails in TrimRange's own check, before the library opens the file.
+        MetadataStripper.runSanitizer(out, "Trim $startMs..$endMs of $uri failed") {
+            Mp4Sanitizer.sanitize(context, uri, out, TrimRange(startMs, endMs))
+        } != null
 
     /** How long [uri] runs, in milliseconds: a video's own length, or a GIF's frame delays added up. */
     fun durationMs(
@@ -285,14 +186,6 @@ object VideoTrimmer {
         val ratio = maxEdge.toFloat() / long
         return bitmap.scale((bitmap.width * ratio).roundToInt().coerceAtLeast(1), (bitmap.height * ratio).roundToInt().coerceAtLeast(1)).also { if (it !== bitmap) bitmap.recycle() }
     }
-
-    private fun rotationOf(
-        context: Context,
-        uri: Uri,
-    ): Int? =
-        retrieve(context, uri) {
-            it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?.takeIf { degrees -> degrees in setOf(90, 180, 270) }
-        }
 
     private fun <T> retrieve(
         context: Context,

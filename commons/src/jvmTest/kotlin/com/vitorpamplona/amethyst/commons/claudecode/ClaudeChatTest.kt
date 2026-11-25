@@ -24,6 +24,7 @@ import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
+import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CompletableDeferred
@@ -40,6 +41,7 @@ import kotlinx.coroutines.test.runTest
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -494,5 +496,97 @@ class ClaudeChatTest {
             assertEquals(ChatStatus.ENDED, chat.state.value.status)
             assertTrue(cli.written.isEmpty())
             chatScope.cancel()
+        }
+
+    @Test
+    fun aGuardedSessionKeepsTheScopeItFirstStartedWith() =
+        runTest {
+            val repo = Files.createTempDirectory("guarded").toFile()
+            try {
+                fun git(vararg args: String) = check(GitWorkspace.run(repo, listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false") + args).code == 0) { "git ${args.toList()}" }
+                git("init", "-q", "-b", "main")
+                git("commit", "-q", "--allow-empty", "-m", "base")
+                git("remote", "add", "origin", File(repo, "nowhere.git").absolutePath)
+                git("checkout", "-q", "-b", "agent/w")
+                val saved = ConcurrentHashMap<String, PushScope>()
+                val store =
+                    object : PushScopeStore {
+                        override fun load(sessionId: String) = saved[sessionId]
+
+                        override fun save(
+                            sessionId: String,
+                            scope: PushScope,
+                        ) {
+                            saved[sessionId] = scope
+                        }
+                    }
+                val started = CopyOnWriteArrayList<ClaudeCodeOptions>()
+                // The scope each start was given: what this is about, whatever git does with it (PushGuardTest).
+                val scopes = CopyOnWriteArrayList<PushScope>()
+
+                fun chat(
+                    sessionId: String?,
+                    workspace: AgentWorkspace?,
+                ): ClaudeChat {
+                    val cli = ScriptedCli()
+                    return ClaudeChat(
+                        key = sessionId ?: "new-1",
+                        resumeSessionId = sessionId,
+                        cwd = repo,
+                        title = null,
+                        permissionMode = PermissionMode.DEFAULT,
+                        model = null,
+                        backend =
+                            ClaudeBackend(
+                                ClaudeSessionStore(Files.createTempDirectory("claude-config").toFile()),
+                                ClaudeCodeStarter { options, scope ->
+                                    started.add(options)
+                                    ClaudeCodeConnection(cli, scope).also { it.initialize() }
+                                },
+                            ),
+                        scope = chatScope,
+                        onSessionChanged = {},
+                        inspectGit = { null },
+                        workstreamOf = { workspace },
+                        pushScopes = store,
+                        pushRulesFor = { _, scope ->
+                            scopes.add(scope)
+                            PushGuard.PushRules(emptyMap(), guarded = true, scope = scope)
+                        },
+                    )
+                }
+
+                suspend fun TestScope.settle(done: () -> Boolean) {
+                    // Git and the store run on the IO dispatcher, which the test clock doesn't drive.
+                    repeat(400) {
+                        advanceUntilIdle()
+                        if (done()) return
+                        Thread.sleep(10)
+                    }
+                }
+                chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+                val workspace = AgentWorkspace("w", "w", repo.absolutePath, listOf(WorkspaceRepo("https://example.com/o/r", "work", "main", "agent/w")), 0)
+                chat(null, workspace).send("go")
+                settle { saved.containsKey("s-1") }
+                val first = assertNotNull(saved["s-1"], "the new session's scope was not kept")
+                assertEquals(setOf("agent/w"), first.ownBranches)
+                assertTrue(started.single().commandGuard != null)
+
+                // The app restarts; the folder no longer looks like a workstream, and the session is on another branch.
+                git("checkout", "-q", "-b", "release/1.x")
+                chatScope.cancel()
+                chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+                val resumed = chat("s-1", null)
+                settle { resumed.state.value.historyLoaded }
+                resumed.send("go on")
+                settle { started.size == 2 }
+                val again = started[1]
+                assertTrue(again.commandGuard != null, "a resumed guarded session started unguarded")
+                assertEquals(listOf(first, first), scopes.toList(), "the resumed session got a new scope")
+                assertEquals(first, saved["s-1"])
+                chatScope.cancel()
+            } finally {
+                repo.deleteRecursively()
+            }
         }
 }

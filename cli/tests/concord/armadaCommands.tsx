@@ -14,7 +14,7 @@ import { renderHook } from "@testing-library/react";
 import { finalizeEvent } from "nostr-tools/pure";
 import { Component, createElement, useMemo, type ReactNode } from "react";
 
-import { useChannelTimeline, useSendMessage } from "@/concord/hooks/useChannel";
+import { useChannelTimeline, useMessageActions, useSendMessage } from "@/concord/hooks/useChannel";
 import { useCommunityActions, useCommunityManagement } from "@/concord/hooks/useCommunityActions";
 import { useCommunity, useCommunityList } from "@/concord/hooks/useCommunityList";
 import { useChannels, useControlFold, useDissolved } from "@/concord/hooks/useControlPlane";
@@ -113,11 +113,13 @@ function useArmada({ cid, chid }: Props) {
   useStaffKeyWatch(community);
   const timeline = useChannelTimeline(community, channel, chid ?? null);
   const send = useSendMessage(community, channel);
+  // The message menu's Delete: a self-delete, or a moderator's hide citing their Grant (CORD-03 §3).
+  const messageActions = useMessageActions(community, channel);
   const openedById = useMemo(() => new Map(timeline.raw.map((r) => [r.rumorId, r])), [timeline.raw]);
   const pins = usePins(community, channel, openedById);
   const manage = useCommunityManagement(community);
   const dissolved = useDissolved(community);
-  return { manage, dissolved, list, actions, inbox, accept, community, fold, channels, channel, invites, roles, ranked, meta, members, moderation, rekey, timeline, send, pins, openedById };
+  return { manage, dissolved, list, actions, inbox, accept, community, fold, channels, channel, invites, roles, ranked, meta, members, moderation, rekey, timeline, send, messageActions, pins, openedById };
 }
 
 export interface Ctx {
@@ -318,6 +320,16 @@ export async function makeCommands(ctx: Ctx) {
       await open(cid, ch);
       const t = await until(`message ${target.slice(0, 8)}`, () => H().openedById.get(target));
       await H().send.mutateAsync({ content: text, kind: KIND_EDIT, target, targetKind: t.kind, expiration: null });
+      return {};
+    },
+
+    /** Deletes a message as its menu does: our own, or another member's as a moderator's hide. */
+    delete: async ({ cid, ch, target }: { cid: string; ch: string; target: string }) => {
+      await open(cid, ch);
+      await until(`message ${target.slice(0, 8)}`, () => H().openedById.get(target));
+      H().messageActions.deleteMessage(target);
+      // deleteMessage publishes in the background; give it the time a click would.
+      await sleep(3000);
       return {};
     },
 

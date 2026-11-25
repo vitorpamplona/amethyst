@@ -9226,7 +9226,6 @@
     <string name="claude_code_fork_hint">会话的副本。您的第一条消息会将其作为独立会话启动；原会话保持不变。</string>
     <string name="claude_code_notify_needs_you">%1$s 需要您批准</string>
     <string name="claude_code_notify_finished">%1$s 已完成</string>
-    <string name="claude_code_section_needs_you">需要您处理</string>
     <plurals name="claude_code_section_archived">
         <item quantity="other">已归档 · %1$d 个会话</item>
     </plurals>
@@ -9329,13 +9328,10 @@
     <string name="claude_code_mode_short_plan">规划</string>
     <string name="claude_code_mode_short_auto">自动</string>
     <string name="claude_code_propose_description_hint">更改了什么、为什么，以及您如何测试的</string>
-    <string name="claude_code_settings_assistant">设置助手</string>
     <string name="claude_code_context_used_little">已用不到 1% 上下文</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="other">查询了 %1$d 次设置</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">询问某项设置的作用，或要达到您的目的需要更改什么。Claude 只能看到 Amethyst 的设置，每项更改都需等待您的批准。密钥、钱包、中继和付款都不在其访问范围内。</string>
-    <string name="claude_code_settings_assistant_card">不确定某项设置在哪里？问问设置助手。</string>
     <string name="claude_code_settings_assistant_ask">向助手询问“%1$s”</string>
     <string name="claude_code_permission_setting">Claude 想要更改一项设置</string>
     <string name="claude_code_settings_starter_data">为什么 Amethyst 消耗这么多移动数据？</string>
@@ -9502,27 +9498,6 @@
     <string name="front_page_weather_celsius">°C</string>
     <string name="front_page_weather_fahrenheit">°F</string>
     <string name="front_page_weather_turn_off">关闭</string>
-    <string name="front_page_weather_high">最高</string>
-    <string name="front_page_weather_low">最低</string>
-    <string name="front_page_weather_rain">降雨</string>
-    <string name="front_page_weather_sun">日照</string>
-    <string name="front_page_weather_clear">晴</string>
-    <string name="front_page_weather_mainly_clear">大致晴朗</string>
-    <string name="front_page_weather_partly_cloudy">局部多云</string>
-    <string name="front_page_weather_overcast">阴</string>
-    <string name="front_page_weather_fog">雾</string>
-    <string name="front_page_weather_drizzle">毛毛雨</string>
-    <string name="front_page_weather_freezing_drizzle">冻毛毛雨</string>
-    <string name="front_page_weather_rain_falling">雨</string>
-    <string name="front_page_weather_heavy_rain">大雨</string>
-    <string name="front_page_weather_freezing_rain">冻雨</string>
-    <string name="front_page_weather_snow">雪</string>
-    <string name="front_page_weather_heavy_snow">大雪</string>
-    <string name="front_page_weather_showers">阵雨</string>
-    <string name="front_page_weather_violent_showers">强阵雨</string>
-    <string name="front_page_weather_snow_showers">阵雪</string>
-    <string name="front_page_weather_thunderstorm">雷暴</string>
-    <string name="front_page_weather_thunderstorm_hail">雷暴伴有冰雹</string>
     <string name="front_page_weather_private">仅在您自己的应用中显示，绝不会出现在您的公开观察报上。此帐户的所有设备使用同一地点。天气预报由 Open-Meteo.com 提供。</string>
     <string name="front_page_unknown_params">此计划包含本应用不认识的设置（%1$s），因此不会在此按计划印刷。</string>
     <string name="front_page_schedule_unreadable">您的计划由此版本无法读取的应用保存</string>
@@ -9798,7 +9773,6 @@
     <string name="nip_catalog_empty">没有与您的搜索匹配的 NIP。</string>
     <string name="media_studio_add">添加</string>
     <string name="media_studio_position">%1$d / %2$d</string>
-    <string name="media_studio_hold_original">按住查看原图</string>
     <string name="media_studio_tool_quality">质量</string>
     <string name="media_studio_tool_alt">替代文本</string>
     <string name="media_studio_tool_privacy">隐私</string>

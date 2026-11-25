@@ -115,6 +115,9 @@ sealed interface ConcordNotice : UserNotice {
 
     data object DissolveFailed : ConcordNotice
 
+    /** An invite link was not made: no CREATE_INVITE, the link could not be recorded, or a relay or the signer failed. */
+    data object InviteNotMinted : ConcordNotice
+
     /**
      * A join that was shown at once could not be saved to the Community List once it loaded, so
      * the community was taken back out ([communityName] when known).

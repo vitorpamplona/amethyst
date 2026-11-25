@@ -7,6 +7,12 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        // Magpie is published only to the Plugin Portal. Asking Central first costs a 404, and when a
+        // rate-limited Central answers with a 429 Gradle fails the build instead of trying the Portal.
+        exclusiveContent {
+            forRepository { gradlePluginPortal() }
+            filter { includeGroup("com.vitorpamplona.magpie") }
+        }
         mavenCentral()
         gradlePluginPortal()
         maven {

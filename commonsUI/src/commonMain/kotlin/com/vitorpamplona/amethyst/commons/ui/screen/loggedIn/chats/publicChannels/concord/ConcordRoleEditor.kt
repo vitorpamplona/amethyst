@@ -106,13 +106,7 @@ fun ConcordRoleEditorDialog(
     val me = accountViewModel.account.signer.pubKey
     val myRank = authority.rank(me) ?: Long.MAX_VALUE
     val roles =
-        remember(authority) {
-            authority
-                .roles()
-                .entries
-                .filter { !it.value.deleted }
-                .sortedBy { it.value.position }
-        }
+        remember(authority) { ConcordRoleRules.byRank(authority.roles()) }
     // The permissions a role may be given here: the ones this viewer holds.
     val offeredBits = remember(authority, me) { ConcordRoleRules.EDITABLE_BITS.filter { authority.hasPermission(me, it) } }
 

@@ -55,6 +55,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.File
@@ -94,6 +96,8 @@ data class ClaudeSessionRow(
     val unseenFinish: Boolean = false,
     /** Its last turn here ended in an error. */
     val lastTurnFailed: Boolean = false,
+    /** It waits on the user's answers to its questions ([ChatState.isAsking]). */
+    val asking: Boolean = false,
 ) {
     /** The agent waits on the user: for an approval, or to read how its turn ended. */
     val needsYou: Boolean get() = needsUser(appStatus, unseenFinish)
@@ -110,7 +114,13 @@ data class ChatAttention(
 ) {
     enum class Kind {
         NEEDS_APPROVAL,
+
+        /** The agent asked the user questions. */
+        ASKS,
         FINISHED,
+
+        /** The agent asked the user to open a pull request ([PublishToolServer]). */
+        REQUESTS_PUBLISH,
     }
 }
 
@@ -143,7 +153,14 @@ class ClaudeCodeService(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     /** Each session's own clones of a group of repositories. */
     val agentWorkspaces: AgentWorkspaces = AgentWorkspaces(),
+    /** Where the settings assistant's sessions run: a folder of its own, so a session saved there is the assistant's. */
+    val assistantDir: File = File(appDataDir, ASSISTANT_FOLDER),
+    /** The assistant on the user's own AI key, for when no agent program here can run it. */
+    val online: OnlineAgentBackend = OnlineAgentBackend(OnlineSessionStore(File(appDataDir, ONLINE_SESSIONS_FOLDER))),
 ) {
+    /** Every agent whose sessions the list shows: the coding agents, and the assistant's online one. */
+    private val allAgents: List<AgentBackend> get() = backends + online
+
     constructor(
         backend: AgentBackend,
         scope: CoroutineScope,
@@ -158,7 +175,7 @@ class ClaudeCodeService(
 
     private fun backendOf(sessionId: String?): AgentBackend = sessionId?.let { owners[it] } ?: backend
 
-    fun backend(id: String): AgentBackend? = backends.firstOrNull { it.id == id }
+    fun backend(id: String): AgentBackend? = allAgents.firstOrNull { it.id == id }
 
     private val _installed = MutableStateFlow<List<AgentBackend>>(emptyList())
 
@@ -224,9 +241,17 @@ class ClaudeCodeService(
         return ProjectInfo(repo?.identifier ?: mainCheckout?.name ?: dir.name, repo)
     }
 
-    /** The workspaces as of the last [refresh] or change: rows look theirs up without reading the disk. */
-    @Volatile
-    private var knownWorkspaces: List<AgentWorkspace> = emptyList()
+    /**
+     * The workspaces as of the last [refresh] or change: rows look theirs up without reading the
+     * disk. Changed only through [MutableStateFlow.update]: frees, restores and pull request checks
+     * change it from several threads, and none may undo another's change.
+     */
+    private val workspacesState = MutableStateFlow<List<AgentWorkspace>>(emptyList())
+
+    private val knownWorkspaces: List<AgentWorkspace> get() = workspacesState.value
+
+    /** Puts [updated] in place of the workspace of its id. */
+    private fun replaceWorkspace(updated: AgentWorkspace) = workspacesState.update { list -> list.map { if (it.id == updated.id) updated else it } }
 
     /** The workstream [cwd] is in, as of the last refresh or change; for screens, which must not read the disk. */
     fun workspaceAt(cwd: String?): AgentWorkspace? = workspaceOf(cwd)
@@ -265,10 +290,12 @@ class ClaudeCodeService(
                     workspace.repos.forEach { repo ->
                         // Only GitHub has pull requests to ask `gh` about.
                         val upstream = GitHubPullRequests.gitHubRepo(repo.url) ?: return@forEach
-                        val dir = File(workspace.dir, repo.name)
+                        val clone = File(workspace.dir, repo.name)
+                        // A freed workstream has no clone: `gh` runs in its folder, and asks by URL or by repository.
+                        val dir = if (clone.isDirectory) clone else File(workspace.dir)
                         val saved = workspace.pullRequests[repo.name]
                         // A branch never pushed has no pull request to look for.
-                        val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
+                        val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(clone, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
                         if (pushed && saved?.isOpen != false) {
                             val pr = GitHubPullRequests.state(dir, repo.branch, gh, upstream, knownUrl = saved?.url)
                             // No answer is not "no pull request": gh may be offline. Keep what was seen.
@@ -283,6 +310,20 @@ class ClaudeCodeService(
             }
     }
 
+    /**
+     * Saves what the agent asked to publish from [repo] in workspace [id], or clears it (null) once
+     * the user opened or dismissed it: the list and the Pull requests screen show it.
+     */
+    fun recordPublishRequest(
+        id: String,
+        repo: String,
+        request: PublishRequest?,
+    ) {
+        val updated = agentWorkspaces.recordPublishRequest(id, repo, request) ?: return
+        replaceWorkspace(updated)
+        rebuildRows()
+    }
+
     /** Saves what GitHub said about [repo]'s pull request in workspace [id], for the list's badge. */
     fun recordPullRequest(
         id: String,
@@ -291,7 +332,7 @@ class ClaudeCodeService(
         notify: Boolean = true,
     ) {
         val updated = agentWorkspaces.recordPullRequest(id, repo, pr) ?: return
-        knownWorkspaces = knownWorkspaces.map { if (it.id == id) updated else it }
+        replaceWorkspace(updated)
         if (notify) rebuildRows()
     }
 
@@ -317,7 +358,7 @@ class ClaudeCodeService(
         }
         recountNeedsYou()
         agentWorkspaces.delete(workspace)
-        knownWorkspaces = knownWorkspaces.filter { it.id != workspace.id }
+        workspacesState.update { list -> list.filter { it.id != workspace.id } }
         if (thenRefresh) refresh()
     }
 
@@ -366,31 +407,114 @@ class ClaudeCodeService(
     /** The workspaces whose work is done: every pull request merged or closed. */
     fun finishedWorkspaces(): List<AgentWorkspace> = knownWorkspaces.filter { it.finishedAt != null }
 
-    /** Whether a chat is busy in [workspace]: it must not be removed under the agent. */
-    private fun isBusy(workspace: AgentWorkspace): Boolean =
-        chats.value.values.any { chat ->
+    /** The chats open in [workspace]'s folder. */
+    private fun chatsIn(workspace: AgentWorkspace): List<ClaudeChat> =
+        chats.value.values.filter { chat ->
             val path = File(chat.state.value.cwd).absoluteFile.normalize().path
-            (path == workspace.dir || path.startsWith(workspace.dir + File.separator)) && chat.state.value.isBusy
+            path == workspace.dir || path.startsWith(workspace.dir + File.separator)
+        }
+
+    /** Whether a chat is busy in [workspace]: it must not be removed under the agent. */
+    private fun isBusy(workspace: AgentWorkspace): Boolean = chatsIn(workspace).any { it.state.value.isBusy }
+
+    /** One free or restore at a time per workstream, by its id: neither runs under the other. */
+    private val workspaceLocks = ConcurrentHashMap<String, Mutex>()
+
+    private fun lockOf(workspace: AgentWorkspace): Mutex = workspaceLocks.getOrPut(workspace.id) { Mutex() }
+
+    /** [workspace] as last saved or changed here: a screen may hold an older copy. */
+    private fun latest(workspace: AgentWorkspace): AgentWorkspace = knownWorkspaces.firstOrNull { it.id == workspace.id } ?: workspace
+
+    /**
+     * Frees the clones of [workspaces] that are safe to free ([freeWorkspace]): no busy chat, no
+     * work a bundle can't carry. Their sessions are archived; a message to one brings the clones
+     * back. Returns those freed.
+     */
+    suspend fun cleanUp(workspaces: List<AgentWorkspace>): List<AgentWorkspace> {
+        val freed = workspaces.filter { !latest(it).isFreed && freeWorkspace(it) }
+        if (freed.isNotEmpty()) {
+            val ids = freed.mapTo(HashSet()) { it.id }
+            val appArchived = preferences.value.archivedSessions
+            setArchived(
+                saved.value
+                    .filter { workspaceOf(it.cwd)?.id in ids && !it.archived && it.sessionId !in appArchived }
+                    .map { it.sessionId },
+                archived = true,
+            )
+            refresh()
+        }
+        return freed
+    }
+
+    /**
+     * Gives [workspace]'s disk back ([AgentWorkspaces.free]) unless a chat is busy in it or it
+     * holds work only its folder has; then nothing changes, its chats included. Else the idle chats
+     * there end first; their next message brings the clones back ([restoreBeforeStart]). Whether
+     * it is freed.
+     */
+    private suspend fun freeWorkspace(workspace: AgentWorkspace): Boolean =
+        lockOf(workspace).withLock {
+            val current = latest(workspace)
+            if (current.isFreed) return@withLock true
+            // A message sent meanwhile marks its chat busy before it waits for this lock.
+            if (isBusy(current) || agentWorkspaces.cannotFree(current)) return@withLock false
+            // Idle, each ends at once; the folder they started in stays, only the clones go.
+            chatsIn(current).forEach { it.close() }
+            try {
+                val freed = agentWorkspaces.free(current)
+                replaceWorkspace(freed)
+                workspaceSizes[freed.id] = 0L to System.currentTimeMillis()
+                true
+            } catch (e: IOException) {
+                // UnsavedWorkException included: work that appeared since the check.
+                Log.w(TAG, "Kept the clones of ${current.dir}", e)
+                // As the disk has it: a free that failed late may have saved the record as freed.
+                val onDisk = withContext(Dispatchers.IO) { agentWorkspaces.get(current.id) }
+                onDisk?.let(::replaceWorkspace)
+                if (onDisk?.isFreed == true) workspaceSizes.remove(onDisk.id)
+                onDisk?.isFreed == true
+            }
         }
 
     /**
-     * Removes the clones of [workspaces] that are safe to remove: no busy chat, nothing left
-     * uncommitted or unpushed. Their conversations stay, archived. Returns those removed.
+     * Makes a freed [workspace]'s clones again ([AgentWorkspaces.restore]), on the service's scope:
+     * a screen closed meanwhile doesn't stop it halfway. Under the workstream's lock: a second
+     * caller waits for the first, then finds it restored. Throws [IOException] when it can't.
      */
-    suspend fun cleanUp(workspaces: List<AgentWorkspace>): List<AgentWorkspace> {
-        val removed = mutableListOf<AgentWorkspace>()
-        for (workspace in workspaces) {
-            if (isBusy(workspace) || agentWorkspaces.hasUnsavedWork(workspace)) continue
-            try {
-                deleteWorkspace(workspace, thenRefresh = false)
-                workspaceSizes.remove(workspace.id)
-                removed.add(workspace)
-            } catch (e: IOException) {
-                Log.w(TAG, "Could not clean up ${workspace.dir}", e)
+    suspend fun restoreWorkspace(workspace: AgentWorkspace): AgentWorkspace {
+        if (!latest(workspace).isFreed && !lockOf(workspace).isLocked) return latest(workspace)
+        return scope
+            .async(Dispatchers.IO) {
+                lockOf(workspace).withLock {
+                    val current = latest(workspace)
+                    if (!current.isFreed) return@withLock current
+                    agentWorkspaces.restore(current).also { restored ->
+                        replaceWorkspace(restored)
+                        workspaceSizes.remove(restored.id)
+                    }
+                }
+            }.await()
+            .also {
+                rebuildRows()
+                measureWorkspaces()
             }
-        }
-        if (removed.isNotEmpty()) refresh()
-        return removed
+    }
+
+    /**
+     * For a chat in [cwd]: when its workstream is freed, or being freed, brings the clones back
+     * before the agent starts, telling [restoring] how many repositories it makes. The chat is
+     * already busy, so no new free starts after this looks.
+     */
+    private suspend fun restoreBeforeStart(
+        cwd: File,
+        restoring: (Int) -> Unit,
+    ) {
+        val workspace = workspaceOf(cwd.path) ?: return
+        // A free in progress finishes first: then whether the clones are there is known.
+        val current = lockOf(workspace).withLock { latest(workspace) }
+        if (!current.isFreed) return
+        restoring(current.repos.size)
+        restoreWorkspace(current)
     }
 
     @Volatile
@@ -398,43 +522,92 @@ class ClaudeCodeService(
 
     /**
      * When the user lets it ([AgentPreferences.autoCleanup]): a day after a workspace's pull
-     * requests are all merged or closed, its clones go; and mirrors nobody used for long go too.
-     * At most once an hour.
+     * requests are all merged or closed, or after the user last brought it back, its clones go
+     * ([AgentWorkspace.idleSince]); and mirrors nobody used for long go too. At most once an hour.
      */
     private fun autoCleanup() {
         val now = System.currentTimeMillis()
         if (now - lastAutoCleanup < AUTO_CLEANUP_EVERY_MS) return
         lastAutoCleanup = now
         if (!preferences.value.autoCleanup) return
-        val due = knownWorkspaces.filter { ws -> ws.finishedAt?.let { now - it > CLEANUP_AFTER_MS } == true }
+        val due = dueForCleanup(now)
         scope.launch {
             if (due.isNotEmpty()) {
                 val removed = cleanUp(due)
-                if (removed.isNotEmpty()) Log.i(TAG) { "Cleaned up ${removed.size} finished workspaces" }
+                if (removed.isNotEmpty()) Log.i(TAG) { "Freed ${removed.size} finished workspaces" }
             }
             val mirrors = agentWorkspaces.removeUnusedMirrors()
             if (mirrors > 0) Log.i(TAG) { "Removed $mirrors unused mirrors" }
         }
     }
 
+    /** The workstreams whose clones nobody needed for [CLEANUP_AFTER_MS] as of [now]: what the automatic cleanup frees. */
+    internal fun dueForCleanup(now: Long): List<AgentWorkspace> = knownWorkspaces.filter { ws -> !ws.isFreed && idleSince(ws)?.let { now - it > CLEANUP_AFTER_MS } == true }
+
     /**
-     * Archives the row's session, or brings it back: with the agent's own archive when it keeps
-     * one, else with the app's.
+     * Since when nobody used [workspace]'s clones: its work done, or brought back
+     * ([AgentWorkspace.idleSince]), or a session there last moved, whichever came last. Null while
+     * its work isn't done, or a chat there is working now.
+     */
+    private fun idleSince(workspace: AgentWorkspace): Long? {
+        val done = workspace.idleSince ?: return null
+        if (isBusy(workspace)) return null
+        val lastSession =
+            saved.value
+                .filter { workspaceOf(it.cwd)?.id == workspace.id }
+                .maxOfOrNull { it.lastModified } ?: 0L
+        return maxOf(done, lastSession)
+    }
+
+    /**
+     * Archives the row's session, or brings it back ([setArchived]).
+     *
+     * Archived, its chat ends when idle (the next message starts it again), and, when the user lets
+     * the app clean up on its own ([AgentPreferences.autoCleanup]), its workstream's clones are
+     * freed once every session there is archived ([freeWorkspace]). Brought back, it is
+     * listed again as it is: a freed workstream's clones come back with its next message.
      */
     suspend fun archive(
         row: ClaudeSessionRow,
         archived: Boolean,
     ) {
         val sessionId = row.sessionId ?: return
-        val agent = backendOf(sessionId)
-        val native = agent.capabilities.archive && withContext(Dispatchers.IO) { agent.archive(sessionId, archived) }
-        if (!native) {
-            _preferences.value =
-                agentWorkspaces.updatePreferences { prefs ->
-                    prefs.copy(archivedSessions = if (archived) prefs.archivedSessions + sessionId else prefs.archivedSessions - sessionId)
-                }
+        setArchived(listOf(sessionId), archived)
+        if (archived) {
+            // An idle chat would sit there "Ready" under Archived, holding a process.
+            chats.value[row.key]?.takeIf { !it.state.value.isBusy }?.close()
+            // Only when the user lets the app give disk back on its own ([AgentPreferences.autoCleanup]).
+            if (preferences.value.autoCleanup) workspaceOf(row.cwd)?.takeIf { everySessionArchived(it, sessionId) }?.let { freeWorkspace(it) }
         }
         refresh()
+    }
+
+    /** Archives [sessionIds], or brings them back: with each agent's own archive when it keeps one, else with the app's. */
+    private suspend fun setArchived(
+        sessionIds: Collection<String>,
+        archived: Boolean,
+    ) {
+        val appSide =
+            sessionIds.filterNot { id ->
+                val agent = backendOf(id)
+                agent.capabilities.archive && withContext(Dispatchers.IO) { agent.archive(id, archived) }
+            }
+        if (appSide.isEmpty()) return
+        _preferences.value =
+            agentWorkspaces.updatePreferences { prefs ->
+                prefs.copy(archivedSessions = if (archived) prefs.archivedSessions + appSide else prefs.archivedSessions - appSide.toSet())
+            }
+    }
+
+    /** Whether every saved session in [workspace] is archived, [justArchived] counted as one. */
+    private fun everySessionArchived(
+        workspace: AgentWorkspace,
+        justArchived: String,
+    ): Boolean {
+        val appArchived = preferences.value.archivedSessions
+        return saved.value
+            .filter { workspaceOf(it.cwd)?.id == workspace.id }
+            .all { it.sessionId == justArchived || it.archived || it.sessionId in appArchived }
     }
 
     private val _executable = MutableStateFlow<File?>(null)
@@ -453,7 +626,7 @@ class ClaudeCodeService(
             _executable.value = found.firstNotNullOfOrNull { it.executable() }
             // Every agent: Claude's saved sessions are files, readable even without `claude`.
             saved.value =
-                backends
+                allAgents
                     .flatMap { agent ->
                         try {
                             agent.listSessions().onEach { owners[it.sessionId] = agent }
@@ -472,7 +645,7 @@ class ClaudeCodeService(
                 .filter { !projects.containsKey(it) }
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value = liveSessions()
-            knownWorkspaces = agentWorkspaces.list()
+            workspacesState.value = agentWorkspaces.list()
             _preferences.value = agentWorkspaces.preferences()
         }
         _loaded.value = true
@@ -495,11 +668,13 @@ class ClaudeCodeService(
             ?.let { return it }
         val info =
             saved.value.firstOrNull { it.sessionId == key }
-                ?: backends.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
+                ?: allAgents.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
                 ?: return null
         // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
         // to start rather than resume in some other folder. A session that never named one shows
         // the home folder, and refuses the same way.
+        // The assistant's session reopens as the assistant: its tools, and none of the coding ones.
+        if (isAssistantFolder(info.cwd)) return openAssistant(key, info.sessionId, info.title)
         val cwd = info.cwd?.let { File(it) }
         return open(
             key,
@@ -567,7 +742,7 @@ class ClaudeCodeService(
                 val workspace = agentWorkspaces.create(clean, name, agentId = agent.id, nostrRepos = nostrRepos, claimed = dir)
                 // Offered first next time; only once they cloned, so a mistyped URL isn't.
                 agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
-                knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
+                workspacesState.update { list -> listOf(workspace) + list.filter { it.id != workspace.id } }
                 rebuildRows()
             }
         chat.waitFor(cloning, clean.size)
@@ -623,6 +798,22 @@ class ClaudeCodeService(
             ?.takeIf { it in backendOf(sessionId).capabilities.modes }
             ?: PermissionMode.DEFAULT
 
+    /**
+     * Each guarded session's push scope, kept with the preferences so a restart doesn't capture it
+     * again. Read from the file, not [_preferences], which may not be loaded yet. Called off the main thread.
+     */
+    private val pushScopeStore =
+        object : PushScopeStore {
+            override fun load(sessionId: String): PushScope? = agentWorkspaces.preferences().pushScopes[sessionId]
+
+            override fun save(
+                sessionId: String,
+                scope: PushScope,
+            ) {
+                _preferences.value = agentWorkspaces.updatePreferences { it.copy(pushScopes = it.pushScopes + (sessionId to scope)) }
+            }
+        }
+
     /** Keeps the mode [sessionId] is in, so it reopens in it after a restart ([savedModeOf]). */
     private suspend fun rememberMode(
         sessionId: String,
@@ -661,6 +852,8 @@ class ClaudeCodeService(
         agent: AgentBackend = backend,
         folderKnown: Boolean = true,
     ): ClaudeChat {
+        // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
+        val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
         val chat =
             ClaudeChat(
                 key,
@@ -674,12 +867,20 @@ class ClaudeCodeService(
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
                 heldElsewhere = ::isHeldElsewhere,
-                mcpServers = mcpServers,
-                launchOptions = launchOptions,
+                mcpServers = mcpServers + listOfNotNull(publish),
+                launchOptions =
+                    if (publish == null) {
+                        launchOptions
+                    } else {
+                        // It only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
+                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + publish.qualifiedName(PublishToolServer.REQUEST)) } }
+                    },
                 kind = kind,
                 forkBefore = forkBefore,
-                publishingIsTheUsers = { agentWorkspaces.of(it) != null },
-                folderBrief = { agentWorkspaces.of(it)?.brief },
+                workstreamOf = { agentWorkspaces.of(it) },
+                pushScopes = pushScopeStore,
+                restoreFolder = ::restoreBeforeStart,
+                folderBrief = { dir -> agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it } },
                 folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }
@@ -712,7 +913,7 @@ class ClaudeCodeService(
                     .collect { status ->
                         val wasRunning = last == ChatStatus.WORKING || last == ChatStatus.NEEDS_APPROVAL
                         when {
-                            status == ChatStatus.NEEDS_APPROVAL -> ChatAttention.Kind.NEEDS_APPROVAL
+                            status == ChatStatus.NEEDS_APPROVAL -> if (chat.state.value.isAsking) ChatAttention.Kind.ASKS else ChatAttention.Kind.NEEDS_APPROVAL
                             wasRunning && (status == ChatStatus.READY || status == ChatStatus.ENDED) -> ChatAttention.Kind.FINISHED
                             else -> null
                         }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it, chat.backend.shortName)) }
@@ -722,6 +923,21 @@ class ClaudeCodeService(
             }
         return chat
     }
+
+    /** The publish tool of the chat [key] working in [cwd]: its requests are saved with the workstream, and the user is told. */
+    internal fun publishTool(
+        key: String,
+        cwd: File,
+    ) = PublishToolServer(
+        folder = cwd,
+        workspaceOf = { dir -> workspaceOf(dir.path) ?: agentWorkspaces.of(dir) },
+        status = { agentWorkspaces.status(it) },
+        request = { workspace, repo, request ->
+            recordPublishRequest(workspace.id, repo.name, request)
+            val chat = chats.value[key]
+            _attention.tryEmit(ChatAttention(key, chat?.state?.value?.let(::titleOf) ?: workspace.title, ChatAttention.Kind.REQUESTS_PUBLISH, chat?.backend?.shortName ?: "Claude"))
+        },
+    )
 
     private fun recountNeedsYou() {
         _needsYou.value = chats.value.values.count { it.state.value.needsUser }
@@ -851,14 +1067,18 @@ class ClaudeCodeService(
             }
         var copyId: String? = null
         var answer: String? = null
+        var ended: AgentEvent.TurnEnded? = null
         try {
             withTimeout(timeoutMs) {
                 coroutineScope {
                     val reading =
                         launch {
                             connection.events
-                                .takeWhile { it !is AgentEvent.TurnEnded }
-                                .collect { event ->
+                                .takeWhile { event ->
+                                    // Kept: how the turn ended says why there was no answer.
+                                    if (event is AgentEvent.TurnEnded) ended = event
+                                    event !is AgentEvent.TurnEnded
+                                }.collect { event ->
                                     when (event) {
                                         is AgentEvent.SessionStarted ->
                                             if (event.sessionId != state.sessionId) {
@@ -892,6 +1112,17 @@ class ClaudeCodeService(
                 copyId?.let { id -> if (agent.session(id) != null && !agent.delete(id)) Log.w(TAG) { "Could not delete the aside copy $id" } }
             }
         }
+        if (answer == null) {
+            val turn = ended
+            Log.w(TAG) {
+                when {
+                    turn == null -> "${agent.displayName} stopped before answering aside"
+                    turn.failure != null -> "${agent.displayName}'s aside turn failed: ${turn.failure}"
+                    turn.interrupted -> "${agent.displayName}'s aside turn was interrupted"
+                    else -> "${agent.displayName} ended its aside turn without any text"
+                }
+            }
+        }
         return answer
     }
 
@@ -910,6 +1141,11 @@ class ClaudeCodeService(
         if (sessionId != null) {
             withContext(Dispatchers.IO) { backendOf(sessionId).delete(sessionId) }
             rememberMode(sessionId, PermissionMode.DEFAULT)
+            withContext(Dispatchers.IO) {
+                if (sessionId in agentWorkspaces.preferences().pushScopes) {
+                    _preferences.value = agentWorkspaces.updatePreferences { it.copy(pushScopes = it.pushScopes - sessionId) }
+                }
+            }
         }
         refresh()
     }
@@ -948,44 +1184,144 @@ class ClaudeCodeService(
     /**
      * The settings assistant: a chat whose only tools are [settings] (no files, no shell, none of
      * the user's own MCP servers), in a folder of its own. Reading a setting runs without asking;
-     * every change waits for the user's approval. The same chat comes back while it is open.
+     * every change waits for the user's approval. It stays one conversation: the chat open now, or
+     * after a restart the newest session saved in [assistantDir], or else a new one.
      */
-    fun settingsAssistant(
+    suspend fun settingsAssistant(
         settings: SettingsToolServer,
         title: String,
+        account: AccountToolServer? = null,
+        access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
     ): ClaudeChat {
+        bindAssistant(settings, account, access, screen)
         settingsAssistantKey?.let { key -> chats.value[key]?.let { return it } }
-        val dir = File(appDataDir, "claude-settings-assistant")
-        if (!dir.isDirectory && !dir.mkdirs()) Log.w(TAG) { "Could not create $dir" }
+        // Finding the agent program reads the disk (each PATH folder): not on the caller's thread.
+        val agent = withContext(Dispatchers.IO) { assistantAgent() }
+        // Read here rather than from the last [refresh]: the assistant may open before the list ever has.
+        val newest =
+            withContext(Dispatchers.IO) {
+                try {
+                    agent.listSessions().firstOrNull { isAssistantFolder(it.cwd) }?.also { owners[it.sessionId] = agent }
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not list ${agent.displayName} sessions", e)
+                    null
+                }
+            }
         val chat =
-            open(
-                "settings-${UUID.randomUUID()}",
-                null,
-                dir,
-                title,
-                PermissionMode.DEFAULT,
-                null,
-                kind = ChatKind.SETTINGS,
-                mcpServers = listOf(settings),
-                agent = backends.firstOrNull { it.capabilities.hostTools } ?: backend,
-                launchOptions = { options ->
-                    options.copy(
-                        onlyHostTools = true,
-                        preApprovedTools = listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settings::qualifiedName),
-                        instructions = SettingsToolServer.SYSTEM_PROMPT,
-                    )
-                },
-            )
+            newest?.let { info ->
+                chats.value.values.firstOrNull { it.state.value.sessionId == info.sessionId }
+                    ?: openAssistant(info.sessionId, info.sessionId, info.title, agent)
+            } ?: openAssistant("settings-${UUID.randomUUID()}", null, title, agent)
         settingsAssistantKey = chat.key
         return chat
     }
 
+    /**
+     * Points every assistant chat at [settings] and [account]: the account and navigation of the
+     * screen showing one now. Until a screen binds them, a tool call answers that Amethyst is out
+     * of reach.
+     */
+    fun bindAssistant(
+        settings: SettingsToolServer,
+        account: AccountToolServer?,
+        access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
+    ) {
+        settingsTools.target = settings
+        accountTools.target = account
+        screenTools.target = screen
+        if (access != null) online.access = access
+    }
+
+    /** Whether the chat [key] names is the assistant: open as one, or saved in its folder. */
+    fun isAssistantChat(key: String): Boolean {
+        chats.value[key]?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        chats.value.values
+            .firstOrNull { it.state.value.sessionId == key }
+            ?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        return saved.value.any { it.sessionId == key && isAssistantFolder(it.cwd) }
+    }
+
+    /** Whether [cwd] is the assistant's own folder, where only its sessions run. */
+    fun isAssistantFolder(cwd: String?): Boolean = cwd != null && File(cwd).absoluteFile.normalize() == assistantDir.absoluteFile.normalize()
+
+    /**
+     * Who runs the assistant: an agent program on this computer that takes the app's tools (Claude
+     * Code), else the user's own AI key, else Claude Code all the same (the chat then says it isn't installed).
+     */
+    private fun assistantAgent(): AgentBackend =
+        backends.firstOrNull { it.capabilities.hostTools && it.executable() != null }
+            ?: online.takeIf { it.isAvailable() }
+            ?: backends.firstOrNull { it.capabilities.hostTools }
+            ?: backend
+
+    private fun openAssistant(
+        key: String,
+        sessionId: String?,
+        title: String?,
+        /** Who runs it; null: the agent that saved [sessionId]. */
+        chosen: AgentBackend? = null,
+    ): ClaudeChat {
+        if (!assistantDir.isDirectory && !assistantDir.mkdirs()) Log.w(TAG) { "Could not create $assistantDir" }
+        return open(
+            key,
+            sessionId,
+            assistantDir,
+            title,
+            PermissionMode.DEFAULT,
+            null,
+            kind = ChatKind.SETTINGS,
+            mcpServers = listOf(settingsTools, accountTools, screenTools),
+            agent = chosen ?: sessionId?.let { backendOf(it) }?.takeIf { it.capabilities.hostTools } ?: assistantAgent(),
+            launchOptions = { options ->
+                options.copy(
+                    onlyHostTools = true,
+                    preApprovedTools =
+                        listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settingsTools::qualifiedName) +
+                            AccountToolServer.READ_ONLY_TOOLS.map(accountTools::qualifiedName) +
+                            ScreenToolServer.READ_ONLY_TOOLS.map(screenTools::qualifiedName),
+                    instructions = SettingsToolServer.SYSTEM_PROMPT,
+                )
+            },
+        )
+    }
+
+    /** The tools of every assistant chat, bound to the screen that shows one ([bindAssistant]). */
+    private val settingsTools = BoundToolServer(SettingsToolServer.NAME, SettingsToolServer.TOOLS)
+    private val accountTools = BoundToolServer(AccountToolServer.NAME, AccountToolServer.TOOLS, AccountToolServer.ALWAYS_ASK)
+    private val screenTools = BoundToolServer(ScreenToolServer.NAME, ScreenToolServer.TOOLS, ScreenToolServer.ALWAYS_ASK)
+
     @Volatile
     private var settingsAssistantKey: String? = null
+
+    private val gates = ConcurrentHashMap<String, BuildGate>()
+
+    /**
+     * The build gate of the checkout whose top folder is [root]: one per checkout, whichever screen
+     * asks, so a run goes on when its screen closes and its result counts for every way of publishing.
+     */
+    fun buildGateAt(root: File): BuildGate {
+        // By the real path: git names a checkout behind a symlink (macOS's /var) by where it leads.
+        val path =
+            try {
+                root.canonicalPath
+            } catch (_: IOException) {
+                root.absoluteFile.normalize().path
+            }
+        return gates.computeIfAbsent(path) { BuildGate(File(it), scope) }
+    }
+
+    /** The build gate of the checkout [dir] is in, anywhere inside it. */
+    suspend fun buildGate(dir: File): BuildGate {
+        val root = withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--show-toplevel") }?.trim()?.takeIf { it.isNotEmpty() }
+        return buildGateAt(root?.let(::File) ?: dir)
+    }
 
     /** Stops every process this app started. */
     fun shutdown() {
         chats.value.values.forEach { it.kill() }
+        gates.values.forEach { it.cancel() }
     }
 
     @Synchronized
@@ -1016,6 +1352,9 @@ class ClaudeCodeService(
         val fromDisk =
             saved.value.filter { it.sessionId !in asideCopies }.map { info ->
                 val chat = openBySession[info.sessionId]
+                val workspace = workspaceOf(info.cwd)
+                // Its clones are gone for now: no size to show; the next message brings them back.
+                val freed = workspace?.isFreed == true
                 ClaudeSessionRow(
                     key = chat?.key ?: info.sessionId,
                     sessionId = info.sessionId,
@@ -1027,12 +1366,13 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     unseenFinish = chat?.state?.value?.unseenFinish == true,
                     lastTurnFailed = chat?.state?.value?.lastTurnFailed == true,
+                    asking = chat?.state?.value?.isAsking == true,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone || info.archived || info.sessionId in appArchived,
                     userArchived = info.archived || info.sessionId in appArchived,
-                    workspace = workspaceOf(info.cwd),
-                    workspaceSize = workspaceOf(info.cwd)?.let { workspaceSizes[it.id]?.first },
+                    workspace = workspace,
+                    workspaceSize = workspace?.takeIf { !freed }?.let { workspaceSizes[it.id]?.first },
                     agentId = backendOf(info.sessionId).id,
                     agentName = backendOf(info.sessionId).displayName,
                 )
@@ -1060,6 +1400,7 @@ class ClaudeCodeService(
                         appStatus = state.status,
                         unseenFinish = state.unseenFinish,
                         lastTurnFailed = state.lastTurnFailed,
+                        asking = state.isAsking,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
                         workspace = workspaceOf(state.cwd),
@@ -1112,6 +1453,12 @@ class ClaudeCodeService(
 
         /** How long after its last pull request closes a workspace is kept: time to look back. */
         const val CLEANUP_AFTER_MS = 24 * 60 * 60_000L
+
+        /** The settings assistant's folder under the app's data: its sessions are the ones saved there. */
+        const val ASSISTANT_FOLDER = "claude-settings-assistant"
+
+        /** Where the assistant's sessions on the user's own AI key are saved, under the app's data. */
+        const val ONLINE_SESSIONS_FOLDER = "assistant-sessions"
 
         /** The key of a workspace's row when no session works in it yet. */
         const val WORKSPACE_KEY = "workspace:"

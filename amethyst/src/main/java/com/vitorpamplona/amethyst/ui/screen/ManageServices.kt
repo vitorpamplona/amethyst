@@ -24,12 +24,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.app.RedialRelaysOnReturn
 
-/** Keeps the relay pool connected while a window that shows the app is started; pauses it once stopped. */
+/**
+ * Keeps the relay pool connected while a window that shows the app is started; pauses it once
+ * stopped. Coming back from the background also redials the relays that dropped meanwhile.
+ */
 @Composable
 fun ManageRelayServices() {
-    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
-        .collectAsStateWithLifecycle()
+    val connector = Amethyst.instance.relayProxyClientConnector
+    val relayServices by connector.relayServices.collectAsStateWithLifecycle()
+    RedialRelaysOnReturn(connector.foreground)
 }
 
 /** Keeps the Tor and clear-net HTTP clients alive while a window that shows the app is started. */

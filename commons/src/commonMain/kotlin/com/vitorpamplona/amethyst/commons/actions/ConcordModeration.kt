@@ -37,7 +37,9 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.RankKey
 import com.vitorpamplona.quartz.concord.cord04Roles.RankedRoster
+import com.vitorpamplona.quartz.concord.cord04Roles.RankedRosterContent
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
@@ -52,6 +54,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Builds the Control Plane editions (CORD-04) that drive roles and moderation:
@@ -185,8 +190,129 @@ object ConcordModeration {
         require(ConcordLimits.nameFits(role.name)) { "role name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes" }
         // CORD-04 §3: position 0 is the owner's alone — refuse here rather than have every reader drop it.
         require(role.deleted || role.position >= 1) { "role position must be 1 or greater (position 0 is the owner's)" }
+        // A Community on Roles v2 (CORD-04 §2) takes the role as a vsk-13 Role keyed by rank instead.
+        if (RankedRoster.bindingForWrite(current, communityId, owner, ControlEntityKind.ROLE) != null) {
+            return defineRankedRole(actor, controlPlane, communityId, roleId, role, current, createdAt, citation, owner)
+        }
         val stamped = role.copy(roleId = roleId.toHexKey())
         return edit(actor, controlPlane, communityId, ControlEntityKind.ROLE, roleId, RoleEntity.serializer(), stamped, current, createdAt, citation, owner)
+    }
+
+    /**
+     * The live Roles v2 Roles' rank keys, highest-ranked first (lowest key, then id), from the
+     * authorized vsk-13 heads of [current]; [except] (the role being edited) left out.
+     */
+    private fun rankedRoleKeys(
+        current: List<ControlEdition>,
+        communityId: ByteArray,
+        owner: HexKey,
+        except: HexKey,
+    ): List<Pair<HexKey, String>> =
+        ConcordCommunityState
+            .authorizedHeads(current, communityId, owner)
+            .values
+            .mapNotNull { floor -> floor.known?.takeIf { it.entityKind == ControlEntityKind.RANKED_ROLE } }
+            .mapNotNull { RankedRosterContent.parseRankedRole(it.content) as? RankedRosterContent.ParsedRole.Live }
+            .filter { it.roleId != except }
+            .map { it.roleId to it.rank }
+            .sortedWith(compareBy({ it.second }, { it.first }))
+
+    /**
+     * The rank key (CORD-04 §3) that puts a role at 1-based [position] among the other live Roles
+     * ([others], highest first), kept strictly below [actor]'s own highest Role so every reader
+     * honors the edition: the role then sits where [position] asks, or right below the actor.
+     */
+    fun rankKeyFor(
+        position: Long,
+        others: List<Pair<HexKey, String>>,
+        actorKey: String?,
+    ): String? {
+        val keys = others.map { it.second }.distinct()
+        // The first slot the actor may place a role in: after every key at or above its own.
+        val floor = if (actorKey == null) 0 else keys.count { it <= actorKey }
+        val at = (position - 1).coerceIn(floor.toLong(), keys.size.toLong()).toInt()
+        val lo = if (at > 0) keys[at - 1] else null
+        val hi = if (at < keys.size) keys[at] else null
+        return RankKey.between(lo ?: actorKey, hi)
+    }
+
+    /**
+     * The 1-based slot among the other live Roles ([rankKeyFor]) that a fold [position] asks for.
+     *
+     * A v2 fold numbers Roles densely over every marked edition's rank key, superseded editions
+     * and Tenures included (CORD-04 §3, `RankKey.denseRanks`), so the live positions have gaps
+     * (1, 3, 4, …) and are no index into the live keys. A role moving down from [currentPosition]
+     * goes below every other Role the fold places at or above [position], taking the place of the
+     * one it lands on; a new role, or one moving up, goes above every Role at [position] or below.
+     */
+    fun liveSlotOf(
+        position: Long,
+        currentPosition: Long?,
+        othersPositions: List<Long?>,
+    ): Long {
+        val known = othersPositions.filterNotNull().distinct()
+        val movingDown = currentPosition != null && currentPosition < position
+        val above = if (movingDown) known.count { it <= position } else known.count { it < position }
+        return above + 1L
+    }
+
+    /**
+     * Writes [role] as a Roles v2 Role (vsk 13, CORD-04 §2): `role_id`, `name`, a `rank` key placed
+     * by [RoleEntity.position] among the live Roles ([rankKeyFor]), and `permissions`, over whatever
+     * else the current head carries; a deletion carries `deleted` alone.
+     */
+    private suspend fun defineRankedRole(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        roleId: ByteArray,
+        role: RoleEntity,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation?,
+        owner: HexKey,
+    ): Event {
+        val id = roleId.toHexKey()
+        val head = headOf(current, communityId, roleId, owner)
+        val content =
+            if (role.deleted) {
+                JsonObject(mapOf("role_id" to JsonPrimitive(id), "deleted" to JsonPrimitive(true)))
+            } else {
+                val folded = ConcordCommunityState.fold(current, communityId, owner)
+                val authority = folded.authority
+                val live = rankedRoleKeys(current, communityId, owner, except = "")
+                val others = live.filter { it.first != id }
+                val currentRank = live.firstOrNull { it.first == id }?.second
+                val mine = authority.rolesOf(actor.pubKey)
+                val actorKey = if (authority.isOwner(actor.pubKey)) null else others.filter { it.first in mine }.minOfOrNull { it.second }
+                require(authority.isOwner(actor.pubKey) || actorKey != null) { "only the owner or a role holder can place a Roles v2 role" }
+                val currentPosition = folded.roles[id]?.position
+                val rank =
+                    if (currentRank != null && currentPosition == role.position && (actorKey == null || currentRank > actorKey)) {
+                        // The position the editor showed, unchanged: the role keeps its key, and its place.
+                        currentRank
+                    } else {
+                        val slot = liveSlotOf(role.position, currentPosition, others.map { folded.roles[it.first]?.position })
+                        rankKeyFor(slot, others, actorKey) ?: error("no rank key fits at position ${role.position}")
+                    }
+                val previous =
+                    head?.content?.let {
+                        try {
+                            ConcordJson.instance.parseToJsonElement(it) as? JsonObject
+                        } catch (_: Exception) {
+                            null
+                        }
+                    } ?: JsonObject(emptyMap())
+                val fields = LinkedHashMap<String, JsonElement>(previous.filterKeys { it != "deleted" })
+                fields["role_id"] = JsonPrimitive(id)
+                fields["name"] = JsonPrimitive(role.name)
+                fields["rank"] = JsonPrimitive(rank)
+                fields["permissions"] = JsonPrimitive(role.permissions)
+                if (role.color != 0L) fields["color"] = JsonPrimitive(role.color)
+                JsonObject(fields)
+            }
+        val text = ConcordJson.instance.encodeToString(JsonObject.serializer(), content)
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.RANKED_ROLE, roleId, head, text, current, createdAt, citation, owner)
     }
 
     /**

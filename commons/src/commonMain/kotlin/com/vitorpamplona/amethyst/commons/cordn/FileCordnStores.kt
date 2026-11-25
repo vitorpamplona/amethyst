@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -500,23 +502,28 @@ class FileCordnCoordinatorStore(
             try {
                 CoordinatorListCodec.decode(cipher.decrypt(fileSystem.readBytes(stored)))
             } catch (e: Exception) {
-                // A list written by a future build, or one the keystore can no
-                // longer decrypt. Returning nothing loses the coordinators but
-                // keeps the account usable; throwing here would fail login.
-                //
-                // Say so, though. Losing this list loses every cordn group with
-                // it — the MLS state stays on disk but a gid whose coordinator
-                // is unknown is not a group anyone can open — and silently it
-                // looks exactly like an account that never had a coordinator:
-                // the rooms are gone from the inbox and the invitations screen
-                // says there is nowhere to look. One line is the difference
-                // between a diagnosable fault and a mystery.
+                // A keystore not unlocked yet, a list written by a future build, a disk
+                // error. Fail the load rather than answer with nothing: every write of
+                // this list loads it first and merges (upsert, remove, rememberOpen), so
+                // an empty answer would be saved back over the coordinators we could not
+                // read, and with them every cordn group (its MLS state stays on disk, but
+                // a gid whose coordinator is unknown is not a group anyone can open).
+                // Throwing leaves the file untouched; CordnRuntime retries until it reads.
+                currentCoroutineContext().ensureActive()
                 val size = fileSystem.metadataOrNull(stored)?.size ?: 0L
-                Log.w(TAG, "could not read $size bytes of coordinators, losing them: ${e.message}", e)
-                emptyList()
+                throw CordnCoordinatorListUnreadableException("could not read $size bytes of coordinators", e)
             }
         }
 }
+
+/**
+ * The stored coordinator list exists but cannot be read now (see [FileCordnCoordinatorStore.load]).
+ * Nothing was lost: the file is left as it is, to be read again later.
+ */
+class CordnCoordinatorListUnreadableException(
+    message: String,
+    cause: Throwable,
+) : IllegalStateException(message, cause)
 
 /**
  * The handoff flag, as the presence of a file.

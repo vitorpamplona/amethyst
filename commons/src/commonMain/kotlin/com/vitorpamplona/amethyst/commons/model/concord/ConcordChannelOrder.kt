@@ -21,22 +21,18 @@
 package com.vitorpamplona.amethyst.commons.model.concord
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordChannel as FoldedChannel
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelOrder as SidebarOrder
 
 /**
- * The order a community's channel list shows its Channels in. CORD-03 gives a Channel no ordering
- * field; the reference client sorts by its optional `armada.order` position and then by name, so a
- * community that never orders anything (all of ours) reads alphabetically, and a new channel lands
- * where its name puts it. We don't read positions yet, so: name, case-insensitive, then id for a
- * stable order between equal names. Without this the list followed the fold's map order, which put
- * `#general` below channels created after it.
+ * The order a community's channel list shows its Channels in: Quartz's
+ * [SidebarOrder] (CORD-03 §2), the same on every client. A Channel's `position` rank key first, then
+ * Armada's legacy `custom["armada.order"]` position, then name as UTF-8 bytes, then id, so a
+ * community Armada ordered lists alike here and one that never ordered anything reads by name.
+ * Without this the list followed the fold's map order, which put `#general` below channels
+ * created after it.
  */
 object ConcordChannelOrder {
-    val comparator: Comparator<Map.Entry<String, FoldedChannel>> =
-        compareBy<Map.Entry<String, FoldedChannel>> {
-            it.value.definition.name
-                .lowercase()
-        }.thenBy { it.value.definition.name }
-            .thenBy { it.key }
+    val comparator: Comparator<Map.Entry<String, FoldedChannel>> = Comparator { a, b -> SidebarOrder.comparator.compare(a.value, b.value) }
 
     fun <T : Map.Entry<String, FoldedChannel>> sorted(channels: Collection<T>): List<T> = channels.sortedWith(comparator)
 }

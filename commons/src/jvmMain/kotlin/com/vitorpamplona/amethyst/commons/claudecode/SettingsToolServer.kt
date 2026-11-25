@@ -45,33 +45,7 @@ class SettingsToolServer(
 ) : HostToolServer {
     override val name = NAME
 
-    override val tools =
-        listOf(
-            HostTool(
-                SEARCH,
-                "Finds Amethyst settings by what the user is asking about (\"dark mode\", \"videos use my data\", \"notifications are noisy\"). " +
-                    "Returns each match's id, title and current value. Use it before answering any question about settings.",
-                schema("""{"type":"object","properties":{"query":{"type":"string","description":"What the user wants, in a few words"}},"required":["query"]}"""),
-            ),
-            HostTool(
-                GET,
-                "Explains one setting: what it does, its current value, every value it can take and what each means, and where its screen is.",
-                schema("""{"type":"object","properties":{"id":{"type":"string","description":"The setting's id, from search_settings"}},"required":["id"]}"""),
-            ),
-            HostTool(
-                CHANGE,
-                "Changes one setting to a new value. The user is asked to approve each change, so propose one change at a time and say why. " +
-                    "Values: true/false for on/off settings, an option's value for choices, the text for text settings.",
-                schema(
-                    """{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"string"}},"required":["id","value"]}""",
-                ),
-            ),
-            HostTool(
-                OPEN,
-                "Opens the screen where a setting lives, so the user can see it and change it themselves.",
-                schema("""{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}"""),
-            ),
-        )
+    override val tools = TOOLS
 
     override suspend fun call(
         tool: String,
@@ -153,17 +127,85 @@ class SettingsToolServer(
 
         private fun schema(json: String) = Json.parseToJsonElement(json).jsonObject
 
+        /** The same four tools whatever the registry: a session resumed later finds what it was started with. */
+        val TOOLS =
+            listOf(
+                HostTool(
+                    SEARCH,
+                    "Finds Amethyst settings by what the user is asking about (\"dark mode\", \"videos use my data\", \"notifications are noisy\"). " +
+                        "Returns each match's id, title and current value. Use it before answering any question about settings.",
+                    schema("""{"type":"object","properties":{"query":{"type":"string","description":"What the user wants, in a few words"}},"required":["query"]}"""),
+                ),
+                HostTool(
+                    GET,
+                    "Explains one setting: what it does, its current value, every value it can take and what each means, and where its screen is.",
+                    schema("""{"type":"object","properties":{"id":{"type":"string","description":"The setting's id, from search_settings"}},"required":["id"]}"""),
+                ),
+                HostTool(
+                    CHANGE,
+                    "Changes one setting to a new value. The user is asked to approve each change, so propose one change at a time and say why. " +
+                        "Values: true/false for on/off settings, an option's value for choices, the text for text settings.",
+                    schema(
+                        """{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"string"}},"required":["id","value"]}""",
+                    ),
+                ),
+                HostTool(
+                    OPEN,
+                    "Opens the screen where a setting lives, so the user can see it and change it themselves.",
+                    schema("""{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}"""),
+                ),
+            )
+
         /**
-         * What the settings assistant is for, added to Claude Code's own prompt. It has no
-         * other tools: no files, no shell.
+         * What the Amethyst assistant is for, added to the agent's own prompt. It has no files,
+         * shell or web: only Amethyst's settings ([NAME]) and the user's account ([AccountToolServer.NAME]).
          */
         const val SYSTEM_PROMPT =
-            "You are the settings assistant inside Amethyst, a Nostr client. You help the user understand what Amethyst's " +
-                "settings do and change them. You have no files, shell or web here: only the amethyst-settings tools. " +
+            "You are the Amethyst assistant, inside Amethyst, a Nostr client. You do in the app what the user asks: explain and " +
+                "change settings, search notes and people, read threads, their home feed and notifications and summarize them, " +
+                "post, reply, upload files, zap, pay Lightning invoices and sync their events across relays. " +
+                "When the user says \"this\", \"here\" or \"on my screen\", call what_is_on_screen first and read what it names; " +
+                "take a screenshot only when how something looks matters, since the user approves each one. " +
+                "Reads return a page of results: summarize from them, cite notes by their note1 id, and ask before reading many " +
+                "more pages, since every note read is sent to the model. " +
+                "You have no files, shell or web here: only the amethyst-settings and amethyst-account tools. " +
                 "Look settings up with search_settings and get_setting before answering; never guess what a setting does. " +
-                "Explain in plain words, in the user's language, without jargon. Propose one change at a time with change_setting " +
-                "and say why; the user approves each one. For settings marked careful, explain the trade-off first. " +
-                "When something isn't in the tools (keys, signer, wallets, relays, payments), say so and offer open_settings_screen " +
-                "or point the user to Settings. Keep answers short."
+                "Explain in plain words, in the user's language, without jargon. Propose one change at a time and say why. " +
+                "Posting, replying, uploading, zapping, paying and syncing act as the user in public or spend their money: the user " +
+                "approves each one on a card, so show the exact text or amount first and never call these unasked. " +
+                "Before a zap or a payment, check wallet_status. Never claim something was sent or paid unless the tool said so. " +
+                "When something isn't in the tools (keys, signer, relay lists, follows, messages), say so and offer open_settings_screen " +
+                "or point the user to the right screen. Keep answers short."
+    }
+}
+
+/**
+ * Tools the assistant's chats talk to, bound late: whichever server a screen bound last
+ * ([target]), so a session reopened from the list, or after a restart, reaches the account and
+ * navigation of now rather than those of the screen that first started it. [tools] and
+ * [alwaysAsking] are fixed: a session resumed later finds what it was started with.
+ */
+class BoundToolServer(
+    override val name: String,
+    override val tools: List<HostTool>,
+    private val alwaysAsking: Set<String> = emptySet(),
+) : HostToolServer {
+    @Volatile
+    var target: HostToolServer? = null
+
+    override suspend fun call(
+        tool: String,
+        arguments: JsonObject,
+    ): HostToolResult = target?.call(tool, arguments) ?: HostToolResult(UNBOUND, isError = true)
+
+    override fun describe(
+        tool: String,
+        arguments: JsonObject,
+    ): String? = target?.describe(tool, arguments)
+
+    override fun alwaysAsks(tool: String): Boolean = tool in alwaysAsking || target?.alwaysAsks(tool) == true
+
+    companion object {
+        const val UNBOUND = "Amethyst is not reachable from this chat right now. Ask the user to open the assistant again from Settings."
     }
 }

@@ -3339,6 +3339,7 @@
     <string name="concord_redeeming_invite">Canjeando invitación…</string>
     <string name="concord_invite_links_created">Creado %1$s</string>
     <string name="concord_invite_links_empty">Aún no has creado enlaces de invitación para esta comunidad. Los enlaces que crearon otros administradores se gestionan en sus propios dispositivos.</string>
+    <string name="concord_invite_links_create">Crear enlace de invitación</string>
     <string name="concord_invite_links_unreadable">No se pudieron cargar tus enlaces de invitación, así que ahora no se puede revocar ninguno. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="concord_invite_revoke_action">Revocar enlace</string>
     <string name="concord_invite_revoke_title">¿Revocar este enlace?</string>
@@ -4800,6 +4801,21 @@
     <string name="emoji_pack_empty_title">Este paquete está vacío</string>
     <string name="emoji_pack_empty_body">Agrega emojis uno por uno, o trae un conjunto entero de imágenes o un .zip de una sola vez.</string>
     <string name="cordn_groups_title">Grupos Cordn</string>
+    <string name="cordn_calendar_cancelled">Cancelado</string>
+    <plurals name="cordn_calendar_going">
+        <item quantity="one">%1$d asistirá</item>
+        <item quantity="other">%1$d asistirán</item>
+    </plurals>
+    <plurals name="cordn_calendar_maybe">
+        <item quantity="one">%1$d quizás</item>
+        <item quantity="other">%1$d quizás</item>
+    </plurals>
+    <plurals name="cordn_calendar_declined">
+        <item quantity="one">%1$d no puede ir</item>
+        <item quantity="other">%1$d no pueden ir</item>
+    </plurals>
+    <string name="cordn_poll_closes">Cierra %1$s</string>
+    <string name="cordn_poll_closed">Cerrada</string>
     <string name="marmot_retention_title">Mensajes temporales</string>
     <string name="marmot_retention_off">Desactivado</string>
     <string name="marmot_retention_1h">1 hora</string>
@@ -5241,6 +5257,7 @@
     <string name="concord_invite_failed_revoked">Este enlace de invitación fue revocado y ya no se puede usar. Pide uno nuevo.</string>
     <string name="concord_invite_links_action">Enlaces de invitación…</string>
     <string name="concord_invite_links_title">Enlaces de invitación</string>
+    <string name="concord_invite_mint_failed">No se pudo crear el enlace de invitación. Puede que no tengas permiso para invitar a esta comunidad o que el enlace no se haya podido guardar en tus relés. Inténtalo de nuevo en un momento.</string>
     <string name="concord_invite_revoked_failed">No se pudo revocar el enlace. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="concord_invite_revoked_ok">Enlace de invitación revocado.</string>
     <string name="concord_invite_title">Enlace de invitación</string>
@@ -9534,7 +9551,6 @@
     <string name="claude_code_fork_hint">Una copia de la sesión. Tu primer mensaje la inicia como una sesión propia; la original se queda como está.</string>
     <string name="claude_code_notify_needs_you">%1$s necesita tu aprobación</string>
     <string name="claude_code_notify_finished">%1$s terminó</string>
-    <string name="claude_code_section_needs_you">Te necesitan</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archivadas · %1$d sesión</item>
         <item quantity="other">Archivadas · %1$d sesiones</item>
@@ -9645,14 +9661,11 @@
     <string name="claude_code_mode_short_plan">Planificar</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Qué cambia, por qué y cómo lo probaste</string>
-    <string name="claude_code_settings_assistant">Asistente de ajustes</string>
     <string name="claude_code_context_used_little">menos del 1% del contexto</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">consultó los ajustes una vez</item>
         <item quantity="other">consultó los ajustes %1$d veces</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Pregunta qué hace un ajuste o qué cambiar para conseguir lo que quieres. Claude solo ve los ajustes de Amethyst, y cada cambio espera tu aprobación. Las claves, billeteras, relés y pagos quedan fuera de su alcance.</string>
-    <string name="claude_code_settings_assistant_card">¿No sabes dónde está algo? Pregúntale al asistente de ajustes.</string>
     <string name="claude_code_settings_assistant_ask">Preguntarle al asistente sobre “%1$s”</string>
     <string name="claude_code_permission_setting">Claude quiere cambiar un ajuste</string>
     <string name="claude_code_settings_starter_data">¿Por qué Amethyst usa tantos datos móviles?</string>
@@ -9822,27 +9835,6 @@
     <string name="front_page_weather_celsius">°C</string>
     <string name="front_page_weather_fahrenheit">°F</string>
     <string name="front_page_weather_turn_off">Desactivar</string>
-    <string name="front_page_weather_high">máx.</string>
-    <string name="front_page_weather_low">mín.</string>
-    <string name="front_page_weather_rain">lluvia</string>
-    <string name="front_page_weather_sun">sol</string>
-    <string name="front_page_weather_clear">Despejado</string>
-    <string name="front_page_weather_mainly_clear">Mayormente despejado</string>
-    <string name="front_page_weather_partly_cloudy">Parcialmente nublado</string>
-    <string name="front_page_weather_overcast">Nublado</string>
-    <string name="front_page_weather_fog">Niebla</string>
-    <string name="front_page_weather_drizzle">Llovizna</string>
-    <string name="front_page_weather_freezing_drizzle">Llovizna helada</string>
-    <string name="front_page_weather_rain_falling">Lluvia</string>
-    <string name="front_page_weather_heavy_rain">Lluvia intensa</string>
-    <string name="front_page_weather_freezing_rain">Lluvia helada</string>
-    <string name="front_page_weather_snow">Nieve</string>
-    <string name="front_page_weather_heavy_snow">Nevada intensa</string>
-    <string name="front_page_weather_showers">Chubascos</string>
-    <string name="front_page_weather_violent_showers">Chubascos fuertes</string>
-    <string name="front_page_weather_snow_showers">Chubascos de nieve</string>
-    <string name="front_page_weather_thunderstorm">Tormentas eléctricas</string>
-    <string name="front_page_weather_thunderstorm_hail">Tormentas eléctricas con granizo</string>
     <string name="front_page_weather_private">Solo se muestra en tus propias apps, nunca en tu Observer público. Todos los dispositivos de esta cuenta usan el mismo lugar. Pronóstico de Open-Meteo.com.</string>
     <string name="front_page_unknown_params">Esta programación tiene ajustes que esta app no conoce (%1$s), así que no se imprimirá según la programación aquí.</string>
     <string name="front_page_schedule_unreadable">Tu programación la guardó una app que esta versión no puede leer</string>
@@ -10133,7 +10125,6 @@
     <string name="nip_catalog_empty">Ningún NIP coincide con tu búsqueda.</string>
     <string name="media_studio_add">Agregar</string>
     <string name="media_studio_position">%1$d de %2$d</string>
-    <string name="media_studio_hold_original">Mantén presionado para ver el original</string>
     <string name="media_studio_tool_quality">Calidad</string>
     <string name="media_studio_tool_alt">Texto alternativo</string>
     <string name="media_studio_tool_privacy">Privacidad</string>
@@ -10385,6 +10376,9 @@
     <string name="marmot_devices_link_new_desc">Este dispositivo aprueba otro de los tuyos</string>
     <string name="marmot_devices_link_this">Vincular este dispositivo a uno existente</string>
     <string name="marmot_devices_link_this_desc">Apruébalo en un dispositivo que ya tenga tus chats</string>
+    <string name="marmot_devices_move_this">Mover este dispositivo a otro grupo de tus dispositivos</string>
+    <string name="marmot_devices_move_this_desc">Apruébalo en un dispositivo de ese grupo; este dispositivo deja su grupo actual cuando termine el traslado</string>
+    <string name="marmot_devices_moving">Este dispositivo se está moviendo a otro grupo de tus dispositivos. Sigue en su grupo actual hasta que termine el traslado.</string>
     <string name="marmot_devices_section_sign_ins">Otros inicios de sesión</string>
     <string name="marmot_devices_sign_in_new">Nuevo inicio de sesión %1$s</string>
     <string name="marmot_devices_sign_in_earlier">Inició sesión antes que este dispositivo, %1$s</string>
@@ -10396,6 +10390,7 @@
     <string name="marmot_devices_failed_action">Eso no funcionó. Inténtalo de nuevo.</string>
     <string name="marmot_devices_switch_off_while_linked">Este dispositivo está vinculado a tus otros dispositivos, así que esto sigue activado. Para desvincularlo, quítalo desde uno de tus otros dispositivos o cierra la sesión de esta cuenta aquí.</string>
     <string name="marmot_link_title_new">Vincular este dispositivo</string>
+    <string name="marmot_link_title_move">Mover este dispositivo</string>
     <string name="marmot_link_title_existing">Vincular un dispositivo nuevo</string>
     <string name="marmot_link_starting">Enviando la solicitud de vinculación…</string>
     <string name="marmot_link_waiting_answer">Esperando a otro de tus dispositivos. Abre Amethyst o White Noise en él: te pedirá vincular este.</string>

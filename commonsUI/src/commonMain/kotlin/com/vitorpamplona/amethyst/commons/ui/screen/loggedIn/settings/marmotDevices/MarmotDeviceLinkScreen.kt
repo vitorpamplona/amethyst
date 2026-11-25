@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_link_rate_limited
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_start_failed
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_starting
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
+import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_move
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_new
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_wait_to_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_waiting_answer
@@ -111,18 +112,29 @@ fun MarmotDeviceLinkScreen(
     sessionId: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    /** This device is linked and moves to the group of the device that answers. */
+    move: Boolean = false,
 ) {
     val role = if (asNewDevice) DeviceLinkRole.NEW_DEVICE else DeviceLinkRole.EXISTING_DEVICE
     val viewModel: MarmotDeviceLinkViewModel =
         viewModel(
-            key = "MarmotDeviceLink" + accountViewModel.account.signer.pubKey + role + sessionId,
-            factory = MarmotDeviceLinkViewModel.Factory(accountViewModel.account, role, sessionId, accountViewModel.marmotDeviceAttention),
+            key = "MarmotDeviceLink" + accountViewModel.account.signer.pubKey + role + sessionId + move,
+            factory = MarmotDeviceLinkViewModel.Factory(accountViewModel.account, role, sessionId, accountViewModel.marmotDeviceAttention, move),
         )
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(if (asNewDevice) Res.string.marmot_link_title_new else Res.string.marmot_link_title_existing), nav)
+            TopBarWithBackButton(
+                stringRes(
+                    when {
+                        move -> Res.string.marmot_link_title_move
+                        asNewDevice -> Res.string.marmot_link_title_new
+                        else -> Res.string.marmot_link_title_existing
+                    },
+                ),
+                nav,
+            )
         },
     ) { padding ->
         MarmotDeviceLinkContent(

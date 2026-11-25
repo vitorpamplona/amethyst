@@ -10170,7 +10170,6 @@
     <string name="claude_code_fork_hint">Kopia sesji. Twoja pierwsza wiadomość uruchomi ją jako osobną sesję; oryginał pozostanie bez zmian.</string>
     <string name="claude_code_notify_needs_you">%1$s wymaga Twojej zgody</string>
     <string name="claude_code_notify_finished">%1$s: gotowe</string>
-    <string name="claude_code_section_needs_you">Czeka na Ciebie</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Zarchiwizowane · %1$d sesja</item>
         <item quantity="few">Zarchiwizowane · %1$d sesje</item>
@@ -10297,7 +10296,6 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Co zmienia, dlaczego i jak to przetestowano</string>
-    <string name="claude_code_settings_assistant">Asystent ustawień</string>
     <string name="claude_code_context_used_little">poniżej 1% kontekstu</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">sprawdzono ustawienia raz</item>
@@ -10305,8 +10303,6 @@
         <item quantity="many">sprawdzono ustawienia %1$d razy</item>
         <item quantity="other">sprawdzono ustawienia %1$d razy</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Zapytaj, do czego służy dane ustawienie albo co zmienić, aby uzyskać to, czego chcesz. Claude widzi tylko ustawienia Amethyst, a każda zmiana czeka na Twoją zgodę. Klucze, portfele, transmitery i płatności są poza jego zasięgiem.</string>
-    <string name="claude_code_settings_assistant_card">Nie wiesz, gdzie coś jest? Zapytaj asystenta ustawień.</string>
     <string name="claude_code_settings_assistant_ask">Zapytaj asystenta o „%1$s”</string>
     <string name="claude_code_permission_setting">Claude chce zmienić ustawienie</string>
     <string name="claude_code_settings_starter_data">Dlaczego Amethyst zużywa tyle danych mobilnych?</string>
@@ -10791,7 +10787,6 @@
     <string name="nip_catalog_empty">Żaden NIP nie pasuje do wyszukiwania.</string>
     <string name="media_studio_add">Dodaj</string>
     <string name="media_studio_position">%1$d z %2$d</string>
-    <string name="media_studio_hold_original">Przytrzymaj, aby zobaczyć oryginał</string>
     <string name="media_studio_tool_quality">Jakość</string>
     <string name="media_studio_tool_alt">Tekst alternatywny</string>
     <string name="media_studio_tool_privacy">Prywatność</string>
@@ -10956,27 +10951,6 @@
     <string name="front_page_weather_celsius">°C</string>
     <string name="front_page_weather_fahrenheit">°F</string>
     <string name="front_page_weather_turn_off">Wyłącz</string>
-    <string name="front_page_weather_high">maks.</string>
-    <string name="front_page_weather_low">min.</string>
-    <string name="front_page_weather_rain">deszcz</string>
-    <string name="front_page_weather_sun">słońce</string>
-    <string name="front_page_weather_clear">Bezchmurnie</string>
-    <string name="front_page_weather_mainly_clear">Przeważnie bezchmurnie</string>
-    <string name="front_page_weather_partly_cloudy">Częściowe zachmurzenie</string>
-    <string name="front_page_weather_overcast">Pochmurno</string>
-    <string name="front_page_weather_fog">Mgła</string>
-    <string name="front_page_weather_drizzle">Mżawka</string>
-    <string name="front_page_weather_freezing_drizzle">Marznąca mżawka</string>
-    <string name="front_page_weather_rain_falling">Deszcz</string>
-    <string name="front_page_weather_heavy_rain">Ulewny deszcz</string>
-    <string name="front_page_weather_freezing_rain">Marznący deszcz</string>
-    <string name="front_page_weather_snow">Śnieg</string>
-    <string name="front_page_weather_heavy_snow">Intensywne opady śniegu</string>
-    <string name="front_page_weather_showers">Przelotne opady</string>
-    <string name="front_page_weather_violent_showers">Gwałtowne ulewy</string>
-    <string name="front_page_weather_snow_showers">Przelotne opady śniegu</string>
-    <string name="front_page_weather_thunderstorm">Burze</string>
-    <string name="front_page_weather_thunderstorm_hail">Burze z gradem</string>
     <string name="front_page_weather_private">Widoczna tylko w Twoich aplikacjach, nigdy w Twoim publicznym Observerze. Każde urządzenie tego konta używa tego samego miejsca. Prognoza: Open-Meteo.com.</string>
     <string name="llama_garden_listing">Torrent modelu</string>
     <string name="llama_garden_curated">Zatwierdzone</string>

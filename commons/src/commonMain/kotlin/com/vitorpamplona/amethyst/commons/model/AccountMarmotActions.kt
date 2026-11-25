@@ -24,8 +24,11 @@ import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageReach
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotKeyPackageRelays
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.importedHistoryReadUpTo
+import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSetting
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
@@ -55,6 +58,7 @@ import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageReferences
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
@@ -778,16 +782,32 @@ class AccountMarmotActions(
         }
     }
 
+    /** Moves [groupId]'s last-read time to [upTo] unless it is already there. */
+    fun markMarmotChatReadUpTo(
+        groupId: HexKey,
+        upTo: Long,
+    ) {
+        val route = marmotGroupLastReadRoute(groupId)
+        if (account.loadLastRead(route) < upTo) account.markAsRead(route, upTo)
+    }
+
     /**
      * History a linked sibling delivered (`account-sync.md` "History deliveries"): already in the
      * message store, indexed here like a restored message. Importing is not reading, so it moves no
-     * read position, but it is not news either: the chat's local last-read time moves past it, so
-     * the earlier messages do not show as unread.
+     * read position, but it is not news either: the chat's local last-read time moves past it
+     * before the messages are indexed, so they show as neither unread in the chat list nor new in
+     * Notifications (where they are listed by their own dates, [isReadMarmotMessage]), and raise no
+     * system notification: they never pass through the [MarmotGroupNotifier].
      */
     suspend fun indexImportedMarmotHistory(imports: List<MarmotDeviceGroupManager.ImportedHistory>) {
         for (history in imports) {
             val groupId = history.nostrGroupId
             val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+            // Read before indexing: a cache observer that sees the notes sees them as read already.
+            // Clamped to now (importedHistoryReadUpTo): a message dated ahead must not silence the chat.
+            importedHistoryReadUpTo(history.events.map { it.createdAt }, TimeUtils.now())?.let { upTo ->
+                markMarmotChatReadUpTo(groupId, upTo)
+            }
             for (event in history.events) {
                 try {
                     val note = indexMarmotGroupInnerEvent(groupId, event).note
@@ -799,9 +819,6 @@ class AccountMarmotActions(
                     Log.w("MarmotDbg", "could not index an imported message of $groupId", e)
                 }
             }
-            val newest = history.events.maxOfOrNull { it.createdAt } ?: continue
-            val route = marmotGroupLastReadRoute(groupId)
-            if (account.loadLastRead(route) < newest) account.markAsRead(route, newest)
             account.marmotGroupList.notifyGroupChanged(groupId)
         }
     }
@@ -1296,19 +1313,40 @@ class AccountMarmotActions(
     }
 
     /**
+     * [innerEvent] is new in [nostrGroupId]: a system notification, unless it is no chat
+     * ([MarmotGroupNotifier.notifies]), an admin removed it, or the chat is muted.
+     */
+    suspend fun notifyMarmotGroupMessage(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        if (!MarmotGroupNotifier.notifies(innerEvent)) return
+        if (account.marmotGroupList.isAdminRemoved(nostrGroupId, innerEvent.id)) return
+        if (account.marmotChatSettings.state.value
+                .isMuted(nostrGroupId)
+        ) {
+            return
+        }
+        account.marmotNotifier().notifyGroupMessage(innerEvent, nostrGroupId, account)
+    }
+
+    /**
      * The user pins, mutes or archives [nostrGroupId] on this device (or undoes it). With device
      * groups on and this device linked, the change also goes to the account's other devices
-     * (`account-sync.md` "Small state"), which apply it to their copy of the chat.
+     * (`account-sync.md` "Small state"), which apply it to their copy of the chat. Archiving unpins
+     * (both changes go to the siblings); unarchiving lets a pin a sibling settled on meanwhile apply.
      */
     suspend fun setMarmotChatSetting(
         nostrGroupId: HexKey,
         setting: MarmotChatSetting,
         on: Boolean,
     ) {
-        if (!account.marmotChatSettings.set(nostrGroupId, setting, on)) return
+        val changes = account.marmotChatSettings.setAll(nostrGroupId, setting, on)
+        if (changes.isEmpty()) return
         val devices = account.marmotDevices ?: return
         if (!devices.state.value.linked || devices.isDeviceGroup(nostrGroupId)) return
-        devices.changeSetting(nostrGroupId, setting, on)
+        changes.forEach { (changed, value) -> devices.changeSetting(nostrGroupId, changed, value) }
+        if (setting == MarmotChatSetting.ARCHIVE && !on) applyMarmotSmallState(devices.groups.smallState())
     }
 
     /**
@@ -1323,6 +1361,8 @@ class AccountMarmotActions(
             state,
             manager,
             skip = { id -> account.marmotDevices?.isDeviceGroup(id) == true },
+            // The unpin a sibling's archive brought here is this device's change: the siblings hear it.
+            onLocalChange = { nostrId, setting, value -> account.marmotDevices?.changeSetting(nostrId, setting, value) },
         ) { nostrId, read ->
             val route = marmotGroupLastReadRoute(nostrId)
             if (read.at > account.loadLastRead(route)) account.markAsRead(route, read.at)
@@ -1957,6 +1997,14 @@ class AccountMarmotActions(
                 // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
                 // message's, and only loadEvent sets it.
                 innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
+            }
+
+            // What a group message replies to is MDK's reading (first `q`, else first `e`), not the
+            // every-`e`-and-`q` of a generic kind 9: White Noise and Amethyst then quote the same
+            // parent when a message's `e` and `q` differ, the `e` being only a reference.
+            if (innerEvent.kind == ChatEvent.KIND && innerNote.event?.id == innerEvent.id) {
+                val target = MarmotMessageReferences.replyTarget(innerEvent)?.let { cache.checkGetOrCreateNote(it) }
+                cache.relinkReplyTo(innerNote, listOfNotNull(target))
             }
 
             // The overlay's rules (author-only, latest wins) are applied at render time by

@@ -61,6 +61,8 @@ class MarmotDeviceLinkViewModel(
      */
     private val decisionScope: CoroutineScope? = null,
     private val clock: () -> Long = { TimeUtils.now() },
+    /** A linked device linking again as the new one: it moves to the answering device's group. */
+    private val move: Boolean = false,
 ) : ViewModel() {
     private val openedAt = clock()
     private val snapshots = devices?.state ?: MutableStateFlow(MarmotDevicesSnapshot())
@@ -69,11 +71,11 @@ class MarmotDeviceLinkViewModel(
 
     val state: StateFlow<DeviceLinkScreenState> =
         combine(snapshots, followed, startFailed) { snapshot, session, failed ->
-            DeviceLinkScreen.state(snapshot, role, session, failed)
+            DeviceLinkScreen.state(snapshot, role, session, failed, move)
         }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
-            DeviceLinkScreen.state(snapshots.value, role, initialSessionId, false),
+            DeviceLinkScreen.state(snapshots.value, role, initialSessionId, false, move),
         )
 
     init {
@@ -82,7 +84,7 @@ class MarmotDeviceLinkViewModel(
         if (role == DeviceLinkRole.NEW_DEVICE) {
             val current = snapshots.value
             val inProgress = current.newDevice.let { it != null && it !is NewDeviceLinkState.Ended && it != NewDeviceLinkState.Linked }
-            if (!current.linked && !inProgress) start()
+            if ((move || !current.linked) && !inProgress) start()
         } else if (initialSessionId == null) {
             // The existing device follows the first request it sees, and keeps following it once it ends.
             viewModelScope.launch {
@@ -161,12 +163,13 @@ class MarmotDeviceLinkViewModel(
         val role: DeviceLinkRole,
         val sessionId: HexKey?,
         val attention: DeviceGroupAttentionState?,
+        val move: Boolean = false,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = MarmotDeviceLinkViewModel(account.marmotDevices, role, sessionId, attention, account.scope) as T
+        ): T = MarmotDeviceLinkViewModel(account.marmotDevices, role, sessionId, attention, account.scope, move = move) as T
     }
 
     companion object {

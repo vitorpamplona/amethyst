@@ -32,6 +32,9 @@ object AndroidSdk {
     /**
      * `ANDROID_HOME` for a child process when [parent] names no SDK and one is installed where
      * Android Studio puts it; empty otherwise. A `local.properties` `sdk.dir` still wins in Gradle.
+     * A stale `ANDROID_SDK_ROOT` (naming no folder) is pointed at the same SDK: AGP 9.5 skips such
+     * a variable, but an older AGP, in another repository a workstream clones, may stop on two
+     * variables naming different paths.
      */
     fun environment(
         parent: Map<String, String> = System.getenv(),
@@ -39,8 +42,9 @@ object AndroidSdk {
         os: String = System.getProperty("os.name").orEmpty(),
     ): Map<String, String> {
         if (listOf("ANDROID_HOME", "ANDROID_SDK_ROOT").any { parent[it]?.let { dir -> File(dir).isDirectory } == true }) return emptyMap()
-        val found = candidates(parent, home, os).firstOrNull { File(it).isDirectory } ?: return emptyMap()
-        return mapOf("ANDROID_HOME" to found)
+        // As a File's path: the separators this system writes, whichever system's layout matched.
+        val found = candidates(parent, home, os).map(::File).firstOrNull { it.isDirectory }?.path ?: return emptyMap()
+        return if (parent["ANDROID_SDK_ROOT"] != null) mapOf("ANDROID_HOME" to found, "ANDROID_SDK_ROOT" to found) else mapOf("ANDROID_HOME" to found)
     }
 
     /** Android Studio's default SDK folder on each system. */

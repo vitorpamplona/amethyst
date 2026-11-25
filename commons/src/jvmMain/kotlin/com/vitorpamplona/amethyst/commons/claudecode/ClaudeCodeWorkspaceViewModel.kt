@@ -24,13 +24,25 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** One repository of the workspace on the pull requests screen. */
 @Immutable
@@ -47,6 +59,8 @@ data class WorkspaceRepoRow(
     val gitHub: String? = null,
     /** The user can't push to it: the branch goes to their fork. */
     val viaFork: Boolean = false,
+    /** The pull request the agent asked the user to open ([PublishToolServer]), until one is open or opened after it. */
+    val request: PublishRequest? = null,
 ) {
     val name get() = status.repo.name
 }
@@ -76,11 +90,18 @@ class ClaudeCodeWorkspaceViewModel(
             ?.cwd
             ?.let { service.agentWorkspaces.of(File(it)) }
 
-    private val _rows = MutableStateFlow<List<WorkspaceRepoRow>>(emptyList())
+    // What the last look found, shown at once when the screen comes back while a new look runs.
+    private val _rows = MutableStateFlow(workspace?.let { lastRows[it.id] }.orEmpty())
     val rows: StateFlow<List<WorkspaceRepoRow>> = _rows.asStateFlow()
 
-    private val _loading = MutableStateFlow(true)
+    /** Only while there is nothing to show yet: a refresh over shown rows replaces them when it ends. */
+    private val _loading = MutableStateFlow(_rows.value.isEmpty())
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
+
+    private val _restoring = MutableStateFlow(false)
+
+    /** Set while a freed workstream's clones are made again, for what needs them ([withClones]). */
+    val restoring: StateFlow<Boolean> = _restoring.asStateFlow()
 
     /** The repository whose pull request is being opened, and why the last one failed. */
     private val _opening = MutableStateFlow<String?>(null)
@@ -94,42 +115,169 @@ class ClaudeCodeWorkspaceViewModel(
     /** Whether the user's `gh` is installed: without it, pull requests can't be opened from here. */
     val hasGh: Boolean = GitHubPullRequests.find() != null
 
+    private var refreshing: Job? = null
+    private var generation = 0
+
+    /** Whether the workstream's clones are gone (freed): its checks wait for them to come back. */
+    private val freed = MutableStateFlow(false)
+
+    /** [repo]'s build gate: one per clone, the same one the Propose screen runs. */
+    private fun gateOf(repo: String): BuildGate? = workspace?.let { service.buildGateAt(File(it.dir, repo)) }
+
+    /** Each repository's checks, by folder, for the branch as it is now. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val gates: StateFlow<Map<String, GateState>> =
+        combine(_rows.map { rows -> rows.map { it.name } }, freed, ::Pair)
+            .distinctUntilChanged()
+            .flatMapLatest { (names, isFreed) ->
+                val gates = names.mapNotNull { name -> gateOf(name)?.let { name to it } }
+                if (gates.isEmpty()) {
+                    flowOf(emptyMap())
+                } else {
+                    combine(gates.map { (name, gate) -> gate.state.map { name to it } }) { states ->
+                        // Without its clone a repository shows no script: its checks are still to run.
+                        states.associate { (name, state) -> name to if (isFreed && state == GateState.None) GateState.NotRun else state }
+                    }
+                }
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Where [repo]'s last run of the checks wrote its whole output. */
+    fun gateLogFile(repo: String): StateFlow<File?> = gateOf(repo)?.logFile ?: MutableStateFlow(null)
+
+    /** [repo]'s last run of the checks, up to its last two million characters. */
+    fun fullGateLog(repo: String): String = gateOf(repo)?.fullLog().orEmpty()
+
+    /** Runs [repo]'s checks, in its clone: a freed workstream's come back first. */
+    fun runGate(repo: String) {
+        viewModelScope.launch {
+            if (!ensureClones()) return@launch
+            gateOf(repo)?.start()
+        }
+    }
+
+    /** Stops [repo]'s checks. */
+    fun cancelGate(repo: String) {
+        gateOf(repo)?.cancel()
+    }
+
     init {
         refresh()
     }
 
+    /** Reads each repository's state again; a refresh still running gives way to this one. */
     fun refresh() {
-        val ws = workspace ?: return
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                _rows.value =
-                    service.agentWorkspaces.status(ws).map { status ->
-                        val dir = File(ws.dir, status.repo.name)
-                        val subjects =
-                            GitWorkspace
-                                .git(dir, "log", "--format=%s", "origin/${status.repo.baseBranch}..HEAD")
-                                ?.lines()
-                                ?.filter { it.isNotBlank() }
-                                .orEmpty()
-                        val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
-                        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
-                        // The session list shows it from the saved record, without asking GitHub.
-                        if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
-                        WorkspaceRepoRow(
-                            status = status,
-                            pullRequest = pr,
-                            draftTitle = subjects.lastOrNull() ?: ws.title,
-                            draftBody = subjects.reversed().joinToString("\n") { "- $it" },
-                            nostr = NostrRepoRef.fromConfig(GitWorkspace.git(dir, "config", "--get", "branch.${status.repo.branch}.${GitWorkspace.KEY_REPO}")?.trim()),
-                            gitHub = gitHub,
-                            viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
-                        )
-                    }
-            } finally {
-                _loading.value = false
+        val known = workspace ?: return
+        refreshing?.cancel()
+        val self = ++generation
+        refreshing =
+            viewModelScope.launch {
+                if (_rows.value.isEmpty()) _loading.value = true
+                try {
+                    // As the service knows it now: it may have been freed, or brought back, since the screen opened.
+                    val ws = service.workspaceAt(known.dir) ?: known
+                    // An equal list changes nothing on screen: StateFlow drops it.
+                    _rows.value = if (ws.isFreed) freedRows(ws) else cloneRows(ws)
+                    freed.value = ws.isFreed
+                    // A commit since the checks ran outdates their pass.
+                    if (!ws.isFreed) ws.repos.forEach { gateOf(it.name)?.recheck() }
+                    lastRows[known.id] = _rows.value
+                } finally {
+                    // A refresh that gave way leaves the bar to the one that replaced it.
+                    if (generation == self) _loading.value = false
+                }
             }
+    }
+
+    /** The repositories as their clones are now. */
+    private suspend fun cloneRows(ws: AgentWorkspace): List<WorkspaceRepoRow> =
+        service.agentWorkspaces.status(ws).map { status ->
+            val dir = File(ws.dir, status.repo.name)
+            val subjects =
+                GitWorkspace
+                    .git(dir, "log", "--format=%s", "origin/${status.repo.baseBranch}..HEAD")
+                    ?.lines()
+                    ?.filter { it.isNotBlank() }
+                    .orEmpty()
+            val nostr = GitWorkspace.git(dir, "config", "--get", "branch.${status.repo.branch}.${GitWorkspace.KEY_REPO}")?.trim()
+            row(ws, status, dir, subjects, nostr)
         }
+
+    /**
+     * A freed workstream's repositories, from what it kept ([AgentWorkspaces.freedRepos]): seeing
+     * them, and its pull requests, doesn't bring the clones back; opening one does.
+     */
+    private suspend fun freedRows(ws: AgentWorkspace): List<WorkspaceRepoRow> {
+        val kept = withContext(Dispatchers.IO) { service.agentWorkspaces.freedRepos(ws) }
+        // No clone: `gh` runs in the workstream's folder, and asks by URL or by repository.
+        val folder = File(ws.dir)
+        return ws.repos.map { repo ->
+            val summary = kept[repo.name]
+            row(ws, WorkspaceRepoStatus(repo, ahead = summary?.ahead ?: 0, uncommitted = 0), folder, summary?.subjects.orEmpty(), summary?.nostrRepo)
+        }
+    }
+
+    private suspend fun row(
+        ws: AgentWorkspace,
+        status: WorkspaceRepoStatus,
+        /** Where `git` and `gh` run for it: its clone, or the workstream's folder when freed. */
+        dir: File,
+        /** Its commits' subjects, newest first. */
+        subjects: List<String>,
+        nostr: String?,
+    ): WorkspaceRepoRow {
+        val gitHub = GitHubPullRequests.gitHubRepo(status.repo.url)
+        val pr = GitHubPullRequests.state(dir, status.repo.branch, upstream = gitHub, knownUrl = ws.pullRequests[status.repo.name]?.url)
+        // The session list shows it from the saved record, without asking GitHub.
+        if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
+        // The agent's request, until a pull request is open: then it was answered, here or elsewhere.
+        val request = ws.publishRequests[status.repo.name]
+        val asked = pendingRequest(request, pr)
+        if (request != null && asked == null) service.recordPublishRequest(ws.id, status.repo.name, null)
+        return WorkspaceRepoRow(
+            status = status,
+            pullRequest = pr,
+            draftTitle = asked?.title ?: subjects.lastOrNull() ?: ws.title,
+            draftBody = asked?.body ?: subjects.reversed().joinToString("\n") { "- $it" },
+            nostr = NostrRepoRef.fromConfig(nostr),
+            gitHub = gitHub,
+            viaFork = gitHub != null && pr == null && GitHubPullRequests.needsFork(GitHubPullRequests.permission(dir, gitHub)),
+            request = asked,
+        )
+    }
+
+    /** Declines the agent's request to publish [repo]: the form stays, with the commits' own title and description. */
+    fun dismissRequest(repo: String) {
+        val ws = workspace ?: return
+        service.recordPublishRequest(ws.id, repo, null)
+        refresh()
+    }
+
+    /**
+     * Brings a freed workstream's clones back, for what needs them: opening a pull request,
+     * seeing the changes, sending a proposal. False, with the reason shown, when they can't come.
+     */
+    private suspend fun ensureClones(): Boolean {
+        val known = workspace ?: return false
+        val ws = service.workspaceAt(known.dir) ?: known
+        if (!ws.isFreed) return true
+        _restoring.value = true
+        _errors.update { it - "" }
+        return try {
+            service.restoreWorkspace(ws)
+            refresh()
+            true
+        } catch (e: IOException) {
+            Log.w("ClaudeCodeWorkspace", "Could not bring the clones back", e)
+            _errors.update { it + ("" to PullRequestError(e.message ?: ws.dir, pushed = false)) }
+            false
+        } finally {
+            _restoring.value = false
+        }
+    }
+
+    /** Runs [action] (a screen that reads the clones) once they are there. */
+    fun withClones(action: () -> Unit) {
+        viewModelScope.launch { if (ensureClones()) action() }
     }
 
     /** Pushes the repository's branch and opens its pull request, on the user's click. */
@@ -146,13 +294,26 @@ class ClaudeCodeWorkspaceViewModel(
         _errors.update { it - repo }
         viewModelScope.launch {
             try {
+                // A freed workstream pushes from its clones: they come back first.
+                if (!ensureClones()) return@launch
+                // Only work the checks passed on goes out. The buttons wait for a pass already;
+                // this looks again, for a commit since. The gate's card says what is missing.
+                val gate = gateOf(repo)
+                gate?.recheck()
+                if (gate != null && !gate.stateNow().allowsPublishing) return@launch
                 when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft, upstream = row.gitHub)) {
                     is GitHubPullRequests.Result.Failed -> {
                         _errors.update { it + (repo to PullRequestError(result.reason, result.pushed)) }
                         // gh may have failed because the pull request already exists: it shows.
                         if (result.pushed) refresh()
                     }
-                    is GitHubPullRequests.Result.Opened -> refresh()
+                    is GitHubPullRequests.Result.Opened -> {
+                        // The new one is the branch's now, over any merged or closed before it.
+                        service.recordPullRequest(ws.id, repo, PullRequestInfo(result.url, "OPEN", draft, System.currentTimeMillis()))
+                        // Answered: the agent's request, if any, is done.
+                        service.recordPublishRequest(ws.id, repo, null)
+                        refresh()
+                    }
                 }
             } finally {
                 _opening.value = null
@@ -177,5 +338,24 @@ class ClaudeCodeWorkspaceViewModel(
                 _errors.update { it + ("" to PullRequestError(e.message ?: ws.dir, pushed = false)) }
             }
         }
+    }
+
+    companion object {
+        /**
+         * The agent's [request] while it still waits on the user, given the branch's pull request
+         * [pr] as GitHub has it now: answered once one is open, or once one was opened after the
+         * request. An earlier pull request, merged or closed before the agent asked, answers nothing.
+         */
+        internal fun pendingRequest(
+            request: PublishRequest?,
+            pr: PullRequestInfo?,
+        ): PublishRequest? {
+            if (request == null || pr == null) return request
+            val answered = pr.isOpen || (pr.createdAt != null && pr.createdAt >= request.requestedAt)
+            return request.takeIf { !answered }
+        }
+
+        /** Each workspace's rows as last seen, by workspace id, for as long as the app runs. */
+        private val lastRows = ConcurrentHashMap<String, List<WorkspaceRepoRow>>()
     }
 }

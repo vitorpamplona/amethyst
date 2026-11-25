@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_w
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pick_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_requested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
@@ -151,9 +152,9 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_source_nost
 import com.vitorpamplona.amethyst.commons.resources.claude_code_repo_uses
 import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
-import com.vitorpamplona.amethyst.commons.resources.claude_code_section_needs_you
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_workspaces
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
+import com.vitorpamplona.amethyst.commons.resources.claude_code_status_asks
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_in_terminal
@@ -177,6 +178,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget_group
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_freed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
@@ -450,12 +452,11 @@ private fun SessionList(
     onDeleteWorkspace: (ClaudeSessionRow) -> Unit,
     onArchive: (ClaudeSessionRow, Boolean) -> Unit,
 ) {
-    // Sessions waiting on the user first (an approval, then a turn they haven't seen end); then
-    // the ones in workspaces of their own, newest first; then a section per project, in the
-    // order of its newest session; sessions whose folder is gone last, folded.
-    val needsYou = remember(rows) { rows.filter { it.needsYou }.sortedByDescending { it.appStatus == ChatStatus.NEEDS_APPROVAL } }
-    val archived = remember(rows) { rows.filter { it.archived && !it.needsYou } }
-    val active = remember(rows) { rows.filter { !it.needsYou && !it.archived } }
+    // The sessions in workspaces of their own, newest first; then a section per project, in the
+    // order of its newest session; sessions whose folder is gone last, folded. One waiting on the
+    // user stays in its section: its row's mark and status say so.
+    val archived = remember(rows) { rows.filter { it.archived } }
+    val active = remember(rows) { rows.filter { !it.archived } }
     val inWorkspaces = remember(active) { active.filter { it.workspace != null } }
     val sections =
         remember(active) {
@@ -469,11 +470,10 @@ private fun SessionList(
     val listState = rememberForeverLazyListState("ClaudeCodeSessions")
     // Where the open chat's row sits in the list, headers counted, as laid out below.
     val selectedIndex =
-        remember(needsYou, inWorkspaces, sections, archived, showArchived, selectedKey) {
+        remember(inWorkspaces, sections, archived, showArchived, selectedKey) {
             selectedKey ?: return@remember -1
             val groups =
                 buildList {
-                    if (needsYou.isNotEmpty()) add(needsYou)
                     if (inWorkspaces.isNotEmpty()) add(inWorkspaces)
                     sections.forEach { add(it.second) }
                     if (archived.isNotEmpty()) add(if (showArchived) archived else emptyList())
@@ -513,11 +513,6 @@ private fun SessionList(
         var first = true
 
         fun headerTop(): Dp = (if (first) 8.dp else SectionHeaderTop).also { first = false }
-        if (needsYou.isNotEmpty()) {
-            val top = headerTop()
-            item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error, top = top) }
-            items(needsYou, key = { "needs-" + it.key }) { Item(it) }
-        }
         if (inWorkspaces.isNotEmpty()) {
             val top = headerTop()
             item(key = "section-workspaces") { SectionHeader(stringRes(Res.string.claude_code_section_workspaces), top = top) }
@@ -604,6 +599,8 @@ private fun SessionRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // The PR pills stand taller than the line around them: a gap keeps their border off the title.
+            Spacer(Modifier.height(3.dp))
             // What matters first: what the session is doing, then when, then where. The branch is
             // the one that gives way when the line runs out, not the status.
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -625,7 +622,14 @@ private fun SessionRow(
                 row.workspaceSize?.let { size ->
                     Text(" • " + formatFileSize(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
                 }
-                row.workspace?.let { PullRequestBadge(it) }
+                // Its clones were freed: the next message (or Unarchive) makes them again.
+                if (row.workspace?.isFreed == true) {
+                    Text(" • " + stringRes(Res.string.claude_code_workspace_freed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1)
+                }
+                row.workspace?.let {
+                    PublishRequestBadge(it)
+                    PullRequestBadge(it)
+                }
                 // A workspace's branch is the app's own name for it: its repositories say more.
                 val where = row.workspace?.repoLabels?.joinToString(", ") ?: row.gitBranch
                 where?.let {
@@ -675,6 +679,20 @@ private fun SessionRow(
             }
         }
     }
+}
+
+/** The agent asked the user to open a pull request, and it waits on the Pull requests screen. */
+@Composable
+private fun PublishRequestBadge(workspace: AgentWorkspace) {
+    if (workspace.publishRequests.isEmpty()) return
+    val color = MaterialTheme.colorScheme.primary
+    Text(
+        stringRes(Res.string.claude_code_pr_badge_requested),
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.padding(start = 6.dp).border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /**
@@ -755,7 +773,7 @@ private fun statusLabel(row: ClaudeSessionRow): Pair<String, Color>? =
     when (row.appStatus) {
         ChatStatus.STARTING -> stringRes(Res.string.claude_code_status_starting) to MaterialTheme.colorScheme.primary
         ChatStatus.WORKING -> stringRes(Res.string.claude_code_status_working) to MaterialTheme.colorScheme.primary
-        ChatStatus.NEEDS_APPROVAL -> stringRes(Res.string.claude_code_status_needs_approval) to MaterialTheme.colorScheme.error
+        ChatStatus.NEEDS_APPROVAL -> stringRes(if (row.asking) Res.string.claude_code_status_asks else Res.string.claude_code_status_needs_approval) to MaterialTheme.colorScheme.error
         ChatStatus.READY, ChatStatus.ENDED, ChatStatus.NOT_STARTED, null ->
             when {
                 row.lastTurnFailed -> stringRes(Res.string.claude_code_status_failed) to MaterialTheme.colorScheme.error

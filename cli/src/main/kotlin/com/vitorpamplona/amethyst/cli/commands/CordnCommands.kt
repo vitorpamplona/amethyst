@@ -90,6 +90,9 @@ object CordnCommands {
         |  cordn decline --gid GID | --all                refuse and retire it
         |  cordn send --text "…" [--gid GID]              a kind-9 chat message
         |             [--reply-to ID] [--react-to ID]
+        |             [--kind N --tags JSON]              any envelope: a poll, vote, event, RSVP
+        |             [--attach FILE[,FILE…] --blossom URL]  encrypted attachments (imeta)
+        |             [--emoji-media NAME]               the one attachment as :NAME:'s picture
         |  cordn fetch                                    drain the stream and print it
         |  cordn watch [--timeout MS]                     hold a live subscription
         |

@@ -73,6 +73,20 @@ class ImageInput(
             return ImageInput(file.name, shrunkType, encode(shrunk))
         }
 
+        /**
+         * [image] (a screenshot) for sending, shrunk to [SHRINK_TO] on its longest side: PNG, or
+         * JPEG when PNG is still too large.
+         *
+         * @throws IOException when even the JPEG is too large.
+         */
+        fun fromImage(
+            name: String,
+            image: BufferedImage,
+        ): ImageInput {
+            val (type, bytes) = shrink(image)
+            return ImageInput(name, type, encode(bytes))
+        }
+
         /** The media type from the file's first bytes, or null for anything else. */
         fun mediaTypeOf(bytes: ByteArray): String? {
             fun starts(vararg b: Int) = bytes.size >= b.size && b.indices.all { bytes[it] == b[it].toByte() }

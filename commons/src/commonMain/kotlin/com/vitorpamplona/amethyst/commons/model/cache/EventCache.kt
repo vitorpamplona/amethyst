@@ -161,7 +161,9 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFrag
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatRules
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
@@ -1204,6 +1206,9 @@ open class EventCache :
         // only (CORD-02 Appendix B). Another plane's kind — a Control edition, a Guestbook motion, a
         // rekey blob — must never land in the store as if it came from its own plane.
         if (!ChannelChat.isChatKind(rumor.kind)) return
+        // A reaction a row can't show (a sentence, a link) is not tallied on any client (CORD-03,
+        // Quartz's ConcordChatRules): never stored, so it never lands on its target's chips.
+        if (rumor is ReactionEvent && !ConcordChatRules.isRenderableReaction(rumor.content)) return
 
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
@@ -1584,6 +1589,22 @@ open class EventCache :
         return false
     }
 
+    /**
+     * Points [note]'s reply links at [targets] alone, unlinking it from every other note it was
+     * counted as replying to. For a protocol whose rule for what a message replies to is narrower
+     * than its kind's generic one in [computeReplyTo].
+     */
+    fun relinkReplyTo(
+        note: Note,
+        targets: List<Note>,
+    ) {
+        val current = note.replyTo.orEmpty()
+        if (current == targets) return
+        current.forEach { if (it !in targets) it.removeReply(note) }
+        note.replyTo = targets
+        targets.forEach { it.addReply(note) }
+    }
+
     @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
@@ -1810,10 +1831,11 @@ open class EventCache :
 
             is ChatEvent -> {
                 // Amethyst's own kind:9 replies carry the parent as a NIP-18
-                // `q` tag (see ChatEvent.replyingTo), but the broader Marmot
-                // ecosystem — WhiteNoise in particular — threads kind:9 chats
-                // with a plain NIP-10 `e` tag. Accept both so inbound replies
-                // from either client show their quote bubble in the feed.
+                // `q` tag (see ChatEvent.replyingTo), but other clients thread
+                // kind:9 chats with a plain NIP-10 `e` tag. Accept both so
+                // inbound replies from either client show their quote bubble.
+                // A Marmot group message is then re-pointed at the one message
+                // MDK reads as its reply (AccountMarmotActions.indexMarmotInnerEvent).
                 event.replyTargetIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
@@ -4368,6 +4390,10 @@ open class EventCache :
                 is ConcordCommunityListEvent,
                 // Its successor (CORD-02 §8): the List split into addressable fragments at d = index.
                 is ConcordCommunityListFragmentEvent,
+                // A Concord invite bundle (CORD-05, kind 33301), fetched by the invite preview and a
+                // link refresh. Public and addressable at (33301, link signer, ""); the note card
+                // renders it. Unlisted, every one that arrived was dropped as "Event Not Supported".
+                is ConcordInviteBundleEvent,
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,

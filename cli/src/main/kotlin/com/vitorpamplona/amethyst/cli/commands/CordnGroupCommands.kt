@@ -21,14 +21,24 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
+import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.cli.CordnArgException
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaEncryption
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.appGroupRef.CordnGroupRef
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.groups.CordnCredential
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCustomEmoji
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
+import java.io.File
+import java.nio.file.Files
 
 /**
  * `amy cordn group …`, `invite`, `request`, `welcomes`, `join`, `send`, `fetch`
@@ -503,6 +513,17 @@ internal object CordnGroupCommands {
         val deleteTo = args.flag("delete")
         val pinTo = args.flag("pin")
         val unpinTo = args.flag("unpin")
+        val rawKind = args.flag("kind")?.let { it.toIntOrNull() ?: return Output.error("bad_args", "--kind takes a number") }
+        val rawTags = args.flag("tags")
+        val attach =
+            args
+                .flag("attach")
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
+        val blossom = args.flag("blossom")
+        val emojiMedia = args.flag("emoji-media")
         args.rejectUnknown("coordinator", "relay", "gid")
 
         val referenced = listOfNotNull(replyTo, reactionTo, editTo, deleteTo, pinTo, unpinTo)
@@ -513,26 +534,65 @@ internal object CordnGroupCommands {
         if (targetId != null && author == null) {
             return Output.error("bad_args", "a reference needs --to-author PK: its tags name the target's author, not only its id")
         }
-        if (targetId == null && text.isEmpty()) {
+        if (targetId == null && text.isEmpty() && rawKind == null && attach.isEmpty()) {
             return Output.error("bad_args", "cordn send needs --text, or a reference to annotate")
         }
+        if (rawKind != null && targetId != null) {
+            return Output.error("bad_args", "--kind sends the envelope as given; put its references in --tags")
+        }
+        val annotating = listOfNotNull(editTo, deleteTo, pinTo, unpinTo).isNotEmpty()
+        if (annotating && (rawTags != null || attach.isNotEmpty())) {
+            return Output.error("bad_args", "--tags and --attach go on a message, a reply or a reaction, not on an edit, deletion or pin")
+        }
+        if (attach.isNotEmpty() && blossom == null) {
+            return Output.error("bad_args", "--attach needs --blossom URL, the server to put the encrypted file on")
+        }
+        if (emojiMedia != null && attach.size != 1) {
+            return Output.error("bad_args", "--emoji-media NAME names one --attach picture")
+        }
+        val extraTags =
+            try {
+                rawTags?.let { CliJson.parseTagArray(it) } ?: emptyArray()
+            } catch (e: IllegalArgumentException) {
+                return Output.error("bad_args", "--tags must be a JSON array of string arrays: ${e.message}")
+            }
 
         val target = targetId?.let { CordnMessageReferences.Target(id = it, pubKey = author!!, kind = targetKind) }
 
-        return CordnRun.withSession(dataDir, args) { _, scope ->
+        return CordnRun.withSession(dataDir, args) { ctx, scope ->
             val gid = CordnRun.gid(args, scope)
+            val media =
+                attach.map { path ->
+                    val file = File(path)
+                    if (!file.isFile) return@withSession Output.error("bad_args", "no such file: $path")
+                    val imeta = uploadAttachment(ctx, scope, gid, file, blossom!!)
+                    if (emojiMedia != null) CordnCustomEmoji.mediaTag(emojiMedia, imeta) else imeta
+                }
             val envelope =
                 try {
-                    scope.manager.post(
-                        gid = gid,
-                        content = text,
-                        replyTo = target.takeIf { replyTo != null },
-                        reactionTo = target.takeIf { reactionTo != null },
-                        editTo = target.takeIf { editTo != null },
-                        deleteTo = target.takeIf { deleteTo != null },
-                        pinTo = target.takeIf { pinTo != null || unpinTo != null },
-                        pinOp = if (unpinTo != null) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                    )
+                    if (rawKind != null || media.isNotEmpty() || extraTags.isNotEmpty()) {
+                        // Built here and sent as is: a poll, a vote, a calendar event, an RSVP or an
+                        // attachment, for scripts and interop tests that drive what the verbs above do not.
+                        val outbound =
+                            CordnMessageReferences.outbound(
+                                content = text,
+                                replyTo = target.takeIf { replyTo != null },
+                                reactionTo = target.takeIf { reactionTo != null },
+                                extraTags = extraTags + media,
+                            )
+                        scope.manager.send(gid, outbound.content, rawKind ?: outbound.kind, outbound.tags)
+                    } else {
+                        scope.manager.post(
+                            gid = gid,
+                            content = text,
+                            replyTo = target.takeIf { replyTo != null },
+                            reactionTo = target.takeIf { reactionTo != null },
+                            editTo = target.takeIf { editTo != null },
+                            deleteTo = target.takeIf { deleteTo != null },
+                            pinTo = target.takeIf { pinTo != null || unpinTo != null },
+                            pinOp = if (unpinTo != null) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                        )
+                    }
                 } catch (e: IllegalArgumentException) {
                     // The manager refuses an edit or delete of somebody else's
                     // message. That is a rule, not a failure to handle here.
@@ -556,6 +616,29 @@ internal object CordnGroupCommands {
             )
             0
         }
+    }
+
+    /**
+     * Encrypts [file] under the group's media key (`encrypted-media.md`), puts the ciphertext on
+     * [server] and returns its `imeta` tag, the path the app's attachments take
+     * (`CordnMediaService`), with amy's signer for the upload's authorization.
+     */
+    private suspend fun uploadAttachment(
+        ctx: Context,
+        scope: CordnRun.CordnSessionScope,
+        gid: String,
+        file: File,
+        server: String,
+    ): Array<String> {
+        val group = scope.manager.group(gid) ?: throw CordnArgException("not in group $gid")
+        val mime = runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: CordnBlobUpload.OPAQUE
+        val sealed = CordnMediaEncryption.sealFor(group, file.readBytes(), mime, file.name)
+        val blob = CordnBlobUpload.of(sealed)
+        val auth = BlossomAuth.createUploadAuth(blob.hash, blob.length, "Uploading ${blob.baseFileName}", ctx.signer, servers = listOf(server))
+        val url =
+            ctx.blossom.upload(bytes = blob.bytes, contentType = blob.contentType, serverBaseUrl = server, authHeader = auth).url
+                ?: throw IllegalStateException("the blob server returned no URL")
+        return CordnMediaTag.build(media = sealed, url = url)
     }
 
     /**

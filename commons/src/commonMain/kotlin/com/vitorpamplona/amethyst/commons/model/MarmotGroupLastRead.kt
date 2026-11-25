@@ -28,4 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * unread indicators (Messages screen row, group list row) must use the
  * identical key, or read state silently stops persisting for one of them.
  */
-fun marmotGroupLastReadRoute(nostrGroupId: HexKey): String = "MarmotGroup/$nostrGroupId"
+fun marmotGroupLastReadRoute(nostrGroupId: HexKey): String = "$MARMOT_GROUP_LAST_READ_PREFIX$nostrGroupId"
+
+/** What every [marmotGroupLastReadRoute] starts with. */
+const val MARMOT_GROUP_LAST_READ_PREFIX = "MarmotGroup/"

@@ -57,52 +57,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverPlace
-import com.vitorpamplona.amethyst.commons.frontpage.WeatherCondition
-import com.vitorpamplona.amethyst.commons.frontpage.WeatherLabels
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_friday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_monday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_saturday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_sunday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_thursday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_tuesday
-import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_celsius
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_clear
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_drizzle
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_fahrenheit
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_fog
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_freezing_drizzle
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_freezing_rain
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_heavy_rain
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_heavy_snow
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_high
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_low
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_mainly_clear
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_none_found
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_off
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_overcast
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_partly_cloudy
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_private
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_rain
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_rain_falling
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_search
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_search_hint
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_showers
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_snow
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_snow_showers
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_sun
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_thunderstorm
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_thunderstorm_hail
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_weather_turn_off
-import com.vitorpamplona.amethyst.commons.resources.front_page_weather_violent_showers
 import com.vitorpamplona.amethyst.commons.resources.save
-import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.launch
 
@@ -245,46 +214,4 @@ private fun WeatherPlaceDialog(
             }
         },
     )
-}
-
-/** The weather strip's words in the reader's language, for [ObserverWeather.withStrip]. */
-@Composable
-internal fun rememberWeatherLabels(): WeatherLabels {
-    val title = stringRes(Res.string.front_page_weather)
-    val today = stringRes(Res.string.today)
-    val high = stringRes(Res.string.front_page_weather_high)
-    val low = stringRes(Res.string.front_page_weather_low)
-    val rain = stringRes(Res.string.front_page_weather_rain)
-    val sun = stringRes(Res.string.front_page_weather_sun)
-    val weekdays =
-        listOf(
-            stringRes(Res.string.dlist_day_monday),
-            stringRes(Res.string.dlist_day_tuesday),
-            stringRes(Res.string.dlist_day_wednesday),
-            stringRes(Res.string.dlist_day_thursday),
-            stringRes(Res.string.dlist_day_friday),
-            stringRes(Res.string.dlist_day_saturday),
-            stringRes(Res.string.dlist_day_sunday),
-        )
-    val conditions =
-        mapOf(
-            WeatherCondition.CLEAR to stringRes(Res.string.front_page_weather_clear),
-            WeatherCondition.MAINLY_CLEAR to stringRes(Res.string.front_page_weather_mainly_clear),
-            WeatherCondition.PARTLY_CLOUDY to stringRes(Res.string.front_page_weather_partly_cloudy),
-            WeatherCondition.OVERCAST to stringRes(Res.string.front_page_weather_overcast),
-            WeatherCondition.FOG to stringRes(Res.string.front_page_weather_fog),
-            WeatherCondition.DRIZZLE to stringRes(Res.string.front_page_weather_drizzle),
-            WeatherCondition.FREEZING_DRIZZLE to stringRes(Res.string.front_page_weather_freezing_drizzle),
-            WeatherCondition.RAIN to stringRes(Res.string.front_page_weather_rain_falling),
-            WeatherCondition.HEAVY_RAIN to stringRes(Res.string.front_page_weather_heavy_rain),
-            WeatherCondition.FREEZING_RAIN to stringRes(Res.string.front_page_weather_freezing_rain),
-            WeatherCondition.SNOW to stringRes(Res.string.front_page_weather_snow),
-            WeatherCondition.HEAVY_SNOW to stringRes(Res.string.front_page_weather_heavy_snow),
-            WeatherCondition.SHOWERS to stringRes(Res.string.front_page_weather_showers),
-            WeatherCondition.VIOLENT_SHOWERS to stringRes(Res.string.front_page_weather_violent_showers),
-            WeatherCondition.SNOW_SHOWERS to stringRes(Res.string.front_page_weather_snow_showers),
-            WeatherCondition.THUNDERSTORM to stringRes(Res.string.front_page_weather_thunderstorm),
-            WeatherCondition.THUNDERSTORM_HAIL to stringRes(Res.string.front_page_weather_thunderstorm_hail),
-        )
-    return remember(title, today, high, low, rain, sun, weekdays, conditions) { WeatherLabels(title, today, high, low, rain, sun, weekdays, conditions) }
 }

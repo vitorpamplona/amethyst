@@ -1,0 +1,10 @@
+{
+  "name": "amy-dm-nostr-tools-peer",
+  "private": true,
+  "description": "A second NIP-17 client for cli/tests/dm/dm-nostr-tools.sh, built on nostr-tools (Unlicense).",
+  "type": "module",
+  "dependencies": {
+    "nostr-tools": "2.26.1",
+    "ws": "8.18.3"
+  }
+}

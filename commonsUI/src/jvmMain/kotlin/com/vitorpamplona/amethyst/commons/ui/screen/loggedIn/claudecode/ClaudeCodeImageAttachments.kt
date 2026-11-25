@@ -322,9 +322,11 @@ internal fun ComposerImageRow(
 internal fun SentImageRow(
     images: List<SentImage>,
     modifier: Modifier = Modifier,
+    /** Opens the image at this index full size; offered only while its file is there. */
+    onOpen: ((Int) -> Unit)? = null,
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        images.forEach { image ->
+        images.forEachIndexed { index, image ->
             val picture by produceState<ImageBitmap?>(null, image.file) {
                 value =
                     image.file?.let { path ->
@@ -335,7 +337,8 @@ internal fun SentImageRow(
                     }
             }
             val name = image.name
-            if (name != null) HoverTooltip(name) { ImageTile(picture, 96.dp) } else ImageTile(picture, 96.dp)
+            val open = onOpen?.takeIf { picture != null }?.let { { it(index) } }
+            if (name != null) HoverTooltip(name) { ImageTile(picture, 96.dp, open) } else ImageTile(picture, 96.dp, open)
         }
     }
 }
@@ -344,12 +347,14 @@ internal fun SentImageRow(
 private fun ImageTile(
     picture: ImageBitmap?,
     size: Dp,
+    onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         Modifier
             .size(size)
             .clip(shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
         contentAlignment = Alignment.Center,

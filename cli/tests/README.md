@@ -3,7 +3,9 @@
 Shell-based end-to-end harnesses that drive the `amy` CLI binary — against an
 embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
 public servers, or no relay at all, depending on the suite. Apart from
-`buzz/buzz-relay-interop.sh`, which runs upstream Buzz's own relay, no suite depends on
+`buzz/buzz-relay-interop.sh`, which runs upstream Buzz's own relay, and the two
+second-implementation suites (`relaygroup/relaygroup-relay29.sh` against fiatjaf/relay29,
+`relaygroup/relaygroup-zooid.sh` against zooid, `dm/dm-nostr-tools.sh` against nostr-tools), no suite depends on
 an external relay binary or a Rust toolchain for its relay: every relay-backed
 harness boots geode from the `amy` binary it already built, so the relay under
 test is the same server code that runs in production. Twelve directories:
@@ -29,6 +31,8 @@ cli/tests/
 │   └── clink-headless.sh
 ├── dm/                    # NIP-17 DM interop (amy ↔ amy) vs embedded `amy serve`
 │   ├── dm-interop-headless.sh
+│   ├── dm-nostr-tools.sh           # amy ↔ nostr-tools (a second NIP-17 client)
+│   ├── nostr-tools-peer/           #   the nostr-tools client it drives (Node)
 │   ├── setup.sh                    # preflight + identities
 │   └── tests-dm.sh
 ├── git/                   # NIP-34 git collaboration vs embedded `amy serve`
@@ -42,6 +46,9 @@ cli/tests/
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
 │   │                               #   media v2, retention, disband)
+├── concord/               # Concord: amy's chat verbs vs amy (concord-headless.sh, tests 01-12:
+│   ├── concord-headless.sh #   edit, delete, react, moderator hide, leave) vs embedded `amy serve`;
+│   └── armada-interop.sh   #   amy vs Armada (ARMADA_DIR), both on one loopback geode
 ├── emoji/                 # NIP-30 emoji packs: create/add/import (folder, zip,
 │   └── emoji-headless.sh  #   list) vs embedded `amy serve` + a throwaway Blossom server
 ├── notes/                 # social loop (post/show/feed/reply/react/repost/quote/
@@ -57,7 +64,10 @@ cli/tests/
 ├── buzz/                  # Buzz agent jobs/workflows vs `amy serve`, plus
 │   └── buzz-relay-interop.sh #  amy's Buzz + NIP-29 verbs vs a REAL block/buzz relay
 ├── relaygroup/            # NIP-29 round-trip vs embedded `amy serve` (geode)
-│   └── relaygroup-headless.sh
+│   ├── relaygroup-headless.sh
+│   ├── relaygroup-relay29.sh       # amy vs fiatjaf/relay29, a second NIP-29 relay
+│   ├── relay29-runner/             #   the relay29 build it boots (Go, pinned)
+│   └── relaygroup-zooid.sh         # amy vs zooid (invite codes, hidden groups)
 └── sync/                  # NIP-77 deletion propagation vs `amy serve`
     └── sync-deletions-headless.sh
 ```
@@ -129,6 +139,21 @@ Suite notes:
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
   emptiness is a relay capability, not a client bug.
+- **`relaygroup/relaygroup-relay29.sh`** runs the same verbs and the moderation
+  ones against **fiatjaf/relay29** (MIT; khatru29, the NIP author's relay library,
+  pinned in `relay29-runner/go.mod`, built with `go build`, or `--relay29-bin`), which
+  signs 39000-39003 and enforces roles: create, browse, join (relay-issued 9000),
+  members-only writes, put-user with a role, remove-user by a moderator, edit-metadata
+  (admin only), delete-event, private + closed (reads refused to outsiders), invite
+  codes (relay29 has no kind 9009: refused), back to public/open, leave (relay-issued
+  9001) and delete-group. `rg-12` needs quartz > 2.24.0 (an edit that lifts `private`
+  also sends relay29's legacy `public`).
+- **`relaygroup/relaygroup-zooid.sh`** runs them against **zooid** (coracle, MIT; the
+  relay behind Flotilla's spaces; `--zooid-bin`, or `--zooid-src` to `go build` a
+  checkout of gitea.coracle.social/coracle/zooid) on a throwaway Postgres container:
+  what relay29 lacks — invite codes (9009 + a 9021 `code`) and `hidden` groups — plus
+  create, relay-signed state, joins, managers-only moderation, private/closed and back,
+  leave, delete-event and delete-group. zooid's group admins are the relay's managers.
 - **`buzz/buzz-relay-interop.sh`** is the one harness that runs an external relay:
   upstream block/buzz's `buzz-relay` (a checkout via `--buzz-src`, built with
   `cargo build --profile ci -j2 -p buzz-relay`, or `--relay-bin`) on Postgres, Redis
@@ -201,6 +226,11 @@ A third, slimmer harness covers the NIP-17 DM surface:
 - **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and
   Identity D) exchange NIP-17 DMs through the embedded `amy serve` relay.
   No MDK, no Rust — only `amy`.
+- **`dm/dm-nostr-tools.sh`** — amy against a second NIP-17 client,
+  `dm/nostr-tools-peer/peer.mjs` on nostr-tools 2.26.1 (Unlicense; `npm ci` from its
+  lock file), both ways: text routed by kind 10050, replies, subjects, wrapped
+  reactions, kind-15 file messages, group rooms and nostr-tools' unwrap checks.
+  Needs node and a routable relay address, like the harness above.
 
 A harness covers Blossom blob storage (BUD-01/02/04/09) against **live**
 public servers rather than a loopback relay:
@@ -431,9 +461,55 @@ Pick `p`, `f`, or `s`.
   prompt, with the exact `wn` stdout that was parsed.
 - **`state/results-<timestamp>.tsv`** — tab-separated `test_id \t status \t
   note` lines. Easy to grep.
+- **`state/results-<timestamp>.jsonl`** — the same results, one JSON object
+  per scenario (`suite`, `counterpart`, `id`, `status`, `note`, `section`,
+  `feature`, `direction`, `ts`, `elapsed_s`). Every harness that records
+  through `lib.sh`'s `record_result` writes one next to its TSV (the `.tsv`
+  suffix swapped for `.jsonl`, or `.jsonl` appended), and also appends to
+  `$INTEROP_RESULTS_DIR/$INTEROP_SUITE.jsonl` when that variable is set.
 - **`state/run.env`** — persistent key/value state (npubs, group ids) so you
   can kill and resume the harness mid-run without losing context.
 - **Final summary table on stdout** — colored per-test status and totals.
+
+## Nightly CI
+
+`.github/workflows/interop-nightly.yml` runs the counterparty suites every night
+and on demand (Actions → "Interop nightly" → Run workflow, optionally naming
+suites and the channel). Everything it needs is in `tools/interop-ci/`:
+
+- `suites.json` — the registry: one entry per suite with its counterpart, the
+  channels it runs on (`pinned` blocks, `latest` only warns), its isolation, the
+  toolchains, caches and logs its job needs, and the rules that file each
+  scenario under a feature and a direction for the matrix. A suite that must not
+  run in CI stays listed with `enabled: false` and a `reason` (cordn's reference
+  coordinator, for one: it has no licence).
+- `suites/<id>.sh` — the driver, sourced by `run-suite.sh`: `suite_resolve`
+  (which commit `pinned` and `latest` mean; the pin lives here, or for Marmot in
+  `marmot/setup.sh`), `suite_prepare` (fetch and build it, network allowed, cached
+  per commit) and `suite_run` (start the harness).
+- `run-suite.sh resolve|prepare|run <suite> <pinned|latest>` — what each job
+  runs, and what you run to reproduce a night locally after
+  `./gradlew :cli:installDist`. `run` starts the harness inside `netns-run.sh` (a
+  network namespace with only loopback, plus any address the suite lists, checked
+  to be cut off before the harness starts; needs `iproute2` and root or
+  passwordless sudo) or, for a suite that needs Docker-published ports, on the
+  host with `AMY_LOCAL_ONLY=1`. Results go to `build/interop-ci/<channel>/<suite>.jsonl`;
+  a harness that aborts (dies before recording anything, exits non-zero with no
+  failure recorded, or runs past `INTEROP_TIMEOUT`) is filed as a
+  `"status":"aborted"` row naming its exit code and the last test it reached, and
+  fails the run, so a suite that stopped halfway cannot pass on the results it
+  recorded before it stopped. `test-run-suite.sh` checks this against fake suites
+  (offline, a few seconds; the workflow's `plan` job runs it).
+- `results_matrix.py --results build/interop-ci [--markdown m.md] [--junit-dir d]`
+  — turns those files into the feature × counterpart × direction matrix (per
+  channel: an overview, the aborted runs, the matrix, failures, known gaps,
+  suites not run) and JUnit XML, where an abort is an error. A test can name its own feature and direction by setting
+  `RESULT_FEATURE` / `RESULT_DIRECTION` before `record_result`.
+
+Adding a suite: write the harness so it records through `lib.sh`, add
+`suites/<id>.sh` and an entry in `suites.json`; the workflow needs no change.
+Counterparts under a copyleft licence (White Noise, Armada) are fetched at a
+commit and run as separate programs, never copied into this repository.
 
 ## State cleanup
 
@@ -466,7 +542,8 @@ for B/C if this matters to you.
 
 - `marmot-interop.sh` — main entry point; orchestrates preflight, daemons,
   identities, relays, and runs the 13 tests in sequence.
-- `lib.sh` — helpers (logging, prompts, polling, jq wrappers, result table).
+- `lib.sh` — helpers (logging, prompts, polling, jq wrappers, result table and
+  its JSON-lines twin).
 - `state/` — runtime directory, gitignored. Contains the `mdk/` source
   checkout, per-daemon data/log dirs, the session `run.env`, logs, and
   results TSVs.

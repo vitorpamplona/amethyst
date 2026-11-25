@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeWorkspaceViewModel
+import com.vitorpamplona.amethyst.commons.claudecode.GateState
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.PullRequestError
 import com.vitorpamplona.amethyst.commons.claudecode.PullRequestInfo
@@ -85,6 +86,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_pushed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_request_dismiss
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_requested
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_requested_draft
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_restoring
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_rules
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_send_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
@@ -111,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import java.io.File
 
 /**
  * A workspace session's repositories, each on its own branch: what each has to propose, and the
@@ -126,8 +132,10 @@ fun ClaudeCodePullRequestsScreen(
     val workspace = viewModel.workspace
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val restoring by viewModel.restoring.collectAsStateWithLifecycle()
     val opening by viewModel.opening.collectAsStateWithLifecycle()
     val errors by viewModel.errors.collectAsStateWithLifecycle()
+    val gates by viewModel.gates.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
 
@@ -168,18 +176,28 @@ fun ClaudeCodePullRequestsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(InlineGap)) {
                         Text(stringRes(Res.string.claude_code_pr_rules), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (!viewModel.hasGh) Banner(stringRes(Res.string.claude_code_pr_no_gh), modifier = Modifier)
+                        // A freed workstream: its clones come back for what needs them.
+                        if (restoring) Text(stringRes(Res.string.claude_code_pr_restoring), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }
                 items(rows, key = { it.name }) { row ->
+                    val gateLogFile by viewModel.gateLogFile(row.name).collectAsStateWithLifecycle()
                     RepoCard(
                         row = row,
                         canOpen = viewModel.hasGh && opening == null,
                         opening = opening == row.name,
                         error = errors[row.name],
+                        gate = gates[row.name] ?: GateState.NotRun,
+                        gateLogFile = gateLogFile,
+                        fullGateLog = { viewModel.fullGateLog(row.name) },
+                        onRunGate = { viewModel.runGate(row.name) },
+                        onCancelGate = { viewModel.cancelGate(row.name) },
                         onOpen = { title, body, draft -> viewModel.openPullRequest(row.name, title, body, draft) },
-                        onChanges = { nav.nav(Route.ClaudeCodeChanges(key, row.name)) },
-                        onPropose = { nav.nav(Route.ClaudeCodePropose(key, row.name)) },
+                        onDismissRequest = { viewModel.dismissRequest(row.name) },
+                        // Both read the clone: a freed workstream's come back first.
+                        onChanges = { viewModel.withClones { nav.nav(Route.ClaudeCodeChanges(key, row.name)) } },
+                        onPropose = { viewModel.withClones { nav.nav(Route.ClaudeCodePropose(key, row.name)) } },
                         onOpenNostr = { repo -> nav.nav(Route.GitRepository(repo.kind, repo.pubKeyHex, repo.identifier)) },
                         onAskToCommit = {
                             viewModel.askToCommit(row.name)
@@ -214,7 +232,13 @@ private fun RepoCard(
     canOpen: Boolean,
     opening: Boolean,
     error: PullRequestError?,
+    gate: GateState,
+    gateLogFile: File?,
+    fullGateLog: () -> String,
+    onRunGate: () -> Unit,
+    onCancelGate: () -> Unit,
     onOpen: (title: String, body: String, draft: Boolean) -> Unit,
+    onDismissRequest: () -> Unit,
     onChanges: () -> Unit,
     onPropose: () -> Unit,
     onOpenNostr: (NostrRepoRef) -> Unit,
@@ -255,6 +279,18 @@ private fun RepoCard(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+            // The agent asked for this pull request: its title and description fill the form below.
+            row.request?.let { request ->
+                FlowRow(verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringRes(if (request.draft) Res.string.claude_code_pr_requested_draft else Res.string.claude_code_pr_requested),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                    InlineAction(stringRes(Res.string.claude_code_pr_request_dismiss), onDismissRequest)
+                }
+            }
             val parts =
                 listOfNotNull(
                     status.ahead.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_pr_ahead, it, it) },
@@ -278,9 +314,10 @@ private fun RepoCard(
             val pr = row.pullRequest
             // A GitHub pull request, unless the repository is only on Nostr.
             val offersPullRequest = row.gitHub != null || row.nostr == null
-            if (pr != null) {
-                PullRequestLine(pr)
-            } else if (status.ahead > 0 && offersPullRequest) {
+            if (pr != null) PullRequestLine(pr)
+            // A new pull request: none yet, or the agent asks for one after the last was merged or closed.
+            val canAskForNew = pr == null || (!pr.isOpen && row.request != null)
+            if (canAskForNew && status.ahead > 0 && offersPullRequest) {
                 if (row.viaFork && row.gitHub != null) {
                     Text(stringRes(Res.string.claude_code_pr_via_fork, row.gitHub ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
                 }
@@ -290,9 +327,12 @@ private fun RepoCard(
                 LabeledField(Res.string.claude_code_pr_body) {
                     FormTextField(value = body, onValueChange = { body = it }, singleLine = false, minLines = 3, textStyle = MaterialTheme.typography.bodyMedium)
                 }
+                // The same checks a proposal runs: the pull request opens once they passed on this work.
+                GateSection(gate = gate, logFile = gateLogFile, fullLog = fullGateLog, onRun = onRunGate, onCancel = onCancelGate)
+                val ready = canOpen && title.isNotBlank() && gate.allowsPublishing
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(enabled = canOpen && title.isNotBlank(), onClick = { onOpen(title, body, false) }) { Text(stringRes(Res.string.claude_code_pr_open)) }
-                    OutlinedButton(enabled = canOpen && title.isNotBlank(), onClick = { onOpen(title, body, true) }) { Text(stringRes(Res.string.claude_code_pr_open_draft)) }
+                    Button(enabled = ready, onClick = { onOpen(title, body, false) }) { Text(stringRes(Res.string.claude_code_pr_open)) }
+                    OutlinedButton(enabled = ready, onClick = { onOpen(title, body, true) }) { Text(stringRes(Res.string.claude_code_pr_open_draft)) }
                     if (opening) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 }
             }

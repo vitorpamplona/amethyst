@@ -49,6 +49,8 @@ internal const val HOUSE_CSS: String =
  *   figure.whole       a picture that may stand taller than the cap
  *                      (every other picture is capped in height, set narrower, never cropped)
  *   div.spread         a picture spread of <figure>s, the first one large
+ *   .fold of 3 .col    the column holding the .lead-head is set in the middle
+ *   a lead story with no <figure> runs in two columns on a wide column
  *   div.agate          the small-print strip: up to five .cell columns of
  *                      .box-head + .wire-item (headlines, on air, classifieds,
  *                      coming up, conditions)
@@ -681,6 +683,138 @@ td.num {
   border-bottom-color: var(--rule);
 }
 
+/* APP ONLY: the writer's prompt leaves this out ([houseCssForWriter]); the app
+ * writes this markup itself.
+ *
+ * THE WEATHER CARD: the Weather desk's box, made by the app and set as given at
+ * the top of a narrow column. The place in its head, the reading now large,
+ * today in a line, the next days in a small table, the credit last. */
+.box.weather {
+  gap: 8px;
+}
+.weather .wx-now {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  line-height: 1.1;
+  margin: 0;
+}
+.weather .wx-now b {
+  font-size: 2.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-right: 4px;
+}
+.weather .wx-today {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+  margin: 0;
+}
+.weather th,
+.weather td {
+  font-size: 0.76rem;
+  padding: 5px 8px 5px 0;
+}
+.weather td:first-child {
+  white-space: nowrap;
+}
+.weather .wx-note {
+  font-size: 0.74rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--ink-3);
+  margin: 0;
+}
+.weather .wx-credit {
+  font-size: 0.85rem;
+  margin: 0;
+}
+/* END APP ONLY */
+
+/* THE LEAD SITS IN THE MIDDLE.
+ *
+ * Where the fold has three columns or more, the column holding the lead (its
+ * `.lead-head`) is set in the centre, with the column written before it on
+ * its left, as a broadsheet sets its front, whatever order the markup gave.
+ * Desktop and tablet only: a phone reads the lead first. The borders follow
+ * the order seen, not the order written. */
+@media (min-width: 721px) {
+  /* Every rule here starts from the same fold, so each later, narrower one
+   * outranks the "everything else" order: 3 (a shorter prefix lost to it, and
+   * the lead stayed where it was written). */
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col {
+    order: 3;
+  }
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head) {
+    order: 2;
+    padding-left: 20px;
+    border-left: 1px solid var(--rule);
+  }
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head):first-child + .col,
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:not(:has(.lead-head)):first-child {
+    order: 1;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head):first-child + .col + .col {
+    border-left: 1px solid var(--rule);
+  }
+}
+
+/* On a tablet the fold's narrow columns are half the width, two to a row: the
+ * lead goes across the top on its own and the other columns share the rows
+ * under it, so no column starts a row with a rule on its left. */
+@media (min-width: 721px) and (max-width: 1000px) {
+  .fold:has(> .col:nth-child(3)):has(> .col .lead-head) > .col:has(.lead-head) {
+    grid-column: span 12;
+    order: 0;
+    padding-left: 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+}
+
+/* A LEAD WITH NO PICTURE IS SET IN TWO COLUMNS.
+ *
+ * A wide column of running text reads as a wall: ninety characters to a line
+ * is twice a newspaper's measure. The lead's kicker, headline, dek and byline
+ * span the top; its paragraphs run in two columns with a rule between. */
+@media (min-width: 900px) {
+  .col.span-6 > .story:has(> .lead-head):not(:has(figure)),
+  .col.span-8 > .story:has(> .lead-head):not(:has(figure)),
+  .col.span-12 > .story:has(> .lead-head):not(:has(figure)) {
+    display: block;
+    column-count: 2;
+    column-gap: 26px;
+    column-rule: 1px solid var(--rule-soft);
+  }
+  .story:has(> .lead-head):not(:has(figure)) > :is(.kicker, .lead-head, .main-head, .dek, .byline) {
+    column-span: all;
+    margin-bottom: 9px;
+  }
+  .story:has(> .lead-head):not(:has(figure)) > p:not(.kicker):not(.dek):not(.byline) {
+    margin-bottom: 9px;
+  }
+}
+
+/* A PICTURE IN A NARROW COLUMN FILLS IT.
+ *
+ * Capped and set narrower, a phone screenshot in a quarter-width column is a
+ * ribbon with paper either side. There it fills the column's width and is cut
+ * from the top down: a screenshot's top is what it is about. `figure.whole`
+ * still shows all of it. */
+.col.span-3 figure:not(.whole) img,
+.col.span-4 figure:not(.whole) img,
+.cols3 .cell figure:not(.whole) img,
+.cols4 .cell figure:not(.whole) img,
+.cols5 .cell figure:not(.whole) img {
+  width: 100%;
+  align-self: stretch;
+  max-height: 20rem;
+  object-fit: cover;
+  object-position: center top;
+}
+
 /* --- responsive ------------------------------------------------------- */
 
 @media (max-width: 1000px) {
@@ -710,6 +844,12 @@ td.num {
   .fold {
     display: flex;
     flex-direction: column;
+  }
+  /* A phone reads the lead first, whatever column was written before it: a
+   * rail's weather card or briefs never stand between the nameplate and the
+   * news. */
+  .fold > .col:has(.lead-head) {
+    order: -1;
   }
   .col {
     padding: 18px 0;
@@ -750,6 +890,13 @@ td.num {
   .reverse {
     padding: 20px 16px;
   }
+  /* The lead moved first: the rules between columns follow the order seen. */
+  .fold > .col:has(.lead-head):last-child:not(:first-child) {
+    border-bottom: 1px solid var(--rule);
+  }
+  .fold:has(> .col:last-child .lead-head) > .col:nth-last-child(2) {
+    border-bottom: 0;
+  }
 }
 """
 
@@ -760,9 +907,11 @@ td.num {
  */
 internal val HOUSE_CSS_FOR_WRITER: String by lazy { houseCssForWriter(HOUSE_CSS) }
 
-/** [css] with its comments gone, but for the layout list, and without the blank lines they leave. */
+/** [css] with its comments and its app-only rules gone, but for the layout list, and without the blank lines they leave. */
 internal fun houseCssForWriter(css: String): String =
     css
+        // What the app writes itself (the weather card) the writer never styles: not worth its tokens.
+        .replace(Regex("/\\* APP ONLY:[\\s\\S]*?/\\* END APP ONLY \\*/")) { "" }
         .replace(Regex("/\\*[\\s\\S]*?\\*/")) { comment ->
             val at = comment.value.indexOf(LAYOUTS_MARKER)
             if (at < 0) "" else "/* " + comment.value.substring(at).trimEnd()

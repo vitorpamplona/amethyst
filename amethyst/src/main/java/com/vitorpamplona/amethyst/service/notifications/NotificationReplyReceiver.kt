@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotMentionTags
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelAndPrune
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelChildlessGroupSummaries
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -306,6 +307,8 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 text = replyText,
                 replyToEventId = replyToInnerEventId,
                 replyToAuthorPubKey = replyToInnerAuthor,
+                // A member named in the reply gets its `p`, as MDK's sender adds one.
+                mentions = MarmotMentionTags.of(replyText),
             )
 
         account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))

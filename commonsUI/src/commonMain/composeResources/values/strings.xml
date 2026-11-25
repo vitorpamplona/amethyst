@@ -545,6 +545,7 @@
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_links_created">Created %1$s</string>
     <string name="concord_invite_links_empty">You haven't created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_create">Create invite link</string>
     <string name="concord_invite_links_unreadable">Your invite links couldn't be loaded, so none can be revoked right now. Check your connection and try again.</string>
     <string name="concord_invite_revoke_action">Revoke link</string>
     <string name="concord_invite_revoke_title">Revoke this link?</string>
@@ -4337,6 +4338,7 @@
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_links_action">Invite links…</string>
     <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_mint_failed">The invite link couldn't be created. You may not be allowed to invite people to this community, or the link couldn't be saved to your relays. Try again in a moment.</string>
     <string name="concord_invite_revoked_failed">The link couldn't be revoked. Check your connection and try again.</string>
     <string name="concord_invite_revoked_ok">Invite link revoked.</string>
     <string name="concord_invite_title">Invite link</string>
@@ -7297,6 +7299,21 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_calendar_event">Event: %1$s</string>
     <string name="cordn_calendar_event_cancelled">Cancelled event: %1$s</string>
+    <string name="cordn_calendar_cancelled">Cancelled</string>
+    <plurals name="cordn_calendar_going">
+        <item quantity="one">%1$d going</item>
+        <item quantity="other">%1$d going</item>
+    </plurals>
+    <plurals name="cordn_calendar_maybe">
+        <item quantity="one">%1$d maybe</item>
+        <item quantity="other">%1$d maybe</item>
+    </plurals>
+    <plurals name="cordn_calendar_declined">
+        <item quantity="one">%1$d can't go</item>
+        <item quantity="other">%1$d can't go</item>
+    </plurals>
+    <string name="cordn_poll_closes">Closes %1$s</string>
+    <string name="cordn_poll_closed">Closed</string>
     <string name="cordn_call_started">Call started</string>
     <string name="cordn_call_started_titled">Call started · %1$s</string>
     <string name="cordn_call_ended">Call ended</string>
@@ -9560,6 +9577,7 @@
     <string name="claude_code_status_starting">Starting</string>
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
+    <string name="claude_code_status_asks">Has a question</string>
     <string name="claude_code_status_your_turn">Your turn</string>
     <string name="claude_code_status_finished">Finished, your turn</string>
     <string name="claude_code_status_failed">Failed</string>
@@ -9675,6 +9693,7 @@
     <string name="claude_code_gate_passed">The checks passed.</string>
     <string name="claude_code_gate_failed">The checks failed. Ask Claude to fix them, then run them again.</string>
     <string name="claude_code_gate_cancelled">Stopped. Run the checks again before publishing.</string>
+    <string name="claude_code_gate_outdated">The branch changed since the checks last ran. Run them again before publishing.</string>
     <string name="claude_code_gate_full_log">Full log</string>
     <string name="claude_code_close">Close</string>
     <string name="claude_code_gate_run">Run</string>
@@ -9731,6 +9750,26 @@
     <string name="claude_code_permission_run">%1$s wants to run a command</string>
     <string name="claude_code_permission_keys">Enter allows · Esc denies</string>
     <string name="claude_code_permission_keys_deny">Enter or Esc denies</string>
+    <string name="claude_code_question_title">%1$s has a question</string>
+    <plurals name="claude_code_questions_title">
+        <item quantity="one">%1$s has %2$d question</item>
+        <item quantity="other">%1$s has %2$d questions</item>
+    </plurals>
+    <string name="claude_code_question_other_hint">Something else: type your answer</string>
+    <string name="claude_code_question_text_hint">Type your answer</string>
+    <string name="claude_code_question_pick_any">Pick any that apply</string>
+    <string name="claude_code_question_add_note">Add a note</string>
+    <string name="claude_code_question_note_hint">A note to go with your answer</string>
+    <string name="claude_code_question_preview">Preview of %1$s</string>
+    <string name="claude_code_question_submit">Send answers</string>
+    <string name="claude_code_question_ask_more">Ask me more</string>
+    <string name="claude_code_question_ask_more_tooltip">Send what you answered and ask %1$s for more questions before it starts</string>
+    <string name="claude_code_question_dismiss">Dismiss</string>
+    <string name="claude_code_question_keys">Or write a reply below · Esc dismisses</string>
+    <string name="claude_code_question_keys_reply">Or write a reply below</string>
+    <string name="claude_code_question_no_answer">No answer</string>
+    <string name="claude_code_question_waiting">Waiting for your answer</string>
+    <string name="claude_code_question_number_value">%1$s %2$s</string>
     <string name="claude_code_context_used">%1$d% of context</string>
     <string name="claude_code_context_tooltip">%1$s of %2$s tokens in use. Near full, Claude Code summarizes the conversation to go on.</string>
     <string name="claude_code_open_elsewhere_readonly">Another Claude Code has this session open. Messages from here would mix with its turns.</string>
@@ -9738,8 +9777,9 @@
     <string name="claude_code_folder_gone">This session's folder is gone, so it can be read but not continued.</string>
     <string name="claude_code_fork_hint">A copy of the session. Your first message starts it as a session of its own; the original stays as it is.</string>
     <string name="claude_code_notify_needs_you">%1$s needs your approval</string>
+    <string name="claude_code_notify_asks">%1$s has a question for you</string>
     <string name="claude_code_notify_finished">%1$s finished</string>
-    <string name="claude_code_section_needs_you">Needs you</string>
+    <string name="claude_code_notify_publish">%1$s asks you to open a pull request</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Archived · %1$d session</item>
         <item quantity="other">Archived · %1$d sessions</item>
@@ -9789,6 +9829,10 @@
     <string name="claude_code_pr_open">Push and open pull request</string>
     <string name="claude_code_pr_open_draft">Open as draft</string>
     <string name="claude_code_pr_view">View on GitHub</string>
+    <string name="claude_code_pr_panel_number">%1$s #%2$d</string>
+    <string name="claude_code_pr_panel_details">Open full page</string>
+    <string name="claude_code_pr_panel_create">Create PR</string>
+    <string name="claude_code_pr_panel_more">More actions for %1$s</string>
     <string name="claude_code_pr_state_open">Pull request open</string>
     <string name="claude_code_pr_state_draft">Draft pull request</string>
     <string name="claude_code_pr_state_merged">Merged</string>
@@ -9854,19 +9898,21 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">What it changes, why, and how you tested it</string>
-    <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">looked up settings once</item>
         <item quantity="other">looked up settings %1$d times</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Ask what a setting does, or what to change to get what you want. Claude only sees Amethyst’s settings, and every change waits for your approval. Keys, wallets, relays and payments stay out of its reach.</string>
-    <string name="claude_code_settings_assistant_card">Not sure where something is? Ask the settings assistant.</string>
+    <string name="amethyst_assistant">Amethyst assistant</string>
+    <string name="amethyst_assistant_desc">Ask it to search notes and people, summarize your feed, notifications or a thread, explain or change a setting, post, reply, upload a file, zap, pay an invoice or sync your relays. It only reaches Amethyst, never your files. Every change, post and payment waits for your approval, and your keys stay out of its reach.</string>
+    <string name="amethyst_assistant_card">Not sure where something is, or want it done for you? Ask the Amethyst assistant.</string>
     <string name="claude_code_settings_assistant_ask">Ask the assistant about “%1$s”</string>
     <string name="claude_code_intro_question">What should %1$s work on?</string>
     <string name="claude_code_permission_change_this">%1$s wants to make this change</string>
     <string name="claude_code_permission_create_this">%1$s wants to create this file</string>
     <string name="claude_code_permission_setting">Claude wants to change a setting</string>
+    <string name="amethyst_assistant_permission_act">%1$s wants to act as you</string>
+    <string name="amethyst_assistant_permission_screen">%1$s wants to see your screen</string>
     <string name="claude_code_settings_starter_data">Why does Amethyst use so much mobile data?</string>
     <string name="claude_code_settings_starter_text">Make the text bigger and easier to read</string>
     <string name="claude_code_settings_starter_notifications">My notifications are too noisy. What can I change?</string>
@@ -10037,28 +10083,7 @@
     <string name="front_page_weather_celsius">°C</string>
     <string name="front_page_weather_fahrenheit">°F</string>
     <string name="front_page_weather_turn_off">Turn off</string>
-    <string name="front_page_weather_high">high</string>
-    <string name="front_page_weather_low">low</string>
-    <string name="front_page_weather_rain">rain</string>
-    <string name="front_page_weather_sun">sun</string>
-    <string name="front_page_weather_clear">Clear</string>
-    <string name="front_page_weather_mainly_clear">Mainly clear</string>
-    <string name="front_page_weather_partly_cloudy">Partly cloudy</string>
-    <string name="front_page_weather_overcast">Overcast</string>
-    <string name="front_page_weather_fog">Fog</string>
-    <string name="front_page_weather_drizzle">Drizzle</string>
-    <string name="front_page_weather_freezing_drizzle">Freezing drizzle</string>
-    <string name="front_page_weather_rain_falling">Rain</string>
-    <string name="front_page_weather_heavy_rain">Heavy rain</string>
-    <string name="front_page_weather_freezing_rain">Freezing rain</string>
-    <string name="front_page_weather_snow">Snow</string>
-    <string name="front_page_weather_heavy_snow">Heavy snow</string>
-    <string name="front_page_weather_showers">Showers</string>
-    <string name="front_page_weather_violent_showers">Violent showers</string>
-    <string name="front_page_weather_snow_showers">Snow showers</string>
-    <string name="front_page_weather_thunderstorm">Thunderstorms</string>
-    <string name="front_page_weather_thunderstorm_hail">Thunderstorms with hail</string>
-    <string name="front_page_weather_private">Shown only in your own apps, never on your public Observer. Every device of this account uses the same place. Forecast by Open-Meteo.com.</string>
+    <string name="front_page_weather_private">Every device of this account uses the same place. The forecast runs as a box in your paper; while your paper is published on your public Observer, the box names no place. Forecast by Open-Meteo.com.</string>
     <string name="front_page_unknown_params">This schedule has settings this app doesn't know (%1$s), so it won't print on schedule here.</string>
     <string name="front_page_schedule_unreadable">Your schedule was saved by an app this version can't read</string>
     <string name="front_page_schedule_unreachable">Couldn't reach your relays. Nothing was changed.</string>
@@ -10351,7 +10376,7 @@
     <string name="nip_catalog_empty">No NIPs match your search.</string>
     <string name="media_studio_add">Add</string>
     <string name="media_studio_position">%1$d of %2$d</string>
-    <string name="media_studio_hold_original">Hold for original</string>
+    <string name="media_studio_compare_original">Compare with the original</string>
     <string name="media_studio_tool_quality">Quality</string>
     <string name="media_studio_tool_alt">Alt text</string>
     <string name="media_studio_tool_privacy">Privacy</string>
@@ -10415,17 +10440,17 @@
         <item quantity="other">%1$d not used in %2$d days</item>
     </plurals>
     <string name="claude_code_storage_auto">Clean up on its own</string>
-    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, remove its clones, unless something in them is not pushed. Mirrors not used in %1$d days go too. Conversations stay.</string>
+    <string name="claude_code_storage_auto_desc">A day after a workstream’s pull requests are all merged or closed, free its clones, unless something in them is not committed. Archiving a workstream’s last conversation frees them too. Its commits are kept, and its next message brings the clones back. Mirrors not used in %1$d days go too. Conversations stay.</string>
     <string name="claude_code_storage_finished">Finished workstreams</string>
     <string name="claude_code_storage_none_finished">None yet: a workstream is finished when every repository’s pull request is merged or closed.</string>
-    <string name="claude_code_storage_unsaved">Kept: work not pushed</string>
+    <string name="claude_code_storage_unsaved">Kept: work not committed</string>
     <plurals name="claude_code_storage_clean_up">
         <item quantity="one">Clean up %1$d · frees %2$s</item>
         <item quantity="other">Clean up %1$d · frees %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_cleaned">
-        <item quantity="one">Removed %1$d workstream, freed %2$s</item>
-        <item quantity="other">Removed %1$d workstreams, freed %2$s</item>
+        <item quantity="one">Freed the clones of %1$d workstream, %2$s</item>
+        <item quantity="other">Freed the clones of %1$d workstreams, %2$s</item>
     </plurals>
     <plurals name="claude_code_storage_tidied">
         <item quantity="one">Tidied the mirrors and removed %1$d unused one, freed %2$s</item>
@@ -10511,6 +10536,12 @@
     <string name="llama_garden_model_kind_help">What the model is underneath, for a quant.</string>
     <string name="llama_garden_matches_hf_label">Matches the HuggingFace repository</string>
     <string name="llama_garden_all_models">All model torrents</string>
+    <string name="claude_code_workspace_freed">space freed</string>
+    <string name="claude_code_pr_restoring">Bringing the workstream’s clones back…</string>
+    <string name="claude_code_pr_requested">The agent asks you to open this pull request. Review it, then open it.</string>
+    <string name="claude_code_pr_requested_draft">The agent asks you to open this as a draft pull request. Review it, then open it.</string>
+    <string name="claude_code_pr_request_dismiss">Dismiss</string>
+    <string name="claude_code_pr_badge_requested">PR requested</string>
     <string name="relay_group_pin_refused_title">The relay did not pin the message</string>
     <string name="relay_group_unpin_refused_title">The relay did not unpin the message</string>
     <string name="kc_buzz_unpinned">Unpinned a message</string>
@@ -10543,6 +10574,9 @@
     <string name="marmot_devices_link_new_desc">This device approves another one of yours</string>
     <string name="marmot_devices_link_this">Link this device to an existing one</string>
     <string name="marmot_devices_link_this_desc">Approve it on a device that already has your chats</string>
+    <string name="marmot_devices_move_this">Move this device to another group of your devices</string>
+    <string name="marmot_devices_move_this_desc">Approve it on a device of that group; this device leaves its current group once the move is done</string>
+    <string name="marmot_devices_moving">This device is moving to another group of your devices. It stays in its current group until the move is done.</string>
     <string name="marmot_devices_section_sign_ins">Other sign-ins</string>
     <string name="marmot_devices_sign_in_new">New sign-in %1$s</string>
     <string name="marmot_devices_sign_in_earlier">Signed in before this device, %1$s</string>
@@ -10554,6 +10588,7 @@
     <string name="marmot_devices_failed_action">That did not work. Try again.</string>
     <string name="marmot_devices_switch_off_while_linked">This device is linked to your other devices, so this stays on. To unlink it, remove it from one of your other devices, or log out of this account here.</string>
     <string name="marmot_link_title_new">Link this device</string>
+    <string name="marmot_link_title_move">Move this device</string>
     <string name="marmot_link_title_existing">Link a new device</string>
     <string name="marmot_link_starting">Sending the link request…</string>
     <string name="marmot_link_waiting_answer">Waiting for one of your other devices. Open Amethyst or White Noise on it: it will ask to link this one.</string>

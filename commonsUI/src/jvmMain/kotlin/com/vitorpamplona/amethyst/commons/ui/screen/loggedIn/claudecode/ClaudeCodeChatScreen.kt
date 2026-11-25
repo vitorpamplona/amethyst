@@ -32,15 +32,18 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -102,11 +105,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -117,12 +122,14 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.GitHubPullRequests
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
+import com.vitorpamplona.amethyst.commons.claudecode.ScreenToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
@@ -138,6 +145,10 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -189,6 +200,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
+import com.vitorpamplona.amethyst.commons.resources.claude_code_question_waiting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree_failed
@@ -202,8 +214,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_data
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_notifications
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
@@ -237,6 +247,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_cloning
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.resources.try_again
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -245,10 +257,13 @@ import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -264,6 +279,8 @@ import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -304,6 +321,8 @@ fun ClaudeCodeChatScreen(
         return
     }
     val state by chat.state.collectAsStateWithLifecycle()
+    // However it was opened (the list, a notification, after a restart), the assistant reaches this account.
+    if (state.kind == ChatKind.SETTINGS) BindAssistantTools(accountViewModel, nav)
     val runningApp by viewModel.runningApp.collectAsStateWithLifecycle()
     val runError by viewModel.runError.collectAsStateWithLifecycle()
     val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
@@ -343,6 +362,8 @@ fun ClaudeCodeChatScreen(
     // Typing goes straight to the composer, and the keys below work, without a click first.
     LaunchedEffect(Unit) { composerFocus.requestFocus() }
     val pending = state.pendingPermissions.firstOrNull()
+    // The answers being filled in for [pending]'s questions: the key handler reads them too.
+    val questionForm = remember(pending?.requestId) { pending?.questions?.let { QuestionForm(it) } }
     // Sends the failed message again; a saved session's message with images can't be, so its text
     // goes back into the composer to send with them by hand.
     val retry: (() -> Unit)? =
@@ -366,12 +387,18 @@ fun ClaudeCodeChatScreen(
                     switching = true
                     true
                 }
+                // Questions wait: Esc dismisses them, unless the user has started answering. Enter
+                // belongs to the card's own fields.
+                pending?.questions != null && event.key == Key.Escape -> {
+                    if (questionForm?.hasInput != true) viewModel.dismissQuestions(pending)
+                    true
+                }
                 // An approval waits: Esc denies; Enter, with nothing typed, gives the default answer.
-                pending != null && event.key == Key.Escape -> {
+                pending != null && pending.questions == null && event.key == Key.Escape -> {
                     viewModel.deny(pending)
                     true
                 }
-                pending != null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
+                pending != null && pending.questions == null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
                     if (pending.defaultToNo) viewModel.deny(pending) else viewModel.approve(pending, always = false)
                     true
                 }
@@ -414,150 +441,220 @@ fun ClaudeCodeChatScreen(
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
-        Scaffold(
-            topBar = {
-                ChatTopBar(
-                    title = shownTitle,
-                    subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state, workspace),
-                    nav = nav,
-                    onTitleClick = { renaming = true },
-                ) {
-                    // A workspace of fresh clones: its repositories' pull requests, which the user opens.
-                    if (workspace != null) {
-                        TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
-                    }
-                    val git = state.git
-                    if (git != null && git.hasChanges) {
-                        // A narrow window keeps the title readable: an icon stands for the word. The
-                        // counts are the whole branch's, so the tooltip says what they compare with.
-                        val wide = LocalScreenLayout.current.isLargeScreen
-                        HoverTooltip(changesTooltip(git)) {
-                            TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
-                                if (wide) {
-                                    Text(stringRes(Res.string.claude_code_changes))
-                                } else {
-                                    Icon(MaterialSymbols.Commit, contentDescription = stringRes(Res.string.claude_code_changes), modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(Modifier.width(6.dp))
-                                DiffStat(git.insertions, git.deletions)
-                            }
-                        }
-                        // A merged or closed proposal takes no new version.
-                        val ended = git.proposalId?.let { proposalEnded(it) } ?: false
-                        if (git.repo != null && git.ahead > 0 && !ended) {
-                            FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
-                                Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
-                            }
-                        }
-                    }
-                    ChatMenu(
-                        canRunApp = canRunApp && !runningApp,
-                        canEnd = state.status != ChatStatus.NOT_STARTED && state.status != ChatStatus.ENDED,
-                        onRename = { renaming = true },
-                        onRunApp = { viewModel.runApp() },
-                        onEnd = { viewModel.endSession() },
-                    )
-                }
-            },
-        ) { padding ->
-            Box(
-                Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .imePadding()
-                    .then(keys)
-                    .dragAndDropTarget(shouldStartDragAndDrop = { it.hasFiles() }, target = dropTarget),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
-                    // A start that failed can be tried again; a gone folder or a failed clone can't.
-                    state.error?.let { ErrorBanner(it, onRetry = retry?.takeIf { _ -> state.lastTurnFailed && !state.isBusy }) }
-                    state.cloning?.let { CloningNote(it) }
-                    if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
-                    runError?.let { Banner(stringRes(Res.string.claude_code_run_failed, it)) }
-
-                    state.git?.proposalId?.let { proposalId ->
-                        ProposalActivity(
-                            proposalId = proposalId,
-                            chat = chat,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onRemoveWorktree = { viewModel.removeWorktree { nav.popBack() } },
-                        )
-                    }
-                    cleanupError?.let {
-                        Banner(stringRes(Res.string.claude_code_remove_worktree_failed, it), stringRes(Res.string.claude_code_remove_anyway)) {
-                            viewModel.removeWorktree(force = true) { nav.popBack() }
-                        }
-                    }
-
-                    Messages(
-                        chatKey = chat.key,
-                        state = state,
-                        readOnly = openElsewhere || folderGone,
-                        terminalStatus = terminal?.status,
+        BoxWithConstraints {
+            // A wide window has the workspace's changes and pull requests beside the chat; a narrow one
+            // reaches them from the top bar.
+            val showPanel = workspace != null && state.kind == ChatKind.CODE && maxWidth >= PullRequestsPanelMinScreen
+            val paneWidths = LocalAppServices.current.paneWidthPrefs
+            val savedWidth by paneWidths.flow.collectAsStateWithLifecycle()
+            // What the user dragged it to, as far as the chat keeps room to read.
+            val panelWidth =
+                (savedWidth.changesPanel ?: PullRequestsPanelWidth.value)
+                    .coerceIn(PullRequestsPanelWidthRange.start, maxOf(PullRequestsPanelWidthRange.start, minOf(PullRequestsPanelWidthRange.endInclusive, maxWidth.value - ChatMinWidth.value)))
+                    .dp
+            Scaffold(
+                topBar = {
+                    ChatTopBar(
+                        title = shownTitle,
+                        subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state, workspace),
                         nav = nav,
-                        modifier = Modifier.weight(1f),
-                        onEditFrom =
-                            if (state.kind == ChatKind.CODE && state.sessionId != null && !folderGone && chat.backend.capabilities.editFromMessage) {
-                                { item -> viewModel.editFrom(item) { key -> nav.nav(Route.ClaudeCodeChat(key)) } }
-                            } else {
-                                null
-                            },
-                        onStarter = {
-                            composerText.setTextAndPlaceCursorAtEnd(it)
-                            composerFocus.requestFocus()
-                        },
-                        onRetry = retry,
-                    )
-
-                    state.pendingPermissions.firstOrNull()?.let { request ->
-                        PermissionCard(
-                            request = request,
-                            note = state.permissionNotes[request.requestId],
-                            cwd = state.cwd,
-                            onAllow = { viewModel.approve(request, always = false) },
-                            onAllowAlways = { viewModel.approve(request, always = true) },
-                            onDeny = { viewModel.deny(request) },
-                        )
-                    }
-
-                    // The agent's plan stays in view while there is work left in it.
-                    if (state.tasks.hasOpenWork) {
-                        AgentTaskList(state.tasks, working = state.isBusy, approvalPending = state.pendingPermissions.isNotEmpty(), chatKey = chat.key)
-                    }
-
-                    if (folderGone && !state.isBusy) {
-                        // A removed worktree: its history reads, but there is nowhere to continue it.
-                        InlineNote(stringRes(Res.string.claude_code_folder_gone))
-                    } else if (openElsewhere && !state.isBusy) {
-                        // Two processes writing one session would interleave their turns: this one reads.
-                        OpenElsewhereBar {
-                            viewModel.fork { forked ->
-                                nav.popBack()
-                                nav.nav(Route.ClaudeCodeChat(forked))
+                        onTitleClick = { renaming = true },
+                    ) {
+                        // A workspace of fresh clones: its repositories' pull requests, which the user opens.
+                        if (workspace != null && !showPanel) {
+                            TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
+                        }
+                        // With the panel, each repository's changes and pull request are in it, not here.
+                        val git = state.git?.takeIf { !showPanel }
+                        if (git != null && git.hasChanges) {
+                            // A narrow window keeps the title readable: an icon stands for the word. The
+                            // counts are the whole branch's, so the tooltip says what they compare with.
+                            val wide = LocalScreenLayout.current.isLargeScreen
+                            HoverTooltip(changesTooltip(git)) {
+                                TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
+                                    if (wide) {
+                                        Text(stringRes(Res.string.claude_code_changes))
+                                    } else {
+                                        Icon(MaterialSymbols.Commit, contentDescription = stringRes(Res.string.claude_code_changes), modifier = Modifier.size(18.dp))
+                                    }
+                                    Spacer(Modifier.width(6.dp))
+                                    DiffStat(git.insertions, git.deletions)
+                                }
+                            }
+                            // A merged or closed proposal takes no new version.
+                            val ended = git.proposalId?.let { proposalEnded(it) } ?: false
+                            if (git.repo != null && git.ahead > 0 && !ended) {
+                                FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
+                                    Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
+                                }
                             }
                         }
-                    } else {
-                        Composer(
-                            text = composerText,
-                            commands = state.commands,
-                            attachments = attachments,
-                            dropHover = dropHover,
-                            focusRequester = composerFocus,
-                            busy = state.isBusy,
-                            onSend = { text, images ->
-                                if (images.isEmpty()) viewModel.send(text) else viewModel.send(text, images.map { it.input }, images.map { it.file })
-                            },
-                            onStop = { viewModel.interrupt() },
-                        )
-                        ComposerFooter(
-                            state = state,
-                            onMode = { viewModel.setPermissionMode(it) },
-                            onModel = { viewModel.setModel(it) },
-                            modes = chat.backend.capabilities.modes,
+                        ChatMenu(
+                            canRunApp = canRunApp && !runningApp,
+                            canEnd = state.status != ChatStatus.NOT_STARTED && state.status != ChatStatus.ENDED,
+                            onRename = { renaming = true },
+                            onRunApp = { viewModel.runApp() },
+                            onEnd = { viewModel.endSession() },
                         )
                     }
+                },
+            ) { padding ->
+                Row(Modifier.padding(padding).fillMaxSize()) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .imePadding()
+                            .then(keys)
+                            .dragAndDropTarget(shouldStartDragAndDrop = { it.hasFiles() }, target = dropTarget),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
+                            // A start that failed can be tried again; a gone folder or a failed clone can't.
+                            state.error?.let { ErrorBanner(it, onRetry = retry?.takeIf { _ -> state.lastTurnFailed && !state.isBusy }) }
+                            state.cloning?.let { CloningNote(it) }
+                            if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
+                            runError?.let { Banner(stringRes(Res.string.claude_code_run_failed, it)) }
+
+                            state.git?.proposalId?.let { proposalId ->
+                                ProposalActivity(
+                                    proposalId = proposalId,
+                                    chat = chat,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                    onRemoveWorktree = { viewModel.removeWorktree { nav.popBack() } },
+                                )
+                            }
+                            cleanupError?.let {
+                                Banner(stringRes(Res.string.claude_code_remove_worktree_failed, it), stringRes(Res.string.claude_code_remove_anyway)) {
+                                    viewModel.removeWorktree(force = true) { nav.popBack() }
+                                }
+                            }
+
+                            Messages(
+                                chatKey = chat.key,
+                                state = state,
+                                accountViewModel = accountViewModel,
+                                readOnly = openElsewhere || folderGone,
+                                terminalStatus = terminal?.status,
+                                nav = nav,
+                                modifier = Modifier.weight(1f),
+                                onEditFrom =
+                                    if (state.kind == ChatKind.CODE && state.sessionId != null && !folderGone && chat.backend.capabilities.editFromMessage) {
+                                        { item -> viewModel.editFrom(item) { key -> nav.nav(Route.ClaudeCodeChat(key)) } }
+                                    } else {
+                                        null
+                                    },
+                                onStarter = {
+                                    composerText.setTextAndPlaceCursorAtEnd(it)
+                                    composerFocus.requestFocus()
+                                },
+                                onRetry = retry,
+                            )
+
+                            state.pendingPermissions.firstOrNull()?.let { request ->
+                                if (questionForm != null && request.requestId == pending?.requestId) {
+                                    QuestionCard(
+                                        form = questionForm,
+                                        onAnswer = { viewModel.answerQuestions(request, it) },
+                                        onDismiss = { viewModel.dismissQuestions(request) },
+                                    )
+                                    return@let
+                                }
+                                PermissionCard(
+                                    request = request,
+                                    note = state.permissionNotes[request.requestId],
+                                    cwd = state.cwd,
+                                    onAllow = { viewModel.approve(request, always = false) },
+                                    onAllowAlways = { viewModel.approve(request, always = true) },
+                                    onDeny = { viewModel.deny(request) },
+                                )
+                            }
+
+                            // The agent's plan stays in view while there is work left in it.
+                            if (state.tasks.hasOpenWork) {
+                                AgentTaskList(state.tasks, working = state.isBusy, approvalPending = state.pendingPermissions.isNotEmpty(), chatKey = chat.key)
+                            }
+
+                            if (folderGone && !state.isBusy) {
+                                // A removed worktree: its history reads, but there is nowhere to continue it.
+                                InlineNote(stringRes(Res.string.claude_code_folder_gone))
+                            } else if (openElsewhere && !state.isBusy) {
+                                // Two processes writing one session would interleave their turns: this one reads.
+                                OpenElsewhereBar {
+                                    viewModel.fork { forked ->
+                                        nav.popBack()
+                                        nav.nav(Route.ClaudeCodeChat(forked))
+                                    }
+                                }
+                            } else {
+                                Composer(
+                                    text = composerText,
+                                    commands = state.commands,
+                                    attachments = attachments,
+                                    dropHover = dropHover,
+                                    focusRequester = composerFocus,
+                                    busy = state.isBusy,
+                                    onSend = { text, images ->
+                                        val asking = pending?.takeIf { it.questions != null }
+                                        when {
+                                            // Open questions hold the turn: a message now is the reply to them, not the next prompt.
+                                            asking != null && images.isEmpty() && !text.startsWith("/") -> viewModel.answerQuestions(asking, PermissionDecision.Answer(emptyMap(), reply = text))
+                                            images.isEmpty() -> viewModel.send(text)
+                                            else -> viewModel.send(text, images.map { it.input }, images.map { it.file })
+                                        }
+                                    },
+                                    onStop = { viewModel.interrupt() },
+                                )
+                                ComposerFooter(
+                                    state = state,
+                                    onMode = { viewModel.setPermissionMode(it) },
+                                    onModel = { viewModel.setModel(it) },
+                                    modes = chat.backend.capabilities.modes,
+                                )
+                            }
+                        }
+                    }
+                    if (showPanel) {
+                        // Dragged like the app's other side panes, and remembered with them.
+                        PaneSplitter(onDrag = { delta -> paneWidths.setChangesPanel((panelWidth.value - delta).coerceIn(PullRequestsPanelWidthRange)) })
+                        PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** How a hashtag link reaches the chat from the Markdown renderer. */
+private const val HASHTAG_LINK = "nostr:hashtag?id="
+
+/**
+ * Where a link in the chat goes. The Markdown renderer makes every `#word` a Nostr hashtag link,
+ * which the system can't open: in an agent's reply, `#4888` is the repository's pull request or
+ * issue, opened on GitHub when the workstream has one GitHub repository; any other hashtag opens
+ * its feed in the app, where there is [nav] to go to it.
+ */
+@Composable
+internal fun rememberChatLinks(nav: INav?): (String) -> Unit {
+    val uriHandler = LocalUriHandler.current
+    val workspace = LocalWorkspace.current
+    return remember(uriHandler, nav, workspace) {
+        { url: String ->
+            if (!url.startsWith(HASHTAG_LINK)) {
+                uriHandler.openUri(url)
+            } else {
+                val tag = url.removePrefix(HASHTAG_LINK)
+                val gitHub =
+                    workspace
+                        ?.repos
+                        ?.mapNotNull { GitHubPullRequests.gitHubRepo(it.url) }
+                        ?.distinct()
+                        ?.singleOrNull()
+                when {
+                    // GitHub sends /issues/N on to the pull request when N is one.
+                    gitHub != null && tag.isNotEmpty() && tag.all { it.isDigit() } -> uriHandler.openUri("https://github.com/$gitHub/issues/$tag")
+                    nav != null -> nav.nav(Route.Hashtag(tag))
                 }
             }
         }
@@ -664,6 +761,7 @@ private val landedChats: MutableSet<String> = ConcurrentHashMap.newKeySet()
 private fun Messages(
     chatKey: String,
     state: ClaudeChatState,
+    accountViewModel: AccountViewModel,
     readOnly: Boolean,
     /** What a terminal that has the session open says it is doing (`idle`, `busy`, `waiting`). */
     terminalStatus: String?,
@@ -725,11 +823,18 @@ private fun Messages(
                 ?.index
         if (lastVisible == null || lastVisible >= last - FOLLOW_SLACK) listState.animateScrollToItem(last, TO_ITS_END)
     }
-    val uriHandler = LocalUriHandler.current
-    val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
+    val onLink = rememberChatLinks(nav)
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
     val replyBlocks = rememberChatBlocks()
+    // A sent image open full size: the message's images, and the one clicked.
+    var viewing by remember { mutableStateOf<Pair<ImmutableList<BaseMediaContent>, BaseMediaContent>?>(null) }
+    val onOpenImage = remember { { images: List<SentImage>, index: Int -> viewing = sentImagesToView(images, index) } }
+    // Outside the SelectionContainer below: a dialog is another layout hierarchy, and its text
+    // must not join the chat's selection.
+    viewing?.let { (all, shown) ->
+        ZoomableImageDialog(imageUrl = shown, allImages = all, onDismiss = { viewing = null }, accountViewModel = accountViewModel)
+    }
     // One selection for the whole chat: any part of any message, or a run across several, copies.
     SelectionContainer(modifier.fillMaxWidth()) {
         LazyColumn(
@@ -755,14 +860,14 @@ private fun Messages(
                             // A new turn: more room above it than between the parts of a reply.
                             is ChatItem.UserText ->
                                 Box(Modifier.padding(top = GroupGap - PartGap)) {
-                                    UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
+                                    UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } }, onOpenImage)
                                 }
                             is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = replyBlocks)
                             is ChatItem.ToolCall ->
-                                if (ToolKind.of(item.name) == ToolKind.EDIT) {
-                                    FileChangeRow(item, state.cwd, turnRunning)
-                                } else {
-                                    ToolCallRow(item, state.cwd, turnRunning)
+                                when (ToolKind.of(item.name)) {
+                                    ToolKind.EDIT -> FileChangeRow(item, state.cwd, turnRunning)
+                                    ToolKind.QUESTION -> QuestionCallRow(item, waiting = busy)
+                                    else -> ToolCallRow(item, state.cwd, turnRunning)
                                 }
                             is ChatItem.Notice -> NoticeRow(item, onRetry = onRetry?.takeIf { !busy && item === state.items.lastOrNull() })
                         }
@@ -948,7 +1053,7 @@ private fun LiveStatus(state: ClaudeChatState) {
         Spacer(Modifier.width(10.dp))
         Text(
             if (waiting) {
-                stringRes(Res.string.claude_code_waiting_approval)
+                stringRes(if (state.isAsking) Res.string.claude_code_question_waiting else Res.string.claude_code_waiting_approval)
             } else {
                 listOfNotNull(state.activity ?: stringRes(Res.string.claude_code_working), seconds?.let { elapsed(it) }).joinToString(" · ")
             },
@@ -969,7 +1074,15 @@ private fun TurnDone(
     val agent = LocalAgentName.current
     val took = state.lastTurnMillis?.takeIf { !inTerminal && state.turnEndedAt != null }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, filled = true, modifier = Modifier.size(16.dp))
+        // Centering on the line box sits the check below the letters, whose capitals ride high in
+        // it: lift it to their middle.
+        Icon(
+            MaterialSymbols.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            filled = true,
+            modifier = Modifier.offset(y = (-1.5).dp).size(16.dp),
+        )
         Spacer(Modifier.width(10.dp))
         Text(
             when {
@@ -1051,9 +1164,9 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(MaterialSymbols.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
         }
-        Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(stringRes(Res.string.amethyst_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
-            stringRes(Res.string.claude_code_settings_assistant_desc),
+            stringRes(Res.string.amethyst_assistant_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
             textAlign = TextAlign.Center,
@@ -1087,13 +1200,14 @@ private fun UserBubble(
     textStyle: TextStyle,
     onLink: (String) -> Unit,
     onEdit: (() -> Unit)?,
+    onOpenImage: (List<SentImage>, Int) -> Unit,
 ) {
     // One column: the caller may place this in a Box, which would stack the images and the
     // text on top of each other.
     Column(Modifier.fillMaxWidth()) {
         if (images.isNotEmpty()) {
             Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
-                SentImageRow(images)
+                SentImageRow(images, onOpen = { index -> onOpenImage(images, index) })
             }
         }
         if (text.isNotEmpty()) UserTextBubble(text, images.isNotEmpty(), textStyle, onLink, onEdit)
@@ -1169,7 +1283,7 @@ private fun ToolGroupRow(
                     ToolKind.AGENT -> Res.plurals.claude_code_tool_group_agent
                     ToolKind.SETTINGS -> Res.plurals.claude_code_tool_group_settings
                     // Left out of the rows (the task card shows them); counted as other tools if one slips in.
-                    ToolKind.PLAN, ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
+                    ToolKind.PLAN, ToolKind.QUESTION, ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
                 },
                 n,
                 n,
@@ -1330,6 +1444,9 @@ private fun PermissionCard(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when {
+                        // A post, an upload or a payment from the assistant: it acts as the user, not on a setting.
+                        note != null && request.toolName.startsWith(ACCOUNT_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_act, LocalAgentName.current)
+                        note != null && request.toolName.startsWith(SCREEN_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_screen, LocalAgentName.current)
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
                         view is ToolView.FileChange ->
                             // The diff below names the file: the question needn't say it again.
@@ -1769,3 +1886,26 @@ internal fun modeDescription(mode: PermissionMode): String =
         PermissionMode.AUTO -> stringRes(Res.string.claude_code_mode_auto_desc)
         else -> stringRes(Res.string.claude_code_mode_default_desc)
     }
+
+/**
+ * [images] as the app's image viewer takes them, with the one at [index] shown first: only those
+ * whose file is still on this computer. Null when that one's file is gone.
+ */
+internal fun sentImagesToView(
+    images: List<SentImage>,
+    index: Int,
+): Pair<ImmutableList<BaseMediaContent>, BaseMediaContent>? {
+    val viewable =
+        images.map { image ->
+            image.file
+                ?.let(::File)
+                ?.takeIf { it.isFile }
+                ?.let { MediaUrlImage(it.toURI().toString(), description = image.name) }
+        }
+    val shown = viewable.getOrNull(index) ?: return null
+    return viewable.filterNotNull().toImmutableList() to shown
+}
+
+/** How the agent names the assistant's account tools: `mcp__amethyst-account__…`. */
+private val ACCOUNT_TOOLS_PREFIX = "mcp__${AccountToolServer.NAME}__"
+private val SCREEN_TOOLS_PREFIX = "mcp__${ScreenToolServer.NAME}__"

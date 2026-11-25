@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.cordn.client.CordnRoomState
+import com.vitorpamplona.cordn.client.rememberOpen
+import com.vitorpamplona.cordn.client.upsert
 import com.vitorpamplona.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
@@ -422,12 +424,19 @@ class FileCordnStoresTest {
         }
 
     @Test
-    fun `an unreadable list loses the coordinators rather than the login`() =
+    fun `an unreadable list fails the load and is never written over`() =
         runTest {
             coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")))))
-            File(CordnStorageLayout.accountDirectoryFor(rootPath, account).toFile(), "coordinators").writeBytes(byteArrayOf(9, 9, 9))
+            val file = File(CordnStorageLayout.accountDirectoryFor(rootPath, account).toFile(), "coordinators")
+            val unreadable = byteArrayOf(9, 9, 9)
+            file.writeBytes(unreadable)
 
-            assertEquals(emptyList(), coordinators().load())
+            // An empty answer would be merged and saved back by every write of the list.
+            assertFailsWith<CordnCoordinatorListUnreadableException> { coordinators().load() }
+            val other = CoordinatorConfig("b".repeat(64), listOf(relay("wss://two.example.com")))
+            assertFailsWith<CordnCoordinatorListUnreadableException> { coordinators().rememberOpen(listOf(other)) }
+            assertFailsWith<CordnCoordinatorListUnreadableException> { coordinators().upsert(other) }
+            assertContentEquals(unreadable, file.readBytes(), "the list we could not read was replaced")
         }
 
     @Test

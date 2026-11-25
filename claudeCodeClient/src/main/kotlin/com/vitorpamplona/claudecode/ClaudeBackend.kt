@@ -32,6 +32,7 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeExecutable
+import com.vitorpamplona.claudecode.protocol.ClaudeQuestions
 import com.vitorpamplona.claudecode.session.ClaudeSessionInfo
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
@@ -97,7 +98,10 @@ class ClaudeBackend(
                 model = options.model,
                 permissionMode = options.permissionMode,
                 disallowedTools = options.blockedCommands.map { "Bash($it:*)" },
-                environment = options.environment,
+                commandGuard = options.commandGuard,
+                // The full question form: previews, text and number questions, "ask me more".
+                environment = ClaudeQuestions.HOST_ENVIRONMENT + options.environment,
+                pathFirst = options.pathFirst,
                 sdkMcpServers = options.hostTools,
                 strictMcpConfig = options.onlyHostTools,
                 tools = if (options.onlyHostTools) emptyList() else null,

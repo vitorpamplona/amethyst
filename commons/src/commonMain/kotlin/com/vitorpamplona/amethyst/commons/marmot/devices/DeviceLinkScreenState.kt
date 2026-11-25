@@ -100,28 +100,32 @@ object DeviceLinkScreen {
         role: DeviceLinkRole,
         sessionId: HexKey?,
         startFailed: Boolean = false,
+        /** A linked device linking again: it moves, so being linked is no reason to stop. */
+        move: Boolean = false,
     ): DeviceLinkScreenState =
         when (role) {
-            DeviceLinkRole.NEW_DEVICE -> newDevice(snapshot, startFailed)
+            DeviceLinkRole.NEW_DEVICE -> newDevice(snapshot, startFailed, move)
             DeviceLinkRole.EXISTING_DEVICE -> existingDevice(snapshot, sessionId)
         }
 
     private fun newDevice(
         snapshot: MarmotDevicesSnapshot,
         startFailed: Boolean,
+        move: Boolean,
     ): DeviceLinkScreenState =
         when (val s = snapshot.newDevice) {
             null ->
                 when {
                     startFailed -> DeviceLinkScreenState.StartFailed
-                    snapshot.linked -> DeviceLinkScreenState.AlreadyLinked
+                    snapshot.linked && !move -> DeviceLinkScreenState.AlreadyLinked
                     else -> DeviceLinkScreenState.Starting
                 }
             NewDeviceLinkState.WaitingForAnswer -> DeviceLinkScreenState.WaitingForAnswer
             is NewDeviceLinkState.Comparing -> DeviceLinkScreenState.Comparing(s.code, canConfirm = true, sessionId = null)
             NewDeviceLinkState.WaitingForOtherDevice -> DeviceLinkScreenState.WaitingForOtherDevice
             NewDeviceLinkState.Joining -> DeviceLinkScreenState.Joining
-            NewDeviceLinkState.Linked -> DeviceLinkScreenState.Linked(snapshot.remainingChats?.takeIf { it > 0 })
+            // A move is done once it is made, not when its first Commit went out.
+            NewDeviceLinkState.Linked -> if (snapshot.moving) DeviceLinkScreenState.Joining else DeviceLinkScreenState.Linked(snapshot.remainingChats?.takeIf { it > 0 })
             is NewDeviceLinkState.Ended -> if (startFailed) DeviceLinkScreenState.StartFailed else DeviceLinkScreenState.Ended(s.reason)
         }
 

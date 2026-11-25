@@ -23,6 +23,7 @@ package com.vitorpamplona.claudecode
 import com.vitorpamplona.agents.HostTool
 import com.vitorpamplona.agents.HostToolResult
 import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import kotlinx.coroutines.test.runTest
@@ -51,6 +52,29 @@ class SdkMcpTest {
             return HostToolResult("you said $text")
         }
     }
+
+    @Test
+    fun aToolsPicturesGoAsMcpImageContent() =
+        runTest {
+            val picture = ImageInput("shot.png", "image/png", "iVBORw0KGgo=")
+            val server =
+                object : HostToolServer {
+                    override val name = "screen"
+                    override val tools = listOf(HostTool("shot", "Takes a picture", obj("""{"type":"object","properties":{}}""")))
+
+                    override suspend fun call(
+                        tool: String,
+                        arguments: JsonObject,
+                    ) = HostToolResult("here it is", images = listOf(picture))
+                }
+            val call = SdkMcpDispatcher.handle(server, obj("""{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"shot","arguments":{}}}"""))
+            val content = call["result"]!!.jsonObject["content"]!!.jsonArray
+            assertEquals("here it is", content[0].jsonObject["text"]!!.jsonPrimitive.content)
+            val image = content[1].jsonObject
+            assertEquals("image", image["type"]!!.jsonPrimitive.content)
+            assertEquals(picture.base64, image["data"]!!.jsonPrimitive.content)
+            assertEquals("image/png", image["mimeType"]!!.jsonPrimitive.content)
+        }
 
     @Test
     fun answersTheMcpHandshakeListAndCalls() =

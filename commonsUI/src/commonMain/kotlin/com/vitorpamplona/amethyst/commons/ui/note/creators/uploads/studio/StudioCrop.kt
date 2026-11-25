@@ -38,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.media_crop_free
@@ -86,12 +88,16 @@ internal fun StudioCropStage(
     item: SelectedMediaProcessing,
     aspect: CropAspect,
     enabled: Boolean,
+    /** Room the picture leaves free at the top of the stage, for a button drawn over it. */
+    topClearance: Dp = 0.dp,
 ) {
     val model = item.media.uri.toString()
+    // The editor already keeps 24 dp around the picture.
+    val stage = Modifier.fillMaxSize().padding(top = (topClearance - 24.dp).coerceAtLeast(0.dp))
     val imageAspect = item.displayAspectRatio
     if (imageAspect == null) {
         // Loads the picture once to learn its shape.
-        CroppedImage(model, null, null, ContentScale.Fit, Modifier.fillMaxSize().padding(24.dp), onAspect = { item.displayAspectRatio = it })
+        CroppedImage(model, null, null, ContentScale.Fit, stage.padding(24.dp), onAspect = { item.displayAspectRatio = it })
         return
     }
     // A shape picked before the picture's own was known takes effect now.
@@ -107,7 +113,7 @@ internal fun StudioCropStage(
         shape = shape,
         enabled = enabled,
         onCrop = { item.options = item.options.copy(crop = it.orNullIfWhole()) },
-        modifier = Modifier.fillMaxSize(),
+        modifier = stage,
     )
 }
 

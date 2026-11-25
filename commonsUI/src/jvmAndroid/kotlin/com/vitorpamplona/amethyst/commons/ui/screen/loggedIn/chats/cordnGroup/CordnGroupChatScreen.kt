@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnReactionOutbound
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -137,9 +138,12 @@ import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaCipher
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnCalendar
 import com.vitorpamplona.cordn.spec02Envelopes.CordnCallAnnouncement
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
+import com.vitorpamplona.cordn.spec02Envelopes.CordnPolls
 import com.vitorpamplona.cordn.spec02Envelopes.CordnStreamRows
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -529,7 +533,38 @@ private fun CordnGroupChat(
                                             }
                                         },
                                         onReact = { emoji ->
-                                            scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
+                                            // A custom emoji goes as `:name:` plus its `emoji` tag, as cordn-web reads it.
+                                            val reaction = CordnReactionOutbound.of(emoji, message.target())
+                                            scope.launch { trySend { it.send(room.gid, reaction.content, reaction.kind, reaction.tags) } }
+                                        },
+                                        onVote = { optionIds ->
+                                            // A vote is the whole selection, built by CordnPolls as cordn-web
+                                            // builds it, with the "Voted: …" text a client without polls shows.
+                                            val definition = CordnPolls.definition(message.envelope.kind, message.envelope.content, message.envelope.tags)
+                                            scope.launch {
+                                                trySend {
+                                                    it.send(
+                                                        gid = room.gid,
+                                                        content = CordnPolls.describe(definition, optionIds),
+                                                        kind = CordnMessageKinds.POLL_RESPONSE,
+                                                        tags = CordnPolls.voteTags(message.target(), optionIds),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        // Any member answers; the newest RSVP per account counts (calendar-events.md §7).
+                                        // A cancelled event offers no answer (CordnCalendarCard).
+                                        onRsvp = { status ->
+                                            scope.launch {
+                                                trySend {
+                                                    it.send(
+                                                        gid = room.gid,
+                                                        content = CordnCalendar.rsvpLabel(status),
+                                                        kind = CordnMessageKinds.CALENDAR_RSVP,
+                                                        tags = CordnCalendar.rsvpTags(message.envelope, status),
+                                                    )
+                                                }
+                                            }
                                         },
                                     )
                                 }
@@ -1138,7 +1173,11 @@ private suspend fun sendAttachment(
                 //
                 // The file's description (its alt text in the studio) is the message's own content, so an attachment with
                 // something written about it is one message rather than two.
-                room.add(session.manager.send(room.gid, content = (item.options.altOrNull ?: state.caption).trim(), tags = arrayOf(tag)))
+                //
+                // send, not post, carries the `imeta`, so the caption's mentions get their `p` tags here:
+                // a mention notifies through its `p`, never through the text alone (cordn-web).
+                val caption = (item.options.altOrNull ?: state.caption).trim()
+                room.add(session.manager.send(room.gid, content = caption, tags = CordnMessageReferences.withMentions(arrayOf(tag), caption)))
             } finally {
                 // Compressing and stripping each write a new file, and both hold the
                 // attachment in the clear. Leaving them in the cache would keep plaintext
@@ -1310,6 +1349,9 @@ fun VoiceNoteButton(
     }
 }
 
+/** The top of `MediaRecorder.maxAmplitude`, the scale [RecordingResult.amplitudes] is on. */
+private const val MAX_RECORDER_AMPLITUDE = 32767f
+
 /**
  * Sends a recording through exactly the same encrypted path as any other file.
  *
@@ -1345,14 +1387,17 @@ private suspend fun sendVoiceNote(
                     filename = recording.file.name,
                     // The recorder measured these while it was recording; the
                     // composer's own preview already draws them. Carrying them
-                    // is what makes the bubble match the preview.
-                    waveform = recording.amplitudes,
+                    // is what makes the bubble match the preview. cordn-web reads
+                    // peaks from 0 to 1, so the recorder's 0..32767 is scaled down.
+                    waveform = recording.amplitudes.map { (it / MAX_RECORDER_AMPLITUDE).coerceIn(0f, 1f) },
+                    durationMs = recording.duration * 1000L,
                 )
                 ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
         // Into the room as well, for the same reason every other send is: an
         // attachment of your own echoes back as an Echo and would otherwise be
         // invisible to the person who sent it.
-        room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
+        val text = caption.trim()
+        room.add(session.manager.send(room.gid, content = text, tags = CordnMessageReferences.withMentions(arrayOf(tag), text)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.toFile().delete() }
     }

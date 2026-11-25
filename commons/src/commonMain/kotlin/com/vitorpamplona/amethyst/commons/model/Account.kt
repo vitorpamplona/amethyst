@@ -67,11 +67,14 @@ import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotReceiveFlusher
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.AccountMarmotDevicesTransport
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotHistoryBlobs
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotImportedHistoryReads
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
@@ -535,6 +538,11 @@ class Account(
     val marmotLocalBlobs: DeviceGroupBlobs? = null,
     /** This device's platform for its device-group roster entry (`Android`, `Linux`, …); empty when unknown. */
     val marmotDevicePlatform: String = "",
+    /**
+     * Blossom for device-group history bundles too long to travel inline, over the app's HTTP
+     * routes; null on a front end without one. Built with the account, not with a screen.
+     */
+    marmotHistoryBlobs: ((Account) -> MarmotHistoryBlobs?)? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to
@@ -1322,8 +1330,27 @@ class Account(
             )
         }
 
+    /**
+     * Writes Marmot receive state after each burst of live events, which marmot-kmp otherwise writes
+     * only every 32 opened messages; [flushMarmotReceivedState] writes it at once.
+     */
+    val marmotReceiveFlusher: MarmotReceiveFlusher? =
+        marmotManager?.let { manager -> MarmotReceiveFlusher(scope, flush = { manager.flushReceivedState() }) }
+
+    /**
+     * Writes the receive state of every Marmot group whose ratchets moved since it was last written:
+     * call when the app goes to the background, before an account switch and on exit, so a restart
+     * neither opens those messages again nor finds their keys on disk.
+     */
+    suspend fun flushMarmotReceivedState() {
+        marmotReceiveFlusher?.flushNow()
+    }
+
     /** Pin, mute and archive of this account's Marmot chats, shared with its linked devices when device groups are on. */
     val marmotChatSettings = MarmotChatSettings(marmotLocalBlobs)
+
+    /** How far each chat's imported device-group history counts as read; applied on every start. */
+    val marmotImportedHistoryReads = MarmotImportedHistoryReads(marmotLocalBlobs)
 
     /**
      * Device groups for this account (linking its devices, the hidden device group, adding
@@ -1340,6 +1367,8 @@ class Account(
                 onSmallState = { state -> marmot.applyMarmotSmallState(state) },
                 onHistoryImported = { imports -> marmot.indexImportedMarmotHistory(imports) },
                 onChatsJoined = { chats -> marmot.onMarmotChatsJoinedBySibling(chats) },
+                importedReads = marmotImportedHistoryReads,
+                historyBlobs = marmotHistoryBlobs?.invoke(this),
             )
         }
 
@@ -4578,6 +4607,17 @@ class Account(
 
         nwcBackup.start()
 
+        // A Marmot chat muted here or on a linked device leaves nothing in the system shade. Every
+        // mute counts, not only the ones a look at the conflated settings state would tell apart:
+        // an unmute and a mute back to back, or a mute that ran out and was set again, may have
+        // let a notification through in between.
+        scope.launch(Dispatchers.IO) {
+            marmotChatSettings.newlyMuted.collect { id ->
+                runCatchingCancellable { marmotNotifier().clearGroupNotifications(id, this@Account) }
+                    .onFailure { Log.w("Account", "could not clear the notifications of a muted chat", it) }
+            }
+        }
+
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
             // Derived kind:1210 rows go straight into the conversation. Only
@@ -4657,6 +4697,10 @@ class Account(
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
                 scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
+
+                // Imported device-group history is read, even when the app died before showing it:
+                // its chats' last-read times move past it before any of it is indexed.
+                marmotImportedHistoryReads.load().forEach { (groupId, upTo) -> marmot.markMarmotChatReadUpTo(groupId, upTo) }
 
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.

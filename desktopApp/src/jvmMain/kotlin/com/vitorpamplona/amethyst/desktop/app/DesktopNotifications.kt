@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
 import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
@@ -48,8 +49,10 @@ import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotific
 import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_asks
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_publish
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_open
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
@@ -152,7 +155,9 @@ class DesktopNotifications(
                     loadStringRes(
                         when (event.kind) {
                             ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
+                            ChatAttention.Kind.ASKS -> Res.string.claude_code_notify_asks
                             ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
+                            ChatAttention.Kind.REQUESTS_PUBLISH -> Res.string.claude_code_notify_publish
                         },
                         event.agent,
                     )
@@ -189,7 +194,9 @@ class DesktopNotifications(
          */
         internal fun notifiesAbout(account: Account): (Note) -> Boolean {
             val feedFilter = NotificationFeedFilter(account)
-            return { note -> account.isAcceptable(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
+            // A Marmot message its chat already read (history a linked device delivered is read on
+            // import) stays in Notifications but raises no toast.
+            return { note -> account.isAcceptable(note) && !account.isReadMarmotMessage(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
         }
     }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.claudecode.process
 import com.vitorpamplona.agents.AgentConnection
 import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentInfo
+import com.vitorpamplona.agents.CommandGuard
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.agents.LineTransport
@@ -34,6 +35,7 @@ import com.vitorpamplona.claudecode.protocol.ClaudeEvents
 import com.vitorpamplona.claudecode.protocol.ClaudeInfo
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.ClaudeQuestions
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -59,8 +62,8 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * Everything the CLI writes comes out of [messages], in order, including the permission prompts
  * ([ClaudeMessage.ControlRequest] with a [ClaudeMessage.ControlRequest.permission]) the host
- * answers with [respond]. Control requests this client doesn't handle (hooks, SDK MCP servers,
- * dialogs) are refused at once, so the CLI never waits on an answer that won't come.
+ * answers with [respond]. Control requests this client doesn't handle (other hooks, dialogs) are
+ * refused at once, so the CLI never waits on an answer that won't come.
  *
  * The process takes any number of turns: [send] a prompt, read until a
  * [ClaudeMessage.Result], send the next. [close] ends it.
@@ -70,11 +73,18 @@ class ClaudeCodeConnection(
     private val scope: CoroutineScope,
     /** Tools the host runs itself, which the CLI reaches over this pipe (see [HostToolServer]). */
     private val mcpServers: List<HostToolServer> = emptyList(),
+    /** Asked about every Bash command before it runs, as a PreToolUse hook: it holds in every permission mode. */
+    private val commandGuard: CommandGuard? = null,
 ) : AgentConnection {
     private val output = Channel<ClaudeMessage>(Channel.UNLIMITED)
     private val pending = ConcurrentHashMap<String, CompletableDeferred<ClaudeMessage.ControlResponse>>()
     private val openPrompts = ConcurrentHashMap<String, PermissionRequest>()
     private val ids = AtomicLong()
+
+    /** What the CLI said it supports in its last `init` (`capabilities`). */
+    @Volatile
+    var capabilities: Set<String> = emptySet()
+        private set
 
     /** Every message, once. Collect it, or [events], from one place. */
     val messages: Flow<ClaudeMessage> = output.receiveAsFlow()
@@ -105,6 +115,7 @@ class ClaudeCodeConnection(
 
     private suspend fun handle(message: ClaudeMessage) {
         when (message) {
+            is ClaudeMessage.Init -> capabilities = message.capabilities.toSet()
             is ClaudeMessage.ControlResponse -> pending.remove(message.requestId)?.complete(message)
             is ClaudeMessage.ControlCancel -> openPrompts.remove(message.requestId)
             is ClaudeMessage.ControlRequest -> {
@@ -114,6 +125,8 @@ class ClaudeCodeConnection(
                 } else if (message.subtype == "mcp_message") {
                     // A tool can take a while: the stream keeps flowing meanwhile.
                     scope.launch { answerMcp(message) }
+                } else if (message.subtype == "hook_callback" && commandGuard != null && message.request.text("callback_id") == GUARD_HOOK_ID) {
+                    writeQuietly(ClaudeInput.controlSuccess(message.requestId, guardAnswer(commandGuard, message.request)))
                 } else {
                     writeQuietly(ClaudeInput.controlError(message.requestId, "Not supported by this client: ${message.subtype}"))
                 }
@@ -145,11 +158,17 @@ class ClaudeCodeConnection(
     /** The permission prompts still waiting on an answer. */
     fun openPermissionRequests(): List<PermissionRequest> = openPrompts.values.toList()
 
-    /** Sends the handshake; the CLI answers with its commands, models and pending prompts. */
+    /**
+     * Sends the handshake, with the host's tool servers and its command guard's hook; the CLI
+     * answers with its commands, models and pending prompts.
+     */
     suspend fun initialize(): ClaudeMessage.ControlResponse? =
         request(
             "initialize",
-            if (mcpServers.isEmpty()) emptyMap() else mapOf("sdkMcpServers" to SdkMcpDispatcher.names(mcpServers)),
+            buildMap {
+                if (mcpServers.isNotEmpty()) put("sdkMcpServers", SdkMcpDispatcher.names(mcpServers))
+                if (commandGuard != null) put("hooks", GUARD_HOOKS)
+            },
         ).also { answer -> if (answer?.isSuccess == true) info = ClaudeInfo.parse(answer.response) }
 
     /** The commands and models the CLI offered when it started, once [initialize] answered. */
@@ -169,7 +188,7 @@ class ClaudeCodeConnection(
         decision: PermissionDecision,
     ) {
         openPrompts.remove(request.requestId)
-        write(ClaudeInput.permissionResponse(request, decision))
+        write(ClaudeInput.permissionResponse(request, decision, unansweredNotes = ClaudeQuestions.UNANSWERED_CAPABILITY in capabilities))
     }
 
     /** Stops the running turn. */
@@ -235,4 +254,58 @@ class ClaudeCodeConnection(
     override fun kill() = transport.kill()
 
     override fun stderrTail(): String = transport.stderrTail()
+
+    companion object {
+        const val GUARD_HOOK_ID = "amethyst-command-guard"
+
+        /**
+         * A PreToolUse hook on Bash that the CLI asks the host about. A failed or unanswered
+         * callback blocks the command (`onFailure`), so a guard that can't answer never lets one through.
+         */
+        private val GUARD_HOOKS =
+            buildJsonObject {
+                put(
+                    "PreToolUse",
+                    JsonArray(
+                        listOf(
+                            buildJsonObject {
+                                put("matcher", "Bash")
+                                put("hookCallbackIds", JsonArray(listOf(JsonPrimitive(GUARD_HOOK_ID))))
+                                put("onFailure", "block")
+                            },
+                        ),
+                    ),
+                )
+            }
+
+        /**
+         * The hook's answer for the command in [request]: a deny with the guard's reason, or nothing
+         * to add. A guard that fails denies: it runs on the reader, which must not die with it.
+         */
+        internal fun guardAnswer(
+            guard: CommandGuard,
+            request: JsonObject,
+        ): JsonObject {
+            val toolInput = (request["input"] as? JsonObject)?.get("tool_input") as? JsonObject
+            val command = toolInput?.text("command") ?: return JsonObject(emptyMap())
+            val reason =
+                try {
+                    guard.refusal(command)
+                } catch (e: Exception) {
+                    "The app could not check this command (${e.message ?: e::class.simpleName}), so it doesn't run."
+                } ?: return JsonObject(emptyMap())
+            return buildJsonObject {
+                put(
+                    "hookSpecificOutput",
+                    buildJsonObject {
+                        put("hookEventName", "PreToolUse")
+                        put("permissionDecision", "deny")
+                        put("permissionDecisionReason", reason)
+                    },
+                )
+            }
+        }
+
+        private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    }
 }

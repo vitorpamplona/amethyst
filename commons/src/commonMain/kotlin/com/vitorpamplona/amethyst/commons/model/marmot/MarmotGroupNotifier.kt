@@ -49,6 +49,15 @@ interface MarmotGroupNotifier {
         account: Account,
     )
 
+    /**
+     * The user muted [nostrGroupId] (here or on a linked device): take down the system notifications
+     * already shown for its messages, so a muted chat leaves nothing in the shade.
+     */
+    suspend fun clearGroupNotifications(
+        nostrGroupId: String,
+        account: Account,
+    ) = Unit
+
     companion object {
         /**
          * True when [innerEvent] is chat a member should hear about: a kind 9 message or a

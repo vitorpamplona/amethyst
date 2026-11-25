@@ -25,7 +25,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,13 +77,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -101,10 +107,10 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_suggested
 import com.vitorpamplona.amethyst.commons.resources.media_studio_caption_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_compare_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_gif_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_h265
 import com.vitorpamplona.amethyst.commons.resources.media_studio_h265_description
-import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
 import com.vitorpamplona.amethyst.commons.resources.media_studio_long_edge
 import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
 import com.vitorpamplona.amethyst.commons.resources.media_studio_position
@@ -155,7 +161,7 @@ import kotlin.math.min
  * ([SelectedMediaProcessing.options]) and is made on a picture of that file:
  *
  * - The preview is the upload: a still image is shown compressed exactly as it will be sent, zoomable
- *   (pinch, double-tap, mouse wheel), and "Hold for original" flips to the source in place.
+ *   (pinch, double-tap, mouse wheel), and pressing and holding the picture flips to the source in place.
  * - Quality lists the platform's levels with the size and long edge each one produces.
  * - Alt text is per file, with the on-device suggestion when the platform has one.
  * - Privacy: the content warning and the metadata strip.
@@ -330,7 +336,6 @@ fun MediaStudio(
                 isUploading = isUploading,
                 confirmLabel = confirmLabel,
                 onCancel = onCancel.takeIf { canCancel },
-                onRemove = { onRemove(current) },
                 onAdd = { onAdd(server) },
             )
 
@@ -348,12 +353,20 @@ fun MediaStudio(
                     }
                 }
                 if (canTrim) rememberVideoDuration(current, uploader)
+                // One file and a Cancel in the corner: removing it is the same as cancelling, so
+                // only a batch (or a reopened file, which has no Cancel) gets its own remove.
+                val removable = items.size > 1 || !canCancel
                 if (tool == StudioTool.TRIM) {
                     StudioTrimStage(current, uploader, trimSession)
                 } else if (tool == StudioTool.CROP) {
-                    StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading)
+                    // The frame's top corners would sit under the remove button: the picture starts below it.
+                    StudioCropStage(current, cropAspects[current] ?: CropAspect.FREE, enabled = !isUploading, topClearance = if (removable) REMOVE_BUTTON_BOTTOM else 0.dp)
                 } else {
-                    StudioPreview(current, previews, cropped, uploader, holdingOriginal)
+                    StudioPreview(current, previews, cropped, uploader, holdingOriginal, badgeEndInset = if (removable) REMOVE_BUTTON_INSET else 0.dp)
+                }
+                if (removable) {
+                    // The touch target overhangs the circle, so it sits closer to the corner than the badges.
+                    RemoveFileButton(enabled = !isUploading, onClick = { onRemove(current) }, modifier = Modifier.align(Alignment.TopEnd).padding(STAGE_OVERLAY_PADDING - REMOVE_BUTTON_OVERHANG))
                 }
                 UploadOverlay(current)
             }
@@ -434,7 +447,6 @@ private fun StudioTopBar(
     isUploading: Boolean,
     confirmLabel: StringResource,
     onCancel: (() -> Unit)?,
-    onRemove: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -451,9 +463,6 @@ private fun StudioTopBar(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        IconButton(onClick = onRemove, enabled = !isUploading) {
-            Icon(MaterialSymbols.Delete, contentDescription = stringRes(Res.string.remove))
-        }
         // No spinner here while it uploads: the stage shows each file's progress and what it is doing.
         Button(onClick = onAdd, enabled = !isUploading, modifier = Modifier.padding(end = 8.dp).height(36.dp)) {
             Text(stringRes(confirmLabel))
@@ -522,18 +531,20 @@ private fun StudioPreview(
     cropped: CroppedSources,
     uploader: MediaUploader,
     forceOriginal: Boolean,
+    /** Room kept clear at the top right for the stage's remove button. */
+    badgeEndInset: Dp,
 ) {
     val media = item.media
     when {
         media.isImage() == true && media.isCompressible() -> {
             val source = cropped.sourceFor(item)
             if (source != null) {
-                CompressedImagePreview(item, source, previews, forceOriginal)
+                CompressedImagePreview(item, source, previews, forceOriginal, badgeEndInset)
             } else {
                 // The crop's copy is being written: show the part it will hold meanwhile.
                 Box(Modifier.fillMaxSize()) {
                     CroppedImage(media.uri.toString(), item.options.crop, item.displayAspectRatio, ContentScale.Fit, Modifier.fillMaxSize())
-                    WorkingBadge(Modifier.align(Alignment.TopEnd).padding(12.dp))
+                    WorkingBadge(Modifier.align(Alignment.TopEnd).padding(top = STAGE_OVERLAY_PADDING, end = STAGE_OVERLAY_PADDING + badgeEndInset))
                 }
             }
         }
@@ -568,6 +579,7 @@ private fun CompressedImagePreview(
     media: SelectedMedia,
     previews: CompressionPreviews,
     forceOriginal: Boolean,
+    badgeEndInset: Dp,
 ) {
     val quality = item.options.quality
     val compresses = quality.imageMaxDimension != null
@@ -577,6 +589,7 @@ private fun CompressedImagePreview(
     var holding by remember(item) { mutableStateOf(false) }
     val showOriginal = holding || forceOriginal || preview == null
     val zoomState = rememberZoomState()
+    val compareLabel = stringRes(Res.string.media_studio_compare_original)
 
     // Pan limits follow the picture, not the letterboxed screen around it.
     LaunchedEffect(original) {
@@ -592,7 +605,23 @@ private fun CompressedImagePreview(
             showOriginal = showOriginal,
             fullResolution = true,
             originalLongEdge = original?.longEdge(),
-            modifier = Modifier.fillMaxSize().zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+            // Outside zoomable, so the hold sees the press before zoomable's pan and pinch do.
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (preview != null) {
+                            // A screen reader can't hold a finger on the picture: its long-press action flips instead.
+                            Modifier.holdToShowOriginal { holding = it }.semantics {
+                                onLongClick(compareLabel) {
+                                    holding = !holding
+                                    true
+                                }
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
         )
 
         val stats = if (showOriginal) original else preview.compressed
@@ -604,18 +633,11 @@ private fun CompressedImagePreview(
                     if (stats.width != null && stats.height != null) "${stats.width}×${stats.height}" else null,
                     stats.bytes?.let { formatFileSize(it) },
                 )
-            MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
+            // Vertically centred on the remove button's row, which sits at the same top padding.
+            MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(start = STAGE_OVERLAY_PADDING, top = STAGE_PILL_TOP))
         }
 
-        if (loading) WorkingBadge(Modifier.align(Alignment.TopEnd).padding(12.dp))
-
-        if (preview != null) {
-            HoldForOriginal(
-                active = showOriginal,
-                onHold = { holding = it },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            )
-        }
+        if (loading) WorkingBadge(Modifier.align(Alignment.TopEnd).padding(top = STAGE_OVERLAY_PADDING, end = STAGE_OVERLAY_PADDING + badgeEndInset))
     }
 }
 
@@ -632,30 +654,73 @@ private fun WorkingBadge(modifier: Modifier) {
     }
 }
 
-@Composable
-private fun HoldForOriginal(
-    active: Boolean,
-    onHold: (Boolean) -> Unit,
-    modifier: Modifier,
-) {
-    Row(
-        modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (active) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.6f))
-            .pointerInput(Unit) {
-                detectTapGestures(onPress = {
-                    onHold(true)
-                    tryAwaitRelease()
-                    onHold(false)
-                })
-            }.padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(MaterialSymbols.Visibility, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringRes(Res.string.media_studio_hold_original), color = Color.White, fontSize = 12.sp)
+/** Waits until the press at [down] ends, moves past the touch slop or gains a finger; never returns otherwise. */
+private suspend fun AwaitPointerEventScope.awaitReleaseOrMove(down: PointerInputChange) {
+    while (true) {
+        val changes = awaitPointerEvent(PointerEventPass.Initial).changes
+        if (changes.count { it.pressed } != 1) return
+        val finger = changes.first { it.pressed }
+        if ((finger.position - down.position).getDistance() > viewConfiguration.touchSlop) return
     }
 }
+
+internal val STAGE_OVERLAY_PADDING = 12.dp
+private val REMOVE_BUTTON_SIZE = 32.dp
+
+/** A pill's top on the stage (a 22 dp line), centred on the remove button's circle. */
+internal val STAGE_PILL_TOP = STAGE_OVERLAY_PADDING + 5.dp
+
+/** Where the remove button's circle ends, from the stage's top. */
+private val REMOVE_BUTTON_BOTTOM = STAGE_OVERLAY_PADDING + REMOVE_BUTTON_SIZE
+
+/** How far the remove button's 48 dp touch target reaches past its circle on each side. */
+private val REMOVE_BUTTON_OVERHANG = (48.dp - REMOVE_BUTTON_SIZE) / 2
+
+/** What a badge at the stage's top right moves left by to clear the remove button. */
+private val REMOVE_BUTTON_INSET = REMOVE_BUTTON_SIZE + 8.dp
+
+/** Removes the file on the stage from the batch: a round button in the stage's top-right corner. */
+@Composable
+private fun RemoveFileButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
+    Box(
+        modifier
+            .size(REMOVE_BUTTON_SIZE + REMOVE_BUTTON_OVERHANG * 2)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(REMOVE_BUTTON_SIZE).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove), tint = Color.White, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/**
+ * Reports true while one finger (or the mouse) is held still on the picture past the long-press
+ * timeout, and false when it lets go. A drag or a second finger before then is a pan or a pinch, and
+ * is left to zoomable: nothing here consumes an event.
+ */
+private fun Modifier.holdToShowOriginal(onHold: (Boolean) -> Unit): Modifier =
+    pointerInput(onHold) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            // Null when the timeout ran out first: the press is a hold.
+            val endedEarly = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { awaitReleaseOrMove(down) }
+            if (endedEarly != null) return@awaitEachGesture
+            onHold(true)
+            try {
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
+            } finally {
+                onHold(false)
+            }
+        }
+    }
 
 @Composable
 private fun VideoPreview(

@@ -10224,7 +10224,6 @@
     <string name="claude_code_fork_hint">Копия сессии. Ваше первое сообщение запустит её как отдельную сессию; оригинал останется как есть.</string>
     <string name="claude_code_notify_needs_you">%1$s ждёт вашего одобрения</string>
     <string name="claude_code_notify_finished">%1$s закончил</string>
-    <string name="claude_code_section_needs_you">Ждут вас</string>
     <plurals name="claude_code_section_archived">
         <item quantity="one">Архив · %1$d сессия</item>
         <item quantity="few">Архив · %1$d сессии</item>
@@ -10351,7 +10350,6 @@
     <string name="claude_code_mode_short_plan">План</string>
     <string name="claude_code_mode_short_auto">Авто</string>
     <string name="claude_code_propose_description_hint">Что меняется, зачем и как вы это проверили</string>
-    <string name="claude_code_settings_assistant">Ассистент настроек</string>
     <string name="claude_code_context_used_little">меньше 1% контекста</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">настройки просмотрены %1$d раз</item>
@@ -10359,8 +10357,6 @@
         <item quantity="many">настройки просмотрены %1$d раз</item>
         <item quantity="other">настройки просмотрены %1$d раза</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Спросите, что делает настройка или что изменить, чтобы получить нужное. Claude видит только настройки Amethyst, и каждое изменение ждёт вашего одобрения. Ключи, кошельки, relay и платежи ему недоступны.</string>
-    <string name="claude_code_settings_assistant_card">Не можете что-то найти? Спросите ассистента настроек.</string>
     <string name="claude_code_settings_assistant_ask">Спросить ассистента о «%1$s»</string>
     <string name="claude_code_permission_setting">Claude хочет изменить настройку</string>
     <string name="claude_code_settings_starter_data">Почему Amethyst расходует так много мобильного трафика?</string>
@@ -10536,27 +10532,6 @@
     <string name="front_page_weather_celsius">°C</string>
     <string name="front_page_weather_fahrenheit">°F</string>
     <string name="front_page_weather_turn_off">Выключить</string>
-    <string name="front_page_weather_high">макс.</string>
-    <string name="front_page_weather_low">мин.</string>
-    <string name="front_page_weather_rain">дождь</string>
-    <string name="front_page_weather_sun">солнце</string>
-    <string name="front_page_weather_clear">Ясно</string>
-    <string name="front_page_weather_mainly_clear">Преимущественно ясно</string>
-    <string name="front_page_weather_partly_cloudy">Переменная облачность</string>
-    <string name="front_page_weather_overcast">Пасмурно</string>
-    <string name="front_page_weather_fog">Туман</string>
-    <string name="front_page_weather_drizzle">Морось</string>
-    <string name="front_page_weather_freezing_drizzle">Ледяная морось</string>
-    <string name="front_page_weather_rain_falling">Дождь</string>
-    <string name="front_page_weather_heavy_rain">Сильный дождь</string>
-    <string name="front_page_weather_freezing_rain">Ледяной дождь</string>
-    <string name="front_page_weather_snow">Снег</string>
-    <string name="front_page_weather_heavy_snow">Сильный снег</string>
-    <string name="front_page_weather_showers">Ливни</string>
-    <string name="front_page_weather_violent_showers">Сильные ливни</string>
-    <string name="front_page_weather_snow_showers">Снегопады</string>
-    <string name="front_page_weather_thunderstorm">Грозы</string>
-    <string name="front_page_weather_thunderstorm_hail">Грозы с градом</string>
     <string name="front_page_weather_private">Показывается только в ваших приложениях, никогда в публичном Observer. Все устройства этого аккаунта используют одно место. Прогноз от Open-Meteo.com.</string>
     <string name="front_page_unknown_params">В расписании есть настройки, неизвестные этому приложению (%1$s), поэтому здесь оно не будет печатать по расписанию.</string>
     <string name="front_page_schedule_unreadable">Расписание сохранено приложением, которое эта версия не может прочитать</string>
@@ -10877,7 +10852,6 @@
     <string name="nip_catalog_empty">Нет NIP, подходящих под запрос.</string>
     <string name="media_studio_add">Добавить</string>
     <string name="media_studio_position">%1$d из %2$d</string>
-    <string name="media_studio_hold_original">Удерживайте для оригинала</string>
     <string name="media_studio_tool_quality">Качество</string>
     <string name="media_studio_tool_alt">Альт-текст</string>
     <string name="media_studio_tool_privacy">Приватность</string>

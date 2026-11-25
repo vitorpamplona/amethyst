@@ -1279,10 +1279,13 @@ sealed class Route {
     /**
      * Linking a device with the seven-emoji comparison. [asNewDevice]: this device joins the
      * account's others; otherwise it approves a new one, the request [sessionId] or the next to come.
+     * [move]: this device is linked already and joins another group of the account's devices,
+     * leaving its own once the move is made.
      */
     @Serializable data class MarmotDeviceLink(
         val asNewDevice: Boolean,
         val sessionId: String? = null,
+        val move: Boolean = false,
     ) : Route()
 
     @Serializable data class NewGroupDM(

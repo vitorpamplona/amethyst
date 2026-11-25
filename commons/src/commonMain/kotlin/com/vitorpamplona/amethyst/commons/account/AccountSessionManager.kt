@@ -492,16 +492,19 @@ class AccountSessionManager(
     /**
      * The sign-up screen's new account: a fresh key with the default relays and lists, opened on the
      * follow import and published to the relays. [transientAccount] keeps its key and settings off
-     * this device (a desktop test run that must not stop at a key prompt).
+     * this device (a desktop test run that must not stop at a key prompt). [relays], when given,
+     * replace the default relays in every list the account starts with, so a test run that must stay
+     * on its own relays never names or publishes to a public one.
      */
     suspend fun signUp(
         name: String? = null,
         transientAccount: Boolean = false,
+        relays: Set<NormalizedRelayUrl>? = null,
     ): AccountSettings =
         withContext(Dispatchers.IO) {
             _accountContent.update { AccountState.Loading }
 
-            val accountSettings = createNewAccount(name, transientAccount)
+            val accountSettings = createNewAccount(name, transientAccount, relays)
 
             localPreferences.setDefaultAccount(accountSettings)
 
@@ -539,12 +542,14 @@ class AccountSessionManager(
     fun createNewAccount(
         name: String? = null,
         transientAccount: Boolean = false,
+        relays: Set<NormalizedRelayUrl>? = null,
     ): AccountSettings {
         val keyPair = KeyPair()
         val bootstrap =
             bootstrapAccountEvents(
                 signer = NostrSignerSync(keyPair),
                 name = name,
+                relays = relays,
             )
         return AccountSettings(
             keyPair = keyPair,
@@ -589,6 +594,8 @@ class AccountSessionManager(
         // Whatever the previous user had running (an audio room, a call) belongs to them, so it ends
         // before the swap. This is the real "account switch" hook; the Activity being destroyed is not.
         hooks.onSessionEnding()
+        // The account being left keeps its Marmot receive state on disk, not only in memory.
+        loggedInAccount()?.flushMarmotReceivedState()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
     }

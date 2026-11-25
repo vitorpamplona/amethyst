@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
@@ -390,6 +391,13 @@ class ClaudeCodeChatViewModel(
     ) = chat?.approve(request, always)
 
     fun deny(request: PermissionRequest) = chat?.deny(request)
+
+    fun answerQuestions(
+        request: PermissionRequest,
+        answers: PermissionDecision.Answer,
+    ) = chat?.answerQuestions(request, answers)
+
+    fun dismissQuestions(request: PermissionRequest) = chat?.dismissQuestions(request)
 
     fun interrupt() = chat?.interrupt()
 
