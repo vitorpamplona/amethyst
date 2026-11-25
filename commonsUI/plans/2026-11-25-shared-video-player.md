@@ -50,6 +50,24 @@ The Android adapter forwards each member to the media3 `Player`, so moved code k
 - PiP, Cast/AirPlay, saving a file, fullscreen brightness/volume swipe (system APIs);
 - keep-screen-on; background/"keep playing" media.
 
+### As built (step 1)
+
+`AmethystPlayer` gained what the moved code needed: `isPlaybackSuppressed`, `canSetPlaybackSpeed`,
+`hasVideoTrack` / `hasAudioTrack`, `captionsEnabled` (media3's text-type switch, apart from the
+track pick), `cues`, and the listener callbacks `onPlayWhenReadyChanged`,
+`onPlaybackSuppressionChanged`, `onTimelineChanged`; `VideoTrack` carries `mimeType`/`frameRate`
+and `PlayerFailure` a `diagnostic` line for the logs. `player/PlayerStates.kt` ports media3-ui-compose's
+play/pause, progress and speed state holders onto it.
+
+`PlaybackPlatform` (`LocalPlaybackPlatform`, installed by Android's `AmethystTheme` and by
+`PipVideoActivity`): `GetVideoController`, `VideoSurface` (`INLINE` / `FULLSCREEN` / `AUDIO_STRIP`),
+`KeepScreenOnWhilePlaying`, `rememberVisibleRootBounds`, `canPictureInPicture` /
+`isPictureInPictureAllowed` / `rememberEnterPictureInPicture`, `canPlayExternally` /
+`isPlayingExternally` / `rememberExternalPlayback`, `canSaveMedia` / `rememberSaveMediaAction`,
+`canShareMedia` / `ShareMediaAction`, `rememberDeviceLevels`, `rememberAudioSpectrum`.
+Android: `service/playback/player/Media3Player.kt` and `AndroidPlaybackPlatform.kt`. The PiP
+window itself (`pip/`), `TrimPreviewPlayer`, the pool and `MediaItemCache` stay Android-only.
+
 ## Feature checklist (Android parity on iOS)
 
 - [ ] autoplay rules (always / Wi-Fi / never, tap-to-load card with size), share-as-image still
