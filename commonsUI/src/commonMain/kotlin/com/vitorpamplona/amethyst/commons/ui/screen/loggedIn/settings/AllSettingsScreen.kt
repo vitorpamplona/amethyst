@@ -59,6 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
 import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -140,6 +142,11 @@ fun AllSettingsScreen(
     // filterSettings itself Compose-free and unit-testable.
     // The settings assistant runs the user's own Claude Code: only where that exists (desktop).
     val hasAssistant = remember(destinations) { destinations?.has(Route.ClaudeCodeSettingsAssistant()) == true }
+    // The assistant answers in its dock panel, beside these settings, where the platform has one.
+    val dock = LocalDockController.current
+    val askAssistant: (String?) -> Unit = { text ->
+        if (dock != null && dock.has(PanelId.ASSISTANT)) dock.ask(PanelId.ASSISTANT, text) else nav.nav(Route.ClaudeCodeSettingsAssistant(text))
+    }
 
     val labels = rememberCatalogLabels(catalog)
     val filtered =
@@ -174,7 +181,7 @@ fun AllSettingsScreen(
             if (filtered.isEmpty()) {
                 SettingsSearchEmptyState(
                     query = query,
-                    onAskAssistant = if (hasAssistant) ({ nav.nav(Route.ClaudeCodeSettingsAssistant(query)) }) else null,
+                    onAskAssistant = if (hasAssistant) ({ askAssistant(query) }) else null,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -187,7 +194,7 @@ fun AllSettingsScreen(
                             .padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
-                    if (hasAssistant && query.isBlank()) SettingsAssistantCard { nav.nav(Route.ClaudeCodeSettingsAssistant()) }
+                    if (hasAssistant && query.isBlank()) SettingsAssistantCard { askAssistant(null) }
                     filtered.forEach { category -> SettingsCategoryCard(category) }
                 }
             }

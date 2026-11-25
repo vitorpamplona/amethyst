@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dock_pin_screen
 import com.vitorpamplona.amethyst.commons.resources.navigation_close_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_new_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_reopen_closed
@@ -118,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.navigation_tab_search
 import com.vitorpamplona.amethyst.commons.resources.navigation_tab_to_window
 import com.vitorpamplona.amethyst.commons.resources.navigation_tab_unpin
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndDrawInnerUserPicture
@@ -419,6 +421,7 @@ private fun TabMenu(
     val canMoveToWindow = NavigationLayoutType.WINDOWS in LocalAppPlatform.current.navigationLayouts
     val link = remember(entry.route) { routeLink(entry.route) }
     val opened = stacks.openedBy(entry.id)
+    val dock = LocalDockController.current
 
     // Material's DropdownMenu would open at the tab's corner and keep 48dp off the window's top
     // edge, which the strip sits on: a long way from the cursor. This opens at the cursor itself.
@@ -434,6 +437,9 @@ private fun TabMenu(
             }
             if (canMoveToWindow) {
                 MenuItem(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.navigation_tab_to_window), onDismiss) { stacks.setDetached(entry.id, true) }
+            }
+            if (dock != null) {
+                MenuItem(MaterialSymbols.ViewColumn, stringRes(Res.string.dock_pin_screen), onDismiss) { dock.pinScreen(entry.route) }
             }
             HorizontalDivider()
             MenuItem(MaterialSymbols.Close, stringRes(Res.string.navigation_close_tab), onDismiss) { stacks.close(entry.id) }

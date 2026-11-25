@@ -50,7 +50,6 @@ import kotlin.coroutines.cancellation.CancellationException
 @Immutable
 data class PaneWidths(
     val drawer: Float? = null,
-    val notifications: Float? = null,
     val chatList: Float? = null,
     val changesPanel: Float? = null,
 )
@@ -80,8 +79,6 @@ class PaneWidthPreferences(
 
     fun setDrawer(width: Float) = widths.update { it.copy(drawer = width) }
 
-    fun setNotifications(width: Float) = widths.update { it.copy(notifications = width) }
-
     fun setChatList(width: Float) = widths.update { it.copy(chatList = width) }
 
     fun setChangesPanel(width: Float) = widths.update { it.copy(changesPanel = width) }
@@ -89,7 +86,7 @@ class PaneWidthPreferences(
     private suspend fun restoreFromDisk() {
         try {
             val prefs = store.data.first()
-            widths.value = PaneWidths(prefs[DRAWER], prefs[NOTIFICATIONS], prefs[CHAT_LIST], prefs[CHANGES_PANEL])
+            widths.value = PaneWidths(prefs[DRAWER], prefs[CHAT_LIST], prefs[CHANGES_PANEL])
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("PaneWidthPrefs") { "Error reading pane widths: ${e.message}" }
@@ -100,7 +97,6 @@ class PaneWidthPreferences(
         try {
             store.edit { prefs ->
                 prefs.putOrRemove(DRAWER, value.drawer)
-                prefs.putOrRemove(NOTIFICATIONS, value.notifications)
                 prefs.putOrRemove(CHAT_LIST, value.chatList)
                 prefs.putOrRemove(CHANGES_PANEL, value.changesPanel)
             }
@@ -120,7 +116,6 @@ class PaneWidthPreferences(
     companion object {
         const val SAVE_DELAY_MS = 400L
         private val DRAWER = floatPreferencesKey("ui.panes.drawerWidth")
-        private val NOTIFICATIONS = floatPreferencesKey("ui.panes.notificationsWidth")
         private val CHAT_LIST = floatPreferencesKey("ui.panes.chatListWidth")
         private val CHANGES_PANEL = floatPreferencesKey("ui.panes.changesPanelWidth")
     }

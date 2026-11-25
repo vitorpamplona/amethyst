@@ -29,11 +29,11 @@ import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
+import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -100,7 +100,7 @@ object AndroidAppServices : AppServices {
 
     override val paneWidthPrefs: PaneWidthPreferences get() = Amethyst.instance.paneWidthPrefs
 
-    override val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences get() = Amethyst.instance.notificationPanelCollapsePrefs
+    override val dockLayoutPrefs: DockLayoutPreferences get() = Amethyst.instance.dockLayoutPrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = Amethyst.instance.scheduledPostStore
 

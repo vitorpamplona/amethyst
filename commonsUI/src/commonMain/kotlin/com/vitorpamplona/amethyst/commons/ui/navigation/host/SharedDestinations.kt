@@ -495,7 +495,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.RoutstrSetup> { RoutstrSetupScreen(it, accountViewModel, nav) }
-    // The paper's own HTML sets its measure: the screen gets the whole pane (see PanelFreeRoutes).
+    // The paper's own HTML sets its measure: the screen gets the whole pane (see FullWidthRoutes).
     composableFromEndArgs<Route.FrontPage>(capWidth = false) { FrontPageScreen(accountViewModel, nav, it.day) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }

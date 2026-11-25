@@ -437,6 +437,13 @@ class ClaudeCodeChatViewModel(
     /** The text a chat opened to ask a message again starts with, once. */
     fun takeDraft(): String? = chat?.draft?.also { chat.draft = null }
 
+    /** The message typed and not sent yet, wherever this chat was last drawn. */
+    var unsent: String
+        get() = chat?.unsent.orEmpty()
+        set(value) {
+            chat?.unsent = value
+        }
+
     /** Opens a copy of this session to go on with, while another Claude Code holds this one. */
     fun fork(onReady: (String) -> Unit) {
         val key = chat?.key ?: return

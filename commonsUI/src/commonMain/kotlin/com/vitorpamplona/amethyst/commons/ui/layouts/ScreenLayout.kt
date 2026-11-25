@@ -109,8 +109,8 @@ val PermanentDrawerWidth = 300.dp
 
 val NotificationPanelWidth = 360.dp
 
-/** The folded notification panel's strip: just the badged bell, no feed. */
-val NotificationPanelCollapsedWidth = 48.dp
+/** The dock's strip at the window's right edge: one icon per panel, as an IDE's tool window bar. */
+val DockStripWidth = 40.dp
 
 /** How far the user can drag the docked drawer, in dp. */
 val DrawerWidthRange = 220f..480f
@@ -145,19 +145,59 @@ fun fitPaneWidths(
     showNotifications: Boolean,
     notificationStripWidth: Float = 0f,
 ): FittedPaneWidths {
-    var drawerWidth = if (showDrawer) (drawer ?: PermanentDrawerWidth.value).coerceIn(DrawerWidthRange) else 0f
-    var panelWidth = if (showNotifications) (notifications ?: NotificationPanelWidth.value).coerceIn(NotificationPanelWidthRange) else 0f
+    // The panel gives up its room first, then the drawer; neither folds away.
+    val panes =
+        listOf(
+            PaneFit(notifications, NotificationPanelWidth.value, NotificationPanelWidthRange, droppable = false, shown = showNotifications),
+            PaneFit(drawer, PermanentDrawerWidth.value, DrawerWidthRange, droppable = false, shown = showDrawer),
+        )
+    val (panel, drawerWidth) = fitPanes(windowWidth, panes, reserved = notificationStripWidth)
+    return FittedPaneWidths(drawerWidth, panel)
+}
 
-    var excess = drawerWidth + panelWidth + notificationStripWidth + MIN_CENTER_PANE_DP - windowWidth
-    if (excess > 0 && showNotifications) {
-        val narrowed = maxOf(NotificationPanelWidthRange.start, panelWidth - excess)
-        excess -= panelWidth - narrowed
-        panelWidth = narrowed
+/**
+ * A side pane to fit beside the centre: what the user dragged it to ([requested], null for
+ * [default]), the [range] it may take, and whether it may fold away ([droppable]) when the window
+ * cannot hold it even at its narrowest. A pane that is not [shown] takes no width.
+ */
+@Immutable
+data class PaneFit(
+    val requested: Float?,
+    val default: Float,
+    val range: ClosedFloatingPointRange<Float>,
+    val droppable: Boolean,
+    val shown: Boolean = true,
+)
+
+/**
+ * The widths [panes] are drawn at in a window [windowWidth] dp wide, in their order: each takes what
+ * the user chose, within its range; when together with [reserved] (fixed strips) they would leave the
+ * centre under [centerMin], they narrow in list order, each down to its minimum. When that is not
+ * enough, the first droppable pane still showing folds away (width 0) and the rest fit again from
+ * their choices, so a pane folded by a narrow window gives the others their room back. The user's
+ * choice is never rewritten: a wider window gives it back.
+ */
+fun fitPanes(
+    windowWidth: Float,
+    panes: List<PaneFit>,
+    reserved: Float = 0f,
+    centerMin: Float = MIN_CENTER_PANE_DP,
+): List<Float> {
+    val dropped = BooleanArray(panes.size) { !panes[it].shown }
+    while (true) {
+        val widths = FloatArray(panes.size) { if (dropped[it]) 0f else (panes[it].requested ?: panes[it].default).coerceIn(panes[it].range) }
+        var excess = widths.sum() + reserved + centerMin - windowWidth
+        for (i in panes.indices) {
+            if (excess <= 0f) break
+            if (dropped[i]) continue
+            val narrowed = maxOf(panes[i].range.start, widths[i] - excess)
+            excess -= widths[i] - narrowed
+            widths[i] = narrowed
+        }
+        if (excess <= 0f) return widths.toList()
+        val fold = panes.indices.firstOrNull { panes[it].droppable && !dropped[it] } ?: return widths.toList()
+        dropped[fold] = true
     }
-    if (excess > 0 && showDrawer) {
-        drawerWidth = maxOf(DrawerWidthRange.start, drawerWidth - excess)
-    }
-    return FittedPaneWidths(drawerWidth, panelWidth)
 }
 
 /**

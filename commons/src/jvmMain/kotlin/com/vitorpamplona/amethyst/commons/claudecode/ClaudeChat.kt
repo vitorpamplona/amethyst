@@ -238,6 +238,14 @@ class ClaudeChat internal constructor(
     @Volatile
     var draft: String? = null
 
+    /**
+     * What the user has typed and not sent yet. Kept on the chat, not in the screen, so a chat
+     * drawn somewhere else (a tab moved out, the assistant's dock panel popped into a window of its
+     * own, a chat opened again later) shows the same unfinished message.
+     */
+    @Volatile
+    var unsent: String = ""
+
     /** What `--model` starts the process with; [setModel] changes it, and the running process. */
     @Volatile
     private var model: String? = model

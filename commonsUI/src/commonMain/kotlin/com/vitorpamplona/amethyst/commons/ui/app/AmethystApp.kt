@@ -81,6 +81,9 @@ import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageHost
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelWindows
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.rememberDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchMenu
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
@@ -108,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppManifestPreloader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationsDockPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.marmotDevices.MarmotDevicesPromptHost
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
@@ -354,8 +358,15 @@ private fun AppNavigation(
             }
         }
 
+    // The dock beside the main screen: the notification feed, then the panels only this platform
+    // has. Built once per account, so every panel keeps its state wherever the dock draws it.
+    val dockPanels = remember(accountViewModel) { listOf(NotificationsDockPanel) + root.dockPanels(accountViewModel) }
+    val dock = rememberDockController(LocalAppServices.current.dockLayoutPrefs, dockPanels, root.supportsPanelWindows, accountViewModel)
+    dock.windowOrigin = root::mainWindowScreenOrigin
+
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
+        LocalDockController provides dock,
         LocalNavDestinations provides destinations,
         LocalTabReselectCoordinator provides tabReselectCoordinator,
         // The finders shared composables reach for through the no-arg observeUser* /
@@ -397,6 +408,9 @@ private fun AppNavigation(
 
         // Screens in windows of their own: the windows layout, or tabs moved out.
         chrome.windows?.invoke()
+
+        // Dock panels popped out into windows of their own.
+        PanelWindows(dock, accountViewModel, nav, root)
 
         OpenFirstRoute(firstRoute, nav)
 

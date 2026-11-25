@@ -41,6 +41,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPlacement
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -60,6 +61,14 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_menu_report_issue
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_website
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_window
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_zoom
+import com.vitorpamplona.amethyst.commons.resources.dock_forget_layout
+import com.vitorpamplona.amethyst.commons.resources.dock_hide_all
+import com.vitorpamplona.amethyst.commons.resources.dock_layouts
+import com.vitorpamplona.amethyst.commons.resources.dock_panels
+import com.vitorpamplona.amethyst.commons.resources.dock_pin_screen
+import com.vitorpamplona.amethyst.commons.resources.dock_reset_layout
+import com.vitorpamplona.amethyst.commons.resources.dock_save_layout
+import com.vitorpamplona.amethyst.commons.resources.dock_show_all
 import com.vitorpamplona.amethyst.commons.resources.navigation_close_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_new_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_next_tab
@@ -72,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_show_
 import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_to_tab
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommand
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommandBus
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionsNavigateFirst
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -97,6 +107,9 @@ class DesktopNavigator(
     val windows: DesktopWindowManager,
 ) {
     var nav by mutableStateOf<INav?>(null)
+
+    /** The shell's dock, for the panel shortcuts and the Panels menu. */
+    var dock by mutableStateOf<DockController?>(null)
     var userPubKeyHex by mutableStateOf<String?>(null)
 
     /** What the menu bar mirrors the drawer from: the shell's account and the screens it has. */
@@ -199,6 +212,13 @@ internal enum class Command(
     FOCUS_COLUMN_7(Key.Seven, alt = true, column = 6),
     FOCUS_COLUMN_8(Key.Eight, alt = true, column = 7),
     FOCUS_COLUMN_9(Key.Nine, alt = true, column = 8),
+
+    // The dock's panels, as an IDE's tool windows: Shift with a digit, which the sections (no Shift)
+    // and the deck's focus keys (Alt) leave free.
+    TOGGLE_NOTIFICATIONS_PANEL(Key.One, shift = true),
+    TOGGLE_ASSISTANT_PANEL(Key.Two, shift = true),
+    TOGGLE_DEVICES_PANEL(Key.Three, shift = true),
+    HIDE_ALL_PANELS(Key.Backslash, shift = true),
     ;
 
     val shortcut: KeyShortcut
@@ -207,6 +227,13 @@ internal enum class Command(
     /** The deck's commands, which only apply while a deck is on screen. */
     val forDeck: Boolean get() = column >= 0 || this in DECK_COMMANDS
 }
+
+private val PANEL_COMMANDS =
+    listOf(
+        PanelId.NOTIFICATIONS to Command.TOGGLE_NOTIFICATIONS_PANEL,
+        PanelId.ASSISTANT to Command.TOGGLE_ASSISTANT_PANEL,
+        PanelId.DEVICES to Command.TOGGLE_DEVICES_PANEL,
+    )
 
 private val DECK_COMMANDS = setOf(Command.ADD_COLUMN, Command.CLOSE_COLUMN, Command.MOVE_COLUMN_LEFT, Command.MOVE_COLUMN_RIGHT, Command.SAVE_WORKSPACE)
 
@@ -242,6 +269,10 @@ private fun DesktopNavigator.run(
         Command.REOPEN_CLOSED -> (stacks?.model as? SingleScreenModel)?.reopenClosed()
         Command.NEXT_TAB -> (stacks?.model as? TabsModel)?.cycle(1)
         Command.PREVIOUS_TAB -> (stacks?.model as? TabsModel)?.cycle(-1)
+        Command.TOGGLE_NOTIFICATIONS_PANEL -> dock?.toggle(PanelId.NOTIFICATIONS)
+        Command.TOGGLE_ASSISTANT_PANEL -> dock?.toggle(PanelId.ASSISTANT)
+        Command.TOGGLE_DEVICES_PANEL -> dock?.toggle(PanelId.DEVICES)
+        Command.HIDE_ALL_PANELS -> dock?.toggleHideAll()
     }
 }
 
@@ -346,6 +377,27 @@ fun FrameWindowScope.DesktopMenuBar(
                 Command.entries.filter { it.column >= 0 }.forEach { command ->
                     CommandItem(stringRes(Res.string.deck_focus_column, command.column + 1), command)
                 }
+            }
+        }
+        navigator.dock?.let { dock ->
+            Menu(stringRes(Res.string.dock_panels)) {
+                PANEL_COMMANDS.forEach { (id, command) ->
+                    val spec = dock.spec(id) ?: return@forEach
+                    CommandItem(stringRes(spec.title), command)
+                }
+                (navigator.nav as? Nav)?.let { nav ->
+                    Item(stringRes(Res.string.dock_pin_screen)) { dock.pinScreen(nav.currentRoute) }
+                }
+                Separator()
+                CommandItem(stringRes(if (dock.allHidden) Res.string.dock_show_all else Res.string.dock_hide_all), Command.HIDE_ALL_PANELS)
+                val saved by dock.savedLayouts.collectAsState()
+                Menu(stringRes(Res.string.dock_layouts)) {
+                    saved.keys.sorted().forEach { name -> Item(name) { dock.restoreLayout(name) } }
+                    if (saved.isNotEmpty()) Separator()
+                    Item(stringRes(Res.string.dock_save_layout)) { dock.namingLayout = true }
+                    saved.keys.sorted().forEach { name -> Item(stringRes(Res.string.dock_forget_layout, name)) { dock.forgetLayout(name) } }
+                }
+                Item(stringRes(Res.string.dock_reset_layout)) { dock.reset() }
             }
         }
         Menu(stringRes(Res.string.desktop_menu_window)) {
