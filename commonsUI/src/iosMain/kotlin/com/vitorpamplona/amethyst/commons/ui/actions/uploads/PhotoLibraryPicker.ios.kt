@@ -146,7 +146,7 @@ private suspend fun copyOut(result: PHPickerResult): SelectedMedia? {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun copyToTemp(
+internal fun copyToTemp(
     source: NSURL,
     extension: String,
 ): String? {
