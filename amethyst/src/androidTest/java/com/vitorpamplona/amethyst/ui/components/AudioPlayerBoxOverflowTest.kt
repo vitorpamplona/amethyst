@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.playback.audioSquare
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.unknownMediaAspectRatio
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

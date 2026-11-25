@@ -34,8 +34,8 @@ import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool

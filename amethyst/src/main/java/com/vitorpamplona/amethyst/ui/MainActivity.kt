@@ -33,14 +33,14 @@ import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedCacheWindow
 import com.vitorpamplona.amethyst.commons.ui.feeds.LocalLazyListCacheWindow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.DEFAULT_MUTED_SETTING
+import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
-import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch

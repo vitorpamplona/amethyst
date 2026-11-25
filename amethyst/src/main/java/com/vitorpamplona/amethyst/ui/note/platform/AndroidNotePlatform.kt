@@ -43,11 +43,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWaveformPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -60,8 +60,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as A
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as AppEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.NoteMediaView as AppNoteMediaView
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWithWaveform as AppRenderAudioWithWaveform
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.TrimPreviewPlayer as AppTrimPreviewPlayer
-import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
@@ -71,11 +76,6 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomab
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog as AppPdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
-import com.vitorpamplona.amethyst.ui.note.types.EpisodeAudioPlayer as AppEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
-import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.METERED_MAX_SHORT_SIDE_PX
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.clampViewportShortSide
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.needsViewportUpdate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

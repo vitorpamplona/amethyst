@@ -36,14 +36,16 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.RenderPlaybackError
+import com.vitorpamplona.amethyst.commons.ui.playback.player.AmethystPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.player.PlayerFailure
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -75,13 +77,12 @@ class PlaybackErrorOverlayFitTest {
      */
     private fun failedControllerState() =
         MediaControllerState(
-            controller = mockk<Player>(relaxed = true),
+            controller = mockk<AmethystPlayer>(relaxed = true),
             playbackError =
                 mutableStateOf(
-                    PlaybackException(
-                        "Malformed HLS manifest",
-                        null,
-                        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                    PlayerFailure(
+                        message = "Malformed HLS manifest",
+                        code = "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
                     ),
                 ),
         )

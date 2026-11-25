@@ -27,6 +27,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.playback.player.LocalPlaybackPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
@@ -48,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColors
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
+import com.vitorpamplona.amethyst.service.playback.player.AndroidPlaybackPlatform
 import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
 import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
 import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
@@ -109,11 +112,15 @@ fun AmethystTheme(
     ) {
         // The platform halves of the shared note and rich-text renderers: media, LaTeX, payments,
         // link previews, the note types built on platform engines and the
-        // flavour's translator. Every Activity root goes through this theme.
+        // flavour's translator, and the platform half of the shared video/audio player.
+        // Every Activity root goes through this theme.
+        val appContext = LocalContext.current.applicationContext
+        val playbackPlatform = remember(appContext) { AndroidPlaybackPlatform(appContext) }
         CompositionLocalProvider(
             LocalRichTextPlatform provides AndroidRichTextPlatform,
             LocalTranslationPlatform provides FlavorTranslationPlatform,
             LocalNotePlatform provides AndroidNotePlatform,
+            LocalPlaybackPlatform provides playbackPlatform,
             LocalAppPlatform provides AndroidAppPlatform,
             LocalAppServices provides AndroidAppServices,
             content = content,

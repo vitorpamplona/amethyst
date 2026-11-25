@@ -26,8 +26,11 @@ import android.view.Window
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Player
@@ -37,7 +40,6 @@ import coil3.BitmapImage
 import coil3.Image
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
-import com.vitorpamplona.amethyst.service.playback.composable.rememberTracksState
 import java.util.WeakHashMap
 
 /**
@@ -153,4 +155,31 @@ private fun RequestHdr(
             if (!requests.wantsHdr) windowRequests.remove(window)
         }
     }
+}
+
+/**
+ * Derives [select] from the tracks [player] is rendering and keeps it current through the player's
+ * track-change listener, so a quality switch or the next playlist item updates the value live.
+ */
+@Composable
+private fun <T> rememberTracksState(
+    player: Player,
+    select: (Tracks) -> T,
+): State<T> {
+    // The listener outlives the composition that created it, so it must see the latest lambda.
+    val currentSelect by rememberUpdatedState(select)
+    val state = remember(player) { mutableStateOf(currentSelect(player.currentTracks)) }
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onTracksChanged(tracks: Tracks) {
+                    state.value = currentSelect(tracks)
+                }
+            }
+        player.addListener(listener)
+        // Re-read after registering so a track change racing the initial remember{} read isn't missed.
+        state.value = currentSelect(player.currentTracks)
+        onDispose { player.removeListener(listener) }
+    }
+    return state
 }

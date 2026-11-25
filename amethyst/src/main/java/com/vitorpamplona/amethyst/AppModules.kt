@@ -140,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -167,7 +168,6 @@ import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.mediaDataSourceFactory
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
