@@ -24,10 +24,11 @@ import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 
 /**
- * The desktop [CordnBlobCipher]: the AES-256-GCM key that already protects the desktop's Marmot
- * group state and account secrets ([SecretEncryption]), so Cordn's MLS state is no weaker and no
- * stronger than theirs. That key is a file only this OS user can read, which covers a stolen disk
- * or a careless backup, not another process running as the same user.
+ * The desktop and iOS [CordnBlobCipher]: the AES-256-GCM key that already protects the platform's
+ * Marmot group state and account secrets ([SecretEncryption]), so Cordn's MLS state is no weaker
+ * and no stronger than theirs. On the desktop that key is a file only this OS user can read, which
+ * covers a stolen disk or a careless backup, not another process running as the same user; on iOS
+ * it is a Keychain item that never leaves this device.
  */
 class SecretEncryptionCordnBlobCipher : CordnBlobCipher {
     // Built on first use, as on Android: CordnRuntime is built with the Account, and a key file that

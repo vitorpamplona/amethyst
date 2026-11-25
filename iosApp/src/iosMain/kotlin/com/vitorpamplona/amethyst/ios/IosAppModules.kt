@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.cashu.DataStoreCashuCounterStore
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
@@ -263,8 +264,7 @@ class IosAppModules(
             cashuMintTransport = KtorMintTransport { httpClient },
             // NIP-55 signer apps are Android's.
             externalSignerFactory = { _, _ -> null },
-            // Cordn keeps its state in memory until its iOS file store lands (A3).
-            cordnBlobCipher = null,
+            cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
             otsResolverBuilder = { OtsResolver(UnavailableOts, UnavailableOts) },
             cache = cache,
             client = client,
