@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import android.media.MediaPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -60,14 +58,24 @@ import com.vitorpamplona.amethyst.commons.resources.recording_indicator_descript
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
+import com.vitorpamplona.amethyst.commons.ui.playback.player.AmethystPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.player.LocalPlaybackPlatform
+import com.vitorpamplona.amethyst.commons.ui.playback.player.PlaybackState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatSecondsToTime
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import okio.Path
 
+/**
+ * Plays back a voice message before it is sent, from [localFile] only (there is nothing to play
+ * without it); [voiceMetadata] gives its duration and waveform. [onRemove] drops it and
+ * [onReRecord], where given, replaces it with a new recording.
+ *
+ * The clip plays through the platform's local player
+ * ([com.vitorpamplona.amethyst.commons.ui.playback.player.PlaybackPlatform.rememberLocalAudioPlayer]).
+ */
 @Composable
 fun VoiceMessagePreview(
     voiceMetadata: AudioMeta,
@@ -77,26 +85,26 @@ fun VoiceMessagePreview(
     isUploading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
-    ManageMediaPlayer(
-        localFile = localFile,
+    // Plays only the recording on the device, never a URL: every caller previews a recording that
+    // has not been uploaded yet, so there is always a local file while there is something to play.
+    val player = LocalPlaybackPlatform.current.rememberLocalAudioPlayer(localFile)
+
+    WatchPlaybackEnd(
+        player = player,
         onCompletion = {
             isPlaying = false
             progress = 0f
         },
-        onPlayerChanged = { mediaPlayer = it },
         onRelease = { isPlaying = false },
     )
 
     TrackPlaybackProgress(
-        mediaPlayer = mediaPlayer,
+        player = player,
         isPlaying = isPlaying,
         onProgressUpdate = { progress = it },
-        onInvalidState = { isPlaying = false },
     )
 
     Box(
@@ -118,7 +126,7 @@ fun VoiceMessagePreview(
                 IconButton(
                     onClick = {
                         handlePlayPauseClick(
-                            mediaPlayer = mediaPlayer,
+                            player = player,
                             isPlaying = isPlaying,
                             progress = progress,
                             onProgressReset = { progress = 0f },
@@ -149,7 +157,7 @@ fun VoiceMessagePreview(
                         onProgressChange = { newProgress ->
                             handleWaveformScrub(
                                 newProgress = newProgress,
-                                mediaPlayer = mediaPlayer,
+                                player = player,
                                 onProgressChanged = { progress = it },
                             )
                         },
@@ -262,25 +270,22 @@ private fun ReRecordButton(
 }
 
 @Composable
-private fun ManageMediaPlayer(
-    localFile: Path?,
+private fun WatchPlaybackEnd(
+    player: AmethystPlayer?,
     onCompletion: () -> Unit,
-    onPlayerChanged: (MediaPlayer?) -> Unit,
     onRelease: () -> Unit,
 ) {
-    DisposableEffect(localFile) {
-        val player = createMediaPlayer(localFile)
-        player?.setOnCompletionListener { onCompletion() }
-        onPlayerChanged(player)
+    DisposableEffect(player) {
+        val listener =
+            object : AmethystPlayer.Listener {
+                override fun onPlaybackStateChanged(state: PlaybackState) {
+                    if (state == PlaybackState.ENDED) onCompletion()
+                }
+            }
+        player?.addListener(listener)
 
         onDispose {
-            try {
-                player?.stop()
-            } catch (e: IllegalStateException) {
-                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
-            }
-            player?.release()
-            onPlayerChanged(null)
+            player?.removeListener(listener)
             onRelease()
         }
     }
@@ -288,104 +293,76 @@ private fun ManageMediaPlayer(
 
 @Composable
 private fun TrackPlaybackProgress(
-    mediaPlayer: MediaPlayer?,
+    player: AmethystPlayer?,
     isPlaying: Boolean,
     onProgressUpdate: (Float) -> Unit,
-    onInvalidState: () -> Unit,
 ) {
-    LaunchedEffect(mediaPlayer, isPlaying) {
-        val player = mediaPlayer ?: return@LaunchedEffect
+    LaunchedEffect(player, isPlaying) {
+        val current = player ?: return@LaunchedEffect
         if (!isPlaying) return@LaunchedEffect
 
+        // Runs until the end (or a pause) flips isPlaying: a player still loading the file reports
+        // that it is not playing yet, and stopping on that would freeze the bar at the start.
         while (isActive) {
-            try {
-                if (!player.isPlaying) break
-                calculateProgress(player.currentPosition.toFloat(), player.duration.toFloat())?.let { onProgressUpdate(it) }
-            } catch (e: IllegalStateException) {
-                Log.w("VoiceMessagePreview", "MediaPlayer in invalid state during progress tracking", e)
-                onInvalidState()
-                break
-            }
+            calculateProgress(current.currentPosition, current.duration)?.let { onProgressUpdate(it) }
             delay(100)
         }
     }
 }
 
-private fun calculateProgress(
-    current: Float,
-    duration: Float,
+/** How far [currentMs] is into [durationMs], from 0 to 1; 0 while the duration is not known yet. */
+internal fun calculateProgress(
+    currentMs: Long,
+    durationMs: Long,
 ): Float? {
     val progress =
-        if (duration > 0 && current >= 0) {
-            (current / duration).coerceIn(0f, 1f)
+        if (durationMs > 0 && currentMs >= 0) {
+            (currentMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
         } else {
             0f
         }
     return progress.takeIf { it.isFinite() }
 }
 
+/** Where a scrub to [progress] lands in a clip of [durationMs]; null when it cannot seek. */
+internal fun scrubPositionMs(
+    progress: Float,
+    durationMs: Long,
+): Long? {
+    if (!progress.isFinite() || progress < 0f || progress > 1f) return null
+    if (durationMs <= 0) return null
+    return (progress * durationMs).toLong()
+}
+
 private fun handlePlayPauseClick(
-    mediaPlayer: MediaPlayer?,
+    player: AmethystPlayer?,
     isPlaying: Boolean,
     progress: Float,
     onProgressReset: () -> Unit,
     onPlayingChanged: (Boolean) -> Unit,
 ) {
-    val player = mediaPlayer ?: return
-    try {
-        if (isPlaying) {
-            player.pause()
-            onPlayingChanged(false)
-            return
-        }
-        if (progress.isFinite() && progress >= 1f) {
-            player.seekTo(0)
-            onProgressReset()
-        }
-        player.start()
-        onPlayingChanged(true)
-    } catch (e: IllegalStateException) {
-        Log.w("VoiceMessagePreview", "MediaPlayer operation failed in onClick handler", e)
+    val current = player ?: return
+    if (isPlaying) {
+        current.pause()
         onPlayingChanged(false)
+        return
     }
+    // A finished clip starts again from the top.
+    if (current.playbackState == PlaybackState.ENDED || (progress.isFinite() && progress >= 1f)) {
+        current.seekTo(0)
+        onProgressReset()
+    }
+    current.play()
+    onPlayingChanged(true)
 }
 
 private fun handleWaveformScrub(
     newProgress: Float,
-    mediaPlayer: MediaPlayer?,
+    player: AmethystPlayer?,
     onProgressChanged: (Float) -> Unit,
 ) {
-    if (!newProgress.isFinite() || newProgress < 0f || newProgress > 1f) return
-    val player = mediaPlayer ?: return
-    try {
-        val duration = player.duration
-        if (duration > 0) {
-            val newPosition = (newProgress * duration).toInt()
-            player.seekTo(newPosition)
-            onProgressChanged(newProgress)
-        }
-    } catch (e: IllegalStateException) {
-        Log.w("VoiceMessagePreview", "MediaPlayer seek failed in onProgressChange", e)
-    }
+    val current = player ?: return
+    val position = scrubPositionMs(newProgress, current.duration) ?: return
+    current.seekTo(position)
+    onProgressChanged(newProgress)
 }
-
-/**
- * Plays only the recording on the device. Never hand [MediaPlayer] a URL: the platform player
- * fetches it itself, outside the app's HTTP clients, so the request would skip Tor, the app's DNS
- * and its User-Agent. Every caller previews a recording that has not been uploaded yet, so there is
- * always a local file while there is something to play.
- */
-private fun createMediaPlayer(localFile: Path?): MediaPlayer? =
-    try {
-        if (localFile == null || !localFile.toFile().exists()) {
-            null
-        } else {
-            MediaPlayer().apply {
-                setDataSource(localFile.toString())
-                prepare()
-            }
-        }
-    } catch (e: Exception) {
-        Log.w("VoiceMessagePreview", "Failed to create MediaPlayer", e)
-        null
-    }

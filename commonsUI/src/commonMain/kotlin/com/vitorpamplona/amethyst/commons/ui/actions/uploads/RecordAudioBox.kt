@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import android.Manifest
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,41 +30,47 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.record_a_message_description
 import com.vitorpamplona.amethyst.commons.ui.components.ToggleableBox
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMicrophonePermission
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-@OptIn(ExperimentalPermissionsApi::class)
+/**
+ * Records a voice message behind a caller-drawn trigger: [content] gets whether it is recording,
+ * the elapsed seconds and a stop action, and the finished recording goes to [onRecordTaken]. A
+ * tap starts (asking for the microphone first when needed) and the next one stops; recording
+ * also stops by itself at [maxDurationSeconds].
+ *
+ * The recorder is the platform's ([com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform.rememberVoiceRecorder]);
+ * platforms without one draw nothing, so no dead button shows.
+ */
 @Composable
 fun RecordAudioBox(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     onRecordTaken: (RecordingResult) -> Unit,
     maxDurationSeconds: Int? = null,
-    content: @Composable (Boolean, Int, () -> Unit) -> Unit,
+    content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
 ) {
-    val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
-    val context = LocalContext.current
+    val recorder = LocalNotePlatform.current.rememberVoiceRecorder() ?: return
+
+    var isRecording by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     var pendingPermissionStart by remember { mutableStateOf(false) }
 
     // Must be called at Composable scope, not in callback
-    val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    val recordPermission = rememberMicrophonePermission()
     val scope = rememberCoroutineScope()
+    val notice = rememberShortNotice()
 
-    val isRecording = mediaRecorder.value != null
-
-    DisposableEffect(Unit) {
+    DisposableEffect(recorder) {
         onDispose {
-            mediaRecorder.value?.stop()
-            mediaRecorder.value = null
+            recorder.stop()
         }
     }
 
@@ -75,43 +79,36 @@ fun RecordAudioBox(
     val recordDescription = stringRes(Res.string.record_a_message_description)
 
     fun startRecording() {
-        if (mediaRecorder.value == null) {
+        if (!isRecording) {
             elapsedSeconds = 0
-            mediaRecorder.value = VoiceMessageRecorder()
-            mediaRecorder.value?.start(context, scope)
+            isRecording = recorder.start(scope)
+            if (!isRecording) notice.show(recordDescription)
         }
     }
 
     fun stopRecording() {
-        val recorder = mediaRecorder.value ?: return
+        if (!isRecording) return
         val result = recorder.stop()
-        mediaRecorder.value = null
+        isRecording = false
         if (result != null) {
             onRecordTaken(result)
         } else {
-            Toast
-                .makeText(
-                    context,
-                    recordDescription,
-                    Toast.LENGTH_SHORT,
-                ).show()
+            notice.show(recordDescription)
         }
     }
 
     // Start recording after permission is granted
-    LaunchedEffect(recordPermissionState.status.isGranted) {
-        if (recordPermissionState.status.isGranted && pendingPermissionStart) {
+    LaunchedEffect(recordPermission.isGranted) {
+        if (recordPermission.isGranted && pendingPermissionStart) {
             pendingPermissionStart = false
             startRecording()
         }
     }
 
     // Track elapsed time while recording
-    LaunchedEffect(mediaRecorder.value) {
-        // Capture the current recorder state to avoid repeated reads of volatile state
-        val currentRecorder = mediaRecorder.value
-        if (currentRecorder != null) {
-            // Loop while coroutine is active - LaunchedEffect will cancel when mediaRecorder.value changes
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            // Loop while coroutine is active - LaunchedEffect will cancel when isRecording changes
             while (isActive) {
                 delay(1000)
                 elapsedSeconds++
@@ -133,9 +130,9 @@ fun RecordAudioBox(
             if (isRecording) {
                 stopRecording()
             } else {
-                if (!recordPermissionState.status.isGranted) {
+                if (!recordPermission.isGranted) {
                     pendingPermissionStart = true
-                    recordPermissionState.launchPermissionRequest()
+                    recordPermission.launchRequest()
                 } else {
                     startRecording()
                 }

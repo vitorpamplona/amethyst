@@ -103,8 +103,10 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.OnIncomingShare
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceAnonymizationSection
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
@@ -153,8 +155,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRe
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordVoiceButton
-import com.vitorpamplona.amethyst.commons.ui.note.platform.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
@@ -618,7 +618,7 @@ private fun NewPostScreenBody(
                             )
 
                             // Voice anonymization section (only show when not uploading and voice is pending)
-                            if (postViewModel.voiceRecording != null) {
+                            if (postViewModel.voiceRecording != null && accountViewModel.host.canAnonymizeVoice) {
                                 VoiceAnonymizationSection(
                                     selectedPreset = postViewModel.selectedPreset,
                                     processingPreset = postViewModel.processingPreset,

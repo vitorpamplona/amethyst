@@ -155,6 +155,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
@@ -191,7 +192,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer

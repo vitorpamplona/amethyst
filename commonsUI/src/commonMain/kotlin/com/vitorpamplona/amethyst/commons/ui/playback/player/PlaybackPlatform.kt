@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import okio.Path
 
 /**
  * The platform halves of the shared video and audio player UI: what only the front end can do.
@@ -78,6 +79,18 @@ interface PlaybackPlatform {
         videoUri: String,
         accountViewModel: AccountViewModel,
     ): Int? = null
+
+    /**
+     * A player of an audio file on this device, such as a voice message recorded but not yet
+     * uploaded, kept while composed and released when [file] changes or this leaves. Null when
+     * there is no [file] or this platform cannot play one.
+     *
+     * Only ever a local file, never a URL: it plays outside the pooled players, and so outside
+     * the app's HTTP clients, Tor and its User-Agent. It is not the pooled media session either,
+     * so the lock screen and other players are left alone.
+     */
+    @Composable
+    fun rememberLocalAudioPlayer(file: Path?): AmethystPlayer? = null
 
     /** Draws the picture of [controllerState]'s player into [modifier], in the way [style] asks. */
     @Composable

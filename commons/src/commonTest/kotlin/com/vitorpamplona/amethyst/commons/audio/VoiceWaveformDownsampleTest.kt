@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.commons.audio
 
-import com.vitorpamplona.amethyst.ui.actions.uploads.downsampled
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The bars a recording reports.
@@ -38,7 +37,7 @@ class VoiceWaveformDownsampleTest {
     fun `a short recording is left exactly as it is`() {
         val short = listOf(1f, 2f, 3f)
 
-        assertEquals(short, short.downsampled(100))
+        assertEquals(short, short.downsampledWaveform(100))
     }
 
     @Test
@@ -48,7 +47,7 @@ class VoiceWaveformDownsampleTest {
         // than on how long somebody spoke.
         val long = List(6000) { it.toFloat() }
 
-        assertEquals(100, long.downsampled(100).size)
+        assertEquals(100, long.downsampledWaveform(100).size)
     }
 
     @Test
@@ -58,7 +57,7 @@ class VoiceWaveformDownsampleTest {
         // here averages 0..9, whose mean is 4.5.
         val ramp = List(1000) { it.toFloat() }
 
-        val reduced = ramp.downsampled(100)
+        val reduced = ramp.downsampledWaveform(100)
 
         assertEquals(4.5f, reduced.first(), 0.001f)
         assertEquals(994.5f, reduced.last(), 0.001f)
@@ -70,8 +69,8 @@ class VoiceWaveformDownsampleTest {
         // one loud moment should still show that moment.
         val quietWithBurst = MutableList(1000) { 100f }.also { for (i in 500..509) it[i] = 30000f }
 
-        val reduced = quietWithBurst.downsampled(100)
+        val reduced = quietWithBurst.downsampledWaveform(100)
 
-        assertTrue("the burst was averaged away: ${reduced.max()}", reduced.max() > 10000f)
+        assertTrue(reduced.max() > 10000f, "the burst was averaged away: ${reduced.max()}")
     }
 }

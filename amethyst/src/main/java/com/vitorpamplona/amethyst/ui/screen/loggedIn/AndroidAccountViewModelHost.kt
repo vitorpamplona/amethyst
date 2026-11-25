@@ -109,6 +109,8 @@ class AndroidAccountViewModelHost(
         value: Boolean,
     ) = LocalPreferences.setHasBackedUpKeys(value, npub)
 
+    override val canAnonymizeVoice: Boolean get() = true
+
     override suspend fun anonymizeVoice(
         input: Path,
         presetName: String,

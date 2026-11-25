@@ -47,8 +47,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntRect
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
@@ -90,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import okio.Path
 import java.lang.ref.WeakReference
 import com.vitorpamplona.amethyst.service.playback.composable.controls.rememberSaveMediaAction as rememberAndroidSaveMediaAction
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction as AppShareMediaAction
@@ -116,6 +120,29 @@ class AndroidPlaybackPlatform(
         videoUri: String,
         accountViewModel: AccountViewModel,
     ): Int? = accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri)
+
+    /**
+     * A plain ExoPlayer of its own, outside the PlaybackService pool: a recording that is not sent
+     * yet has no place in the media session, the lock screen or the video cache, and the pool's
+     * data source reads only through OkHttp, which cannot open a file. The default one here reads
+     * the file and nothing else.
+     */
+    @Composable
+    override fun rememberLocalAudioPlayer(file: Path?): AmethystPlayer? {
+        val player =
+            remember(file) {
+                file?.toFile()?.takeIf { it.exists() }?.let { local ->
+                    val exo = ExoPlayer.Builder(appContext).build()
+                    exo.setMediaItem(MediaItem.fromUri(local.toUri()))
+                    exo.prepare()
+                    Media3Player(exo)
+                }
+            }
+        DisposableEffect(player) {
+            onDispose { player?.player?.release() }
+        }
+        return player
+    }
 
     @OptIn(UnstableApi::class)
     @Composable

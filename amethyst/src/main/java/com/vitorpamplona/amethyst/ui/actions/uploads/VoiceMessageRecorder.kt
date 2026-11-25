@@ -24,7 +24,10 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
 import androidx.media3.common.MimeTypes
+import com.vitorpamplona.amethyst.commons.audio.MAX_VOICE_WAVEFORM_POINTS
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.amethyst.commons.audio.VoiceRecorder
+import com.vitorpamplona.amethyst.commons.audio.downsampledWaveform
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,7 +43,11 @@ import okio.Path.Companion.toOkioPath
 import java.io.File
 
 @Suppress("DEPRECATION")
-class VoiceMessageRecorder {
+class VoiceMessageRecorder(
+    context: Context,
+) : VoiceRecorder {
+    private val appContext = context.applicationContext
+
     @Volatile
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
@@ -53,33 +60,30 @@ class VoiceMessageRecorder {
     private var amplitudeSamplingJob: Job? = null
     private var amplitudes: MutableList<Float> = mutableListOf()
 
-    private fun createRecorder(context: Context): MediaRecorder =
+    private fun createRecorder(): MediaRecorder =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context.applicationContext)
+            MediaRecorder(appContext)
         } else {
             MediaRecorder()
         }
 
     @Synchronized
-    fun start(
-        context: Context,
-        parentScope: CoroutineScope,
-    ) {
+    override fun start(scope: CoroutineScope): Boolean {
         // Clean up any existing recording first
         cleanup()
 
         val fileName = RandomInstance.randomChars(16) + ".mp4"
-        val outputFile = File(context.cacheDir, "voice/$fileName")
+        val outputFile = File(appContext.cacheDir, "voice/$fileName")
         outputFile.parentFile?.mkdirs()
         this.outputFile = outputFile
         this.startTime = TimeUtils.now()
         this.amplitudes.clear()
 
         // Create own scope with SupervisorJob so failures don't cascade
-        val scopeJob = SupervisorJob(parentScope.coroutineContext[Job])
+        val scopeJob = SupervisorJob(scope.coroutineContext[Job])
         recorderScope = CoroutineScope(Dispatchers.Main.immediate + scopeJob)
 
-        createRecorder(context).apply {
+        createRecorder().apply {
             setAudioEncodingBitRate(16 * 44100)
             setAudioSamplingRate(44100) // Set the desired audio sampling rate (e.g., 44.1 kHz)
             setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
@@ -117,10 +121,11 @@ class VoiceMessageRecorder {
                     }
                 }
             }
+        return true
     }
 
     @Synchronized
-    fun stop(): RecordingResult? {
+    override fun stop(): RecordingResult? {
         if (recorder == null) {
             cleanup()
             return null
@@ -132,7 +137,7 @@ class VoiceMessageRecorder {
         val amplitudesCopy =
             synchronized(amplitudes) {
                 amplitudes.toList()
-            }.downsampled(MAX_WAVEFORM_POINTS)
+            }.downsampledWaveform(MAX_VOICE_WAVEFORM_POINTS)
         val duration = (currentTime - startTime).toInt()
 
         // Clean up recorder and scope
@@ -210,31 +215,5 @@ class VoiceMessageRecorder {
          * count is bounded on the way out rather than here.
          */
         const val SAMPLE_INTERVAL_MS = 100L
-
-        /**
-         * The most amplitudes a recording reports.
-         *
-         * Sampling finely and reducing at the end keeps the shape faithful
-         * without letting a long recording turn into a long list: these travel
-         * inside events and `imeta` tags, so the size has to depend on the
-         * detail wanted rather than on how long somebody spoke.
-         */
-        const val MAX_WAVEFORM_POINTS = 100
-    }
-}
-
-/**
- * Averages [this] down to at most [max] buckets, keeping the ends in place.
- *
- * Averaging rather than dropping samples: taking every Nth would let a single
- * loud frame stand for a whole bucket and make the bars flicker with the
- * sampling phase rather than with the sound.
- */
-internal fun List<Float>.downsampled(max: Int): List<Float> {
-    if (max <= 0 || size <= max) return this
-    return List(max) { bucket ->
-        val from = bucket * size / max
-        val to = ((bucket + 1) * size / max).coerceAtLeast(from + 1)
-        subList(from, to.coerceAtMost(size)).average().toFloat()
     }
 }

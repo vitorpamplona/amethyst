@@ -20,7 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.audio
 
+import kotlinx.coroutines.CoroutineScope
 import okio.Path
+
+/**
+ * The platform's microphone recorder behind the shared voice-message UI: one recording at a
+ * time, reusable for the next one. Android records with `MediaRecorder`, iOS with
+ * `AVAudioRecorder`; both write AAC and sample the peak level for the waveform.
+ */
+interface VoiceRecorder {
+    /**
+     * Starts recording, sampling amplitudes in [scope] until [stop]. False when the microphone
+     * could not be opened, and nothing is recording.
+     */
+    fun start(scope: CoroutineScope): Boolean
+
+    /**
+     * Stops and returns the recording, or null when nothing was recording, it failed, or it was
+     * under a second. Safe to call when not recording.
+     */
+    fun stop(): RecordingResult?
+}
 
 /** A finished voice-message recording: the audio file, its type, and its waveform. */
 class RecordingResult(
