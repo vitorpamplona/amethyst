@@ -110,7 +110,7 @@ JVM targets only, even for its pure-Compose modules.
    | Piece | Home | Why |
    |---|---|---|
    | Format per kind; NIP-54 wikilink target normalization | quartz | NIP interpretation every client needs; no new dependency |
-   | General Djot parser, no Nostr | new repo `djot-kmp`, via Magpie | No Kotlin or JVM Djot parser exists (the Djot README lists JavaScript, Lua, Prolog, PHP, Rust, Go and Haskell; Maven Central has none). Spec-driven, with its own conformance suite, like crypto-kmp and kiko-kmp |
+   | General Djot parser, no Nostr | `vitorpamplona/djot-kmp`, via Magpie | No Kotlin or JVM Djot parser exists (the Djot README lists JavaScript, Lua, Prolog, PHP, Rust, Go and Haskell; Maven Central has none). Spec-driven, with its own conformance suite, like crypto-kmp and kiko-kmp |
    | Markdown parser | JetBrains `org.jetbrains:markdown` 0.7.18, used directly | Apache-2.0 (checked in its POM); publishes iOS, JVM, wasm, JS and native targets |
    | Document model, format mappings, Nostr inline pass, parser registry, event-keyed cache | `commons/content/` | Amethyst's own model; `amy` already depends on `commons` |
    | Renderer registry and renderers | `commonsUI` | UI |
@@ -122,17 +122,25 @@ JVM targets only, even for its pure-Compose modules.
    `RichTextString` additions and the iOS targets: about 100 lines. Offer those upstream. If
    they land, depend on `com.halilibo.compose-richtext` from Maven Central and drop the fork and
    JitPack.
-7. **Kind-1 text keeps its own fast layout for now.** Plain Nostr text renders through
+7. **Kind 1 keeps rendering markdown (maintainer, 2026-11-25).** Notes already contain
+   markdown, and Amethyst renders it, even though NIP-10 says markup SHOULD NOT be used. So kind
+   1's format is "Nostr text, or markdown when it looks like markdown": today's `isMarkdown()`
+   heuristic becomes a documented rule of kind 1's parser, and stops running for every other
+   kind. Comments (kind 1111, NIP-22) and the kinds whose NIP names a format use that format
+   only.
+8. **Kind-1 text keeps its own fast layout for now.** Plain Nostr text renders through
    `RichTextViewer`'s word layout, which is tuned for feed scrolling. In the model it is a
    paragraph-only document. Whether it moves onto `richtext-ui`'s `RichTextString` is decided by
    the scroll benchmarks, not up front.
+9. **`vitorpamplona/djot-kmp`** holds the Djot parser, MIT-licensed, published through Magpie
+   like the other libraries (repo created 2026-11-25, empty).
 
 ## Steps
 
 | # | Step | Where | Weeks |
 |---|---|---|---|
 | 1 | `ContentFormat` per kind for the kinds in the table above; NIP-54 wikilink target normalization. Release. | quartz | 0.5 |
-| 2 | Registry and event-keyed, off-thread cache, still with today's two renderers. `RichTextViewer` stops guessing for kinds with a declared format; kind 1 follows decision 1 under "Open". Check what `RichTextParser` uses `callbackUri` for and move it to render time if it can. | commons, commonsUI | 1–1.5 |
+| 2 | Registry and event-keyed, off-thread cache, still with today's two renderers. `RichTextViewer` stops guessing for kinds with a declared format; kind 1 keeps the heuristic as its own rule (decision 7). Check what `RichTextParser` uses `callbackUri` for and move it to render time if it can. | commons, commonsUI | 1–1.5 |
 | 3 | Document model; markdown into it through JetBrains markdown; the Nostr inline pass. Parity harness (below). | commons | 2 |
 | 4 | Renderer registry on `richtext-ui`. Delete `RenderContentAsMarkdown`'s commonmark path, `BareUrlExtension`, and the `richtext-markdown`, `richtext-commonmark`, commonmark and autolink dependencies. Move the markdown files from `commonsUI/jvmAndroid` to `commonMain`. Markdown works on iOS from here. | commonsUI | 2 |
 | 5 | Fork: drop the two modules, add `iosArm64`/`iosSimulatorArm64` to `richtext-ui` and `-material3` with an iOS `CodeBlock`, publish through Magpie instead of JitPack. Open the upstream PR. | fork | 0.5 |
@@ -170,10 +178,5 @@ Steps 6 and 7 can follow in either order.
 
 ## Open
 
-1. **Markdown in kind 1.** NIP-10 says markup SHOULD NOT be used in kind 1, but notes do contain
-   markdown today, and Amethyst renders it. Either keep the heuristic as a documented kind-1 rule,
-   or render kind 1 as Nostr text only. Users will see the difference either way.
-2. **`djot-kmp`'s name and owner** (proposed: `vitorpamplona/djot-kmp`, published through Magpie
-   like the other libraries).
-3. **Cache size**, from the memory measurement.
-4. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 7).
+1. **Cache size**, from the memory measurement.
+2. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).
