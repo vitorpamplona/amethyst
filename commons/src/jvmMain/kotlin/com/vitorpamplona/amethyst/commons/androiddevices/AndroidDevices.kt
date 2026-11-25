@@ -142,6 +142,8 @@ data class SeenCrash(
     val seq: Long,
     val serial: String,
     val crash: DeviceCrash,
+    /** When the app found it, in epoch milliseconds. */
+    val at: Long = System.currentTimeMillis(),
 )
 
 /** An emulator this app is starting, before adb lists it. */

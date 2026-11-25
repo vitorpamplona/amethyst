@@ -20,18 +20,38 @@
  */
 package com.vitorpamplona.amethyst.commons.androiddevices.ui
 
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import java.io.File
 
-/** Which chats have their device panel open: kept while the app runs, so leaving a chat and coming back finds it as it was. */
-object DevicePanelVisibility {
-    private val open = mutableStateMapOf<String, Boolean>()
+/** The coding chat in front, as the device panel needs it. */
+@Immutable
+class ChatFocus(
+    val chatKey: String,
+    /** Whose device and emulator copies: the chat's workstream, else the chat. */
+    val owner: String,
+    val ownerLabel: String?,
+    /** Where Run finds the app. */
+    val folder: File,
+    val agentName: String,
+    /** Puts a screenshot into the chat's next message. */
+    val attach: (File) -> Unit,
+)
 
-    fun isOpen(chatKey: String): Boolean = open[chatKey] == true
+/**
+ * Which coding chat the dock's device panel follows: the one a chat screen in the main window
+ * published last ([publish]), until it leaves. With none, the panel is the Android devices screen's
+ * (any device, AVDs started as themselves).
+ */
+object DeviceChatFocus {
+    var current by mutableStateOf<ChatFocus?>(null)
+        private set
 
-    fun set(
-        chatKey: String,
-        shown: Boolean,
-    ) {
-        open[chatKey] = shown
+    /** [focus] is in front; call what it returns when its screen leaves. */
+    fun publish(focus: ChatFocus): () -> Unit {
+        current = focus
+        return { if (current === focus) current = null }
     }
 }

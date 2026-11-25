@@ -10776,6 +10776,7 @@
     <string name="marmot_devices_rename_label">Name</string>
     <string name="marmot_devices_rename_save">Save</string>
     <string name="dock_panel_assistant">Assistant</string>
+    <string name="dock_panel_devices">Devices</string>
     <string name="dock_panels">Panels</string>
     <string name="dock_panel_options">%1$s options</string>
     <string name="dock_fold">Fold</string>

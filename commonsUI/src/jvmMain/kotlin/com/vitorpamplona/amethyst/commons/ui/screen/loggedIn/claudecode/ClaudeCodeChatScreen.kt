@@ -112,10 +112,8 @@ import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanel
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelVisibility
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelWidth
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelWidthRange
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.ChatFocus
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
@@ -149,6 +147,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
@@ -269,6 +268,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -453,43 +453,45 @@ fun ClaudeCodeChatScreen(
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
     // From the service's own list, not the disk; a new workstream is in it once its clones are.
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
-    // An Android device beside the chat, for the user and the agent to try the app on: where an SDK is.
+    // The dock's Android device panel follows the coding chat in front: its workstream's device, its
+    // folder for Run, and its composer for a screenshot. Where an Android SDK is installed.
     val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
-    val showDevice = canDevice && DevicePanelVisibility.isOpen(key)
-    // A workstream's chats share its device, and its emulator copies are its own.
     val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
+    val dock = LocalDockController.current
+    val chatScope = rememberCoroutineScope()
     if (canDevice) {
-        // When the agent starts using this chat's device, the panel opens to show what it does.
-        LaunchedEffect(key, deviceOwner) {
-            AndroidDevices.shared.activity.collect { a -> if (AndroidDevices.shared.selection.value[deviceOwner] == a.serial) DevicePanelVisibility.set(key, true) }
+        DisposableEffect(key, deviceOwner, workspace, state.cwd) {
+            val release =
+                DeviceChatFocus.publish(
+                    ChatFocus(
+                        chatKey = key,
+                        owner = deviceOwner,
+                        ownerLabel = workspace?.title ?: state.title,
+                        folder = File(state.cwd),
+                        agentName = chat.backend.shortName,
+                        attach = { file -> chatScope.launch { attachments.add(listOf(file)) } },
+                    ),
+                )
+            onDispose(release)
+        }
+        // When the agent starts using this chat's device, the panel comes up to show what it does.
+        LaunchedEffect(key, deviceOwner, dock) {
+            AndroidDevices.shared.activity.collect { a -> if (AndroidDevices.shared.selection.value[deviceOwner] == a.serial) dock?.show(PanelId.DEVICES) }
         }
     }
-    val scope = rememberCoroutineScope()
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         BoxWithConstraints {
+            // A wide window has the workspace's changes and pull requests beside the chat; a narrow one
+            // reaches them from the top bar.
+            val showPanel = workspace != null && state.kind == ChatKind.CODE && maxWidth >= PullRequestsPanelMinScreen
             val paneWidths = LocalAppServices.current.paneWidthPrefs
             val savedWidth by paneWidths.flow.collectAsStateWithLifecycle()
-            // The device panel goes beside the chat where both fit; a narrow window opens it on its own screen.
-            val deviceFits = maxWidth.value >= ChatMinWidth.value + DevicePanelWidthRange.start
-            val deviceShown = showDevice && deviceFits
-            val wantedDeviceWidth = savedWidth.devicePanel ?: DevicePanelWidth.value
-            // A wide window has the workspace's changes and pull requests beside the chat; a narrow one
-            // reaches them from the top bar. Beside the device too, when the window has room for all three.
-            val showPanel =
-                workspace != null && state.kind == ChatKind.CODE && maxWidth >= PullRequestsPanelMinScreen &&
-                    (!deviceShown || maxWidth.value >= PullRequestsPanelMinScreen.value + wantedDeviceWidth)
             // What the user dragged it to, as far as the chat keeps room to read.
             val panelWidth =
                 (savedWidth.changesPanel ?: PullRequestsPanelWidth.value)
                     .coerceIn(PullRequestsPanelWidthRange.start, maxOf(PullRequestsPanelWidthRange.start, minOf(PullRequestsPanelWidthRange.endInclusive, maxWidth.value - ChatMinWidth.value)))
                     .dp
-            val deviceWidth =
-                wantedDeviceWidth
-                    .coerceIn(
-                        DevicePanelWidthRange.start,
-                        maxOf(DevicePanelWidthRange.start, minOf(DevicePanelWidthRange.endInclusive, maxWidth.value - ChatMinWidth.value - if (showPanel) panelWidth.value else 0f)),
-                    ).dp
             Scaffold(
                 topBar = {
                     ChatTopBar(
@@ -529,11 +531,8 @@ fun ClaudeCodeChatScreen(
                         }
                         if (canDevice) {
                             HoverTooltip(stringRes(Res.string.android_device_panel_toggle_desc)) {
-                                IconButton(
-                                    onClick = {
-                                        if (deviceFits) DevicePanelVisibility.set(key, !showDevice) else nav.nav(Route.AndroidDevices(key))
-                                    },
-                                ) {
+                                // The dock's device panel; a window without a dock opens the devices screen.
+                                IconButton(onClick = { dock?.toggle(PanelId.DEVICES) ?: nav.nav(Route.AndroidDevices(key)) }) {
                                     // A green dot while this chat's device is up, panel open or not.
                                     val devices by AndroidDevices.shared.state.collectAsStateWithLifecycle()
                                     val picks by AndroidDevices.shared.selection.collectAsStateWithLifecycle()
@@ -542,7 +541,7 @@ fun ClaudeCodeChatScreen(
                                         Icon(
                                             MaterialSymbols.PhoneAndroid,
                                             contentDescription = stringRes(Res.string.android_device_panel_toggle),
-                                            tint = if (deviceShown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp),
                                         )
                                         if (up) DeviceUpBadge(Modifier.align(Alignment.TopEnd))
@@ -680,20 +679,6 @@ fun ClaudeCodeChatScreen(
                         // Dragged like the app's other side panes, and remembered with them.
                         PaneSplitter(onDrag = { delta -> paneWidths.setChangesPanel((panelWidth.value - delta).coerceIn(PullRequestsPanelWidthRange)) })
                         PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth)
-                    }
-                    if (deviceShown) {
-                        PaneSplitter(onDrag = { delta -> paneWidths.setDevicePanel((deviceWidth.value - delta).coerceIn(DevicePanelWidthRange)) })
-                        DevicePanel(
-                            chatKey = key,
-                            folder = File(state.cwd),
-                            agentName = chat.backend.shortName,
-                            owner = deviceOwner,
-                            ownerLabel = workspace?.title ?: shownTitle,
-                            modifier = Modifier.width(deviceWidth),
-                            onAttachScreenshot = { file -> scope.launch { attachments.add(listOf(file)) } },
-                            onOpenFull = { nav.nav(Route.AndroidDevices(key)) },
-                            onClose = { DevicePanelVisibility.set(key, false) },
-                        )
                     }
                 }
             }

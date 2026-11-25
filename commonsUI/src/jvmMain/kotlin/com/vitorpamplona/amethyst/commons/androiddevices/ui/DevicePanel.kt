@@ -170,9 +170,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 
-/** How wide the device panel starts, and how far it can be dragged. */
+/** How wide the device panel's dock column starts. */
 val DevicePanelWidth = 380.dp
-val DevicePanelWidthRange = 280f..720f
 
 private val CardShape = RoundedCornerShape(16.dp)
 
