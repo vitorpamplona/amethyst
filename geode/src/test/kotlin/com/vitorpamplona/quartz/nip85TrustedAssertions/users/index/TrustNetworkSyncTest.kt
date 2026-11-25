@@ -27,16 +27,22 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -72,6 +78,7 @@ class TrustNetworkSyncTest {
     @Test
     fun updatesOnlyFetchWhatChanged() =
         runBlocking {
+            val batchTime = TimeUtils.now() - 2 * 3600
             val subjects = List(300) { hex() }
             val batch = subjects.mapIndexed { i, s -> card(s, 1 + i % 90, batchTime) }
 
@@ -92,18 +99,20 @@ class TrustNetworkSyncTest {
                 assertEquals(200, cold.index.size)
                 assertEquals(batchTime, cold.header.syncCursor)
 
-                // The rest of the batch lands with the same created_at as the cursor.
+                // The rest of the batch lands with the same created_at as the cursor: no REQ past
+                // the cursor sees it, so the update finds nothing and the weekly reconcile gets it.
                 publish(batch.drop(200))
-                val caughtUp = client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay)
+                assertTrue(client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay).unchanged)
+                val caughtUp = assertNotNull(client.reconcileTrustNetwork(cold.header, cold.index, cold.ids, relay))
                 assertTrue(caughtUp.complete)
                 assertEquals(300, caughtUp.index.size)
                 assertEquals(100, caughtUp.received, "only the missing part of the batch is fetched")
                 assertEquals(300, caughtUp.header.heldAtCursor, "the whole batch shares the cursor's second")
                 assertFalse(client.trustNetworkNews(caughtUp.header, relay).any, "the header alone answers 'anything new?'")
 
-                // Nothing new: the COUNT pre-check ends the update without downloading.
+                // Nothing new: one REQ ends the update without reading anything else.
                 val idle = client.updateTrustNetwork(caughtUp.header, caughtUp.index, caughtUp.ids, relay)
-                assertTrue(idle.unchanged, "the COUNT pre-check ends the update")
+                assertTrue(idle.unchanged, idle.detail)
                 assertEquals(0, idle.received)
 
                 // The provider re-ranks one person, removes another with a rank-0 card (its
@@ -122,33 +131,36 @@ class TrustNetworkSyncTest {
                 assertNull(changed.index.rankOf(subjects[1]))
                 assertNull(changed.index.rankOf(subjects[2]))
                 assertEquals(298, changed.index.size, "one re-ranked, one tombstoned, one deleted")
-                assertEquals(1, changed.ids.tombstones, "the rank-0 card is kept as a tombstone")
+                // The rank-0 card is a tombstone, and so is the deleted card: the relay applied the
+                // kind 5, but only the weekly reconcile learns it no longer serves the card.
+                assertEquals(2, changed.ids.tombstones, "the rank-0 card and the deleted one")
                 assertEquals(later, changed.header.syncCursor)
                 // The update window reaches an hour before the cursor: the earlier batch is in it too.
-                assertEquals(299, changed.header.heldAtCursor, "every card held in the update window")
+                assertEquals(300, changed.header.heldAtCursor, "every card held in the update window")
                 assertEquals(0, changed.header.heldAfterCursor, "the re-rank and the rank-0 card are at the cursor, none after it")
 
                 // The tombstone keeps the pre-check exact: nothing new again.
                 val idleAgain = client.updateTrustNetwork(changed.header, changed.index, changed.ids, relay)
                 assertTrue(idleAgain.unchanged)
 
-                // The full check agrees with the relay and fetches nothing (rank-0 cards included).
+                // The full check fetches nothing (rank-0 cards included) and drops the deleted card.
                 val full = assertNotNull(client.reconcileTrustNetwork(idleAgain.header, idleAgain.index, idleAgain.ids, relay))
                 assertTrue(full.complete)
-                assertEquals(0, full.received, "nothing to fetch, nothing gone: ${full.detail}")
+                assertEquals("need 0, gone 1", full.detail)
+                assertEquals(1, full.ids.tombstones)
                 assertEquals(298, full.index.size)
 
-                // The counts say something changed (a relay without NIP-45 always does), but the
-                // reconcile finds nothing: the same index comes back, so nothing is rewritten.
+                // The counts said something changed, but the REQ finds nothing and the counts then
+                // agree: the same index comes back, so nothing is rewritten.
                 val noNews = client.updateTrustNetwork(full.header, full.index, full.ids, relay, knownNews = TrustNetworkNews(cards = true))
                 assertTrue(noNews.unchanged)
                 assertSame(full.index, noNews.index)
 
                 // The cursor moves far past the batch, then the relay drops a batch card (a kind 5
-                // signed at the cursor's second, so no "newer than the cursor" count sees it, and
-                // the card sits far below the update window). Only the total count notices, and
-                // the reconcile drops the card the relay stopped serving: no kind 5 is downloaded.
-                val far = batchTime + 10 * TRUST_NETWORK_UPDATE_OVERLAP_SECS
+                // signed at the cursor's second, so no REQ past the cursor sees it, and the card
+                // sits below the hour an update counts). The update leaves it to the weekly
+                // reconcile, which drops the card the relay stopped serving: no kind 5 downloaded.
+                val far = TimeUtils.now() - 60
                 publish(listOf(card(subjects[3], 50, far)))
                 val moved = client.updateTrustNetwork(full.header, full.index, full.ids, relay)
                 assertEquals(far, moved.header.syncCursor)
@@ -157,12 +169,14 @@ class TrustNetworkSyncTest {
 
                 publish(listOf(deletion(far, subjects[4])))
                 assertTrue(client.trustNetworkNews(moved.header, relay).any, "the total count sees a card gone below the window")
-                val dropped = client.updateTrustNetwork(moved.header, moved.index, moved.ids, relay)
+                val missed = client.updateTrustNetwork(moved.header, moved.index, moved.ids, relay)
+                assertNotNull(missed.index.rankOf(subjects[4]), "below the hour an update counts: ${missed.detail}")
+                val dropped = assertNotNull(client.reconcileTrustNetwork(missed.header, missed.index, missed.ids, relay))
                 assertTrue(dropped.complete)
                 assertNull(dropped.index.rankOf(subjects[4]), dropped.detail)
                 assertEquals(297, dropped.index.size)
                 assertEquals("need 0, gone 1", dropped.detail)
-                assertTrue(client.updateTrustNetwork(dropped.header, dropped.index, dropped.ids, relay).unchanged, "and the counts agree again")
+                assertFalse(client.trustNetworkNews(dropped.header, relay).any, "and the counts agree again")
 
                 // The ids file round-trips with the tombstone.
                 val decoded = assertNotNull(TrustNetworkCodec.decodeIds(TrustNetworkCodec.encodeIds(full.ids)))
@@ -174,6 +188,117 @@ class TrustNetworkSyncTest {
                 client.close()
                 server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
                 engine.close()
+            }
+        }
+
+    /**
+     * What a provider publishing new cards costs an update: REQs for what is newer than the
+     * cursor, no COUNT and no negentropy. A card no REQ past the cursor can see (one that reached
+     * the relay late, at the cursor's own second) is the weekly reconcile's.
+     */
+    @Test
+    fun newCardsArriveByReqAndALateCardWaitsForTheWeeklyCheck() =
+        runBlocking {
+            val batchTime = TimeUtils.now() - 2 * 3600
+            val subjects = List(300) { hex() }
+            val batch = subjects.map { card(it, 50, batchTime) }
+
+            val engine = RelayEngine(url = "ws://127.0.0.1:7774/".normalizeRelayUrl())
+            engine.store.batchInsert(batch)
+            val server = KtorRelay(engine, port = 0).start()
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
+            val relay = server.url.normalizeRelayUrl()
+            val negOpens = AtomicInteger()
+            client.addConnectionListener(
+                object : RelayConnectionListener {
+                    override fun onSent(
+                        relay: IRelayClient,
+                        cmdStr: String,
+                        cmd: Command,
+                        success: Boolean,
+                    ) {
+                        if (cmdStr.startsWith("[\"NEG-OPEN\"")) negOpens.incrementAndGet()
+                    }
+                },
+            )
+
+            suspend fun publish(events: List<Event>) = events.forEach { assertTrue(client.publishAndConfirm(it, setOf(relay)), "relay refused ${it.id}") }
+
+            try {
+                val cold = client.downloadTrustNetwork(provider.pubKey, relay)
+                assertEquals(300, cold.index.size)
+
+                // A recompute: five new people and one re-ranked, all newer than the cursor.
+                val later = batchTime + 600
+                val newcomers = List(5) { hex() }
+                publish(newcomers.map { card(it, 40, later) } + card(subjects[0], 90, later))
+                negOpens.set(0)
+                val updated = client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay)
+                assertTrue(updated.complete, updated.detail)
+                assertEquals(305, updated.index.size)
+                assertEquals(90, updated.index.rankOf(subjects[0]))
+                assertEquals(40, updated.index.rankOf(newcomers[0]))
+                assertEquals(0, negOpens.get(), "a REQ caught up, no reconcile: ${updated.detail}")
+                assertTrue(client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay).unchanged, "the counts agree afterwards")
+
+                // An on-demand provider's next card: one more REQ, still no negentropy.
+                negOpens.set(0)
+                val single = hex()
+                publish(listOf(card(single, 60, later + 300)))
+                val next = client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay)
+                assertEquals(60, next.index.rankOf(single), next.detail)
+                assertEquals(0, negOpens.get(), next.detail)
+
+                // A kind 5 for someone the index never held: nothing to rebuild, the same index
+                // comes back (no rewrite, no feed rebuild), and the cursor moves past it.
+                var idsRead = 0
+                val stranger = later + 400
+                publish(listOf(deletion(stranger, hex())))
+                val ignored =
+                    assertNotNull(
+                        client.catchUpTrustNetwork(next.header, next.index, relay) {
+                            idsRead++
+                            next.ids
+                        },
+                    )
+                assertTrue(ignored.unchanged, ignored.detail)
+                assertSame(next.index, ignored.index)
+                assertEquals(stranger, ignored.header.syncCursor)
+                assertEquals(1, idsRead)
+
+                // A card signed at the cursor's second that reaches the relay only now: no REQ
+                // past the cursor sees it, so it waits for the weekly reconcile.
+                val late = hex()
+                publish(listOf(card(late, 30, stranger)))
+                assertTrue(client.updateTrustNetwork(ignored.header, ignored.index, ignored.ids, relay).unchanged)
+                val weekly = assertNotNull(client.reconcileTrustNetwork(ignored.header, ignored.index, ignored.ids, relay))
+                assertEquals(30, weekly.index.rankOf(late), weekly.detail)
+                assertEquals("need 1, gone 0", weekly.detail)
+            } finally {
+                client.close()
+                server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
+                engine.close()
+            }
+        }
+
+    /** A relay that cannot be reached: the catch-up fails without reading the 12 MB id column. */
+    @Test
+    fun aCatchUpThatCannotReachTheRelayReadsNoIds() =
+        runBlocking {
+            val (index, ids) = TrustNetworkBuilder(provider.pubKey).apply { add(card(hex(), 50, batchTime)) }.build()
+            val header = TrustNetworkHeader(provider.pubKey, "ws://127.0.0.1:1/", batchTime, batchTime, batchTime)
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
+            var idsRead = 0
+            try {
+                assertFailsWith<TrustNetworkCatchUpException> {
+                    client.catchUpTrustNetwork(header, index, "ws://127.0.0.1:1/".normalizeRelayUrl()) {
+                        idsRead++
+                        ids
+                    }
+                }
+                assertEquals(0, idsRead)
+            } finally {
+                client.close()
             }
         }
 

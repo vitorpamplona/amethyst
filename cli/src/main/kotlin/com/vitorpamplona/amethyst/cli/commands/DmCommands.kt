@@ -33,11 +33,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.delay
 
@@ -60,16 +65,24 @@ object DmCommands {
     val USAGE: String =
         """
         |Direct messages (NIP-17):
-        |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
-        |    [--allow-fallback]                       (default: only deliver to recipient's kind:10050)
+        |  dm send RECIPIENT[,RECIPIENT…] TEXT        send a gift-wrapped DM (kind:14); several
+        |    [--subject S]                            recipients make a group room; --reply-to
+        |    [--reply-to EVENT_ID]                    answers a DM in your inbox, in its room: the
+        |    [--timeout SECS]                         recipients may be left out, and any given must
+        |    [--allow-fallback]                       be in that room (else bad_args); --timeout
+        |                                             bounds the inbox search (default 8s)
+        |                                             (default: only deliver to recipient's kind:10050)
+        |  dm react EVENT_ID EMOJI                    react (kind:7) to a DM in your inbox, wrapped
+        |    [--timeout SECS] [--allow-fallback]      to everyone in its room
         |  dm send-file RECIPIENT --file PATH         encrypt + upload to Blossom + publish kind:15
         |    --server URL [--mime-type M]
         |  dm send-file RECIPIENT URL --key HEX       reference-mode: file already uploaded
         |    --nonce HEX [--mime-type M] [--hash H]
         |    [--original-hash H] [--size N]
         |    [--dim WxH] [--blurhash S]
-        |  dm list [USER] [--peer USER] [--since TS]  list decrypted DMs (kind:14 text + kind:15 file
-        |          [--limit N] [--timeout SECS]        with `type` discriminator); positional USER is
+        |  dm list [USER] [--peer USER] [--since TS]  list decrypted DMs (kind:14 text, kind:15 file,
+        |          [--limit N] [--timeout SECS]        kind:7 reaction: `type` text|file|reaction,
+        |                                              with reply_to and subject); positional USER is
         |                                              an alternative to --peer (the flag wins);
         |                                              default --limit 50
         |  dm await [USER] --match TEXT               wait for a matching DM (positional USER or
@@ -84,12 +97,13 @@ object DmCommands {
         route(
             "dm",
             tail,
-            "dm <send|send-file|list|await> …",
+            "dm <send|send-file|react|list|await> …",
             help = USAGE,
             routes =
                 mapOf(
                     "send" to { rest -> send(dataDir, rest) },
                     "send-file" to { rest -> sendFile(dataDir, rest) },
+                    "react" to { rest -> react(dataDir, rest) },
                     "list" to { rest -> list(dataDir, rest) },
                     "await" to { rest -> await(dataDir, rest) },
                 ),
@@ -101,17 +115,115 @@ object DmCommands {
     ): Int {
         val args = Args(rest)
         val allowFallback = args.bool("allow-fallback")
+        val subject = args.flag("subject")
+        val replyTo = args.flag("reply-to")
+        val timeoutSecs = args.longFlag("timeout", 8)
         args.rejectUnknown()
-        if (args.positional.size < 2) return Output.error("bad_args", "dm send <recipient> <text> [--allow-fallback]")
-        val recipientInput = args.positional(0, "recipient")
-        val text = args.positional(1, "text")
+        val usage = "dm send <recipient>[,<recipient>…] <text> [--subject S] [--reply-to EVENT_ID [--timeout SECS]] [--allow-fallback]"
+        // A reply's room is the replied message's, so its recipients may be left out: `dm send --reply-to ID TEXT`.
+        val recipientInput: String?
+        val text: String
+        when {
+            args.positional.size >= 2 -> {
+                recipientInput = args.positional(0, "recipient")
+                text = args.positional(1, "text")
+            }
+
+            replyTo != null && args.positional.size == 1 -> {
+                recipientInput = null
+                text = args.positional(0, "text")
+            }
+
+            else -> {
+                return Output.error("bad_args", usage)
+            }
+        }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val recipient = ctx.requireUserHex(recipientInput)
-            val result = DmActions.buildTextDm(ctx.signer, recipient, text)
+            val recipients =
+                recipientInput
+                    ?.split(',')
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() }
+                    ?.map { ctx.requireUserHex(it) }
+                    ?.distinct()
+                    .orEmpty()
+            if (recipientInput != null && recipients.isEmpty()) return Output.error("bad_args", usage)
+            val template =
+                if (replyTo != null) {
+                    // A reply goes to the room of the message it answers (ChatMessageEvent.reply), as in the app.
+                    val target =
+                        findRumor(ctx, replyTo, timeoutSecs) as? BaseDMGroupEvent
+                            ?: return Output.error("not_found", "no DM $replyTo in your inbox")
+                    // Never dropped silently: a recipient outside that room would be a different chat.
+                    val outside = recipients - target.groupMembers()
+                    if (outside.isNotEmpty()) {
+                        return Output.error(
+                            "bad_args",
+                            "--reply-to answers in the room of $replyTo; not in it: ${outside.joinToString(",")}",
+                            mapOf("room" to target.groupMembers().sorted()),
+                        )
+                    }
+                    ChatMessageEvent.reply(text, EventHintBundle(target)) { subject?.let { changeSubject(it) } }
+                } else {
+                    ChatMessageEvent.build(text, recipients.map { PTag(it) }) { subject?.let { changeSubject(it) } }
+                }
+            val result = NIP17Factory().createMessageNIP17(template, ctx.signer)
             return publishWraps(ctx, result, allowFallback)
         }
+    }
+
+    /**
+     * `dm react EVENT_ID EMOJI`: a NIP-25 reaction to a DM in the inbox, gift-wrapped (as a rumor) to
+     * everyone in that DM's room and to ourselves, the way the app reacts inside a chat
+     * ([NIP17Factory.createReactionWithinGroup]).
+     */
+    private suspend fun react(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val allowFallback = args.bool("allow-fallback")
+        val timeoutSecs = args.longFlag("timeout", 8)
+        args.rejectUnknown()
+        if (args.positional.size < 2) return Output.error("bad_args", "dm react <event_id> <emoji> [--allow-fallback]")
+        val targetId = args.positional(0, "event_id")
+        val emoji = args.positional(1, "emoji")
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val target =
+                findRumor(ctx, targetId, timeoutSecs) as? BaseDMGroupEvent
+                    ?: return Output.error("not_found", "no DM $targetId in your inbox")
+            val room = target.groupMembers().filter { it != ctx.signer.pubKey }
+            val result = NIP17Factory().createReactionWithinGroup(emoji, EventHintBundle<Event>(target), room, ctx.signer)
+            return publishWraps(ctx, result, allowFallback, extra = mapOf("target" to targetId, "content" to emoji))
+        }
+    }
+
+    /** The rumor [id] among the gift wraps in our inbox relays, or null when none of them holds it. */
+    private suspend fun findRumor(
+        ctx: Context,
+        id: HexKey,
+        timeoutSecs: Long,
+    ): Event? {
+        val inbox =
+            ctx
+                .inboxRelays()
+                .ifEmpty { ctx.outboxRelays() }
+                .ifEmpty { ctx.bootstrapRelays() }
+        val filters =
+            inbox
+                .flatMap { filterGiftWrapsToPubkey(it, ctx.signer.pubKey, null) }
+                .groupBy { it.relay }
+                .mapValues { (_, v) -> v.map { it.filter } }
+        for ((_, event) in ctx.drain(filters, idleTimeoutMs = timeoutSecs * 1000)) {
+            if (event !is GiftWrapEvent) continue
+            val inner = event.unwrapAndUnsealOrNull(ctx.signer) ?: continue
+            if (inner.id == id) return inner
+        }
+        return null
     }
 
     /**
@@ -474,6 +586,8 @@ object DmCommands {
         override val from: HexKey,
         override val to: List<HexKey>,
         val content: String,
+        val replyTo: List<HexKey>,
+        val subject: String?,
         override val createdAt: Long,
         override val relay: String,
     ) : DecryptedDm {
@@ -487,6 +601,35 @@ object DmCommands {
                 "author" to from,
                 "to" to to,
                 "content" to content,
+                "reply_to" to replyTo,
+                "subject" to subject,
+                "created_at" to createdAt,
+                "relay" to relay,
+            )
+    }
+
+    /** A NIP-25 reaction that arrived inside a gift wrap (a rumor, not a public kind:7). */
+    private data class ReactionDm(
+        override val id: HexKey,
+        override val wrapId: HexKey,
+        override val from: HexKey,
+        override val to: List<HexKey>,
+        val content: String,
+        val target: List<HexKey>,
+        override val createdAt: Long,
+        override val relay: String,
+    ) : DecryptedDm {
+        override val searchText: String get() = content
+
+        override fun toJson(): Map<String, Any?> =
+            mapOf(
+                "type" to "reaction",
+                "event_id" to id,
+                "wrap_id" to wrapId,
+                "author" to from,
+                "to" to to,
+                "content" to content,
+                "target" to target,
                 "created_at" to createdAt,
                 "relay" to relay,
             )
@@ -507,6 +650,7 @@ object DmCommands {
         val size: Int?,
         val dimensions: String?,
         val blurhash: String?,
+        val replyTo: List<HexKey>,
         override val createdAt: Long,
         override val relay: String,
     ) : DecryptedDm {
@@ -533,6 +677,7 @@ object DmCommands {
             if (size != null) out["size"] = size
             if (dimensions != null) out["dim"] = dimensions
             if (blurhash != null) out["blurhash"] = blurhash
+            out["reply_to"] = replyTo
             return out
         }
     }
@@ -550,8 +695,14 @@ object DmCommands {
             // seal author's, so the NIP-17 §7 step-3 impersonation check is
             // already enforced upstream — no need to redo it here.
             val inner = event.unwrapAndUnsealOrNull(ctx.signer) ?: continue
-            if (inner !is BaseDMGroupEvent) continue
             if (!seen.add(inner.id)) continue
+            if (inner is ReactionEvent) {
+                // A reaction rumor p-tags only the reacted-to author; the wrap reached us, so we're in it.
+                if (peerHex != null && peerHex != inner.pubKey && peerHex !in inner.originalAuthor()) continue
+                out.add(ReactionDm(inner.id, event.id, inner.pubKey, inner.originalAuthor(), inner.content, inner.originalPost(), inner.createdAt, relay.url))
+                continue
+            }
+            if (inner !is BaseDMGroupEvent) continue
             if (peerHex != null && peerHex !in inner.groupMembers()) continue
             out.add(toDecrypted(inner, event.id, relay.url) ?: continue)
         }
@@ -571,6 +722,8 @@ object DmCommands {
                     from = inner.pubKey,
                     to = inner.recipientsPubKey(),
                     content = inner.content,
+                    replyTo = inner.replyTo(),
+                    subject = inner.tags.subject(),
                     createdAt = inner.createdAt,
                     relay = relayUrl,
                 )
@@ -592,6 +745,7 @@ object DmCommands {
                     size = inner.size(),
                     dimensions = inner.dimensions()?.let { "${it.width}x${it.height}" },
                     blurhash = inner.blurhash(),
+                    replyTo = inner.replyTo(),
                     createdAt = inner.createdAt,
                     relay = relayUrl,
                 )

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip88Polls
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -102,4 +103,14 @@ data class PollTallyPolicy(
 fun interface PollResponseRule {
     /** The options [response] casts, or null when it is not a valid vote under this rule. */
     fun cast(response: PollResponseEvent): Set<String>?
+
+    /**
+     * Each voter's counted vote among [responses] (by pubkey: the response that casts it and its
+     * options), when the room counts a poll's votes as a whole by its own rule rather than by
+     * folding them in one at a time; null leaves the tally to [PollResponsesCache]'s fold.
+     */
+    fun tally(responses: Collection<PollResponseEvent>): Map<HexKey, Pair<PollResponseEvent, Set<String>>>? = null
+
+    /** Whether [tally] counts this room's polls (true) or the cache folds votes in itself (false). */
+    val talliesAsWhole: Boolean get() = false
 }

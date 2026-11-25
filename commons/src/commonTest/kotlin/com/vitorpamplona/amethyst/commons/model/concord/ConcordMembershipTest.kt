@@ -42,7 +42,7 @@ class ConcordMembershipTest {
         eid: String,
         content: String,
         author: String = owner,
-    ) = ControlEdition(kind, eid.hexToByteArray(), 0, null, null, content, author, "r-$eid", 0)
+    ) = ControlEdition(kind, eid.hexToByteArray(), 1, null, null, content, author, "r-$eid", 0)
 
     private val communityId = "cc".repeat(32).hexToByteArray()
 

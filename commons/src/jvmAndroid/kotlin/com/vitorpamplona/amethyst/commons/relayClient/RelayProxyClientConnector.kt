@@ -71,6 +71,12 @@ class RelayProxyClientConnector(
         val torBootstrapped: Boolean,
     )
 
+    /**
+     * Redials the relays that dropped while the app was away. Each window that shows the app
+     * reports its visibility to it (`RedialRelaysOnReturn`), on Android and the desktop alike.
+     */
+    val foreground = RelayForegroundReconnect(client)
+
     // The OkHttp clients in use the last time we forced a reconnect. These are only
     // rebuilt when something connection-relevant changes (Tor's SOCKS port appears,
     // wifi<->cellular switch), so comparing them tells us whether a wakeup is a real

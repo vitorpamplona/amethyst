@@ -62,6 +62,8 @@ class FileMlsGroupStateStore(
 
     private fun ratchetFile(id: String) = File(dir, "$id.ratchet")
 
+    private fun convergenceFile(id: String) = File(dir, "$id.convergence")
+
     override suspend fun save(
         nostrGroupId: String,
         state: ByteArray,
@@ -75,7 +77,20 @@ class FileMlsGroupStateStore(
         stateFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "group state")
         retainedFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "retained epochs")
         ratchetFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "sender ratchet")
+        convergenceFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "convergence window")
     }
+
+    // A fork's other half usually reaches amy in a later command: without the window that later
+    // process cannot tell it from an echo, and the group stays split.
+    override suspend fun saveConvergenceWindow(
+        nostrGroupId: String,
+        window: ByteArray,
+    ): Boolean {
+        SecureFileIO.writeBytesAtomic(convergenceFile(nostrGroupId), window)
+        return true
+    }
+
+    override suspend fun loadConvergenceWindow(nostrGroupId: String): ByteArray? = convergenceFile(nostrGroupId).takeIf { it.exists() }?.readBytes()
 
     // The CLI reopens a fresh context per command, so "restart between two
     // sends" is its normal mode rather than an edge case — it is the caller
@@ -195,12 +210,36 @@ class FileMarmotMessageStore(
         val target = file(nostrGroupId)
         if (target.exists() && target.readLines().any { it == line }) return
         SecureFileIO.appendText(target, line + "\n")
+        Event.fromJsonOrNull(innerEventJson)?.createdAt?.let { createdAt ->
+            val current = newestMessageCreatedAt(nostrGroupId)
+            if (current == null || createdAt > current) SecureFileIO.writeTextAtomic(newestFile(nostrGroupId), createdAt.toString())
+        }
+    }
+
+    private fun newestFile(id: String) = File(dir, "$id.newest")
+
+    /**
+     * Kept in `<group>.newest` as messages are appended, so a command's start reads no message log.
+     * A log written before that file existed is read once, and the answer stored.
+     */
+    override suspend fun newestMessageCreatedAt(nostrGroupId: String): Long? {
+        val target = newestFile(nostrGroupId)
+        target
+            .takeIf { it.exists() }
+            ?.readText()
+            ?.trim()
+            ?.toLongOrNull()
+            ?.let { return it }
+        val computed = loadMessages(nostrGroupId).maxOfOrNull { Event.fromJsonOrNull(it)?.createdAt ?: 0L } ?: return null
+        SecureFileIO.writeTextAtomic(target, computed.toString())
+        return computed
     }
 
     override suspend fun loadMessages(nostrGroupId: String): List<String> = file(nostrGroupId).takeIf { it.exists() }?.readLines()?.filter { it.isNotBlank() } ?: emptyList()
 
     override suspend fun delete(nostrGroupId: String) {
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
+        newestFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group newest message time")
         epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
         snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
         expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
@@ -533,6 +572,30 @@ class FileIngestDedupStore(
                 ?.readLines()
                 ?.filter { it.isNotBlank() }
                 ?.toSet()
+                .orEmpty()
+        }
+
+    /** Beside [file], so the echoes of sent messages never push the Welcome markers out of it. */
+    private val ownEchoFile = File(file.parentFile, file.name + ".own-echoes")
+
+    /** Trimmed to the newest [MarmotIngestDedupStore.OWN_ECHO_LIMIT] once it holds twice that. */
+    override suspend fun markOwnEcho(eventId: HexKey) =
+        mutex.withLock {
+            SecureFileIO.appendText(ownEchoFile, eventId + "\n")
+            if (ownEchoFile.length() > 2L * MarmotIngestDedupStore.OWN_ECHO_LIMIT * 65L) {
+                val kept = ownEchoFile.readLines().filter { it.isNotBlank() }.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
+                SecureFileIO.writeBytesAtomic(ownEchoFile, (kept.joinToString("\n") + "\n").encodeToByteArray())
+            }
+        }
+
+    override suspend fun loadOwnEchoes(): List<HexKey> =
+        mutex.withLock {
+            ownEchoFile
+                .takeIf { it.exists() }
+                ?.readLines()
+                ?.filter { it.isNotBlank() }
+                ?.distinct()
+                ?.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
                 .orEmpty()
         }
 }

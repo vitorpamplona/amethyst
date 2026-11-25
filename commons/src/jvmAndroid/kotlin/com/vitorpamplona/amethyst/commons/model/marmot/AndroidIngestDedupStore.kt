@@ -84,6 +84,49 @@ class AndroidIngestDedupStore(
             }
         }
 
+    private fun ownEchoFile(): File = File(rootDir, "marmot_own_echoes.ids")
+
+    /**
+     * The kind:445 ids this device sent, in their own file so they never crowd the Welcome and
+     * created-locally markers out of [mark]'s capped one. Trimmed to the newest
+     * [MarmotIngestDedupStore.OWN_ECHO_LIMIT] once it holds twice that.
+     */
+    override suspend fun markOwnEcho(eventId: HexKey) =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val target = ownEchoFile()
+                try {
+                    target.parentFile?.mkdirs()
+                    target.appendText(eventId + "\n")
+                    if (target.length() > 2L * MarmotIngestDedupStore.OWN_ECHO_LIMIT * 65L) {
+                        val kept = target.readLines().filter { it.isNotBlank() }.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
+                        target.writeText(kept.joinToString("\n") + "\n")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "could not record an own echo", e)
+                }
+                Unit
+            }
+        }
+
+    override suspend fun loadOwnEchoes(): List<HexKey> =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                try {
+                    ownEchoFile()
+                        .takeIf { it.exists() }
+                        ?.readLines()
+                        ?.filter { it.isNotBlank() }
+                        ?.distinct()
+                        ?.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
+                        .orEmpty()
+                } catch (e: Exception) {
+                    Log.w(TAG, "could not read own echoes", e)
+                    emptyList()
+                }
+            }
+        }
+
     companion object {
         private const val TAG = "AndroidIngestDedupStore"
     }

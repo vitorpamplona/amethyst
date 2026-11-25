@@ -86,6 +86,8 @@ kotlin {
                 implementation(libs.cordn)
                 // Imported directly; see the same line in commons/build.gradle.kts.
                 implementation(libs.crypto)
+                // CordnGroupPolicy (cordn) extends MlsGroupPolicy: the KMP metadata compiles need mls here too.
+                implementation(libs.mls.kmp)
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)

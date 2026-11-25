@@ -545,6 +545,7 @@
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_links_created">Created %1$s</string>
     <string name="concord_invite_links_empty">You haven't created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_create">Create invite link</string>
     <string name="concord_invite_links_unreadable">Your invite links couldn't be loaded, so none can be revoked right now. Check your connection and try again.</string>
     <string name="concord_invite_revoke_action">Revoke link</string>
     <string name="concord_invite_revoke_title">Revoke this link?</string>
@@ -4337,6 +4338,7 @@
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_links_action">Invite links…</string>
     <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_mint_failed">The invite link couldn't be created. You may not be allowed to invite people to this community, or the link couldn't be saved to your relays. Try again in a moment.</string>
     <string name="concord_invite_revoked_failed">The link couldn't be revoked. Check your connection and try again.</string>
     <string name="concord_invite_revoked_ok">Invite link revoked.</string>
     <string name="concord_invite_title">Invite link</string>
@@ -7297,6 +7299,21 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_calendar_event">Event: %1$s</string>
     <string name="cordn_calendar_event_cancelled">Cancelled event: %1$s</string>
+    <string name="cordn_calendar_cancelled">Cancelled</string>
+    <plurals name="cordn_calendar_going">
+        <item quantity="one">%1$d going</item>
+        <item quantity="other">%1$d going</item>
+    </plurals>
+    <plurals name="cordn_calendar_maybe">
+        <item quantity="one">%1$d maybe</item>
+        <item quantity="other">%1$d maybe</item>
+    </plurals>
+    <plurals name="cordn_calendar_declined">
+        <item quantity="one">%1$d can't go</item>
+        <item quantity="other">%1$d can't go</item>
+    </plurals>
+    <string name="cordn_poll_closes">Closes %1$s</string>
+    <string name="cordn_poll_closed">Closed</string>
     <string name="cordn_call_started">Call started</string>
     <string name="cordn_call_started_titled">Call started · %1$s</string>
     <string name="cordn_call_ended">Call ended</string>
@@ -10557,6 +10574,9 @@
     <string name="marmot_devices_link_new_desc">This device approves another one of yours</string>
     <string name="marmot_devices_link_this">Link this device to an existing one</string>
     <string name="marmot_devices_link_this_desc">Approve it on a device that already has your chats</string>
+    <string name="marmot_devices_move_this">Move this device to another group of your devices</string>
+    <string name="marmot_devices_move_this_desc">Approve it on a device of that group; this device leaves its current group once the move is done</string>
+    <string name="marmot_devices_moving">This device is moving to another group of your devices. It stays in its current group until the move is done.</string>
     <string name="marmot_devices_section_sign_ins">Other sign-ins</string>
     <string name="marmot_devices_sign_in_new">New sign-in %1$s</string>
     <string name="marmot_devices_sign_in_earlier">Signed in before this device, %1$s</string>
@@ -10568,6 +10588,7 @@
     <string name="marmot_devices_failed_action">That did not work. Try again.</string>
     <string name="marmot_devices_switch_off_while_linked">This device is linked to your other devices, so this stays on. To unlink it, remove it from one of your other devices, or log out of this account here.</string>
     <string name="marmot_link_title_new">Link this device</string>
+    <string name="marmot_link_title_move">Move this device</string>
     <string name="marmot_link_title_existing">Link a new device</string>
     <string name="marmot_link_starting">Sending the link request…</string>
     <string name="marmot_link_waiting_answer">Waiting for one of your other devices. Open Amethyst or White Noise on it: it will ask to link this one.</string>

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 
 /**
@@ -119,7 +120,7 @@ object RelayGroupReadCommands {
         }
     }
 
-    /** `relaygroup info RELAY GROUP_ID [--timeout S]` — one group's metadata + admin/member roster. */
+    /** `relaygroup info RELAY GROUP_ID [--timeout S]` — one group's metadata, admin/member roster and the roles it supports (39003). */
     suspend fun info(
         dataDir: DataDir,
         rest: Array<String>,
@@ -135,7 +136,7 @@ object RelayGroupReadCommands {
             ctx.prepare()
             val filter =
                 Filter(
-                    kinds = listOf(GroupMetadataEvent.KIND, GroupAdminsEvent.KIND, GroupMembersEvent.KIND),
+                    kinds = listOf(GroupMetadataEvent.KIND, GroupAdminsEvent.KIND, GroupMembersEvent.KIND, GroupRolesEvent.KIND),
                     tags = mapOf("d" to listOf(groupId)),
                     limit = 10,
                 )
@@ -150,6 +151,7 @@ object RelayGroupReadCommands {
             val meta = events.filterIsInstance<GroupMetadataEvent>().maxByOrNull { it.createdAt }
             val admins = events.filterIsInstance<GroupAdminsEvent>().maxByOrNull { it.createdAt }?.admins() ?: emptyList()
             val members = events.filterIsInstance<GroupMembersEvent>().maxByOrNull { it.createdAt }?.members() ?: emptyList()
+            val roles = events.filterIsInstance<GroupRolesEvent>().maxByOrNull { it.createdAt }?.roles() ?: emptyList()
             val memberCount = (members + admins.map { it.pubKey }).distinct().size
 
             if (meta == null && admins.isEmpty() && members.isEmpty()) {
@@ -168,6 +170,7 @@ object RelayGroupReadCommands {
                     "member_count" to memberCount,
                     "admins" to admins.map { mapOf("pubkey" to it.pubKey, "roles" to it.roles) },
                     "members" to members,
+                    "roles" to roles.map { mapOf("name" to it.name, "description" to it.description) },
                 ),
             )
             return 0

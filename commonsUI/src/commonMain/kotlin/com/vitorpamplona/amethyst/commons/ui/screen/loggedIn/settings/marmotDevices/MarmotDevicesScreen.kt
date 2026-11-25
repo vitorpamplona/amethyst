@@ -72,6 +72,9 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_devices_link_new_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_link_this
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_link_this_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_linked_at
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_move_this
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_move_this_desc
+import com.vitorpamplona.amethyst.commons.resources.marmot_devices_moving
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_needs_signer
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_not_linked
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_remaining_chats
@@ -156,6 +159,7 @@ fun MarmotDevicesScreen(
             onSwitch = viewModel::setSwitch,
             onLinkNewDevice = { nav.nav(Route.MarmotDeviceLink(asNewDevice = false)) },
             onLinkThisDevice = { nav.nav(Route.MarmotDeviceLink(asNewDevice = true)) },
+            onMoveThisDevice = { nav.nav(Route.MarmotDeviceLink(asNewDevice = true, move = true)) },
             onRemove = { viewModel.removeDevice(it.slot) },
             onRejectSignIn = { viewModel.rejectSignIn(it.slot) },
             onAcceptSignIn = { viewModel.acceptSignIn(it.slot) },
@@ -189,6 +193,7 @@ fun MarmotDevicesContent(
     onSwitch: (Boolean) -> Unit,
     onLinkNewDevice: () -> Unit,
     onLinkThisDevice: () -> Unit,
+    onMoveThisDevice: () -> Unit = {},
     onRemove: (LinkedDevice) -> Unit,
     onRejectSignIn: (SignIn) -> Unit,
     modifier: Modifier = Modifier,
@@ -272,6 +277,13 @@ fun MarmotDevicesContent(
                     if (!snapshot.linked) {
                         SettingsDivider()
                         LinkEntry(MaterialSymbols.PhonelinkLock, Res.string.marmot_devices_link_this, Res.string.marmot_devices_link_this_desc, onLinkThisDevice)
+                    } else if (snapshot.moving) {
+                        SettingsDivider()
+                        NoticeRow(MaterialSymbols.PhonelinkLock, stringRes(Res.string.marmot_devices_moving))
+                    } else {
+                        // Two groups of the same account's devices: this one can join the other.
+                        SettingsDivider()
+                        LinkEntry(MaterialSymbols.PhonelinkLock, Res.string.marmot_devices_move_this, Res.string.marmot_devices_move_this_desc, onMoveThisDevice)
                     }
                 }
             }

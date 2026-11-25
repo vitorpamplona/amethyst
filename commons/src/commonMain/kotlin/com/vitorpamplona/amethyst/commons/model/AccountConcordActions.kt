@@ -121,6 +121,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -1537,12 +1538,18 @@ class AccountConcordActions(
         val plane = session.currentChannelPlane(channelIdHex) ?: return false
         val channelKey = plane.key
         // A custom-emoji reaction is a `:shortcode:` content that needs its NIP-30 `emoji` tag to
-        // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
+        // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags. The
+        // palette's `:name:url` carries its own picture, which buildChannelReaction splits into
+        // the shortcode and the tag.
         val emojiTags =
-            account.emoji
-                .findEmojiTags(reaction)
-                .map { it.toTagArray() }
-                .toTypedArray()
+            if (reaction.startsWith(":") && EmojiUrlTag.decode(reaction) != null) {
+                emptyArray()
+            } else {
+                account.emoji
+                    .findEmojiTags(reaction)
+                    .map { it.toTagArray() }
+                    .toTypedArray()
+            }
         val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         publishConcordWrap(entry, wrap)
         return true
@@ -2848,6 +2855,7 @@ class AccountConcordActions(
                         communityId = entry.id,
                         priorRoot = entry.root.hexToByteArray(),
                         rootEpoch = entry.rootEpoch,
+                        open = session.wrapOpener,
                         accept = honored,
                     )
                 if (received != null && received.newEpoch > entry.rootEpoch) {
@@ -2881,6 +2889,7 @@ class AccountConcordActions(
                     communityId = entry.id,
                     priorRoot = prior.key.hexToByteArray(),
                     rootEpoch = prior.epoch,
+                    open = session.wrapOpener,
                     accept = honored,
                 ) ?: continue
             val healed = ConcordReceive.withHealedRoot(entry, sibling) ?: continue
@@ -3387,7 +3396,7 @@ class AccountConcordActions(
             val wraps = session.pendingChannelRekeyWraps()
             if (wraps.isEmpty()) continue
             val entry = session.entry
-            val outcomes = ConcordPrivateChannels.receive(entry, wraps, session.controlEditions(), state.authority, account.signer)
+            val outcomes = ConcordPrivateChannels.receive(entry, wraps, session.controlEditions(), state.authority, account.signer, session.wrapOpener)
             if (outcomes.isEmpty()) continue
             val fromEpochs = entry.privateChannels.associate { it.channelId.lowercase() to it.epoch }
             if (updateConcordEntry(entry.id) { cur -> ConcordPrivateChannels.applyOutcome(cur, outcomes, fromEpochs) }) {

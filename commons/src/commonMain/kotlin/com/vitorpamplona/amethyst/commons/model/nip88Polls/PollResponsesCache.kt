@@ -170,6 +170,8 @@ class PollResponsesCache : UserDependencies {
                 if (note in allResponses) return this
 
                 val withNote = allResponses.adding(note)
+                // A room that counts a poll as a whole (a Marmot group: marmot-kmp's tally) recounts.
+                if (policy?.rule?.talliesAsWhole == true) return byRoomTally(withNote, policy)
                 val event =
                     note.event as? PollResponseEvent
                         ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
@@ -221,6 +223,42 @@ class PollResponsesCache : UserDependencies {
             }
 
             /**
+             * The tally of [responses] by the room's own count ([PollResponseRule.tally]): each voter's
+             * counted vote is the one the room's rule picks, over every response at once. A room's polls
+             * are small (a group's members), so recounting on each arrival costs little.
+             */
+            private fun byRoomTally(
+                responses: PersistentSet<Note>,
+                policy: PollTallyPolicy,
+            ): ResponseTally {
+                val rule = checkNotNull(policy.rule)
+                val authors = HashMap<HexKey, User>()
+                val events = ArrayList<PollResponseEvent>(responses.size)
+                var late = 0
+                var backdated = 0
+                responses.forEach { note ->
+                    val event = note.event as? PollResponseEvent ?: return@forEach
+                    when {
+                        policy.isAfterWindow(event.createdAt) -> late++
+                        policy.isBeforeWindow(event.createdAt) -> backdated++
+                    }
+                    note.author?.let { authors[event.pubKey] = it }
+                    events.add(event)
+                }
+                var votes = persistentMapOf<User, PollResponseEvent>()
+                var tally = persistentMapOf<String, PersistentSet<User>>()
+                var counted = persistentSetOf<User>()
+                rule.tally(events).orEmpty().forEach { (voter, vote) ->
+                    val user = authors[voter] ?: return@forEach
+                    val (event, codes) = vote
+                    votes = votes.putting(user, event)
+                    if (codes.isNotEmpty()) counted = counted.adding(user)
+                    codes.forEach { code -> tally = tally.putting(code, (tally[code] ?: persistentSetOf()).adding(user)) }
+                }
+                return ResponseTally(responses, policy, votes, tally, counted, late, backdated)
+            }
+
+            /**
              * Rebuilds from a response set — the O(n) path, used when a response disappears or the
              * rules change under us. Both are rare; incremental removal would need a per-author
              * index to find the next-latest vote, which is not worth carrying for a delete.
@@ -229,6 +267,7 @@ class PollResponsesCache : UserDependencies {
                 responses: PersistentSet<Note> = allResponses,
                 newPolicy: PollTallyPolicy? = policy,
             ): ResponseTally {
+                if (newPolicy?.rule?.talliesAsWhole == true) return byRoomTally(responses, newPolicy)
                 var rebuilt = ResponseTally(persistentSetOf(), newPolicy, persistentMapOf(), persistentMapOf(), persistentSetOf(), 0, 0)
                 responses.forEach { rebuilt = rebuilt.add(it) }
                 return rebuilt

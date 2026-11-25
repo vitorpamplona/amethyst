@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
-import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -782,6 +781,8 @@ class GroupEventHandler(
 
         try {
             receiver.receive(event)
+            // The receive ratchets this moved are written once the burst ends, not every 32 messages.
+            account.marmotReceiveFlusher?.request()
             // Device-group answers queued by this event (hand-offs, small state) go out now.
             account.marmotDevices?.afterIngest(groupId)
         } catch (e: Exception) {
@@ -970,17 +971,7 @@ class GroupEventHandler(
             // so reactions, deletions, and control messages stay
             // silent. A message an admin removed before it
             // landed is never shown, so it never notifies either.
-            if (MarmotGroupNotifier.notifies(innerEvent) &&
-                !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id) &&
-                !account.marmotChatSettings.state.value
-                    .isMuted(result.groupId)
-            ) {
-                account.marmotNotifier().notifyGroupMessage(
-                    innerEvent,
-                    result.groupId,
-                    account,
-                )
-            }
+            account.marmot.notifyMarmotGroupMessage(result.groupId, innerEvent)
         }
     }
 

@@ -38,9 +38,10 @@ import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -122,7 +123,7 @@ class ConcordPendingJoinTest {
 
             state.addPendingJoin(entry(alpha))
 
-            withTimeout(5000) { while (state.liveCommunities.value.isEmpty()) yield() }
+            eventually { state.liveCommunities.value.isNotEmpty() }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id })
             // Shown, never written: the List itself still holds nothing.
             assertTrue(state.entries().isEmpty())
@@ -140,13 +141,13 @@ class ConcordPendingJoinTest {
             val fragment = events.filterIsInstance<ConcordCommunityListFragmentEvent>().single()
             state.cache.getOrCreateAddressableNote(fragment.address()).loadEvent(fragment, author, emptyList())
 
-            // liveCommunities combines the List read on Dispatchers.IO with the pending joins, and
-            // says nothing until that read has come once: a slow runner gets here first.
-            withTimeout(5000) { while (state.entries().isEmpty() || state.liveCommunities.value.isEmpty()) yield() }
+            eventually { state.entries().isNotEmpty() }
+            // liveCommunities folds the document on Dispatchers.IO, so it can trail entries(): wait for it too.
+            eventually { state.liveCommunities.value.any { it.id == alpha } }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id })
 
             state.dropPendingJoin(alpha)
-            withTimeout(5000) { while (state.liveCommunities.value.isEmpty()) yield() }
+            eventually { state.liveCommunities.value.isNotEmpty() }
             assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id }, "the written entry stays after the pending one goes")
         }
 
@@ -179,9 +180,19 @@ class ConcordPendingJoinTest {
         runTest {
             val state = state()
             state.addPendingJoin(entry(alpha))
-            withTimeout(5000) { while (state.liveCommunities.value.isEmpty()) yield() }
+            eventually { state.liveCommunities.value.isNotEmpty() }
             state.dropPendingJoin(alpha)
-            withTimeout(5000) { while (state.liveCommunities.value.isNotEmpty()) yield() }
+            eventually { state.liveCommunities.value.isEmpty() }
             assertTrue(state.liveCommunities.value.isEmpty())
+        }
+
+    /**
+     * Waits up to 5 s of real time for [done]. The state derives its flows on Dispatchers.IO, which
+     * runTest's virtual clock does not drive: a virtual-time withTimeout around a yield() loop never
+     * fires, so a flow that never catches up hung CI instead of failing.
+     */
+    private suspend fun eventually(done: suspend () -> Boolean) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5000) { while (!done()) delay(10) }
         }
 }

@@ -120,6 +120,12 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
 
         Log.d("ActivityLifecycle") { "MainActivity.onStop $this" }
+
+        // Going to the background: the Marmot receive state goes to disk now, not 32 messages from
+        // now, in case the process is killed while it is away. MainActivity runs in the main process only.
+        Amethyst.instance.applicationIOScope.launch {
+            Amethyst.instance.accountsCache.flushMarmotReceivedState()
+        }
     }
 
     override fun onDestroy() {

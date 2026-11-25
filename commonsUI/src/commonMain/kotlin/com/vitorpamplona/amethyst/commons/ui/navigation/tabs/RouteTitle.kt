@@ -184,6 +184,13 @@ fun routeIcon(
         is Route.Room -> MaterialSymbols.Mail
         is Route.Note -> MaterialSymbols.AutoMirrored.Article
         is Route.WebPage, is Route.WebApp -> MaterialSymbols.Language
+        // Concord's screens: the community as the Concord section draws it, a channel as its #.
+        is Route.ConcordServer, is Route.ConcordMembers, is Route.Concords -> MaterialSymbols.Group
+        is Route.Concord -> MaterialSymbols.Tag
+        is Route.ConcordInviteLinks -> MaterialSymbols.Link
+        is Route.ConcordInvite -> MaterialSymbols.PersonAdd
+        is Route.ConcordEdit -> MaterialSymbols.Edit
+        is Route.ConcordCreate -> MaterialSymbols.GroupAdd
         // A site's globe, a napplet's grid, read off the coordinate's kind.
         is Route.NostrApp -> {
             val kind = route.coordinate.substringBefore(':').toIntOrNull()

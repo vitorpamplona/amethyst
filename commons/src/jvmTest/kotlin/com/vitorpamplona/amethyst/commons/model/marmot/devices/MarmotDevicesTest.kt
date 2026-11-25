@@ -38,12 +38,14 @@ import com.vitorpamplona.marmot.client.ingest
 import com.vitorpamplona.marmot.features.accountSync.SmallStateItem
 import com.vitorpamplona.marmot.features.deviceGroup.DeviceGroupTrust
 import com.vitorpamplona.marmot.features.deviceGroup.MarmotDeviceGroupManager
+import com.vitorpamplona.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +68,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import kotlin.io.encoding.Base64
 
 /**
  * [MarmotDevices] end to end in one process: two devices of one account pair with the seven
@@ -82,10 +85,77 @@ class MarmotDevicesTest {
     /** Everything published, delivered later by [pump] so no device's lock is held across a hop. */
     private val mailbox = ArrayDeque<Pair<Device, () -> Event>>()
 
+    /** Where a device keeps its imported-history read times; a save throws while [failSaves]. */
+    private class ReadBlobs : DeviceGroupBlobs {
+        val saved = HashMap<String, ByteArray>()
+        var failSaves = false
+        var refused = 0
+
+        fun record() = saved[MarmotImportedHistoryReads.RECORD]?.decodeToString()
+
+        override suspend fun load(name: String) = saved[name]
+
+        override suspend fun save(
+            name: String,
+            bytes: ByteArray,
+        ) {
+            if (failSaves) {
+                refused++
+                throw IllegalStateException("disk full")
+            }
+            saved[name] = bytes
+        }
+    }
+
+    /** A message store that notes, per chat, what [reads] held when the chat's first message was stored. */
+    private class Messages(
+        val reads: ReadBlobs,
+    ) : MarmotMessageStore {
+        val logs = HashMap<String, MutableList<String>>()
+        val epochs = HashMap<String, MutableMap<String, Long>>()
+        val recordAtFirstAppend = HashMap<String, String?>()
+
+        override suspend fun appendMessage(
+            nostrGroupId: String,
+            innerEventJson: String,
+        ) {
+            val log = logs.getOrPut(nostrGroupId) { ArrayList() }
+            if (log.isEmpty()) recordAtFirstAppend[nostrGroupId] = reads.record()
+            if (innerEventJson !in log) log.add(innerEventJson)
+        }
+
+        override suspend fun loadMessages(nostrGroupId: String) = logs[nostrGroupId].orEmpty().toList()
+
+        override suspend fun delete(nostrGroupId: String) {
+            logs.remove(nostrGroupId)
+            epochs.remove(nostrGroupId)
+        }
+
+        override suspend fun recordEpoch(
+            nostrGroupId: String,
+            innerEventId: String,
+            epoch: Long,
+        ) {
+            epochs.getOrPut(nostrGroupId) { HashMap() }[innerEventId] = epoch
+        }
+
+        override suspend fun loadEpochs(nostrGroupId: String) = epochs[nostrGroupId].orEmpty().toMap()
+
+        fun texts(nostrGroupId: String) = loadMessagesNow(nostrGroupId).filter { it.kind == 9 }.map { it.content }
+
+        private fun loadMessagesNow(nostrGroupId: String) = logs[nostrGroupId].orEmpty().mapNotNull { Event.fromJsonOrNull(it) }
+    }
+
     private inner class Device(
         keys: KeyPair,
         val dir: File,
+        withMessages: Boolean = false,
     ) {
+        val readBlobs = ReadBlobs()
+        val messages = if (withMessages) Messages(readBlobs) else null
+        val importedReads = MarmotImportedHistoryReads(readBlobs)
+        val imported = ArrayList<MarmotDeviceGroupManager.ImportedHistory>()
+
         /** Pin, mute and archive as this device's app holds them, fed from the device group. */
         val chatSettings = MarmotChatSettings(null)
         val signer = NostrSignerInternal(keys)
@@ -104,7 +174,7 @@ class MarmotDevicesTest {
             MarmotManager(
                 signer,
                 InMemoryMlsGroupStateStore(),
-                null,
+                messages,
                 null,
                 // The manager publishes commits itself (publish-before-apply): onto the same relay.
                 MarmotPublisher { event, _ ->
@@ -147,7 +217,7 @@ class MarmotDevicesTest {
                     return true
                 }
             }
-        val devices =
+        val devices: MarmotDevices =
             MarmotDevices(
                 manager,
                 signer,
@@ -155,7 +225,11 @@ class MarmotDevicesTest {
                 { emptySet() },
                 { clock },
                 signInAnswers = stores.blobs,
-                onSmallState = { state -> chatSettings.applySmallState(state, manager) },
+                onSmallState = { state ->
+                    chatSettings.applySmallState(state, manager, onLocalChange = { id, setting, value -> this@Device.devices.changeSetting(id, setting, value) })
+                },
+                onHistoryImported = { imported.addAll(it) },
+                importedReads = importedReads,
             )
 
         suspend fun receive(event: Event) {
@@ -173,10 +247,14 @@ class MarmotDevicesTest {
         }
     }
 
-    private suspend fun pair(startExisting: Boolean = true): Pair<Device, Device> {
+    private suspend fun pair(
+        startExisting: Boolean = true,
+        withMessages: Boolean = false,
+        beforeLink: suspend (existing: Device, fresh: Device) -> Unit = { _, _ -> },
+    ): Pair<Device, Device> {
         val keys = KeyPair()
-        val existing = Device(keys, folder.newFolder())
-        val fresh = Device(keys, folder.newFolder())
+        val existing = Device(keys, folder.newFolder(), withMessages)
+        val fresh = Device(keys, folder.newFolder(), withMessages)
         existing.peer = fresh
         fresh.peer = existing
         existing.manager.restoreAll()
@@ -184,12 +262,19 @@ class MarmotDevicesTest {
         if (startExisting) existing.devices.start()
         fresh.devices.start()
         pump()
+        beforeLink(existing, fresh)
         return existing to fresh
     }
 
-    /** Two devices of one account, linked and agreeing on the roster. */
-    private suspend fun linked(): Pair<Device, Device> {
-        val (existing, fresh) = pair()
+    /**
+     * Two devices of one account, linked and agreeing on the roster; [beforeLink] runs on both
+     * once they are started, before the link.
+     */
+    private suspend fun linked(
+        withMessages: Boolean = false,
+        beforeLink: suspend (existing: Device, fresh: Device) -> Unit = { _, _ -> },
+    ): Pair<Device, Device> {
+        val (existing, fresh) = pair(withMessages = withMessages, beforeLink = beforeLink)
         fresh.devices.startLinkAsNewDevice()
         pump()
         val prompt =
@@ -294,15 +379,29 @@ class MarmotDevicesTest {
             assertTrue("the sibling joined the chat", fresh.manager.groupManager.isMember(chat))
 
             existing.devices.changeSetting(chat, MarmotChatSetting.PIN, true)
-            existing.devices.changeSetting(chat, MarmotChatSetting.ARCHIVE, true)
             pump()
             assertTrue(
+                fresh.chatSettings.state.value
+                    .isPinned(chat),
+            )
+            // An archive from the sibling unpins here (as in White Noise), and that unpin goes back.
+            existing.devices.changeSetting(chat, MarmotChatSetting.ARCHIVE, true)
+            pump()
+            assertFalse(
                 fresh.chatSettings.state.value
                     .isPinned(chat),
             )
             assertTrue(
                 fresh.chatSettings.state.value
                     .isArchived(chat),
+            )
+            assertEquals(
+                "false",
+                (
+                    existing.devices.groups
+                        .smallState()
+                        .held("${existing.manager.mlsGroupIdHex(chat)}/pin") as SmallStateItem.Versioned
+                ).value,
             )
 
             fresh.devices.changeSetting(chat, MarmotChatSetting.MUTE, true)
@@ -320,6 +419,99 @@ class MarmotDevicesTest {
                 existing.chatSettings.state.value
                     .isArchived(chat),
             )
+        }
+
+    /** Built with the account, so a device with no screen open still sends and fetches Blossom history. */
+    @Test
+    fun historyBlobsGivenAtConstructionReachTheDeviceGroup() {
+        val device = Device(KeyPair(), folder.newFolder())
+        assertTrue("none by default", device.devices.groups.historyBlobFetcher == null)
+        val blobs =
+            object : MarmotHistoryBlobs {
+                override suspend fun upload(ciphertext: ByteArray) = listOf("https://blossom.invalid")
+
+                override suspend fun fetch(
+                    url: String,
+                    maxBytes: Long,
+                ) = byteArrayOf(1)
+            }
+        val withBlobs = MarmotDevices(device.manager, device.signer, device.transport, { emptySet() }, { clock }, historyBlobs = blobs)
+        assertTrue(withBlobs.groups.historyBlobFetcher != null && withBlobs.groups.historyBlobUploader != null)
+    }
+
+    /** A chat the existing device had with someone else before the link, with one message in it. */
+    private val earlierChat = "c9".repeat(32)
+
+    private suspend fun chatBeforeTheLink(existing: Device) {
+        // marmot-kmp dates a kept delivery by the wall clock and expires it a week later by the
+        // tick's: the two must agree, or the first tick drops the delivery as two months old.
+        clock = TimeUtils.now()
+        // The founding Add of another account is what makes the chat require account devices.
+        val other = MarmotManager(NostrSignerInternal(KeyPair()), InMemoryMlsGroupStateStore(), null, null, MarmotPublisher { _, _ -> true })
+        val kp = other.generateKeyPackageEvent(relays = emptyList())
+        existing.manager.createCurrentProfileGroup(earlierChat, listOf("wss://relay.invalid"), null)
+        existing.manager.addMemberInvites(earlierChat, listOf(MarmotManager.MemberInvite(other.signer.pubKey, Base64.decode(kp.content), kp.id)), emptyList())
+        existing.manager.buildTextMessage(earlierChat, "before the link")
+        pump()
+    }
+
+    /** Runs both devices' timers until the new device holds [earlierChat]. */
+    private suspend fun untilTheChatReaches(
+        fresh: Device,
+        existing: Device,
+    ) {
+        repeat(4) {
+            existing.devices.tick()
+            pump()
+            fresh.devices.tick()
+            pump()
+        }
+        assertTrue("the new device was added to the earlier chat", fresh.manager.groupManager.isMember(earlierChat))
+    }
+
+    /**
+     * Imported history is old news: it must never light the badge, so its read-up-to time is on
+     * disk before marmot-kmp stores the first of its messages. A process death in between restores
+     * the messages as read.
+     */
+    @Test
+    fun importedHistoryIsRecordedAsReadBeforeItIsStored() =
+        runBlocking<Unit> {
+            val (existing, fresh) = linked(withMessages = true, beforeLink = { e, _ -> chatBeforeTheLink(e) })
+            untilTheChatReaches(fresh, existing)
+            val messages = fresh.messages!!
+            assertEquals(listOf("before the link"), messages.texts(earlierChat))
+            val record = messages.recordAtFirstAppend[earlierChat]
+            assertTrue("the read time was saved before the first message: $record", record?.contains(earlierChat) == true)
+            assertEquals(setOf(earlierChat), fresh.importedReads.load().keys)
+            assertEquals("the app is still handed the import to show", listOf(earlierChat), fresh.imported.map { it.nostrGroupId })
+        }
+
+    /** A read time that cannot be saved holds the import back; the next pass after the disk recovers imports it. */
+    @Test
+    fun aReadTimeThatCannotBeSavedHoldsTheImportBack() =
+        runBlocking<Unit> {
+            // From before the link: the history is delivered and imported while the devices link.
+            val (existing, fresh) =
+                linked(withMessages = true, beforeLink = { e, f ->
+                    f.readBlobs.failSaves = true
+                    chatBeforeTheLink(e)
+                })
+            untilTheChatReaches(fresh, existing)
+            val messages = fresh.messages!!
+            assertEquals("nothing of the history is stored", emptyList<String>(), messages.texts(earlierChat))
+            assertTrue("nor shown", fresh.imported.isEmpty())
+            assertTrue(fresh.importedReads.load().isEmpty())
+            assertTrue("the read time was refused", fresh.readBlobs.refused > 0)
+            assertEquals("the delivery waits", 1, fresh.devices.groups.keptHistoryCount())
+
+            fresh.readBlobs.failSaves = false
+            fresh.devices.tick()
+            pump()
+            assertEquals(listOf("before the link"), messages.texts(earlierChat))
+            assertTrue(messages.recordAtFirstAppend[earlierChat]?.contains(earlierChat) == true)
+            assertEquals(0, fresh.devices.groups.keptHistoryCount())
+            assertEquals(listOf(earlierChat), fresh.imported.map { it.nostrGroupId })
         }
 
     @Test

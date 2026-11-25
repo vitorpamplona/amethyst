@@ -91,7 +91,10 @@ data class ReactionChip(
     val type: String,
     val count: Int,
     val includesMe: Boolean,
-    /** What the chip draws; differs from [type] only for a Marmot custom emoji that cannot be shown as a picture yet. */
+    /**
+     * What the chip draws; differs from [type] only for a Marmot custom emoji that cannot be shown as a picture yet,
+     * and for a cordn custom emoji, whose [type] is its `:name:` and whose glyph adds the picture's URL.
+     */
     val glyph: String = type,
 )
 
@@ -174,7 +177,8 @@ fun ChatReactionChips(
                 note.reactions.entries
                     .groupBy({ (type, _) -> marmotEmoji?.chipKey(type) ?: type }, { it.toPair() })
                     .map { (_, entries) ->
-                        val reactors = entries.flatMap { it.second }
+                        // One per reactor and key (NIP-25, Concord's tally rule): reacting twice is one reaction.
+                        val reactors = entries.flatMap { it.second }.distinctBy { it.author ?: it }
                         val mine =
                             if (myIdentities != null) {
                                 reactors.any { it.author?.pubkeyHex in myIdentities }

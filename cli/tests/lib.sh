@@ -44,6 +44,8 @@ banner() {
     printf '%s%s================================================================%s\n\n' \
         "$C_BOLD" "$C_BLUE" "$C_RESET" >&2
     printf '\n=== %s ===\n' "$1" >>"$LOG_FILE"
+    # The section a later record_result is filed under (see result tracking).
+    _RESULT_SECTION="$1"
 }
 
 step() { printf '%s>%s %s\n' "$C_CYAN" "$C_RESET" "$1" >&2; printf '> %s\n' "$1" >>"$LOG_FILE"; }
@@ -51,13 +53,83 @@ info() { printf '%s  %s%s\n' "$C_GREY" "$1" "$C_RESET" >&2; printf '  %s\n' "$1"
 warn() { printf '%s!%s %s\n' "$C_YELLOW" "$C_RESET" "$1" >&2; printf '! %s\n' "$1" >>"$LOG_FILE"; }
 pass_msg() { printf '%s\u2713 PASS%s %s\n' "$C_GREEN" "$C_RESET" "$1" >&2; printf 'PASS %s\n' "$1" >>"$LOG_FILE"; }
 fail_msg() { printf '%s\u2717 FAIL%s %s\n' "$C_RED" "$C_RESET" "$1" >&2;   printf 'FAIL %s\n' "$1" >>"$LOG_FILE"; }
+# port_in_use PORT → 0 when something already listens on 127.0.0.1:PORT. A harness checks its ports
+# before it boots a relay, so it never talks to a stale one left by an earlier run.
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+# version_at_least HAVE WANT → 0 when HAVE >= WANT (dotted versions).
+version_at_least() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 skip_msg() { printf '%s- SKIP%s %s\n' "$C_YELLOW" "$C_RESET" "$1" >&2;     printf 'SKIP %s\n' "$1" >>"$LOG_FILE"; }
 
 # ------- result tracking ------------------------------------------------------
-# Each test calls record_result <test-id> <pass|fail|skip> [note]
+# Each test calls record_result <test-id> <pass|fail|skip|gap> [note]
+#
+# Every result lands twice: as a tab-separated row in $RESULTS_FILE (what
+# print_summary and each harness's exit status read), and as one JSON object per
+# line in $RESULTS_JSONL, which is what machines read. The nightly interop
+# workflow (.github/workflows/interop-nightly.yml) turns those lines into JUnit
+# XML and the feature x counterpart x direction matrix with
+# tools/interop-ci/results_matrix.py.
+#
+# One JSON line per scenario:
+#   {"suite":…, "counterpart":…, "id":…, "status":"pass|fail|skip|gap", "note":…,
+#    "section":<last banner>, "feature":…, "direction":…, "ts":<epoch s>,
+#    "elapsed_s":<seconds since the previous result>}
+#
+#   RESULTS_JSONL          default: $RESULTS_FILE with .tsv swapped for .jsonl
+#                          (or .jsonl appended); truncated when lib.sh is sourced,
+#                          like $RESULTS_FILE is by every harness.
+#   INTEROP_RESULTS_DIR    when set, each line is ALSO appended to
+#                          $INTEROP_RESULTS_DIR/$INTEROP_SUITE.jsonl (CI collects it).
+#   INTEROP_SUITE          suite name in the record; default the harness's file name.
+#   INTEROP_COUNTERPART    who amy talked to (e.g. "wn 0.19.0"); default empty.
+#   RESULT_FEATURE / RESULT_DIRECTION
+#                          optional, set by a test before record_result to name the
+#                          feature and the direction ("amy→cp", "cp→amy", "both")
+#                          itself. Unset, the matrix derives them from the suite's
+#                          rules in tools/interop-ci/suites.json, then the section.
+INTEROP_SUITE="${INTEROP_SUITE:-$(basename -- "${0:-harness}" .sh)}"
+INTEROP_COUNTERPART="${INTEROP_COUNTERPART:-}"
+if [[ -z "${RESULTS_JSONL:-}" && -n "${RESULTS_FILE:-}" ]]; then
+    RESULTS_JSONL="${RESULTS_FILE%.tsv}.jsonl"
+fi
+RESULTS_JSONL="${RESULTS_JSONL:-}"
+[[ -n "$RESULTS_JSONL" ]] && : >"$RESULTS_JSONL"
+if [[ -n "${INTEROP_RESULTS_DIR:-}" ]]; then
+    mkdir -p "$INTEROP_RESULTS_DIR"
+fi
+_RESULT_SECTION=""
+_RESULT_LAST_TS=$(date +%s)
+
+# A JSON string literal for $1: backslash, quote and the control characters a
+# note can carry (newlines from captured output, tabs, ANSI escapes) escaped,
+# anything else below 0x20 dropped.
+_json_str() {
+    local s="$1"
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    s=${s//$'\r'/\\r}
+    s=${s//$'\t'/\\t}
+    s=${s//$'\033'/\\u001b}
+    s=$(printf '%s' "$s" | LC_ALL=C tr -d '\000-\010\013\014\016-\037')
+    printf '"%s"' "$s"
+}
+
 record_result() {
     local test_id="$1" status="$2" note="${3:-}"
     printf '%s\t%s\t%s\n' "$test_id" "$status" "$note" >>"$RESULTS_FILE"
+
+    local now line
+    now=$(date +%s)
+    line=$(printf '{"suite":%s,"counterpart":%s,"id":%s,"status":%s,"note":%s,"section":%s,"feature":%s,"direction":%s,"ts":%d,"elapsed_s":%d}' \
+        "$(_json_str "$INTEROP_SUITE")" "$(_json_str "$INTEROP_COUNTERPART")" \
+        "$(_json_str "$test_id")" "$(_json_str "$status")" "$(_json_str "$note")" \
+        "$(_json_str "$_RESULT_SECTION")" "$(_json_str "${RESULT_FEATURE:-}")" \
+        "$(_json_str "${RESULT_DIRECTION:-}")" "$now" "$(( now - _RESULT_LAST_TS ))")
+    _RESULT_LAST_TS=$now
+    [[ -n "$RESULTS_JSONL" ]] && printf '%s\n' "$line" >>"$RESULTS_JSONL"
+    [[ -n "${INTEROP_RESULTS_DIR:-}" ]] && printf '%s\n' "$line" >>"$INTEROP_RESULTS_DIR/$INTEROP_SUITE.jsonl"
+    return 0
 }
 
 print_summary() {

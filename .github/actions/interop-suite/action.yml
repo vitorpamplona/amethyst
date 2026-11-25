@@ -1,0 +1,138 @@
+name: Run one interop suite
+description: >-
+  Builds amy, fetches and builds one counterpart at the channel's commit (cached per
+  commit), runs the suite fully local through tools/interop-ci/run-suite.sh (a network
+  namespace with only loopback, or AMY_LOCAL_ONLY=1 for a Docker-backed suite), and
+  publishes the per-scenario results: JUnit annotations, a job-summary matrix and an
+  artifact with the results and logs. Used by .github/workflows/interop-nightly.yml;
+  the inputs are the suite's entry in tools/interop-ci/suites.json.
+
+inputs:
+  suite:
+    description: Suite id in tools/interop-ci/suites.json
+    required: true
+  channel:
+    description: pinned or latest
+    required: true
+  toolchains:
+    description: Space-separated toolchains the suite needs (node rust docker protoc psql)
+    default: ''
+  timeout:
+    description: Minutes the run step may take
+    default: '30'
+  cache:
+    description: Newline-separated paths cached per suite, channel and counterpart commit
+    default: ''
+  logs:
+    description: Newline-separated extra log paths for the artifact
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 25
+      uses: actions/setup-java@v6.1.0
+      with:
+        distribution: temurin
+        java-version: 25
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+    - name: Build amy
+      shell: bash
+      run: ./gradlew :cli:installDist
+
+    - name: Install system packages
+      if: contains(inputs.toolchains, 'protoc') || contains(inputs.toolchains, 'psql')
+      shell: bash
+      env:
+        TOOLCHAINS: ${{ inputs.toolchains }}
+      run: |
+        pkgs=()
+        [[ " $TOOLCHAINS " == *" protoc "* ]] && pkgs+=(protobuf-compiler)
+        [[ " $TOOLCHAINS " == *" psql "* ]] && pkgs+=(postgresql-client)
+        sudo apt-get update -q
+        sudo apt-get install -y -q "${pkgs[@]}"
+
+    - name: Set up Node 22
+      if: contains(inputs.toolchains, 'node')
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22
+
+    - name: Rust toolchain
+      if: contains(inputs.toolchains, 'rust')
+      shell: bash
+      # The runner image ships rustup; a counterpart's rust-toolchain.toml pins its own
+      # toolchain and rustup installs it on the first cargo call.
+      run: rustup show active-toolchain || rustup default stable
+
+    - name: Resolve the counterpart commit
+      id: resolve
+      shell: bash
+      run: tools/interop-ci/run-suite.sh resolve "${{ inputs.suite }}" "${{ inputs.channel }}" | tee -a "$GITHUB_OUTPUT"
+
+    - name: Cache the counterpart build
+      if: inputs.cache != ''
+      uses: actions/cache@v6
+      with:
+        path: ${{ inputs.cache }}
+        key: ${{ steps.resolve.outputs.cache_key }}
+
+    - name: Cache cargo downloads
+      if: contains(inputs.toolchains, 'rust')
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: interop-cargo-${{ inputs.suite }}-${{ steps.resolve.outputs.ref }}
+        restore-keys: interop-cargo-${{ inputs.suite }}-
+
+    - name: Fetch and build the counterpart (${{ steps.resolve.outputs.version }})
+      shell: bash
+      run: tools/interop-ci/run-suite.sh prepare "${{ inputs.suite }}" "${{ inputs.channel }}"
+
+    - name: Run the suite, fully local
+      shell: bash
+      env:
+        INTEROP_TIMEOUT: ${{ inputs.timeout }}m
+      run: tools/interop-ci/run-suite.sh run "${{ inputs.suite }}" "${{ inputs.channel }}"
+
+    - name: Results matrix and JUnit
+      if: always()
+      shell: bash
+      run: |
+        out=build/interop-ci
+        [[ -d "$out/${{ inputs.channel }}" ]] || exit 0
+        python3 tools/interop-ci/results_matrix.py --results "$out" --channel "${{ inputs.channel }}" \
+          --markdown "$out/${{ inputs.channel }}/${{ inputs.suite }}.md" --junit-dir "$out/junit"
+        cat "$out/${{ inputs.channel }}/${{ inputs.suite }}.md" >>"$GITHUB_STEP_SUMMARY"
+
+    - name: Annotate scenarios
+      if: always()
+      uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6.6.2
+      with:
+        report_paths: build/interop-ci/junit/TEST-*.xml
+        annotate_only: true
+        detailed_summary: true
+        include_passed: false
+        fail_on_failure: false
+        require_tests: false
+
+    - name: Upload results and logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: interop-${{ inputs.channel }}-${{ inputs.suite }}
+        path: |
+          build/interop-ci/${{ inputs.channel }}
+          build/interop-ci/junit
+          build/interop-ci/state/${{ inputs.suite }}
+          ${{ inputs.logs }}
+        if-no-files-found: warn
+        retention-days: 30

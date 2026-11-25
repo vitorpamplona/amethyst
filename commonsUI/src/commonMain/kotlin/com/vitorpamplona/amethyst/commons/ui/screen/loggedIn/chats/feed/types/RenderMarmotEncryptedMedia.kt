@@ -126,19 +126,18 @@ fun RenderEncryptedMediaV2(
         }
 
     val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
-    val secretLookup = rememberMessageMediaSecret(note, nostrGroupId, accountViewModel)
-    if (secretLookup is MessageMediaSecret.Loading) {
+    val cipherLookup = rememberMessageMediaCipher(note, nostrGroupId, reference, accountViewModel)
+    if (cipherLookup is MessageMediaCipher.Loading) {
         MediaKeyLoadingSpace(reference?.dim)
         return
     }
-    val mediaSecret = (secretLookup as? MessageMediaSecret.Found)?.secret
+    val cipher = (cipherLookup as? MessageMediaCipher.Found)?.cipher
 
-    if (reference == null || url == null || mediaSecret == null) {
+    if (reference == null || url == null || cipher == null) {
         RenderDecryptionError(note, bgColor, accountViewModel, nav)
         return
     }
 
-    val cipher = remember(reference, mediaSecret) { EncryptedMediaV2Cipher(mediaSecret, reference) }
     accountViewModel.account.encryptionKeyCache.add(url, cipher, reference.mediaType)
 
     val description = event.alt()
@@ -172,7 +171,7 @@ fun RenderEncryptedMediaV2(
                     uri = note.toNostrUri(),
                     mimeType = reference.mediaType,
                     encryptionAlgo = EncryptedMediaV2.VERSION,
-                    encryptionKey = mediaSecret,
+                    encryptionKey = NO_KEY_BYTES,
                     encryptionNonce = reference.nonce,
                     thumbhash = reference.thumbhash,
                 )
@@ -186,7 +185,7 @@ fun RenderEncryptedMediaV2(
                     authorName = note.author?.toBestDisplayName(),
                     mimeType = reference.mediaType,
                     encryptionAlgo = EncryptedMediaV2.VERSION,
-                    encryptionKey = mediaSecret,
+                    encryptionKey = NO_KEY_BYTES,
                     encryptionNonce = reference.nonce,
                     thumbhash = reference.thumbhash,
                 )
@@ -377,6 +376,42 @@ private sealed interface MessageMediaSecret {
 private fun MediaKeyLoadingSpace(dimensions: String?) {
     val ratio = remember(dimensions) { dimensions?.let { DimensionTag.parse(it) }?.aspectRatioOrNull() } ?: return
     Box(Modifier.fillMaxWidth().aspectRatio(ratio))
+}
+
+/**
+ * What the v2 media contents carry as their key: nothing reads it, the cipher registered in the
+ * encryption key cache opens the file, and an imported history's file key is no media secret.
+ */
+private val NO_KEY_BYTES = ByteArray(0)
+
+private sealed interface MessageMediaCipher {
+    data object Loading : MessageMediaCipher
+
+    data object Missing : MessageMediaCipher
+
+    class Found(
+        val cipher: EncryptedMediaV2Cipher,
+    ) : MessageMediaCipher
+}
+
+/**
+ * The cipher that opens [reference] on [note]: under the media key of the epoch that carried it,
+ * or, for a message a linked device's history brought from an epoch this device never held, under
+ * the file key that history gave for it.
+ */
+@Composable
+private fun rememberMessageMediaCipher(
+    note: Note,
+    nostrGroupId: String?,
+    reference: EncryptedMediaReferenceV2?,
+    accountViewModel: AccountViewModel,
+): MessageMediaCipher {
+    val state by
+        produceState<MessageMediaCipher>(MessageMediaCipher.Loading, note.idHex, nostrGroupId, reference) {
+            val cipher = if (nostrGroupId != null && reference != null) accountViewModel.marmotMediaCipherForMessage(nostrGroupId, note.idHex, reference) else null
+            value = if (cipher != null) MessageMediaCipher.Found(cipher) else MessageMediaCipher.Missing
+        }
+    return state
 }
 
 /**

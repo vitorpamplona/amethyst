@@ -127,4 +127,18 @@ class MarmotPollTallyTest {
         val tally = tallyInGroup(p, listOf(vote('2', bob, 110, p.id, "0"), outsider))
         assertEquals(listOf(1, 0, 0), tally.counts())
     }
+
+    @Test
+    fun theGroupsCountIsMarmotKmpsTally() {
+        // Only a voter's newest 64 responses are looked at (MDK `effective_poll_votes`, through
+        // MarmotPolls.tally): 64 newer responses that are no vote hide an older valid one.
+        val p = poll(endsAt = null)
+        val valid = vote('2', bob, 110, p.id, "1")
+        val noise =
+            (0 until MarmotPolls.MAX_RESPONSES_PER_VOTER).map { i ->
+                PollResponseEvent(i.toString().padStart(64, 'e'), bob, 200L + i, MarmotPolls.responseTags(p.id, listOf("0", "1"))!!, "", "")
+            }
+        assertEquals(listOf(0, 0, 0), tallyInGroup(p, listOf(valid) + noise).counts())
+        assertEquals(listOf(0, 1, 0), tallyInGroup(p, listOf(valid) + noise.drop(1)).counts())
+    }
 }

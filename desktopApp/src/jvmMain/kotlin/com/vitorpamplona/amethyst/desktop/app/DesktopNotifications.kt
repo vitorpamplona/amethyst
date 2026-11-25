@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
 import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
@@ -193,7 +194,9 @@ class DesktopNotifications(
          */
         internal fun notifiesAbout(account: Account): (Note) -> Boolean {
             val feedFilter = NotificationFeedFilter(account)
-            return { note -> account.isAcceptable(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
+            // A Marmot message its chat already read (history a linked device delivered is read on
+            // import) stays in Notifications but raises no toast.
+            return { note -> account.isAcceptable(note) && !account.isReadMarmotMessage(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
         }
     }
 }

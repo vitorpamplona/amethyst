@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.GroupMessageNotification
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -340,6 +341,19 @@ class NotificationDispatcher(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to dispatch Group Message notification ${innerEvent.id}", e)
+        }
+    }
+
+    /** A muted Marmot chat: its notifications already in the shade come down. */
+    override suspend fun clearGroupNotifications(
+        nostrGroupId: String,
+        account: Account,
+    ) {
+        try {
+            GroupMessageNotification.clearGroup(context, nostrGroupId)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Failed to clear the notifications of $nostrGroupId", e)
         }
     }
 }

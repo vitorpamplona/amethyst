@@ -57,7 +57,7 @@ object RelayGroupCommands {
         |Relay groups (NIP-29):
         |  relaygroup list [--timeout S]              joined groups (from kind:10009)
         |  relaygroup browse RELAY [--timeout S]      every group a relay hosts
-        |  relaygroup info RELAY GID [--timeout S]    a group's metadata + roster
+        |  relaygroup info RELAY GID [--timeout S]    a group's metadata, roster + roles
         |  relaygroup create RELAY --name NAME        create a group (publishes 9007+9002)
         |    [--about A] [--picture URL] [--banner URL]
         |    [--parent GID] [--private] [--closed]

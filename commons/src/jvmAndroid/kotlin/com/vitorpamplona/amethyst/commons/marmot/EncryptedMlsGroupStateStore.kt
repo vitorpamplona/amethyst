@@ -71,6 +71,8 @@ class EncryptedMlsGroupStateStore(
 
     private fun ratchetFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "ratchet")
 
+    private fun convergenceFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "convergence")
+
     override suspend fun save(
         nostrGroupId: String,
         state: ByteArray,
@@ -226,6 +228,40 @@ class EncryptedMlsGroupStateStore(
                 // atomic write above is what should make this unreachable, so
                 // if it ever fires the group's key material is suspect.
                 Log.e(TAG, "loadSenderRatchet($nostrGroupId) unreadable — the ratchet may rewind: ${e.message}", e)
+                null
+            }
+        }
+
+    /**
+     * The convergence window: the retained states of the last few epochs, so a fork whose other
+     * half arrives after a restart is still resolved. Private state, encrypted like [save]; the
+     * group directory [delete] removes holds it.
+     */
+    override suspend fun saveConvergenceWindow(
+        nostrGroupId: String,
+        window: ByteArray,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val file = convergenceFile(nostrGroupId)
+                file.parentFile?.mkdirs()
+                atomicWrite(file, encryption.encrypt(window))
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "saveConvergenceWindow($nostrGroupId) failed", e)
+                false
+            }
+        }
+
+    override suspend fun loadConvergenceWindow(nostrGroupId: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val file = convergenceFile(nostrGroupId)
+            if (!file.exists()) return@withContext null
+            try {
+                encryption.decrypt(file.readBytes())
+            } catch (e: Exception) {
+                // Losing it costs only a fork's recovery across this restart.
+                Log.w(TAG, "loadConvergenceWindow($nostrGroupId) unreadable", e)
                 null
             }
         }

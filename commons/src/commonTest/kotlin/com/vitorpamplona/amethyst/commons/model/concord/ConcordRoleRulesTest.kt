@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -39,5 +45,55 @@ class ConcordRoleRulesTest {
         assertTrue(ConcordRoleRules.canPlace(myRank = 2, oldPosition = null, newPosition = 3))
         assertFalse(ConcordRoleRules.canPlace(myRank = 2, oldPosition = 1, newPosition = 5), "a role above us stays out of reach")
         assertEquals(3, ConcordRoleRules.highestPlaceable(2))
+    }
+
+    private val owner = "0f".repeat(32)
+    private val communityId = "cc".repeat(32).hexToByteArray()
+
+    private fun ed(
+        kind: ControlEntityKind,
+        eid: String,
+        content: String,
+    ) = ControlEdition(kind, eid.hexToByteArray(), 1, null, null, content, owner, "r-$eid", 0)
+
+    private fun role(
+        id: String,
+        name: String,
+        position: Int,
+    ) = ed(ControlEntityKind.ROLE, id, """{"name":"$name","position":$position,"permissions":"1"}""")
+
+    private fun grant(
+        member: String,
+        vararg roles: String,
+    ) = ed(
+        ControlEntityKind.GRANT,
+        ConcordKeyDerivation.grantCoordinate(communityId, member.hexToByteArray()).toHexKey(),
+        """{"member":"$member","role_ids":[${roles.joinToString(",") { "\"$it\"" }}]}""",
+    )
+
+    @Test
+    fun rolesListAndBadgesFollowRankThenId() {
+        val admin = "a1".repeat(32)
+        val helperB = "b2".repeat(32)
+        val helperA = "a2".repeat(32)
+        val both = "e1".repeat(32)
+        val all = "e2".repeat(32)
+        val authority =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(helperB, "Helper B", 2),
+                    role(admin, "Admin", 1),
+                    role(helperA, "Helper A", 2),
+                    grant(both, helperB, helperA),
+                    grant(all, helperB, admin, helperA),
+                ),
+                communityId,
+                owner,
+            )
+        assertEquals(listOf("Admin", "Helper A", "Helper B"), ConcordRoleRules.byRank(authority.roles()).map { it.value.name })
+        assertEquals("Admin", ConcordRoleRules.badgeRole(authority, all)?.name)
+        // Two roles at one position: the badge is the same on every device, by role id.
+        assertEquals("Helper A", ConcordRoleRules.badgeRole(authority, both)?.name)
+        assertEquals(null, ConcordRoleRules.badgeRole(authority, owner))
     }
 }

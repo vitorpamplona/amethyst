@@ -29,9 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
 /**
- * MDK's reading of the votes on one poll ([MarmotPolls.castVote]), handed to the shared tally
- * ([PollResponsesCache]) by the group the poll lives in. The rule itself is marmot-kmp's; this
- * only adapts it to the cache.
+ * MDK's reading of the votes on one poll, handed to the shared tally ([PollResponsesCache]) by the
+ * group the poll lives in: which response is a vote ([MarmotPolls.castVote]) and which vote of each
+ * voter counts ([MarmotPolls.tally], MDK's `effective_poll_votes`: the newest valid one, among a
+ * voter's newest responses). The rules are marmot-kmp's; this only adapts them to the cache, which
+ * keeps its own fold for every other poll.
  */
 @Immutable
 data class MarmotPollResponseRule(
@@ -39,6 +41,17 @@ data class MarmotPollResponseRule(
     val poll: MarmotPolls.Definition,
 ) : PollResponseRule {
     override fun cast(response: PollResponseEvent): Set<String>? = MarmotPolls.castVote(pollId, poll, response)
+
+    override val talliesAsWhole: Boolean get() = true
+
+    override fun tally(responses: Collection<PollResponseEvent>): Map<HexKey, Pair<PollResponseEvent, Set<String>>> {
+        val byId = responses.associateBy { it.id }
+        return MarmotPolls
+            .tally(pollId, poll, responses)
+            .votes
+            .mapNotNull { (voter, vote) -> byId[vote.responseId]?.let { voter to (it to vote.optionIds) } }
+            .toMap()
+    }
 
     companion object {
         /** The rule of [poll], or null when the poll itself breaks MDK's profile. */

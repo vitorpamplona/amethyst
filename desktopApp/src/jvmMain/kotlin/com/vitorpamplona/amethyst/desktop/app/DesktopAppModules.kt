@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -205,6 +206,11 @@ class DesktopAppModules(
      * so a test run reads and writes on a relay it started itself, like `amy serve`. See [addStartupLocalRelays].
      */
     private val startupLocalRelays: List<String> = emptyList(),
+    /**
+     * Relays a startup sign-up gives the new account in place of the defaults (`AMETHYST_SIGNUP_RELAYS`,
+     * comma-separated): every relay list it starts with names only these, and it publishes only to them.
+     */
+    private val startupSignUpRelays: List<String> = emptyList(),
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
 
@@ -619,6 +625,8 @@ class DesktopAppModules(
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
+            // Long device-group histories go through the account's Blossom servers, on the app's HTTP routes.
+            marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
@@ -733,15 +741,20 @@ class DesktopAppModules(
     }
 
     /**
-     * Signs up as the sign-up screen does with [name]: a new key, Amethyst's default relays and lists
+     * Signs up as the sign-up screen does with [name]: a new key, Amethyst's default relays (or
+     * [startupSignUpRelays] when set) and lists
      * published to the relays, and the follow import to start on. Transient like [startupLogin], so
      * no key prompt; the nsec goes to [SIGNUP_KEY_FILE] (owner-only) for a later run's
      * `AMETHYST_LOGIN` to open the same account.
      */
     private suspend fun startupSignUp(name: String) {
+        val relays = startupSignUpRelays.mapNotNull { it.normalizeRelayUrlOrNull() }.toSet()
+        if (relays.size != startupSignUpRelays.distinct().size) {
+            Log.w("DesktopAppModules") { "Ignoring unparsable sign-up relays in ${startupSignUpRelays.joinToString()}" }
+        }
         val account =
             try {
-                sessionManager.signUp(name, transientAccount = true)
+                sessionManager.signUp(name, transientAccount = true, relays = relays.ifEmpty { null })
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // signUp set the loading screen; without this it would stay there.
@@ -776,6 +789,13 @@ class DesktopAppModules(
             val account = sessionManager.accountContent.mapNotNull { (it as? AccountState.LoggedIn)?.account }.first()
             account.saveLocalRelayList((account.localRelayList.flow.value + relays).toList())
             Log.i("DesktopAppModules") { "Local relays of ${account.pubKey.take(8)}: ${account.localRelayList.flow.value.joinToString { it.url }}" }
+        }
+    }
+
+    /** Writes every account's Marmot receive state; bounded, for the shutdown hook. */
+    fun flushMarmotReceivedState() {
+        runBlocking {
+            withTimeoutOrNull(FLUSH_TIMEOUT_MS) { accountsCache.flushMarmotReceivedState() }
         }
     }
 

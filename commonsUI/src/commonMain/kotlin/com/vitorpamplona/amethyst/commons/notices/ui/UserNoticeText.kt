@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_direct_invites_title
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_mint_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_title
 import com.vitorpamplona.amethyst.commons.resources.concord_join_not_saved_named
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
@@ -315,6 +317,7 @@ fun UserNotice.text(): NoticeText =
             }
         }
         ConcordNotice.DissolveFailed -> text(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+        ConcordNotice.InviteNotMinted -> text(Res.string.concord_invite_title, Res.string.concord_invite_mint_failed)
         is RelayGroupNotice.PinRefused ->
             NoticeText(if (unpin) Res.string.relay_group_unpin_refused_title else Res.string.relay_group_pin_refused_title, raw(reason))
         RelayGroupCreateNotice.Unconfirmed -> text(Res.string.relay_group_create_unconfirmed_title, Res.string.relay_group_create_unconfirmed)

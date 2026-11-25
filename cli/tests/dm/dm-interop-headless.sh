@@ -8,7 +8,8 @@
 #
 # amy (like the app) drops loopback, RFC 1918 and link-local relays from
 # other people's relay lists, so A only finds D's kind:10050 inbox when the
-# relay runs on an address outside those ranges. The harness takes the
+# relay runs on an address outside those ranges (named by a hostname; see
+# RELAY_NAME below). The harness takes the
 # first such address on any interface (or --host IP). Without one the
 # relay runs on 127.0.0.2 and the inbox tests (dm-01/02/05/06) are skipped;
 # dm-03/04 still run. Any host can provide one on loopback:
@@ -88,7 +89,21 @@ if [[ -z "$RELAY_HOST" ]] && ! RELAY_HOST="$(detect_routing_host)"; then
 elif ! is_routable_ipv4 "$RELAY_HOST"; then
   INBOX_SKIP="$RELAY_HOST is loopback/private: amy drops it from D's kind:10050"
 fi
-RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
+# Everyone names the relay by a hostname, not its address. Quartz never dials a literal
+# IP from someone else's relay list unless it is global unicast, which excludes the
+# documentation block a test host uses (192.0.2.0/24), while a name is dialable as long
+# as it does not resolve to loopback. amy's JVM resolves the name through a private hosts
+# file, so nothing else resolves at all. Run on 127.x, the inbox tests are skipped anyway.
+RELAY_NAME="${RELAY_NAME:-relay.dm-interop.test}"
+mkdir -p "$STATE_DIR"
+printf '%s %s\n' "$RELAY_HOST" "$RELAY_NAME" >"$STATE_DIR/hosts"
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djdk.net.hosts.file=$STATE_DIR/hosts"
+RELAY_URL="ws://$RELAY_NAME:$RELAY_PORT"
+# lib.sh turns on AMY_LOCAL_ONLY, which refuses a host outside loopback and the private
+# ranges: exactly the kind the inbox tests need. Naming the relay as the bootstrap set
+# allows its host, and makes it where amy looks up D's kind:10050 in place of the public
+# defaults (which AMY_LOCAL_ONLY refuses).
+export AMY_BOOTSTRAP_RELAYS="$RELAY_URL"
 
 # run_inbox_test FN ID — a test whose send resolves D's kind:10050 inbox.
 run_inbox_test() {
@@ -104,6 +119,8 @@ cleanup() {
   trap - EXIT INT TERM HUP
   stop_local_relay
   print_summary
+  # A failed scenario fails the run, not only an aborted one.
+  [[ $rc -eq 0 ]] && grep -q $'\tfail\t' "$RESULTS_FILE" && rc=1
   exit "$rc"
 }
 trap cleanup EXIT

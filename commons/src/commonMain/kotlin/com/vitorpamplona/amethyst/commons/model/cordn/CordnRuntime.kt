@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordn
 
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorListUnreadableException
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
@@ -45,6 +46,7 @@ import com.vitorpamplona.cordn.client.CordnCoordinatorLinkFactory
 import com.vitorpamplona.cordn.client.CordnCoordinatorRegistry
 import com.vitorpamplona.cordn.client.CordnCoverage
 import com.vitorpamplona.cordn.client.CordnGroupManager
+import com.vitorpamplona.cordn.client.CordnHandedOffException
 import com.vitorpamplona.cordn.client.CordnHandoffState
 import com.vitorpamplona.cordn.client.CordnInvitation
 import com.vitorpamplona.cordn.client.CordnInvitations
@@ -77,6 +79,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -123,6 +126,10 @@ class CordnRuntime(
      * identity split is not a thing a caller should be able to widen.
      */
     private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner) { relays -> coordinatorRelayPool(client, relays) },
+    /** The first wait before a coordinator that failed to open is tried again ([start]); it doubles each time. */
+    private val openRetryFirstMs: Long = 5_000L,
+    /** The longest wait between two tries. */
+    private val openRetryMaxMs: Long = 5 * 60_000L,
 ) {
     private val coordinatorStore =
         FileCordnCoordinatorStore(
@@ -182,6 +189,13 @@ class CordnRuntime(
 
     private val loops = mutableMapOf<HexKey, SyncLoopHandle>()
     private val lock = Mutex()
+
+    /** A coordinator that failed to open, being tried again ([retryOpening]). Under [retryLock]. */
+    private val retries = mutableMapOf<HexKey, Job>()
+
+    /** The retry of a coordinator list that could not be read yet ([startFromStore]), guarded by [retryLock]. */
+    private var listRetry: Job? = null
+    private val retryLock = Mutex()
 
     val coordinators = registry.coordinators
 
@@ -625,10 +639,61 @@ class CordnRuntime(
         // disk so the handoff can be undone, but a live sync loop would fetch,
         // decrypt and self-echo alongside the device that took over.
         if (handoff.handedOff.value) return
-        start(coordinatorStore.load())
+        startFromStore()
     }
 
-    /** Opens every configured coordinator and starts syncing. */
+    /**
+     * Opens the coordinators on disk. When the list is there but cannot be read yet (a keystore
+     * not unlocked, [CordnCoordinatorListUnreadableException]) the load is tried again with the
+     * same backoff as a coordinator that fails to open, until it reads, this device hands off, or
+     * [stop] ends it. Nothing is written meanwhile: every write of the list loads it first, so a
+     * read that fails also fails the write, and the coordinators on disk are never replaced by an
+     * empty list.
+     */
+    private suspend fun startFromStore() {
+        val configs =
+            try {
+                coordinatorStore.load()
+            } catch (e: CordnCoordinatorListUnreadableException) {
+                Log.w(TAG, "the coordinator list cannot be read yet; trying again", e)
+                retryLoadingList()
+                return
+            }
+        start(configs)
+    }
+
+    private suspend fun retryLoadingList() {
+        retryLock.withLock {
+            if (listRetry?.isActive == true) return
+            listRetry =
+                scope.launch {
+                    var wait = openRetryFirstMs
+                    while (true) {
+                        delay(wait)
+                        if (handoff.handedOff.value) return@launch
+                        val configs =
+                            try {
+                                coordinatorStore.load()
+                            } catch (e: CordnCoordinatorListUnreadableException) {
+                                Log.w(TAG, "the coordinator list still cannot be read", e)
+                                wait = (wait * 2).coerceAtMost(openRetryMaxMs)
+                                continue
+                            }
+                        start(configs)
+                        return@launch
+                    }
+                }
+        }
+    }
+
+    /**
+     * Opens every configured coordinator and starts syncing.
+     *
+     * One that fails to open is tried again ([retryOpening]) rather than given up on: since
+     * cordn-kmp 1.7.0 a store that cannot be read (a keystore not unlocked yet, a disk error) fails
+     * the open instead of hiding the coordinator's groups, so without a retry they stayed missing
+     * until the next launch.
+     */
     suspend fun start(configs: List<CoordinatorConfig>) {
         configs.forEach {
             try {
@@ -639,12 +704,57 @@ class CordnRuntime(
                 // are independent authorities and a user with two of them has
                 // two unrelated sets of groups.
                 Log.w(TAG, "could not open coordinator ${it.pubKey.take(8)}…: ${e.message}", e)
+                if (e !is CordnHandedOffException) retryOpening(it)
+            }
+        }
+    }
+
+    /**
+     * Tries [config] again, waiting [openRetryFirstMs] and doubling up to [openRetryMaxMs], until
+     * it opens, this device hands its groups off, or [forget] or [stop] ends it. One at a time
+     * per coordinator.
+     */
+    private suspend fun retryOpening(config: CoordinatorConfig) {
+        retryLock.withLock {
+            if (retries[config.pubKey]?.isActive == true) return
+            retries[config.pubKey] =
+                scope.launch {
+                    var wait = openRetryFirstMs
+                    while (true) {
+                        delay(wait)
+                        if (handoff.handedOff.value) return@launch
+                        try {
+                            session(config)
+                            return@launch
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: CordnHandedOffException) {
+                            return@launch
+                        } catch (e: Exception) {
+                            Log.w(TAG, "coordinator ${config.pubKey.take(8)}… still does not open: ${e.message}", e)
+                            wait = (wait * 2).coerceAtMost(openRetryMaxMs)
+                        }
+                    }
+                }
+        }
+    }
+
+    private suspend fun cancelRetry(coordinatorPubKey: HexKey?) {
+        retryLock.withLock {
+            if (coordinatorPubKey == null) {
+                retries.values.forEach { it.cancel() }
+                retries.clear()
+                listRetry?.cancel()
+                listRetry = null
+            } else {
+                retries.remove(coordinatorPubKey)?.cancel()
             }
         }
     }
 
     /** Stops every loop and closes every transport. Call at logout. */
     suspend fun stop() {
+        cancelRetry(null)
         lock.withLock {
             loops.values.forEach {
                 it.watcher.cancel()
@@ -659,6 +769,7 @@ class CordnRuntime(
 
     /** Drops one coordinator, leaving its stored groups on disk. */
     suspend fun forget(coordinatorPubKey: HexKey) {
+        cancelRetry(coordinatorPubKey)
         lock.withLock {
             loops.remove(coordinatorPubKey)?.let {
                 it.watcher.cancel()
@@ -763,7 +874,9 @@ class CordnRuntime(
      */
     suspend fun exportArchive(passphrase: String): ByteArray {
         val configs = coordinatorStore.load()
-        val state = withContext(Dispatchers.IO) { CordnLocalState.read(configs.map { it.pubKey }, ::storesFor) }
+        // Each group read under its lock: an open session saving it meanwhile cannot leave the
+        // archive with the state from before a Commit and the cursor from after it.
+        val state = withContext(Dispatchers.IO) { CordnLocalState.read(configs.map { it.pubKey }, registry::whileIdle) { storesFor(it) } }
         return CordnBackup.seal(CordnBackup.Archive.of(accountSigner.pubKey, configs, state), passphrase)
     }
 
@@ -819,7 +932,7 @@ class CordnRuntime(
      */
     suspend fun migrationSnapshot(): CordnMigrationSnapshot =
         withContext(Dispatchers.IO) {
-            CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load())
+            CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load(), guard = registry::whileIdle)
         }
 
     /**
@@ -853,7 +966,7 @@ class CordnRuntime(
     /** Takes this device back after a handoff that did not complete. */
     suspend fun cancelHandOff() {
         handoff.resume()
-        start(coordinatorStore.load())
+        startFromStore()
     }
 
     /**

@@ -26,7 +26,7 @@ import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.buzzOnBehalfOf
-import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatRules
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
@@ -140,10 +140,11 @@ fun Note.latestMarmotEdit(): Note? {
     return candidates.first { it.first === winner }.second
 }
 
-/** The kind-3302 Concord edit overlaying this message, or null — author-only, newest by CORD-02 §4 send time. */
+/**
+ * The kind-3302 Concord edit overlaying this message, or null: Quartz's shared rule
+ * ([ConcordChatRules.latestEdit]), author-only, newest by CORD-02 §4 send time, the id breaking a tie.
+ */
 fun Note.latestConcordEdit(): Note? {
     val authorHex = author?.pubkeyHex ?: return null
-    return edits
-        .filter { it.author?.pubkeyHex == authorHex && it.event is ConcordChatEditEvent }
-        .maxWithOrNull(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
+    return ConcordChatRules.latestEdit(authorHex, edits) { it.event }
 }

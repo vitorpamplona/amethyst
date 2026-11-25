@@ -116,7 +116,9 @@ object KeyPackageCommands {
                     "kind" to event.kind,
                     "created_at" to event.createdAt,
                     "has_content" to event.content.isNotBlank(),
-                    "found_on" to relays.map { it.url },
+                    // Where it was found, not every relay asked: those are `asked`.
+                    "found_on" to lookup.foundOn(event).map { it.url },
+                    "asked" to relays.map { it.url },
                 ),
             )
             return 0

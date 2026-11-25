@@ -29,8 +29,8 @@ import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.geode.grasp.GraspGitHost
 import com.vitorpamplona.quartz.buzz.relay.BuzzMembershipPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.awaitCancellation
 import java.io.File
@@ -113,11 +113,14 @@ object ServeCommand {
         val url = "ws://$advertisedHost:$port$path".normalizeRelayUrl()
 
         // --buzz locks the relay to members + NIP-OA-attested agents; otherwise a vanilla relay.
+        // Either way VerifyPolicy goes first: nothing else checks EVENT or AUTH signatures
+        // (FullAuthPolicy and BuzzMembershipPolicy leave the AUTH signature to it), so without
+        // it the relay stores forged events and takes a forged AUTH.
         val policyBuilder: () -> IRelayPolicy =
             if (buzz) {
-                { BuzzMembershipPolicy(url, memberPubkeys) }
+                { VerifyPolicy + BuzzMembershipPolicy(url, memberPubkeys) }
             } else {
-                { EmptyPolicy }
+                { VerifyPolicy }
             }
 
         // In-memory is RelayEngine's default; only build a SQLite store for --db.

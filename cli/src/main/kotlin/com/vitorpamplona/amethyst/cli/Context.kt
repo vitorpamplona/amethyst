@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
+import com.vitorpamplona.amethyst.commons.model.marmot.devices.BlossomHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotDevices
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotChatSettings
@@ -44,6 +45,7 @@ import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -83,6 +85,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
@@ -92,6 +95,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -376,6 +380,10 @@ class Context(
         )
     }
 
+    /** Set by a verb that races its group Commit in an interop test ([CommitBarrier]); null otherwise. */
+    @Volatile
+    var commitBarrier: File? = null
+
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager by lazy {
         MarmotManager(
@@ -386,7 +394,10 @@ class Context(
             // Publish-before-apply: a group-state change becomes canonical only
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
-            MarmotPublisher { event, relays -> client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true) },
+            MarmotPublisher { event, relays ->
+                commitBarrier?.let { if (event.kind == GroupEvent.KIND) CommitBarrier.await(it) }
+                client.publishAndConfirm(event, dialable(relays), untilFirstAccept = true)
+            },
             publishObligationStore,
             ingestDedupStore,
             deviceGroupConfig =
@@ -413,10 +424,29 @@ class Context(
             transport = CliMarmotDevicesTransport(this),
             keyPackageRelays = { keyPackageRelays() },
             signInAnswers = deviceGroupBlobs,
-            onSmallState = { state -> marmotChatSettings.applySmallState(state, marmot, skip = { id -> marmotDevices?.isDeviceGroup(id) == true }) },
+            onSmallState = { state ->
+                marmotChatSettings.applySmallState(
+                    state,
+                    marmot,
+                    skip = { id -> marmotDevices?.isDeviceGroup(id) == true },
+                    // A sibling's archive unpins here too, and that unpin goes back to the siblings.
+                    onLocalChange = { id, setting, value -> marmotDevices?.changeSetting(id, setting, value) },
+                )
+            },
             // Imported history is already in the message store, which every `marmot message` verb reads.
             onHistoryImported = { imports -> System.err.println("imported history: ${imports.sumOf { it.events.size }} message(s) in ${imports.size} chat(s)") },
+            // Long histories go through the account's Blossom servers (kind 10063), on [okhttp], so
+            // `AMY_LOCAL_ONLY` keeps them on loopback too.
+            historyBlobs = BlossomHistoryBlobs({ accountBlossomServers() }, signer) { okhttp },
         )
+    }
+
+    /** This account's Blossom servers (its kind 10063), from its outbox relays, in its order. */
+    suspend fun accountBlossomServers(timeoutMs: Long = 4_000): List<String> {
+        val self = identity.pubKeyHex
+        val filter = Filter(kinds = listOf(BlossomServersEvent.KIND), authors = listOf(self), limit = 1)
+        drain(outboxRelays().associateWith { listOf(filter) }, timeoutMs)
+        return (latestReplaceable(self, BlossomServersEvent.KIND) as? BlossomServersEvent)?.servers().orEmpty()
     }
 
     /** This account's own device-group records and chat settings, owner-only files. */
