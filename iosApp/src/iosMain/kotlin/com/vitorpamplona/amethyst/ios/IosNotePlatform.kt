@@ -26,12 +26,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ImageViewerDialog
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
@@ -52,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWaveformPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewerDialog
@@ -61,6 +65,11 @@ import com.vitorpamplona.amethyst.ios.playback.IosVoiceRecorder
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as SharedRenderGitPatchEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as SharedRenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as SharedRenderGitPullRequestUpdateEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as SharedRenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as SharedEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.MusicTrackAudioPlayer as SharedMusicTrackAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.NoteMediaView as SharedNoteMediaView
@@ -295,6 +304,63 @@ object IosNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav?,
     ) = ClickableUrl(url, urlText)
+
+    // Git: the shared NIP-34 cards with GitCardSlots.Portable, since there is no git client here to
+    // fetch a repository's snapshot, a pull request's diff or merge it.
+
+    @Composable
+    override fun RenderGitRepositoryEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPatchEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitIssueEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPullRequestEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPullRequestUpdateEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPullRequestUpdateEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 
     private val MAX_INLINE_MEDIA_HEIGHT = 600.dp
 }
