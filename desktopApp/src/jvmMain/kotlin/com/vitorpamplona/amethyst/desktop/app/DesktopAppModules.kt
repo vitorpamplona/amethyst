@@ -143,7 +143,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
-import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OkHttpEsploraTransport
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -368,7 +369,7 @@ class DesktopAppModules(
         cache.appHost = DesktopLocalCacheHost(this, isDebug)
         cache.onchainBackend =
             CachingOnchainBackend(
-                EsploraBackend(
+                EsploraClient(
                     // The explorer OpenTimestamps uses, so onchain zaps honour the same server and Tor choice.
                     baseUrl = {
                         BitcoinExplorerEndpoint.resolveNormalized(
@@ -376,7 +377,7 @@ class DesktopAppModules(
                             usingTor = roleBasedHttpClientBuilder.shouldUseTorForMoneyOperations(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                         )
                     },
-                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
+                    transport = OkHttpEsploraTransport { roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL) },
                 ),
             )
         cache.lnurlEndpointResolver = OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)

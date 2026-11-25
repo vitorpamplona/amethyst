@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip03Timestamp
 
-import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 
 /**
  * Picks the Bitcoin block-explorer (Esplora) base URL.
@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
  * This is the single source of truth shared by two features that both talk to
  * the same Esplora API:
  * - OpenTimestamps verification ([TorAwareOkHttpOtsResolverBuilder]).
- * - NIP-BC onchain zaps (the `EsploraBackend` wired in `AppModules`).
+ * - NIP-BC onchain zaps (the Esplora client each front end wires).
  *
  * So a user who configures a custom explorer in the OTS settings gets it for
  * onchain zaps too, and both honour the same Tor preference: a configured
@@ -48,9 +48,9 @@ object BitcoinExplorerEndpoint {
     ): String =
         customExplorerUrl?.takeIf { it.isNotBlank() }
             ?: if (usingTor) {
-                OkHttpBitcoinExplorer.MEMPOOL_API_URL
+                BitcoinExplorerUrls.MEMPOOL
             } else {
-                OkHttpBitcoinExplorer.BLOCKSTREAM_API_URL
+                BitcoinExplorerUrls.BLOCKSTREAM
             }
 
     /**

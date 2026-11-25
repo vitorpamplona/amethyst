@@ -25,10 +25,14 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Fetcher
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpResponse
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraHttpResponse
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraHttpTransport
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -36,7 +40,8 @@ import io.ktor.http.isSuccess
 
 /**
  * The plain HTTP transports on a Ktor [HttpClient], for the targets without OkHttp. Each mirrors
- * its OkHttp counterpart (`OkHttpNip05Fetcher`, `OkHttpLnurlTransport`, `OkHttpMintTransport`).
+ * its OkHttp counterpart (`OkHttpNip05Fetcher`, `OkHttpLnurlTransport`, `OkHttpMintTransport`,
+ * `OkHttpEsploraTransport`).
  */
 class KtorNip05Fetcher(
     private val client: () -> HttpClient,
@@ -76,4 +81,24 @@ class KtorMintTransport(
             }
         return MintHttpResponse(response.status.value, response.bodyAsText())
     }
+}
+
+class KtorEsploraTransport(
+    private val client: () -> HttpClient,
+) : EsploraHttpTransport {
+    override suspend fun getJson(url: String): EsploraHttpResponse = client().get(url) { header("Accept", "application/json") }.toEsplora()
+
+    override suspend fun get(url: String): EsploraHttpResponse = client().get(url).toEsplora()
+
+    override suspend fun postText(
+        url: String,
+        body: String,
+    ): EsploraHttpResponse =
+        client()
+            .post(url) {
+                contentType(ContentType.Text.Plain)
+                setBody(body)
+            }.toEsplora()
+
+    private suspend fun HttpResponse.toEsplora() = EsploraHttpResponse(status.value, status.description, bodyAsText())
 }

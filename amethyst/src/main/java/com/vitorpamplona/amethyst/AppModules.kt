@@ -211,7 +211,8 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
-import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OkHttpEsploraTransport
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -736,7 +737,7 @@ class AppModules(
     init {
         cache.onchainBackend =
             CachingOnchainBackend(
-                EsploraBackend(
+                EsploraClient(
                     baseUrl = {
                         BitcoinExplorerEndpoint.resolveNormalized(
                             customExplorerUrl = otsPrefs.current.normalizedUrl(),
@@ -746,7 +747,7 @@ class AppModules(
                                 ),
                         )
                     },
-                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
+                    transport = OkHttpEsploraTransport { roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL) },
                 ),
             )
 

@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDeco
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.http.KtorEsploraTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorMintTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
@@ -77,6 +79,8 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 import com.vitorpamplona.quartz.nip03Timestamp.ots.RemoteCalendar
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
 import com.vitorpamplona.quartz.utils.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
@@ -182,6 +186,19 @@ class IosAppModules(
     }
 
     val cache: LocalCache = LocalCache
+
+    // The on-chain wallet and on-chain zaps read the chain through the explorer OpenTimestamps uses
+    // (OTS settings), as on Android and the desktop. No Tor on iOS until B12, so the default is
+    // blockstream.info.
+    init {
+        cache.onchainBackend =
+            CachingOnchainBackend(
+                EsploraClient(
+                    baseUrl = { BitcoinExplorerEndpoint.resolveNormalized(customExplorerUrl = otsPrefs.current.normalizedUrl(), usingTor = false) },
+                    transport = KtorEsploraTransport { httpClient },
+                ),
+            )
+    }
 
     // The relay pool. The active account's blocked relays (kind 10006) are subtracted here, once.
     val client: INostrClient =
