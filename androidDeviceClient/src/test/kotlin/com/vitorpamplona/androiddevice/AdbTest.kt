@@ -24,6 +24,7 @@ import com.vitorpamplona.androiddevice.adb.Adb
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.adb.ScreenSize
 import kotlinx.coroutines.runBlocking
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import kotlin.test.Test
@@ -130,5 +131,40 @@ class AdbTest {
         assertEquals(DeviceKey.BACK, DeviceKey.named("back"))
         assertEquals(DeviceKey.RECENTS, DeviceKey.named("app_switch"))
         assertNull(DeviceKey.named("teleport"))
+    }
+}
+
+class RawScreencapTest {
+    private fun raw(
+        width: Int,
+        height: Int,
+        headerInts: Int,
+    ): ByteArray {
+        val out = ByteArrayOutputStream()
+
+        fun int(v: Int) = repeat(4) { out.write((v ushr (8 * it)) and 0xff) }
+        int(width)
+        int(height)
+        int(1)
+        if (headerInts == 4) int(0)
+        repeat(width * height) { i -> out.write(byteArrayOf(i.toByte(), 2, 3, -1)) }
+        return out.toByteArray()
+    }
+
+    @Test
+    fun readsBothHeaderLayouts() {
+        listOf(3, 4).forEach { ints ->
+            val screen = Adb.parseRawScreencap(raw(3, 2, ints))
+            assertEquals(3, screen.width)
+            assertEquals(2, screen.height)
+            assertEquals(24, screen.rgba.size)
+            assertEquals(1.toByte(), screen.rgba[4])
+        }
+    }
+
+    @Test
+    fun refusesWhatIsntARawScreen() {
+        assertFailsWith<IOException> { Adb.parseRawScreencap(ByteArray(5)) }
+        assertFailsWith<IOException> { Adb.parseRawScreencap(raw(3, 2, 3).copyOf(20)) }
     }
 }

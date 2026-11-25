@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.androiddevices
 
 import com.vitorpamplona.androiddevice.CommandResult
 import com.vitorpamplona.androiddevice.CommandRunner
+import com.vitorpamplona.androiddevice.emulator.EmulatorController
+import com.vitorpamplona.androiddevice.grpc.GrpcChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -242,5 +244,15 @@ class DeviceToolServerTest {
             val result = server.call(DeviceToolServer.RESET, args("""{"device":"emulator-5554"}"""))
             assertTrue(result.isError)
             assertTrue(result.text.contains("only resets this workstream's own emulator copy"), result.text)
+        }
+
+    @Test
+    fun anEmulatorWhoseControlPortIsGoneIsTouchedThroughAdb() =
+        runBlocking {
+            // Nothing listens on this port: the gRPC touch fails and adb takes over.
+            val dead = EmulatorController(GrpcChannel("127.0.0.1", 1, null, callTimeoutMs = 2_000))
+            val connection = DeviceConnection("emulator-5554", devices.connection("emulator-5554").adb, dead)
+            connection.tap(100, 200)
+            assertTrue(adb.commands.contains("-s emulator-5554 shell input tap 100 200"), adb.commands.toString())
         }
 }

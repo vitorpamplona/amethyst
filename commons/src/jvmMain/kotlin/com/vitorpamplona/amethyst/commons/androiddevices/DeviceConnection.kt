@@ -33,6 +33,7 @@ import com.vitorpamplona.androiddevice.grpc.GrpcException
 import com.vitorpamplona.androiddevice.ui.UiTree
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -84,8 +85,76 @@ class DeviceConnection(
     /** From the device's pixels to the agent's ([AgentShot] pixels). Turning the screen keeps it. */
     suspend fun scale(): Double = agentScale(size().logical)
 
-    /** The live view: the emulator's stream when it can be opened, else adb screenshots. */
-    suspend fun screen(): DeviceScreen = emulator?.let { EmulatorScreen(it, adb, serial, size().physical) } ?: AdbScreen(adb, serial)
+    @Volatile
+    private var cachedScreen: DeviceScreen? = null
+
+    /**
+     * The live view: the emulator's stream when it can be opened, else adb screenshots. One per
+     * connection, so a key press from the panel doesn't build a new one (and ask adb its size).
+     */
+    suspend fun screen(): DeviceScreen = cachedScreen ?: (emulator?.let { EmulatorScreen(it, adb, serial, size().physical) } ?: AdbScreen(adb, serial)).also { cachedScreen = it }
+
+    /**
+     * Agent input, in the device's own (logical, turned) pixels. On an emulator whose gRPC endpoint
+     * answers, a touch is a millisecond-scale call; `adb shell input` starts a JVM on the device for
+     * each one (half a second or more), so it is only the fallback.
+     */
+    suspend fun tap(
+        x: Int,
+        y: Int,
+    ) = gesture(listOf(x to y), holdMs = TAP_HOLD_MS) { adb.tap(serial, x, y) }
+
+    suspend fun longPress(
+        x: Int,
+        y: Int,
+        holdMs: Int,
+    ) = gesture(listOf(x to y), holdMs = holdMs.toLong()) { adb.swipe(serial, x, y, x, y, holdMs) }
+
+    suspend fun swipe(
+        x1: Int,
+        y1: Int,
+        x2: Int,
+        y2: Int,
+        durationMs: Int,
+    ) {
+        val steps = (durationMs / SWIPE_STEP_MS).toInt().coerceIn(2, MAX_SWIPE_STEPS)
+        val path = (0..steps).map { i -> (x1 + (x2 - x1) * i / steps) to (y1 + (y2 - y1) * i / steps) }
+        gesture(path, holdMs = 0, stepMs = durationMs.toLong() / steps) { adb.swipe(serial, x1, y1, x2, y2, durationMs) }
+    }
+
+    /**
+     * One finger along [path] over the emulator's gRPC endpoint: down at the first point, held
+     * [holdMs], moved [stepMs] apart, lifted at the last. Falls back to [viaAdb] without an
+     * endpoint, or when it fails.
+     */
+    private suspend fun gesture(
+        path: List<Pair<Int, Int>>,
+        holdMs: Long,
+        stepMs: Long = 0,
+        viaAdb: suspend () -> Unit,
+    ) {
+        val controller = emulator ?: return viaAdb()
+        try {
+            val rotation = controller.rotation()
+            val turned = size().let { if (rotation % 2 == 1) it.logical.swapped() else it.logical }
+            val natural = size().physical
+
+            fun at(p: Pair<Int, Int>) = EmulatorScreen.toNatural(p.first.toFloat() / turned.width, p.second.toFloat() / turned.height, rotation, natural)
+            val (sx, sy) = at(path.first())
+            controller.touch(sx, sy, pressed = true)
+            if (holdMs > 0) delay(holdMs)
+            path.drop(1).forEach { p ->
+                if (stepMs > 0) delay(stepMs)
+                val (x, y) = at(p)
+                controller.touch(x, y, pressed = true)
+            }
+            val (ex, ey) = at(path.last())
+            controller.touch(ex, ey, pressed = false)
+        } catch (e: IOException) {
+            Log.w(TAG, "The emulator's touch failed; asking adb", e)
+            viaAdb()
+        }
+    }
 
     /** A picture of the screen at the agent's scale, as PNG. */
     suspend fun agentShot(): AgentShot {
@@ -124,6 +193,9 @@ class DeviceConnection(
     companion object {
         private const val TAG = "DeviceConnection"
         private const val SIZE_TTL_MS = 30_000L
+        private const val TAP_HOLD_MS = 40L
+        private const val SWIPE_STEP_MS = 16L
+        private const val MAX_SWIPE_STEPS = 60
 
         /** The model sees an image up to this long edge and this many pixels without shrinking it. */
         const val MAX_EDGE = 1568

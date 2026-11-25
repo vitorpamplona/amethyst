@@ -152,6 +152,12 @@ class EmulatorController(
         )
     }
 
+    /**
+     * How the display is turned now, in quarter turns: from a one-pixel screenshot, which carries
+     * the rotation and costs next to nothing.
+     */
+    suspend fun rotation(): Int = screenshot(PixelFormat.RGB888, 1, 1).rotation
+
     /** A W3C key name ("GoBack", "GoHome", "AppSwitch", "Power", "Enter", "Backspace", "a"…). */
     suspend fun key(
         key: String,

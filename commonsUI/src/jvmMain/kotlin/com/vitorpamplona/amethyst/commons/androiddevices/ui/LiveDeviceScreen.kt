@@ -118,6 +118,7 @@ import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicLong
 import org.jetbrains.skia.Image as SkiaImage
 
 /** A frame ready to draw, with what the pointer needs to know about it. */
@@ -221,6 +222,11 @@ fun LiveDeviceScreen(
         }
     }
 
+    // Where the user's finger is, drawn at once: the device's own redraw comes a frame (or, through
+    // adb, a screenshot) later, and without this a click feels like nothing happened.
+    var touch by remember { mutableStateOf<Offset?>(null) }
+    val moves = remember { AtomicLong() }
+    var touching by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -274,13 +280,22 @@ fun LiveDeviceScreen(
                                 PointerEventType.Press -> {
                                     focus.requestFocus()
                                     down = true
+                                    touch = Offset(fx, fy)
+                                    touching = true
                                     input.trySend { s.pointer(PointerAction.DOWN, fx, fy, f) }
                                 }
                                 PointerEventType.Move ->
-                                    if (down) input.trySend { s.pointer(PointerAction.MOVE, fx, fy, f) }
+                                    if (down) {
+                                        touch = Offset(fx, fy)
+                                        // Only the newest move goes out: a fast mouse reports moves quicker
+                                        // than the device takes them, and a queue of old ones is lag.
+                                        val mine = moves.incrementAndGet()
+                                        input.trySend { if (moves.get() == mine) s.pointer(PointerAction.MOVE, fx, fy, f) }
+                                    }
                                 PointerEventType.Release -> {
                                     if (down) input.trySend { s.pointer(PointerAction.UP, fx, fy, f) }
                                     down = false
+                                    touching = false
                                 }
                                 PointerEventType.Scroll -> {
                                     // A short drag the wheel's way: what scrolling is on a touch screen.
@@ -308,6 +323,7 @@ fun LiveDeviceScreen(
         } else if (failure == null) {
             FrameMessage("", progress = true)
         }
+        FingerDot(touch, touching)
         AgentTouches(activity, agentName)
         // Clicked: what the keyboard does now, said once at the top of the screen while it holds.
         AnimatedVisibility(focused && failure == null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)) {
@@ -330,6 +346,27 @@ fun LiveDeviceScreen(
                 FilledTonalButton(onClick = { attempt++ }) { Text(stringRes(Res.string.android_device_reconnect)) }
             }
         }
+    }
+}
+
+/** The user's finger on the screen, as Android's "show taps" draws it: solid while down, fading after. */
+@Composable
+private fun FingerDot(
+    at: Offset?,
+    down: Boolean,
+) {
+    val alpha = remember { Animatable(0f) }
+    LaunchedEffect(down, at == null) {
+        if (down) alpha.snapTo(1f) else alpha.animateTo(0f, tween(FINGER_FADE_MS))
+    }
+    val p = at ?: return
+    if (alpha.value <= 0f) return
+    val density = LocalDensity.current
+    Canvas(Modifier.fillMaxSize()) {
+        val center = Offset(p.x * size.width, p.y * size.height)
+        val radius = with(density) { 14.dp.toPx() }
+        drawCircle(Color.White.copy(alpha = 0.35f * alpha.value), radius, center)
+        drawCircle(Color.White.copy(alpha = 0.7f * alpha.value), radius, center, style = Stroke(with(density) { 1.5.dp.toPx() }))
     }
 }
 
@@ -422,5 +459,6 @@ private fun keyOf(key: Key): DeviceKey? =
 
 private const val RESIZE_DEBOUNCE_MS = 250L
 private const val TOUCH_FADE_MS = 1_400
+private const val FINGER_FADE_MS = 250
 private const val WHEEL_STEP = 0.12f
 private const val WHEEL_MOVE_MS = 30L

@@ -31,6 +31,8 @@ import com.vitorpamplona.androiddevice.ui.UiNode
 import com.vitorpamplona.androiddevice.ui.UiTree
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -133,20 +135,26 @@ class DeviceToolServer(
         val chat = owner()
         if (chat != null) devices.select(chat, serial)
         if (tool in WITHOUT_CRASH_CHECK) return act(tool, device, args)
-        // A crash the last action caused after its result went back is told now.
-        val earlier = newCrashes(serial)
+        // The first touch of a device only marks where its crash log starts. After that, one read
+        // per call, after it acts: a crash that lands after a result went back is in the next one's.
+        if (!crashCursors.containsKey(serial)) newCrashes(serial)
         val result =
             try {
                 act(tool, device, args)
             } catch (e: IOException) {
                 HostToolResult(e.message ?: "The device didn't answer", isError = true)
             }
-        val now = newCrashes(serial)
+        // The crash log and the app's process, asked at once: two adb calls, one wait.
+        val (crashes, gone) =
+            coroutineScope {
+                val crashes = async { newCrashes(serial) }
+                val alive = async { appAlive(tool, serial) }
+                crashes.await().let { it to appGone(serial, it, alive.await()) }
+            }
         val notes =
             listOfNotNull(
-                earlier.takeIf { it.isNotEmpty() }?.let { "SINCE YOUR LAST DEVICE ACTION, " + crashText(it) },
-                now.takeIf { it.isNotEmpty() }?.let { "AFTER THIS ACTION, " + crashText(it) },
-                appGone(tool, serial, earlier + now),
+                crashes.takeIf { it.isNotEmpty() }?.let { "SINCE YOUR LAST DEVICE ACTION, " + crashText(it) },
+                gone,
             )
         return if (notes.isEmpty()) result else result.copy(text = notes.joinToString("\n\n") + "\n\n" + result.text)
     }
@@ -170,27 +178,34 @@ class DeviceToolServer(
             crashes.joinToString("\n") { it.crash.summary() }
 
     /**
-     * The app this chat opened, gone with no crash in the log (killed, or it exited): said once.
-     * Nothing for the tools that stop it themselves.
+     * Whether the app this chat opened still runs, or null when there's nothing to watch: no app
+     * opened, a tool that stops it on purpose, or adb didn't answer.
      */
-    private suspend fun appGone(
+    private suspend fun appAlive(
         tool: String,
         serial: String,
-        crashes: List<SeenCrash>,
-    ): String? {
+    ): Boolean? {
         val pkg = openedApp[serial] ?: return null
         if (tool in STOPS_APP) return null
+        return try {
+            devices.connection(serial).adb.pidOf(serial, pkg) != null
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    /** The app this chat opened, gone with no crash in the log (killed, or it exited): said once. */
+    private fun appGone(
+        serial: String,
+        crashes: List<SeenCrash>,
+        alive: Boolean?,
+    ): String? {
+        val pkg = openedApp[serial] ?: return null
         if (crashes.any { it.crash.packageName == pkg }) {
             openedApp.remove(serial)
             return null
         }
-        val pid =
-            try {
-                devices.connection(serial).adb.pidOf(serial, pkg)
-            } catch (_: IOException) {
-                return null
-            }
-        if (pid != null) return null
+        if (alive != false) return null
         openedApp.remove(serial)
         return "$pkg IS NO LONGER RUNNING, with nothing in the crash log (it was killed, or it exited). logcat with package shows its last lines."
     }
@@ -440,7 +455,7 @@ class DeviceToolServer(
         val (point, what) = target(device, args, connection)
         val (x, y) = point
         val long = args.bool("long_press") == true
-        if (long) connection.adb.swipe(device.serial, x, y, x, y, LONG_PRESS_MS) else connection.adb.tap(device.serial, x, y)
+        if (long) connection.longPress(x, y, LONG_PRESS_MS) else connection.tap(x, y)
         val (fx, fy) = fraction(connection, x, y)
         devices.report(DeviceActivity(device.serial, if (long) DeviceActivity.Kind.LONG_PRESS else DeviceActivity.Kind.TAP, fx, fy, label = what))
         return after(device, args, "${if (long) "Long-pressed" else "Tapped"} $what")
@@ -476,7 +491,7 @@ class DeviceToolServer(
                 fun coord(name: String) = ((args.int(name) ?: throw IllegalArgumentException("Give direction, or x1, y1, x2 and y2")) / scale).roundToInt()
                 (coord("x1") to coord("y1")) to (coord("x2") to coord("y2"))
             }
-        connection.adb.swipe(device.serial, from.first, from.second, to.first, to.second, duration)
+        connection.swipe(from.first, from.second, to.first, to.second, duration)
         val (fx, fy) = fraction(connection, from.first, from.second)
         val (tx, ty) = fraction(connection, to.first, to.second)
         devices.report(DeviceActivity(device.serial, DeviceActivity.Kind.SWIPE, fx, fy, tx, ty, label = direction ?: "swipe"))
@@ -492,11 +507,11 @@ class DeviceToolServer(
         if (args.int("element") != null || args.str("into") != null) {
             val focus = if (args.int("element") != null) args else JsonObject(mapOf("text" to args["into"]!!))
             val (point, _) = target(device, focus, connection)
-            connection.adb.tap(device.serial, point.first, point.second)
+            connection.tap(point.first, point.second)
             delay(FOCUS_MS)
         }
         connection.screen().type(text)
-        if (args.bool("submit") == true) connection.adb.key(device.serial, DeviceKey.ENTER)
+        if (args.bool("submit") == true) connection.screen().key(DeviceKey.ENTER)
         devices.report(DeviceActivity(device.serial, DeviceActivity.Kind.TYPE, label = text.take(40)))
         return after(device, args, "Typed ${text.length} characters${if (args.bool("submit") == true) " and pressed Enter" else ""}")
     }

@@ -192,14 +192,13 @@ class AdbScreen(
             while (true) {
                 val started = System.currentTimeMillis()
                 try {
-                    val png = adb.screencapPng(serial)
+                    val frame = capture()
                     failures = 0
                     // An unchanged screen isn't drawn again, and is looked at less often.
-                    if (last == null || !png.contentEquals(last)) {
-                        last = png
+                    if (last == null || !frame.pixels.contentEquals(last)) {
+                        last = frame.pixels
                         unchanged = 0
-                        val size = PngSize.of(png) ?: throw IOException("Not a PNG")
-                        emit(ScreenFrame(size.width, size.height, PixelFormat.PNG, png, 0))
+                        emit(frame)
                     } else {
                         unchanged++
                     }
@@ -211,6 +210,24 @@ class AdbScreen(
                 while (System.currentTimeMillis() - started < nextInterval(unchanged)) delay(INPUT_POLL_MS)
             }
         }
+
+    /** Raw pixels while the device sends them (an emulator), else PNG; a device that can't sends PNG from then on. */
+    @Volatile
+    private var raw = serial.startsWith("emulator-")
+
+    private suspend fun capture(): ScreenFrame {
+        if (raw) {
+            try {
+                val screen = adb.screencapRaw(serial)
+                return ScreenFrame(screen.width, screen.height, PixelFormat.RGBA8888, screen.rgba, 0)
+            } catch (_: IOException) {
+                raw = false
+            }
+        }
+        val png = adb.screencapPng(serial)
+        val size = PngSize.of(png) ?: throw IOException("Not a PNG")
+        return ScreenFrame(size.width, size.height, PixelFormat.PNG, png, 0)
+    }
 
     override suspend fun pointer(
         action: PointerAction,

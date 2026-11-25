@@ -98,6 +98,13 @@ data class ScreenSize(
     fun swapped() = ScreenSize(height, width)
 }
 
+/** A screenshot as RGBA pixels, row by row from the top. */
+class RawScreen(
+    val width: Int,
+    val height: Int,
+    val rgba: ByteArray,
+)
+
 /** What `wm size` says, both in the natural orientation. */
 data class WmSize(
     val physical: ScreenSize,
@@ -154,6 +161,13 @@ class Adb(
         vararg command: String,
         timeoutMs: Long = 30_000,
     ): ByteArray = checked(listOf("-s", serial, "exec-out", command.joinToString(" ") { quote(it) }), timeoutMs).stdout
+
+    /**
+     * The screen as raw RGBA pixels (`screencap` without `-p`): no PNG encode on the device, which
+     * is most of a PNG screenshot's time. Ten megabytes for a 1080x2400 screen, so it pays where
+     * the transfer is cheap (an emulator, over the local socket), not over USB.
+     */
+    suspend fun screencapRaw(serial: String): RawScreen = parseRawScreencap(execOut(serial, "screencap", timeoutMs = 15_000))
 
     suspend fun screencapPng(serial: String): ByteArray {
         val png = execOut(serial, "screencap", "-p", timeoutMs = 15_000)
@@ -365,6 +379,25 @@ class Adb(
                     val props = rest.filter { it.contains(':') }.associate { it.substringBefore(':') to it.substringAfter(':') }
                     AdbDevice(parts[0], state, props["model"]?.replace('_', ' '), props["product"])
                 }.toList()
+
+        /**
+         * `screencap`'s raw output: width, height and pixel format as little-endian ints, a fourth
+         * int (the color space) on newer Androids, then the pixels. The header's length is what's
+         * left once the pixels are counted, so both layouts read the same.
+         */
+        fun parseRawScreencap(bytes: ByteArray): RawScreen {
+            if (bytes.size < 12) throw IOException("The device sent no picture of its screen")
+
+            fun int(at: Int) = (bytes[at].toInt() and 0xff) or ((bytes[at + 1].toInt() and 0xff) shl 8) or ((bytes[at + 2].toInt() and 0xff) shl 16) or ((bytes[at + 3].toInt() and 0xff) shl 24)
+            val width = int(0)
+            val height = int(4)
+            val format = int(8)
+            val pixels = width.toLong() * height * 4
+            val header = bytes.size - pixels
+            // Format 1 is RGBA_8888, what every emulator image writes.
+            if (width <= 0 || height <= 0 || format != 1 || header !in 12L..16L) throw IOException("Unexpected raw screenshot (${width}x$height, format $format)")
+            return RawScreen(width, height, bytes.copyOfRange(header.toInt(), bytes.size))
+        }
 
         fun parseWmSize(out: String): WmSize? {
             fun sizeAfter(label: String) = Regex("$label size:\\s*(\\d+)x(\\d+)").find(out)?.let { ScreenSize(it.groupValues[1].toInt(), it.groupValues[2].toInt()) }
