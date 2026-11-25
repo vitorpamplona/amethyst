@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.ios.playback
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
@@ -32,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.player.AmethystPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.player.DeviceLevels
 import com.vitorpamplona.amethyst.commons.ui.playback.player.ExternalPlayback
 import com.vitorpamplona.amethyst.commons.ui.playback.player.PlaybackPlatform
+import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSize
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSurfaceStyle
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoTrack
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -168,6 +174,13 @@ class IosPlaybackPlatform(
         return SideLoadedCaptions(files)
     }
 
+    /**
+     * What media3's `ContentFrame` does on Android: the picture takes the space it is given, in
+     * the video's own shape under [contentScale], centered. The native view must never be larger
+     * than the picture: a see-through part of it would show the white window behind Compose, not
+     * the blurhash or the post. Until the first frame says the size, nothing is drawn, so the
+     * placeholder underneath stays visible.
+     */
     @Composable
     override fun VideoSurface(
         controllerState: MediaControllerState,
@@ -176,12 +189,43 @@ class IosPlaybackPlatform(
         modifier: Modifier,
     ) {
         val player = controllerState.controller as? AvAmethystPlayer ?: return
-        AvPlayerSurface(
-            player = player.avPlayer,
-            contentScale = contentScale,
-            modifier = modifier,
-            onView = { view -> if (view != null) PictureInPicture.register(player, view) },
-        )
+        val size by rememberVideoSize(player)
+        BoxWithConstraints(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val video = size
+            if (video.width <= 0 || video.height <= 0) return@BoxWithConstraints
+            val ratio = video.width * video.pixelWidthHeightRatio / video.height
+            val surfaceModifier =
+                if (contentScale == ContentScale.Crop || contentScale == ContentScale.FillBounds || !constraints.hasBoundedHeight) {
+                    // Crop fills the box (the layer crops the overflow); an unbounded height takes the video's.
+                    if (constraints.hasBoundedHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(ratio)
+                } else {
+                    Modifier.aspectRatio(ratio, matchHeightConstraintsFirst = maxWidth / maxHeight > ratio)
+                }
+            AvPlayerSurface(
+                player = player.avPlayer,
+                contentScale = contentScale,
+                modifier = surfaceModifier,
+                onView = { view -> if (view != null) PictureInPicture.register(player, view) },
+            )
+        }
+    }
+
+    /** The player's picture size, following it as it changes (an HLS rendition switch, a rotation). */
+    @Composable
+    private fun rememberVideoSize(player: AvAmethystPlayer): State<VideoSize> {
+        val state = remember(player) { mutableStateOf(player.videoSize) }
+        DisposableEffect(player) {
+            val listener =
+                object : AmethystPlayer.Listener {
+                    override fun onVideoSizeChanged(size: VideoSize) {
+                        state.value = size
+                    }
+                }
+            player.addListener(listener)
+            state.value = player.videoSize
+            onDispose { player.removeListener(listener) }
+        }
+        return state
     }
 
     // Keep the screen on

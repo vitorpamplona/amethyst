@@ -45,6 +45,8 @@ class AvPlayerView : UIView(frame = CGRectZero.readValue()) {
     init {
         backgroundColor = UIColor.clearColor
         userInteractionEnabled = false
+        // A cropped picture (aspect fill) must not spill past the view.
+        clipsToBounds = true
         layer.addSublayer(playerLayer)
     }
 

@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.playback.composable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.mediaViewerDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -58,10 +59,16 @@ fun VideoViewerDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    // Read out here: inside an edge-to-edge dialog the insets can come back empty (iOS), which put
+    // the close button and the player's top buttons under the status bar, out of reach.
+    val safeArea = WindowInsets.safeDrawing.asPaddingValues()
     Dialog(onDismissRequest = onDismiss, properties = mediaViewerDialogProperties()) {
         SetDialogToEdgeToEdge()
+        // The system back: Android's gesture, iOS's edge swipe.
+        PlatformBackHandler(onBack = onDismiss)
         val controllerVisible = remember(content.url) { mutableStateOf(true) }
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        // The black reaches the screen edges; the player and its controls stay in the safe area.
+        Box(Modifier.fillMaxSize().background(Color.Black).padding(safeArea), contentAlignment = Alignment.Center) {
             VideoViewInner(
                 videoUri = content.url,
                 mimeType = content.mimeType,
@@ -85,7 +92,6 @@ fun VideoViewerDialog(
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
-                        .windowInsetsPadding(WindowInsets.safeDrawing)
                         .padding(8.dp),
             ) {
                 Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.close), tint = Color.White)
