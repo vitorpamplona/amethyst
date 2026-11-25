@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
+import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -163,6 +164,9 @@ class IosAppModules(
                     ?.value ?: emptySet()
             },
         )
+
+    // Feeds every event the relays send into the cache, as on Android and the desktop.
+    val cacheClientConnector = CacheClientConnector(client, cache)
 
     val relayStats by lazy { RelayStats(client) }
 
