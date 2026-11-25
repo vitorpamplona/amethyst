@@ -1043,8 +1043,9 @@ class AppModules(
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             // Long device-group histories go through the account's Blossom servers, on the app's HTTP routes.
             marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
-            // Unknown (a cold start before the first callback) waits, like mobile data.
-            canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
+            // Unknown (a cold start before the first callback) asks the system for the active
+            // network; no network at all waits, like mobile data.
+            canDownloadLargeFiles = { !connManager.isMeteredOrMobileNow() },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
             // joined workspace relays (so the app knows which relays to sync as workspaces on cold
             // start — Buzz membership is server-side) and the starred channels. Per account: the
