@@ -127,6 +127,8 @@ import com.vitorpamplona.amethyst.commons.claudecode.GitHubPullRequests
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
+import com.vitorpamplona.amethyst.commons.claudecode.PublishedArtifact
+import com.vitorpamplona.amethyst.commons.claudecode.PublishedArtifacts
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
@@ -192,9 +194,13 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_process_e
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_turn_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_readonly
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_change_this
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_artifact
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_doc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_this
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_publish
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_republish
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
@@ -494,6 +500,9 @@ fun ClaudeCodeChatScreen(
                                 }
                             }
                         }
+                        // What the session put on claude.ai, one click away however far up the chat it is.
+                        // With the panel, it is listed there, under the repositories' changes.
+                        if (!showPanel) PublishedMenu(state.items, state.cwd)
                         ChatMenu(
                             canRunApp = canRunApp && !runningApp,
                             canEnd = state.status != ChatStatus.NOT_STARTED && state.status != ChatStatus.ENDED,
@@ -623,7 +632,7 @@ fun ClaudeCodeChatScreen(
                     if (showPanel) {
                         // Dragged like the app's other side panes, and remembered with them.
                         PaneSplitter(onDrag = { delta -> paneWidths.setChangesPanel((panelWidth.value - delta).coerceIn(PullRequestsPanelWidthRange)) })
-                        PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth)
+                        PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth, items = state.items, cwd = state.cwd)
                     }
                 }
             }
@@ -860,6 +869,13 @@ private fun Messages(
             items(rows, key = { it.key }) { row ->
                 when (row) {
                     is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
+                    is ChatRow.Published ->
+                        PublishedRow(
+                            row,
+                            state.cwd,
+                            turnRunning,
+                            waitingForApproval = state.pendingPermissions.any { it.toolUseId == row.call.toolUseId },
+                        )
                     is ChatRow.Single ->
                         when (val item = row.item) {
                             // A new turn: more room above it than between the parts of a reply.
@@ -1438,6 +1454,8 @@ private fun PermissionCard(
     onDeny: () -> Unit,
 ) {
     val view = rememberToolView(request.toolName, request.input, cwd, pending = true)
+    // A page, deck or doc for claude.ai: asked as what it publishes, not as the tool's JSON.
+    val publishing = remember(request.toolName, request.input) { PublishedArtifacts.of(request.toolName, request.input.toString(), null) }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
@@ -1445,7 +1463,7 @@ private fun PermissionCard(
     ) {
         Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(PartGap)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(publishing?.kind?.symbol() ?: ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when {
@@ -1453,6 +1471,16 @@ private fun PermissionCard(
                         note != null && request.toolName.startsWith(ACCOUNT_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_act, LocalAgentName.current)
                         note != null && request.toolName.startsWith(SCREEN_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_screen, LocalAgentName.current)
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
+                        publishing != null ->
+                            stringRes(
+                                when {
+                                    publishing.kind == PublishedArtifact.Kind.DOCUMENT -> Res.string.claude_code_permission_create_doc
+                                    publishing.kind == PublishedArtifact.Kind.TYPED -> Res.string.claude_code_permission_create_artifact
+                                    publishing.change == PublishedArtifact.Change.UPDATED -> Res.string.claude_code_permission_republish
+                                    else -> Res.string.claude_code_permission_publish
+                                },
+                                LocalAgentName.current,
+                            )
                         view is ToolView.FileChange ->
                             // The diff below names the file: the question needn't say it again.
                             stringRes(if (view.newFile) Res.string.claude_code_permission_create_this else Res.string.claude_code_permission_change_this, LocalAgentName.current)
@@ -1469,6 +1497,7 @@ private fun PermissionCard(
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                         Text(note, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp))
                     }
+                publishing != null -> PublishPreview(publishing, cwd)
                 view is ToolView.FileChange ->
                     Box(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) { FileChangeDiff(view) }
                 view is ToolView.Command -> {
