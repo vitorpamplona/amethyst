@@ -18,8 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.media
+package com.vitorpamplona.amethyst.commons.ui.components.animated
 
+import androidx.collection.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -52,15 +53,14 @@ import com.vitorpamplona.amethyst.commons.service.image.drawAtWholePixels
 import com.vitorpamplona.amethyst.commons.service.image.scaleInto
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.render.SoftwareDrawing
-import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import okhttp3.Request
-import okhttp3.coroutines.executeAsync
 import org.jetbrains.skia.AnimationDisposalMode
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
@@ -68,9 +68,10 @@ import org.jetbrains.skia.Data
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.impl.use
-import java.io.File
-import java.net.URI
 import kotlin.math.roundToInt
+import kotlin.time.TimeSource
+
+private const val TAG = "AnimatedGif"
 
 private const val MIN_FRAME_DURATION_MS = 20
 
@@ -91,30 +92,27 @@ private class GifSource(
 
 // GIFs kept for the next time they show (scrolling back, reopening a thread), so they neither
 // download again nor flash a placeholder. Bounded by their bytes plus their first frame's pixels.
-private const val SOURCE_CACHE_BYTES = 64L * 1024 * 1024
+private const val SOURCE_CACHE_BYTES = 64 * 1024 * 1024
 
 private object GifSourceCache {
-    private val entries = LinkedHashMap<String, GifSource>(16, 0.75f, true)
-    private var total = 0L
+    // Least recently shown first out. LruCache locks itself, so the UI thread and the loaders share it.
+    private val entries =
+        object : LruCache<String, GifSource>(SOURCE_CACHE_BYTES) {
+            override fun sizeOf(
+                key: String,
+                value: GifSource,
+            ): Int = value.cost.toInt()
+        }
 
-    @Synchronized
     fun get(url: String): GifSource? = entries[url]
 
-    @Synchronized
     fun put(
         url: String,
         source: GifSource,
     ) {
+        // One bigger than the whole cache would evict everything else and then itself.
         if (source.cost > SOURCE_CACHE_BYTES) return
-        entries.put(url, source)?.let { total -= it.cost }
-        total += source.cost
-        val oldest = entries.entries.iterator()
-        while (total > SOURCE_CACHE_BYTES && oldest.hasNext()) {
-            val evicted = oldest.next()
-            if (evicted.key == url) continue
-            total -= evicted.value.cost
-            oldest.remove()
-        }
+        entries.put(url, source)
     }
 }
 
@@ -135,6 +133,10 @@ fun AnimatedGifImage(
     scaleToDrawnSize: Boolean = true,
     // Whether a frame is on screen, for a caller that draws a placeholder under it until then.
     onShown: (Boolean) -> Unit = {},
+    // Off when the user turned autoplay off: the first frame stays, and no player runs.
+    autoPlay: Boolean = true,
+    // Where the file's bytes come from: the platform's HTTP client, local files, decryption.
+    fetcher: AnimatedImageFetcher = AnimatedImageFetcher.installed,
 ) {
     var gif by remember(url) { mutableStateOf(GifSourceCache.get(url)) }
     var loadFailed by remember(url) { mutableStateOf(false) }
@@ -143,7 +145,7 @@ fun AnimatedGifImage(
     LaunchedEffect(url) {
         loadFailed = false
         if (gif != null) return@LaunchedEffect
-        gif = withContext(Dispatchers.IO) { loadGif(url, local)?.also { GifSourceCache.put(url, it) } }
+        gif = withContext(Dispatchers.IO) { loadGif(url, local, fetcher)?.also { GifSourceCache.put(url, it) } }
         if (gif == null) loadFailed = true
     }
 
@@ -154,7 +156,7 @@ fun AnimatedGifImage(
             var shown by remember(data) { mutableStateOf<GifFrame>(GifFrame.First) }
             val box = remember { GifBox() }
             val currentScale by rememberUpdatedState(contentScale)
-            if (data.bytes != null) {
+            if (data.bytes != null && autoPlay) {
                 LaunchedEffect(data) {
                     playGif(
                         data.bytes,
@@ -287,7 +289,7 @@ private suspend fun playGif(
             withContext(Dispatchers.Default) { GifPlayer(bytes) }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            println("AnimatedGif: cannot play — ${e.message}")
+            Log.w(TAG, "cannot play", e)
             return
         }
 
@@ -299,7 +301,7 @@ private suspend fun playGif(
         // pictures already recorded with them, which keep their own reference to the pixels.
         val shownSnapshots = ArrayDeque<Image>()
         while (currentCoroutineContext().isActive) {
-            val start = System.nanoTime()
+            val start = TimeSource.Monotonic.markNow()
             when (val next = target(player.width, player.height)) {
                 // Until the box is laid out: a frame now would be scaled again on every draw.
                 FrameTarget.Wait -> {
@@ -318,13 +320,13 @@ private suspend fun playGif(
                     while (shownSnapshots.size > 2) shownSnapshots.removeFirst().close()
                 }
             }
-            val spentMs = (System.nanoTime() - start) / 1_000_000
+            val spentMs = start.elapsedNow().inWholeMilliseconds
             delay((player.duration(frame) - spentMs).coerceAtLeast(MIN_FRAME_GAP_MS))
             frame = (frame + 1) % player.frameCount
         }
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
-        println("AnimatedGif: stopped playing — ${e.message}")
+        Log.w(TAG, "stopped playing", e)
     } finally {
         player.close()
     }
@@ -494,11 +496,12 @@ internal class GifPlayer(
 private suspend fun gifBytes(
     url: String,
     local: Boolean,
+    fetcher: AnimatedImageFetcher,
 ): ByteArray? {
     // A file the user picked to post (the media Studio, the composer's card): read it in place.
-    if (local) return localFile(url)?.readBytes()
+    if (local) return fetcher.readLocal(url)
 
-    val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
+    val disk = if (fetcher.mayCacheOnDisk(url)) SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache else null
     val key = "gif:$url"
     // Its own copy, else the image loader's: an animated WebP reaches the player after the loader
     // fetched it ([AnimatedImageProbe]), so the file is already on disk under its URL.
@@ -508,12 +511,7 @@ private suspend fun gifBytes(
         }
     }
 
-    val request = Request.Builder().url(url).build()
-    val bytes =
-        MediaHttp.imageClient(url).newCall(request).executeAsync().use { response ->
-            if (!response.isSuccessful) return null
-            response.body.bytes()
-        }
+    val bytes = fetcher.download(url) ?: return null
 
     disk?.openEditor(key)?.let { editor ->
         try {
@@ -532,9 +530,12 @@ private suspend fun gifBytes(
  * an empty box. True when the file has frames to play; a single frame is left to the image
  * loader, which downsamples it.
  */
-internal suspend fun preloadAnimation(url: String): Boolean {
+internal suspend fun preloadAnimation(
+    url: String,
+    fetcher: AnimatedImageFetcher = AnimatedImageFetcher.installed,
+): Boolean {
     GifSourceCache.get(url)?.let { return it.bytes != null }
-    val source = withContext(Dispatchers.IO) { loadGif(url, local = false) } ?: return false
+    val source = withContext(Dispatchers.IO) { loadGif(url, local = false, fetcher) } ?: return false
     if (source.bytes != null) GifSourceCache.put(url, source)
     return source.bytes != null
 }
@@ -542,9 +543,10 @@ internal suspend fun preloadAnimation(url: String): Boolean {
 private suspend fun loadGif(
     url: String,
     local: Boolean,
+    fetcher: AnimatedImageFetcher,
 ): GifSource? =
     try {
-        val bytes = gifBytes(url, local) ?: return null
+        val bytes = gifBytes(url, local, fetcher) ?: return null
 
         Data.makeFromBytes(bytes).use { skData ->
             Codec.makeFromData(skData).use { codec ->
@@ -564,17 +566,6 @@ private suspend fun loadGif(
         }
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
-        println("AnimatedGif: failed to load $url — ${e.message}")
+        Log.w(TAG, "failed to load $url", e)
         null
     }
-
-/** The file [url] names when it is a local path (`/home/…`, `C:\…`) or a `file:` URL; null for anything fetched. */
-private fun localFile(url: String): File? {
-    val file =
-        when {
-            url.startsWith("file:") -> runCatching { File(URI(url)) }.getOrNull()
-            url.startsWith("http://") || url.startsWith("https://") -> null
-            else -> File(url)
-        }
-    return file?.takeIf { it.isFile }
-}

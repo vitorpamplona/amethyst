@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.media
+package com.vitorpamplona.amethyst.commons.ui.components.animated
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.ImageComposeScene
@@ -42,9 +42,20 @@ import javax.imageio.ImageTypeSpecifier
 import javax.imageio.metadata.IIOMetadataNode
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AnimatedGifImageRenderTest {
+    /** Reads the picked file from disk, as the desktop's fetcher does; never downloads. */
+    private val files =
+        object : AnimatedImageFetcher {
+            override fun readLocal(url: String): ByteArray? = File(url).takeIf { it.isFile }?.readBytes()
+
+            override fun mayCacheOnDisk(url: String): Boolean = false
+
+            override suspend fun download(url: String): ByteArray? = null
+        }
+
     @AfterTest
     fun reset() {
         SoftwareDrawing.active = false
@@ -108,7 +119,7 @@ class AnimatedGifImageRenderTest {
     ): Boolean {
         val scene =
             ImageComposeScene(width, height, Density(1f)) {
-                AnimatedGifImage(url = file.path, local = true, modifier = Modifier.size(width.dp, height.dp), contentScale = contentScale)
+                AnimatedGifImage(url = file.path, local = true, fetcher = files, modifier = Modifier.size(width.dp, height.dp), contentScale = contentScale)
             }
         var matched = false
         val deadline = System.currentTimeMillis() + 10_000
@@ -145,7 +156,7 @@ class AnimatedGifImageRenderTest {
         val expected = listOf(prescaled(file, 0), prescaled(file, 1))
         val scene =
             ImageComposeScene(160, 120, Density(1f)) {
-                AnimatedGifImage(url = file.path, local = true, modifier = Modifier.size(160.dp, 120.dp), contentScale = ContentScale.Fit)
+                AnimatedGifImage(url = file.path, local = true, fetcher = files, modifier = Modifier.size(160.dp, 120.dp), contentScale = ContentScale.Fit)
             }
         // The GIF loads and the player starts on other threads: render until a played frame is up.
         var matched = false
@@ -157,5 +168,34 @@ class AnimatedGifImageRenderTest {
         }
         scene.close()
         assertTrue(matched, "no rendered frame was a frame scaled by the player and drawn 1:1")
+    }
+
+    @Test
+    fun withAutoplayOffOnlyTheFirstFrameEverDraws() {
+        SoftwareDrawing.active = true
+        val file = checkerGif()
+        val first = prescaled(file, 0)
+        val second = prescaled(file, 1)
+        val scene =
+            ImageComposeScene(160, 120, Density(1f)) {
+                AnimatedGifImage(url = file.path, local = true, fetcher = files, autoPlay = false, modifier = Modifier.size(160.dp, 120.dp), contentScale = ContentScale.Fit)
+            }
+        // The frames last 50 ms: a second of rendering would show the other one if a player ran.
+        var sawFirst = false
+        var sawSecond = false
+        val deadline = System.currentTimeMillis() + 10_000
+        var firstSeenAt = 0L
+        while (System.currentTimeMillis() < deadline && (!sawFirst || System.currentTimeMillis() < firstSeenAt + 1_000)) {
+            val pixels = Bitmap.makeFromImage(scene.render(System.nanoTime())).readPixels()!!
+            if (pixels.contentEquals(first) && !sawFirst) {
+                sawFirst = true
+                firstSeenAt = System.currentTimeMillis()
+            }
+            if (pixels.contentEquals(second)) sawSecond = true
+            Thread.sleep(30)
+        }
+        scene.close()
+        assertTrue(sawFirst, "the first frame never drew")
+        assertFalse(sawSecond, "a second frame drew although autoplay is off")
     }
 }

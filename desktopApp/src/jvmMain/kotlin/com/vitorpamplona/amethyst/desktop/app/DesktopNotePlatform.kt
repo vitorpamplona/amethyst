@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedGifImage
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageProbe
 import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
@@ -117,8 +119,6 @@ import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
-import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
-import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedImageProbe
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopTrimPreviewPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer

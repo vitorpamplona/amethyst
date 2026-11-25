@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ios
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -32,12 +28,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.audio.VoiceRecorder
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -50,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ImageViewerDialog
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
-import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
@@ -63,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.composable.ZoomableVideoCo
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ios.playback.IosVoiceRecorder
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
@@ -78,7 +72,8 @@ import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWithWavef
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as SharedVideoView
 
 /**
- * iOS's note media: images draw inline through Coil and open the shared [ImageViewerDialog]; videos
+ * iOS's note media: images draw inline through Coil (GIFs and animated WebPs through the shared
+ * Skia player, [IosGifVideoView]) and open the shared [ImageViewerDialog]; videos
  * and audio run the shared player UI (`commons.ui.playback`) on AVPlayer through
  * [IosPlaybackPlatform], and voice messages record through [IosVoiceRecorder]. PDFs and link
  * previews are still links the user can open (B7).
@@ -120,18 +115,8 @@ object IosNotePlatform : NotePlatform {
             // Keyed by the image, so a viewer paged to a sibling can close into that one's thumbnail.
             val source = rememberZoomSourceAnchor(content)
             val cornerRadius = if (roundedCorner) 12.dp else 0.dp
-            AsyncImage(
-                model = url,
-                contentDescription = content.description,
-                contentScale = contentScale,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = MAX_INLINE_MEDIA_HEIGHT)
-                        .zoomSourceAnchor(source)
-                        .clip(RoundedCornerShape(cornerRadius))
-                        .clickable { showViewer = true },
-            )
+            // Coil here decodes a GIF's first frame only: animated images play through the GIF player.
+            IosInlineImage(content, contentScale, roundedCorner, cornerRadius, MAX_INLINE_MEDIA_HEIGHT, source, { showViewer = true }, accountViewModel)
             if (showViewer) {
                 ImageViewerDialog(content, images, source, cornerRadius) { showViewer = false }
             }
@@ -152,6 +137,29 @@ object IosNotePlatform : NotePlatform {
             ClickableUrl(url)
         }
     }
+
+    @Composable
+    override fun GifVideoView(
+        videoUri: String,
+        contentDescription: String?,
+        dimensions: DimensionTag?,
+        blurhash: String?,
+        roundedCorner: Boolean,
+        contentScale: ContentScale,
+        onDialog: (() -> Unit)?,
+        accountViewModel: AccountViewModel,
+        thumbhash: String?,
+    ) = IosGifVideoView(videoUri, contentDescription, dimensions, blurhash, roundedCorner, contentScale, onDialog, accountViewModel, thumbhash)
+
+    @Composable
+    override fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
+        local: Boolean,
+    ) = IosAnimatedImage(url, contentDescription, contentScale, modifier, onError, local)
 
     @Composable
     override fun VideoView(

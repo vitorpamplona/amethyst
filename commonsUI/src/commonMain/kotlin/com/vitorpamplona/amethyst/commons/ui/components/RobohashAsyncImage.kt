@@ -54,8 +54,8 @@ import coil3.Image as CoilImage
 
 /**
  * Plays or pauses an animated avatar (GIF/AVIF) once Coil has decoded it. Android drives the
- * decoded `Animatable` drawable; desktop decodes only the first frame, so there [autoPlay] has
- * no effect.
+ * decoded `Animatable` drawable; desktop and iOS decode only the first frame, so there [autoPlay]
+ * has no effect.
  */
 @Composable
 internal expect fun AnimatedImageAutoPlay(

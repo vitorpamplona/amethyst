@@ -18,12 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.media
+package com.vitorpamplona.amethyst.commons.ui.components.animated
 
+import androidx.collection.LruCache
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 // Enough for the WebP header up to its VP8X flags (byte 20) and the GIF signature.
@@ -34,26 +36,24 @@ private const val MAX_REMEMBERED = 1024
 
 /**
  * Finds the images that animate although their URL doesn't end in `.gif`: an animated WebP, or a
- * GIF behind an extensionless Blossom URL. Coil on desktop draws only the first frame of those, so
+ * GIF behind an extensionless Blossom URL. Coil on desktop and iOS draws only the first frame of those, so
  * once the image loader has the file, its header is read from the loader's disk cache and, when it
  * holds frames, the card hands the URL to [AnimatedGifImage], whose Skia codec plays WebP as well
  * as GIF. Android's decoder animates these by itself.
  */
 object AnimatedImageProbe {
-    private val probed =
-        object : LinkedHashMap<String, Boolean>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > MAX_REMEMBERED
-        }
+    // LruCache locks itself: cards on the UI thread and probes on IO share it.
+    private val probed = LruCache<String, Boolean>(MAX_REMEMBERED)
 
     /** True when [url] is played by [AnimatedGifImage]: a `.gif`, or a file a probe found frames in. */
-    fun isAnimated(url: String): Boolean = isAnimatedGifUrl(url) || synchronized(probed) { probed[url] } == true
+    fun isAnimated(url: String): Boolean = isAnimatedGifUrl(url) || probed[url] == true
 
     /**
      * Whether a load of [url] is worth a [probe]: not yet probed, and not named as a format Skia
      * can't animate (JPEG, PNG, whose APNG frames it doesn't play, SVG, BMP). Checked before
      * launching anything, since every memory-cache hit of a scrolled feed reports a load.
      */
-    fun needsProbe(url: String): Boolean = !isAnimatedGifUrl(url) && !hasStillExtension(url) && synchronized(probed) { url !in probed }
+    fun needsProbe(url: String): Boolean = !isAnimatedGifUrl(url) && !hasStillExtension(url) && probed[url] == null
 
     /**
      * Reads the header of [url]'s file from the image loader's disk cache (under [diskCacheKey],
@@ -65,8 +65,9 @@ object AnimatedImageProbe {
     suspend fun probe(
         url: String,
         diskCacheKey: String?,
+        fetcher: AnimatedImageFetcher = AnimatedImageFetcher.installed,
     ): Boolean {
-        synchronized(probed) { probed[url] }?.let { return it }
+        probed[url]?.let { return it }
         val animated =
             withContext(Dispatchers.IO) {
                 val disk = SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache ?: return@withContext null
@@ -81,8 +82,8 @@ object AnimatedImageProbe {
                     } ?: return@withContext null
                 isAnimatedImageHeader(header)
             } ?: return false
-        val playable = animated && preloadAnimation(url)
-        synchronized(probed) { probed[url] = playable }
+        val playable = animated && preloadAnimation(url, fetcher)
+        probed.put(url, playable)
         return playable
     }
 }

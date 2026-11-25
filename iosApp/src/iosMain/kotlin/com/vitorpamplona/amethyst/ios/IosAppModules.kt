@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.KtorBlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
@@ -211,6 +212,8 @@ class IosAppModules(
             download = ::downloadBytes,
             cacheDir = (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String).toPath() / "images",
         )
+        // GIFs and animated WebPs play through the shared Skia player, which fetches them itself.
+        AnimatedImageFetcher.installed = IosAnimatedImageFetcher(keyCache, ::downloadBytes)
     }
 
     val cache: LocalCache = LocalCache

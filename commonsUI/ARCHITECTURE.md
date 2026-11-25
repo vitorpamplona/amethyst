@@ -70,7 +70,7 @@ is specific to the UI module.
 | `jvmAndroid`  | Markdown renderer (`ui/markdown`), Coil-OkHttp + Blossom read-auth fetcher, the `viewModel()` helper, and the avatar/image engine (`ui/components/RobohashAsyncImage.kt`: `RobohashFallbackAsyncImage`, `GifProfilePicture`) behind the `UserAvatar` `AvatarImage` actual. For a user avatar call the commonMain `UserAvatar`; don't add another avatar composable. |
 | `jvmMain`     | Desktop Coil bridge (`CoilImageBridge.jvm.kt`), a no-op `AnimatedImageAutoPlay` (Coil decodes only the first frame), `compose.desktop.currentOs`. `dependsOn(jvmAndroid)` + `skikoMain`. |
 | `androidMain` | Android Coil bridge, the `AnimatedImageAutoPlay` actual that starts/stops GIF/AVIF drawables. `dependsOn(jvmAndroid)`. |
-| `skikoMain`   | `org.jetbrains.skia` pixel helpers shared by desktop JVM + iOS (`SkiaBitmapConverter`). |
+| `skikoMain`   | `org.jetbrains.skia` pixel helpers shared by desktop JVM + iOS (`SkiaBitmapConverter`), and the frame-by-frame GIF/animated-WebP player (`ui/components/animated`: `AnimatedGifImage`, `AnimatedImageProbe`), which fetches through the platform's `AnimatedImageFetcher`. |
 | `iosMain`     | iOS Coil bridge, a plain `AsyncImage` `AvatarImage` actual. Compile-only spike today. |
 
 ## Tooling that points here
