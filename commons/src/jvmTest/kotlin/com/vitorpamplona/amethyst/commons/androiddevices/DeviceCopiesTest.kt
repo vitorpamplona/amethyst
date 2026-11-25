@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.androiddevices
 
 import com.vitorpamplona.androiddevice.CommandResult
 import com.vitorpamplona.androiddevice.CommandRunner
+import com.vitorpamplona.androiddevice.emulator.LaunchOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -171,4 +172,35 @@ class DeviceCopiesTest {
         while (!check() && System.currentTimeMillis() < until) delay(50)
         assertTrue(check())
     }
+
+    @Test
+    fun aSerialReusedByAnotherEmulatorDoesntKeepTheOldOwner() =
+        runBlocking {
+            val copy = devices.start("Pixel", owner = "ws-a", ownerLabel = "Feed fix")
+            assertEquals("ws-a", devices.device(copy)?.owner)
+            // The copy dies on its own (closed from its window, crashed), and its port comes back.
+            running
+                .remove(copy)
+                ?.first
+                ?.destroyForcibly()
+                ?.waitFor()
+            devices.refresh()
+            nextPort = copy.removePrefix("emulator-").toInt()
+            val next = devices.start("Pixel")
+            assertEquals(copy, next)
+            assertNull(devices.device(next)?.owner)
+        }
+
+    @Test
+    fun aColdBootStopsTheOldInstanceBeforeStartingAgain() =
+        runBlocking {
+            val copy = devices.start("Pixel", owner = "ws-a")
+            var booted: String? = null
+            devices.restartInBackground(copy, LaunchOptions(coldBoot = true)) { booted = it }
+            waitUntil { booted != null }
+            assertNotEquals(copy, booted)
+            assertTrue("-no-snapshot-load" in launches.last(), launches.last().toString())
+            assertEquals("ws-a", devices.device(booted!!)?.owner)
+            assertTrue(!running.containsKey(copy))
+        }
 }

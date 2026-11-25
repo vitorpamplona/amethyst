@@ -72,7 +72,7 @@ class GrpcChannel(
     private val port: Int,
     /** `authorization: Bearer <token>`, when the emulator was started with `-grpc-use-token`. */
     private val token: String? = null,
-    baseClient: OkHttpClient = OkHttpClient(),
+    baseClient: OkHttpClient = sharedClient,
     private val callTimeoutMs: Long = 15_000,
 ) {
     private val client =
@@ -173,6 +173,12 @@ class GrpcChannel(
 
     companion object {
         private val GRPC = "application/grpc".toMediaType()
+
+        /**
+         * Every channel derives from this one, so they share one connection pool and dispatcher:
+         * an OkHttpClient each would start thread pools per emulator connection.
+         */
+        private val sharedClient: OkHttpClient by lazy { OkHttpClient() }
 
         /** One message as gRPC frames it on the wire: uncompressed flag, length, bytes. */
         fun frame(message: ByteArray): ByteArray {

@@ -57,6 +57,10 @@ data class DeviceCrash(
  * debuggerd's `DEBUG` lines) and ANRs (`ActivityManager: ANR in`).
  */
 object CrashLog {
+    private val PROCESS = Regex("""^Process: ([^,\s]+)""")
+    private val CMDLINE = Regex("""Cmdline: (\S+)""")
+    private val NATIVE_PID = Regex("""pid \d+ \(([^)]+)\)""")
+    private val ANR_PID = Regex("""^PID: (\d+)""")
     private val LINE = Regex("""^(\d\d-\d\d \d\d:\d\d:\d\d\.\d{3})\s+(\d+)\s+(\d+)\s+([VDIWEFA])\s+(.*?)\s*: (.*)$""")
 
     private class Line(
@@ -77,7 +81,7 @@ object CrashLog {
             when {
                 line.tag == "AndroidRuntime" && line.message.startsWith("FATAL EXCEPTION") -> {
                     val body = lines.drop(i + 1).takeWhile { it.tag == "AndroidRuntime" && it.pid == line.pid && !it.message.startsWith("FATAL EXCEPTION") }
-                    val pkg = body.firstNotNullOfOrNull { Regex("""^Process: ([^,\s]+)""").find(it.message)?.groupValues?.get(1) }
+                    val pkg = body.firstNotNullOfOrNull { PROCESS.find(it.message)?.groupValues?.get(1) }
                     val trace = body.map { it.message.trimEnd() }.filter { !it.startsWith("Process: ") && it.isNotBlank() }
                     crashes += DeviceCrash(id(line, DeviceCrash.Kind.JAVA), DeviceCrash.Kind.JAVA, line.time, line.pid, pkg, trace.firstOrNull()?.trim() ?: line.message, trace.drop(1).map { it.trim() })
                     i += body.size + 1
@@ -85,8 +89,8 @@ object CrashLog {
                 line.tag == "libc" && line.message.contains("Fatal signal") -> {
                     val body = lines.drop(i + 1).takeWhile { it.tag == "DEBUG" || it.tag == "crash_dump64" || it.tag == "crash_dump32" }
                     val pkg =
-                        body.firstNotNullOfOrNull { Regex("""Cmdline: (\S+)""").find(it.message)?.groupValues?.get(1) }
-                            ?: Regex("""pid \d+ \(([^)]+)\)""").find(line.message)?.groupValues?.get(1)
+                        body.firstNotNullOfOrNull { CMDLINE.find(it.message)?.groupValues?.get(1) }
+                            ?: NATIVE_PID.find(line.message)?.groupValues?.get(1)
                     val frames = body.map { it.message.trim() }.filter { it.startsWith("#") || it.startsWith("Abort message") || it.startsWith("signal ") }
                     crashes += DeviceCrash(id(line, DeviceCrash.Kind.NATIVE), DeviceCrash.Kind.NATIVE, line.time, line.pid, pkg, line.message.substringBefore(", fault addr").trim(), frames)
                     i += body.size + 1
@@ -106,7 +110,7 @@ object CrashLog {
                             ?.trim()
                     val anrPid =
                         body.firstNotNullOfOrNull {
-                            Regex("""^PID: (\d+)""")
+                            ANR_PID
                                 .find(it.message)
                                 ?.groupValues
                                 ?.get(1)

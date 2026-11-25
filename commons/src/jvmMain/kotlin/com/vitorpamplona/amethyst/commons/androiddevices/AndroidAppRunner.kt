@@ -26,6 +26,7 @@ import com.vitorpamplona.androiddevice.CommandRunner
 import com.vitorpamplona.androiddevice.ProcessCommandRunner
 import com.vitorpamplona.androiddevice.emulator.EmulatorLauncher
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -224,6 +225,14 @@ class AndroidAppRunner(
         } catch (e: IOException) {
             set(root, AppRunState.Failed(e.message ?: "The run failed", log.takeIf { it.isFile }))
             throw e
+        } catch (e: CancellationException) {
+            // The screen or the agent's turn went away: the build stopped with it (see CommandRunner).
+            set(root, AppRunState.Idle)
+            throw e
+        } catch (e: RuntimeException) {
+            // Unreadable build output, a bad manifest: still a failure, never "already being built" forever.
+            set(root, AppRunState.Failed(e.message ?: e.javaClass.simpleName, log.takeIf { it.isFile }))
+            throw IOException(e.message ?: "The run failed", e)
         }
     }
 

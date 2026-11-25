@@ -159,11 +159,27 @@ class AdbScreen(
     private val adb: Adb,
     private val serial: String,
     private val minFrameIntervalMs: Long = 150,
+    /** The slowest it looks at a screen that stopped changing. */
+    private val idleFrameIntervalMs: Long = 1_000,
 ) : DeviceScreen {
     override val streams = false
 
     private var downAt: Pair<Float, Float>? = null
     private var downTime = 0L
+
+    /** When the user last touched or typed: the screen is about to change, so look at full speed. */
+    @Volatile
+    private var lastInput = 0L
+
+    /**
+     * The wait before the next screenshot: [minFrameIntervalMs] right after input or a change, then
+     * doubling up to [idleFrameIntervalMs] while the screen stays the same. Each screenshot costs the
+     * phone a PNG encode and a megabyte or more over USB; an idle screen needn't be read 6 times a second.
+     */
+    internal fun nextInterval(unchangedFrames: Int): Long {
+        if (System.currentTimeMillis() - lastInput < INPUT_BURST_MS) return minFrameIntervalMs
+        return (minFrameIntervalMs shl unchangedFrames.coerceAtMost(4)).coerceAtMost(idleFrameIntervalMs)
+    }
 
     override fun frames(
         maxWidth: Int,
@@ -172,23 +188,27 @@ class AdbScreen(
         flow {
             var last: ByteArray? = null
             var failures = 0
+            var unchanged = 0
             while (true) {
                 val started = System.currentTimeMillis()
                 try {
                     val png = adb.screencapPng(serial)
                     failures = 0
-                    // An unchanged screen isn't drawn again.
+                    // An unchanged screen isn't drawn again, and is looked at less often.
                     if (last == null || !png.contentEquals(last)) {
                         last = png
+                        unchanged = 0
                         val size = PngSize.of(png) ?: throw IOException("Not a PNG")
                         emit(ScreenFrame(size.width, size.height, PixelFormat.PNG, png, 0))
+                    } else {
+                        unchanged++
                     }
                 } catch (e: IOException) {
                     if (++failures >= MAX_FAILURES) throw e
                     delay(RETRY_MS)
                 }
-                val spent = System.currentTimeMillis() - started
-                if (spent < minFrameIntervalMs) delay(minFrameIntervalMs - spent)
+                // Waits in short steps, so input arriving during an idle wait cuts it short.
+                while (System.currentTimeMillis() - started < nextInterval(unchanged)) delay(INPUT_POLL_MS)
             }
         }
 
@@ -198,6 +218,7 @@ class AdbScreen(
         fy: Float,
         frame: ScreenFrame,
     ) {
+        lastInput = System.currentTimeMillis()
         when (action) {
             PointerAction.DOWN -> {
                 downAt = fx to fy
@@ -223,12 +244,20 @@ class AdbScreen(
         }
     }
 
-    override suspend fun key(key: DeviceKey) = adb.key(serial, key)
+    override suspend fun key(key: DeviceKey) {
+        lastInput = System.currentTimeMillis()
+        adb.key(serial, key)
+    }
 
-    override suspend fun type(text: String) = adb.type(serial, text)
+    override suspend fun type(text: String) {
+        lastInput = System.currentTimeMillis()
+        adb.type(serial, text)
+    }
 
     companion object {
         private const val MAX_FAILURES = 5
+        private const val INPUT_BURST_MS = 2_000L
+        private const val INPUT_POLL_MS = 50L
         private const val RETRY_MS = 1_000L
         private const val TAP_SLOP_PX = 12.0
         private const val LONG_PRESS_MS = 500L

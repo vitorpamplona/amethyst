@@ -234,4 +234,13 @@ class DeviceToolServerTest {
             // Said once, and not after stopping it on purpose.
             assertFalse(server.call(DeviceToolServer.KEY, args("""{"device":"emulator-5554","key":"back"}""")).text.contains("NO LONGER"))
         }
+
+    @Test
+    fun resetOnlyTouchesTheWorkstreamsOwnCopy() =
+        runBlocking {
+            // emulator-5554 is shared (nobody's copy): the user's state may live there.
+            val result = server.call(DeviceToolServer.RESET, args("""{"device":"emulator-5554"}"""))
+            assertTrue(result.isError)
+            assertTrue(result.text.contains("only resets this workstream's own emulator copy"), result.text)
+        }
 }

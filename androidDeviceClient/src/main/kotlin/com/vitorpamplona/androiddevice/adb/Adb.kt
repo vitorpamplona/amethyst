@@ -346,6 +346,7 @@ class Adb(
 
     companion object {
         private const val INSTALL_TIMEOUT_MS = 5 * 60_000L
+        private val WHITESPACE = Regex("\\s+")
         private const val CRASH_LINES = 400
         private const val ANR_LINES = 200
 
@@ -355,7 +356,7 @@ class Adb(
                 .map { it.trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("List of devices") && !it.startsWith("*") && !it.startsWith("adb ") }
                 .mapNotNull { line ->
-                    val parts = line.split(Regex("\\s+"))
+                    val parts = line.split(WHITESPACE)
                     if (parts.size < 2) return@mapNotNull null
                     // "no permissions (…)" is two words and more; everything after the serial up to the
                     // first key:value is the state.

@@ -62,6 +62,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -164,6 +165,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.androiddevice.adb.DeviceCrash
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.avd.AvdInfo
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -173,6 +175,9 @@ val DevicePanelWidth = 380.dp
 val DevicePanelWidthRange = 280f..720f
 
 private val CardShape = RoundedCornerShape(16.dp)
+
+private const val CONNECT_RETRY_MS = 3_000L
+private const val CONNECT_RETRIES = 10
 
 /** Under this, the keys pill drops its dividers and shrinks its buttons. */
 private val CompactKeysWidth = 340.dp
@@ -203,6 +208,11 @@ fun DevicePanel(
         rememberViewModel(key = "DevicePanel-$chatKey-$owner-${folder?.path}") {
             DevicePanelViewModel(AndroidDevices.shared, AndroidDevices.apps, chatKey, folder, owner, ownerLabel)
         }
+    // The ViewModel outlives the panel (it is the chat screen's): it polls adb only while shown.
+    DisposableEffect(viewModel) {
+        val hide = viewModel.shown()
+        onDispose { hide() }
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selected by viewModel.selected.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -210,16 +220,23 @@ fun DevicePanel(
     val device = selected
     val online = device?.status == DeviceStatus.ONLINE
     val connection by produceState<DeviceConnection?>(null, device?.serial, online) {
-        value =
-            if (device == null || !online) {
-                null
-            } else {
+        if (device == null || !online) {
+            value = null
+            return@produceState
+        }
+        // An emulator started here whose control port isn't answering yet is asked again for a
+        // while, so the live stream takes over from adb screenshots once it can.
+        var tries = 0
+        do {
+            value =
                 try {
                     viewModel.connection(device.serial)
                 } catch (_: IOException) {
                     null
                 }
-            }
+            if (value?.emulator != null || !device.startedHere) break
+            delay(CONNECT_RETRY_MS)
+        } while (++tries < CONNECT_RETRIES)
     }
 
     Column(modifier.fillMaxHeight()) {
@@ -440,8 +457,7 @@ private fun Header(
                             selected.avdName?.let { avd ->
                                 MenuItem(stringRes(Res.string.android_device_cold_boot), leading = { MenuIcon(MaterialSymbols.Refresh) }) {
                                     menu = false
-                                    viewModel.stop(selected.serial)
-                                    viewModel.start(avd, coldBoot = true)
+                                    viewModel.coldBoot()
                                 }
                             }
                         }
@@ -816,6 +832,8 @@ private fun Logcat(viewModel: DevicePanelViewModel) {
     var open by remember { mutableStateOf(false) }
     var appOnly by remember { mutableStateOf(true) }
     LaunchedEffect(open, appOnly) { viewModel.showLogcat(open, appOnly) }
+    // Folded away with the panel, or the device going offline: logcat stops asking adb.
+    DisposableEffect(viewModel) { onDispose { viewModel.showLogcat(false) } }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     Row(
         Modifier
@@ -860,10 +878,13 @@ private fun Logcat(viewModel: DevicePanelViewModel) {
     }
 }
 
+private val LOG_FIELDS = Regex("\\s+")
+
 /** One threadtime line: the time dimmed, the level as a colored letter, then tag and message. */
 @Composable
 private fun LogLine(line: String) {
-    val parts = line.split(Regex("\\s+"), limit = 6)
+    // Split once per line, not on every recomposition of the list.
+    val parts = remember(line) { line.split(LOG_FIELDS, limit = 6) }
     val level = parts.getOrNull(4)?.takeIf { it.length == 1 }
     val color =
         when (level) {

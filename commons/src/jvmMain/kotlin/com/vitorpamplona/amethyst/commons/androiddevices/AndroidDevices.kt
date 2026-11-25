@@ -204,7 +204,20 @@ class AndroidDevices(
     @Volatile
     private var tools: AndroidSdkTools? = null
 
-    private fun tools(): AndroidSdkTools = tools ?: AndroidSdkTools(sdkHome()).also { tools = it }
+    @Volatile
+    private var cachedAvds: Pair<List<AvdInfo>, Long>? = null
+
+    @Volatile
+    private var refreshedAt = 0L
+
+    /**
+     * The SDK's programs, looked up again while one is missing: the panel tells the user to install
+     * platform-tools or the emulator, and should see them once they have.
+     */
+    private fun tools(): AndroidSdkTools {
+        tools?.let { if (it.adb != null && it.emulator != null) return it }
+        return AndroidSdkTools(sdkHome()).also { tools = it }
+    }
 
     /** The SDK's programs: `adb`, the emulator, `aapt2`. */
     fun sdkTools(): AndroidSdkTools = tools()
@@ -243,7 +256,10 @@ class AndroidDevices(
             withContext(Dispatchers.IO) {
                 val sdk = tools()
                 val adb = sdk.adb?.let { Adb(it, runner) }
-                val avds = Avds.list(avdHome())
+                // The AVD folder changes when the user makes one: no need to read every .ini every poll.
+                val avds =
+                    cachedAvds?.takeIf { System.currentTimeMillis() - it.second < AVD_TTL_MS }?.first
+                        ?: Avds.list(avdHome()).also { cachedAvds = it to System.currentTimeMillis() }
                 val emulators = EmulatorDiscovery.running(discoveryDirs())
                 var error: String? = null
                 val adbDevices =
@@ -266,6 +282,11 @@ class AndroidDevices(
                 connections.keys.retainAll(seen)
                 // An emulator that went away on its own takes its process with it.
                 launched.entries.removeIf { (_, l) -> !l.process.isAlive }
+                // Ports are reused: a serial gone from adb (and not one starting here) leaves no owner
+                // or crash bookkeeping for the next emulator that gets it.
+                owners.keys.removeIf { it !in seen && !launched.containsKey(it) }
+                crashesSeen.keys.retainAll(seen)
+                refreshedAt = System.currentTimeMillis()
                 _state.update {
                     it.copy(
                         sdkDir = sdk.sdkDir,
@@ -333,6 +354,11 @@ class AndroidDevices(
                     )
                 }
         return listed + pending
+    }
+
+    /** [refresh], unless the last one is younger than [maxAgeMs]: a burst of tool calls asks adb once. */
+    suspend fun refreshIfStale(maxAgeMs: Long = 1_000) {
+        if (System.currentTimeMillis() - refreshedAt > maxAgeMs) refresh()
     }
 
     fun device(serial: String): DeviceInfo? = _state.value.devices.firstOrNull { it.serial == serial }
@@ -501,6 +527,32 @@ class AndroidDevices(
         booted += serial
     }
 
+    /**
+     * Shuts [serial] down and starts its AVD again (a cold boot with [options]), for the same owner:
+     * one after the other, waiting for the old one to leave adb's list so the start doesn't find it.
+     */
+    fun restartInBackground(
+        serial: String,
+        options: LaunchOptions,
+        onBooted: (String) -> Unit = {},
+    ) {
+        val device = device(serial) ?: return
+        val avd = device.avdName ?: return
+        scope.launch {
+            try {
+                stop(serial)
+                val until = System.currentTimeMillis() + STOP_WAIT_S * 1000
+                while (device(serial) != null && System.currentTimeMillis() < until) {
+                    delay(BOOT_POLL_MS / 4)
+                    refresh()
+                }
+                onBooted(start(avd, options, owner = device.owner, ownerLabel = device.ownerLabel))
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not restart $serial", e)
+            }
+        }
+    }
+
     fun stopInBackground(serial: String) {
         scope.launch {
             try {
@@ -519,7 +571,11 @@ class AndroidDevices(
         connections[serial]?.let { return it }
         val adb = adb() ?: throw IOException("adb isn't installed: install the Android SDK's platform-tools")
         val controller = emulatorController(serial)
-        return DeviceConnection(serial, adb, controller).also { connections[serial] = it }
+        val connection = DeviceConnection(serial, adb, controller)
+        // An emulator started here whose control port didn't answer yet (still coming up) is asked
+        // again next time, instead of being stuck on adb screenshots for its whole life.
+        if (controller != null || !launched.containsKey(serial)) connections[serial] = connection
+        return connection
     }
 
     private suspend fun emulatorController(serial: String): EmulatorController? {
@@ -630,6 +686,7 @@ class AndroidDevices(
         private const val BOOT_POLL_MS = 2_000L
         private const val STOP_WAIT_S = 20L
         private const val MAX_CRASHES = 50
+        private const val AVD_TTL_MS = 10_000L
 
         val shared: AndroidDevices by lazy {
             AndroidDevices().also { devices ->

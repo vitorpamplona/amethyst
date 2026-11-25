@@ -62,7 +62,13 @@ class DevicePanelViewModel(
     private val owner: String? = chatKey,
     private val ownerLabel: String? = null,
 ) : ViewModel() {
-    private val release = devices.watch()
+    /**
+     * How many panels show this ViewModel now ([shown]). It outlives the panel (it lives as long as
+     * the chat's screen), so the polling runs only while one shows it: a closed panel asks adb nothing.
+     */
+    private var showing = 0
+    private var releaseWatch: (() -> Unit)? = null
+    private var crashJob: Job? = null
 
     val state: StateFlow<DevicesState> = devices.state
 
@@ -103,19 +109,6 @@ class DevicePanelViewModel(
 
     init {
         folder?.let { dir -> viewModelScope.launch(Dispatchers.IO) { _targets.value = AndroidAppTargets.find(dir) } }
-        // Crashes the user causes by hand show too, not only the ones an agent's tools find.
-        viewModelScope.launch {
-            while (true) {
-                selected.value?.takeIf { it.isOnline }?.let { device ->
-                    try {
-                        devices.pollCrashes(device.serial)
-                    } catch (e: IOException) {
-                        Log.w(TAG, "Could not read the crash log of ${device.serial}", e)
-                    }
-                }
-                delay(CRASH_POLL_MS)
-            }
-        }
         viewModelScope.launch {
             selected.collect { device ->
                 if (device != null && device.status != DeviceStatus.STARTING && devices.selection.value[pickKey] == null) devices.select(pickKey, device.serial)
@@ -123,7 +116,52 @@ class DevicePanelViewModel(
         }
     }
 
+    /**
+     * The panel is on screen: keep the device list current and watch the shown device's crash log
+     * (crashes the user causes by hand show too, not only the ones an agent's tools find). Call
+     * what it returns when the panel goes.
+     */
+    fun shown(): () -> Unit {
+        if (showing++ == 0) {
+            releaseWatch = devices.watch()
+            crashJob =
+                viewModelScope.launch {
+                    while (true) {
+                        selected.value?.takeIf { it.isOnline }?.let { device ->
+                            try {
+                                devices.pollCrashes(device.serial)
+                            } catch (e: IOException) {
+                                Log.w(TAG, "Could not read the crash log of ${device.serial}", e)
+                            }
+                        }
+                        delay(CRASH_POLL_MS)
+                    }
+                }
+        }
+        var released = false
+        return {
+            if (!released) {
+                released = true
+                if (--showing == 0) stopPolling()
+            }
+        }
+    }
+
+    private fun stopPolling() {
+        releaseWatch?.invoke()
+        releaseWatch = null
+        crashJob?.cancel()
+        crashJob = null
+        showLogcat(false)
+    }
+
     fun select(serial: String) = devices.select(pickKey, serial)
+
+    /** Shuts the device shown down and boots its AVD from scratch, as the same owner's device. */
+    fun coldBoot() {
+        val serial = selected.value?.serial ?: return
+        devices.restartInBackground(serial, LaunchOptions(coldBoot = true)) { select(it) }
+    }
 
     fun start(
         avd: String,
@@ -264,8 +302,7 @@ class DevicePanelViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     override fun onCleared() {
-        logcatJob?.cancel()
-        release()
+        stopPolling()
     }
 
     companion object {

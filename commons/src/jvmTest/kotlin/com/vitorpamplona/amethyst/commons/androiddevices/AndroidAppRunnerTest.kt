@@ -25,8 +25,11 @@ import com.vitorpamplona.androiddevice.CommandRunner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -58,6 +61,7 @@ class AndroidAppRunnerTest {
 
     private inner class Fake(
         val gradleFails: Boolean = false,
+        val gradleHangs: Boolean = false,
     ) : CommandRunner {
         val commands = mutableListOf<String>()
 
@@ -76,6 +80,7 @@ class AndroidAppRunnerTest {
                 command.first().endsWith("gradlew") -> {
                     assertEquals(root, directory)
                     assertEquals("emulator-5554", environment["ANDROID_SERIAL"])
+                    if (gradleHangs) delay(60_000)
                     if (gradleFails) {
                         log?.writeText("> Task :app:compileKotlin\ne: Unresolved reference 'foo'\nFAILURE: Build failed with an exception.\n")
                         return CommandResult(1, ByteArray(0), "")
@@ -143,5 +148,15 @@ class AndroidAppRunnerTest {
             assertTrue(e.message!!.contains("Unresolved reference 'foo'"), e.message)
             val state = assertIs<AppRunState.Failed>(runner.states.value[root.path])
             assertTrue(state.log!!.isFile)
+        }
+
+    @Test
+    fun aCancelledRunCanBeRunAgain() =
+        runBlocking {
+            val runner = runner(Fake(gradleHangs = true))
+            assertFailsWith<TimeoutCancellationException> { withTimeout(300) { runner.run(target, "playDebug", "emulator-5554") } }
+            // Not stuck on "already being built".
+            assertIs<AppRunState.Idle>(runner.states.value[root.path])
+            Unit
         }
 }

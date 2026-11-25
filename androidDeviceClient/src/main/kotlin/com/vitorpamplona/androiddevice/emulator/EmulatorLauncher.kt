@@ -92,29 +92,47 @@ class EmulatorLauncher(
         log: File? = null,
         timeoutMs: Long = 90_000,
     ): LaunchedEmulator {
-        val port = withContext(Dispatchers.IO) { freePort() }
-        log?.parentFile?.let { if (!it.isDirectory && !it.mkdirs()) throw IOException("Could not create $it") }
-        val process = withContext(Dispatchers.IO) { runner.start(arguments(avd, port, options), log = log) }
-        val started = System.currentTimeMillis()
-        while (System.currentTimeMillis() - started < timeoutMs) {
-            if (!process.isAlive) {
-                throw IOException("The emulator exited (code ${process.exitValue()}) before it started${log?.let { ": " + tail(it) } ?: ""}")
+        // Held until the emulator has bound it: two starting at once would otherwise both find it free.
+        val port = withContext(Dispatchers.IO) { reservePort() }
+        try {
+            log?.parentFile?.let { if (!it.isDirectory && !it.mkdirs()) throw IOException("Could not create $it") }
+            val process = withContext(Dispatchers.IO) { runner.start(arguments(avd, port, options), log = log) }
+            try {
+                val started = System.currentTimeMillis()
+                while (System.currentTimeMillis() - started < timeoutMs) {
+                    if (!process.isAlive) {
+                        throw IOException("The emulator exited (code ${process.exitValue()}) before it started${log?.let { ": " + tail(it) } ?: ""}")
+                    }
+                    val info = withContext(Dispatchers.IO) { EmulatorDiscovery.find(process.pid(), discoveryDirs()) }
+                    if (info != null && info.grpcPort != null) return LaunchedEmulator(process, info)
+                    delay(POLL_MS)
+                }
+                throw IOException("The emulator didn't start within ${timeoutMs / 1000}s${log?.let { ": " + tail(it) } ?: ""}")
+            } catch (e: Throwable) {
+                // Timed out, or the caller gave up (cancelled): nobody would track it, so it goes.
+                process.destroy()
+                throw e
             }
-            val info = withContext(Dispatchers.IO) { EmulatorDiscovery.find(process.pid(), discoveryDirs()) }
-            if (info != null && info.grpcPort != null) return LaunchedEmulator(process, info)
-            delay(POLL_MS)
+        } finally {
+            releasePort(port)
         }
-        process.destroy()
-        throw IOException("The emulator didn't start within ${timeoutMs / 1000}s${log?.let { ": " + tail(it) } ?: ""}")
     }
 
     companion object {
         private const val POLL_MS = 500L
         const val FIRST_GRPC_PORT = 8554
 
-        /** The first port from [FIRST_GRPC_PORT] nothing listens on; another emulator may hold the first ones. */
-        fun freePort(): Int {
+        private val reserved = HashSet<Int>()
+
+        /** [freePort], held for this launcher until [releasePort]: another start skips it meanwhile. */
+        fun reservePort(): Int = synchronized(reserved) { freePort(reserved).also { reserved += it } }
+
+        fun releasePort(port: Int) = synchronized(reserved) { reserved -= port }
+
+        /** The first port from [FIRST_GRPC_PORT] nothing listens on and [skip] doesn't hold; another emulator may hold the first ones. */
+        fun freePort(skip: Set<Int> = emptySet()): Int {
             for (port in FIRST_GRPC_PORT until FIRST_GRPC_PORT + 200) {
+                if (port in skip) continue
                 try {
                     ServerSocket(port, 1, InetAddress.getLoopbackAddress()).use { return port }
                 } catch (_: IOException) {

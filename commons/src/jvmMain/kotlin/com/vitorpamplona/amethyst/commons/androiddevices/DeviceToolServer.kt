@@ -248,6 +248,11 @@ class DeviceToolServer(
                 HostToolResult("pm clear $pkg: ${devices.connection(serial).adb.clearData(serial, pkg)}")
             }
             RESET -> {
+                // Without asking only on this workstream's own copy: anything else may hold the user's
+                // unsaved state (the AVD itself, set up from the Devices screen; another workstream's copy).
+                if (device.owner == null || device.owner != owner()) {
+                    throw IOException("reset_device only resets this workstream's own emulator copy. ${device.name} isn't one: ask the user to reset it, or start_emulator for a copy of your own.")
+                }
                 devices.reset(serial)
                 openedApp.remove(serial)
                 after(device, args, "${device.name} is back to the state it started from", defaultShot = true)
@@ -339,7 +344,8 @@ class DeviceToolServer(
 
     /** [arg] (a serial or a name) or, without one, the chat's device: the one it picked, else the only one online. */
     private suspend fun resolve(arg: String?): DeviceInfo {
-        devices.refresh()
+        // An agent acts in bursts (tap, look, tap): one adb listing serves the burst.
+        devices.refreshIfStale()
         val all = devices.state.value.devices
         if (arg != null) {
             return all.firstOrNull { it.serial == arg }
@@ -662,7 +668,7 @@ class DeviceToolServer(
                 ),
                 HostTool(
                     RESET,
-                    "Puts an emulator back to the state its AVD last saved, as it was when this chat's copy started: logged-in accounts, installed apps and data as they were then. Returns a screenshot.",
+                    "Puts this workstream's own emulator copy back to the state its AVD last saved, as it was when the copy started: logged-in accounts, installed apps and data as they were then. Only works on the copy start_emulator gave this workstream. Returns a screenshot.",
                     schema("""{"type":"object","properties":{$DEVICE,$SHOT}}"""),
                 ),
                 HostTool(STOP_EMULATOR, "Shuts an emulator down.", schema("""{"type":"object","properties":{$DEVICE}}""")),

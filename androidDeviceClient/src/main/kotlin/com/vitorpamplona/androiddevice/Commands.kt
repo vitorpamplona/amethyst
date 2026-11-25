@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.androiddevice
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -92,7 +94,12 @@ object ProcessCommandRunner : CommandRunner {
                 val err = async(Dispatchers.IO) { process.errorStream.use { it.readBytes().toString(Charsets.UTF_8) } }
                 val finished =
                     try {
-                        process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+                        // Interruptible: a cancelled caller (an interrupted agent turn, a closed
+                        // screen) ends the program instead of waiting out its timeout.
+                        runInterruptible { process.waitFor(timeoutMs, TimeUnit.MILLISECONDS) }
+                    } catch (e: CancellationException) {
+                        process.destroyForcibly()
+                        throw e
                     } catch (e: InterruptedException) {
                         process.destroyForcibly()
                         throw IOException("Interrupted while running ${command.first()}", e)
