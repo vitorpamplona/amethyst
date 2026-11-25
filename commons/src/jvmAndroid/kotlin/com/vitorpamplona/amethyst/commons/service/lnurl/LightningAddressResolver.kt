@@ -112,12 +112,13 @@ class LightningAddressResolver(
                     lnurlp?.get("callback")?.asText()?.ifBlank { null }
                         ?: return@withContext Result.Error("No callback URL in LNURL response")
 
-                when (val notice = lnurlp.sendableRangeNotice(lnAddress, milliSats)) {
-                    is InvoiceNotice.AmountBelowMinimum ->
-                        return@withContext Result.Error("$lnAddress only accepts payments of at least ${notice.minSats} sats")
-                    is InvoiceNotice.AmountAboveMaximum ->
-                        return@withContext Result.Error("$lnAddress only accepts payments of up to ${notice.maxSats} sats")
-                    else -> {}
+                lnurlp.sendableRangeNotice(lnAddress, milliSats)?.let { notice ->
+                    val limit =
+                        when (notice) {
+                            is InvoiceNotice.AmountBelowMinimum -> "at least ${notice.minSats}"
+                            is InvoiceNotice.AmountAboveMaximum -> "up to ${notice.maxSats}"
+                        }
+                    return@withContext Result.Error("$lnAddress only accepts payments of $limit sats")
                 }
 
                 val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false

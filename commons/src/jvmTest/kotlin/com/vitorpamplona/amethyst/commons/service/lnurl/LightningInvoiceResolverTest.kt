@@ -155,6 +155,42 @@ class LightningInvoiceResolverTest {
         }
 
     @Test
+    fun anAmountExactlyAtMinSendableGoesThrough() =
+        runBlocking {
+            val (resolver, _) = resolverFor("""{"callback":"https://example.com/callback","minSendable":100000000}""")
+
+            assertEquals(invoice100kSats, resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}))
+        }
+
+    @Test
+    fun aHugeMinSendableDoesNotOverflowWhenRoundedToSats() =
+        runBlocking {
+            val (resolver, _) = resolverFor("""{"callback":"https://example.com/callback","minSendable":${Long.MAX_VALUE}}""")
+
+            val error = assertFailsWith<LightningInvoiceResolver.LightningAddressError> { resolver.lnAddressInvoice("alice@example.com", 1000L, "", onProgress = {}) }
+
+            assertEquals(Long.MAX_VALUE / 1000 + 1, assertIs<InvoiceNotice.AmountBelowMinimum>(error.notice).minSats)
+        }
+
+    @Test
+    fun anInvertedSendableRangeIsIgnoredAsMalformed() =
+        runBlocking {
+            // min > max would otherwise say "at least 200,000 sats", then "up to 1 sat" once obeyed.
+            val (resolver, _) =
+                resolverFor("""{"callback":"https://example.com/callback","minSendable":200000000,"maxSendable":1000}""")
+
+            assertEquals(invoice100kSats, resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}))
+        }
+
+    @Test
+    fun aFractionalBoundIsIgnoredAsMalformed() =
+        runBlocking {
+            val (resolver, _) = resolverFor("""{"callback":"https://example.com/callback","minSendable":200000000.0}""")
+
+            assertEquals(invoice100kSats, resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}))
+        }
+
+    @Test
     fun unreadableSendableBoundsAreIgnored() =
         runBlocking {
             val (resolver, _) =
