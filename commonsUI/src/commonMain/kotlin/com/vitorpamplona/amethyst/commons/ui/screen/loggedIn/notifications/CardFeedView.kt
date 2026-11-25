@@ -112,6 +112,7 @@ fun RenderCardFeed(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String? = null,
+    onScrolledToEvent: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     // Whether THIS feed drives the shared account history pager. False for an off-screen split tab / second
     // pane, so only the feed the user is actually looking at pages the pager (see #2 in the audit).
@@ -131,6 +132,7 @@ fun RenderCardFeed(
             nav = nav,
             routeForLastRead = routeForLastRead,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             headerContent = headerContent,
             drivesPaging = drivesPaging,
         )
@@ -146,6 +148,7 @@ private fun RenderCardFeedContent(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     headerContent: (@Composable () -> Unit)?,
     drivesPaging: Boolean,
 ) {
@@ -183,6 +186,7 @@ private fun RenderCardFeedContent(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 scrollToEventId = scrollToEventId,
+                onScrolledToEvent = onScrolledToEvent,
                 headerContent = headerContent,
                 drivesPaging = drivesPaging,
             )
@@ -247,6 +251,7 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
     scrollToEventId: String? = null,
+    onScrolledToEvent: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     drivesPaging: Boolean = true,
 ) {
@@ -276,18 +281,24 @@ private fun FeedLoaded(
 
     // Track which card is highlighted (will auto-clear after animation)
     var highlightedCardId by remember { mutableStateOf<String?>(null) }
+    highlightedCardId?.let { id ->
+        // Its own effect: reporting the scroll below drops [scrollToEventId] to null, which would
+        // cancel a clear that waited inside that effect and leave the card highlighted.
+        LaunchedEffect(id) {
+            delay(2000)
+            highlightedCardId = null
+        }
+    }
 
-    // Scroll to the card containing the target event ID
+    // Scroll to the card containing the target event ID, once: the screen stops passing the target
+    // after [onScrolledToEvent]. Until the card loads, every new page of items gets another look.
     if (scrollToEventId != null) {
         LaunchedEffect(scrollToEventId, items) {
             val position = items.list.indexOfFirst { it.containsEventId(scrollToEventId) }
             if (position >= 0) {
-                // +1 offset for the donation card header item
-                val scrollIndex = position + 1 + openPolls.size
-                listState.animateScrollToItem(scrollIndex)
+                listState.animateScrollToItem(position + leadingItemCount)
                 highlightedCardId = items.list[position].id()
-                delay(2000)
-                highlightedCardId = null
+                onScrolledToEvent()
             }
         }
     }
