@@ -253,13 +253,24 @@ sealed class SingleScreenModel(
         focus = WindowFocus(id, (focus?.serial ?: 0) + 1)
     }
 
-    /** The open screen [request] asks for, when it should be shown rather than opened again. */
-    protected fun existing(request: NavRequest): NavStackEntry? =
-        if (request.forceNew) {
-            null
-        } else {
-            entries.firstOrNull { it.route == request.route || (request.kind == NavRequest.Kind.Section && it.tabRoute == request.route) }
-        }
+    /**
+     * The open screen [request] asks for, when it should be shown rather than opened again.
+     *
+     * A restart (a tapped notification, a deep link) for one of the bar's sections with other
+     * arguments, such as `Notification(eventId)`, is that section's tab, handed the new arguments
+     * ([NavStackEntry.reArgue]), as [StackModel.newStack] does on the stack. Matching the route
+     * alone opened a second Notifications tab beside the pinned one, one more per notification.
+     */
+    protected fun existing(request: NavRequest): NavStackEntry? {
+        if (request.forceNew) return null
+        entries
+            .firstOrNull { it.route == request.route || (request.kind == NavRequest.Kind.Section && it.tabRoute == request.route) }
+            ?.let { return it }
+        if (request.kind != NavRequest.Kind.Restart) return null
+        val section = entries.firstOrNull { it.tabRoute?.let { tab -> tab::class == request.route::class } == true } ?: return null
+        section.reArgue(request.route)
+        return section
+    }
 
     companion object {
         const val MAX_CLOSED = 10

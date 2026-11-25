@@ -288,7 +288,9 @@ class DesktopAppRoot(
                 if (npub != null && npub != sessionManager.currentAccountNPub()) {
                     sessionManager.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
                 } else {
-                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                    // A new stack, as Android opens a link: a push would leave a second Notifications
+                    // screen (back arrow, no bar) over the tab the link meant, one more per link.
+                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.newStack(route) }
                 }
                 // A link opens where it can be seen: a main window hidden (kept for a print, or closed
                 // beside screen windows) comes back.
@@ -310,7 +312,8 @@ class DesktopAppRoot(
                         // The Observer already on top, on a past edition: opening its route again does
                         // nothing, so it is told to show today, the paper the notification is about.
                         if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
-                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                        // A new stack, like a deep link above and a tapped Android notification.
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.newStack(it) }
                     }
                     is NotificationClickPlan.SwitchAndOpen ->
                         sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->

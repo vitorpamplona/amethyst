@@ -26,6 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class NavBackStacksLayoutsTest {
@@ -104,6 +105,51 @@ class NavBackStacksLayoutsTest {
 
         assertEquals(listOf(Route.Home, Route.Note("n")), stacks.routes())
         assertEquals(Route.Note("n"), stacks.topRoute)
+    }
+
+    @Test
+    fun aNotificationForASectionReArguesItsTabInsteadOfOpeningAnother() {
+        // A tapped notification or a deep link: Notification(eventId) is the pinned Notifications
+        // tab with a target, not a second Notifications tab next to it, one more per notification.
+        val stacks = tabs()
+        stacks.switchTab(Route.Notification())
+        val notifications = stacks.top
+        stacks.switchTab(Route.Home)
+
+        stacks.newStack(Route.Notification(scrollToEventId = "e1"))
+        stacks.newStack(Route.Notification(scrollToEventId = "e2"))
+
+        assertEquals(listOf(Route.Home, Route.Notification(scrollToEventId = "e2")), stacks.routes())
+        assertSame(notifications, stacks.top)
+        assertFalse(stacks.model.canGoBack(stacks.top, wide = false))
+
+        // The bar still finds it under the route it asks for.
+        stacks.switchTab(Route.Home)
+        stacks.switchTab(Route.Notification())
+        assertSame(notifications, stacks.top)
+    }
+
+    @Test
+    fun aNotificationReArguesTheSectionInTheWindowsLayoutToo() {
+        val stacks = windows()
+        stacks.switchTab(Route.Notification())
+        val notifications = stacks.top
+
+        stacks.newStack(Route.Notification(scrollToEventId = "e1"))
+
+        assertSame(notifications, stacks.top)
+        assertEquals(Route.Notification(scrollToEventId = "e1"), stacks.topRoute)
+        assertTrue(stacks.windows().isEmpty())
+    }
+
+    @Test
+    fun aPushedScreenWithASectionsClassStillOpensItsOwnTab() {
+        // Only a restart is a section's notification; a push keeps opening a screen of its own.
+        val stacks = tabs()
+        stacks.switchTab(Route.Notification())
+        stacks.push(Route.Notification(scrollToEventId = "e1"))
+
+        assertEquals(3, stacks.routes().size)
     }
 
     @Test
