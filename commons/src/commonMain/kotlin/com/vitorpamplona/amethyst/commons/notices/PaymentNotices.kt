@@ -79,6 +79,18 @@ sealed interface InvoiceNotice : UserNotice {
         val reason: String,
     ) : InvoiceNotice
 
+    /** The amount is below the receiver's LUD-06 `minSendable`, here converted to whole sats. */
+    data class AmountBelowMinimum(
+        val lnAddress: String,
+        val minSats: Long,
+    ) : InvoiceNotice
+
+    /** The amount is above the receiver's LUD-06 `maxSendable`, here converted to whole sats. */
+    data class AmountAboveMaximum(
+        val lnAddress: String,
+        val maxSats: Long,
+    ) : InvoiceNotice
+
     /** The receiver's wallet answered without a `pr` element. */
     data class InvoiceMissing(
         val lnAddress: String,

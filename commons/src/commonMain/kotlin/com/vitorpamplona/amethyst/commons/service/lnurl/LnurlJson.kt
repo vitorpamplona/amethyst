@@ -45,3 +45,9 @@ internal fun JsonElement.asBoolean(): Boolean =
         isString -> content.trim() == "true"
         else -> booleanOrNull ?: longOrNull?.let { it != 0L } ?: false
     }
+
+/**
+ * A LUD-06 `minSendable`/`maxSendable` bound in millisats, or null when it is absent, not a
+ * whole number or not positive, so a malformed bound never blocks a payment.
+ */
+internal fun JsonElement.asMilliSatsBound(): Long? = asText()?.trim()?.toLongOrNull()?.takeIf { it > 0 }

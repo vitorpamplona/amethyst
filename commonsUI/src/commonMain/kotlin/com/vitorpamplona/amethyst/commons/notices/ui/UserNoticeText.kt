@@ -110,6 +110,8 @@ import com.vitorpamplona.amethyst.commons.resources.error_parsing_json_from_ligh
 import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
 import com.vitorpamplona.amethyst.commons.resources.incorrect_invoice_amount_sats_from_it_should_have_been
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.lightning_amount_above_receiver_maximum
+import com.vitorpamplona.amethyst.commons.resources.lightning_amount_below_receiver_minimum
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.marmot_emoji_upload_failed
@@ -434,6 +436,10 @@ private fun InvoiceNotice.invoiceMessage(): NoticeTxt =
                 raw(lnAddress),
                 raw(reason),
             )
+        is InvoiceNotice.AmountBelowMinimum ->
+            satsPlural(Res.plurals.lightning_amount_below_receiver_minimum, lnAddress, minSats)
+        is InvoiceNotice.AmountAboveMaximum ->
+            satsPlural(Res.plurals.lightning_amount_above_receiver_maximum, lnAddress, maxSats)
         is InvoiceNotice.InvoiceMissing ->
             str(
                 Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user,
@@ -453,6 +459,13 @@ private fun InvoiceNotice.invoiceMessage(): NoticeTxt =
             )
         is InvoiceNotice.Unexpected -> message?.let { raw(it) } ?: str(Res.string.error_parsing_error_message)
     }
+
+/** "[lnAddress] … [sats] sat(s)": the count picks the plural form, capped to what a plural takes. */
+private fun satsPlural(
+    res: PluralStringResource,
+    lnAddress: String,
+    sats: Long,
+) = NoticeTxt.Plural(res, sats.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), listOf(raw(lnAddress), raw(sats.toString())))
 
 suspend fun NoticeTxt.loadText(): String =
     when (this) {

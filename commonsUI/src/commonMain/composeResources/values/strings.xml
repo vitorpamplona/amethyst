@@ -4727,6 +4727,14 @@
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="inbox_relays_title">Inbox Relays</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Incorrect invoice amount (%1$s sats) from %2$s. It should have been %3$s</string>
+    <plurals name="lightning_amount_below_receiver_minimum">
+        <item quantity="one">%1$s only accepts payments of at least %2$s sat.</item>
+        <item quantity="other">%1$s only accepts payments of at least %2$s sats.</item>
+    </plurals>
+    <plurals name="lightning_amount_above_receiver_maximum">
+        <item quantity="one">%1$s only accepts payments of up to %2$s sat.</item>
+        <item quantity="other">%1$s only accepts payments of up to %2$s sats.</item>
+    </plurals>
     <string name="indexer_section">Indexer Relays</string>
     <string name="indexer_section_explainer">Relays that specialize in hosting everyone's metadata and relay lists, like purplepag.es. Amethyst will use these relays to find users that are not in your lists.</string>
     <string name="interest_set_creation_screen_title">New Interest Set</string>

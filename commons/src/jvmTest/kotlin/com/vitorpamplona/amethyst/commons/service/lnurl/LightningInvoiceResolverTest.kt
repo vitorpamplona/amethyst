@@ -108,6 +108,62 @@ class LightningInvoiceResolverTest {
         }
 
     @Test
+    fun anAmountBelowMinSendableIsRefusedInSatsBeforeAskingForAnInvoice() =
+        runBlocking {
+            // LUD-06 bounds are millisats: 5000 is 5 sats, the case behind the "between 5000 and …" report.
+            val (resolver, transport) =
+                resolverFor("""{"callback":"https://example.com/callback","minSendable":5000,"maxSendable":100000000000}""")
+
+            val error = assertFailsWith<LightningInvoiceResolver.LightningAddressError> { resolver.lnAddressInvoice("alice@example.com", 1000L, "", onProgress = {}) }
+
+            val notice = assertIs<InvoiceNotice.AmountBelowMinimum>(error.notice)
+            assertEquals("alice@example.com", notice.lnAddress)
+            assertEquals(5L, notice.minSats)
+            assertEquals(1, transport.requested.size, "the callback must not be called")
+        }
+
+    @Test
+    fun aMinSendableThatIsNotAWholeSatRoundsUp() =
+        runBlocking {
+            val (resolver, _) = resolverFor("""{"callback":"https://example.com/callback","minSendable":"1500"}""")
+
+            val error = assertFailsWith<LightningInvoiceResolver.LightningAddressError> { resolver.lnAddressInvoice("alice@example.com", 1000L, "", onProgress = {}) }
+
+            assertEquals(2L, assertIs<InvoiceNotice.AmountBelowMinimum>(error.notice).minSats)
+        }
+
+    @Test
+    fun anAmountAboveMaxSendableIsRefusedInSats() =
+        runBlocking {
+            val (resolver, transport) =
+                resolverFor("""{"callback":"https://example.com/callback","minSendable":1000,"maxSendable":50000000}""")
+
+            val error = assertFailsWith<LightningInvoiceResolver.LightningAddressError> { resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}) }
+
+            val notice = assertIs<InvoiceNotice.AmountAboveMaximum>(error.notice)
+            assertEquals(50_000L, notice.maxSats)
+            assertEquals(1, transport.requested.size, "the callback must not be called")
+        }
+
+    @Test
+    fun anAmountInsideTheSendableRangeGoesThrough() =
+        runBlocking {
+            val (resolver, _) =
+                resolverFor("""{"callback":"https://example.com/callback","minSendable":100000000,"maxSendable":100000000}""")
+
+            assertEquals(invoice100kSats, resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}))
+        }
+
+    @Test
+    fun unreadableSendableBoundsAreIgnored() =
+        runBlocking {
+            val (resolver, _) =
+                resolverFor("""{"callback":"https://example.com/callback","minSendable":"lots","maxSendable":0}""")
+
+            assertEquals(invoice100kSats, resolver.lnAddressInvoice("alice@example.com", 100_000_000L, "", onProgress = {}))
+        }
+
+    @Test
     fun roundsHalfASatUp() {
         assertEquals(0L, roundHalfUpToSats(499))
         assertEquals(1L, roundHalfUpToSats(500))
