@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReplyContext
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
@@ -124,6 +125,7 @@ fun displayedNoteText(
 @Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
 fun hasTextCard(event: Event): Boolean = event is TextNoteEvent || event is CommentEvent || event is GitReplyEvent
 
+@Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
 @Composable
 fun RenderTextEvent(
     note: Note,
@@ -183,6 +185,14 @@ fun RenderTextEvent(
             // No in-cache parent note: this comment answers a scope rather than a note.
             // What a comment answers is context, like a quote: its card keeps the margin.
             ProvideMediaBleed(0.dp) { DisplayCommentScope(noteEvent, accountViewModel, nav) }
+        }
+
+        // A legacy NIP-34 reply names the issue or patch it is in and its repository, unless the
+        // quote above is that item.
+        if (!makeItShort && noteEvent is GitReplyEvent) {
+            val shownParent = if (parentNote != null && canShowReply && unPackReply == ReplyRenderType.FULL) parentNote else null
+            GitReplyContext(noteEvent, shownParent, accountViewModel, nav)
+            Spacer(modifier = HalfVertSpacer)
         }
     }
 
