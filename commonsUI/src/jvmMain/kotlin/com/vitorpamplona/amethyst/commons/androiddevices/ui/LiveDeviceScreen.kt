@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.androiddevices.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusable
@@ -33,13 +30,10 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -94,7 +88,6 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_did_tap
 import com.vitorpamplona.amethyst.commons.resources.android_device_did_type
 import com.vitorpamplona.amethyst.commons.resources.android_device_reconnect
 import com.vitorpamplona.amethyst.commons.resources.android_device_screen_failed
-import com.vitorpamplona.amethyst.commons.resources.android_device_typing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.device.DeviceScreen
@@ -330,25 +323,6 @@ fun LiveDeviceScreen(
         }
         FingerDot(touch, touching)
         AgentTouches(activity, agentName)
-        // Clicked: what the keyboard does now, said for a moment at the top of the screen, then out
-        // of the way of the device's own status bar. The focus ring stays as the lasting sign.
-        var hint by remember { mutableStateOf(false) }
-        LaunchedEffect(focused) {
-            hint = focused
-            if (focused) {
-                delay(TYPING_HINT_MS)
-                hint = false
-            }
-        }
-        AnimatedVisibility(hint && failure == null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f), contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(MaterialSymbols.Keyboard, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringRes(Res.string.android_device_typing), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
         failure?.let { why ->
             Column(
                 Modifier.align(Alignment.Center).padding(20.dp),
@@ -474,6 +448,5 @@ private fun keyOf(key: Key): DeviceKey? =
 private const val RESIZE_DEBOUNCE_MS = 250L
 private const val TOUCH_FADE_MS = 1_400
 private const val FINGER_FADE_MS = 250
-private const val TYPING_HINT_MS = 3_000L
 private const val WHEEL_STEP = 0.12f
 private const val WHEEL_MOVE_MS = 30L

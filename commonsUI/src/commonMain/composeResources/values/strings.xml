@@ -9681,7 +9681,6 @@
     <string name="android_device_anr">%1$s stopped responding</string>
     <string name="android_device_status_live">Live</string>
     <string name="android_device_status_polled">adb screenshots</string>
-    <string name="android_device_typing">Your keyboard types on the device</string>
     <string name="android_device_none_hint">Start a virtual device to see it here, live.</string>
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>

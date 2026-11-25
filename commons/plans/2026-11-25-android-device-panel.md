@@ -35,6 +35,10 @@ look, tap and read logcat on the same device the user is watching.
 - **Agents' gestures over gRPC where there is one.** `adb shell input` starts a JVM on the device
   for each touch; the emulator's `sendTouch` takes milliseconds. adb stays the fallback, and the
   coordinates the agent sees are the same either way.
+- **A dock panel, docked beside the chat.** The panel is the dock's reserved Devices panel
+  (`DevicesDockPanel`) and follows the coding chat in focus (`DeviceChatFocus`). Coding screens
+  take the whole width (`FullWidthRoutes`), where other panels open over the screen; this one is
+  marked `besideFullWidth`, so it stays docked there, since it is what the chat works on.
 - **Rotation by the emulator's sensor.** A rotation locked through adb turns Android but not the
   emulator's frames, so the stream would show the app sideways; turning the emulated device
   (`setPhysicalModel`) turns both, as the emulator's own rotate button does.

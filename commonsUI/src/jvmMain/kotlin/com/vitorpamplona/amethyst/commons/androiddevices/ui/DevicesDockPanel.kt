@@ -50,6 +50,8 @@ val DevicesDockPanel =
         hidesOn = setOf(Route.AndroidDevices::class),
         onTitleClick = { nav -> nav.nav(Route.AndroidDevices(DeviceChatFocus.current?.chatKey)) },
         badge = { scope -> if (crashedSince(scope.foldedAt)) PanelBadge.Attention else PanelBadge.None },
+        // Docked beside the coding chat it serves, though that screen takes the whole width.
+        besideFullWidth = true,
         content = { _ ->
             val focus = DeviceChatFocus.current
             // A new chat in front is a new panel state: its own device pick and Run target.
