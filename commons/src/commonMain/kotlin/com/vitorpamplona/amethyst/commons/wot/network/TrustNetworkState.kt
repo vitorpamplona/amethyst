@@ -415,6 +415,9 @@ class TrustNetworkState(
         val allowMetered = force || clock() < forceDownloadUntil
         val current = _network.value?.takeIf { it.isFrom(provider) }
         val kind = requested ?: dueSync(current, clock(), allowMetered) ?: return null
+        // The hourly catch-up waits for an unmetered network, like a download; the network
+        // change that brings Wi-Fi back triggers it. Asked for (force), it runs anyway.
+        if (kind == TrustNetworkSyncStatus.Kind.UPDATE && !allowMetered && !canDownloadLarge()) return null
         if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD) {
             if (!allowMetered && !canDownloadLarge()) {
                 _status.update { it.copy(waitingForUnmetered = true) }
@@ -486,25 +489,38 @@ class TrustNetworkState(
         mayDownload: Boolean,
         allowMetered: Boolean,
     ): TrustNetworkRun {
-        // The common case: nothing changed. Two COUNTs answer it before the ids file (12 MB at
-        // 300k) is read, and nothing is written: the files keep an older lastUpdate, which only
-        // means the next process start asks again.
-        val news = if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current?.header?.heldAtCursor != null) relay.news(provider, current.header) else null
-        if (current != null && news != null && !news.any) {
-            return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
-        }
+        val progress = TrustNetworkProgress { verified, expected -> _status.update { it.copy(verified = verified, expected = expected) } }
 
-        // An update or full check needs the id column saved with this index; without it,
-        // download again.
-        val ids = if (current != null) withContext(Dispatchers.IO) { store.readIds(current.header) }?.takeIf { it.size == current.index.size } else null
-        val kind = if (current == null || ids == null) TrustNetworkSyncStatus.Kind.DOWNLOAD else requested
+        // The hourly catch-up: a REQ for what is newer than the cursor. The common case is that
+        // nothing is: then the ids file (12 MB at 300k) is never read, and only the update's time
+        // is written (see TrustNetworkStore.TIMES_FILE).
+        val caughtUp =
+            if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null) {
+                try {
+                    relay.catchUp(provider, current.header, current.index, progress) { readIds(store, current) ?: throw IdsMissing() }
+                        ?: return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
+                } catch (e: IdsMissing) {
+                    null
+                }
+            } else {
+                null
+            }
+
+        // A full check needs the id column saved with this index; without it (or when the
+        // catch-up found it gone), download again.
+        val ids = if (current != null && requested == TrustNetworkSyncStatus.Kind.FULL_CHECK) readIds(store, current) else null
+        val kind =
+            when {
+                caughtUp != null -> requested
+                current == null || ids == null -> TrustNetworkSyncStatus.Kind.DOWNLOAD
+                else -> requested
+            }
         if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && !mayDownload) return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
 
         _status.value = TrustNetworkSyncStatus(running = kind)
-        val progress = TrustNetworkProgress { verified, expected -> _status.update { it.copy(verified = verified, expected = expected) } }
 
         val result =
-            when (kind) {
+            caughtUp ?: when (kind) {
                 TrustNetworkSyncStatus.Kind.DOWNLOAD -> {
                     // A download cut off earlier (the process killed, the relay gone) resumes from
                     // its last checkpoint: at a phone's pace, the whole download is minutes.
@@ -514,9 +530,8 @@ class TrustNetworkState(
                     if (allowMetered) download() else unlessMetered(download) ?: return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
                 }
 
-                TrustNetworkSyncStatus.Kind.UPDATE -> {
-                    relay.update(provider, current!!.header, current.index, ids!!, news, progress)
-                }
+                // Reached only with the catch-up's result in hand.
+                TrustNetworkSyncStatus.Kind.UPDATE -> error("the catch-up returned no result")
 
                 TrustNetworkSyncStatus.Kind.FULL_CHECK -> {
                     fullCheck(relay, provider, current!!, ids!!, mayDownload, progress)
@@ -609,28 +624,36 @@ class TrustNetworkState(
     ): TrustNetworkRun =
         commitLock.withLock {
             if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
-            // Same index instance: feeds keyed on it do not rebuild. Only a finished full check
-            // is saved (its date decides when the next one runs), or held counts the saved
-            // header lacked (a file from before they existed would otherwise make every process
-            // start reconcile again); an update's lastUpdate is not, which only means the next
-            // process start asks again.
-            val countsLearned =
-                header.heldAtCursor != current.header.heldAtCursor ||
-                    header.heldAfterCursor != current.header.heldAfterCursor ||
-                    header.heldTotal != current.header.heldTotal
-            // A kind 5 that changed nothing still moves the cursor past it, or every update finds it again.
+            // Same index instance: feeds keyed on it do not rebuild, and the index files on disk
+            // are already this index. Only the times move (the cursor past a kind 5 that changed
+            // nothing, a full check that agreed, the update's time): a few bytes, not the MBs.
             val cursorMoved = header.syncCursor != current.header.syncCursor
-            val saved =
-                if (result != null && (header.lastFullCheck != current.header.lastFullCheck || countsLearned || cursorMoved)) {
-                    withContext(Dispatchers.IO) { store?.write(header, current.index, result.ids) }
-                } else {
-                    null
-                }
-            _network.value = TrustNetwork(saved ?: header.copy(generation = current.header.generation), current.index)
+            val published = header.copy(generation = current.header.generation)
+            val timesMoved = cursorMoved || published.lastFullCheck != current.header.lastFullCheck || published.lastUpdate != current.header.lastUpdate
+            if (timesMoved) saveTimes(published)
+            _network.value = TrustNetwork(published, current.index)
             // Cards seen between syncs at or before the new cursor are the index's to answer now.
             if (cursorMoved) pruneOverlay(header.syncCursor)
             TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
+
+    /** The id column saved with [current]'s index, or null when it is not on disk (any more). */
+    private suspend fun readIds(
+        store: TrustNetworkStore,
+        current: TrustNetwork,
+    ): TrustNetworkIds? = withContext(Dispatchers.IO) { store.readIds(current.header) }?.takeIf { it.size == current.index.size }
+
+    /** The catch-up needed the id column and it was gone: the sync downloads instead. */
+    private class IdsMissing : Exception()
+
+    /** Losing these only costs a sync the next process start runs again. */
+    private suspend fun saveTimes(header: TrustNetworkHeader) {
+        try {
+            withContext(Dispatchers.IO) { store?.writeTimes(header) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not save the trust network's sync times", e)
+        }
+    }
 
     /** Drops the cards seen between syncs that the index now holds (at or before [cursor]). */
     private fun pruneOverlay(cursor: Long) {
@@ -669,7 +692,7 @@ class TrustNetworkState(
         }
         // Keep current with a cheap update, and try the check again in a day rather than on
         // every app open (a relay that ignores NIP-77 makes each attempt wait out a timeout).
-        val updated = relay.update(provider, current.header, current.index, ids, null, progress)
+        val updated = relay.catchUp(provider, current.header, current.index, progress) { ids } ?: TrustNetworkSyncResult(current.header.copy(lastUpdate = clock()), current.index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new", unchanged = true)
         val retryAt = clock() - FULL_CHECK_EVERY_SECS + FULL_CHECK_RETRY_SECS
         return TrustNetworkSyncResult(
             header = updated.header.copy(lastFullCheck = maxOf(updated.header.lastFullCheck, retryAt)),
@@ -687,10 +710,11 @@ class TrustNetworkState(
         private const val TAG = "TrustNetworkState"
 
         /**
-         * Some providers recompute on demand, and checking costs two COUNTs of a few bytes when
-         * nothing changed (see `updateTrustNetwork`), so every app open after 15 minutes asks.
+         * How often the catch-up runs: one small REQ for anything newer than the cursor (see
+         * `updateTrustNetwork`), on an unmetered network. Cards for the profiles on screen arrive
+         * meanwhile through their own REQs, into [overlay].
          */
-        const val UPDATE_EVERY_SECS = 15 * 60L
+        const val UPDATE_EVERY_SECS = 60 * 60L
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
         const val MAX_FAILED_FULL_CHECKS = 3
@@ -699,7 +723,7 @@ class TrustNetworkState(
 
         /**
          * Which sync is due for [current] at [now]: a download when there is no index, a full
-         * check once a week, an update every 15 minutes (or now, when [force]d), else none.
+         * check once a week, an update every hour (or now, when [force]d), else none.
          */
         fun dueSync(
             current: TrustNetwork?,

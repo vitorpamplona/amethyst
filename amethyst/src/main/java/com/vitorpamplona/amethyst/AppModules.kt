@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
+import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteD
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
@@ -440,9 +440,9 @@ class AppModules(
     // Device-global: the widths the user dragged the panes of a wide window to.
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
 
-    // Device-global: whether the docked notification panel of a wide window is folded away to
-    // its bell. The fold rides window width, not the platform, so every front end keeps it.
-    val notificationPanelCollapsePrefs = NotificationPanelCollapsePreferences(sharedSettingsStore, applicationIOScope)
+    // Device-global: the dock beside a wide window's main screen (the notification feed and the
+    // other panels). It rides window width, not the platform, so every front end keeps it.
+    val dockLayoutPrefs = DockLayoutPreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
@@ -1043,8 +1043,9 @@ class AppModules(
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             // Long device-group histories go through the account's Blossom servers, on the app's HTTP routes.
             marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
-            // Unknown (a cold start before the first callback) waits, like mobile data.
-            canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
+            // Unknown (a cold start before the first callback) asks the system for the active
+            // network; no network at all waits, like mobile data.
+            canDownloadLargeFiles = { !connManager.isMeteredOrMobileNow() },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
             // joined workspace relays (so the app knows which relays to sync as workspaces on cold
             // start — Buzz membership is server-side) and the starred channels. Per account: the

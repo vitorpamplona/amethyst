@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
+import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.marmotHistoryBlobsOf
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteD
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
@@ -278,7 +278,7 @@ class DesktopAppModules(
 
     val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
-    val notificationPanelCollapsePrefs = NotificationPanelCollapsePreferences(sharedSettingsStore, applicationIOScope)
+    val dockLayoutPrefs = DockLayoutPreferences(sharedSettingsStore, applicationIOScope)
 
     // A desktop is never on a metered connection the app can see, and is always "connected":
     // relays find out about a lost network from their own sockets.

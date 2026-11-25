@@ -483,7 +483,7 @@ Do this before considering the task complete.
 ### Navigation Shell
 One shell, picked by window size rather than by platform: `ScreenLayoutSpec`
 chooses the bottom bar (compact), the rail, or the permanent drawer (wide,
-landscape, tall enough), and docks the notification panel on very wide windows.
+landscape, tall enough), and docks panels (`DockPanelSpec`) on very wide windows.
 It lives in `commonsUI` (`AppShellLayout`, run by `AmethystApp`), and both Android
 and the desktop window use it. The opt-in deck (Settings › App › Deck) adds columns beside the
 main screen on windows of 1,200 dp and up (`DeckArea`).

@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.stateIn
  * Tor will connect as soon as status is listened to.
  */
 class ConnectivityManager(
-    context: Context,
+    private val context: Context,
     scope: CoroutineScope,
 ) {
     val status: StateFlow<ConnectivityStatus> =
@@ -54,6 +54,17 @@ class ConnectivityManager(
                 SharingStarted.WhileSubscribed(2000),
                 (status.value as? ConnectivityStatus.Active)?.isMobile,
             )
+
+    /**
+     * [isMobileOrNull], or, while that has no reading yet (a process the system just started for
+     * a background job, before the first network callback), the active network's capabilities as
+     * the system reports them now. No network at all counts as metered.
+     */
+    fun isMeteredOrMobileNow(): Boolean =
+        isMobileOrNull.value ?: context
+            .getConnectivityManager()
+            .let { manager -> manager.activeNetwork?.let { manager.getNetworkCapabilities(it) } }
+            ?.isMeteredOrMobileData() ?: true
 
     val isMobileOrFalse: StateFlow<Boolean> =
         status

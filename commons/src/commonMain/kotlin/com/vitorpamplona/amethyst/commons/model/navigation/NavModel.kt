@@ -253,15 +253,43 @@ sealed class SingleScreenModel(
         focus = WindowFocus(id, (focus?.serial ?: 0) + 1)
     }
 
-    /** The open screen [request] asks for, when it should be shown rather than opened again. */
-    protected fun existing(request: NavRequest): NavStackEntry? =
-        if (request.forceNew) {
-            null
-        } else {
-            entries.firstOrNull { it.route == request.route || (request.kind == NavRequest.Kind.Section && it.tabRoute == request.route) }
-        }
+    /**
+     * The open screen [request] asks for, when it should be shown rather than opened again.
+     *
+     * A restart (a tapped notification, a deep link) for one of the bar's sections with other
+     * arguments, such as `Notification(eventId)`, is that section's tab, handed the new arguments
+     * ([NavStackEntry.reArgue]), as [StackModel.newStack] does on the stack. Matching the route
+     * alone opened a second Notifications tab beside the pinned one, one more per notification.
+     * Only a route that is its section in another state counts ([sectionItReopens]): a section of
+     * the same class can be another place, such as the bar's own Profile and someone else's.
+     */
+    protected fun existing(request: NavRequest): NavStackEntry? {
+        if (request.forceNew) return null
+        entries
+            .firstOrNull { it.route == request.route || (request.kind == NavRequest.Kind.Section && it.tabRoute == request.route) }
+            ?.let { return it }
+        if (request.kind != NavRequest.Kind.Restart) return null
+        val sectionRoute = request.route.sectionItReopens() ?: return null
+        val section = entries.firstOrNull { it.tabRoute == sectionRoute } ?: return null
+        section.reArgue(request.route)
+        return section
+    }
 
     companion object {
         const val MAX_CLOSED = 10
     }
 }
+
+/**
+ * The bar section this route is, opened in another state (a notification to scroll to, a day of
+ * the front page, an app to connect), or null when the route is a place of its own. A link to it
+ * takes over that section's tab instead of opening a second one. A [Route.Profile] is not here: the
+ * bar's Profile is the user's, and a link to someone else's must not replace it.
+ */
+internal fun Route.sectionItReopens(): Route? =
+    when (this) {
+        is Route.Notification -> Route.Notification()
+        is Route.FrontPage -> Route.FrontPage()
+        is Route.Nip46Signer -> Route.Nip46Signer()
+        else -> null
+    }

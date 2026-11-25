@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntOffset
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
@@ -53,6 +54,9 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.app.RedialRelaysOnReturn
 import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
@@ -62,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.AssistantDockPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -200,6 +205,41 @@ class DesktopAppRoot(
         }
     }
 
+    /** The assistant beside the screen, as an IDE's tool window. */
+    override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> = listOf(AssistantDockPanel)
+
+    override val supportsPanelWindows: Boolean = true
+
+    override fun mainWindowScreenOrigin(): IntOffset? = navigator.windows.mainContentOrigin()
+
+    /**
+     * A dock panel in a window of its own: placed where it was dropped, or beside the main window.
+     * Its header moves the window, and docks the panel back when dropped on the main window.
+     */
+    @Composable
+    override fun PanelWindow(
+        window: PanelWindowSpec,
+        content: @Composable (headerDrag: Modifier) -> Unit,
+    ) {
+        val windows = navigator.windows
+        val state = remember(window.id) { windows.initialState(window) }
+        val quit = { modules.quitRequests.tryEmit(Unit) }
+        AppWindow(
+            onCloseRequest = window.onClose,
+            state = state,
+            title = window.title,
+            icon = IconResources.adaptedBitmapPainter,
+            onPreviewKeyEvent = { navigator.handleShortcut(it, onQuit = { quit() }) },
+        ) {
+            windows.PanelWindowEffects(window, this.window, state)
+            frameScope?.DesktopMenuBar(navigator, onQuit = { quit() }, installAppMenu = false)
+            val dock = LocalDockController.current
+            val frame = this.window
+            val drag = remember(frame, dock, window.id) { if (dock != null) Modifier.panelWindowDrag(frame, window.id, windows, dock) else Modifier }
+            content(drag)
+        }
+    }
+
     override fun registerDestinations(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
@@ -259,6 +299,12 @@ class DesktopAppRoot(
         }
         LaunchedEffect(nav.stacks.arrangement) { navigator.windows.showMainWindow(raise = false) }
 
+        val dock = LocalDockController.current
+        DisposableEffect(dock) {
+            navigator.dock = dock
+            onDispose { if (navigator.dock === dock) navigator.dock = null }
+        }
+
         DisposableEffect(nav, accountViewModel, destinations, settingsCatalog) {
             navigator.nav = nav
             navigator.userPubKeyHex = accountViewModel.account.signer.pubKey
@@ -288,7 +334,9 @@ class DesktopAppRoot(
                 if (npub != null && npub != sessionManager.currentAccountNPub()) {
                     sessionManager.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
                 } else {
-                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                    // A new stack, as Android opens a link: a push would leave a second Notifications
+                    // screen (back arrow, no bar) over the tab the link meant, one more per link.
+                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.newStack(route) }
                 }
                 // A link opens where it can be seen: a main window hidden (kept for a print, or closed
                 // beside screen windows) comes back.
@@ -310,7 +358,8 @@ class DesktopAppRoot(
                         // The Observer already on top, on a past edition: opening its route again does
                         // nothing, so it is told to show today, the paper the notification is about.
                         if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
-                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                        // A new stack, like a deep link above and a tapped Android notification.
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.newStack(it) }
                     }
                     is NotificationClickPlan.SwitchAndOpen ->
                         sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->

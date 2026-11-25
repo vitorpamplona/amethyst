@@ -41,6 +41,10 @@ import kotlin.random.Random
  *  - [IDS_FILE]: event ids and tombstones, read only by syncs.
  *  - [PARTIAL_INDEX_FILE] and [PARTIAL_IDS_FILE]: what a cold download that has not finished
  *    collected so far, so it resumes. Never read as the network.
+ *  - [TIMES_FILE]: the sync's cursor, last full check and last update for the index of one
+ *    generation. A sync that changes nothing (an hourly catch-up that found nothing, a full check
+ *    that agreed) writes these few bytes instead of the index files (MBs), and they survive a
+ *    process restart, so the hourly gate and the weekly schedule hold across app opens.
  *
  * Files are written to a temp file and moved into place, so a crash leaves the old file or the
  * new one, never half. A file that cannot be read (wrong version, truncated) reads as missing.
@@ -54,7 +58,36 @@ class TrustNetworkStore(
 
     fun readIndex(): TrustNetwork? {
         deleteLegacyFiles()
-        return read(INDEX_FILE) { bytes -> TrustNetworkCodec.decodeIndex(bytes)?.let { (header, index) -> TrustNetwork(header, index) } }
+        val network = read(INDEX_FILE) { bytes -> TrustNetworkCodec.decodeIndex(bytes)?.let { (header, index) -> TrustNetwork(header, index) } } ?: return null
+        val times = readTimes(network.header) ?: return network
+        val header = network.header
+        return TrustNetwork(
+            header.copy(
+                syncCursor = maxOf(header.syncCursor, times.syncCursor),
+                lastFullCheck = maxOf(header.lastFullCheck, times.lastFullCheck),
+                lastUpdate = maxOf(header.lastUpdate, times.lastUpdate),
+            ),
+            network.index,
+        )
+    }
+
+    /** The [TIMES_FILE] saved for the index whose header is [header], or null when there is none. */
+    private fun readTimes(header: TrustNetworkHeader): TrustNetworkHeader? =
+        read(TIMES_FILE) { bytes ->
+            val fields =
+                bytes
+                    .decodeToString()
+                    .trim()
+                    .split(' ')
+                    .map { it.toLongOrNull() ?: return@read null }
+            if (fields.size != 4 || fields[0] != header.generation) return@read null
+            header.copy(syncCursor = fields[1], lastFullCheck = fields[2], lastUpdate = fields[3])
+        }
+
+    /** Saves [header]'s cursor and sync times beside its index, which stays as it is (see [TIMES_FILE]). */
+    fun writeTimes(header: TrustNetworkHeader) {
+        fileSystem.createDirectories(directory)
+        atomicWrite(directory / TIMES_FILE, "${header.generation} ${header.syncCursor} ${header.lastFullCheck} ${header.lastUpdate}".encodeToByteArray())
     }
 
     /** The ids saved with the index whose header is [header], or null when they are not (any more) on disk. */
@@ -85,7 +118,7 @@ class TrustNetworkStore(
 
     fun deletePartial() = deleteFiles(PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
 
-    fun delete() = deleteFiles(INDEX_FILE, IDS_FILE, PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
+    fun delete() = deleteFiles(INDEX_FILE, IDS_FILE, PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE, TIMES_FILE)
 
     private fun writePair(
         indexFile: String,
@@ -153,6 +186,7 @@ class TrustNetworkStore(
         const val IDS_FILE = "network-ids-v2.bin"
         const val PARTIAL_INDEX_FILE = "partial-network-v2.bin"
         const val PARTIAL_IDS_FILE = "partial-network-ids-v2.bin"
+        const val TIMES_FILE = "network-times.txt"
         private val LEGACY_FILES = listOf("network-v1.bin", "network-ids-v1.bin")
     }
 }

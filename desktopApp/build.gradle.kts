@@ -174,6 +174,8 @@ dependencies {
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
+    // Stands in for the account and navigation a dock panel is handed (Apache-2.0; test only).
+    testImplementation(libs.mockk)
 }
 
 // The per-user class archive of a package without a trained AOT cache (BUILDING.md, "Startup
