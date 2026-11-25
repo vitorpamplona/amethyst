@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-import com.vitorpamplona.crypto.aes.AESGCM
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response
@@ -39,15 +37,7 @@ class EncryptedBlobInterceptor(
         val contentType = body.contentType()
         val bytes = body.use { it.bytes() }
 
-        // Tries the correct way first
-        // if it fails, tries to decrypt as UTF8 nonce, which was how
-        // 0xChat started encrypting
-        val decrypted =
-            info.cipher.decryptOrNull(bytes) ?: if (info.cipher is AESGCM) {
-                info.cipher.copyUsingUTF8Nonce().decryptOrNull(bytes)
-            } else {
-                null
-            }
+        val decrypted = info.decryptBlob(bytes)
 
         if (decrypted == null) {
             return null
@@ -104,6 +94,3 @@ class EncryptedBlobInterceptor(
         return response
     }
 }
-
-/** 0xChat's early encrypted blobs used the hex of the nonce, as UTF-8 bytes, for the nonce. */
-private fun AESGCM.copyUsingUTF8Nonce(): AESGCM = AESGCM(keyBytes, nonce.toHexKey().toByteArray(Charsets.UTF_8))

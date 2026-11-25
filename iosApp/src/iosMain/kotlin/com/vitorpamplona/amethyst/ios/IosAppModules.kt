@@ -194,7 +194,7 @@ class IosAppModules(
     /** The shared player's iOS half. */
     val playbackPlatform by lazy {
         NowPlaying.artworkLoader = ::downloadBytes
-        IosPlaybackPlatform(download = ::downloadBytes)
+        IosPlaybackPlatform(download = ::downloadBytes, keyCache = keyCache)
     }
 
     val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }
@@ -205,6 +205,8 @@ class IosAppModules(
     init {
         IosImageLoaderSetup.setup(
             httpClient = httpClient,
+            keyCache = keyCache,
+            download = ::downloadBytes,
             cacheDir = (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String).toPath() / "images",
         )
     }

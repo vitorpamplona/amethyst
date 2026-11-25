@@ -39,6 +39,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.play_on_another_device
 import com.vitorpamplona.amethyst.commons.resources.play_on_another_device_description
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
@@ -104,7 +106,10 @@ import kotlin.coroutines.resume
  */
 class IosPlaybackPlatform(
     private val download: suspend (String) -> ByteArray?,
+    private val keyCache: EncryptionKeyCache,
 ) : PlaybackPlatform {
+    private val decrypted = DecryptedMediaFiles(download)
+
     // The state handed out for each live player, so picture in picture can mark it as the one
     // that keeps playing in the background.
     private val states = mutableMapOf<AvAmethystPlayer, MediaControllerState>()
@@ -124,8 +129,27 @@ class IosPlaybackPlatform(
         releaseOnBackgroundTimeout: Boolean,
         inner: @Composable (MediaControllerState) -> Unit,
     ) {
+        // An encrypted file (a NIP-17, Marmot or Concord attachment) plays from a decrypted copy:
+        // AES-GCM opens only the whole blob, and AVPlayer fetches ranges. The placeholder stays
+        // until it is ready.
+        val keys = remember(mediaItem.videoUri) { keyCache.get(mediaItem.videoUri) }
+        val playUrl by produceState(initialValue = if (keys == null) mediaItem.videoUri else null, mediaItem.videoUri) {
+            if (keys != null) value = decrypted.fileUrlFor(mediaItem.videoUri, keys)
+        }
+        val url = playUrl ?: return
+        PlayerFor(url, mediaItem, muted, play, inner)
+    }
+
+    @Composable
+    private fun PlayerFor(
+        url: String,
+        mediaItem: MediaItemData,
+        muted: Boolean,
+        play: Boolean,
+        inner: @Composable (MediaControllerState) -> Unit,
+    ) {
         val metadata = NowPlayingMetadata(mediaItem.title, mediaItem.authorName, mediaItem.artworkUri)
-        val player = remember(mediaItem.videoUri) { IosPlayerPool.acquire(mediaItem.videoUri, metadata) }
+        val player = remember(url) { IosPlayerPool.acquire(url, metadata) }
         val state = remember(player) { states[player] ?: MediaControllerState(controller = player).also { states[player] = it } }
 
         DisposableEffect(player) {
@@ -264,7 +288,7 @@ class IosPlaybackPlatform(
     override fun rememberEnterPictureInPicture(): (MediaItemData, IntRect?) -> Unit =
         remember {
             { item, _ ->
-                val player = IosPlayerPool.find(item.videoUri)
+                val player = IosPlayerPool.find(decrypted.playingUrl(item.videoUri))
                 if (player != null && PictureInPicture.start(player)) {
                     states[player]?.let { BackgroundMedia.bgInstance = it }
                 }

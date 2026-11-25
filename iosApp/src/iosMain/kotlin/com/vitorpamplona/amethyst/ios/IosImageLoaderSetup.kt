@@ -28,6 +28,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.size.Precision
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
 import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.SkiaDownsamplingDecoder
@@ -47,6 +48,8 @@ object IosImageLoaderSetup {
     fun setup(
         httpClient: HttpClient,
         cacheDir: Path,
+        keyCache: EncryptionKeyCache,
+        download: suspend (String) -> ByteArray?,
     ) {
         val context = PlatformContext.INSTANCE
         val loader =
@@ -70,6 +73,8 @@ object IosImageLoaderSetup {
                     add(Base64Fetcher.BKeyer)
                     add(BlurHashFetcher.BKeyer)
                     add(ThumbHashFetcher.TKeyer)
+                    // Before the network fetcher: an encrypted picture's URL must not reach Coil raw.
+                    add(EncryptedBlobFetcher.Factory(keyCache, download))
                     add(KtorNetworkFetcherFactory(httpClient = { httpClient }))
                 }.build()
         SingletonImageLoader.setUnsafe(loader)
