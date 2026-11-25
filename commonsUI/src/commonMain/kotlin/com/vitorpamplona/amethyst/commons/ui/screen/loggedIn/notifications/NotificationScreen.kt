@@ -30,7 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -90,6 +94,16 @@ fun NotificationScreen(
 ) {
     NotificationProviderPrompt(sharedPrefs)
 
+    // A deep link (tapping a push notification) opens this screen as Notification(eventId) and the
+    // route keeps that argument for as long as the entry lives, which for a tab root is until the app
+    // dies. Without this, every return to the screen (back from a thread, a tab switch, the feed
+    // reloading) scrolled to and flashed the same card again. Saveable, so it survives the screen
+    // leaving composition while its entry stays on the back stack. A deep link to another event
+    // re-argues the route, which no longer matches and so jumps again.
+    var scrolledTo by rememberSaveable { mutableStateOf<String?>(null) }
+    val pendingScrollTo = scrollToEventId?.takeIf { it != scrolledTo }
+    val onScrolledToEvent = remember(scrollToEventId) { { scrolledTo = scrollToEventId } }
+
     val split by accountViewModel.account.settings.splitNotificationsEnabled
         .collectAsStateWithLifecycle()
 
@@ -101,7 +115,8 @@ fun NotificationScreen(
             notifEveryoneState = notifEveryoneState,
             notifSummaryState = notifSummaryState,
             notifPolls = notifPolls,
-            scrollToEventId = scrollToEventId,
+            scrollToEventId = pendingScrollTo,
+            onScrolledToEvent = onScrolledToEvent,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -111,7 +126,8 @@ fun NotificationScreen(
             notifFeedContentState = notifFeedContentState,
             notifSummaryState = notifSummaryState,
             notifPolls = notifPolls,
-            scrollToEventId = scrollToEventId,
+            scrollToEventId = pendingScrollTo,
+            onScrolledToEvent = onScrolledToEvent,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -124,6 +140,7 @@ private fun SingleNotificationsScaffold(
     notifSummaryState: NotificationSummaryState,
     notifPolls: OpenPollsState,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -150,6 +167,7 @@ private fun SingleNotificationsScaffold(
             notifFeedContentState = notifFeedContentState,
             notifPolls = notifPolls,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -163,6 +181,7 @@ private fun SplitNotificationsScaffold(
     notifSummaryState: NotificationSummaryState,
     notifPolls: OpenPollsState,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -213,6 +232,7 @@ private fun SplitNotificationsScaffold(
             notifEveryoneState = notifEveryoneState,
             notifPolls = notifPolls,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -230,6 +250,7 @@ fun SingleNotificationsBody(
     notifFeedContentState: CardFeedContentState,
     notifPolls: OpenPollsState,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit = {},
     accountViewModel: AccountViewModel,
     nav: INav,
     scrollStateKey: String = ScrollStateKeys.NOTIFICATION_SCREEN,
@@ -247,6 +268,7 @@ fun SingleNotificationsBody(
             nav = nav,
             routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             // "X added you to #channel" is not a header prompt any more — each pending invite is a
             // ChannelInviteCard in the feed itself, sorted ahead of the dated rows by
             // NotificationFeedOrderCard.
@@ -264,6 +286,7 @@ private fun SplitNotificationsBody(
     notifEveryoneState: CardFeedContentState,
     notifPolls: OpenPollsState,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -278,6 +301,7 @@ private fun SplitNotificationsBody(
                     pollContent = notifPolls,
                     scrollStateKey = ScrollStateKeys.NOTIFICATION_FOLLOWING,
                     scrollToEventId = scrollToEventId,
+                    onScrolledToEvent = onScrolledToEvent,
                     drivesPaging = drivesPaging,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -292,6 +316,7 @@ private fun SplitNotificationsBody(
                     // Only the Following tab honors the deep-link scroll target so users
                     // aren't bounced when they swipe across to Everyone.
                     scrollToEventId = null,
+                    onScrolledToEvent = {},
                     drivesPaging = drivesPaging,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -307,6 +332,7 @@ private fun NotificationPagerPage(
     pollContent: OpenPollsState,
     scrollStateKey: String,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
     drivesPaging: Boolean = true,
@@ -324,6 +350,7 @@ private fun NotificationPagerPage(
             nav = nav,
             routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
             drivesPaging = drivesPaging,
         )

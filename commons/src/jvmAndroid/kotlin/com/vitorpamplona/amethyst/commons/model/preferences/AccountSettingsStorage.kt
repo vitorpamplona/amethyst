@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.model.trustedLastRead
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
@@ -74,6 +75,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEve
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -472,8 +474,10 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
 
         val lastReadPerRoute =
             async {
+                // A marker carried into the future by a future-dated event would stay there.
+                val now = TimeUtils.now()
                 parseOrNull<Map<String, Long>>(lastReadPerRouteStr)?.mapValues {
-                    MutableStateFlow(it.value)
+                    MutableStateFlow(trustedLastRead(it.value, now))
                 } ?: mapOf()
             }
 
