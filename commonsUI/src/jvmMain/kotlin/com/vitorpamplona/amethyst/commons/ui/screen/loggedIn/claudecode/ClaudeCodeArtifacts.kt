@@ -104,14 +104,9 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_updated
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_waiting_create_line
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_waiting_publish_line
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_in_browser
-import com.vitorpamplona.amethyst.commons.resources.claude_code_published_count
-import com.vitorpamplona.amethyst.commons.resources.claude_code_published_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_output
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
-import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
-import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
@@ -471,57 +466,6 @@ private fun CopyLinkButton(url: String) {
             Icon(if (copied) MaterialSymbols.Check else MaterialSymbols.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringRes(if (copied) Res.string.claude_code_artifact_link_copied else Res.string.claude_code_artifact_copy_link))
-        }
-    }
-}
-
-/**
- * The top bar's list of what this session put on claude.ai, newest first, each opened with a
- * click: a long session's pages are otherwise far up the chat. Nothing shows until there is one.
- */
-@Composable
-internal fun PublishedMenu(
-    items: List<ChatItem>,
-    cwd: String,
-) {
-    val titled = rememberSessionArtifacts(items, cwd)
-    if (titled.isEmpty()) return
-    val open = rememberArtifactOpener()
-    var expanded by remember { mutableStateOf(false) }
-    val count = pluralStringRes(Res.plurals.claude_code_published_count, titled.size, titled.size)
-    Box {
-        HoverTooltip(count) {
-            TextButton(onClick = { expanded = true }) {
-                Icon(MaterialSymbols.CloudUpload, contentDescription = count, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(titled.size.toString())
-            }
-        }
-        RoundedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            Text(
-                stringRes(Res.string.claude_code_published_title),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.grayText,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            )
-            RoundedMenuSection {
-                titled.forEach { artifact ->
-                    val url = artifact.url ?: return@forEach
-                    PublishedArtifactRow(artifact, Modifier.width(320.dp)) {
-                        open.link(url)
-                        // Nothing opened it: the menu stays, saying so.
-                        if (open.failed == null) expanded = false
-                    }
-                }
-            }
-            open.failed?.let {
-                Text(
-                    stringRes(Res.string.claude_code_artifact_open_failed),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                )
-            }
         }
     }
 }

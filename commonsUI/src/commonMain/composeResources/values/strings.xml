@@ -9952,8 +9952,8 @@
     <string name="claude_code_artifact_updated_line_version">Updated %1$s · version %2$d</string>
     <string name="claude_code_artifact_opened_line">Pointed you to %1$s</string>
     <string name="claude_code_open_in_browser">Open in browser</string>
-    <string name="claude_code_published_title">On claude.ai from this session</string>
     <string name="claude_code_published_section">On claude.ai</string>
+    <string name="claude_code_session_panel">Session</string>
     <string name="claude_code_artifact_list_published">Published</string>
     <string name="claude_code_artifact_list_created">Created</string>
     <string name="claude_code_artifact_list_updated">Updated</string>
