@@ -287,7 +287,7 @@ class IosAppModules(
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             marmotHistoryBlobs = null,
             canDownloadLargeFiles = { true },
-            startBuzzPersistence = { },
+            accountSettingsStore = sharedSettingsStore,
         )
 
     val sessionManager =

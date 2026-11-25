@@ -58,14 +58,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
-import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
@@ -632,17 +626,10 @@ class DesktopAppModules(
             marmotHistoryBlobs = { account -> marmotHistoryBlobsOf(account, roleBasedHttpClientBuilder) },
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
-            // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
-            // attestations, declined Concord invites and the now-playing status settings.
-            startBuzzPersistence = { account ->
-                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
-                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
-                ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
-                NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
-                // The playback speed picked for each drss feed, local as drss.io keeps it.
-                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
-                // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
+            // Each account's local-only state (Buzz workspaces and stars, declined Concord invites, ...).
+            accountSettingsStore = sharedSettingsStore,
+            // The legacy app's feeds and deck go to the first account that loads.
+            onAccountCreated = { account ->
                 legacyCustomFeedImport.importInto(account.settings)
                 legacyDeckImport.importInto(account.settings, account.signer.pubKey)
             },

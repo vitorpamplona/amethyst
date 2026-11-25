@@ -59,16 +59,10 @@ import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventV
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarReminderScanner
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_LOG_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
-import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore
@@ -1049,23 +1043,8 @@ class AppModules(
             // Unknown (a cold start before the first callback) asks the system for the active
             // network; no network at all waits, like mobile data.
             canDownloadLargeFiles = { !connManager.isMeteredOrMobileNow() },
-            // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
-            // joined workspace relays (so the app knows which relays to sync as workspaces on cold
-            // start — Buzz membership is server-side) and the starred channels. Per account: the
-            // joined set makes a relay first-party for NIP-42, and a star is personal.
-            startBuzzPersistence = { account ->
-                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
-                // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
-                // first Buzz-relay AUTH rather than after it.
-                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
-                // Concord Direct Invites the user declined (CORD-05 §6) stay declined across restarts.
-                ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
-                // Whether this account shares what it listens to as its music status, and from which apps.
-                NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
-                // The playback speed picked for each drss feed, local as drss.io keeps it.
-                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
-            },
+            // Each account's local-only state (Buzz workspaces and stars, declined Concord invites, ...).
+            accountSettingsStore = sharedSettingsStore,
         )
 
     val sessionManager =

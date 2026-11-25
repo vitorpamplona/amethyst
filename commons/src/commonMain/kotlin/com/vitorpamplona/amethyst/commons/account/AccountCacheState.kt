@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
@@ -33,6 +35,12 @@ import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
+import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
@@ -120,12 +128,14 @@ class AccountCacheState(
     /** App-global store of connected NIP-46 client display + relay info. */
     val nip46ClientStore: Nip46ClientStore,
     /**
-     * Starts per-account persistence of the Buzz client-side bookkeeping that has no Nostr event to
-     * rebuild from — the joined workspaces and the starred channels (restore now, mirror later
-     * changes). A lambda because those stores need an Android `Context` and this class deliberately
-     * takes none.
+     * Where each account keeps the local state that has no Nostr event to rebuild from (joined Buzz
+     * workspaces, starred channels, NIP-OA attestations, declined Concord invites, now-playing
+     * settings, drss speeds): restored when the account loads, mirrored as it changes. Every front
+     * end passes its shared settings store, so none can forget a store ([startLocalAccountStores]).
      */
-    val startBuzzPersistence: (Account) -> Unit,
+    val accountSettingsStore: DataStore<Preferences>,
+    /** Anything else a front end does when an account is built (the desktop imports legacy feeds). */
+    val onAccountCreated: (Account) -> Unit = {},
     /** Who this app says it is when it asks a NIP-46 remote signer to sign (NIP-46 client metadata). */
     val remoteSignerMetadata: BunkerClientMetadata?,
     /**
@@ -450,7 +460,8 @@ class AccountCacheState(
             // Per account, not per device: the joined set makes a relay first-party for NIP-42, so a
             // shared one hands every other logged-in account an automatic login on a workspace it
             // never joined, and a shared star set reorders everyone's channel list at once.
-            startBuzzPersistence(newAccount)
+            startLocalAccountStores(accountSettingsStore, newAccount)
+            onAccountCreated(newAccount)
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))
             }
@@ -502,4 +513,25 @@ internal fun supersedes(
 ): Boolean {
     if (incoming === loaded || !incoming.isWriteable()) return false
     return !loaded.isWriteable() || incoming.rememberKey != loaded.rememberKey
+}
+
+/**
+ * Restores [account]'s local-only state from [store] and keeps it saved there. Per account, not per
+ * device: the joined Buzz set makes a relay first-party for NIP-42 and a star is personal.
+ */
+fun startLocalAccountStores(
+    store: DataStore<Preferences>,
+    account: Account,
+) {
+    BuzzWorkspaceStore(store, account.scope, account.pubKey, account.buzzWorkspaces)
+    BuzzChannelStarStore(store, account.scope, account.pubKey, account.buzzChannelStars)
+    // Eager like the rest, so a held NIP-OA attestation is loaded before this account's first
+    // Buzz-relay AUTH rather than after it.
+    BuzzAttestationStore(store, account.scope, account.pubKey, account.buzzAttestation)
+    // Concord Direct Invites the user declined (CORD-05 §6) stay declined across restarts.
+    ConcordDirectInviteDeclineStore(store, account.scope, account.pubKey, account.concord.directInviteInbox)
+    // Whether this account shares what it listens to as its music status, and from which apps.
+    NowPlayingSettingsStore(store, account.scope, account.pubKey, account.nowPlayingSettings)
+    // The playback speed picked for each drss feed, local as drss.io keeps it.
+    DrssListenRateStore(store, account.scope, account.pubKey, account.drss.rates)
 }
