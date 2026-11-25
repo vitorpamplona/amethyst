@@ -154,19 +154,23 @@ fun AudioTrackHeader(
 @Composable
 fun RenderAudioHeader(
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
-    AudioHeader(noteEvent, note, contentScale, accountViewModel, nav)
+    AudioHeader(noteEvent, note, canPreview, quotesLeft, contentScale, accountViewModel, nav)
 }
 
 @Composable
 fun AudioHeader(
     noteEvent: AudioHeaderEvent,
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -210,8 +214,8 @@ fun AudioHeader(
                 ) {
                     TranslatableRichTextViewer(
                         content = it,
-                        canPreview = true,
-                        quotesLeft = 1,
+                        canPreview = canPreview,
+                        quotesLeft = quotesLeft,
                         tags = tags,
                         backgroundColor = background,
                         id = note.idHex,

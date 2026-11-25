@@ -58,6 +58,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 @Composable
 fun RenderReport(
     note: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -101,13 +102,13 @@ fun RenderReport(
         noteEvent.content.ifBlank { null }?.let { comment ->
             TranslatableRichTextViewer(
                 content = comment,
-                canPreview = true,
+                canPreview = canPreview,
                 modifier = Modifier,
                 tags = EmptyTagList,
                 backgroundColor = backgroundColor,
                 id = note.idHex,
                 callbackUri = note.toNostrUri(),
-                quotesLeft = 1,
+                quotesLeft = quotesLeft,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

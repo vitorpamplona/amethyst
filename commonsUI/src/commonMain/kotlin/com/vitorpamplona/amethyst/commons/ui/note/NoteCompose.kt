@@ -1728,7 +1728,7 @@ internal fun RenderNoteRow(
             }
 
             is SoftwareApplicationEvent -> {
-                RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
+                RenderSoftwareApplication(baseNote, canPreview && !makeItShort, quotesLeft, accountViewModel, nav, backgroundColor)
             }
 
             is SoftwareAssetEvent -> {
@@ -1740,26 +1740,26 @@ internal fun RenderNoteRow(
                 // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
                 // tag signature matches.
                 if (noteEvent.isNip82SoftwareRelease()) {
-                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderSoftwareRelease(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
-                    RenderReleaseArtifactSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                    RenderReleaseArtifactSet(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is AttestationEvent -> {
-                RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestation(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestationRequestEvent -> {
-                RenderAttestationRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestationRequest(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestorRecommendationEvent -> {
-                RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestorRecommendation(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestorProficiencyEvent -> {
-                RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestorProficiency(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
@@ -1769,23 +1769,23 @@ internal fun RenderNoteRow(
             }
 
             is AudioHeaderEvent -> {
-                RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                RenderAudioHeader(baseNote, canPreview && !makeItShort, quotesLeft, ContentScale.FillWidth, accountViewModel, nav)
             }
 
             is MusicTrackEvent -> {
-                RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderMusicTrack(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is MusicPlaylistEvent -> {
-                RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderMusicPlaylist(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is PodcastEpisodeEvent -> {
-                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is Podcasting20EpisodeEvent -> {
-                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is Podcasting20TrailerEvent -> {
@@ -1793,14 +1793,14 @@ internal fun RenderNoteRow(
             }
 
             is PodcastMetadataEvent -> {
-                RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastMetadata(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AppSpecificDataEvent -> {
                 // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a
                 // podcast card. Anything else (e.g. a client's own settings) keeps the text fallback.
                 if (noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
-                    RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                    RenderPodcastMetadata(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
                     RenderTextEvent(
                         baseNote,
@@ -1818,7 +1818,7 @@ internal fun RenderNoteRow(
             }
 
             is DraftWrapEvent -> {
-                RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
+                RenderDraft(baseNote, makeItShort, canPreview, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
             }
 
             is ReactionEvent -> {
@@ -1838,7 +1838,7 @@ internal fun RenderNoteRow(
             }
 
             is ReportEvent -> {
-                RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderReport(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is LongFormContentEvent -> {
@@ -2512,7 +2512,7 @@ internal fun RenderNoteRow(
             // so new video subtypes render automatically instead of falling through to text.
             is VideoEvent -> {
                 ProvideMediaBleed(mediaBleed) {
-                    VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                    VideoDisplay(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
                 }
             }
 
@@ -3164,6 +3164,8 @@ fun ObserveDraftEvent(
 @Composable
 fun RenderDraft(
     note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
     quotesLeft: Int,
     unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
@@ -3176,8 +3178,8 @@ fun RenderDraft(
         RenderNoteRow(
             baseNote = it,
             backgroundColor = backgroundColor,
-            makeItShort = false,
-            canPreview = true,
+            makeItShort = makeItShort,
+            canPreview = canPreview,
             editState = edits,
             quotesLeft = quotesLeft,
             unPackReply = unPackReply,
