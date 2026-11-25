@@ -103,6 +103,14 @@ class NotificationFeedFutureEventTest {
     }
 
     @Test
+    fun aMentionFromAClockAFewMinutesFastIsANotification() {
+        // Filtered once, a note is not checked again until the tab rebuilds: minutes of skew pass.
+        val threeMinutesAhead = TimeUtils.now() + 3 * 60
+
+        assertTrue(filter.acceptableEvent(mentionOfMeAt(threeMinutesAhead, '3'), filter.buildFilterParams(account)))
+    }
+
+    @Test
     fun aMentionDatedAYearAheadIsNot() {
         val nextYear = TimeUtils.now() + 365L * 24 * 60 * 60
 
