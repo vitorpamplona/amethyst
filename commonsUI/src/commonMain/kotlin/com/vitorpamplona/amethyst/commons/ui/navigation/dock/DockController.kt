@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.dock.DropTarget
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.dock.PanelState
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.StateFlow
@@ -149,6 +150,9 @@ class DockController internal constructor(
     }
 
     private val viewModelStores = mutableMapOf<PanelId, ViewModelStore>()
+
+    /** Each pinned screen's history, kept here so it outlives the panel's composition: a fold, a window, a dock-back. */
+    private val screenStacks = mutableMapOf<PanelId, NavBackStacks>()
 
     /** Each panel's saved UI state (scroll positions, a half-typed message) from where it was last drawn. */
     private val savedStates = mutableMapOf<PanelId, Map<String, List<Any?>>>()
@@ -307,9 +311,12 @@ class DockController internal constructor(
      */
     fun pinScreen(route: Route): PanelId {
         val json = DockLayout.encodeRoute(route)
-        val id = layout().screenShowing(json) ?: PanelId.newScreen()
-        update { it.pinScreen(id, json) }
-        if (!canDock) overlay = id
+        val id =
+            layout().screenShowing(json) ?: PanelId.newScreen().also { id ->
+                update { it.pinScreen(id, json) }
+            }
+        // Wherever it is: its window comes to the front, an overlay-mode or narrow-window panel opens over the screen.
+        show(id)
         return id
     }
 
@@ -322,11 +329,16 @@ class DockController internal constructor(
         forgetScreen(id)
     }
 
+    /**
+     * Drops what the dock kept for pinned screen [id]. A panel still on screen lets go on the next
+     * frame: its ViewModels are cleared then, in [release], so none is made in a store already cleared.
+     */
     private fun forgetScreen(id: PanelId) {
         screenSpecs.remove(id)
         movables.remove(id)
+        screenStacks.remove(id)
         savedStates.remove(id)
-        viewModelStores.remove(id)?.clear()
+        if (sites[id].isNullOrEmpty()) viewModelStores.remove(id)?.clear()
     }
 
     /** Layouts saved by name, to go back to. */
@@ -365,13 +377,20 @@ class DockController internal constructor(
 
     internal fun storeFor(id: PanelId): ViewModelStore = viewModelStores.getOrPut(id) { ViewModelStore() }
 
+    /** Pinned screen [id]'s history, started at [route] the first time it is drawn. */
+    internal fun screenStacks(
+        id: PanelId,
+        route: Route,
+    ): NavBackStacks = screenStacks.getOrPut(id) { NavBackStacks(route) }
+
     internal fun savedState(id: PanelId): Map<String, List<Any?>>? = savedStates[id]
 
+    /** Keeps the state panel [id] leaves with, unless it left because it was taken out of the dock. */
     internal fun keepState(
         id: PanelId,
         state: Map<String, List<Any?>>,
     ) {
-        savedStates[id] = state
+        if (has(id)) savedStates[id] = state
     }
 
     /** Whether [site] may draw panel [id]: no other place holds it, or this one has held it longest. */
@@ -395,7 +414,17 @@ class DockController internal constructor(
         id: PanelId,
         site: Any,
     ) {
-        sites[id] = sites[id].orEmpty().filterNot { it === site }
+        val left = sites[id].orEmpty().filterNot { it === site }
+        if (left.isNotEmpty()) {
+            sites[id] = left
+            return
+        }
+        sites.remove(id)
+        // The last place drawing a panel that was unpinned meanwhile: its ViewModels go now.
+        if (!has(id)) {
+            savedStates.remove(id)
+            viewModelStores.remove(id)?.clear()
+        }
     }
 
     internal fun clear() {

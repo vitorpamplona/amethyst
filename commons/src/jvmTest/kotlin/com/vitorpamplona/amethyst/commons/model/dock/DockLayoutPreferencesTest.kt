@@ -25,11 +25,14 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -43,6 +46,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Each [session] is one launch over the same file: restore, act, flush, shut down. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -176,4 +181,40 @@ class DockLayoutPreferencesTest {
         assertEquals(layouts, DockLayoutPreferences.decodeNamed(DockLayoutPreferences.encodeNamed(layouts)))
         assertTrue(DockLayoutPreferences.decodeNamed("garbage").isEmpty())
     }
+
+    @Test
+    fun aLayoutSavedBeforeTheReadJoinsTheOnesOnDisk() =
+        runTest(StandardTestDispatcher()) {
+            session { saveAs("Reading") }
+            // Saved before the read finishes: nothing has run on the store's dispatcher yet.
+            val scope = CoroutineScope(StandardTestDispatcher(testScheduler))
+            DockLayoutPreferences(store(scope), scope).saveAs("Writing")
+            advanceUntilIdle()
+            scope.cancel()
+            advanceUntilIdle()
+            assertEquals(setOf("Reading", "Writing"), session().saved.value.keys)
+        }
+
+    @Test
+    fun aFailedReadNeverOverwritesTheSavedLayouts() =
+        runTest(StandardTestDispatcher()) {
+            val writes = AtomicInteger()
+            val broken =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = flow { throw IOException("unreadable") }
+
+                    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+                        writes.incrementAndGet()
+                        return transform(emptyPreferences())
+                    }
+                }
+            val scope = CoroutineScope(StandardTestDispatcher(testScheduler))
+            val prefs = DockLayoutPreferences(broken, scope)
+            advanceUntilIdle()
+            prefs.saveAs("Coding")
+            advanceUntilIdle()
+            scope.cancel()
+            assertEquals("kept for this run", setOf("Coding"), prefs.saved.value.keys)
+            assertEquals("nothing written over the layouts it could not read", 0, writes.get())
+        }
 }
