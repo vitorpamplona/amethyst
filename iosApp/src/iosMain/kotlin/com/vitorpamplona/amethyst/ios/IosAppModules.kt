@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.KtorBlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
@@ -144,8 +145,10 @@ class IosAppModules(
     val uiPrefs: UiSettingsFlow =
         UiSettingsFlow.build(runBlocking { UiSettingsStore(sharedSettingsStore).load() } ?: UiSettingsFlow().toSettings())
 
-    // Tor comes with B12; until then the stored settings say off and nothing routes through it.
-    val torPrefs: TorSettingsStore = TorSettingsStore(TorSettings(), sharedSettingsStore, applicationIOScope)
+    // No Tor on iOS until B12d (commons/plans/2026-11-25-ios-tor.md): every connection goes direct,
+    // so the settings start with Tor off. TorSettings()'s default is INTERNAL, which made the
+    // Privacy screen claim that DM and new relays went through Tor.
+    val torPrefs: TorSettingsStore = TorSettingsStore(TorSettings(torType = TorType.OFF), sharedSettingsStore, applicationIOScope)
 
     val namecoinPrefs by lazy { NamecoinSettingsStore(sharedSettingsStore, applicationIOScope) }
     val otsPrefs by lazy { OtsSettingsStore(sharedSettingsStore, runBlocking { OtsSettingsStore.load(sharedSettingsStore) }) }

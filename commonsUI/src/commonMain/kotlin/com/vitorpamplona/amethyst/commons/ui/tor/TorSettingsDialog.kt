@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_s
 import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
 import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
+import com.vitorpamplona.amethyst.commons.resources.tor_not_available_on_this_device
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
@@ -200,6 +201,10 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
         modifier = Modifier.padding(horizontal = 5.dp),
         verticalArrangement = Arrangement.spacedBy(Size10dp),
     ) {
+        if (!LocalAppPlatform.current.supportsTor) {
+            Text(stringRes(Res.string.tor_not_available_on_this_device))
+            return@Column
+        }
         SettingsRow(
             Res.string.use_internal_tor,
             Res.string.use_internal_tor_explainer,

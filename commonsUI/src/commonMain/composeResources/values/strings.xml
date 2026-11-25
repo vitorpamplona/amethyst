@@ -4208,6 +4208,7 @@
     </plurals>
     <string name="cast_stop_casting">Stop casting</string>
     <string name="cast_to_device">Cast to device</string>
+    <string name="tor_not_available_on_this_device">Tor is not available on this device yet. Every connection goes direct.</string>
     <string name="play_on_another_device">Play on another device</string>
     <string name="play_on_another_device_description">Tap the button below to pick a speaker or TV.</string>
     <string name="chat_delivery_accepted">Accepted by at least one relay</string>

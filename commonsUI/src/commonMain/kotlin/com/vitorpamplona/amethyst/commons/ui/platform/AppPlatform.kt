@@ -225,6 +225,13 @@ interface AppPlatform {
     fun NotificationCategorySettings() {}
 
     /**
+     * Whether this app can route through Tor here (its own Tor, or an external SOCKS port like
+     * Orbot's). Where it can't, the Tor settings say so instead of offering choices that would
+     * change nothing: connections go direct.
+     */
+    val supportsTor: Boolean get() = true
+
+    /**
      * Whether this platform can show a notification with Tor's startup progress
      * ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification]). Only Android has the
      * notifier, so the Tor settings show the switch only where this is true.

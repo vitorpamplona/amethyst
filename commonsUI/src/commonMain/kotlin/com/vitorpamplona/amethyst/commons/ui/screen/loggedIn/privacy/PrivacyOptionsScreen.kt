@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_engine
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_routing
+import com.vitorpamplona.amethyst.commons.resources.tor_not_available_on_this_device
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
@@ -158,6 +159,15 @@ fun PrivacyOptionsContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         SettingsSection(Res.string.settings_section_tor_engine) {
+            if (!LocalAppPlatform.current.supportsTor) {
+                // Nothing to choose: saying so beats offering a switch that changes nothing.
+                Text(
+                    text = stringRes(Res.string.tor_not_available_on_this_device),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                return@SettingsSection
+            }
             TorEngineTile(torSettings, torType)
             AnimatedVisibility(
                 visible = torType == TorType.EXTERNAL,

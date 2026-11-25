@@ -37,6 +37,9 @@ object IosAppPlatform : AppPlatform {
 
     override val appFlavor: String get() = "ios"
 
+    // No Tor on iOS until B12d (commons/plans/2026-11-25-ios-tor.md): say so rather than offer it.
+    override val supportsTor: Boolean get() = false
+
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable
     override fun AppBottomBar(
