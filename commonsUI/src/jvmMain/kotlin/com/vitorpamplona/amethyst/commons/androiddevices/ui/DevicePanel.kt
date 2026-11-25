@@ -223,8 +223,9 @@ fun DevicePanel(
             value = null
             return@produceState
         }
-        // An emulator started here whose control port isn't answering yet is asked again for a
-        // while, so the live stream takes over from adb screenshots once it can.
+        // An emulator whose control port should answer but isn't yet (still coming up, or Android
+        // Studio's not yet taking this app's key) is asked again for a while, so the live stream
+        // takes over from adb screenshots once it can.
         var tries = 0
         do {
             value =
@@ -233,7 +234,7 @@ fun DevicePanel(
                 } catch (_: IOException) {
                     null
                 }
-            if (value?.emulator != null || !device.startedHere) break
+            if (value?.emulator != null || !(device.startedHere || device.liveStream)) break
             delay(CONNECT_RETRY_MS)
         } while (++tries < CONNECT_RETRIES)
     }

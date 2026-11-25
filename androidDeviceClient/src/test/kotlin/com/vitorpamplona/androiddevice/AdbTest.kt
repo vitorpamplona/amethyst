@@ -180,4 +180,14 @@ class RawScreencapTest {
         assertNull(Adb.parsePid("", "com.app"))
         assertNull(Adb.parsePid("u0_a52 3001 1153 990000 40000 ffffffff b7751f15 S com.app:remote\n", "com.app"))
     }
+
+    @Test
+    fun readsHowAndroidTurnedItsScreen() {
+        // Android 5's dumpsys input, cut down: the touchscreen's surface orientation.
+        assertEquals(1, Adb.parseDisplayRotation("  Device 1: qwerty2\n    Touch Input Mapper:\n      SurfaceOrientation: 1\n"))
+        // Without one, the default viewport's.
+        assertEquals(3, Adb.parseDisplayRotation("  mDefaultViewport=DisplayViewport{valid=true, displayId=0, orientation=3, logicalFrame=Rect(0, 0 - 800, 480)}\n"))
+        assertEquals(2, Adb.parseDisplayRotation("Viewport INTERNAL: displayId=0, uniqueId=local:0, port=0, orientation=2, logicalFrame=[0, 0, 1080, 2400]"))
+        assertNull(Adb.parseDisplayRotation("INPUT MANAGER (dumpsys input)\n"))
+    }
 }

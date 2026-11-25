@@ -350,6 +350,13 @@ class Adb(
         shell(serial, "settings", "put", "system", "user_rotation", (quarterTurns and 3).toString())
     }
 
+    /**
+     * How Android has turned its screen now, in quarter turns: what uiautomator's bounds, `screencap`
+     * and `input` use. It can differ from how the device is held (an app locked to landscape on a
+     * portrait emulator). Null when the device doesn't say.
+     */
+    suspend fun displayRotation(serial: String): Int? = parseDisplayRotation(shell(serial, "dumpsys", "input"))
+
     /** Auto-rotate on: Android turns its screen as the device's sensor says (an emulator's rotate). */
     suspend fun followSensor(serial: String) {
         shell(serial, "settings", "put", "system", "accelerometer_rotation", "1")
@@ -367,6 +374,17 @@ class Adb(
         private val WHITESPACE = Regex("\\s+")
         private const val CRASH_LINES = 400
         private const val ANR_LINES = 200
+
+        /** The screen's rotation from `dumpsys input`: the touchscreen's `SurfaceOrientation`, else the default viewport's. */
+        fun parseDisplayRotation(dump: String): Int? =
+            (SURFACE_ORIENTATION.find(dump) ?: VIEWPORT_ORIENTATION.find(dump))
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
+                ?.and(3)
+
+        private val SURFACE_ORIENTATION = Regex("SurfaceOrientation:\\s*(\\d)")
+        private val VIEWPORT_ORIENTATION = Regex("(?:mDefaultViewport|Viewport INTERNAL)[^\\n]*?orientation=(\\d)")
 
         /** A pid from `pidof`'s answer (pids alone), or the `ps` line whose name is [packageName]. */
         fun parsePid(

@@ -1167,6 +1167,8 @@ class ClaudeCodeService(
             withContext(Dispatchers.IO) { chat.kill() }
             watchers.remove(row.key)?.cancel()
             chats.update { it - row.key }
+            // A chat outside a workstream owns its emulator copy: it goes with the chat.
+            AndroidDevices.shared.releaseOwner(row.key)
             // Its own status watcher is gone: a chat deleted while waiting must leave the count.
             recountNeedsYou()
             rebuildRows()

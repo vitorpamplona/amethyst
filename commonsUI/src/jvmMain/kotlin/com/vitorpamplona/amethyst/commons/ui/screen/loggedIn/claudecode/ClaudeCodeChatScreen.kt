@@ -301,6 +301,12 @@ internal val ChatColumnMaxWidth = 760.dp
 
 private const val LIVE_REFRESH_MS = 5_000L
 
+/** How long the agent must leave the device alone before its next action brings the panel up again. */
+private const val DEVICE_RUN_GAP_MS = 60_000L
+
+/** How fresh the device list behind the top bar's green dot is kept. */
+private const val DEVICE_DOT_REFRESH_MS = 10_000L
+
 /** The agent a chat talks to, as its sentences name it. */
 internal val LocalAgentName = staticCompositionLocalOf { "Claude" }
 
@@ -474,9 +480,24 @@ fun ClaudeCodeChatScreen(
                 )
             onDispose(release)
         }
-        // When the agent starts using this chat's device, the panel comes up to show what it does.
+        // When the agent starts using this chat's device, the panel comes up to show what it does:
+        // once per run of work, so a user who folds it while the agent goes on keeps it folded.
         LaunchedEffect(key, deviceOwner, dock) {
-            AndroidDevices.shared.activity.collect { a -> if (AndroidDevices.shared.selection.value[deviceOwner] == a.serial) dock?.show(PanelId.DEVICES) }
+            var lastAt = 0L
+            AndroidDevices.shared.activity.collect { a ->
+                if (AndroidDevices.shared.selection.value[deviceOwner] != a.serial) return@collect
+                val now = System.currentTimeMillis()
+                if (now - lastAt > DEVICE_RUN_GAP_MS) dock?.show(PanelId.DEVICES)
+                lastAt = now
+            }
+        }
+        // The top bar's green dot reads the device list: kept fresh while the chat is shown, even
+        // with the panel (which polls it closely) folded.
+        LaunchedEffect(Unit) {
+            while (true) {
+                AndroidDevices.shared.refreshIfStale(DEVICE_DOT_REFRESH_MS)
+                delay(DEVICE_DOT_REFRESH_MS)
+            }
         }
     }
     // Sentences in the chat name the agent ("Codex wants to run a command").

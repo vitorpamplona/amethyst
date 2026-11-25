@@ -29,7 +29,6 @@ import com.vitorpamplona.androiddevice.device.EmulatorScreen
 import com.vitorpamplona.androiddevice.device.PngSize
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
 import com.vitorpamplona.androiddevice.emulator.PixelFormat
-import com.vitorpamplona.androiddevice.grpc.GrpcException
 import com.vitorpamplona.androiddevice.ui.UiTree
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -88,12 +87,33 @@ class DeviceConnection(
     @Volatile
     private var cachedScreen: DeviceScreen? = null
 
+    @Volatile
+    private var display: Pair<Int?, Long>? = null
+
+    /** Android's screen rotation ([Adb.displayRotation]), asked again after a moment. */
+    private suspend fun displayRotation(): Int? {
+        display?.let { (value, at) -> if (System.currentTimeMillis() - at < DISPLAY_TTL_MS) return value }
+        return adb.displayRotation(serial).also { display = it to System.currentTimeMillis() }
+    }
+
+    /**
+     * The emulator's rotation, when its frames are turned as Android's screen is; null when they
+     * aren't. An app locked to an orientation the device isn't held in (a landscape game on a
+     * portrait emulator) turns Android's screen but not the emulator's frames: the agent's
+     * coordinates (uiautomator's, adb's) then don't match the emulator's, and adb serves it.
+     */
+    private suspend fun matchingRotation(controller: EmulatorController): Int? {
+        val skin = controller.rotation()
+        val android = displayRotation() ?: return skin
+        return skin.takeIf { it == android }
+    }
+
     /** How the screen is turned now, in quarter turns from portrait. */
     suspend fun rotation(): Int {
         emulator?.let { emu ->
             try {
                 return emu.rotation()
-            } catch (e: GrpcException) {
+            } catch (e: IOException) {
                 Log.w(TAG, "The emulator $serial didn't say how it is turned; asking adb", e)
             }
         }
@@ -112,12 +132,14 @@ class DeviceConnection(
                 // The sensor turns the screen only with auto-rotate on, which an adb turn switches off.
                 adb.followSensor(serial)
                 emu.setRotation(quarterTurns)
+                display = null
                 return
-            } catch (e: GrpcException) {
+            } catch (e: IOException) {
                 Log.w(TAG, "The emulator $serial didn't take a rotation; locking it through adb", e)
             }
         }
         adb.rotate(serial, quarterTurns)
+        display = null
     }
 
     /**
@@ -167,7 +189,7 @@ class DeviceConnection(
     ) {
         val controller = emulator ?: return viaAdb()
         try {
-            val rotation = controller.rotation()
+            val rotation = matchingRotation(controller) ?: return viaAdb()
             val turned = size().let { if (rotation % 2 == 1) it.logical.swapped() else it.logical }
             val natural = size().physical
 
@@ -195,14 +217,14 @@ class DeviceConnection(
         val longEdge = (max(logical.width, logical.height) * scale).roundToInt()
         emulator?.let { controller ->
             try {
+                // Frames turned otherwise than Android's screen would not match the UI tree's bounds.
+                if (matchingRotation(controller) == null) return@let
                 // The emulator scales it itself; a box of the long edge on both sides fits either orientation.
                 val image = controller.screenshot(PixelFormat.PNG, longEdge, longEdge)
                 if (!image.isEmpty) {
                     lastShownSize = ScreenSize((image.width / scale).roundToInt(), (image.height / scale).roundToInt())
                     return AgentShot(image.pixels, image.width, image.height, scale)
                 }
-            } catch (e: GrpcException) {
-                Log.w(TAG, "The emulator's screenshot failed; asking adb", e)
             } catch (e: IOException) {
                 Log.w(TAG, "The emulator's screenshot failed; asking adb", e)
             }
@@ -225,6 +247,7 @@ class DeviceConnection(
     companion object {
         private const val TAG = "DeviceConnection"
         private const val SIZE_TTL_MS = 30_000L
+        private const val DISPLAY_TTL_MS = 1_500L
         private const val TAP_HOLD_MS = 40L
         private const val SWIPE_STEP_MS = 16L
         private const val MAX_SWIPE_STEPS = 60

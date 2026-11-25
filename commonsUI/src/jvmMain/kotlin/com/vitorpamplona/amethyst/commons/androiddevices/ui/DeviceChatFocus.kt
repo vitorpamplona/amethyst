@@ -41,17 +41,29 @@ class ChatFocus(
 )
 
 /**
- * Which coding chat the dock's device panel follows: the one a chat screen in the main window
- * published last ([publish]), until it leaves. With none, the panel is the Android devices screen's
- * (any device, AVDs started as themselves).
+ * Which coding chat the dock's device panel follows: the one a chat screen published last
+ * ([publish]) among those still shown. Several can be (a deck column, a pinned chat, another
+ * window): when the latest leaves, the one before it is followed again. With none, the panel is the
+ * Android devices screen's (any device, AVDs started as themselves).
  */
 object DeviceChatFocus {
+    private val shown = mutableListOf<ChatFocus>()
+
     var current by mutableStateOf<ChatFocus?>(null)
         private set
 
     /** [focus] is in front; call what it returns when its screen leaves. */
     fun publish(focus: ChatFocus): () -> Unit {
-        current = focus
-        return { if (current === focus) current = null }
+        synchronized(shown) {
+            shown.remove(focus)
+            shown.add(focus)
+            current = focus
+        }
+        return {
+            synchronized(shown) {
+                shown.remove(focus)
+                current = shown.lastOrNull()
+            }
+        }
     }
 }

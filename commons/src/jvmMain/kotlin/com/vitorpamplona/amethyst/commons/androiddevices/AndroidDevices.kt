@@ -284,6 +284,9 @@ class AndroidDevices(
                 val seen = adbDevices.map { it.serial }.toSet()
                 booted.retainAll(seen)
                 connections.keys.retainAll(seen)
+                adbOnlyUntil.keys.retainAll(seen)
+                // Keys given to emulators that have gone: their folders went with them.
+                jwtAuths.entries.removeIf { (dir, auth) -> !File(dir).isDirectory.also { if (!it) auth.close() } }
                 // An emulator that went away on its own takes its process with it.
                 launched.entries.removeIf { (_, l) -> !l.process.isAlive }
                 // Ports are reused: a serial gone from adb (and not one starting here) leaves no owner
@@ -528,7 +531,15 @@ class AndroidDevices(
         val adb = adb() ?: return
         val started = System.currentTimeMillis()
         while (System.currentTimeMillis() - started < RESET_RECONNECT_MS) {
-            if (adb.devices().any { it.serial == serial && it.isOnline } && adb.bootCompleted(serial)) break
+            // adb itself may stumble while the guest reconnects: the reset is done, so keep looking.
+            val back =
+                try {
+                    adb.devices().any { it.serial == serial && it.isOnline } && adb.bootCompleted(serial)
+                } catch (e: IOException) {
+                    Log.d(TAG, "adb stumbled while an emulator reconnected", e)
+                    false
+                }
+            if (back) break
             delay(RESET_POLL_MS)
         }
         booted += serial
@@ -575,15 +586,27 @@ class AndroidDevices(
      * status call; an emulator that refuses it is driven through adb).
      */
     suspend fun connection(serial: String): DeviceConnection {
-        connections[serial]?.let { return it }
+        connections[serial]?.let { cached ->
+            val retryAt = adbOnlyUntil[serial]
+            if (cached.emulator != null || retryAt == null || System.currentTimeMillis() < retryAt) return cached
+        }
         val adb = adb() ?: throw IOException("adb isn't installed: install the Android SDK's platform-tools")
         val controller = emulatorController(serial)
         val connection = DeviceConnection(serial, adb, controller)
-        // An emulator started here whose control port didn't answer yet (still coming up) is asked
-        // again next time, instead of being stuck on adb screenshots for its whole life.
-        if (controller != null || !launched.containsKey(serial)) connections[serial] = connection
+        // An emulator whose control port should answer but didn't (still coming up, or Android
+        // Studio's not yet taking this app's key) is asked again after a pause, instead of being
+        // stuck on adb screenshots for its whole life.
+        if (controller == null && (launched.containsKey(serial) || device(serial)?.liveStream == true)) {
+            adbOnlyUntil[serial] = System.currentTimeMillis() + GRPC_RETRY_MS
+        } else {
+            adbOnlyUntil.remove(serial)
+        }
+        connections[serial] = connection
         return connection
     }
+
+    /** Emulators driven through adb for now, though their control port should open: when to try it again. */
+    private val adbOnlyUntil = ConcurrentHashMap<String, Long>()
 
     private suspend fun emulatorController(serial: String): EmulatorController? {
         if (!serial.startsWith("emulator-")) return null
@@ -708,6 +731,7 @@ class AndroidDevices(
         private const val BOOT_POLL_MS = 2_000L
         private const val RESET_RECONNECT_MS = 30_000L
         private const val RESET_POLL_MS = 300L
+        private const val GRPC_RETRY_MS = 5_000L
         private const val STOP_WAIT_S = 20L
         private const val MAX_CRASHES = 50
         private const val AVD_TTL_MS = 10_000L
