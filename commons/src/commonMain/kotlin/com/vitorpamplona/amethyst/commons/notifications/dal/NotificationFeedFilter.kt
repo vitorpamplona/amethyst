@@ -771,6 +771,10 @@ class NotificationFeedFilter(
         // relevance check (tagsAnEventByUser is skipped below); it still scopes
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
+            // Like every other feed: an event dated ahead (past the minute of clock skew the params
+            // allow) would sit on top until that date and carry the tab's last-read marker with it,
+            // keeping the badge off and marking every real notification read.
+            noteEvent != null && filterParams.isNotInTheFuture(noteEvent) &&
             (noteEvent is ZapReceiptEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || isConcord || isReactionToMe || isThreadReplyToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe || isThreadReplyToMe) &&
