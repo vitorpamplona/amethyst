@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecre
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.model.preferences.toAccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.toAccountSettings
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -49,6 +50,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +59,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
 
 /**
  * The saved logins of a front end with no legacy storage to migrate from: the encrypted roster, each
@@ -88,33 +90,33 @@ class StoreAccountSessionStore(
     // The key each npub holds in [keyVault], as last read or written. Every settings save carries
     // the key, and settings are saved on each last-read marker, so without this every post that
     // loads rewrites the OS keychain item, and macOS asks for the keychain password each time.
-    private val keysInVault = ConcurrentHashMap<String, String>()
+    private val keysInVault = ConcurrentMap<String, String>()
 
     // Same for the secrets: AES-GCM re-randomises the IV, so DataStore can never skip an
     // unchanged group by itself and every save would rewrite and fsync the file.
-    private val savedSecrets = ConcurrentHashMap<String, AccountSecrets>()
+    private val savedSecrets = ConcurrentMap<String, AccountSecrets>()
 
     // Accounts whose key the user chose not to keep on this device during this run: the key file's
     // "Don't remember", which happens inside the vault, after the roster entry was built.
-    private val keysNotKept = ConcurrentHashMap.newKeySet<String>()
+    private val keysNotKept = ConcurrentSet<String>()
 
     // Accounts whose stored key was deleted because they no longer remember it, once per run.
-    private val keysForgotten = ConcurrentHashMap.newKeySet<String>()
+    private val keysForgotten = ConcurrentSet<String>()
 
     // Keys that could not be kept because the key file stayed locked this run. Saved again only on
     // the next run: the user already skipped the password, and each settings save would retry.
-    private val keysLockedOut = ConcurrentHashMap<String, String>()
+    private val keysLockedOut = ConcurrentMap<String, String>()
 
     // Keys the vault failed to keep for any other reason this run (the OS keyring refused, an I/O
     // error). Saved again only on the next run: each settings save (a feed switch, a last-read
     // marker) would otherwise fail the same way, reopen the dialog the user just dismissed, and on
     // a refusing keyring ask for its password again.
-    private val keysFailed = ConcurrentHashMap<String, String>()
+    private val keysFailed = ConcurrentMap<String, String>()
 
     // Saved accounts this run opened transiently too (a temporary login, a desktop test run's
     // startup key): the transient entry replaces the saved one in memory, and the saved one is what
     // the roster keeps on disk for the next run.
-    private val shadowedAccounts = ConcurrentHashMap<String, AccountInfo>()
+    private val shadowedAccounts = ConcurrentMap<String, AccountInfo>()
 
     @Volatile
     private var currentAccount: String? = null
@@ -266,7 +268,7 @@ class StoreAccountSessionStore(
      * counts as remembered once the save succeeds; a second "Don't save" marks it as not kept again.
      */
     suspend fun keepDeclinedKeys() {
-        keysNotKept.toList().forEach { npub ->
+        keysNotKept.snapshot().forEach { npub ->
             keysNotKept.remove(npub)
             val key = keysInVault.remove(npub) ?: return@forEach
             saveKey(npub, key)

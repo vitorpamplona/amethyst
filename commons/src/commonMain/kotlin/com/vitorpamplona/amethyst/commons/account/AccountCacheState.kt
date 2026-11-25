@@ -23,23 +23,13 @@ package com.vitorpamplona.amethyst.commons.account
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedDeviceGroupBlobs
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
-import com.vitorpamplona.amethyst.commons.marmot.MarmotDeviceGroupSwitch
-import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
 import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
-import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
-import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobStores
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.MarmotHistoryBlobs
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
@@ -48,8 +38,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaym
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.cordn.client.CordnBlobCipher
-import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -61,24 +53,24 @@ import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okio.Path.Companion.toOkioPath
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
+import okio.FileSystem
+import okio.Path
 
 /**
  * Builds and holds the logged-in [Account]s. Each app passes its platform pieces in, and none of
@@ -90,7 +82,8 @@ class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> CashuMintDirectoryFilterAssembler,
-    val okHttpClientForMoney: (String) -> OkHttpClient,
+    /** Talks to Cashu mints over the app's money route; shared by every [Account]. */
+    val cashuMintTransport: MintHttpTransport,
     /**
      * The signer for an account whose key lives in a signer app ([AccountSettings.externalSignerPackageName]):
      * Android's NIP-55 apps. Returns null where the platform has none, which leaves such an account read-only.
@@ -116,7 +109,9 @@ class AccountCacheState(
     val nip46Consent: Nip46ConsentPrompter,
     /** Builds the store for one account's geohash-chat identity, keyed by its pubkey. */
     val geohashIdentityStore: (HexKey) -> GeohashIdentityStore,
-    val rootFilesDir: () -> File,
+    val rootFilesDir: () -> Path,
+    /** Opens the at-rest stores in each account's directory (see [AccountStoreFactory]). */
+    val accountStores: AccountStoreFactory,
     val powQueue: () -> PoWPublishQueue?,
     /** Resource-ledger wrapper applied to every account signer (see MeteringNostrSigner); `{ it }` for none. */
     val meterSigner: (NostrSigner) -> NostrSigner,
@@ -148,11 +143,12 @@ class AccountCacheState(
     val marmotHistoryBlobs: ((Account) -> MarmotHistoryBlobs?)?,
     /** Where the pages NIP-46 signers send with `auth_url` challenges wait for the user. */
     val remoteSignerAuthPrompts: RemoteSignerAuthPrompts? = null,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
     /** Guards [loadAccount]'s check-then-create so concurrent callers can't build twin Accounts. */
-    private val loadLock = Any()
+    private val loadLock = KmpLock()
 
     /**
      * One [AppPreferenceStores] per account directory, kept for the life of the
@@ -166,9 +162,9 @@ class AccountCacheState(
      */
     private val accountStoreHolders = LargeCache<String, AppPreferenceStores>()
 
-    private fun storesFor(accountDir: File): AppPreferenceStores =
-        accountStoreHolders.getOrCreate(accountDir.absolutePath) {
-            AppPreferenceStores(rootFilesDir = { accountDir.toOkioPath() })
+    private fun storesFor(accountDir: Path): AppPreferenceStores =
+        accountStoreHolders.getOrCreate(accountDir.toString()) {
+            AppPreferenceStores(rootFilesDir = { accountDir })
         }
 
     override fun loadedAccount(pubkey: HexKey): Account? = accounts.value[pubkey]
@@ -241,7 +237,7 @@ class AccountCacheState(
     }
 
     /** The on-disk root that [loadAccount] creates a per-account directory under. */
-    private fun accountsRootDir() = File(rootFilesDir(), "accounts")
+    private fun accountsRootDir() = rootFilesDir() / "accounts"
 
     /**
      * Deletes the on-disk per-account directory (the MLS/Marmot stores created in
@@ -254,9 +250,11 @@ class AccountCacheState(
      */
     override fun deleteAccountFiles(pubkey: HexKey) {
         cache.chatroomList.remove(pubkey)
-        val dir = File(accountsRootDir(), pubkey)
-        if (dir.exists() && !dir.deleteRecursively()) {
-            Log.w("AccountCacheState") { "Failed to delete account directory ${dir.absolutePath}" }
+        val dir = accountsRootDir() / pubkey
+        try {
+            fileSystem.deleteRecursively(dir)
+        } catch (e: Exception) {
+            Log.w("AccountCacheState", "Failed to delete account directory $dir", e)
         }
     }
 
@@ -266,20 +264,21 @@ class AccountCacheState(
      * run alongside [loadAccount]: it only loads saved accounts, whose pubkeys are kept.
      */
     fun pruneOrphanAccountDirs(keepPubkeys: Set<HexKey>) {
-        val children = accountsRootDir().listFiles() ?: return
+        val children = fileSystem.listOrNull(accountsRootDir()) ?: return
         children.forEach { child ->
-            if (child.isDirectory && child.name !in keepPubkeys) {
-                if (child.deleteRecursively()) {
+            if (fileSystem.metadataOrNull(child)?.isDirectory == true && child.name !in keepPubkeys) {
+                try {
+                    fileSystem.deleteRecursively(child)
                     Log.d("AccountCacheState") { "Pruned orphan account dir ${child.name.take(8)}…" }
-                } else {
-                    Log.w("AccountCacheState") { "Failed to prune orphan account dir ${child.absolutePath}" }
+                } catch (e: Exception) {
+                    Log.w("AccountCacheState", "Failed to prune orphan account dir $child", e)
                 }
             }
         }
     }
 
     /** The NIP-46 signers of the loaded remote-signer accounts, closed when their account is removed. */
-    private val remoteSigners = ConcurrentHashMap<HexKey, NostrSignerRemote>()
+    private val remoteSigners = ConcurrentMap<HexKey, NostrSignerRemote>()
 
     private fun remoteSignerFor(settings: AccountSettings): NostrSignerRemote {
         val pubKey = settings.keyPair.pubKey.toHexKey()
@@ -364,7 +363,7 @@ class AccountCacheState(
         // Nip46SignerState answers bunker requests with a NostrSignerExternal no Activity
         // ever registers a launcher on (every sign fails "No activity to launch from"),
         // while duplicating consent prompts and racing error replies to NIP-46 clients.
-        return synchronized(loadLock) {
+        return loadLock.withLock {
             accounts.value[signer.pubKey]?.let { return it }
             createAccount(signer, accountSettings)
         }
@@ -381,102 +380,16 @@ class AccountCacheState(
                 disabled = { !accountSettings.syncedSettings.security.addClientTag.value },
             )
 
-        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}")
+        val accountDir = accountsRootDir() / signer.pubKey
         // An account this install never held: device groups start on for it (MarmotDeviceGroupSwitch).
-        val newAccount = !accountDir.exists()
-        accountDir.mkdirs()
-
-        val mlsStore =
-            try {
-                Log.d("AccountCacheState") {
-                    "Initializing EncryptedMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${accountDir.absolutePath}"
-                }
-                EncryptedMlsGroupStateStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize EncryptedMlsGroupStateStore, falling back to in-memory store (Marmot groups will NOT persist across restarts)",
-                    e,
-                )
-                InMemoryMlsGroupStateStore()
-            }
-        Log.d("AccountCacheState") {
-            "Account ${signer.pubKey.take(8)}… using Marmot store: ${mlsStore::class.simpleName}"
+        val newAccount = !fileSystem.exists(accountDir)
+        try {
+            fileSystem.createDirectories(accountDir)
+        } catch (e: Exception) {
+            Log.w("AccountCacheState", "could not create $accountDir", e)
         }
 
-        val marmotMessageStore =
-            try {
-                EncryptedMarmotMessageStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize EncryptedMarmotMessageStore (Marmot messages will NOT persist across restarts)",
-                    e,
-                )
-                null
-            }
-
-        val marmotKeyPackageStore =
-            try {
-                EncryptedKeyPackageBundleStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize EncryptedKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)",
-                    e,
-                )
-                null
-            }
-
-        val marmotPublishObligationStore =
-            try {
-                EncryptedPublishObligationStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize EncryptedPublishObligationStore " +
-                        "(a Marmot commit interrupted mid-publish will NOT be retried after a restart)",
-                    e,
-                )
-                null
-            }
-
-        val marmotIngestDedupStore =
-            try {
-                AndroidIngestDedupStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize AndroidIngestDedupStore " +
-                        "(every backdated gift wrap will be re-decided on each sync)",
-                    e,
-                )
-                null
-            }
-
-        val marmotPushStateStore =
-            try {
-                AndroidPushStateStore(accountDir)
-            } catch (e: Exception) {
-                Log.e(
-                    "AccountCacheState",
-                    "Failed to initialize AndroidPushStateStore " +
-                        "(a revoked push token could be resurrected by a relayed token list after a restart)",
-                    e,
-                )
-                null
-            }
-
-        // Marmot device groups stay off unless this account's switch file exists; their records hold
-        // the device tag's signing seed and private KeyPackages, so they are encrypted at rest.
-        val marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir, newAccount)
-        val marmotLocalBlobs = EncryptedDeviceGroupBlobs(accountDir)
-        val marmotDeviceGroupStores =
-            if (marmotDeviceGroupSwitch.isEnabled()) {
-                DeviceGroupBlobStores(marmotLocalBlobs)
-            } else {
-                null
-            }
+        val stores = accountStores.open(accountDir, newAccount)
 
         // Per-account NIP-42 ALLOW/DENY overrides live in this account's own dir, so a DENY for one
         // account never leaks into another (the store used to be a single app-wide file).
@@ -491,7 +404,7 @@ class AccountCacheState(
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
             cashuMintDirectoryFilterAssembler = cashuMintDirectoryFilterAssembler,
-            cashuMintTransport = OkHttpMintTransport(okHttpClientForMoney),
+            cashuMintTransport = cashuMintTransport,
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
@@ -513,21 +426,21 @@ class AccountCacheState(
             // The same per-account directory the Marmot stores use. cordn
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
-            cordnFilesDir = accountDir.toOkioPath().takeIf { cordnBlobCipher != null },
+            cordnFilesDir = accountDir.takeIf { cordnBlobCipher != null },
             // The Web of Trust index lives with the account, so deleting the account deletes it.
-            trustNetworkDir = accountDir.toOkioPath() / "wot",
+            trustNetworkDir = accountDir / "wot",
             trustNetworkClientBuilder = trustNetworkClientBuilder,
             canDownloadLargeFiles = canDownloadLargeFiles,
-            mlsGroupStateStore = mlsStore,
-            marmotMessageStore = marmotMessageStore,
-            marmotKeyPackageStore = marmotKeyPackageStore,
-            marmotPublishObligationStore = marmotPublishObligationStore,
-            marmotIngestDedupStore = marmotIngestDedupStore,
-            marmotPushStateStore = marmotPushStateStore,
-            marmotDeviceGroupStores = marmotDeviceGroupStores,
-            marmotDeviceGroupSwitch = marmotDeviceGroupSwitch,
-            marmotLocalBlobs = marmotLocalBlobs,
-            marmotDevicePlatform = MarmotDevicePlatform.name(),
+            mlsGroupStateStore = stores.mlsGroupStateStore,
+            marmotMessageStore = stores.marmotMessageStore,
+            marmotKeyPackageStore = stores.marmotKeyPackageStore,
+            marmotPublishObligationStore = stores.marmotPublishObligationStore,
+            marmotIngestDedupStore = stores.marmotIngestDedupStore,
+            marmotPushStateStore = stores.marmotPushStateStore,
+            marmotDeviceGroupStores = stores.marmotDeviceGroupStores(),
+            marmotDeviceGroupSwitch = stores.marmotDeviceGroupSwitch,
+            marmotLocalBlobs = stores.marmotLocalBlobs,
+            marmotDevicePlatform = stores.marmotDevicePlatform,
             marmotHistoryBlobs = marmotHistoryBlobs,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,

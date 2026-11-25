@@ -20,23 +20,39 @@
  */
 package com.vitorpamplona.amethyst.commons.keystorage
 
-// Phase 2 compile-only iOS actual. Keychain Services wiring lands in Phase 4
-// (write paths: signing, posting, settings) per amethyst/plans/2026-05-24-ios-support.md.
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
+/**
+ * iOS [SecureKeyStorage]: each account's private key (hex) is a Keychain item named by its npub,
+ * kept on this device only (see [Keychain]). Face ID gating comes with `DeviceAuthenticator`
+ * (plans/2026-10-09-ios-app.md, B2).
+ */
 actual class SecureKeyStorage private actual constructor() {
+    private val keychain = Keychain(SERVICE)
+
     actual companion object {
+        private const val SERVICE = "com.vitorpamplona.amethyst.private-keys"
+
         actual fun create(context: Any?): SecureKeyStorage = SecureKeyStorage()
     }
 
     actual suspend fun savePrivateKey(
         npub: String,
         privKeyHex: String,
-    ): Unit = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+    ): Unit = withContext(Dispatchers.IO) { keychain.write(npub, privKeyHex.encodeToByteArray()) }
 
-    actual suspend fun getPrivateKey(npub: String): String? = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+    actual suspend fun getPrivateKey(npub: String): String? =
+        try {
+            getPrivateKeyOrThrow(npub)
+        } catch (e: SecureStorageException) {
+            null
+        }
 
-    actual suspend fun getPrivateKeyOrThrow(npub: String): String? = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+    actual suspend fun getPrivateKeyOrThrow(npub: String): String? = withContext(Dispatchers.IO) { keychain.read(npub)?.decodeToString() }
 
-    actual suspend fun deletePrivateKey(npub: String): Boolean = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+    actual suspend fun deletePrivateKey(npub: String): Boolean = withContext(Dispatchers.IO) { keychain.delete(npub) }
 
-    actual suspend fun hasPrivateKey(npub: String): Boolean = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+    actual suspend fun hasPrivateKey(npub: String): Boolean = getPrivateKeyOrThrow(npub) != null
 }

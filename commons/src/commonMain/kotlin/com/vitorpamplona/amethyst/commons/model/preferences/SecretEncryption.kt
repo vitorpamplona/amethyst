@@ -24,11 +24,9 @@ package com.vitorpamplona.amethyst.commons.model.preferences
  * Symmetric encryption for data this app stores at rest — account secrets, the
  * Marmot group state, message bodies.
  *
- * Declared for `jvmAndroid` rather than `commonMain` on purpose: Android backs
- * it with the hardware-held AndroidKeyStore and desktop with a key file the OS
- * user owns, and those are the two targets that store secrets today. An Apple
- * actual belongs with the first iOS build that needs one, written against the
- * Keychain — not stubbed here, where nothing would exercise it.
+ * Android backs it with the hardware-held AndroidKeyStore, the desktop with a key
+ * file the OS user owns, and iOS with a key in the Keychain. Every platform writes
+ * the same AES-256-GCM layout: a 12-byte nonce, then the ciphertext and tag.
  *
  * Implementations must be safe to call from several coroutines at once.
  */

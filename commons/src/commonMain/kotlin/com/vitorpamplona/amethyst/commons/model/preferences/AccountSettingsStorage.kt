@@ -78,7 +78,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * An account's per-account DataStore records, read in one hop. Android reads them through
@@ -418,8 +419,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
                     if (legacyNorm != null) {
                         val migrated =
                             NwcWalletEntryNorm(
-                                id =
-                                    UUID.randomUUID().toString(),
+                                id = newWalletEntryId(),
                                 name = "Wallet",
                                 uri = legacyNorm,
                             )
@@ -730,12 +730,15 @@ private fun toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowLi
         chess = filters.getValue(FollowListSlot.CHESS),
     )
 
+@OptIn(ExperimentalUuidApi::class)
+private fun newWalletEntryId(): String = Uuid.random().toString()
+
 private inline fun <reified T : Any> parseOrNull(value: String?): T? {
     if (value.isNullOrEmpty() || value == "null") {
         return null
     }
     return try {
-        if (T::class.java.isInstance(Event::class.java)) {
+        if (T::class.isInstance(Event::class)) {
             Event.fromJson(value) as T?
         } else {
             JsonMapper.fromJson<T>(value)

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.account.EncryptedFileAccountStores
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateManager
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
@@ -145,6 +146,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
@@ -602,7 +604,7 @@ class DesktopAppModules(
             geolocationFlow = { noLocation },
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
-            okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
+            cashuMintTransport = OkHttpMintTransport(roleBasedHttpClientBuilder::okHttpClientForMoney),
             // NIP-55 signer apps are Android's: an account that used one is read-only here.
             externalSignerFactory = { _, _ -> null },
             cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
@@ -615,7 +617,8 @@ class DesktopAppModules(
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = nip46Consent,
             geohashIdentityStore = { pubKey -> sessionStore.geohashIdentityStore(pubKey) },
-            rootFilesDir = { filesDir },
+            rootFilesDir = { filesDir.toOkioPath() },
+            accountStores = EncryptedFileAccountStores,
             powQueue = { powPublishQueue },
             // The resource-usage ledger is Android's; nothing reads signer counts here.
             meterSigner = { it },
