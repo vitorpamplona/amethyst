@@ -41,7 +41,7 @@ class PushGuardTest {
         vararg args: String,
     ): String {
         val p =
-            ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false") + args)
+            ProcessBuilder(listOf("git", "-c", "user.name=T", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false") + args)
                 .directory(where)
                 .apply { environment().forgetInheritedRepository() }
                 .apply { environment().keys.removeAll { it.startsWith("GIT_CONFIG_") } }
