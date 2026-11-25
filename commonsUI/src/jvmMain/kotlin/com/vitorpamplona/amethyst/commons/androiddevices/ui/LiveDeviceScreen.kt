@@ -20,27 +20,31 @@
  */
 package com.vitorpamplona.amethyst.commons.androiddevices.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -73,10 +76,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceActivity
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceConnection
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.android_device_agent_acted
 import com.vitorpamplona.amethyst.commons.resources.android_device_agent_looked
@@ -88,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_did_tap
 import com.vitorpamplona.amethyst.commons.resources.android_device_did_type
 import com.vitorpamplona.amethyst.commons.resources.android_device_reconnect
 import com.vitorpamplona.amethyst.commons.resources.android_device_screen_failed
+import com.vitorpamplona.amethyst.commons.resources.android_device_typing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.device.DeviceScreen
@@ -219,17 +226,14 @@ fun LiveDeviceScreen(
     val focused by interaction.collectIsFocusedAsState()
     val clipboard = LocalClipboardManager.current
 
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val frame = drawn
-        val ratio = frame?.let { it.frame.width.toFloat() / it.frame.height } ?: DEFAULT_RATIO
-        val fits = maxWidth / maxHeight < ratio
-        val shape = RoundedCornerShape(18.dp)
-        Box(
+    val frame = drawn
+    val ratio = frame?.let { it.frame.width.toFloat() / it.frame.height } ?: PHONE_RATIO
+    DeviceFrame(
+        ratio = ratio,
+        focused = focused,
+        modifier = modifier,
+        screenModifier =
             Modifier
-                .then(if (fits) Modifier.aspectRatio(ratio, matchHeightConstraintsFirst = false) else Modifier.aspectRatio(ratio, matchHeightConstraintsFirst = true))
-                .clip(shape)
-                .background(Color.Black)
-                .border(if (focused) 2.dp else 1.dp, if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, shape)
                 .onSizeChanged { viewSize.value = it }
                 .focusRequester(focus)
                 .focusable(interactionSource = interaction)
@@ -298,20 +302,32 @@ fun LiveDeviceScreen(
                         }
                     }
                 },
-        ) {
-            if (frame != null) {
-                Image(frame.image, contentDescription = null, contentScale = ContentScale.FillBounds, filterQuality = FilterQuality.Medium, modifier = Modifier.fillMaxSize())
-            } else if (failure == null) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
-            }
-            AgentTouches(activity, agentName)
-            failure?.let { why ->
-                Surface(Modifier.align(Alignment.Center).padding(16.dp), shape = RoundedCornerShape(12.dp), tonalElevation = 6.dp) {
-                    Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringRes(Res.string.android_device_screen_failed, why), style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = { attempt++ }) { Text(stringRes(Res.string.android_device_reconnect)) }
-                    }
+    ) {
+        if (frame != null) {
+            Image(frame.image, contentDescription = null, contentScale = ContentScale.FillBounds, filterQuality = FilterQuality.Medium, modifier = Modifier.fillMaxSize())
+        } else if (failure == null) {
+            FrameMessage("", progress = true)
+        }
+        AgentTouches(activity, agentName)
+        // Clicked: what the keyboard does now, said once at the top of the screen while it holds.
+        AnimatedVisibility(focused && failure == null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f), contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(MaterialSymbols.Keyboard, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringRes(Res.string.android_device_typing), style = MaterialTheme.typography.labelSmall)
                 }
+            }
+        }
+        failure?.let { why ->
+            Column(
+                Modifier.align(Alignment.Center).padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(MaterialSymbols.Error, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))
+                Text(stringRes(Res.string.android_device_screen_failed, why), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+                FilledTonalButton(onClick = { attempt++ }) { Text(stringRes(Res.string.android_device_reconnect)) }
             }
         }
     }
@@ -404,7 +420,6 @@ private fun keyOf(key: Key): DeviceKey? =
         else -> null
     }
 
-private const val DEFAULT_RATIO = 9f / 19.5f
 private const val RESIZE_DEBOUNCE_MS = 250L
 private const val TOUCH_FADE_MS = 1_400
 private const val WHEEL_STEP = 0.12f

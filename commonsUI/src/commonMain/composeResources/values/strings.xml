@@ -9620,11 +9620,11 @@
     <string name="android_device_no_sdk">No Android SDK found. Install Android Studio, or set ANDROID_HOME to the SDK folder.</string>
     <string name="android_device_no_adb">The Android SDK at %1$s has no platform-tools: install them with the SDK Manager.</string>
     <string name="android_device_looking">Looking for devices…</string>
-    <string name="android_device_none">No device is running.</string>
+    <string name="android_device_none">No device is running</string>
     <string name="android_device_virtual_devices">Virtual devices</string>
     <string name="android_device_no_avds">No virtual devices yet. Create one in Android Studio’s Device Manager, or ask the agent to make one with avdmanager.</string>
     <string name="android_device_no_emulator">The Android emulator isn’t installed: add it with the SDK Manager.</string>
-    <string name="android_device_phone_hint">Or plug in a phone with USB debugging on.</string>
+    <string name="android_device_phone_hint">Or plug in a phone with USB debugging on</string>
     <string name="android_device_start">Start</string>
     <string name="android_device_starting">Starting %1$s…</string>
     <string name="android_device_booting">%1$s is booting…</string>
@@ -9654,7 +9654,6 @@
     <string name="android_device_agent_not_allowed">Agents can’t use this phone until you let them.</string>
     <string name="android_device_run">Run the app on this device</string>
     <string name="android_device_run_variant">Run %1$s %2$s</string>
-    <string name="android_device_no_app">No Android app in this folder to run</string>
     <string name="android_device_building">Building %1$s %2$s…</string>
     <string name="android_device_installing">Installing %1$s…</string>
     <string name="android_device_run_done">%1$s is open on the device</string>
@@ -9662,7 +9661,7 @@
     <string name="android_device_open_log">Open the build log</string>
     <string name="android_device_logcat">Logcat</string>
     <string name="android_device_logcat_empty">Nothing logged yet</string>
-    <string name="android_device_logcat_app_only">Only the app’s own lines</string>
+    <string name="android_device_logcat_app_only">App only</string>
     <string name="android_device_agent_acted">%1$s: %2$s</string>
     <string name="android_device_agent_looked">%1$s looked at the screen</string>
     <string name="android_device_did_tap">tapped %1$s</string>
@@ -9680,7 +9679,10 @@
     <string name="android_device_crashed">%1$s crashed</string>
     <string name="android_device_crashed_native">%1$s crashed in native code</string>
     <string name="android_device_anr">%1$s stopped responding</string>
-    <string name="android_device_type_hint">Click the screen, then type: keys go to the device</string>
+    <string name="android_device_status_live">Live</string>
+    <string name="android_device_status_polled">adb screenshots</string>
+    <string name="android_device_typing">Keys go to the device</string>
+    <string name="android_device_none_hint">Start a virtual device to see it here, live.</string>
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>
     <string name="claude_code_session_missing">This session isn't on this computer anymore.</string>

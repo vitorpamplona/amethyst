@@ -295,7 +295,9 @@ class AndroidDevices(
                 val kind = if (d.isEmulator) DeviceKind.EMULATOR else DeviceKind.PHYSICAL
                 DeviceInfo(
                     serial = d.serial,
-                    name = avd?.displayName ?: emulator?.avdName?.replace('_', ' ') ?: d.model ?: d.serial,
+                    // An emulator nobody's discovery file names: its serial says more than adb's
+                    // "sdk_gphone64_x86_64" model.
+                    name = avd?.displayName ?: emulator?.avdName?.replace('_', ' ') ?: (if (d.isEmulator) d.serial else d.model) ?: d.serial,
                     kind = kind,
                     status =
                         when {

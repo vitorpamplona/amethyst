@@ -128,7 +128,7 @@ class DeviceToolServerTest {
         runBlocking {
             val result = server.call(DeviceToolServer.LIST, args("{}"))
             assertFalse(result.isError, result.text)
-            assertTrue(result.text.contains("emulator-5554: sdk phone (emulator, online)"), result.text)
+            assertTrue(result.text.contains("- emulator-5554 (emulator, online)"), result.text)
             assertTrue(result.text.contains("R58M: Pixel 8 (phone, online, the user hasn't allowed agents on it)"), result.text)
         }
 

@@ -275,7 +275,8 @@ class DeviceToolServer(
                 } else {
                     append("Devices:")
                     state.devices.forEach { d ->
-                        append("\n- ").append(d.serial).append(": ").append(d.name)
+                        append("\n- ").append(d.serial)
+                        if (d.name != d.serial) append(": ").append(d.name)
                         append(" (").append(if (d.kind == DeviceKind.EMULATOR) "emulator" else "phone").append(", ").append(
                             d.status.name
                                 .lowercase()

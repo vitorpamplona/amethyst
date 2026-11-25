@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanel
 import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelVisibility
 import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelWidth
 import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicePanelWidthRange
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
@@ -528,12 +529,19 @@ fun ClaudeCodeChatScreen(
                                         if (deviceFits) DevicePanelVisibility.set(key, !showDevice) else nav.nav(Route.AndroidDevices(key))
                                     },
                                 ) {
-                                    Icon(
-                                        MaterialSymbols.PhoneAndroid,
-                                        contentDescription = stringRes(Res.string.android_device_panel_toggle),
-                                        tint = if (deviceShown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp),
-                                    )
+                                    // A green dot while this chat's device is up, panel open or not.
+                                    val devices by AndroidDevices.shared.state.collectAsStateWithLifecycle()
+                                    val picks by AndroidDevices.shared.selection.collectAsStateWithLifecycle()
+                                    val up = remember(devices, picks, deviceOwner) { AndroidDevices.shared.selected(deviceOwner)?.isOnline == true }
+                                    Box {
+                                        Icon(
+                                            MaterialSymbols.PhoneAndroid,
+                                            contentDescription = stringRes(Res.string.android_device_panel_toggle),
+                                            tint = if (deviceShown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        if (up) DeviceUpBadge(Modifier.align(Alignment.TopEnd))
+                                    }
                                 }
                             }
                         }
