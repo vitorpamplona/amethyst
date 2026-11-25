@@ -8464,6 +8464,7 @@
     <string name="kc_list_favorite_follow_sets">Favorite follow sets</string>
     <string name="kc_list_external_identities">External identities</string>
     <string name="kc_list_top_eight">Top 8</string>
+    <string name="kc_list_top_eight_rank">#%1$d</string>
     <string name="kc_list_theme_active">Profile theme</string>
     <string name="kc_list_theme_definition">Theme</string>
     <string name="kc_list_theme_incomplete">Incomplete theme, missing colors</string>

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,13 +33,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,16 +51,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routeForUser
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPreviewDialog
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.cashu_mints
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_emoji_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_and_more
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_sets
@@ -101,13 +113,18 @@ import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_definition
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_incomplete
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_title_font
 import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight
+import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight_rank
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.kind_emoji_packs
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
@@ -134,8 +151,11 @@ import com.vitorpamplona.quartz.experimental.profileTheme.tags.ThemeColors
 import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
@@ -147,6 +167,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -174,6 +195,7 @@ private const val MAX_BADGE_THUMBS = 16
 private const val MAX_STICKERS = 24
 private const val MAX_QUOTES = 2
 private const val MAX_NAME_CHIPS = 6
+private const val MAX_EMOJIS = 16
 private const val MAX_IDENTITIES = 6
 private val StickerSize = 64.dp
 
@@ -244,8 +266,8 @@ private fun QuotedAddresses(
 // ---------------------------------------------------------------------------------------------
 
 /**
- * NIP-51 kind 10030: the emoji packs this user picked. A pack's d-tag is its name, so the packs
- * show as name chips without loading nine pack events for one feed card.
+ * NIP-51 kind 10030, the user's emoji list: its own `emoji` tags (NIP-30 shortcode and image url)
+ * drawn as the emojis, and its `a` tags to kind-30030 emoji packs, named once each pack loads.
  */
 @Composable
 fun RenderEmojiList(
@@ -256,18 +278,129 @@ fun RenderEmojiList(
     nav: INav,
 ) {
     val event = baseNote.event as? EmojiListEvent ?: return
-    val packs = remember(event) { event.emojiPacks() }
-    val names = remember(packs) { packs.mapNotNull { it.dTag.ifBlank { null } } }
+    val emojis = remember(event) { event.tags.listEmojis() }
+    // NIP-51 points the list at kind-30030 sets only; Quartz's emojiPacks() takes any `a`.
+    val packs = remember(event) { event.emojiPacks().filter { it.kind == EmojiPackEvent.KIND } }
+    val subtitle =
+        listOfNotNull(
+            countLine(Res.plurals.emoji_pack_emoji_count, emojis.size),
+            countLine(Res.plurals.kc_list_emoji_pack_count, packs.size),
+        ).joinToString("  ·  ").ifBlank { null }
+    var preview by remember { mutableStateOf<EmojiUrlTag?>(null) }
 
     ListKindCard(
         icon = MaterialSymbols.EmojiEmotions,
         title = kindName(event.kind),
-        subtitle = countLine(Res.plurals.kc_list_emoji_pack_count, packs.size),
-        hasEntries = names.isNotEmpty(),
+        subtitle = subtitle,
+        hasEntries = emojis.isNotEmpty() || packs.isNotEmpty(),
     ) {
-        KindCardChips(names, max = MAX_NAME_CHIPS)
+        if (emojis.isNotEmpty()) {
+            if (accountViewModel.settings.showImages()) {
+                val tileModifier = rememberEmojiTileModifier()
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    emojis.take(MAX_EMOJIS).forEach { emoji -> EmojiTile(emoji, tileModifier) { preview = it } }
+                    if (emojis.size > MAX_EMOJIS) MoreCountBox(emojis.size - MAX_EMOJIS, EmojiTileSize)
+                }
+            } else {
+                KindCardChips(emojis.map { it.toContentEncode() }, max = MAX_EMOJIS)
+            }
+        }
+        if (packs.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.kind_emoji_packs))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                packs.take(MAX_NAME_CHIPS).forEach { address -> key(address.toValue()) { EmojiPackChip(address, accountViewModel, nav) } }
+            }
+            KindCardMore(packs.size - MAX_NAME_CHIPS)
+        }
+    }
+
+    preview?.let { emoji ->
+        EmojiPreviewDialog(emoji = emoji, packNote = null, accountViewModel = accountViewModel, nav = null, onDismiss = { preview = null })
     }
 }
+
+/** NIP-30 `emoji` tags a list or set may carry: a valid shortcode with an image url. */
+private fun TagArray.listEmojis(): List<EmojiUrlTag> =
+    mapNotNull { tag -> EmojiUrlTag.parse(tag)?.takeIf { EmojiUrlTag.isValidShortcode(it.code) && it.url.isNotBlank() } }
+        .distinctBy { it.code }
+
+/** An emoji pack the list points at: its title (or name) once it loads, its `d` until then. */
+@Composable
+private fun EmojiPackChip(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadAddressableNote(address) { note ->
+        val pack = note?.let { observeNoteEvent<EmojiPackEvent>(it, accountViewModel).value }
+        val name = pack?.titleOrName()?.ifBlank { null } ?: address.dTag.ifBlank { null } ?: stringRes(Res.string.kind_emoji_packs)
+        LinkChip(
+            label = name,
+            onClick = { note?.let { routeFor(it, accountViewModel.account) }?.let { nav.nav(it) } },
+        ) {
+            ChipImageOrIcon(pack?.image(), MaterialSymbols.EmojiEmotions, accountViewModel)
+        }
+    }
+}
+
+/**
+ * A chip that opens something: a small picture (or glyph) and a name, like [KindCardPerson] for a
+ * thing that is not a person.
+ */
+@Composable
+private fun LinkChip(
+    label: String,
+    onClick: () -> Unit,
+    leading: @Composable () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                .clickable(onClick = onClick)
+                .padding(start = 2.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+    ) {
+        leading()
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** A chip's 22 dp picture at [url], or [icon] when there is none or images are off. */
+@Composable
+private fun ChipImageOrIcon(
+    url: String?,
+    icon: MaterialSymbol,
+    accountViewModel: AccountViewModel,
+) {
+    val picture = url?.takeIf { it.isNotBlank() && accountViewModel.settings.showImages() }
+    Box(
+        modifier = Modifier.size(ChipImageSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (picture != null) {
+            AsyncImage(model = picture, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(ChipImageSize))
+        } else {
+            Icon(symbol = icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+private val ChipImageSize = 22.dp
 
 /** Kind 30031: a sticker pack — its name, description, and a grid of its safe-for-work stickers. */
 @Composable
@@ -674,8 +807,9 @@ fun RenderFavoriteFollowSets(
 }
 
 /**
- * NIP-72 kind 10004: the moderated communities this user follows. A community's d-tag is its
- * name, so they show as name chips without loading every community definition for a feed card.
+ * NIP-51 kind 10004: the NIP-72 communities this user follows (`a` tags to kind 34550). Each one
+ * loads and shows its picture and name ("if a `name` tag is provided, it SHOULD be displayed
+ * instead of the `d` tag"), and opens the community.
  */
 @Composable
 fun RenderCommunityList(
@@ -686,21 +820,46 @@ fun RenderCommunityList(
     nav: INav,
 ) {
     val event = baseNote.event as? CommunityListEvent ?: return
-    val communities = remember(event) { event.publicCommunities() }
-    val names = remember(communities) { communities.mapNotNull { it.address.dTag.ifBlank { null } } }
+    val communities = remember(event) { event.publicCommunities().map { it.address }.distinct() }
 
     ListKindCard(
         icon = MaterialSymbols.Forum,
         title = kindName(event.kind),
         subtitle = countLine(Res.plurals.kc_list_community_count, communities.size),
-        hasEntries = names.isNotEmpty(),
+        hasEntries = communities.isNotEmpty(),
         hasPrivateItems = event.content.isNotEmpty(),
     ) {
-        KindCardChips(names, max = MAX_NAME_CHIPS)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            communities.take(MAX_NAME_CHIPS).forEach { address -> key(address.toValue()) { CommunityChip(address, accountViewModel, nav) } }
+        }
+        KindCardMore(communities.size - MAX_NAME_CHIPS)
     }
 }
 
-/** Kind 18678: the eight people this user ranks first on their profile, as chips in rank order. */
+/** A community the list follows: its picture and name once its definition loads, its `d` until then. */
+@Composable
+private fun CommunityChip(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadAddressableNote(address) { note ->
+        val community = note?.let { observeNoteEvent<CommunityDefinitionEvent>(it, accountViewModel).value }
+        val name = community?.name()?.ifBlank { null } ?: address.dTag
+        LinkChip(label = name, onClick = { nav.nav(Route.Community(address)) }) {
+            ChipImageOrIcon(community?.image()?.imageUrl, MaterialSymbols.Forum, accountViewModel)
+        }
+    }
+}
+
+/**
+ * Kind 18678, Ditto's Top 8: the author's eight favorite people in rank order ("the first `p` tag
+ * is the author's number one"), as numbered avatars. Clients "SHOULD hide kind 18678 events with
+ * zero `p` tags", so an emptied list draws nothing.
+ */
 @Composable
 fun RenderTopEight(
     baseNote: Note,
@@ -710,16 +869,55 @@ fun RenderTopEight(
 ) {
     val event = baseNote.event as? TopEightEvent ?: return
     val ranked = remember(event) { event.rankedKeys() }
+    if (ranked.isEmpty()) return
 
     ListKindCard(
         icon = MaterialSymbols.Star,
         title = stringRes(Res.string.kc_list_top_eight),
         subtitle = null,
-        hasEntries = ranked.isNotEmpty(),
+        hasEntries = true,
     ) {
-        KindCardUsers(ranked, accountViewModel, nav, max = 8)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ranked.forEachIndexed { index, pubKey -> key(pubKey) { TopEightEntry(index + 1, pubKey, accountViewModel, nav) } }
+        }
     }
 }
+
+/** One of the Top 8: the picture, the rank, the name, opening the profile. */
+@Composable
+private fun TopEightEntry(
+    rank: Int,
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(
+        modifier = Modifier.width(TopEightCellWidth).clip(RoundedCornerShape(8.dp)).clickable { nav.nav(routeForUser(pubKey)) },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        UserPicture(pubKey, TopEightPictureSize, Modifier.clip(CircleShape), accountViewModel, nav)
+        Text(
+            text = stringRes(Res.string.kc_list_top_eight_rank, rank),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        LoadUser(pubKey) { user ->
+            if (user != null) {
+                ProvideTextStyle(MaterialTheme.typography.labelSmall) {
+                    UsernameDisplay(user, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, accountViewModel = accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+private val TopEightCellWidth = 64.dp
+private val TopEightPictureSize = 44.dp
 
 // ---------------------------------------------------------------------------------------------
 // Identity and presence
@@ -835,16 +1033,20 @@ fun RenderPostingStreak(baseNote: Note) {
 
     KindCard(
         icon = MaterialSymbols.LocalFireDepartment,
-        title = pluralStringRes(Res.plurals.kc_list_streak_days, days, days),
+        // Ditto: once the 36-hour window passes "clients MUST display nothing (or zero)" for the
+        // streak, so a broken one keeps no day count, only that it ended and when.
+        title = if (isLive) pluralStringRes(Res.plurals.kc_list_streak_days, days, days) else stringRes(Res.string.kc_list_streak_title),
         // The flame stays orange while the streak burns; an ended one goes quiet.
         iconTint = if (isLive) BitcoinOrange else null,
         tone = if (isLive) KindTone.Primary else KindTone.Neutral,
         status = stringRes(if (isLive) Res.string.kc_list_streak_pill_live else Res.string.kc_list_streak_pill_ended),
     ) {
-        KindCardField(
-            stringRes(Res.string.kc_list_streak_started),
-            formatDateTime(streak.start * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.NONE),
-        )
+        if (isLive) {
+            KindCardField(
+                stringRes(Res.string.kc_list_streak_started),
+                formatDateTime(streak.start * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.NONE),
+            )
+        }
         KindCardField(
             stringRes(Res.string.kc_list_streak_last_post),
             formatDateTime(streak.end * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT),
