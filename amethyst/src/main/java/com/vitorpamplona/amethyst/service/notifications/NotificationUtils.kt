@@ -145,22 +145,6 @@ object NotificationUtils {
         return true
     }
 
-    // Each account's Notifications-tab last-read marker (seconds), as last handed to
-    // [dismissNotificationsReadUpTo]. The sweep alone races the post: the card for a new event
-    // can reach the screen, and move the marker past it, before the dispatcher has posted it.
-    private val notificationsTabReadUpTo = ConcurrentHashMap<String, Long>()
-
-    /** Whether the Notifications tab of [forAccount] already counts an event of [category] made at [time] as read. */
-    private fun isReadOnNotificationsTab(
-        category: NotificationCategory,
-        forAccount: NotificationAccount?,
-        time: Long,
-    ): Boolean {
-        if (forAccount == null || !category.readOnNotificationsTab) return false
-        val readUpTo = notificationsTabReadUpTo[forAccount.npub] ?: return false
-        return time <= readUpTo
-    }
-
     /**
      * Derives a stable summary notification id for a per-thread reply group.
      * Uses the thread root id hash mixed with the base id so different threads
@@ -316,9 +300,8 @@ object NotificationUtils {
         forAccount: NotificationAccount? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
-        // running — don't resurrect it (and skip the bitmap work). The same once the
-        // Notifications tab has read past it, even before this was first posted.
-        if (wasDismissed(id) || isReadOnNotificationsTab(category, forAccount, time)) return
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
 
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
@@ -409,9 +392,8 @@ object NotificationUtils {
         marmotGroupId: String? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
-        // running — don't resurrect it (and skip the bitmap work). The same once the
-        // Notifications tab has read past it, even before this was first posted.
-        if (wasDismissed(id) || isReadOnNotificationsTab(category, forAccount, time)) return
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
 
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
@@ -865,15 +847,14 @@ object NotificationUtils {
      * follows the same rule, whether or not the user scrolled down to each card.
      *
      * Notifications are posted with their event's time as `when`, which is what is compared here.
-     * Remembers the marker so a notification posted after this sweep for an event it covers is not
-     * posted at all ([isReadOnNotificationsTab]).
+     * Called when the marker moves, never to block a post: an event that reaches the device after
+     * the user read past its time (a slow relay, an author's clock behind) still notifies, and goes
+     * at the next move of the marker.
      */
     fun NotificationManager.dismissNotificationsReadUpTo(
         npub: String,
         readUpTo: Long,
     ) {
-        notificationsTabReadUpTo.merge(npub, readUpTo, ::maxOf)
-
         val readUpToMillis = readUpTo * 1000
         val gone =
             activeNotifications

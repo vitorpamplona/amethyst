@@ -208,9 +208,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -227,6 +229,9 @@ import kotlinx.coroutines.withContext
  * run of taps is one publish, short enough that leaving the screen normally finds nothing to flush.
  */
 private const val PICKER_PUBLISH_DEBOUNCE_MS = 2000L
+
+/** How long after the Notifications tab's marker moves the tray is swept again, for a push posted just after its card was seen. */
+private const val TRAY_RESWEEP_MS = 5_000L
 
 /**
  * The account's ViewModel, minus everything that needs the UI module: its members are what the
@@ -2375,10 +2380,14 @@ open class BaseAccountViewModel(
 
         if (onIsNew) {
             viewModelScope.launch(Dispatchers.IO) {
-                account.markAsRead(routeForLastRead, createdAt)
                 // The user is now looking at this event in-app, so clear any tray
-                // notification that was posted for it while the app was backgrounded.
-                dismissNotificationId?.let { dismissTrayNotificationFor(it) }
+                // notification that was posted for it while the app was backgrounded. On the
+                // Notifications tab the move of its marker sweeps the tray already (see the
+                // watcher in init), so each card skips its own lookup there.
+                account.markAsRead(routeForLastRead, createdAt)
+                if (routeForLastRead != NOTIFICATION_LAST_READ_KEY) {
+                    dismissNotificationId?.let { dismissTrayNotificationFor(it) }
+                }
             }
         }
 
@@ -2417,15 +2426,22 @@ open class BaseAccountViewModel(
         // The Notifications tab reads up to one timestamp: a card on screen moves it to its own
         // time, and every older card then counts as read (no highlight, no badge). The tray has to
         // follow, or the zaps, reactions and replies the user just went through stay in the shade.
-        // Cards that dismiss their own notification cover only plain notes, and only the newest of
-        // those once the marker has passed the rest. Each move of the marker takes down this
-        // account's tray notifications at or before it, whichever card (or none) showed them.
+        // Each move of the marker takes down this account's tray notifications at or before it,
+        // whichever card (or none) showed them.
+        //
+        // Only moves: the marker this starts with was read in an earlier session, and a notification
+        // posted since for an event dated before it arrived late (a slow relay, a clock behind) and
+        // has not been seen. A move sweeps twice, the second a few seconds on, for the push of an
+        // event whose card moved the marker before the dispatcher had posted it.
         viewModelScope.launch(Dispatchers.IO) {
             val npub = NotificationRoutes.accountNpub(account)
-            account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).collect { readUpTo ->
-                // Capped at now: the tab takes any event that tags the user, so a reply dated
-                // years ahead can carry the marker there, and the tray must not go quiet with it.
-                if (readUpTo > 0) host.dismissNotificationsReadUpTo(npub, minOf(readUpTo, TimeUtils.now()))
+            account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).drop(1).collectLatest { readUpTo ->
+                // Capped at now: a stored marker can still sit ahead of the clock, and the tray must
+                // not go quiet with it.
+                val upTo = minOf(readUpTo, TimeUtils.now())
+                host.dismissNotificationsReadUpTo(npub, upTo)
+                delay(TRAY_RESWEEP_MS)
+                host.dismissNotificationsReadUpTo(npub, upTo)
             }
         }
     }
