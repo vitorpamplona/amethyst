@@ -8114,6 +8114,7 @@
     <string name="kc_dvm_status_success">Success</string>
     <string name="kc_dvm_status_partial">Partial result</string>
     <string name="kc_dvm_label_amount">Amount</string>
+    <string name="kc_audio_track_price">Price</string>
     <string name="kc_dev_app_id">App</string>
     <plurals name="kc_dev_files_count">
         <item quantity="one">%1$d file</item>

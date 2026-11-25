@@ -186,6 +186,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficienc
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrackHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAuthoredPodcasts
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
@@ -472,6 +473,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
 import com.vitorpamplona.amethyst.commons.ui.note.types.hasTextCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.isTitledTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderAppCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderArticleCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderBookmarkList
@@ -1764,6 +1766,12 @@ internal fun RenderNoteRow(
             // event with an audio file to play is a track. The rest are other apps' records.
             is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
                 RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+            }
+
+            // A titled track whose file is missing or unplayable keeps its header (title, cover,
+            // participants), without the player.
+            is AudioTrackEvent if noteEvent.isTitledTrack() -> {
+                RenderAudioTrackHeader(baseNote, accountViewModel, nav)
             }
 
             is AudioTrackEvent -> {
