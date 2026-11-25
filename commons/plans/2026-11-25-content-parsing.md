@@ -151,6 +151,16 @@ Steps 1–5 (about 6–7 weeks) are what iOS needs. They replace the markdown pa
 A4. The iOS slice (B3) does not wait for them: ordinary notes already use the shared parser.
 Steps 6 and 7 can follow in either order.
 
+**Step 6, first half (2026-11-25).** `djot-kmp` 0.1.0 is the parser (`djot`) and an HTML renderer
+(`djot-html`); Amethyst takes `djot` alone. Until step 3's document model exists, wiki pages go
+through a bridge like the AsciiDoc one: `commons/richtext/DjotToMarkdown.kt` walks the Djot AST and
+writes markdown for today's renderer, cached per event id. It resolves NIP-54 wikilinks to the same
+author's article with the normalized `d` tag (there is no topic screen listing every author's
+version yet), and sends a body whose first line is an AsciiDoc title (`= Title`, the previous
+NIP-54) to the AsciiDoc converter instead. What markdown cannot hold is dropped to its text: spans,
+attributes, highlight, insert, super/subscript, raw blocks. The bridge goes away when Djot maps into
+the document model.
+
 ## Verification
 
 - **Parity harness (step 3):** fetch a few hundred real kind-30023 articles with `amy`, render

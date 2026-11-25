@@ -78,6 +78,8 @@ kotlin {
                 // kiko-player runs one in real time and brings kiko itself. `api` because
                 // CartPlayerViewModel hands its KikoPlayer to the screen in commonsUI.
                 api(libs.kiko.player)
+                // Parses NIP-54 wiki pages, which are Djot (MIT, our own library; stdlib only).
+                implementation(libs.djot)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)

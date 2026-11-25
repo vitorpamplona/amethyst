@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
+import com.vitorpamplona.amethyst.commons.richtext.CachedDjotToMarkdown
+import com.vitorpamplona.amethyst.commons.richtext.DjotToMarkdown
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -51,7 +54,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.experimental.publications.AsciiDocToMarkdown
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 
 @Composable
 fun RenderWikiContent(
@@ -74,7 +80,7 @@ private fun WikiArticleHeader(
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =
         remember(noteEvent) {
-            noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
+            noteEvent.summary()?.ifBlank { null } ?: wikiArticlePreview(noteEvent)
         }
     val image = remember(noteEvent) { noteEvent.image() }
 
@@ -139,3 +145,47 @@ private fun WikiArticleHeader(
         }
     }
 }
+
+/**
+ * The markdown a wiki article's Djot body (NIP-54) renders as. It is also the exact string handed
+ * to the translator, and so the key the translation cache stores the result under: the copy-text
+ * menus look the translation up through [displayedNoteText], which calls this for an article.
+ */
+fun wikiArticleMarkdown(
+    event: WikiArticleEvent,
+    body: String = event.content,
+): String =
+    when {
+        // Older articles are AsciiDoc, NIP-54's format before Djot: the publications' converter reads them.
+        DjotToMarkdown.isLegacyAsciiDoc(body) ->
+            if (body == event.content) {
+                CachedAsciiDocToMarkdown.convert(event.id, body, wikilinkResolver(event))
+            } else {
+                AsciiDocToMarkdown.convert(body, wikilinkResolver(event))
+            }
+        body == event.content -> CachedDjotToMarkdown.convert(event.id, body, wikilinkResolver(event))
+        // A body other than the event's own (an edit shown in its place) is not cached under its id.
+        else -> DjotToMarkdown.convert(body, wikilinkResolver(event))
+    }
+
+/**
+ * NIP-54 wikilinks: a reference-style link the article doesn't define points to the wiki article
+ * whose `d` tag is the link's text, normalized. Which version to read is the reader's choice; with
+ * no screen yet that lists every author's version of a topic, the link opens this author's own.
+ */
+private fun wikilinkResolver(event: WikiArticleEvent): (String) -> String? =
+    { label ->
+        WikiRedirectEvent
+            .normalizeSlug(label)
+            .ifEmpty { null }
+            ?.let { slug -> NAddress.createNostrUriOrNull(WikiArticleEvent.KIND, event.pubKey, slug, null) }
+    }
+
+// The body's first words as plain text, for a card without a summary tag. Only the start is parsed:
+// a card shows 200 characters, and a long article would otherwise cost a full parse per card.
+private fun wikiArticlePreview(event: WikiArticleEvent): String? =
+    (if (DjotToMarkdown.isLegacyAsciiDoc(event.content)) event.content else DjotToMarkdown.plainText(event.content.take(1000)))
+        .replace('\n', ' ')
+        .trim()
+        .take(200)
+        .ifBlank { null }
