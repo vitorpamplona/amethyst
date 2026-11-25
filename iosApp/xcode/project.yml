@@ -57,4 +57,7 @@ targets:
         basedOnDependencyAnalysis: false
         script: |
           cd "$SRCROOT/../.."
+          # Xcode keeps the environment it was launched with, so an inherited JAVA_HOME can name a
+          # JDK that has since been upgraded away. Ask the system for the current JDK 21 instead.
+          if JDK=$(/usr/libexec/java_home -v 21 2>/dev/null); then export JAVA_HOME="$JDK"; fi
           ./gradlew :iosApp:embedAndSignAppleFrameworkForXcode

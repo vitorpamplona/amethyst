@@ -32,12 +32,9 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
-import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
-import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
-import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
@@ -70,10 +67,10 @@ fun MainViewController(): UIViewController {
             CompositionLocalProvider(
                 LocalViewModelStoreOwner provides viewModels,
                 LocalAppServices provides services,
-                // Platform pieces (pickers, sharing, media) arrive with B4, B5 and B7.
-                LocalAppPlatform provides AppPlatform.None,
-                LocalNotePlatform provides NotePlatform.None,
-                LocalRichTextPlatform provides RichTextPlatform.Plain,
+                // Platform pieces (pickers, sharing, playback) arrive with B4, B5 and B7.
+                LocalAppPlatform provides IosAppPlatform,
+                LocalNotePlatform provides IosNotePlatform,
+                LocalRichTextPlatform provides IosRichTextPlatform,
             ) {
                 AmethystApp(modules.sessionManager, root)
             }

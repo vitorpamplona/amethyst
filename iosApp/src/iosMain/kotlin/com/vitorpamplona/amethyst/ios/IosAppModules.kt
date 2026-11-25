@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
+import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -77,6 +78,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.utils.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
+import io.ktor.client.engine.darwin.DarwinHttpRequestException
 import io.ktor.client.plugins.websocket.WebSockets
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -88,8 +90,11 @@ import kotlinx.coroutines.runBlocking
 import okio.Path
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSPOSIXErrorDomain
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.posix.EPROTO
 
 /**
  * The iOS service graph: the same shared classes Android's `AppModules` and the desktop's
@@ -143,11 +148,27 @@ class IosAppModules(
             install(WebSockets)
         }
 
-    val websocketBuilder = KtorWebSocket.Builder(httpClient = { httpClient }, scope = applicationIOScope)
+    // Apple's socket offers permessage-deflate and drops the connection with EPROTO when a relay
+    // breaks the extension's rules (nostr.mom sets RSV1 on continuation frames). Such a relay is
+    // dialed again without compression.
+    val websocketBuilder =
+        KtorWebSocket.Builder(
+            httpClient = { httpClient },
+            scope = applicationIOScope,
+            compression = KtorWebSocket.Compression(isFailure = ::isDarwinProtocolError),
+        )
 
     val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }
 
     val lnurlTransport = KtorLnurlTransport { httpClient }
+
+    // Images load through the same client. The Caches folder is the one iOS may purge.
+    init {
+        IosImageLoaderSetup.setup(
+            httpClient = httpClient,
+            cacheDir = (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String).toPath() / "images",
+        )
+    }
 
     val cache: LocalCache = LocalCache
 
@@ -163,6 +184,9 @@ class IosAppModules(
                     ?.value ?: emptySet()
             },
         )
+
+    // Feeds every event the relays send into the cache, as on Android and the desktop.
+    val cacheClientConnector = CacheClientConnector(client, cache)
 
     val relayStats by lazy { RelayStats(client) }
 
@@ -284,4 +308,10 @@ private object UnavailableOts : BitcoinExplorer, RemoteCalendar {
     ): Timestamp = fail()
 
     private fun fail(): Nothing = throw UnsupportedOperationException("OpenTimestamps on iOS comes with A2")
+}
+
+/** The error Apple's networking reports for a frame it cannot parse: POSIX EPROTO. */
+private fun isDarwinProtocolError(e: Throwable): Boolean {
+    val origin = (e as? DarwinHttpRequestException)?.origin ?: return false
+    return origin.domain == NSPOSIXErrorDomain && origin.code == EPROTO.toLong()
 }
