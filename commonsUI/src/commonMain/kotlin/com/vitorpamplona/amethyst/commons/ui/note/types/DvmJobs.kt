@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -470,6 +471,11 @@ private fun dvmResultSubtitle(event: DvmResponseEvent): String? =
             pluralStringRes(Res.plurals.kc_dvm_results_count, count, count)
         }
 
+        is DvmContentDiscoveryResponseEvent -> {
+            val count = remember(event) { event.resultTags().size }
+            pluralStringRes(Res.plurals.kc_dvm_results_count, count, count)
+        }
+
         is DvmPeopleSearchResponseEvent -> {
             val count =
                 remember(event) {
@@ -517,18 +523,12 @@ private fun DvmResultPayload(
 ) {
     when (event) {
         is DvmContentSearchResponseEvent -> {
-            val found = remember(event) { event.resultTags() }
-            found.take(MAX_QUOTED).forEach { tag ->
-                ETag.parseId(tag)?.let {
-                    KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
-                } ?: ATag.parseAddress(tag)?.let {
-                    KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
-                }
-            }
-            if (found.size > MAX_QUOTED) {
-                val more = found.size - MAX_QUOTED
-                KindCardMore(more)
-            }
+            DvmQuotedResults(remember(event) { event.resultTags() }, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        // Kind 5300's output is a JSON-stringified list of `e` and `a` tags: the notes it found.
+        is DvmContentDiscoveryResponseEvent -> {
+            DvmQuotedResults(remember(event) { event.resultTags() }, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is DvmPeopleSearchResponseEvent -> {
@@ -575,6 +575,27 @@ private fun DvmResultPayload(
         else -> {
             KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         }
+    }
+}
+
+/** The first results of a list of `e` / `a` result tags, quoted, and how many more there are. */
+@Composable
+private fun DvmQuotedResults(
+    found: TagArray,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    found.take(MAX_QUOTED).forEach { tag ->
+        ETag.parseId(tag)?.let {
+            KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        } ?: ATag.parseAddress(tag)?.let {
+            KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+    }
+    if (found.size > MAX_QUOTED) {
+        KindCardMore(found.size - MAX_QUOTED)
     }
 }
 

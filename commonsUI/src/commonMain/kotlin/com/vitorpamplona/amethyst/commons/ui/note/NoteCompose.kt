@@ -294,7 +294,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssReadWriteLists
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmResult
@@ -939,7 +938,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
@@ -2405,18 +2403,6 @@ internal fun RenderNoteRow(
                 )
             }
 
-            is DvmContentDiscoveryResponseEvent -> {
-                RenderDvmContentDiscoveryResponse(
-                    baseNote,
-                    makeItShort,
-                    canPreview,
-                    quotesLeft,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
             is DvmStatusEvent -> {
                 RenderDvmStatus(
                     baseNote,
@@ -3057,8 +3043,9 @@ internal fun RenderNoteRow(
             is EncryptionKeyTransferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
 
             // NIP-90 job requests and results. After the DVM kinds above that keep their own cards.
-            // Base-class branches: they must stay AFTER the existing `is DvmContentDiscoveryResponseEvent` and
-            // `is DvmStatusEvent` branches (both DvmResponseEvent subclasses), which keep their own renderers.
+            // Base-class branches: they must stay AFTER the `is DvmStatusEvent` branch (a
+            // DvmResponseEvent subclass), which keeps its own renderer. Content discovery results
+            // (6300) are drawn here, as the notes their tag list names.
             is DvmRequestEvent -> RenderDvmRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is DvmResponseEvent -> RenderDvmResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is DvmHeartbeatEvent -> RenderDvmHeartbeat(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)

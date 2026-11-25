@@ -42,8 +42,8 @@ import kotlin.test.assertTrue
 
 /**
  * What a note row draws for content that is not a note's text: a typed kind whose card declines
- * it (another app's record on a shared kind) reaches the unknown-kind card, never the text path,
- * which would print the raw JSON.
+ * it (another app's record on a shared kind) and a DVM result whose content is a tag list both
+ * reach a card that reads them, never the text path, which would print the raw JSON.
  */
 class NoteFallbackCardUiTest {
     @get:Rule
@@ -126,6 +126,23 @@ class NoteFallbackCardUiTest {
     fun unrecognizedMintRecommendation() {
         show(consume(event('5', 38000, arrayOf(arrayOf("d", "x")), """{"vote":1}""")))
         assertUnknownKindCard("unrecognized kind 38000")
+    }
+
+    // Kind 5300's output (6300) is a JSON-stringified list of `e` / `a` tags: the notes it found,
+    // which the card quotes.
+    @Test
+    fun contentDiscoveryResultQuotesItsNotes() {
+        val found = consume(event('6', 1, emptyArray(), "Hello from discovery"))
+        val result =
+            event(
+                '7',
+                6300,
+                arrayOf(arrayOf("e", "c8".repeat(32)), arrayOf("p", alice)),
+                """[["e","${found.idHex}","wss://relay.example.com"]]""",
+            )
+        show(consume(result))
+        assertTrue(!shown("[[\"e\""), "kind 6300 printed its raw tag list")
+        assertTrue(shown("Hello from discovery"), "kind 6300 did not quote the note it found")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
