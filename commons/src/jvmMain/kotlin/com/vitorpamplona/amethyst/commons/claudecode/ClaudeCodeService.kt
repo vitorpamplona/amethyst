@@ -31,6 +31,8 @@ import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
+import com.vitorpamplona.amethyst.commons.androiddevices.DeviceToolServer
 import com.vitorpamplona.amethyst.commons.util.appDataDir
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.codex.CodexBackend
@@ -157,6 +159,8 @@ class ClaudeCodeService(
     val assistantDir: File = File(appDataDir, ASSISTANT_FOLDER),
     /** The assistant on the user's own AI key, for when no agent program here can run it. */
     val online: OnlineAgentBackend = OnlineAgentBackend(OnlineSessionStore(File(appDataDir, ONLINE_SESSIONS_FOLDER))),
+    /** Whether coding chats get the Android device tools: when an Android SDK is installed here. */
+    private val deviceTools: Boolean = AndroidSdk.home() != null,
 ) {
     /** Every agent whose sessions the list shows: the coding agents, and the assistant's online one. */
     private val allAgents: List<AgentBackend> get() = backends + online
@@ -165,7 +169,7 @@ class ClaudeCodeService(
         backend: AgentBackend,
         scope: CoroutineScope,
         agentWorkspaces: AgentWorkspaces,
-    ) : this(listOf(backend), scope, agentWorkspaces)
+    ) : this(listOf(backend), scope, agentWorkspaces, deviceTools = false)
 
     /** The default agent: Claude Code. */
     val backend: AgentBackend get() = backends.first()
@@ -854,6 +858,9 @@ class ClaudeCodeService(
     ): ClaudeChat {
         // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
         val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
+        // With an Android SDK here, a coding agent can drive the device panel's emulator or phone.
+        val device = if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, { key }, cwd) else null
+        val preApproved = listOfNotNull(publish?.qualifiedName(PublishToolServer.REQUEST)) + device?.let { DeviceToolServer.PRE_APPROVED.map(it::qualifiedName) }.orEmpty()
         val chat =
             ClaudeChat(
                 key,
@@ -867,20 +874,24 @@ class ClaudeCodeService(
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
                 heldElsewhere = ::isHeldElsewhere,
-                mcpServers = mcpServers + listOfNotNull(publish),
+                mcpServers = mcpServers + listOfNotNull(publish, device),
                 launchOptions =
-                    if (publish == null) {
+                    if (preApproved.isEmpty()) {
                         launchOptions
                     } else {
-                        // It only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
-                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + publish.qualifiedName(PublishToolServer.REQUEST)) } }
+                        // Publishing only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
+                        // The device's looking and touching need no asking either: the user gave the chat that device.
+                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + preApproved) } }
                     },
                 kind = kind,
                 forkBefore = forkBefore,
                 workstreamOf = { agentWorkspaces.of(it) },
                 pushScopes = pushScopeStore,
                 restoreFolder = ::restoreBeforeStart,
-                folderBrief = { dir -> agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it } },
+                folderBrief = { dir ->
+                    val workspace = agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it }
+                    listOfNotNull(workspace, device?.let { DeviceToolServer.BRIEF }).joinToString("\n").ifEmpty { null }
+                },
                 folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }

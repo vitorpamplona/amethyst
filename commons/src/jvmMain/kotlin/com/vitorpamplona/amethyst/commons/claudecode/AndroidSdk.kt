@@ -47,6 +47,18 @@ object AndroidSdk {
         return if (parent["ANDROID_SDK_ROOT"] != null) mapOf("ANDROID_HOME" to found, "ANDROID_SDK_ROOT" to found) else mapOf("ANDROID_HOME" to found)
     }
 
+    /**
+     * The SDK folder: `ANDROID_HOME` or `ANDROID_SDK_ROOT` when either names one, else where
+     * Android Studio installs it; null when there is none. Where `adb` and the emulator are.
+     */
+    fun home(
+        parent: Map<String, String> = System.getenv(),
+        home: String = System.getProperty("user.home"),
+        os: String = System.getProperty("os.name").orEmpty(),
+    ): File? =
+        listOf("ANDROID_HOME", "ANDROID_SDK_ROOT").firstNotNullOfOrNull { name -> parent[name]?.let(::File)?.takeIf { it.isDirectory } }
+            ?: candidates(parent, home, os).map(::File).firstOrNull { it.isDirectory }
+
     /** Android Studio's default SDK folder on each system. */
     internal fun candidates(
         parent: Map<String, String>,

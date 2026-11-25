@@ -787,6 +787,14 @@ sealed class Route {
     ) : Route()
 
     /**
+     * The Android emulators and phones on this computer, full size: the screen of the one [chatKey]'s
+     * coding chat works on, or of the one picked here.
+     */
+    @Serializable data class AndroidDevices(
+        val chatKey: String? = null,
+    ) : Route()
+
+    /**
      * Starts a Claude Code session on a NIP-34 repository, from the repository itself, one of its
      * issues ([issueId]) or one of its proposals ([proposalId]).
      */
