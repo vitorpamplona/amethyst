@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_list_sh
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_list_updated
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_list_version
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_no_link
+import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_no_link_created
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_on_claude
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_open_failed
@@ -146,7 +147,7 @@ internal fun artifactTitle(artifact: PublishedArtifact): String =
     artifact.title ?: PublishedArtifacts.fallbackTitle(artifact) ?: stringRes(
         when (artifact.kind) {
             PublishedArtifact.Kind.PAGE -> Res.string.claude_code_artifact_untitled_page
-            PublishedArtifact.Kind.TYPED -> Res.string.claude_code_artifact_untitled_typed
+            PublishedArtifact.Kind.TYPED, PublishedArtifact.Kind.UNKNOWN -> Res.string.claude_code_artifact_untitled_typed
             PublishedArtifact.Kind.DOCUMENT -> Res.string.claude_code_artifact_untitled_document
         },
     )
@@ -156,6 +157,7 @@ internal fun PublishedArtifact.Kind.symbol(): MaterialSymbol =
         PublishedArtifact.Kind.PAGE -> MaterialSymbols.Language
         PublishedArtifact.Kind.TYPED -> MaterialSymbols.Dashboard
         PublishedArtifact.Kind.DOCUMENT -> MaterialSymbols.AutoMirrored.Article
+        PublishedArtifact.Kind.UNKNOWN -> MaterialSymbols.Link
     }
 
 @Composable
@@ -163,7 +165,7 @@ private fun kindLabel(kind: PublishedArtifact.Kind): String =
     stringRes(
         when (kind) {
             PublishedArtifact.Kind.PAGE -> Res.string.claude_code_artifact_kind_page
-            PublishedArtifact.Kind.TYPED -> Res.string.claude_code_artifact_kind_typed
+            PublishedArtifact.Kind.TYPED, PublishedArtifact.Kind.UNKNOWN -> Res.string.claude_code_artifact_kind_typed
             PublishedArtifact.Kind.DOCUMENT -> Res.string.claude_code_artifact_kind_document
         },
     )
@@ -195,7 +197,8 @@ private fun shortStatus(artifact: PublishedArtifact): String =
 internal fun PublishedRow(
     row: ChatRow.Published,
     cwd: String,
-    turnRunning: Boolean,
+    /** The turn is still on: running, or waiting on the user for this or another call. */
+    turnLive: Boolean,
     waitingForApproval: Boolean,
 ) {
     val artifact = rememberTitled(row.artifact, cwd)
@@ -209,13 +212,13 @@ internal fun PublishedRow(
                 artifact,
                 if (!running) {
                     LineState.DONE
-                } else if (turnRunning) {
+                } else if (turnLive) {
                     LineState.RUNNING
                 } else {
                     LineState.STOPPED
                 },
             )
-        else -> ArtifactCard(row.call, artifact, cwd, turnRunning)
+        else -> ArtifactCard(row.call, artifact, cwd, turnLive)
     }
 }
 
@@ -229,7 +232,8 @@ internal fun ArtifactCard(
     call: ChatItem.ToolCall,
     artifact: PublishedArtifact,
     cwd: String,
-    turnRunning: Boolean,
+    /** The turn is still on: running, or waiting on the user for another call. Over, a call with no result was stopped. */
+    turnLive: Boolean,
 ) {
     val open = rememberArtifactOpener()
     var details by remember(call.id) { mutableStateOf(false) }
@@ -254,7 +258,7 @@ internal fun ArtifactCard(
                 Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                if (running && turnRunning) {
+                if (running && turnLive) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 } else {
                     // The status line under the title already says what kind it is.
@@ -266,10 +270,11 @@ internal fun ArtifactCard(
                 val status =
                     when {
                         // A call the user stopped never gets a result: it says so rather than spin.
-                        running && !turnRunning -> stringRes(Res.string.claude_code_artifact_stopped)
+                        running && !turnLive -> stringRes(Res.string.claude_code_artifact_stopped)
                         running && artifact.kind == PublishedArtifact.Kind.PAGE -> stringRes(Res.string.claude_code_artifact_publishing)
                         running -> stringRes(Res.string.claude_code_artifact_creating)
-                        url == null -> stringRes(Res.string.claude_code_artifact_no_link)
+                        url == null ->
+                            stringRes(if (artifact.kind == PublishedArtifact.Kind.PAGE) Res.string.claude_code_artifact_no_link else Res.string.claude_code_artifact_no_link_created)
                         else -> kindLabel(artifact.kind) + " · " + statusLabel(artifact)
                     }
                 Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -525,10 +530,7 @@ internal fun rememberLocalPage(
     cwd: String,
 ): File? {
     val page by produceState<File?>(null, path, cwd) {
-        value =
-            path?.takeIf { PublishedArtifacts.isPage(it) }?.let {
-                withContext(Dispatchers.IO) { PublishedArtifacts.resolve(it, File(cwd)).takeIf { file -> file.isFile } }
-            }
+        value = path?.takeIf { PublishedArtifacts.isPage(it) }?.let { withContext(Dispatchers.IO) { PublishedArtifacts.localPage(it, File(cwd)) } }
     }
     return page
 }
@@ -580,7 +582,7 @@ internal fun rememberArtifactOpener(): ArtifactOpener {
                         uriHandler.openUri(url)
                         true
                     } catch (e: IllegalArgumentException) {
-                        Log.w(TAG) { "No app opened an artifact link: ${e.message}" }
+                        Log.w(TAG, "No app opened an artifact link", e)
                         false
                     }
                 },
@@ -604,8 +606,9 @@ internal object LocalPages {
     private val os = System.getProperty("os.name").orEmpty().lowercase()
 
     fun open(page: File): Boolean {
-        if (!PublishedArtifacts.isPage(page.path) || !page.isFile) return false
-        val uri = page.absoluteFile.toURI()
+        // Judged by the file a link leads to, and that file is what opens.
+        val target = PublishedArtifacts.localPage(page.path, null) ?: return false
+        val uri = target.toURI()
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(uri)
@@ -616,8 +619,8 @@ internal object LocalPages {
         }
         val command =
             when {
-                os.contains("mac") -> listOf("open", page.absolutePath)
-                os.contains("linux") -> listOf("xdg-open", page.absolutePath)
+                os.contains("mac") -> listOf("open", target.path)
+                os.contains("linux") -> listOf("xdg-open", target.path)
                 else -> return false
             }
         return try {

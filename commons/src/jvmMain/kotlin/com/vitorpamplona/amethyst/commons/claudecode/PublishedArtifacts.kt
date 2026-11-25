@@ -58,6 +58,9 @@ data class PublishedArtifact(
 
         /** A document started through the Claude Docs connector. */
         DOCUMENT,
+
+        /** One Claude only opened: the call says nothing of what it is. */
+        UNKNOWN,
     }
 
     enum class Change {
@@ -91,6 +94,9 @@ object PublishedArtifacts {
     private const val TITLE_SCAN_BYTES = 8 * 1024
     private val TITLE = Regex("""<title[^>]*>(.*?)</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
 
+    /** A Docs batch that starts a doc names it under `container.create`. */
+    private const val CREATE_KEY = "\"create\""
+
     /** File types a browser shows as a page: what "open in browser" offers for a file Claude wrote. */
     private val PAGE_EXTENSIONS = setOf("html", "htm", "xhtml", "svg")
 
@@ -105,6 +111,9 @@ object PublishedArtifacts {
     ): PublishedArtifact? {
         val isDocs = isDocsTool(name, "batch")
         if (name != ARTIFACT_TOOL && !isDocs) return null
+        // Most of the connector's batches fill a doc a section at a time, each with the section's
+        // whole text, and the chat's rows are made again on every change: only a birth is read.
+        if (isDocs && !input.contains(CREATE_KEY)) return null
         val obj =
             try {
                 json.parseToJsonElement(input) as? JsonObject
@@ -159,7 +168,7 @@ object PublishedArtifacts {
             }
             "open" ->
                 existing?.let {
-                    PublishedArtifact(PublishedArtifact.Kind.PAGE, PublishedArtifact.Change.OPENED, null, null, it, null, null)
+                    PublishedArtifact(PublishedArtifact.Kind.UNKNOWN, PublishedArtifact.Change.OPENED, null, null, it, null, null)
                 }
             else -> null
         }
@@ -230,6 +239,25 @@ object PublishedArtifacts {
     /** Whether [path] is a page a browser shows: offered as "open in browser" where Claude wrote it. */
     fun isPage(path: String): Boolean = File(path).extension.lowercase() in PAGE_EXTENSIONS
 
+    /**
+     * The page at [path] (from the session's folder when relative), to open in the browser: null
+     * unless the file is there and is a page. A link is judged by the file it leads to, so a
+     * `report.html` that points at a program is not one. Reads the disk: call it off the main thread.
+     */
+    fun localPage(
+        path: String,
+        cwd: File?,
+    ): File? {
+        if (!isPage(path)) return null
+        val target =
+            try {
+                resolve(path, cwd).canonicalFile
+            } catch (e: IOException) {
+                return null
+            }
+        return target.takeIf { isPage(it.path) && it.isFile }
+    }
+
     /** [path] as a file on this machine: relative ones are from the session's folder. */
     fun resolve(
         path: String,
@@ -260,7 +288,8 @@ object PublishedArtifacts {
                                 // Opening one again says nothing new about it.
                                 val latest = if (artifact.change == PublishedArtifact.Change.OPENED) earlier else artifact
                                 latest.copy(
-                                    title = earlier.title ?: latest.title,
+                                    // A doc started in a blank Docs artifact is that artifact, by the doc's name.
+                                    title = if (startsDocIn(artifact, earlier)) artifact.title ?: earlier.title else earlier.title ?: latest.title,
                                     description = latest.description ?: earlier.description,
                                     file = latest.file ?: earlier.file,
                                 )
@@ -273,6 +302,12 @@ object PublishedArtifacts {
         visit(items)
         return byUrl.values.reversed()
     }
+
+    /** Whether [artifact] is a doc started in [earlier], a blank artifact of the Docs type made just before. */
+    fun startsDocIn(
+        artifact: PublishedArtifact,
+        earlier: PublishedArtifact,
+    ): Boolean = artifact.kind == PublishedArtifact.Kind.DOCUMENT && earlier.kind == PublishedArtifact.Kind.TYPED
 
     private fun unescape(text: String): String =
         text

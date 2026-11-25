@@ -127,6 +127,65 @@ class PublishedArtifactsTest {
         val artifact = PublishedArtifacts.of("Artifact", """{"action":"open","url":"$link"}""", "Opened.")!!
         assertEquals(PublishedArtifact.Change.OPENED, artifact.change)
         assertEquals(link, artifact.url)
+        // A page, a deck or a doc: the call doesn't say.
+        assertEquals(PublishedArtifact.Kind.UNKNOWN, artifact.kind)
+    }
+
+    @Test
+    fun aDocsFillIsNotReadAtAll() {
+        // A section's fill carries its whole text: no "create", so it is turned away before parsing.
+        val fill = """{"container":{"kind":"project","id":"3f2a"},"batch":[{"verb":"update","payload":{"ops":[{"with":"${"x".repeat(50_000)}"}]}}]}"""
+        assertNull(PublishedArtifacts.of("mcp__Claude_Docs__batch", fill, "ok"))
+        // A batch that creates a comment, not a doc, is parsed and still no card.
+        assertNull(PublishedArtifacts.of("mcp__Claude_Docs__batch", """{"container":{"id":"3f2a"},"batch":[{"verb":"create","object":"utterance"}]}""", "ok"))
+    }
+
+    @Test
+    fun aPublishThatNamesItsLinkIsAboutThatOneWhateverTheFile() {
+        val other = "https://claude.ai/artifact/Somewhere0Else1Entirely2"
+        val first = call("Artifact", """{"file_path":"/w/r.html"}""", published("/w/r.html"))
+        val elsewhere = call("Artifact", """{"file_path":"/w/r.html","url":"$other"}""", result = null)
+        val rows = listOf(first, elsewhere).toChatRows()
+
+        val card = assertIs<ChatRow.Published>(rows[1])
+        assertFalse(card.repeat)
+        assertEquals(other, card.artifact.url)
+    }
+
+    @Test
+    fun aDocStartedInABlankDocsArtifactIsThatCard() {
+        val type = "https://claude.ai/artifact/Rp9naXUCj2xozpUkyQy19W"
+        val blank = call("Artifact", """{"type_url":"$type","title":"Docs"}""", "Created $link from $type")
+        val birth = call("mcp__Claude_Docs__batch", """{"container":{"kind":"project","create":{"name":"Rollout plan","artifact":"$link"}},"batch":[]}""", "ok")
+        val rows = listOf(blank, birth).toChatRows()
+
+        // One card, the doc's: no "Updated" line for its birth.
+        val card = assertIs<ChatRow.Published>(rows.single())
+        assertEquals(PublishedArtifact.Kind.DOCUMENT, card.artifact.kind)
+        assertEquals("Rollout plan", card.artifact.title)
+        assertEquals(PublishedArtifact.Change.CREATED, card.artifact.change)
+
+        val listed = PublishedArtifacts.inSession(listOf(blank, birth)).single()
+        assertEquals(PublishedArtifact.Kind.DOCUMENT, listed.kind)
+        assertEquals("Rollout plan", listed.title)
+    }
+
+    @Test
+    fun aLocalPageIsJudgedByWhatItLeadsTo() {
+        val page = File(dir, "report.html").apply { writeText("<title>R</title>") }
+        assertEquals(page.canonicalFile, PublishedArtifacts.localPage("report.html", dir))
+        assertNull(PublishedArtifacts.localPage("gone.html", dir))
+        assertNull(PublishedArtifacts.localPage("run.sh", dir))
+
+        // A page's name on a link to something else is not a page.
+        val script = File(dir, "run.sh").apply { writeText("#!/bin/sh\n") }
+        val disguised = File(dir, "disguised.html")
+        Files.createSymbolicLink(disguised.toPath(), script.toPath())
+        assertNull(PublishedArtifacts.localPage(disguised.path, null))
+        // A link to a page is that page.
+        val alias = File(dir, "alias.html")
+        Files.createSymbolicLink(alias.toPath(), page.toPath())
+        assertEquals(page.canonicalFile, PublishedArtifacts.localPage(alias.path, null))
     }
 
     @Test

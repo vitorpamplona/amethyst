@@ -442,6 +442,8 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
     // so the file says it is a repeat before the result does: no card flashes up while it runs.
     val shown = HashMap<String, PublishedArtifact>()
     val shownFiles = HashMap<String, PublishedArtifact>()
+    // Where each link's card is in [rows], so a doc started in it can rename it.
+    val cardAt = HashMap<String, Int>()
     forEach { item ->
         // A refused one stays: it did nothing to the card, and the user should see that it failed.
         if (item is ChatItem.ToolCall && !item.isError && ToolKind.of(item.name) == ToolKind.PLAN) return@forEach
@@ -451,27 +453,39 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
             if (item.isError) {
                 // What it tried and why it failed, on its own row: nothing was published.
                 rows.add(ChatRow.Single(item))
-            } else {
-                val sameFile = published.file?.takeIf { published.kind == PublishedArtifact.Kind.PAGE && published.change != PublishedArtifact.Change.OPENED }
-                val earlier = published.url?.let { shown[it] } ?: sameFile?.let { shownFiles[it] }
-                val artifact =
-                    if (earlier == null) {
-                        published
-                    } else {
-                        published.copy(
-                            // Opening one says nothing of what it is.
-                            kind = if (published.change == PublishedArtifact.Change.OPENED) earlier.kind else published.kind,
-                            // Running, a republish of the same file has no link of its own yet.
-                            change = if (published.change == PublishedArtifact.Change.CREATED) PublishedArtifact.Change.UPDATED else published.change,
-                            title = published.title ?: earlier.title,
-                            url = published.url ?: earlier.url,
-                            file = published.file ?: earlier.file,
-                        )
-                    }
-                rows.add(ChatRow.Published(item, artifact, repeat = earlier != null))
-                artifact.url?.let { shown[it] = artifact }
-                if (sameFile != null && artifact.url != null) shownFiles[sameFile] = artifact
+                return@forEach
             }
+            val sameFile = published.file?.takeIf { published.kind == PublishedArtifact.Kind.PAGE && published.change != PublishedArtifact.Change.OPENED }
+            // A call that names its link is about that one, whatever file it sends.
+            val earlier = published.url?.let { shown[it] } ?: sameFile?.takeIf { published.url == null }?.let { shownFiles[it] }
+            val url = published.url ?: earlier?.url
+            val at = url?.let { cardAt[it] }
+            if (earlier != null && at != null && PublishedArtifacts.startsDocIn(published, earlier)) {
+                // A doc started in a blank Docs artifact made just before: that card is the doc's.
+                val card = rows[at] as ChatRow.Published
+                val doc = card.artifact.copy(kind = PublishedArtifact.Kind.DOCUMENT, title = published.title ?: card.artifact.title)
+                rows[at] = card.copy(artifact = doc)
+                shown[doc.url ?: return@forEach] = doc
+                return@forEach
+            }
+            val artifact =
+                if (earlier == null) {
+                    published
+                } else {
+                    published.copy(
+                        // Opening one says nothing of what it is.
+                        kind = if (published.change == PublishedArtifact.Change.OPENED) earlier.kind else published.kind,
+                        // Running, a republish of the same file has no link of its own yet.
+                        change = if (published.change == PublishedArtifact.Change.CREATED) PublishedArtifact.Change.UPDATED else published.change,
+                        title = published.title ?: earlier.title,
+                        url = url,
+                        file = published.file ?: earlier.file,
+                    )
+                }
+            if (earlier == null && url != null) cardAt[url] = rows.size
+            rows.add(ChatRow.Published(item, artifact, repeat = earlier != null))
+            artifact.url?.let { shown[it] = artifact }
+            if (sameFile != null && artifact.url != null) shownFiles[sameFile] = artifact
         } else if (item is ChatItem.ToolCall && (ToolKind.of(item.name) == ToolKind.EDIT || ToolKind.of(item.name) == ToolKind.QUESTION)) {
             flush()
             rows.add(ChatRow.Single(item))

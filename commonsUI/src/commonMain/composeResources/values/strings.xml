@@ -9941,6 +9941,7 @@
     <string name="claude_code_artifact_copy_link_tooltip">Only you can open this link until you share it on claude.ai</string>
     <string name="claude_code_artifact_private">Private until you share it</string>
     <string name="claude_code_artifact_no_link">Published, but claude.ai sent back no link</string>
+    <string name="claude_code_artifact_no_link_created">Created, but claude.ai sent back no link</string>
     <string name="claude_code_artifact_open">Open</string>
     <string name="claude_code_artifact_open_link">Open %1$s</string>
     <string name="claude_code_artifact_copy_link">Copy link</string>

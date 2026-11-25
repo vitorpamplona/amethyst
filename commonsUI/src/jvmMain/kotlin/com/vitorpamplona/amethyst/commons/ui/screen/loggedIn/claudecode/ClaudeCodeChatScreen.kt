@@ -867,6 +867,8 @@ private fun Messages(
             // A call the user stopped never gets a result: it only spins while the turn runs, and
             // not while it waits for the user.
             val turnRunning = state.status == ChatStatus.WORKING
+            // Waiting on the user is still the turn: a call that runs meanwhile has not stopped.
+            val turnLive = turnRunning || state.status == ChatStatus.NEEDS_APPROVAL
             items(rows, key = { it.key }) { row ->
                 when (row) {
                     is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
@@ -874,7 +876,7 @@ private fun Messages(
                         PublishedRow(
                             row,
                             state.cwd,
-                            turnRunning,
+                            turnLive,
                             waitingForApproval = state.pendingPermissions.any { it.toolUseId == row.call.toolUseId },
                         )
                     is ChatRow.Single ->
