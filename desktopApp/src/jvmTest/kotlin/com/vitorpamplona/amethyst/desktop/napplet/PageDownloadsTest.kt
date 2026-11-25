@@ -66,10 +66,14 @@ class PageDownloadsTest {
 
     @After
     fun tearDown() {
-        System.setProperty("user.home", realHome!!)
-        // A delete still walking [tmp] when this one does trips kotlin.io's assertion (tests run
-        // with -ea), and the exception lands on whichever coroutine test runs next.
-        runBlocking { withTimeoutOrNull(5_000) { job.cancelAndJoin() } }
+        try {
+            // Stopped first: a delivery still running would resolve Downloads under the real home
+            // once it is back, and a delete still walking [tmp] when this one does trips
+            // kotlin.io's assertion (tests run with -ea), failing whichever coroutine test is next.
+            runBlocking { withTimeoutOrNull(5_000) { job.cancelAndJoin() } }
+        } finally {
+            System.setProperty("user.home", realHome!!)
+        }
         tmp.deleteRecursively()
     }
 
