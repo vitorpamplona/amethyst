@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.material3.RichText
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -169,7 +168,7 @@ private fun MarkdownBlock(
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
             remember(content) {
-                CommonmarkAstNodeParser(AmethystMarkdownParseOptions).parse(content)
+                CachedMarkdownAst.parse(content)
             }
 
         val forCapture = LocalMediaCapture.current != null

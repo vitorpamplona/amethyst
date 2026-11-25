@@ -66,6 +66,12 @@ interface RichTextPlatform {
     )
 
     /**
+     * Parses [content] as markdown ahead of [Markdown] drawing it, so the feed prefetcher can do
+     * it off the UI thread. A platform that keeps no parse cache does nothing.
+     */
+    fun warmMarkdown(content: String) {}
+
+    /**
      * Renders a decoded secret message (text hidden in an emoji's variation selectors) with the
      * platform's leaves, the way the viewer renders a note body.
      */

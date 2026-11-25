@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.ui.markdown.CachedMarkdownAst
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
@@ -41,6 +42,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * the shared secret-message reveal, and the shared markdown renderer for long-form content.
  */
 object DesktopRichTextPlatform : RichTextPlatform {
+    override fun warmMarkdown(content: String) {
+        CachedMarkdownAst.warm(content)
+    }
+
     override fun segmentRenderer(
         accountViewModel: AccountViewModel,
         nav: INav,

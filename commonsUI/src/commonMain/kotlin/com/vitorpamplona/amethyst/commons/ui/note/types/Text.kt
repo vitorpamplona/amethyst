@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
@@ -275,6 +276,9 @@ fun RenderTextEvent(
                         authorPubKey = note.author?.pubkeyHex,
                         accountViewModel = accountViewModel,
                         nav = nav,
+                        // The kind's NIP decides markdown where it names a format (NIP-23 articles,
+                        // NIP-99 classifieds, ...); notes and comments keep the guess.
+                        rendering = TextRendering.of(noteEvent),
                     )
                 }
             }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
@@ -43,6 +44,7 @@ fun TranslatableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    rendering: TextRendering = TextRendering.GUESS,
 ) {
     TranslatableRichTextViewer(
         content = content,
@@ -61,6 +63,7 @@ fun TranslatableRichTextViewer(
             authorPubKey,
             accountViewModel,
             nav,
+            rendering,
         )
     }
 }

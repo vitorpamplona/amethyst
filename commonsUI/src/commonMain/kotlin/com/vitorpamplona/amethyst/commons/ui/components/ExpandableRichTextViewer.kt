@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
@@ -82,6 +83,7 @@ fun ExpandableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    rendering: TextRendering = TextRendering.GUESS,
 ) {
     ExpandableTextViewer(content, modifier, backgroundColor, id) { text, textModifier ->
         RichTextViewer(
@@ -95,6 +97,7 @@ fun ExpandableRichTextViewer(
             authorPubKey,
             accountViewModel,
             nav,
+            rendering,
         )
     }
 }

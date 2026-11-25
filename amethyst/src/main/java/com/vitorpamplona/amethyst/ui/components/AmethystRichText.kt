@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.ui.markdown.CachedMarkdownAst
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
@@ -55,6 +56,10 @@ class AmethystRichTextSegmentRenderer(
  * markdown renderer. Installed in the app theme, so every screen's rich text gets them.
  */
 object AndroidRichTextPlatform : RichTextPlatform {
+    override fun warmMarkdown(content: String) {
+        CachedMarkdownAst.warm(content)
+    }
+
     override fun segmentRenderer(
         accountViewModel: AccountViewModel,
         nav: INav,

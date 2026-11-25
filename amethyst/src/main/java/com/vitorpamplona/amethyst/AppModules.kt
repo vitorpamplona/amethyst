@@ -145,6 +145,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.ui.markdown.CachedMarkdownAst
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -1713,6 +1714,7 @@ class AppModules(
                     // from scratch. memoryCache is byte-sized (Coil), the rest are entry counts.
                     memoryCache.trimToSize(memoryCache.maxSize / 10)
                     CachedRichTextParser.trimToSize(10)
+                    CachedMarkdownAst.trimToSize(4)
                     CachedAsciiDocToMarkdown.trimToSize(4)
                     CachedRobohash.trimToSize(20)
                     nip11Cache.trimToSize(10)

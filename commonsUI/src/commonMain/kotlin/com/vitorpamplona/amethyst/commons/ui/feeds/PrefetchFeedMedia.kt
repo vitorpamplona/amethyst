@@ -44,13 +44,17 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
+import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -158,6 +162,7 @@ private fun PrefetchVisibleMedia(
 ) {
     val context = LocalPlatformContext.current
     val platform = LocalNotePlatform.current
+    val richText = LocalRichTextPlatform.current
     val currentNotes by rememberUpdatedState(notes)
     val warmed = remember(stateKey) { ConcurrentSet<String>() }
 
@@ -181,7 +186,7 @@ private fun PrefetchVisibleMedia(
                     }
                     currentNotes.notesAround(ends, radius).forEach { note ->
                         if (note.idHex !in warmed) {
-                            note.warm(context, platform, accountViewModel, ends)?.let { videosByNote[note.idHex] = it.feedVideos() }
+                            note.warm(context, platform, accountViewModel, ends, richText)?.let { videosByNote[note.idHex] = it.feedVideos() }
                             warmed.add(note.idHex)
                         }
                     }
@@ -351,8 +356,10 @@ private fun Note.warm(
     platform: NotePlatform,
     accountViewModel: AccountViewModel,
     ends: VisibleEnds,
+    richText: RichTextPlatform,
 ): WarmTargets? {
     val targets = collectWarmTargets() ?: return null
+    event?.let { warmMarkdown(it, richText) }
 
     if (accountViewModel.settings.showImages()) {
         val box = ends.boxFor(targets.imageCount)
@@ -530,24 +537,41 @@ private fun Note.collectWarmTargets(): WarmTargets? {
  * Their media and links are still prefetched via [WarmTargets.harvestContentUrls].
  */
 private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
-    val body =
-        when (ev) {
-            is TextNoteEvent -> {
-                // Matches RenderTextEvent: a subject is prepended when not already in the body.
-                val subject = ev.subject()?.ifBlank { null }
-                if (subject != null && !ev.content.contains(subject, ignoreCase = true)) {
-                    "$subject\n\n${ev.content}"
-                } else {
-                    ev.content
-                }
-            }
-            is CommentEvent -> ev.content
-            else -> return null
-        }
-
+    val body = renderedTextBody(ev) ?: return null
     val tags = ev.tags.toImmutableListOfLists()
     // callbackUri = note.toNostrUri(), authorPubKey = the note's author — the values RenderTextEvent passes.
     return CachedRichTextParser.parseText(body, tags, toNostrUri(), author?.pubkeyHex)
+}
+
+/** The body RenderTextEvent draws for a text note or a comment, or null for any other kind. */
+private fun renderedTextBody(ev: Event): String? =
+    when (ev) {
+        is TextNoteEvent -> {
+            // Matches RenderTextEvent: a subject is prepended when not already in the body.
+            val subject = ev.subject()?.ifBlank { null }
+            if (subject != null && !ev.content.contains(subject, ignoreCase = true)) {
+                "$subject\n\n${ev.content}"
+            } else {
+                ev.content
+            }
+        }
+        is CommentEvent -> ev.content
+        else -> null
+    }
+
+/**
+ * Parses the markdown a card will draw, here off the UI thread, so the card finds it in
+ * [RichTextPlatform.warmMarkdown]'s cache instead of parsing it while it scrolls in. Only what a
+ * feed card shows: the body cropped where "Show More" cuts it.
+ */
+private fun warmMarkdown(
+    ev: Event,
+    richText: RichTextPlatform,
+) {
+    val rendering = TextRendering.of(ev)
+    val body = renderedTextBody(ev) ?: if (rendering == TextRendering.MARKDOWN) ev.content else return
+    val shown = body.take(ExpandableTextCutOffCalculator.indexToCutOff(body))
+    if (rendering.isMarkdown(shown)) richText.warmMarkdown(shown)
 }
 
 /**
