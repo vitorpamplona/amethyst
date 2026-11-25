@@ -2404,11 +2404,7 @@ internal fun RenderNoteRow(
             }
 
             is DvmStatusEvent -> {
-                RenderDvmStatus(
-                    baseNote,
-                    accountViewModel,
-                    nav,
-                )
+                RenderDvmStatus(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is ZapPollEvent -> {

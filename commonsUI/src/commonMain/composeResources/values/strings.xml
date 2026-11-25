@@ -8107,6 +8107,13 @@
     <string name="kc_dvm_param_until">Until</string>
     <string name="kc_dvm_param_group">Group</string>
     <string name="kc_dvm_heartbeat_title">DVM heartbeat</string>
+    <string name="kc_dvm_feedback_title">Job feedback</string>
+    <string name="kc_dvm_status_payment_required">Payment required</string>
+    <string name="kc_dvm_status_processing">Processing</string>
+    <string name="kc_dvm_status_error">Error</string>
+    <string name="kc_dvm_status_success">Success</string>
+    <string name="kc_dvm_status_partial">Partial result</string>
+    <string name="kc_dvm_label_amount">Amount</string>
     <string name="kc_dev_app_id">App</string>
     <plurals name="kc_dev_files_count">
         <item quantity="one">%1$d file</item>

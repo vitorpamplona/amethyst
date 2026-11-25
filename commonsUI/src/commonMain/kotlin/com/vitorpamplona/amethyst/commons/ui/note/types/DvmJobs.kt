@@ -142,8 +142,8 @@ import org.jetbrains.compose.resources.StringResource
  * one line, shows the bid as a pill and the DVMs asked as chips. A result leads with its output,
  * shows the price as a pill and quotes the request it answers once, compactly.
  *
- * Job feedback (7000, DvmStatusEvent) and content-discovery results (6300) keep their own
- * renderers, which NoteCompose dispatches before the base-class branches that land here.
+ * Job feedback (7000, DvmStatusEvent) keeps its own card (NIP90Status.kt), which NoteCompose
+ * dispatches before the base-class branches that land here.
  */
 
 /** How many found events a search result quotes at most, so one result cannot flood the feed. */
@@ -192,7 +192,7 @@ private fun dvmJob(requestKind: Int): DvmJob? =
     }
 
 /** NIP-90: a bare `["encrypted"]` tag means the inputs/params (or the result) are NIP-04 ciphertext. */
-private fun TagArray.isDvmEncrypted(): Boolean = any { it.isNotEmpty() && it[0] == "encrypted" }
+internal fun TagArray.isDvmEncrypted(): Boolean = any { it.isNotEmpty() && it[0] == "encrypted" }
 
 /** NIP-90 `["bid", <msats>]`: the most the customer will pay, in sats. */
 private fun TagArray.dvmBidSats(): Long? = firstOrNull { it.size > 1 && it[0] == "bid" }?.get(1)?.toLongOrNull()?.div(1000)
@@ -447,7 +447,7 @@ fun RenderDvmResult(
  * or the customer's chip when the result does not point at its request.
  */
 @Composable
-private fun DvmRequestOrCustomer(
+internal fun DvmRequestOrCustomer(
     requestId: HexKey?,
     customer: List<HexKey>,
     quotesLeft: Int,
