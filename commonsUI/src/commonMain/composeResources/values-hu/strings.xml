@@ -9592,14 +9592,11 @@
     <string name="claude_code_mode_short_plan">Tervez</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Mit változtat, miért, és hogyan tesztelte</string>
-    <string name="claude_code_settings_assistant">Beállítási asszisztens</string>
     <string name="claude_code_context_used_little">a kontextus kevesebb mint 1%-a</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">egyszer megnézte a beállításokat</item>
         <item quantity="other">%1$d alkalommal megnézte a beállításokat</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Kérdezze meg, mit csinál egy beállítás, vagy mit kell módosítania ahhoz, amit szeretne. Claude csak az Amethyst beállításait látja, és minden módosítás az Ön jóváhagyására vár. A kulcsok, tárcák, átjátszók és fizetések kívül esnek a hatókörén.</string>
-    <string name="claude_code_settings_assistant_card">Nem biztos benne, hol talál valamit? Kérdezze a beállítási asszisztenst.</string>
     <string name="claude_code_settings_assistant_ask">Kérdezze az asszisztenst erről: „%1$s”</string>
     <string name="claude_code_permission_setting">Claude módosítana egy beállítást</string>
     <string name="claude_code_settings_starter_data">Miért használ az Amethyst ennyi mobiladatot?</string>

@@ -9898,19 +9898,21 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">What it changes, why, and how you tested it</string>
-    <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">looked up settings once</item>
         <item quantity="other">looked up settings %1$d times</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Ask what a setting does, or what to change to get what you want. Claude only sees Amethyst’s settings, and every change waits for your approval. Keys, wallets, relays and payments stay out of its reach.</string>
-    <string name="claude_code_settings_assistant_card">Not sure where something is? Ask the settings assistant.</string>
+    <string name="amethyst_assistant">Amethyst assistant</string>
+    <string name="amethyst_assistant_desc">Ask it to search notes and people, summarize your feed, notifications or a thread, explain or change a setting, post, reply, upload a file, zap, pay an invoice or sync your relays. It only reaches Amethyst, never your files. Every change, post and payment waits for your approval, and your keys stay out of its reach.</string>
+    <string name="amethyst_assistant_card">Not sure where something is, or want it done for you? Ask the Amethyst assistant.</string>
     <string name="claude_code_settings_assistant_ask">Ask the assistant about “%1$s”</string>
     <string name="claude_code_intro_question">What should %1$s work on?</string>
     <string name="claude_code_permission_change_this">%1$s wants to make this change</string>
     <string name="claude_code_permission_create_this">%1$s wants to create this file</string>
     <string name="claude_code_permission_setting">Claude wants to change a setting</string>
+    <string name="amethyst_assistant_permission_act">%1$s wants to act as you</string>
+    <string name="amethyst_assistant_permission_screen">%1$s wants to see your screen</string>
     <string name="claude_code_settings_starter_data">Why does Amethyst use so much mobile data?</string>
     <string name="claude_code_settings_starter_text">Make the text bigger and easier to read</string>
     <string name="claude_code_settings_starter_notifications">My notifications are too noisy. What can I change?</string>

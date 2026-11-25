@@ -35,7 +35,7 @@ import okhttp3.coroutines.executeAsync
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-private fun Request.Builder.auth(key: AgentKeyTag): Request.Builder =
+internal fun Request.Builder.auth(key: AgentKeyTag): Request.Builder =
     apply {
         if (key.hasKey()) header("Authorization", "Bearer ${key.key}")
         // Anthropic's compatibility layer still wants its own key header and a version.
@@ -46,7 +46,7 @@ private fun Request.Builder.auth(key: AgentKeyTag): Request.Builder =
     }
 
 /** NIP-FA: one trailing slash stripped, and a key never sent in cleartext to a host off this device. */
-private fun root(key: AgentKeyTag): String {
+internal fun root(key: AgentKeyTag): String {
     if (!key.isUrlAllowed()) throw WriterException(WriterFailure.INSECURE_URL)
     return key.apiRoot()
 }

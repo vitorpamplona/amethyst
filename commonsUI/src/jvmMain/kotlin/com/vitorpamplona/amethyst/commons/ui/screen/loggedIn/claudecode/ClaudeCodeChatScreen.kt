@@ -111,6 +111,7 @@ import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -128,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
+import com.vitorpamplona.amethyst.commons.claudecode.ScreenToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
@@ -143,6 +145,10 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -208,8 +214,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_data
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_notifications
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
@@ -317,6 +321,8 @@ fun ClaudeCodeChatScreen(
         return
     }
     val state by chat.state.collectAsStateWithLifecycle()
+    // However it was opened (the list, a notification, after a restart), the assistant reaches this account.
+    if (state.kind == ChatKind.SETTINGS) BindAssistantTools(accountViewModel, nav)
     val runningApp by viewModel.runningApp.collectAsStateWithLifecycle()
     val runError by viewModel.runError.collectAsStateWithLifecycle()
     val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
@@ -1158,9 +1164,9 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(MaterialSymbols.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
         }
-        Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(stringRes(Res.string.amethyst_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
-            stringRes(Res.string.claude_code_settings_assistant_desc),
+            stringRes(Res.string.amethyst_assistant_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
             textAlign = TextAlign.Center,
@@ -1438,6 +1444,9 @@ private fun PermissionCard(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when {
+                        // A post, an upload or a payment from the assistant: it acts as the user, not on a setting.
+                        note != null && request.toolName.startsWith(ACCOUNT_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_act, LocalAgentName.current)
+                        note != null && request.toolName.startsWith(SCREEN_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_screen, LocalAgentName.current)
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
                         view is ToolView.FileChange ->
                             // The diff below names the file: the question needn't say it again.
@@ -1896,3 +1905,7 @@ internal fun sentImagesToView(
     val shown = viewable.getOrNull(index) ?: return null
     return viewable.filterNotNull().toImmutableList() to shown
 }
+
+/** How the agent names the assistant's account tools: `mcp__amethyst-account__…`. */
+private val ACCOUNT_TOOLS_PREFIX = "mcp__${AccountToolServer.NAME}__"
+private val SCREEN_TOOLS_PREFIX = "mcp__${ScreenToolServer.NAME}__"

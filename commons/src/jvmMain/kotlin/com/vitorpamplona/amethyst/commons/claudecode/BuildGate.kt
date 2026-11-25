@@ -265,6 +265,7 @@ class BuildGate(
             return (besideGit + onPath).firstOrNull { it.isFile }?.absolutePath ?: "bash"
         }
 
+        private const val NO_LOCKS = "--no-optional-locks"
         private const val TAIL = 6_000
         private const val LOG_MAX = 2_000_000
         private const val SHOW_MS = 100L
@@ -276,11 +277,14 @@ class BuildGate(
         suspend fun workKey(root: File): String? =
             withContext(Dispatchers.IO) {
                 val head = GitWorkspace.git(root, "rev-parse", "HEAD")?.trim() ?: return@withContext null
-                val status = GitWorkspace.git(root, "status", "--porcelain", "--untracked-files=all") ?: return@withContext null
+                // Only looks: without --no-optional-locks, status and diff refresh the index under
+                // index.lock, and a `git add` or commit running beside them (the user's, an agent's)
+                // fails with "index.lock exists".
+                val status = GitWorkspace.git(root, NO_LOCKS, "status", "--porcelain", "--untracked-files=all") ?: return@withContext null
                 if (status.isBlank()) return@withContext head
                 val digest = MessageDigest.getInstance("SHA-256")
                 digest.update(status.toByteArray())
-                GitWorkspace.git(root, "diff", "HEAD", "--binary")?.let { digest.update(it.toByteArray()) }
+                GitWorkspace.git(root, NO_LOCKS, "diff", "HEAD", "--binary")?.let { digest.update(it.toByteArray()) }
                 head + "+" + digest.digest().joinToString("") { "%02x".format(it) }
             }
     }

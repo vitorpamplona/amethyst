@@ -10296,7 +10296,6 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Co zmienia, dlaczego i jak to przetestowano</string>
-    <string name="claude_code_settings_assistant">Asystent ustawień</string>
     <string name="claude_code_context_used_little">poniżej 1% kontekstu</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">sprawdzono ustawienia raz</item>
@@ -10304,8 +10303,6 @@
         <item quantity="many">sprawdzono ustawienia %1$d razy</item>
         <item quantity="other">sprawdzono ustawienia %1$d razy</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Zapytaj, do czego służy dane ustawienie albo co zmienić, aby uzyskać to, czego chcesz. Claude widzi tylko ustawienia Amethyst, a każda zmiana czeka na Twoją zgodę. Klucze, portfele, transmitery i płatności są poza jego zasięgiem.</string>
-    <string name="claude_code_settings_assistant_card">Nie wiesz, gdzie coś jest? Zapytaj asystenta ustawień.</string>
     <string name="claude_code_settings_assistant_ask">Zapytaj asystenta o „%1$s”</string>
     <string name="claude_code_permission_setting">Claude chce zmienić ustawienie</string>
     <string name="claude_code_settings_starter_data">Dlaczego Amethyst zużywa tyle danych mobilnych?</string>

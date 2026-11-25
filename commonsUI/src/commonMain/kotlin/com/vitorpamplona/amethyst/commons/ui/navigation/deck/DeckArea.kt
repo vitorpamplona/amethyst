@@ -122,6 +122,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestination
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.RegisterOnScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
@@ -335,6 +336,7 @@ private fun DeckColumnPane(
 ) {
     val scope = rememberCoroutineScope()
     val inner = remember(column.id) { Nav(NavBackStacks(column.root), scope) }
+    RegisterOnScreen("Deck column", inner)
     val destinations = checkNotNull(LocalNavDestinations.current)
 
     // Every column keeps its own ViewModels: entry keys restart at nav-0 in each back stack, and

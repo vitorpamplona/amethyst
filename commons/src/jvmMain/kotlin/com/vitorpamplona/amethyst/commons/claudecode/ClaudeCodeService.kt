@@ -153,7 +153,14 @@ class ClaudeCodeService(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     /** Each session's own clones of a group of repositories. */
     val agentWorkspaces: AgentWorkspaces = AgentWorkspaces(),
+    /** Where the settings assistant's sessions run: a folder of its own, so a session saved there is the assistant's. */
+    val assistantDir: File = File(appDataDir, ASSISTANT_FOLDER),
+    /** The assistant on the user's own AI key, for when no agent program here can run it. */
+    val online: OnlineAgentBackend = OnlineAgentBackend(OnlineSessionStore(File(appDataDir, ONLINE_SESSIONS_FOLDER))),
 ) {
+    /** Every agent whose sessions the list shows: the coding agents, and the assistant's online one. */
+    private val allAgents: List<AgentBackend> get() = backends + online
+
     constructor(
         backend: AgentBackend,
         scope: CoroutineScope,
@@ -168,7 +175,7 @@ class ClaudeCodeService(
 
     private fun backendOf(sessionId: String?): AgentBackend = sessionId?.let { owners[it] } ?: backend
 
-    fun backend(id: String): AgentBackend? = backends.firstOrNull { it.id == id }
+    fun backend(id: String): AgentBackend? = allAgents.firstOrNull { it.id == id }
 
     private val _installed = MutableStateFlow<List<AgentBackend>>(emptyList())
 
@@ -619,7 +626,7 @@ class ClaudeCodeService(
             _executable.value = found.firstNotNullOfOrNull { it.executable() }
             // Every agent: Claude's saved sessions are files, readable even without `claude`.
             saved.value =
-                backends
+                allAgents
                     .flatMap { agent ->
                         try {
                             agent.listSessions().onEach { owners[it.sessionId] = agent }
@@ -661,11 +668,13 @@ class ClaudeCodeService(
             ?.let { return it }
         val info =
             saved.value.firstOrNull { it.sessionId == key }
-                ?: backends.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
+                ?: allAgents.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
                 ?: return null
         // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
         // to start rather than resume in some other folder. A session that never named one shows
         // the home folder, and refuses the same way.
+        // The assistant's session reopens as the assistant: its tools, and none of the coding ones.
+        if (isAssistantFolder(info.cwd)) return openAssistant(key, info.sessionId, info.title)
         val cwd = info.cwd?.let { File(it) }
         return open(
             key,
@@ -1175,37 +1184,113 @@ class ClaudeCodeService(
     /**
      * The settings assistant: a chat whose only tools are [settings] (no files, no shell, none of
      * the user's own MCP servers), in a folder of its own. Reading a setting runs without asking;
-     * every change waits for the user's approval. The same chat comes back while it is open.
+     * every change waits for the user's approval. It stays one conversation: the chat open now, or
+     * after a restart the newest session saved in [assistantDir], or else a new one.
      */
-    fun settingsAssistant(
+    suspend fun settingsAssistant(
         settings: SettingsToolServer,
         title: String,
+        account: AccountToolServer? = null,
+        access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
     ): ClaudeChat {
+        bindAssistant(settings, account, access, screen)
         settingsAssistantKey?.let { key -> chats.value[key]?.let { return it } }
-        val dir = File(appDataDir, "claude-settings-assistant")
-        if (!dir.isDirectory && !dir.mkdirs()) Log.w(TAG) { "Could not create $dir" }
+        // Finding the agent program reads the disk (each PATH folder): not on the caller's thread.
+        val agent = withContext(Dispatchers.IO) { assistantAgent() }
+        // Read here rather than from the last [refresh]: the assistant may open before the list ever has.
+        val newest =
+            withContext(Dispatchers.IO) {
+                try {
+                    agent.listSessions().firstOrNull { isAssistantFolder(it.cwd) }?.also { owners[it.sessionId] = agent }
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not list ${agent.displayName} sessions", e)
+                    null
+                }
+            }
         val chat =
-            open(
-                "settings-${UUID.randomUUID()}",
-                null,
-                dir,
-                title,
-                PermissionMode.DEFAULT,
-                null,
-                kind = ChatKind.SETTINGS,
-                mcpServers = listOf(settings),
-                agent = backends.firstOrNull { it.capabilities.hostTools } ?: backend,
-                launchOptions = { options ->
-                    options.copy(
-                        onlyHostTools = true,
-                        preApprovedTools = listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settings::qualifiedName),
-                        instructions = SettingsToolServer.SYSTEM_PROMPT,
-                    )
-                },
-            )
+            newest?.let { info ->
+                chats.value.values.firstOrNull { it.state.value.sessionId == info.sessionId }
+                    ?: openAssistant(info.sessionId, info.sessionId, info.title, agent)
+            } ?: openAssistant("settings-${UUID.randomUUID()}", null, title, agent)
         settingsAssistantKey = chat.key
         return chat
     }
+
+    /**
+     * Points every assistant chat at [settings] and [account]: the account and navigation of the
+     * screen showing one now. Until a screen binds them, a tool call answers that Amethyst is out
+     * of reach.
+     */
+    fun bindAssistant(
+        settings: SettingsToolServer,
+        account: AccountToolServer?,
+        access: OnlineAgentBackend.Access? = null,
+        screen: ScreenToolServer? = null,
+    ) {
+        settingsTools.target = settings
+        accountTools.target = account
+        screenTools.target = screen
+        if (access != null) online.access = access
+    }
+
+    /** Whether the chat [key] names is the assistant: open as one, or saved in its folder. */
+    fun isAssistantChat(key: String): Boolean {
+        chats.value[key]?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        chats.value.values
+            .firstOrNull { it.state.value.sessionId == key }
+            ?.let { return it.state.value.kind == ChatKind.SETTINGS }
+        return saved.value.any { it.sessionId == key && isAssistantFolder(it.cwd) }
+    }
+
+    /** Whether [cwd] is the assistant's own folder, where only its sessions run. */
+    fun isAssistantFolder(cwd: String?): Boolean = cwd != null && File(cwd).absoluteFile.normalize() == assistantDir.absoluteFile.normalize()
+
+    /**
+     * Who runs the assistant: an agent program on this computer that takes the app's tools (Claude
+     * Code), else the user's own AI key, else Claude Code all the same (the chat then says it isn't installed).
+     */
+    private fun assistantAgent(): AgentBackend =
+        backends.firstOrNull { it.capabilities.hostTools && it.executable() != null }
+            ?: online.takeIf { it.isAvailable() }
+            ?: backends.firstOrNull { it.capabilities.hostTools }
+            ?: backend
+
+    private fun openAssistant(
+        key: String,
+        sessionId: String?,
+        title: String?,
+        /** Who runs it; null: the agent that saved [sessionId]. */
+        chosen: AgentBackend? = null,
+    ): ClaudeChat {
+        if (!assistantDir.isDirectory && !assistantDir.mkdirs()) Log.w(TAG) { "Could not create $assistantDir" }
+        return open(
+            key,
+            sessionId,
+            assistantDir,
+            title,
+            PermissionMode.DEFAULT,
+            null,
+            kind = ChatKind.SETTINGS,
+            mcpServers = listOf(settingsTools, accountTools, screenTools),
+            agent = chosen ?: sessionId?.let { backendOf(it) }?.takeIf { it.capabilities.hostTools } ?: assistantAgent(),
+            launchOptions = { options ->
+                options.copy(
+                    onlyHostTools = true,
+                    preApprovedTools =
+                        listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settingsTools::qualifiedName) +
+                            AccountToolServer.READ_ONLY_TOOLS.map(accountTools::qualifiedName) +
+                            ScreenToolServer.READ_ONLY_TOOLS.map(screenTools::qualifiedName),
+                    instructions = SettingsToolServer.SYSTEM_PROMPT,
+                )
+            },
+        )
+    }
+
+    /** The tools of every assistant chat, bound to the screen that shows one ([bindAssistant]). */
+    private val settingsTools = BoundToolServer(SettingsToolServer.NAME, SettingsToolServer.TOOLS)
+    private val accountTools = BoundToolServer(AccountToolServer.NAME, AccountToolServer.TOOLS, AccountToolServer.ALWAYS_ASK)
+    private val screenTools = BoundToolServer(ScreenToolServer.NAME, ScreenToolServer.TOOLS, ScreenToolServer.ALWAYS_ASK)
 
     @Volatile
     private var settingsAssistantKey: String? = null
@@ -1368,6 +1453,12 @@ class ClaudeCodeService(
 
         /** How long after its last pull request closes a workspace is kept: time to look back. */
         const val CLEANUP_AFTER_MS = 24 * 60 * 60_000L
+
+        /** The settings assistant's folder under the app's data: its sessions are the ones saved there. */
+        const val ASSISTANT_FOLDER = "claude-settings-assistant"
+
+        /** Where the assistant's sessions on the user's own AI key are saved, under the app's data. */
+        const val ONLINE_SESSIONS_FOLDER = "assistant-sessions"
 
         /** The key of a workspace's row when no session works in it yet. */
         const val WORKSPACE_KEY = "workspace:"

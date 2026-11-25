@@ -99,6 +99,16 @@ object SdkMcpDispatcher {
                                     put("text", outcome.text)
                                 },
                             )
+                            // MCP's image content: the agent sees the picture, not its bytes as text.
+                            outcome.images.forEach { image ->
+                                add(
+                                    buildJsonObject {
+                                        put("type", "image")
+                                        put("data", image.base64)
+                                        put("mimeType", image.mediaType)
+                                    },
+                                )
+                            }
                         },
                     )
                     if (outcome.isError) put("isError", true)

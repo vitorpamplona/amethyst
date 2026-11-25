@@ -20,13 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.OnlineAgentBackend
 import com.vitorpamplona.amethyst.commons.claudecode.SettingsToolServer
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
+import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.settings.registry.AmethystSettings
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -37,8 +51,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * The settings assistant: Claude Code with Amethyst's settings as its only tools. It reads
- * settings freely; every change waits for the user's approval on the chat's approval card.
+ * The Amethyst assistant: an agent whose only tools are Amethyst's settings and the user's
+ * account. It reads freely; every change, post and payment waits for the user's approval on the
+ * chat's approval card. It is
+ * one conversation that outlives the app: the chat resumes where it was, and a [question] asked
+ * from Settings goes into it.
  */
 @Composable
 fun ClaudeCodeSettingsAssistantScreen(
@@ -46,26 +63,54 @@ fun ClaudeCodeSettingsAssistantScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val title = stringRes(Res.string.claude_code_settings_assistant)
-    val chat =
-        remember(accountViewModel) {
-            val tools =
-                SettingsToolServer(
-                    registry = { AmethystSettings.registry(accountViewModel.settings.uiSettingsFlow, accountViewModel.account.settings) },
-                    // Tools run off the main thread; navigation happens on it.
-                    openScreen = { route -> uiScope.launch { nav.nav(route) } },
-                )
-            ClaudeCodeService.shared.settingsAssistant(tools, title)
-        }
+    val title = stringRes(Res.string.amethyst_assistant)
+    val tools = rememberSettingsTools(accountViewModel, nav)
+    val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
+    val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
+    val screenTools = remember { desktopScreenTools() }
+    val chat by produceState<ClaudeChat?>(null, tools, accountTools) { value = ClaudeCodeService.shared.settingsAssistant(tools, title, accountTools, access, screenTools) }
+    // Asked once per visit to this screen: coming back to it must not ask again.
+    var asked by rememberSaveable(question) { mutableStateOf(false) }
     LaunchedEffect(chat, question) {
-        if (!question.isNullOrBlank() &&
-            chat.state.value.items
-                .isEmpty()
-        ) {
-            chat.send(question)
+        val open = chat ?: return@LaunchedEffect
+        if (!asked && !question.isNullOrBlank()) {
+            asked = true
+            open.send(question)
         }
     }
-    ClaudeCodeChatScreen(chat.key, accountViewModel, nav)
+    val open = chat
+    if (open == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    } else {
+        ClaudeCodeChatScreen(open.key, accountViewModel, nav)
+    }
+}
+
+/** The settings tools for this account, opening screens through [nav]. */
+@Composable
+fun rememberSettingsTools(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+): SettingsToolServer =
+    remember(accountViewModel, nav) {
+        SettingsToolServer(
+            registry = { AmethystSettings.registry(accountViewModel.settings.uiSettingsFlow, accountViewModel.account.settings) },
+            // Tools run off the main thread; navigation happens on it.
+            openScreen = { route -> uiScope.launch { nav.nav(route) } },
+        )
+    }
+
+/** Points the assistant's chats at this screen's account and navigation while it shows one. */
+@Composable
+fun BindAssistantTools(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val tools = rememberSettingsTools(accountViewModel, nav)
+    val accountTools = remember(accountViewModel) { AccountToolServer(accountViewModel) }
+    val access = remember(accountViewModel) { OnlineAgentBackend.Access.of(accountViewModel) }
+    val screenTools = remember { desktopScreenTools() }
+    SideEffect { ClaudeCodeService.shared.bindAssistant(tools, accountTools, access, screenTools) }
 }
 
 private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

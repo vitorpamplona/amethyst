@@ -29,10 +29,14 @@ data class HostTool(
     val inputSchema: JsonObject,
 )
 
-/** What a tool call gave back: text for the agent to read; [isError] when it failed. */
+/**
+ * What a tool call gave back: text for the agent to read, and [images] for it to look at (a
+ * screenshot); [isError] when it failed.
+ */
 data class HostToolResult(
     val text: String,
     val isError: Boolean = false,
+    val images: List<ImageInput> = emptyList(),
 )
 
 /**
@@ -58,6 +62,12 @@ interface HostToolServer {
         tool: String,
         arguments: JsonObject,
     ): String? = null
+
+    /**
+     * [tool] asks the user every time, whatever they answered before: posting, paying. The chat
+     * then offers no "don't ask again" for it and makes No the default answer.
+     */
+    fun alwaysAsks(tool: String): Boolean = false
 
     /** `mcp__<server>__<tool>`: how the chat names [tool], whichever agent calls it. */
     fun qualifiedName(tool: String) = "mcp__${name}__$tool"
