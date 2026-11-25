@@ -379,6 +379,18 @@ class NoteSpecCardsUiTest {
         assertTrue(shown("Garden App"), "the reply does not name its repository")
     }
 
+    // A 1622 on the repository itself: the quote above it is the repository, so no second line
+    // names it. (The test's note platform draws the quoted repository card empty, so any "Garden
+    // App" on screen is that second line.)
+    @Suppress("DEPRECATION")
+    @Test
+    fun legacyGitReplyToTheRepositoryDoesNotRepeatIt() {
+        repository()
+        show(consume(event("f3", 1622, arrayOf(arrayOf("a", "30617:$alice:garden-app")), "Nice project", pubKey = bob)))
+        assertTrue(shown("Nice project"), "the reply's text is missing")
+        assertTrue(!shown("Garden App"), "the repository the quote above already shows is named again: " + texts())
+    }
+
     // ---------------------------------------------------------------------------------------------
     // NIP-51 emoji list (10030)
     // ---------------------------------------------------------------------------------------------

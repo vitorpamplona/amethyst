@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -51,8 +52,8 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 /**
  * Where a legacy NIP-34 reply (kind 1622, replaced by NIP-22 comments) sits: the issue or patch
  * its `root` `e` names, as the one-line [GitItemReference] (state, title, repository), or, until
- * that item loads, the repository its `a` names. Nothing when [shownParent] is the root itself,
- * which the reply's quote above already draws with its repository.
+ * that item loads, the repository its `a` names. Nothing when [shownParent], the quote above the
+ * reply, is that item or the repository, which already say both.
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -65,10 +66,13 @@ fun GitReplyContext(
     val rootId = remember(event) { event.rootIssueOrPatch() }
     val repository = remember(event) { event.repository()?.let { Address(it.kind, it.pubKeyHex, it.dTag) } }
 
+    // The quote above already is the item, or the repository (a reply on the repository itself).
+    if (shownParent != null && (shownParent.idHex == rootId || shownParent.event is GitRepositoryEvent || (shownParent as? AddressableNote)?.address == repository)) return
+
     if (rootId != null) {
-        if (rootId == shownParent?.idHex) return
         LoadNote(rootId) { root ->
-            if (root?.event != null) {
+            val item = root?.event
+            if (item != null && item !is GitRepositoryEvent) {
                 GitItemReference(root, nav, bordered = true)
             } else if (repository != null) {
                 GitRepositoryLine(repository, accountViewModel, nav)
