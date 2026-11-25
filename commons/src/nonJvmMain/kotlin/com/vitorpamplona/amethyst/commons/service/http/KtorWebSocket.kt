@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.utils.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.request.header
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
@@ -38,6 +39,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.time.TimeSource
@@ -52,6 +55,10 @@ import kotlin.time.TimeSource
  * - [disconnect] reports `onClosed(1000, "client disconnect")`, and nothing more comes from that
  *   session.
  *
+ * Compression: the engine may offer permessage-deflate. A relay whose compressed frames the engine
+ * cannot read ([Compression.isFailure] says which errors those are) is dialed again without it,
+ * for as long as the app runs.
+ *
  * It belongs next to `BasicOkHttpWebSocket` in quartz once quartz gains a non-JVM source set;
  * it lives here until then.
  */
@@ -60,7 +67,30 @@ class KtorWebSocket(
     val httpClient: (NormalizedRelayUrl) -> HttpClient,
     val out: WebSocketListener,
     private val scope: CoroutineScope,
+    private val compression: Compression = Compression(),
 ) : WebSocket {
+    /**
+     * The relays that get no compression offer, shared by every socket of one [Builder].
+     * [isFailure] tells an engine error caused by a relay's compressed frames from any other.
+     */
+    class Compression(
+        val isFailure: (Throwable) -> Boolean = { false },
+    ) {
+        private val disabled = MutableStateFlow<Set<String>>(emptySet())
+
+        fun isDisabled(url: NormalizedRelayUrl) = url.url in disabled.value
+
+        /** True the first time [url] is turned off. */
+        fun disable(url: NormalizedRelayUrl): Boolean {
+            var added = false
+            disabled.update {
+                added = url.url !in it
+                it + url.url
+            }
+            return added
+        }
+    }
+
     /** The running session: its job and the queue of frames waiting to go out. */
     private class Session(
         val job: Job,
@@ -92,7 +122,15 @@ class KtorWebSocket(
         val me = currentCoroutineContext()[Job]
         val started = TimeSource.Monotonic.markNow()
         try {
-            httpClient(url).webSocket(urlString = url.url) {
+            val uncompressed = compression.isDisabled(url)
+            httpClient(url).webSocket(
+                urlString = url.url,
+                request = {
+                    // Offering an extension no server knows replaces the engine's deflate offer:
+                    // servers ignore unknown ones, and an empty header stalls the handshake.
+                    if (uncompressed) header(EXTENSIONS_HEADER, NO_EXTENSION)
+                },
+            ) {
                 session?.takeIf { it.job === me }?.open = true
                 if (isCurrent(me)) out.onOpen(started.elapsedNow().inWholeMilliseconds.toInt(), false)
 
@@ -121,6 +159,9 @@ class KtorWebSocket(
             throw e
         } catch (e: Exception) {
             Log.d(TAG) { "${url.url} failed: ${e.message}" }
+            if (compression.isFailure(e) && compression.disable(url)) {
+                Log.i(TAG) { "${url.url} sent compressed frames this engine cannot read: dialing it without compression" }
+            }
             if (isCurrent(me)) out.onFailure(e, (e as? ResponseException)?.response?.status?.value, e.message)
         } finally {
             outgoing.close()
@@ -152,14 +193,17 @@ class KtorWebSocket(
     class Builder(
         private val httpClient: (NormalizedRelayUrl) -> HttpClient,
         private val scope: CoroutineScope,
+        private val compression: Compression = Compression(),
     ) : WebsocketBuilder {
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ): WebSocket = KtorWebSocket(url, httpClient, out, scope)
+        ): WebSocket = KtorWebSocket(url, httpClient, out, scope, compression)
     }
 
     companion object {
         private const val TAG = "KtorWebSocket"
+        private const val EXTENSIONS_HEADER = "Sec-WebSocket-Extensions"
+        private const val NO_EXTENSION = "x-amethyst-no-compression"
     }
 }
