@@ -26,6 +26,7 @@ import com.vitorpamplona.androiddevice.device.EmulatorScreen
 import com.vitorpamplona.androiddevice.emulator.EmulatorDiscovery
 import com.vitorpamplona.androiddevice.emulator.EmulatorLauncher
 import com.vitorpamplona.androiddevice.emulator.LaunchOptions
+import com.vitorpamplona.androiddevice.emulator.displayAvailable
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -40,7 +41,7 @@ class EmulatorDiscoveryTest {
     @Test
     fun readsTheDiscoveryFileEveryEmulatorWrites() {
         val dir = tempDir()
-        File(dir, "pid_4242_info.ini").writeText(
+        File(dir, "pid_4242.ini").writeText(
             """
             port.serial=5556
             port.adb=5557
@@ -51,7 +52,11 @@ class EmulatorDiscoveryTest {
             cmdline="emulator" "-avd" "Pixel_9_API_36"
             """.trimIndent(),
         )
-        File(dir, "pid_99_info.ini").writeText("port.serial=5554\ngrpc.port=8554\ngrpc.jwks=/tmp/jwks\n")
+        // What Android Studio starts (emulator 37): a display name apart from the id, and JWT keys.
+        File(dir, "pid_99_info.ini").writeText(
+            "port.serial=5554\navd.name=Pixel 9 API 36\navd.id=Pixel_9_API_36\ngrpc.port=8554\n" +
+                "grpc.jwks=/tmp/jwks\ngrpc.jwk_active=/tmp/jwks/active.jwk\n",
+        )
         File(dir, "notes.txt").writeText("ignored")
 
         val running = EmulatorDiscovery.running(listOf(dir), alive = { it == 4242L || it == 99L }).sortedBy { it.pid }
@@ -63,9 +68,15 @@ class EmulatorDiscoveryTest {
         assertEquals(8556, ours.grpcPort)
         assertEquals("abc123", ours.grpcToken)
         assertTrue(ours.grpcReachable)
-        // Android Studio's: JWT only, so the app goes through adb for it.
-        assertTrue(running[0].usesJwt)
-        assertFalse(running[0].grpcReachable)
+        // Android Studio's: JWT only, reached with a key dropped into its folder.
+        val studio = running[0]
+        assertTrue(studio.usesJwt)
+        assertTrue(studio.grpcReachable)
+        assertEquals("/tmp/jwks", studio.jwksDir)
+        assertEquals("/tmp/jwks/active.jwk", studio.activeJwks)
+        // Matched to AVDs by id; the display name is only for showing.
+        assertEquals("Pixel_9_API_36", studio.avdName)
+        assertEquals("Pixel 9 API 36", studio.avdDisplayName)
         // A file whose process is gone is stale.
         assertTrue(EmulatorDiscovery.running(listOf(dir), alive = { false }).isEmpty())
         assertEquals(5556, EmulatorDiscovery.find(4242, listOf(dir))?.consolePort)
@@ -81,6 +92,11 @@ class EmulatorDiscoveryTest {
         assertEquals(
             File("/run/user/1000/avd/running"),
             EmulatorDiscovery.directories("Linux", mapOf("XDG_RUNTIME_DIR" to "/run/user/1000"), "/home/me", "/tmp", "me").first(),
+        )
+        // Without XDG_RUNTIME_DIR, emulator 37 writes under ~/.android.
+        assertEquals(
+            File("/home/me/.android/avd/running"),
+            EmulatorDiscovery.directories("Linux", emptyMap(), "/home/me", "/tmp", "me").first(),
         )
     }
 
@@ -107,11 +123,17 @@ class EmulatorDiscoveryTest {
 
     @Test
     fun startsHiddenWithItsOwnTokenGuardedGrpcPort() {
-        val args = EmulatorLauncher(File("/sdk/emulator/emulator")).arguments("Pixel", 8560, LaunchOptions(coldBoot = true))
+        val args = EmulatorLauncher(File("/sdk/emulator/emulator"), hasDisplay = { true }).arguments("Pixel", 8560, LaunchOptions(coldBoot = true))
         assertEquals(listOf("/sdk/emulator/emulator", "-avd", "Pixel", "-grpc", "8560", "-grpc-use-token", "-qt-hide-window", "-no-boot-anim", "-no-snapshot-load"), args)
         // A workstream's copy: several of one AVD run at once only when all are read-only.
-        val copy = EmulatorLauncher(File("/sdk/emulator/emulator")).arguments("Pixel", 8562, LaunchOptions(readOnly = true))
+        val copy = EmulatorLauncher(File("/sdk/emulator/emulator"), hasDisplay = { true }).arguments("Pixel", 8562, LaunchOptions(readOnly = true))
         assertEquals("-read-only", copy.last())
+        // No display (a Linux server): a hidden window would still start Qt and abort the emulator.
+        val headless = EmulatorLauncher(File("/sdk/emulator/emulator"), hasDisplay = { false }).arguments("Pixel", 8564, LaunchOptions())
+        assertTrue("-no-window" in headless && "-qt-hide-window" !in headless, headless.toString())
+        assertFalse(displayAvailable("Linux", emptyMap()))
+        assertTrue(displayAvailable("Linux", mapOf("WAYLAND_DISPLAY" to "wayland-0")))
+        assertTrue(displayAvailable("Mac OS X", emptyMap()))
     }
 
     @Test

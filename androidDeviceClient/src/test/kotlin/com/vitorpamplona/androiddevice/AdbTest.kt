@@ -167,4 +167,17 @@ class RawScreencapTest {
         assertFailsWith<IOException> { Adb.parseRawScreencap(ByteArray(5)) }
         assertFailsWith<IOException> { Adb.parseRawScreencap(raw(3, 2, 3).copyOf(20)) }
     }
+
+    @Test
+    fun findsAPidWithOrWithoutPidof() {
+        assertEquals(4242, Adb.parsePid("4242\n", "com.app"))
+        assertEquals(4242, Adb.parsePid("4242 4300\n", "com.app"))
+        // Android 5's ps, through grep: the main process, not its :remote one.
+        val ps =
+            "u0_a52    3001  1153  990000 40000 ffffffff b7751f15 S com.app:remote\n" +
+                "u0_a52    2407  1153  1002952 62724 ffffffff b7751f15 S com.app\n"
+        assertEquals(2407, Adb.parsePid(ps, "com.app"))
+        assertNull(Adb.parsePid("", "com.app"))
+        assertNull(Adb.parsePid("u0_a52 3001 1153 990000 40000 ffffffff b7751f15 S com.app:remote\n", "com.app"))
+    }
 }

@@ -540,7 +540,7 @@ class DeviceToolServer(
                 "reverse_landscape" -> 3
                 else -> throw IllegalArgumentException("orientation is portrait, landscape, reverse_portrait or reverse_landscape")
             }
-        devices.connection(device.serial).adb.rotate(device.serial, turns)
+        devices.connection(device.serial).rotate(turns)
         return after(device, args, "Turned to ${args.str("orientation")}", defaultShot = false)
     }
 
@@ -727,7 +727,7 @@ class DeviceToolServer(
                 ),
                 HostTool(
                     ROTATE,
-                    "Turns the screen (auto-rotate goes off so it stays).",
+                    "Turns the device. An emulator turns as its own rotate button turns it (apps locked to portrait stay so); a phone gets the rotation locked.",
                     schema("""{"type":"object","properties":{"orientation":{"type":"string","enum":["portrait","landscape","reverse_portrait","reverse_landscape"]},$DEVICE,$SHOT},"required":["orientation"]}"""),
                 ),
                 HostTool(

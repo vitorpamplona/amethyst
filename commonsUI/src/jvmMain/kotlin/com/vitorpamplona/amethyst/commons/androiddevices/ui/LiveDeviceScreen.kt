@@ -114,6 +114,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
@@ -208,16 +209,20 @@ fun LiveDeviceScreen(
         }
     }
 
-    // Input goes out one event at a time, in order: a lift must not overtake its press.
+    // Input goes out one event at a time, in order: a lift must not overtake its press. Off the UI
+    // thread: while the device streams (as it does all through a drag) that thread is busy drawing
+    // frames, and a touch waiting for a turn on it reached the device a redraw late, each one.
     val input = remember(current) { Channel<suspend () -> Unit>(Channel.UNLIMITED) }
     LaunchedEffect(input) {
-        for (event in input) {
-            try {
-                event()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                Log.w("LiveDeviceScreen", "Input didn't reach the device", e)
+        withContext(Dispatchers.IO) {
+            for (event in input) {
+                try {
+                    event()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
+                    Log.w("LiveDeviceScreen", "Input didn't reach the device", e)
+                }
             }
         }
     }
@@ -325,8 +330,17 @@ fun LiveDeviceScreen(
         }
         FingerDot(touch, touching)
         AgentTouches(activity, agentName)
-        // Clicked: what the keyboard does now, said once at the top of the screen while it holds.
-        AnimatedVisibility(focused && failure == null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)) {
+        // Clicked: what the keyboard does now, said for a moment at the top of the screen, then out
+        // of the way of the device's own status bar. The focus ring stays as the lasting sign.
+        var hint by remember { mutableStateOf(false) }
+        LaunchedEffect(focused) {
+            hint = focused
+            if (focused) {
+                delay(TYPING_HINT_MS)
+                hint = false
+            }
+        }
+        AnimatedVisibility(hint && failure == null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f), contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(MaterialSymbols.Keyboard, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -460,5 +474,6 @@ private fun keyOf(key: Key): DeviceKey? =
 private const val RESIZE_DEBOUNCE_MS = 250L
 private const val TOUCH_FADE_MS = 1_400
 private const val FINGER_FADE_MS = 250
+private const val TYPING_HINT_MS = 3_000L
 private const val WHEEL_STEP = 0.12f
 private const val WHEEL_MOVE_MS = 30L

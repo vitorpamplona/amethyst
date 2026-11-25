@@ -88,6 +88,38 @@ class DeviceConnection(
     @Volatile
     private var cachedScreen: DeviceScreen? = null
 
+    /** How the screen is turned now, in quarter turns from portrait. */
+    suspend fun rotation(): Int {
+        emulator?.let { emu ->
+            try {
+                return emu.rotation()
+            } catch (e: GrpcException) {
+                Log.w(TAG, "The emulator $serial didn't say how it is turned; asking adb", e)
+            }
+        }
+        return adb.rotation(serial)
+    }
+
+    /**
+     * Turns the device to [quarterTurns]. An emulator turns itself, by its rotation sensor, as its
+     * own rotate button does: its frames then come turned, which the live view and touches follow.
+     * Anything else (a phone, or an emulator whose port refuses) gets Android's rotation locked to
+     * it through adb, which a phone shows as it is but an emulator's stream doesn't know about.
+     */
+    suspend fun rotate(quarterTurns: Int) {
+        emulator?.let { emu ->
+            try {
+                // The sensor turns the screen only with auto-rotate on, which an adb turn switches off.
+                adb.followSensor(serial)
+                emu.setRotation(quarterTurns)
+                return
+            } catch (e: GrpcException) {
+                Log.w(TAG, "The emulator $serial didn't take a rotation; locking it through adb", e)
+            }
+        }
+        adb.rotate(serial, quarterTurns)
+    }
+
     /**
      * The live view: the emulator's stream when it can be opened, else adb screenshots. One per
      * connection, so a key press from the panel doesn't build a new one (and ask adb its size).

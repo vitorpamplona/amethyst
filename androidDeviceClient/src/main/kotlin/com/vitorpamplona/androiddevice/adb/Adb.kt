@@ -268,13 +268,12 @@ class Adb(
     suspend fun pidOf(
         serial: String,
         packageName: String,
-    ): Int? =
-        adb(listOf("-s", serial, "shell", "pidof ${quote(packageName)}"), 10_000)
-            .text
-            .trim()
-            .split(' ')
-            .firstOrNull()
-            ?.toIntOrNull()
+    ): Int? {
+        val name = quote(packageName)
+        // Android before 7 has no pidof ("not found"): its ps lists every process, the name last.
+        val out = adb(listOf("-s", serial, "shell", "pidof $name 2>/dev/null || ps | grep -F $name"), 10_000).text
+        return parsePid(out, packageName)
+    }
 
     /**
      * The last [lines] of the log: only [pid]'s when given, only [minLevel] and above (V, D, I,
@@ -351,6 +350,11 @@ class Adb(
         shell(serial, "settings", "put", "system", "user_rotation", (quarterTurns and 3).toString())
     }
 
+    /** Auto-rotate on: Android turns its screen as the device's sensor says (an emulator's rotate). */
+    suspend fun followSensor(serial: String) {
+        shell(serial, "settings", "put", "system", "accelerometer_rotation", "1")
+    }
+
     suspend fun rotation(serial: String): Int = shell(serial, "settings", "get", "system", "user_rotation").trim().toIntOrNull()?.and(3) ?: 0
 
     /** Asks an emulator to quit, through its console. */
@@ -363,6 +367,19 @@ class Adb(
         private val WHITESPACE = Regex("\\s+")
         private const val CRASH_LINES = 400
         private const val ANR_LINES = 200
+
+        /** A pid from `pidof`'s answer (pids alone), or the `ps` line whose name is [packageName]. */
+        fun parsePid(
+            out: String,
+            packageName: String,
+        ): Int? =
+            out.lineSequence().map { it.trim().split(WHITESPACE) }.firstNotNullOfOrNull { cols ->
+                when {
+                    cols.size == 1 || cols.all { c -> c.all(Char::isDigit) } -> cols.first().toIntOrNull()
+                    cols.last() == packageName -> cols.getOrNull(1)?.toIntOrNull()
+                    else -> null
+                }
+            }
 
         fun parseDevices(out: String): List<AdbDevice> =
             out

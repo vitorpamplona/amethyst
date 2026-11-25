@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -109,6 +111,14 @@ class DevicePanelViewModel(
 
     init {
         folder?.let { dir -> viewModelScope.launch(Dispatchers.IO) { _targets.value = AndroidAppTargets.find(dir) } }
+        // An error belongs to the device it came from: gone with it, or when another is shown.
+        viewModelScope.launch {
+            selected
+                .map { it?.serial }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { _error.value = null }
+        }
         viewModelScope.launch {
             selected.collect { device ->
                 if (device != null && device.status != DeviceStatus.STARTING && devices.selection.value[pickKey] == null) devices.select(pickKey, device.serial)
@@ -225,8 +235,8 @@ class DevicePanelViewModel(
     fun rotate() {
         val serial = selected.value?.serial ?: return
         act {
-            val adb = devices.connection(serial).adb
-            adb.rotate(serial, adb.rotation(serial) + 1)
+            val connection = devices.connection(serial)
+            connection.rotate(connection.rotation() + 1)
         }
     }
 

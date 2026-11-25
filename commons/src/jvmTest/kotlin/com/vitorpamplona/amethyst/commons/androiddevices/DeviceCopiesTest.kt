@@ -104,7 +104,7 @@ class DeviceCopiesTest {
                 }
                 val process = ProcessBuilder("sleep", "60").start()
                 val port = nextPort.also { nextPort += 2 }
-                File(discovery, "pid_${process.pid()}_info.ini").writeText("port.serial=$port\navd.name=$avd\ngrpc.port=${port + 3000}\ngrpc.token=t\n")
+                File(discovery, "pid_${process.pid()}.ini").writeText("port.serial=$port\navd.name=$avd\ngrpc.port=${port + 3000}\ngrpc.token=t\n")
                 running["emulator-$port"] = Triple(process, readOnly, avd)
                 return process
             }

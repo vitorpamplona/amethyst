@@ -24,36 +24,44 @@ import com.vitorpamplona.androiddevice.avd.Avds
 import java.io.File
 
 /**
- * An emulator running on this computer, as its discovery file (`pid_<pid>_info.ini`) describes it:
+ * An emulator running on this computer, as its discovery file (`pid_<pid>.ini`) describes it:
  * every emulator writes one, whoever started it (Android Studio, a terminal, this app).
  *
  * [grpcToken] is set when it was started with `-grpc-use-token`; one that uses JWTs instead
- * ([usesJwt], the default when no `-grpc` port is given, and what Android Studio starts) only
- * answers clients holding a key it trusts, so the app drives it through adb instead.
+ * ([usesJwt], what Android Studio starts) answers clients whose key it finds in [jwksDir]
+ * ([EmulatorJwtAuth]).
  */
 data class RunningEmulator(
     val pid: Long,
     val consolePort: Int,
     val adbPort: Int?,
+    /** The AVD's id, its `<id>.ini` file's name: what `-avd` takes. */
     val avdName: String?,
+    /** The AVD's display name, when the file gives one apart from the id. */
+    val avdDisplayName: String?,
     val avdDir: String?,
     val grpcPort: Int?,
     val grpcToken: String?,
     val usesJwt: Boolean,
+    /** Where a JWT client writes its public key (`grpc.jwks`). */
+    val jwksDir: String? = null,
+    /** The file listing the keys the emulator accepted (`grpc.jwk_active`). */
+    val activeJwks: String? = null,
     val discoveryFile: File,
 ) {
     /** How adb names it. */
     val serial: String get() = "emulator-$consolePort"
 
-    /** Whether this app can open its gRPC endpoint: a port, and either no auth or the token. */
-    val grpcReachable: Boolean get() = grpcPort != null && !usesJwt
+    /** Whether this app can open its gRPC endpoint: a port, with no auth, the token, or a key folder. */
+    val grpcReachable: Boolean get() = grpcPort != null && (!usesJwt || jwksDir != null)
 }
 
 object EmulatorDiscovery {
     /**
      * The folders emulators write discovery files to, on [os]: Android Studio reads the same ones.
-     * Linux tries each candidate, since the emulator falls back to a temporary folder when
-     * `XDG_RUNTIME_DIR` is unset.
+     * Linux tries each candidate, since the emulator falls back to another folder when
+     * `XDG_RUNTIME_DIR` is unset (`~/.android/avd/running`, seen with emulator 37; older ones used
+     * a temporary folder).
      */
     fun directories(
         os: String = System.getProperty("os.name").orEmpty(),
@@ -67,7 +75,13 @@ object EmulatorDiscovery {
                 os.startsWith("Mac", ignoreCase = true) -> listOf(File(home, "Library/Caches/TemporaryItems"))
                 os.startsWith("Windows", ignoreCase = true) ->
                     listOfNotNull(env["LOCALAPPDATA"]?.let { File(it, "Temp") }, File(home, "AppData/Local/Temp"), File(tmp))
-                else -> listOfNotNull(env["XDG_RUNTIME_DIR"]?.takeIf { it.isNotBlank() }?.let(::File), File(tmp, "android-$user"), File(tmp))
+                else ->
+                    listOfNotNull(
+                        env["XDG_RUNTIME_DIR"]?.takeIf { it.isNotBlank() }?.let(::File),
+                        File(home, ".android"),
+                        File(tmp, "android-$user"),
+                        File(tmp),
+                    )
             }
         return roots.map { File(it, "avd/running") }.distinctBy { it.absolutePath }
     }
@@ -90,7 +104,7 @@ object EmulatorDiscovery {
     ): RunningEmulator? =
         dirs
             .asSequence()
-            .map { File(it, "pid_${pid}_info.ini") }
+            .flatMap { sequenceOf(File(it, "pid_$pid.ini"), File(it, "pid_${pid}_info.ini")) }
             .firstOrNull { it.isFile }
             ?.let(::parse)
 
@@ -107,14 +121,20 @@ object EmulatorDiscovery {
             pid = pid,
             consolePort = console,
             adbPort = ini["port.adb"]?.toIntOrNull(),
-            avdName = ini["avd.name"],
+            // `avd.name` is the display name ("Pixel 9 API 36") when the AVD has one; `avd.id` is
+            // the id, which newer emulators write and older ones left out.
+            avdName = ini["avd.id"]?.takeIf { it.isNotBlank() } ?: ini["avd.name"],
+            avdDisplayName = ini["avd.name"]?.takeIf { it.isNotBlank() },
             avdDir = ini["avd.dir"],
             grpcPort = ini["grpc.port"]?.toIntOrNull(),
             grpcToken = ini["grpc.token"]?.takeIf { it.isNotBlank() },
             usesJwt = !ini["grpc.jwks"].isNullOrBlank() && ini["grpc.token"].isNullOrBlank(),
+            jwksDir = ini["grpc.jwks"]?.takeIf { it.isNotBlank() },
+            activeJwks = ini["grpc.jwk_active"]?.takeIf { it.isNotBlank() },
             discoveryFile = file,
         )
     }
 
-    private val FILE = Regex("pid_(\\d+)_info\\.ini")
+    // `pid_<pid>.ini`, as emulator 37 names it; `_info` kept for anything that wrote the older name.
+    private val FILE = Regex("pid_(\\d+)(?:_info)?\\.ini")
 }

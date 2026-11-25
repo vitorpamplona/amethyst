@@ -32,6 +32,7 @@ import com.vitorpamplona.androiddevice.avd.AvdInfo
 import com.vitorpamplona.androiddevice.avd.Avds
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
 import com.vitorpamplona.androiddevice.emulator.EmulatorDiscovery
+import com.vitorpamplona.androiddevice.emulator.EmulatorJwtAuth
 import com.vitorpamplona.androiddevice.emulator.EmulatorLauncher
 import com.vitorpamplona.androiddevice.emulator.LaunchOptions
 import com.vitorpamplona.androiddevice.emulator.LaunchedEmulator
@@ -58,6 +59,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -320,7 +322,7 @@ class AndroidDevices(
                     serial = d.serial,
                     // An emulator nobody's discovery file names: its serial says more than adb's
                     // "sdk_gphone64_x86_64" model.
-                    name = avd?.displayName ?: emulator?.avdName?.replace('_', ' ') ?: (if (d.isEmulator) d.serial else d.model) ?: d.serial,
+                    name = avd?.displayName ?: emulator?.avdDisplayName ?: emulator?.avdName?.replace('_', ' ') ?: (if (d.isEmulator) d.serial else d.model) ?: d.serial,
                     kind = kind,
                     status =
                         when {
@@ -516,16 +518,19 @@ class AndroidDevices(
      * workstream's copy to where it started. Needs the emulator's gRPC endpoint (one this app started).
      */
     suspend fun reset(serial: String) {
-        val controller =
-            connection(serial).emulator
-                ?: throw IOException(
-                    if (launched.containsKey(serial)) {
-                        "Its control port didn't answer: restart it to drop its changes"
-                    } else {
-                        "Only an emulator started from here can be reset: restart it to drop its changes"
-                    },
-                )
+        // One Android Studio started answers this app with a signed token whose issuer may not load
+        // snapshots (PERMISSION_DENIED), so it isn't asked.
+        if (!launched.containsKey(serial)) throw IOException("Only an emulator started from here can be reset: restart it to drop its changes")
+        val controller = connection(serial).emulator ?: throw IOException("Its control port didn't answer: restart it to drop its changes")
         controller.loadSnapshot()
+        // The loaded state drops adb's connection to the guest for a moment ("device offline"):
+        // back only once adb reaches it again, so the next command doesn't fail.
+        val adb = adb() ?: return
+        val started = System.currentTimeMillis()
+        while (System.currentTimeMillis() - started < RESET_RECONNECT_MS) {
+            if (adb.devices().any { it.serial == serial && it.isOnline } && adb.bootCompleted(serial)) break
+            delay(RESET_POLL_MS)
+        }
         booted += serial
     }
 
@@ -588,8 +593,11 @@ class AndroidDevices(
         val ours = launched.containsKey(serial)
         if (!ours && !info.grpcReachable) return null
         val token = info.grpcToken ?: if (ours) consoleToken() else null
-        val controller = EmulatorController(GrpcChannel("127.0.0.1", grpcPort, token))
+        val jwt = if (token == null && info.usesJwt) info.jwksDir?.let { jwtAuth(it, info.activeJwks) } else null
+        val controller = EmulatorController(GrpcChannel("127.0.0.1", grpcPort, token, authorization = jwt?.let { auth -> auth::authorization }))
         return try {
+            // Puts the key in the emulator's folder and waits for it to take it, off the caller's thread.
+            jwt?.let { withContext(Dispatchers.IO) { it.register() } }
             controller.status()
             controller
         } catch (e: CancellationException) {
@@ -599,6 +607,18 @@ class AndroidDevices(
             null
         }
     }
+
+    /** One key per emulator key folder (Android Studio's emulators), taken back out when the app quits. */
+    private val jwtAuths = ConcurrentHashMap<String, EmulatorJwtAuth>()
+
+    private fun jwtAuth(
+        jwksDir: String,
+        activeJwks: String?,
+    ): EmulatorJwtAuth =
+        jwtAuths.computeIfAbsent(jwksDir) {
+            if (jwtAuths.isEmpty()) Runtime.getRuntime().addShutdownHook(Thread { jwtAuths.values.forEach { it.close() } })
+            EmulatorJwtAuth(Path.of(jwksDir), activeJwks?.let { Path.of(it) })
+        }
 
     /** The emulator console's token, which `-grpc-use-token` also takes. */
     private fun consoleToken(): String? =
@@ -686,6 +706,8 @@ class AndroidDevices(
     companion object {
         private const val TAG = "AndroidDevices"
         private const val BOOT_POLL_MS = 2_000L
+        private const val RESET_RECONNECT_MS = 30_000L
+        private const val RESET_POLL_MS = 300L
         private const val STOP_WAIT_S = 20L
         private const val MAX_CRASHES = 50
         private const val AVD_TTL_MS = 10_000L

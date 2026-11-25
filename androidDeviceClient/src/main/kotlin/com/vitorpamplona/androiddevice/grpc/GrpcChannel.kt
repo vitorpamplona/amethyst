@@ -74,6 +74,8 @@ class GrpcChannel(
     private val token: String? = null,
     baseClient: OkHttpClient = sharedClient,
     private val callTimeoutMs: Long = 15_000,
+    /** The whole `authorization` value for each call, instead of [token]: a signed JWT ([com.vitorpamplona.androiddevice.emulator.EmulatorJwtAuth]). */
+    private val authorization: (() -> String)? = null,
 ) {
     private val client =
         baseClient
@@ -97,7 +99,7 @@ class GrpcChannel(
             .url("http://$host:$port/$method")
             .header("te", "trailers")
             .header("grpc-accept-encoding", "identity")
-            .apply { token?.let { header("authorization", "Bearer $it") } }
+            .apply { (authorization?.invoke() ?: token?.let { "Bearer $it" })?.let { header("authorization", it) } }
             .post(frame(message).toRequestBody(GRPC))
             .build()
 

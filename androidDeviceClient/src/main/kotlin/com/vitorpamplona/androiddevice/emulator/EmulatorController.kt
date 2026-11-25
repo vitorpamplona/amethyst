@@ -158,6 +158,30 @@ class EmulatorController(
      */
     suspend fun rotation(): Int = screenshot(PixelFormat.RGB888, 1, 1).rotation
 
+    /**
+     * Turns the emulated device itself to [quarterTurns] (0 portrait, 1 landscape, 2 upside down, 3
+     * the other landscape), by its rotation sensor (`setPhysicalModel`, ROTATION): the angle on z the
+     * proto gives each skin rotation. Android turns its screen to follow (with auto-rotate on), and
+     * the frames come turned, with [EmulatorImage.rotation] saying so, as the emulator's own rotate
+     * buttons do it.
+     */
+    suspend fun setRotation(quarterTurns: Int) {
+        val z =
+            when (quarterTurns and 3) {
+                1 -> 90f
+                2 -> -180f
+                3 -> -90f
+                else -> 0f
+            }
+        call(
+            "setPhysicalModel",
+            ProtoWriter()
+                .int(1, PHYSICAL_ROTATION)
+                .message(3) { packedFloats(1, floatArrayOf(0f, 0f, z)) }
+                .bytes(),
+        )
+    }
+
     /** A W3C key name ("GoBack", "GoHome", "AppSwitch", "Power", "Enter", "Backspace", "a"…). */
     suspend fun key(
         key: String,
@@ -208,6 +232,9 @@ class EmulatorController(
     companion object {
         const val SERVICE = "android.emulation.control.EmulatorController"
         const val SNAPSHOTS = "android.emulation.control.SnapshotService"
+
+        /** `PhysicalModelValue.PhysicalType.ROTATION`. */
+        private const val PHYSICAL_ROTATION = 1L
 
         /** The quick-boot snapshot the emulator saves on a normal exit and boots from. */
         const val DEFAULT_BOOT = "default_boot"

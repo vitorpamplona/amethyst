@@ -61,6 +61,8 @@ class EmulatorLauncher(
     private val emulator: File,
     private val runner: CommandRunner = ProcessCommandRunner,
     private val discoveryDirs: () -> List<File> = { EmulatorDiscovery.directories() },
+    /** Whether a display is there to hide a window on: Linux without X or Wayland has none. */
+    private val hasDisplay: () -> Boolean = ::displayAvailable,
 ) {
     fun arguments(
         avd: String,
@@ -74,7 +76,9 @@ class EmulatorLauncher(
             add("-grpc")
             add(grpcPort.toString())
             add("-grpc-use-token")
-            if (options.embedded) add("-qt-hide-window")
+            // A hidden window still starts Qt, which aborts the emulator (code 134) where there is
+            // no display to open: there it runs with no window at all.
+            if (options.embedded) add(if (hasDisplay()) "-qt-hide-window" else "-no-window")
             add("-no-boot-anim")
             if (options.coldBoot) add("-no-snapshot-load")
             if (options.wipeData) add("-wipe-data")
@@ -160,4 +164,13 @@ class EmulatorLauncher(
 
         private val ERROR_WORDS = listOf("ERROR", "FATAL", "PANIC", "FAILURE:", "What went wrong", "e: ")
     }
+}
+
+/** Linux needs an X or Wayland display for the emulator's (hidden) window; macOS and Windows always have one. */
+internal fun displayAvailable(
+    os: String = System.getProperty("os.name").orEmpty(),
+    env: Map<String, String> = System.getenv(),
+): Boolean {
+    if (os.startsWith("Mac", ignoreCase = true) || os.startsWith("Windows", ignoreCase = true)) return true
+    return !env["DISPLAY"].isNullOrBlank() || !env["WAYLAND_DISPLAY"].isNullOrBlank()
 }

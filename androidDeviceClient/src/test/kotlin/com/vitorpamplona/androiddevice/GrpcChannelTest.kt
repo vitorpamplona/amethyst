@@ -108,6 +108,25 @@ class GrpcChannelTest {
         }
 
     @Test
+    fun aSignedTokenReplacesTheConsoleToken() =
+        runBlocking {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .addHeader("content-type", "application/grpc")
+                    .body(framed(ByteArray(0)))
+                    .trailers(headersOf("grpc-status", "0"))
+                    .build(),
+            )
+            var signed = 0
+            val channel = GrpcChannel(server.hostName, server.port, authorization = { "Bearer jwt-${++signed}" })
+
+            EmulatorController(channel).status()
+
+            assertEquals("Bearer jwt-1", server.takeRequest().headers["authorization"])
+        }
+
+    @Test
     fun aStatusInTheTrailersFailsTheCall() =
         runBlocking {
             server.enqueue(

@@ -28,12 +28,16 @@ look, tap and read logcat on the same device the user is watching.
 - **gRPC by hand.** The emulator's endpoint is h2c on localhost; OkHttp speaks it with prior
   knowledge, and the messages needed are a dozen fields. That keeps grpc-java, protobuf and the
   protobuf Gradle plugin out of the build.
-- **Two screen paths.** An emulator this app starts gets `-grpc <port> -grpc-use-token`, so its
-  frames stream (RGBA, scaled by the emulator to the view) and touches move live. Any other device
-  (a phone, an emulator Studio started with JWT auth) is polled with `screencap` and driven with
-  `input`: slower, same features.
-- **Agents act through adb.** Their taps don't need the stream's latency, and adb's coordinates
-  are the screen's current ones, the same as uiautomator's bounds and the screenshot's pixels.
+- **Two screen paths.** An emulator this app starts gets `-grpc <port> -grpc-use-token`; one
+  Android Studio started answers a signed JWT (`EmulatorJwtAuth`). Either way its frames stream
+  (RGBA, scaled by the emulator to the view) and touches move live. A phone, or an emulator whose
+  port refuses, is polled with `screencap` and driven with `input`: slower, same features.
+- **Agents' gestures over gRPC where there is one.** `adb shell input` starts a JVM on the device
+  for each touch; the emulator's `sendTouch` takes milliseconds. adb stays the fallback, and the
+  coordinates the agent sees are the same either way.
+- **Rotation by the emulator's sensor.** A rotation locked through adb turns Android but not the
+  emulator's frames, so the stream would show the app sideways; turning the emulated device
+  (`setPhysicalModel`) turns both, as the emulator's own rotate button does.
 - **One coordinate space for the agent.** Screenshots are shrunk to what the model sees without
   resizing (long edge ≤ 1568, ≤ 1.15 MP); the UI tree's bounds and every x/y are in those pixels.
 - **Leave.** Emulators are the agent's; a phone only after the user flips "Let agents use this
@@ -79,10 +83,10 @@ flag."). So:
 
 ## Not done
 
-- JWT auth for emulators started elsewhere (Studio's): they fall back to adb.
 - Multi-display, foldables, XR. The panel shows display 0.
 - Audio, camera, sensors, location: the proto has them; nothing calls them yet.
-- Verifying the gRPC path on a real emulator: this container has no KVM. That covers reset
-  (`SnapshotService/LoadSnapshot` on a read-only instance) and two read-only copies of one AVD
-  running side by side, both read from the emulator's proto and messages, not run. The framing is tested
-  against a real HTTP/2 server; the panel was checked with a scripted adb.
+- Resetting an emulator Android Studio started: the JWT issuer the emulator gives tools may not load
+  snapshots, so the panel offers reset only on emulators started here.
+- A run on a GPU machine. The real-emulator checks (`androidDeviceClient/README.md`) ran in a
+  container that renders in software, where each full-window redraw takes ~150 ms; the gRPC calls
+  themselves measured in milliseconds.

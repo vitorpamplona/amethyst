@@ -446,8 +446,9 @@ private fun Header(
                     }
                     if (selected?.kind == DeviceKind.EMULATOR) {
                         RoundedMenuSection {
-                            // Over the emulator's gRPC endpoint: an emulator this app started.
-                            if (live) {
+                            // Over the emulator's gRPC endpoint, which lets only a token holder load a
+                            // snapshot: an emulator this app started, not one Android Studio did.
+                            if (live && selected.startedHere) {
                                 MenuItem(stringRes(Res.string.android_device_reset), leading = { MenuIcon(MaterialSymbols.RestartAlt) }) {
                                     menu = false
                                     viewModel.reset()
