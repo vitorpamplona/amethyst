@@ -158,6 +158,17 @@ providers.gradleProperty("kikoKmpDir").orNull?.let { dir ->
     }
 }
 
+// The Djot parser lives in its own repo (vitorpamplona/djot-kmp) and comes through Magpie. To change
+// it alongside the wiki rendering in commons, build a local checkout:
+//   ./gradlew -PdjotKmpDir=../djot-kmp :commons:jvmTest
+providers.gradleProperty("djotKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.djot:djot")).using(project(":djot"))
+        }
+    }
+}
+
 // The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes through Magpie, like
 // quic, and reaches this build through marmot and cordn. To change it alongside Marmot or cordn, build a
 // local checkout instead of the artifact:

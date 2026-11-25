@@ -93,6 +93,9 @@ cryptoKmp = "2.1.2"
 # The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp): kiko runs a
 # cart, kiko-player plays it in real time (commons), kiko-compose shows it (commonsUI).
 kikoKmp = "0.2.5"
+# The Djot parser (vitorpamplona/djot-kmp), for NIP-54 wiki pages. Only the parser: Amethyst draws the
+# AST itself, so djot-html is not needed.
+djotKmp = "0.1.0"
 mlsKmp = "1.5.1"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.1"
@@ -287,6 +290,7 @@ marmot = { module = "com.vitorpamplona.marmot:marmot", version.ref = "marmotKmp"
 cordn = { module = "com.vitorpamplona.cordn:cordn", version.ref = "cordnKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 kiko = { module = "com.vitorpamplona.kiko:kiko", version.ref = "kikoKmp" }
+djot = { module = "com.vitorpamplona.djot:djot", version.ref = "djotKmp" }
 kiko-compose = { module = "com.vitorpamplona.kiko:kiko-compose", version.ref = "kikoKmp" }
 kiko-player = { module = "com.vitorpamplona.kiko:kiko-player", version.ref = "kikoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
