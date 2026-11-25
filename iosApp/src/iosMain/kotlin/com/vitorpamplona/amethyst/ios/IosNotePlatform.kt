@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.audio.VoiceRecorder
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewerDialog
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.ZoomableVideoContent
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.playback.IosVoiceRecorder
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as SharedEpisodeAudioPlayer
@@ -68,10 +70,18 @@ import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as Sh
 /**
  * iOS's note media: images draw inline through Coil and open the shared [ImageViewerDialog]; videos
  * and audio run the shared player UI (`commons.ui.playback`) on AVPlayer through
- * [IosPlaybackPlatform]. PDFs and link previews are still links the user can open (B7).
+ * [IosPlaybackPlatform], and voice messages record through [IosVoiceRecorder]. PDFs and link
+ * previews are still links the user can open (B7).
  */
 object IosNotePlatform : NotePlatform {
     override val maxInlineMediaHeight: Dp get() = MAX_INLINE_MEDIA_HEIGHT
+
+    // Voice messages: the shared recording UI over AVAudioRecorder.
+
+    override val canRecordAudio: Boolean get() = true
+
+    @Composable
+    override fun rememberVoiceRecorder(): VoiceRecorder = remember { IosVoiceRecorder() }
 
     @Composable
     override fun ZoomableContentView(

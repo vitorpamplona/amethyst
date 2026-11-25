@@ -81,6 +81,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import okio.Path
 import platform.AVFoundation.externalPlaybackActive
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSTemporaryDirectory
@@ -196,6 +197,31 @@ class IosPlaybackPlatform(
                 }
             }
         return SideLoadedCaptions(files)
+    }
+
+    /**
+     * An AVPlayer of its own, outside [IosPlayerPool]: a recording that is not sent yet has no
+     * place on the lock screen. The audio session plays while it does (the pool's players leave it
+     * ambient, which the silent switch mutes) and goes back to what the pool needs after.
+     */
+    @Composable
+    override fun rememberLocalAudioPlayer(file: Path?): AmethystPlayer? {
+        val player = remember(file) { file?.let { NSURL.fileURLWithPath(it.toString()).absoluteString }?.let { AvAmethystPlayer(it) } }
+        DisposableEffect(player) {
+            val session =
+                object : AmethystPlayer.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (isPlaying) AudioSessionMode.playback() else AudioSessionMode.release()
+                    }
+                }
+            player?.addListener(session)
+            onDispose {
+                player?.removeListener(session)
+                player?.release()
+                if (player != null) AudioSessionMode.release()
+            }
+        }
+        return player
     }
 
     /**

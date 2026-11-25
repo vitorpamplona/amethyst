@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ios.playback
 
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.amethyst.commons.audio.VoiceRecorder
 import com.vitorpamplona.amethyst.commons.audio.downsampledWaveform
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -30,12 +31,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import okio.Path.Companion.toPath
 import platform.AVFAudio.AVAudioQualityHigh
 import platform.AVFAudio.AVAudioRecorder
-import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionRecordPermissionGranted
 import platform.AVFAudio.AVEncoderAudioQualityKey
 import platform.AVFAudio.AVFormatIDKey
 import platform.AVFAudio.AVNumberOfChannelsKey
@@ -45,16 +43,16 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
-import kotlin.coroutines.resume
 import kotlin.math.pow
 
 /**
  * Records a voice message as AAC in an `.m4a`, like Android's `VoiceMessageRecorder`, sampling the
  * peak level [SAMPLE_INTERVAL_MS] apart for the waveform (scaled to MediaRecorder's 0..32767 so the
- * two platforms draw the same bars).
+ * two platforms draw the same bars). The microphone permission is the shared
+ * `rememberMicrophonePermission`, asked by the shared `RecordAudioBox` before it starts this.
  */
 @OptIn(ExperimentalForeignApi::class)
-class IosVoiceRecorder {
+class IosVoiceRecorder : VoiceRecorder {
     private var recorder: AVAudioRecorder? = null
     private var path: String? = null
     private var startedAt = 0L
@@ -62,7 +60,7 @@ class IosVoiceRecorder {
     private val amplitudes = mutableListOf<Float>()
 
     /** Starts recording; false when the microphone could not be opened. */
-    fun start(scope: CoroutineScope): Boolean {
+    override fun start(scope: CoroutineScope): Boolean {
         AudioSessionMode.record()
         val folder = NSTemporaryDirectory() + "voice/"
         NSFileManager.defaultManager.createDirectoryAtPath(folder, withIntermediateDirectories = true, attributes = null, error = null)
@@ -99,7 +97,7 @@ class IosVoiceRecorder {
     }
 
     /** Stops and returns the recording, or null when it was under a second or failed. */
-    fun stop(): RecordingResult? {
+    override fun stop(): RecordingResult? {
         val current = recorder ?: return null
         sampling?.cancel()
         sampling = null
@@ -115,12 +113,5 @@ class IosVoiceRecorder {
         private const val TAG = "IosVoiceRecorder"
         const val SAMPLE_INTERVAL_MS = 100L
         private const val MAX_AMPLITUDE = 32767.0
-
-        val hasPermission: Boolean get() = AVAudioSession.sharedInstance().recordPermission == AVAudioSessionRecordPermissionGranted
-
-        suspend fun requestPermission(): Boolean =
-            suspendCancellableCoroutine { cont ->
-                AVAudioSession.sharedInstance().requestRecordPermission { granted -> if (cont.isActive) cont.resume(granted) }
-            }
     }
 }
