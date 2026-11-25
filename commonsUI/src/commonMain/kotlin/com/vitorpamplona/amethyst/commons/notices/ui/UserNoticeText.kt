@@ -179,6 +179,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.StringResource
 
@@ -460,12 +461,12 @@ private fun InvoiceNotice.invoiceMessage(): NoticeTxt =
         is InvoiceNotice.Unexpected -> message?.let { raw(it) } ?: str(Res.string.error_parsing_error_message)
     }
 
-/** "[lnAddress] … [sats] sat(s)": the count picks the plural form, capped to what a plural takes. */
+/** "[lnAddress] … 1,234 sats": the count picks the plural form, capped to what a plural takes. */
 private fun satsPlural(
     res: PluralStringResource,
     lnAddress: String,
     sats: Long,
-) = NoticeTxt.Plural(res, sats.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), listOf(raw(lnAddress), raw(sats.toString())))
+) = NoticeTxt.Plural(res, sats.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), listOf(raw(lnAddress), raw(formatGrouped(sats))))
 
 suspend fun NoticeTxt.loadText(): String =
     when (this) {

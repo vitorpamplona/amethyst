@@ -167,16 +167,7 @@ class LightningInvoiceResolver(
             throw LightningAddressError(InvoiceNotice.CallbackNotFound(lnAddress))
         }
 
-        // LUD-06 bounds are millisats; servers quote them as such in their refusals ("between
-        // 5000 and …" for a 5-sat minimum), so check here and tell the user in sats instead.
-        val minSendable = lnurlp["minSendable"]?.asMilliSatsBound()
-        if (minSendable != null && milliSats < minSendable) {
-            throw LightningAddressError(InvoiceNotice.AmountBelowMinimum(lnAddress, ceilToSats(minSendable)))
-        }
-        val maxSendable = lnurlp["maxSendable"]?.asMilliSatsBound()
-        if (maxSendable != null && milliSats > maxSendable) {
-            throw LightningAddressError(InvoiceNotice.AmountAboveMaximum(lnAddress, maxSendable / 1000))
-        }
+        lnurlp.sendableRangeNotice(lnAddress, milliSats)?.let { throw LightningAddressError(it) }
 
         val allowsNostr = lnurlp["allowsNostr"]?.asBoolean() ?: false
         val nostrPubkey = lnurlp["nostrPubkey"]?.asText()?.ifBlank { null }
@@ -247,9 +238,6 @@ class LightningInvoiceResolver(
 
 /** Millisats to sats, rounding a half sat up, as `BigDecimal.divide(1000, HALF_UP)` did. */
 internal fun roundHalfUpToSats(milliSats: Long): Long = if (milliSats >= 0) (milliSats + 500) / 1000 else -((-milliSats + 500) / 1000)
-
-/** Millisats to the smallest whole number of sats that reaches them. */
-internal fun ceilToSats(milliSats: Long): Long = (milliSats + 999) / 1000
 
 private fun parseJson(body: String): JsonElement? =
     try {

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
+import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
@@ -111,14 +112,12 @@ class LightningAddressResolver(
                     lnurlp?.get("callback")?.asText()?.ifBlank { null }
                         ?: return@withContext Result.Error("No callback URL in LNURL response")
 
-                // LUD-06 bounds are millisats; report them in sats rather than the server's msat refusal.
-                val minSendable = lnurlp["minSendable"]?.asMilliSatsBound()
-                if (minSendable != null && milliSats < minSendable) {
-                    return@withContext Result.Error("$lnAddress only accepts payments of at least ${ceilToSats(minSendable)} sats")
-                }
-                val maxSendable = lnurlp["maxSendable"]?.asMilliSatsBound()
-                if (maxSendable != null && milliSats > maxSendable) {
-                    return@withContext Result.Error("$lnAddress only accepts payments of up to ${maxSendable / 1000} sats")
+                when (val notice = lnurlp.sendableRangeNotice(lnAddress, milliSats)) {
+                    is InvoiceNotice.AmountBelowMinimum ->
+                        return@withContext Result.Error("$lnAddress only accepts payments of at least ${notice.minSats} sats")
+                    is InvoiceNotice.AmountAboveMaximum ->
+                        return@withContext Result.Error("$lnAddress only accepts payments of up to ${notice.maxSats} sats")
+                    else -> {}
                 }
 
                 val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false

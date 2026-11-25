@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
+import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.longOrNull
@@ -50,4 +52,21 @@ internal fun JsonElement.asBoolean(): Boolean =
  * A LUD-06 `minSendable`/`maxSendable` bound in millisats, or null when it is absent, not a
  * whole number or not positive, so a malformed bound never blocks a payment.
  */
-internal fun JsonElement.asMilliSatsBound(): Long? = asText()?.trim()?.toLongOrNull()?.takeIf { it > 0 }
+private fun JsonElement.asMilliSatsBound(): Long? = asText()?.trim()?.toLongOrNull()?.takeIf { it > 0 }
+
+/**
+ * Why [milliSats] is outside this LNURL-pay response's sendable range, in whole sats, or null
+ * when it fits. The bounds are millisats, which servers quote as-is in their own refusals
+ * ("between 5000 and …" for a 5-sat minimum), so the caller reports this instead of asking.
+ * The minimum rounds up and the maximum down, to the nearest whole sat a payment can use.
+ */
+internal fun JsonObject.sendableRangeNotice(
+    lnAddress: String,
+    milliSats: Long,
+): InvoiceNotice? {
+    val min = this["minSendable"]?.asMilliSatsBound()
+    if (min != null && milliSats < min) return InvoiceNotice.AmountBelowMinimum(lnAddress, (min + 999) / 1000)
+    val max = this["maxSendable"]?.asMilliSatsBound()
+    if (max != null && milliSats > max) return InvoiceNotice.AmountAboveMaximum(lnAddress, max / 1000)
+    return null
+}
