@@ -38,3 +38,10 @@ expect fun edgeToEdgeDialogProperties(
     dismissOnBackPress: Boolean = true,
     dismissOnClickOutside: Boolean = true,
 ): DialogProperties
+
+/**
+ * Properties for a full-screen media viewer that draws its own backdrop and its own open/close
+ * animation: edge to edge, no platform scrim and no platform enter/exit animation where the
+ * platform has them (desktop and iOS).
+ */
+expect fun mediaViewerDialogProperties(): DialogProperties

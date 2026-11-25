@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -51,7 +50,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -71,7 +69,6 @@ import net.engawapg.lib.zoomable.zoomable
  * shrinking back into the thumbnail of the image on screen when it closes. Front ends without a
  * viewer of their own (iOS) open it; Android and the desktop keep theirs for now.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ImageViewerDialog(
     content: BaseMediaContent,
@@ -97,14 +94,9 @@ fun ImageViewerDialog(
 
     Dialog(
         onDismissRequest = transition::dismiss,
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                usePlatformInsets = false,
-                scrimColor = Color.Transparent,
-                animateTransition = false,
-            ),
+        properties = mediaViewerDialogProperties(),
     ) {
+        SetDialogToEdgeToEdge()
         val pager = rememberPagerState(initialPage = start) { viewable.size }
         LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { shown = it } }
         val zoomStates = remember { mutableStateMapOf<Int, ZoomState>() }
