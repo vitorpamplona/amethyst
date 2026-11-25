@@ -101,6 +101,29 @@ class DockControllerTest {
     }
 
     @Test
+    fun onAFullWidthScreenOnlyThePanelsMadeForItDock() {
+        val dock = controller().apply { canDock = true }
+        val beside = dock.pinScreen(profile)
+        val other = dock.pinScreen(Route.Profile("def"))
+        // What the shell sets on a screen in FullWidthRoutes: only the panels marked besideFullWidth.
+        dock.dockOnly = setOf(beside)
+
+        dock.fold(beside)
+        dock.show(beside)
+        assertNull(dock.overlay, "the panel made to sit beside the screen docks")
+        assertTrue(dock.isShowing(beside))
+
+        dock.fold(other)
+        dock.show(other)
+        assertEquals(other, dock.overlay, "any other opens over the screen")
+
+        dock.dismissOverlay()
+        dock.dockOnly = null
+        dock.show(other)
+        assertNull(dock.overlay, "elsewhere every panel docks")
+    }
+
+    @Test
     fun aPinnedScreenKeepsItsHistoryUntilUnpinned() {
         val dock = controller()
         val id = dock.pinScreen(profile)
