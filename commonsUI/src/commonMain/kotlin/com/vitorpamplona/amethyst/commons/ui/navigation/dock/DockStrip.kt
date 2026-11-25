@@ -25,7 +25,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -79,6 +82,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_UNREAD_CAP
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -106,7 +110,8 @@ import kotlin.math.roundToInt
  * The strip at the window's right edge, as an IDE's tool window bar: one icon per panel, lit while
  * the panel shows, badged while it is folded (cards that arrived, an approval waiting). Clicking an
  * icon shows or folds its panel, a right click opens the panel's menu, and dragging an icon drags
- * its panel into the dock. Dropping a panel on the strip folds it.
+ * its panel into the dock. Dropping a panel on the strip folds it. At its foot, [onPinScreen] pins
+ * the current screen as a panel and a menu keeps named layouts.
  */
 @Composable
 internal fun DockStrip(
@@ -115,6 +120,7 @@ internal fun DockStrip(
     view: DockView,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    onPinScreen: (() -> Unit)? = null,
 ) {
     val drag = controller.drag
     DisposableEffect(Unit) { onDispose { drag.strip = null } }
@@ -126,13 +132,18 @@ internal fun DockStrip(
             .fillMaxHeight()
             .background(if (dropping) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
             .onGloballyPositioned { drag.strip = it.boundsInRoot() }
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End)),
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End))
+            // The first icon on the line of the panels' headers and the main screen's top bar.
+            .padding(top = (PanelHeaderHeight - StripButtonSize) / 2 - 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         panels.forEach { id ->
             val spec = controller.spec(id) ?: return@forEach
             StripIcon(controller, spec, showing = controller.showingIn(id, view), foldedAt = folds[id], view, accountViewModel)
         }
+        Spacer(Modifier.weight(1f))
+        DockStripFooter(controller, onPinScreen)
+        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -149,7 +160,7 @@ private fun StripIcon(
     var menuAt by remember { mutableStateOf<IntOffset?>(null) }
     val density = LocalDensity.current
     val badge = if (showing) PanelBadge.None else spec.badge(PanelBadgeScope(accountViewModel, foldedAt))
-    val title = stringRes(spec.title)
+    val title = spec.label(accountViewModel)
     val label =
         when (badge) {
             PanelBadge.Attention -> stringRes(Res.string.dock_panel_waiting, title)
@@ -164,20 +175,26 @@ private fun StripIcon(
             }
         }
     }
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Box {
         HoverTooltip(label) {
             Box(
                 Modifier
-                    .padding(vertical = 4.dp)
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .padding(vertical = 2.dp)
+                    .size(StripButtonSize)
+                    .clip(RoundedCornerShape(8.dp))
+                    // Quiet by default, as an IDE's tool window bar: a faint wash for the shown panel
+                    // and under the pointer, a soft flash when something waits.
                     .background(
                         when {
-                            showing -> colors.secondaryContainer
-                            flash.value > 0f -> colors.primary.copy(alpha = 0.3f * flash.value)
+                            flash.value > 0f -> colors.primary.copy(alpha = 0.22f * flash.value)
+                            showing -> colors.onSurface.copy(alpha = 0.08f)
+                            hovered -> colors.onSurface.copy(alpha = 0.05f)
                             else -> Color.Transparent
                         },
-                    ).pointerInput(spec.id) {
+                    ).hoverable(interaction)
+                    .pointerInput(spec.id) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
@@ -200,25 +217,21 @@ private fun StripIcon(
                             }
                         }
                     }.dockDragSource(controller, spec.id)
-                    .clickable { controller.toggle(spec.id) },
+                    .clickable(interactionSource = interaction, indication = null) { controller.toggle(spec.id) },
                 contentAlignment = Alignment.Center,
             ) {
-                BadgedBox(
-                    badge = {
-                        when (badge) {
-                            is PanelBadge.Count -> Badge { Text(if (badge.count > CHAT_UNREAD_CAP) "$CHAT_UNREAD_CAP+" else badge.count.toString()) }
-                            PanelBadge.Attention -> Badge()
-                            PanelBadge.None -> {}
-                        }
-                    },
-                ) {
-                    Icon(
-                        symbol = spec.icon,
-                        contentDescription = label,
-                        modifier = Modifier.size(22.dp),
-                        tint = if (showing) colors.onSecondaryContainer else colors.onBackground,
-                    )
-                }
+                Icon(
+                    symbol = spec.icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(18.dp),
+                    tint =
+                        when {
+                            showing -> colors.onSurface
+                            hovered -> colors.onSurface.copy(alpha = 0.85f)
+                            else -> colors.onSurfaceVariant.copy(alpha = 0.7f)
+                        },
+                )
+                StripBadge(badge, Modifier.align(Alignment.TopEnd))
             }
         }
         val placement =
@@ -229,6 +242,34 @@ private fun StripIcon(
                 else -> PanelPlacement.DOCKED
             }
         PanelMenu(controller, spec.id, placement, view, expanded = menuAt != null, onDismiss = { menuAt = null }, offset = menuAt?.let { IntOffset(it.x - 160, it.y - 40) })
+    }
+}
+
+/** The size of a strip button; the strip is this plus a little air. */
+private val StripButtonSize = 30.dp
+
+/** A strip icon's badge, kept small: a dot when something waits, a compact count of what arrived. */
+@Composable
+private fun StripBadge(
+    badge: PanelBadge,
+    modifier: Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    when (badge) {
+        PanelBadge.None -> {}
+        PanelBadge.Attention ->
+            Box(modifier.padding(4.dp).size(6.dp).background(colors.primary, CircleShape))
+        is PanelBadge.Count ->
+            Text(
+                text = if (badge.count > CHAT_UNREAD_CAP) "$CHAT_UNREAD_CAP+" else badge.count.toString(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 10.sp),
+                color = colors.onPrimary,
+                modifier =
+                    modifier
+                        .offset(x = 3.dp, y = (-1).dp)
+                        .background(colors.primary.copy(alpha = 0.85f), RoundedCornerShape(50))
+                        .padding(horizontal = 3.dp),
+            )
     }
 }
 
@@ -243,10 +284,11 @@ fun DockRailItems(accountViewModel: AccountViewModel) {
     val layout by controller.layoutFlow.collectAsStateWithLifecycle()
     val folds by controller.foldedAt.collectAsStateWithLifecycle()
     HorizontalDivider(Modifier.width(40.dp).padding(vertical = 4.dp))
-    controller.panels.forEach { spec ->
+    controller.allIds(layout).forEach { id ->
+        val spec = controller.spec(id) ?: return@forEach
         val showing = controller.overlay == spec.id || controller.maximized == spec.id || layout.isInWindow(spec.id)
         val badge = if (showing) PanelBadge.None else spec.badge(PanelBadgeScope(accountViewModel, folds[spec.id]))
-        val label = stringRes(Res.string.dock_toggle_panel, stringRes(spec.title))
+        val label = stringRes(Res.string.dock_toggle_panel, spec.label(accountViewModel))
         NavigationRailItem(
             selected = showing,
             onClick = { controller.toggle(spec.id) },
@@ -361,7 +403,7 @@ internal fun DockDragOverlay(controller: DockController) {
         ) {
             Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(symbol = spec.icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
-                Text(stringRes(spec.title), style = MaterialTheme.typography.labelLarge)
+                Text(spec.label(controller.accountViewModel), style = MaterialTheme.typography.labelLarge)
                 if (where != null) {
                     Spacer(Modifier.size(2.dp).background(colors.outline, CircleShape))
                     Text(stringRes(where), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.alpha(0.9f))

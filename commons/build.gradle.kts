@@ -177,8 +177,6 @@ kotlin {
                 // chats. Desktop only: Android can't run the CLI.
                 api(project(":claudeCodeClient"))
                 api(project(":codexClient"))
-                // Shows and drives an Android emulator in the dock's devices panel (devices/). Desktop only.
-                api(project(":emulatorClient"))
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

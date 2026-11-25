@@ -61,9 +61,13 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_menu_report_issue
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_website
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_window
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_zoom
+import com.vitorpamplona.amethyst.commons.resources.dock_forget_layout
 import com.vitorpamplona.amethyst.commons.resources.dock_hide_all
+import com.vitorpamplona.amethyst.commons.resources.dock_layouts
 import com.vitorpamplona.amethyst.commons.resources.dock_panels
+import com.vitorpamplona.amethyst.commons.resources.dock_pin_screen
 import com.vitorpamplona.amethyst.commons.resources.dock_reset_layout
+import com.vitorpamplona.amethyst.commons.resources.dock_save_layout
 import com.vitorpamplona.amethyst.commons.resources.dock_show_all
 import com.vitorpamplona.amethyst.commons.resources.navigation_close_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_new_tab
@@ -381,8 +385,18 @@ fun FrameWindowScope.DesktopMenuBar(
                     val spec = dock.spec(id) ?: return@forEach
                     CommandItem(stringRes(spec.title), command)
                 }
+                (navigator.nav as? Nav)?.let { nav ->
+                    Item(stringRes(Res.string.dock_pin_screen)) { dock.pinScreen(nav.currentRoute) }
+                }
                 Separator()
                 CommandItem(stringRes(if (dock.allHidden) Res.string.dock_show_all else Res.string.dock_hide_all), Command.HIDE_ALL_PANELS)
+                val saved by dock.savedLayouts.collectAsState()
+                Menu(stringRes(Res.string.dock_layouts)) {
+                    saved.keys.sorted().forEach { name -> Item(name) { dock.restoreLayout(name) } }
+                    if (saved.isNotEmpty()) Separator()
+                    Item(stringRes(Res.string.dock_save_layout)) { dock.namingLayout = true }
+                    saved.keys.sorted().forEach { name -> Item(stringRes(Res.string.dock_forget_layout, name)) { dock.forgetLayout(name) } }
+                }
                 Item(stringRes(Res.string.dock_reset_layout)) { dock.reset() }
             }
         }

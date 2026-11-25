@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.dock
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId.Companion.ASSISTANT
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId.Companion.DEVICES
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId.Companion.NOTIFICATIONS
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -246,5 +247,54 @@ class DockLayoutTest {
     fun garbageDoesNotDecode() {
         assertNull(DockLayout.fromJson("not json"))
         assertNull(DockLayout.fromJson("""{"states":{"notifications":"SIDEWAYS"}}"""))
+    }
+
+    @Test
+    fun aPinnedScreenOpensUnderTheFirstColumnThenInItsOwn() {
+        val route = DockLayout.encodeRoute(Route.Profile("abc"))
+        val first = PanelId.newScreen()
+        val one = default().pinScreen(first, route)
+        assertTrue(first.isScreen)
+        assertEquals(PanelLocation(0, 2, 0), one.locate(first), "the first column holds two slots, so a third fits")
+        assertTrue(one.isOpen(first))
+        assertEquals(first, one.screenShowing(route))
+
+        val second = PanelId.newScreen()
+        val two = one.pinScreen(second, DockLayout.encodeRoute(Route.Home))
+        assertEquals(PanelLocation(2, 0, 0), two.locate(second), "the first column is full: a column of its own")
+    }
+
+    @Test
+    fun aFullDockTakesAPinnedScreenAsATab() {
+        var layout = default()
+        repeat(6) { layout = layout.pinScreen(PanelId.newScreen(), DockLayout.encodeRoute(Route.Profile("p$it"))) }
+        val last = PanelId.newScreen()
+        layout = layout.pinScreen(last, DockLayout.encodeRoute(Route.Home))
+        val at = assertNotNull(layout.locate(last))
+        assertEquals(0, at.column)
+        assertEquals(DockLayout.MAX_SLOTS - 1, at.slot)
+        assertEquals(last, layout.columns[0].slots[at.slot].active)
+    }
+
+    @Test
+    fun unpinningLeavesNoTrace() {
+        val id = PanelId.newScreen()
+        val pinned = default().pinScreen(id, DockLayout.encodeRoute(Route.Home)).setOverlayMode(id, true)
+        val unpinned = pinned.unpin(id)
+        assertNull(unpinned.locate(id))
+        assertNull(unpinned.screenShowing(DockLayout.encodeRoute(Route.Home)))
+        assertFalse(id in unpinned.states)
+        assertFalse(id in unpinned.overlayMode)
+        assertEquals(default(), unpinned)
+    }
+
+    @Test
+    fun pinnedScreensSurviveARoundTrip() {
+        val id = PanelId.newScreen()
+        val layout = default().pinScreen(id, DockLayout.encodeRoute(Route.Profile("abc")))
+        val decoded = assertNotNull(DockLayout.fromJson(layout.toJson()))
+        assertEquals(layout, decoded)
+        assertEquals(Route.Profile("abc"), DockLayout.decodeRoute(assertNotNull(decoded.screens[id])))
+        assertNull(DockLayout.decodeRoute("""{"type":"NoSuchRoute"}"""))
     }
 }

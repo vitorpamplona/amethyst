@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 import kotlin.reflect.KClass
@@ -50,12 +51,18 @@ class DockPanelSpec(
     val icon: MaterialSymbol,
     val title: StringResource,
     val defaultWidth: Float,
+    /** The name shown when it is not just [title]: a pinned screen names itself. */
+    val name: (@Composable (AccountViewModel) -> String)? = null,
     val hidesOn: Set<KClass<out Route>> = emptySet(),
     val onTitleClick: ((INav) -> Unit)? = null,
     val badge: @Composable (PanelBadgeScope) -> PanelBadge = { PanelBadge.None },
     val actions: @Composable RowScope.(DockPanelScope) -> Unit = {},
     val content: @Composable (DockPanelScope) -> Unit,
 )
+
+/** The panel's name as the strip, its header and its window show it. */
+@Composable
+fun DockPanelSpec.label(accountViewModel: AccountViewModel): String = name?.invoke(accountViewModel) ?: stringRes(title)
 
 /** What a strip icon carries. */
 @Immutable

@@ -1,9 +1,10 @@
 # Dockable panels: tool windows for the shared shell
 
-Status: **Built (desktop and shared UI), 2026-11-25.** Android gets the same dock from the
-shared shell, with the notification feed as its only panel and no windows. Checked against a real
-emulator and under a real window manager; see "Checked after the first cut" below. Not run:
-macOS, Windows, an Android device.
+Status: **Built (desktop and shared UI), 2026-11-25, phases 0 to 3 and 5.** Android gets the same
+dock from the shared shell, with the notification feed as its only panel and no windows. The
+emulator panel (phase 4) moved to a separate effort and is not on this branch; the dock keeps
+`PanelId.DEVICES` and its Ctrl/Cmd+Shift+3 shortcut for it. Checked under a real window manager;
+see "Checked after the first cut" below. Not run: macOS, Windows, an Android device.
 
 ## What was built
 
@@ -22,18 +23,38 @@ macOS, Windows, an Android device.
   railed windows. `MultiPaneShell` draws it in place of the notification panel.
   `PanelFreeRoutes` became `FullWidthRoutes` (the dock folds to its strip there) plus each
   panel's own `hidesOn`.
-- **Panels:** `NotificationsDockPanel` (shared), `AssistantDockPanel` and `DevicesDockPanel`
-  (desktop, through `AppRoot.dockPanels`). Settings' "ask the assistant" goes to the panel.
+- **Panels:** `NotificationsDockPanel` (shared) and `AssistantDockPanel` (desktop, through
+  `AppRoot.dockPanels`), plus any screen pinned as a panel (`ScreenDockPanel`). Settings' "ask the
+  assistant" goes to the panel.
 - **Windows:** `AppRoot.PanelWindow` / `supportsPanelWindows` / `mainWindowScreenOrigin`; on the
   desktop `DesktopAppRoot.PanelWindow`, `DesktopWindowManager.initialState(PanelWindowSpec)` and
   `panelWindowDrag` (drag a panel window's header over the main window to dock it).
-- **Keyboard and menus (desktop):** Ctrl/Cmd+Shift+1/2/3 toggle the notification, assistant and
-  devices panels, Ctrl/Cmd+Shift+\ hides or restores all, Shift+Esc folds the focused panel, Esc
-  closes an overlay; a *Panels* menu in the menu bar.
-- **Emulator:** the `emulatorClient` module (gRPC over OkHttp h2c, hand-rolled protobuf, discovery
-  files, launcher; 47 tests against a fake h2c server) and `DeviceStreamService` in
-  `commons/jvmMain/…/devices/`. Frames are asked for as PNG, which sidesteps the proto's
-  bottom-up row order for raw pixels.
+- **Keyboard and menus (desktop):** Ctrl/Cmd+Shift+1/2 toggle the notification and assistant
+  panels (3 is kept for a device panel), Ctrl/Cmd+Shift+\ hides or restores all, Shift+Esc folds
+  the focused panel, Esc closes an overlay; a *Panels* menu in the menu bar with *Pin this screen
+  as a panel* and the saved layouts.
+
+## Phase 5 (2026-11-25)
+
+- **A quieter strip.** 40 dp wide, 30 dp buttons with 18 dp icons in `onSurfaceVariant` at 70%: no
+  filled pill, only a faint wash for the panel showing and under the pointer, and a soft flash
+  when something waits. Badges are a 6 dp dot or a 9 sp count. At its foot, two quieter buttons:
+  pin this screen, and the layouts menu.
+- **Beside the deck.** The deck no longer takes the dock's place: the main screen, the deck and
+  the dock share the width, the dock giving way first (`fitPanes` keeps the main screen's
+  420 dp, the deck's toolbar and its first column whole, and folds dock columns past that). A
+  workspace with a Notifications column hides the notification panel, which would repeat it.
+- **Any screen as a panel.** *Pin this screen as a panel* (strip, a tab's menu, the Panels
+  menu) adds a `screen:<uuid>` panel whose route is stored in `DockLayout.screens` as JSON. It
+  opens under the first column's panels while there is a slot free, else in a column of its own,
+  else as a tab. It runs the screen on its own back stack (`ScreenPanel`: a `Nav` over
+  `NavBackStacks`, links opening in the main screen as deck columns do), takes the screen's
+  title and icon (`routeTitle`, `routeIcon`), and has *Remove from the panels* in its menu.
+  Pinning a route that is pinned already shows that panel.
+- **Named layouts.** *Save this layout…* keeps the dock as it stands under a name, pinned
+  screens included; the layouts menu restores or forgets one. Stored device-wide next to the
+  layout (`ui.dock.saved`), each layout as its own JSON, so one that no longer reads is dropped
+  alone.
 
 ## Checked after the first cut (2026-11-25)
 
@@ -48,16 +69,9 @@ macOS, Windows, an Android device.
   container: dragging a panel out of the main window opens its window where it was dropped, kept
   whole on that screen; dragging that window's header over the main window docks it again.
   macOS and Windows were not run.
-- **A real emulator** (emulator 37.3.10, API 21 images, software CPU): discovery, token and JWT
-  access, frames, the panel's Start, touches in all four rotations (read back with Android's
-  pointer-location overlay), Home, Back, volume, typing and scrolling. What the emulator does
-  differently from its proto or from this plan's assumptions is in `emulatorClient/README.md`;
-  the ones that changed code: the discovery fallback directory, touches taken upright on a turned
-  device, the wheel ignored on old images (the panel scrolls with a swipe), and JWT keys written
-  in place without a `typ` header.
-- **Android Studio's emulators** (`-grpc-use-jwt`) are reached: the client registers its own key in
-  the emulator's key directory and signs as the issuer its allow list gives test tooling, with only
-  the methods it calls. Power is then refused, so shutting one down ends its process.
+- **The emulator panel** was run against a real emulator (token and JWT access, frames, touches
+  in all four rotations, keys) before it moved to its own effort; that code and its findings
+  (`emulatorClient/README.md`) are in this branch's history, commit `8e4a3057`.
 
 ## Goal
 
@@ -315,6 +329,8 @@ panel.
 
 ### Device (Android emulator, desktop only)
 
+*Moved to a separate effort; not on this branch. Kept here as the design that was reviewed.*
+
 - **A new JVM module, `emulatorClient`**, beside `claudeCodeClient`, with no Amethyst or Nostr
   dependencies. It finds the SDK, lists AVDs, starts one without a window and with gRPC on, and
   finds running emulators and their gRPC port and token through the emulator's discovery
@@ -349,8 +365,8 @@ panel.
 | 1 | The strip, the assistant panel, slots split top and bottom, the header menu, Overlay mode, the rail icons below 1,200 dp, keyboard shortcuts | commonsUI, desktopApp | Headless run at 1440×900 shows notifications over the assistant; at 1100×900 the assistant opens as Overlay; `what_is_on_screen` from the panel names the main screen |
 | 2 | Dragging inside the frame: drop zones, tabs in a slot, a second column, reordering the strip | commonsUI | Drag tests with `DockDragState`; screenshots of each drop zone highlighted |
 | 3 | Window mode: pop out by menu or by dragging out of the frame, dock back by button or by dragging in, sizes and places saved per panel | commonsUI, desktopApp | Pop out the assistant mid-conversation and back: same session, same draft. Tested by hand under a real window manager (Xvfb has none) |
-| 4 | `emulatorClient`, `DeviceStreamService`, the device panel | new module, commons, commonsUI | An AVD started from the panel shows its home screen and takes clicks and typing; it keeps streaming through a pop-out and a dock-back |
-| 5 | Panels and deck columns side by side; *Pin as panel* for any screen (`ROUTE`); named layouts | commons, commonsUI | Manual test sheet |
+| 4 | `emulatorClient`, `DeviceStreamService`, the device panel | new module, commons, commonsUI | Moved to a separate effort |
+| 5 | Panels and deck columns side by side; *Pin as panel* for any screen; named layouts | commons, commonsUI | Done: `DockLayoutTest`, `DockLayoutPreferencesTest`, and a headless run (pin, save, reset, restore, restart, deck on) |
 
 Phases 0 and 1 are worth shipping alone. Phase 1 already gives the requested split of the right
 side between notifications and the assistant.
@@ -379,7 +395,5 @@ side between notifications and the assistant.
    follows the monitor. Named layouts could instead join the deck's per-account workspaces.
 3. **Full-width screens:** should they fold the dock to its strip (proposed) or hide it
    completely, as they hide the notification panel now?
-4. **The deck:** does the dock stay strip-only while the deck is on (phases 0 to 4, proposed), or
-   should it share the width with deck columns from the start?
-5. **Emulator scope:** emulator only (proposed), or physical devices too, which brings in a
-   video decoder and its license question?
+4. **The deck:** settled in phase 5: the dock shares the width with the deck and gives way first.
+5. **Emulator scope:** for the separate effort that now owns the device panel.

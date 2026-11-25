@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DockStripWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.DrawerWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
+import com.vitorpamplona.amethyst.commons.ui.layouts.MIN_CENTER_PANE_DP
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneFit
@@ -84,10 +85,12 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.fitPanes
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckChromeWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockColumns
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockDragOverlay
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockLayoutNameDialog
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockOverlayLayer
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
@@ -100,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
+import com.vitorpamplona.amethyst.commons.model.deck.DeckLayout as DeckColumnsLayout
 
 /**
  * The navigation shell around [content] at every window size: the modal drawer (phones), the rail
@@ -210,7 +214,10 @@ fun AppShellLayout(
             ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, movableContent)
         }
         // Over everything while a panel is dragged: where it would land.
-        if (dock != null) DockDragOverlay(dock)
+        if (dock != null) {
+            DockDragOverlay(dock)
+            DockLayoutNameDialog(dock)
+        }
     }
 
     // Sheet content
@@ -312,8 +319,8 @@ private fun ModalDrawerShell(
  * drags to resize them; the widths are kept per device and fitted to the window by [fitPanes], so
  * the centre pane keeps its room: the outer column narrows first, and a column that cannot fit even
  * at its narrowest folds to the strip until the window widens. Where panels cannot dock (a window
- * too narrow, the deck taking the room, a screen that wants the whole width) they show over the
- * main screen instead.
+ * too narrow, a screen that wants the whole width) they show over the main screen instead. Beside
+ * the deck the dock keeps the main screen and one deck column their room.
  */
 @Composable
 private fun MultiPaneShell(
@@ -330,13 +337,20 @@ private fun MultiPaneShell(
     val dock = LocalDockController.current
     val roomForDock = LocalScreenLayout.current.hasRoomForNotificationPanel
     val wantsWidth = fullWidthHere(nav)
-    val canDock = dock != null && deck == null && roomForDock && !wantsWidth
+    // Beside the deck too: its columns and the dock share the room, the dock giving way first.
+    val canDock = dock != null && roomForDock && !wantsWidth
 
     val saved by (dock?.layoutFlow ?: EmptyDockFlow).collectAsStateWithLifecycle()
     val layout = remember(saved, dock) { if (dock != null) saved.ensure(dock.ids) else saved }
     // The panels the current screen leaves in the dock: a panel steps out on the screen it duplicates.
     val hiddenHere = panelsHiddenHere(nav, dock)
-    val available = remember(dock, hiddenHere) { dock?.ids?.filter { it !in hiddenHere }.orEmpty() }
+    // A deck that already has a Notifications column has no use for the notification panel too.
+    val deckNeeds = if (deck != null) deckNeeds(accountViewModel) else null
+    val deckNotifications = deckNeeds?.showsNotifications == true
+    val available =
+        remember(dock, layout, hiddenHere, deckNotifications) {
+            dock?.allIds(layout)?.filter { it !in hiddenHere && !(deckNotifications && it == PanelId.NOTIFICATIONS) }.orEmpty()
+        }
     val overlay = dock?.overlay
     val maximized = dock?.maximized
     val view =
@@ -349,7 +363,7 @@ private fun MultiPaneShell(
     val stripShown =
         dock != null && available.isNotEmpty() &&
             (roomForDock || resizableLeading) &&
-            (dock.panels.size > 1 || view.isEmpty)
+            (available.size > 1 || view.isEmpty)
     if (dock != null) {
         SideEffect {
             dock.canDock = canDock
@@ -377,7 +391,10 @@ private fun MultiPaneShell(
             val first = column.slots.first().active
             PaneFit(column.width, dock?.spec(first)?.defaultWidth ?: NotificationPanelWidth.value, DockLayout.COLUMN_WIDTH_RANGE, droppable = true)
         } + PaneFit(widths.drawer, PermanentDrawerWidth.value, DrawerWidthRange, droppable = false, shown = resizableLeading)
-    val fitted = fitPanes(windowWidth, panes, reserved = if (stripShown) DockStripWidth.value else 0f)
+    // Beside the deck the main screen keeps its own minimum plus one deck column's.
+    // Beside the deck, the dock leaves the main screen its minimum and one whole deck column.
+    val centerMin = if (deckNeeds != null) DeckMainPaneMinWidth.value + DeckChromeWidth.value + deckNeeds.firstColumnWidth else MIN_CENTER_PANE_DP
+    val fitted = fitPanes(windowWidth, panes, reserved = if (stripShown) DockStripWidth.value else 0f, centerMin = centerMin)
     val fittedColumns = fitted.take(columns.size).reversed()
     // A column the window cannot hold right now folds to the strip until it widens: out of what is
     // drawn, and out of what the strip lights as shown.
@@ -410,7 +427,7 @@ private fun MultiPaneShell(
                     }
                 }
                 if (deck != null) {
-                    // The deck takes the dock's place. Like the dock, its columns take back the
+                    // The deck beside the main screen, the dock beyond it. Like the dock, its columns take back the
                     // window-controls inset that only the leading pane sits under.
                     DeckSplit(
                         Modifier.weight(1f).fillMaxHeight(),
@@ -439,7 +456,7 @@ private fun MultiPaneShell(
                             if (!shownView.isEmpty) DockColumns(dock, shownView, columnWidths, accountViewModel, panelNav)
                             if (stripShown) {
                                 VerticalDivider(thickness = DividerThickness)
-                                DockStrip(dock, available, shownView, accountViewModel)
+                                DockStrip(dock, available, shownView, accountViewModel, onPinScreen = { dock.pinScreen(nav.currentRoute) })
                             }
                         }
                     }
@@ -460,6 +477,27 @@ private val EmptyDockFlow = MutableStateFlow(DockLayout())
 private fun Modifier.dockCenterZone(dock: DockController): Modifier {
     DisposableEffect(dock) { onDispose { dock.drag.center = null } }
     return onGloballyPositioned { dock.drag.center = it.boundsInRoot() }
+}
+
+/** What the deck's workspace on screen asks of the dock beside it. */
+private class DeckNeeds(
+    /** It has a Notifications column, so the notification panel would repeat it. */
+    val showsNotifications: Boolean,
+    /** The width of its first column, which the dock leaves it whole. */
+    val firstColumnWidth: Float,
+)
+
+@Composable
+private fun deckNeeds(accountViewModel: AccountViewModel): DeckNeeds {
+    val deck by accountViewModel.account.settings.deck
+        .collectAsStateWithLifecycle()
+    return remember(deck) {
+        val columns = deck.current.columns
+        DeckNeeds(
+            showsNotifications = columns.any { it.root is Route.Notification },
+            firstColumnWidth = columns.firstOrNull()?.width ?: DeckColumnsLayout.MIN_COLUMN_WIDTH,
+        )
+    }
 }
 
 /** The panels that step out of the dock on the current screen, the one each duplicates. */

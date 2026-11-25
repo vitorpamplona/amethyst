@@ -361,7 +361,7 @@ private fun AppNavigation(
     // The dock beside the main screen: the notification feed, then the panels only this platform
     // has. Built once per account, so every panel keeps its state wherever the dock draws it.
     val dockPanels = remember(accountViewModel) { listOf(NotificationsDockPanel) + root.dockPanels(accountViewModel) }
-    val dock = rememberDockController(LocalAppServices.current.dockLayoutPrefs, dockPanels, root.supportsPanelWindows)
+    val dock = rememberDockController(LocalAppServices.current.dockLayoutPrefs, dockPanels, root.supportsPanelWindows, accountViewModel)
     dock.windowOrigin = root::mainWindowScreenOrigin
 
     CompositionLocalProvider(

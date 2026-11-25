@@ -43,6 +43,8 @@ import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.dock.DropTarget
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.dock.PanelState
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -59,14 +61,30 @@ import kotlinx.coroutines.flow.StateFlow
 class DockController internal constructor(
     private val prefs: DockLayoutPreferences,
     val panels: List<DockPanelSpec>,
+    internal val accountViewModel: AccountViewModel,
 ) {
+    /** The platform's panels; screens the user pinned come and go with the layout ([allIds]). */
     val ids: List<PanelId> = panels.map { it.id }
 
     private val byId = panels.associateBy { it.id }
 
-    fun spec(id: PanelId): DockPanelSpec? = byId[id]
+    private val screenSpecs = mutableMapOf<PanelId, DockPanelSpec>()
 
-    fun has(id: PanelId): Boolean = id in byId
+    fun spec(id: PanelId): DockPanelSpec? = byId[id] ?: screenSpec(id)
+
+    fun has(id: PanelId): Boolean = id in byId || (id.isScreen && id in prefs.flow.value.screens)
+
+    /** Every panel of [layout] this platform can draw: its own, then the pinned screens in their order. */
+    fun allIds(layout: DockLayout = layout()): List<PanelId> = ids + layout.ordered().filter { it.isScreen && it in layout.screens }
+
+    private fun screenSpec(id: PanelId): DockPanelSpec? {
+        if (!id.isScreen) return null
+        screenSpecs[id]?.let { return it }
+        val route =
+            prefs.flow.value.screens[id]
+                ?.let { DockLayout.decodeRoute(it) } ?: return null
+        return screenPanelSpec(id, route, accountViewModel).also { screenSpecs[id] = it }
+    }
 
     val layoutFlow: StateFlow<DockLayout> get() = prefs.flow
 
@@ -121,7 +139,14 @@ class DockController internal constructor(
     var allHidden by mutableStateOf(false)
         private set
 
-    internal lateinit var movables: Map<PanelId, @Composable (DockPanelScope) -> Unit>
+    private val movables = mutableMapOf<PanelId, @Composable (DockPanelScope) -> Unit>()
+
+    /** Panel [id]'s content, built once, wherever it is drawn. */
+    internal fun movable(id: PanelId): (@Composable (DockPanelScope) -> Unit)? {
+        movables[id]?.let { return it }
+        val spec = spec(id) ?: return null
+        return movableContentOf { scope: DockPanelScope -> PanelHost(this, spec, scope) }.also { movables[id] = it }
+    }
 
     private val viewModelStores = mutableMapOf<PanelId, ViewModelStore>()
 
@@ -271,8 +296,56 @@ class DockController internal constructor(
 
     fun reset() {
         dismissOverlay()
+        val pinned = layout().screens.keys
         update { DockLayout().ensure(ids) }
+        pinned.forEach(::forgetScreen)
     }
+
+    /**
+     * Pins [route] as a panel and shows it; a screen pinned already is shown instead of pinned twice.
+     * Returns its panel id.
+     */
+    fun pinScreen(route: Route): PanelId {
+        val json = DockLayout.encodeRoute(route)
+        val id = layout().screenShowing(json) ?: PanelId.newScreen()
+        update { it.pinScreen(id, json) }
+        if (!canDock) overlay = id
+        return id
+    }
+
+    /** Takes a pinned screen out of the dock, with its ViewModels. */
+    fun unpin(id: PanelId) {
+        if (!id.isScreen) return
+        if (overlay == id) overlay = null
+        if (maximized == id) maximized = null
+        update { it.unpin(id) }
+        forgetScreen(id)
+    }
+
+    private fun forgetScreen(id: PanelId) {
+        screenSpecs.remove(id)
+        movables.remove(id)
+        savedStates.remove(id)
+        viewModelStores.remove(id)?.clear()
+    }
+
+    /** Layouts saved by name, to go back to. */
+    val savedLayouts: StateFlow<Map<String, DockLayout>> get() = prefs.saved
+
+    /** True while the shell asks for a name to save the layout under. */
+    var namingLayout by mutableStateOf(false)
+
+    fun saveLayoutAs(name: String) = prefs.saveAs(name)
+
+    /** Puts a saved layout back, pinned screens and all. */
+    fun restoreLayout(name: String) {
+        dismissOverlay()
+        val before = layout().screens.keys
+        prefs.restore(name)
+        (before - layout().screens.keys).forEach(::forgetScreen)
+    }
+
+    fun forgetLayout(name: String) = prefs.forget(name)
 
     /** Hands [text] to panel [id] (a question for the assistant) and shows it. */
     fun ask(
@@ -343,16 +416,9 @@ fun rememberDockController(
     prefs: DockLayoutPreferences,
     panels: List<DockPanelSpec>,
     supportsWindows: Boolean,
+    accountViewModel: AccountViewModel,
 ): DockController {
-    val controller =
-        remember(prefs, panels) {
-            DockController(prefs, panels).also { controller ->
-                controller.movables =
-                    panels.associate { spec ->
-                        spec.id to movableContentOf { scope: DockPanelScope -> PanelHost(controller, spec, scope) }
-                    }
-            }
-        }
+    val controller = remember(prefs, panels, accountViewModel) { DockController(prefs, panels, accountViewModel) }
     controller.supportsWindows = supportsWindows
     DisposableEffect(controller) { onDispose { controller.clear() } }
     return controller
@@ -409,8 +475,8 @@ private fun PanelState(
  */
 @Composable
 fun DockController.PanelContent(scope: DockPanelScope) {
-    val movable = movables[scope.id] ?: return
-    movable(scope)
+    val content = movable(scope.id) ?: return
+    content(scope)
 }
 
 /**

@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.AssistantDockPanel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devices.DevicesDockPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -206,8 +205,8 @@ class DesktopAppRoot(
         }
     }
 
-    /** The assistant and the emulators beside the screen, as an IDE's tool windows. */
-    override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> = listOf(AssistantDockPanel, DevicesDockPanel)
+    /** The assistant beside the screen, as an IDE's tool window. */
+    override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> = listOf(AssistantDockPanel)
 
     override val supportsPanelWindows: Boolean = true
 

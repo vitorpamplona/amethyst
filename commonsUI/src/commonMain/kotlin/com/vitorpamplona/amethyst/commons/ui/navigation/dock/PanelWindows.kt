@@ -77,14 +77,15 @@ fun PanelWindows(
     if (!controller.supportsWindows) return
     val layout by controller.layoutFlow.collectAsStateWithLifecycle()
     val panelNav = remember(nav) { DockPanelNav(nav) }
-    controller.panels.forEach { spec ->
-        if (!layout.isInWindow(spec.id)) return@forEach
+    controller.allIds(layout).forEach { id ->
+        if (!layout.isInWindow(id)) return@forEach
+        val spec = controller.spec(id) ?: return@forEach
         key(spec.id) {
             val window =
                 PanelWindowSpec(
                     id = spec.id,
                     kind = "panel:" + spec.id.kind,
-                    title = stringRes(Res.string.navigation_window_title, stringRes(spec.title)),
+                    title = stringRes(Res.string.navigation_window_title, spec.label(accountViewModel)),
                     raise = controller.windowRaise[spec.id],
                     origin = controller.windowOrigins[spec.id],
                     onClose = { controller.closeWindow(spec.id) },

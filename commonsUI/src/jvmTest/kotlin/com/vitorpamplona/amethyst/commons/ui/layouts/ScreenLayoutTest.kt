@@ -111,11 +111,12 @@ class ScreenLayoutTest {
 
     @Test
     fun foldedStripReservesItsWidthSoTheCenterKeepsItsMinimum() {
-        // Window 1000, drawer dragged to 480, panel folded to its 48dp strip: counting the strip,
+        // A drawer dragged to 480 and the panel folded to its strip: counting the strip,
         // the drawer must give up the 8dp the strip takes past the center's 480dp minimum.
+        val window = MIN_CENTER_PANE_DP + 472f + DockStripWidth.value
         val fitted =
             fitPaneWidths(
-                windowWidth = 1_000f,
+                windowWidth = window,
                 drawer = 480f,
                 notifications = null,
                 showDrawer = true,
@@ -123,8 +124,8 @@ class ScreenLayoutTest {
                 notificationStripWidth = DockStripWidth.value,
             )
         assertEquals(472f, fitted.drawer)
-        // 1000 - 472 (drawer) - 48 (strip) = 480: the center pane keeps exactly its minimum.
-        assertEquals(MIN_CENTER_PANE_DP, 1_000f - fitted.drawer - DockStripWidth.value)
+        // The window less the drawer and the strip: the center pane keeps exactly its minimum.
+        assertEquals(MIN_CENTER_PANE_DP, window - fitted.drawer - DockStripWidth.value)
     }
 
     @Test

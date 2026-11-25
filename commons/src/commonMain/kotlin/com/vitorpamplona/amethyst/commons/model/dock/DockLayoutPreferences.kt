@@ -37,7 +37,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -65,9 +69,31 @@ class DockLayoutPreferences(
 
     val foldedAt: StateFlow<Map<PanelId, Long>> = folds.asStateFlow()
 
+    private val named = MutableStateFlow<Map<String, DockLayout>>(emptyMap())
+
+    /** Layouts the user saved by name, to go back to (as an IDE's Window › Layouts). */
+    val saved: StateFlow<Map<String, DockLayout>> = named.asStateFlow()
+
+    /** Keeps the layout on screen now as [name], replacing one saved under the same name. */
+    fun saveAs(name: String) {
+        val key = name.trim().ifEmpty { return }
+        named.update { it + (key to layout.value) }
+    }
+
+    /** Puts the layout saved as [name] back on screen. */
+    fun restore(name: String) {
+        val chosen = named.value[name] ?: return
+        update { chosen }
+    }
+
+    fun forget(name: String) {
+        named.update { it - name }
+    }
+
     init {
         scope.launch {
             restoreFromDisk()
+            launch { named.drop(1).collect { persistNamed(it) } }
             @OptIn(FlowPreview::class)
             layout.drop(1).debounce(SAVE_DELAY_MS).collect { persist(it) }
         }
@@ -96,6 +122,7 @@ class DockLayoutPreferences(
         try {
             val prefs = store.data.first()
             val restored = prefs[LAYOUT]?.let { DockLayout.fromJson(it) } ?: migrate(prefs)
+            named.value = prefs[SAVED]?.let { decodeNamed(it) }.orEmpty()
             layout.value = restored
             val now = TimeUtils.now()
             folds.value = restored.states.filterValues { it == PanelState.FOLDED }.mapValues { now }
@@ -114,9 +141,34 @@ class DockLayoutPreferences(
         }
     }
 
+    private suspend fun persistNamed(value: Map<String, DockLayout>) {
+        try {
+            store.edit { prefs -> prefs[SAVED] = encodeNamed(value) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("DockLayoutPrefs", "Error writing the saved dock layouts", e)
+        }
+    }
+
     companion object {
         const val SAVE_DELAY_MS = 400L
         private val LAYOUT = stringPreferencesKey("ui.dock.layout")
+        private val SAVED = stringPreferencesKey("ui.dock.saved")
+
+        private val namedJson = Json { ignoreUnknownKeys = true }
+
+        /** Name to layout JSON, each layout as [DockLayout.toJson] writes it, so one that no longer reads is dropped alone. */
+        internal fun encodeNamed(value: Map<String, DockLayout>): String = namedJson.encodeToString(MapSerializer(String.serializer(), String.serializer()), value.mapValues { it.value.toJson() })
+
+        internal fun decodeNamed(value: String): Map<String, DockLayout> =
+            try {
+                namedJson
+                    .decodeFromString(MapSerializer(String.serializer(), String.serializer()), value)
+                    .mapNotNull { (name, json) -> DockLayout.fromJson(json)?.let { name to it } }
+                    .toMap()
+            } catch (e: IllegalArgumentException) {
+                emptyMap()
+            }
 
         // What the docked notification panel kept before the dock: read once, to build the first dock.
         private val LEGACY_NOTIFICATIONS_WIDTH = floatPreferencesKey("ui.panes.notificationsWidth")

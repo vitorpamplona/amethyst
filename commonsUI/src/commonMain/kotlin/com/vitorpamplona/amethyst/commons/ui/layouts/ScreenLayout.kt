@@ -110,7 +110,7 @@ val PermanentDrawerWidth = 300.dp
 val NotificationPanelWidth = 360.dp
 
 /** The dock's strip at the window's right edge: one icon per panel, as an IDE's tool window bar. */
-val DockStripWidth = 48.dp
+val DockStripWidth = 40.dp
 
 /** How far the user can drag the docked drawer, in dp. */
 val DrawerWidthRange = 220f..480f

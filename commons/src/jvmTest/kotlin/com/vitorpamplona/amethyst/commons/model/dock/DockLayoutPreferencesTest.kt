@@ -142,4 +142,38 @@ class DockLayoutPreferencesTest {
             scope.cancel()
             advanceUntilIdle()
         }
+
+    @Test
+    fun aNamedLayoutComesBackInTheNextLaunch() =
+        runTest(StandardTestDispatcher()) {
+            session {
+                update { it.ensure(listOf(PanelId.NOTIFICATIONS, PanelId.ASSISTANT)).open(PanelId.ASSISTANT) }
+                saveAs("  Writing  ")
+                saveAs(" ")
+                update { it.fold(PanelId.ASSISTANT) }
+            }
+            val prefs = session()
+            assertEquals(setOf("Writing"), prefs.saved.value.keys)
+            assertFalse(prefs.flow.value.isOpen(PanelId.ASSISTANT))
+            prefs.restore("Writing")
+            assertTrue(prefs.flow.value.isOpen(PanelId.ASSISTANT))
+        }
+
+    @Test
+    fun aForgottenLayoutStaysForgotten() =
+        runTest(StandardTestDispatcher()) {
+            session {
+                saveAs("A")
+                saveAs("B")
+                forget("A")
+            }
+            assertEquals(setOf("B"), session().saved.value.keys)
+        }
+
+    @Test
+    fun namedLayoutsSurviveTheirEncoding() {
+        val layouts = mapOf("A" to DockLayout().ensure(listOf(PanelId.NOTIFICATIONS)), "B" to DockLayout())
+        assertEquals(layouts, DockLayoutPreferences.decodeNamed(DockLayoutPreferences.encodeNamed(layouts)))
+        assertTrue(DockLayoutPreferences.decodeNamed("garbage").isEmpty())
+    }
 }

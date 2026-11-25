@@ -242,7 +242,7 @@ private fun DeckToolbar(
     onSaveWorkspace: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.width(48.dp).fillMaxHeight().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.width(DeckToolbarWidth).fillMaxHeight().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box {
             IconButton(onClick = { menu = true }) {
                 Icon(MaterialSymbols.Dashboard, contentDescription = stringRes(Res.string.deck_workspaces), modifier = Modifier.size(22.dp))
@@ -400,6 +400,11 @@ private fun DeckColumnPane(
 }
 
 private val ResizeHandleWidth = 6.dp
+
+private val DeckToolbarWidth = 48.dp
+
+/** What the deck draws besides its columns: its toolbar and a column's resize handle. */
+internal val DeckChromeWidth = DeckToolbarWidth + ResizeHandleWidth
 
 private class DeckViewModelStoreOwner : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()

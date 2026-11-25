@@ -81,8 +81,10 @@ import com.vitorpamplona.amethyst.commons.resources.dock_panel_options
 import com.vitorpamplona.amethyst.commons.resources.dock_reset_layout
 import com.vitorpamplona.amethyst.commons.resources.dock_restore_size
 import com.vitorpamplona.amethyst.commons.resources.dock_show_over_screen
+import com.vitorpamplona.amethyst.commons.resources.dock_unpin_screen
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 
 /** The header of a slot, an overlay or a panel window: as tall as the main screen's top bar, so they line up. */
@@ -124,7 +126,7 @@ internal fun PanelHeader(
             val onTitle = spec.onTitleClick
             Box(Modifier.weight(1f)) {
                 Text(
-                    text = stringRes(spec.title),
+                    text = spec.label(scope.accountViewModel),
                     style = MaterialTheme.typography.titleMedium,
                     color = colors.onBackground,
                     maxLines = 1,
@@ -138,7 +140,7 @@ internal fun PanelHeader(
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 tabs.forEach { id ->
                     val tab = controller.spec(id) ?: return@forEach
-                    Box(Modifier.weight(1f, fill = false)) { PanelTab(controller, tab, selected = id == active) }
+                    Box(Modifier.weight(1f, fill = false)) { PanelTab(controller, tab, selected = id == active, scope.accountViewModel) }
                 }
             }
         }
@@ -153,9 +155,10 @@ private fun PanelTab(
     controller: DockController,
     spec: DockPanelSpec,
     selected: Boolean,
+    accountViewModel: AccountViewModel,
 ) {
     val colors = MaterialTheme.colorScheme
-    val title = stringRes(spec.title)
+    val title = spec.label(accountViewModel)
     Row(
         Modifier
             .padding(end = 4.dp)
@@ -214,7 +217,7 @@ private fun PanelMenuButton(
 ) {
     var open by remember { mutableStateOf(false) }
     val spec = controller.spec(id) ?: return
-    val label = stringRes(Res.string.dock_panel_options, stringRes(spec.title))
+    val label = stringRes(Res.string.dock_panel_options, spec.label(controller.accountViewModel))
     Box {
         HoverTooltip(label) {
             IconButton(onClick = { open = true }, modifier = Modifier.size(32.dp)) {
@@ -290,6 +293,7 @@ internal fun panelActions(
             actions += PanelAction(Res.string.dock_maximize, MaterialSymbols.OpenInFull) { controller.toggleMaximized(id) }
         }
         if (controller.isShowing(id, layout)) actions += PanelAction(Res.string.dock_fold, MaterialSymbols.AutoMirrored.KeyboardArrowRight) { controller.fold(id) }
+        if (id.isScreen) actions += PanelAction(Res.string.dock_unpin_screen, MaterialSymbols.Close) { controller.unpin(id) }
     } else {
         actions += PanelAction(Res.string.dock_back_to_dock, MaterialSymbols.DockToRight, divides = first > 0) { controller.dockBack(id) }
     }

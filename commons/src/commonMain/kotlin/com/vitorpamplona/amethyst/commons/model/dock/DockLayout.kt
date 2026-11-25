@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.commons.model.dock
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.jvm.JvmInline
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Names a panel of the dock: the notification feed, the assistant, the devices. A string rather than
@@ -36,10 +39,21 @@ import kotlin.jvm.JvmInline
 value class PanelId(
     val kind: String,
 ) {
+    /** A screen the user pinned to the dock ([DockLayout.screens] holds which). */
+    val isScreen: Boolean get() = kind.startsWith(SCREEN_PREFIX)
+
     companion object {
         val NOTIFICATIONS = PanelId("notifications")
         val ASSISTANT = PanelId("assistant")
+
+        /** Kept for a devices panel a platform may add: a column of its own by default. */
         val DEVICES = PanelId("devices")
+
+        private const val SCREEN_PREFIX = "screen:"
+
+        /** A new id for a pinned screen. */
+        @OptIn(ExperimentalUuidApi::class)
+        fun newScreen(): PanelId = PanelId(SCREEN_PREFIX + Uuid.random())
     }
 }
 
@@ -142,6 +156,8 @@ data class DockLayout(
     val columns: List<DockColumn> = emptyList(),
     val states: Map<PanelId, PanelState> = emptyMap(),
     val overlayMode: Set<PanelId> = emptySet(),
+    /** Screens pinned as panels: each one's route, as [encodeRoute] wrote it. */
+    val screens: Map<PanelId, String> = emptyMap(),
 ) {
     fun contains(id: PanelId): Boolean = locate(id) != null
 
@@ -194,6 +210,49 @@ data class DockLayout(
             layout = layout.copy(columns = cols, states = layout.states + (id to (layout.states[id] ?: state)))
         }
         return layout
+    }
+
+    /**
+     * Pins a screen as panel [id], open: under the first column's panels while it has room for
+     * another slot, else in a column of its own, else as a tab of the first column's last slot.
+     */
+    fun pinScreen(
+        id: PanelId,
+        route: String,
+    ): DockLayout {
+        if (contains(id)) return copy(screens = screens + (id to route)).open(id)
+        val cols = columns.toMutableList()
+        val slot = DockSlot(listOf(id), id)
+        when {
+            cols.isEmpty() -> cols.add(DockColumn(listOf(slot)))
+            cols[0].slots.size < MAX_SLOTS -> cols[0] = cols[0].copy(slots = cols[0].slots + slot)
+            cols.size < MAX_COLUMNS -> cols.add(DockColumn(listOf(slot)))
+            else -> {
+                val last = cols[0].slots.last()
+                cols[0] = cols[0].copy(slots = cols[0].slots.dropLast(1) + last.copy(panels = last.panels + id, active = id))
+            }
+        }
+        return copy(columns = cols, states = states + (id to PanelState.OPEN), screens = screens + (id to route))
+    }
+
+    /** The pinned screen showing [route], if one does. */
+    fun screenShowing(route: String): PanelId? = screens.entries.firstOrNull { it.value == route }?.key
+
+    /** Takes pinned screen [id] out of the dock altogether. */
+    fun unpin(id: PanelId): DockLayout {
+        val cols =
+            columns
+                .map { column ->
+                    column.copy(
+                        slots =
+                            column.slots
+                                .map { slot ->
+                                    val panels = slot.panels - id
+                                    slot.copy(panels = panels, active = slot.active?.takeIf { it != id } ?: panels.firstOrNull())
+                                }.filter { it.panels.isNotEmpty() },
+                    )
+                }.filter { it.slots.isNotEmpty() }
+        return copy(columns = cols, states = states - id, overlayMode = overlayMode - id, screens = screens - id)
     }
 
     /** Shows [id] where it last was, as its slot's tab on top. */
@@ -391,6 +450,19 @@ data class DockLayout(
             Json {
                 ignoreUnknownKeys = true
                 encodeDefaults = false
+            }
+
+        private val routeJson = Json { ignoreUnknownKeys = true }
+
+        /** A pinned screen's route, as [screens] keeps it. */
+        fun encodeRoute(route: Route): String = routeJson.encodeToString(Route.serializer(), route)
+
+        /** A pinned screen's route back, or null when this build does not know it (renamed, or added later). */
+        fun decodeRoute(value: String): Route? =
+            try {
+                routeJson.decodeFromString(Route.serializer(), value)
+            } catch (e: IllegalArgumentException) {
+                null
             }
 
         /** The saved layout, or null when it does not decode (the caller starts from the default). */

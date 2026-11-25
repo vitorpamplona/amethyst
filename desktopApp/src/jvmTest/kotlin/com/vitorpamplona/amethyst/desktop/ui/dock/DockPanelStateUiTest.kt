@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelPlacement
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.rememberDockController
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +70,9 @@ class DockPanelStateUiTest {
     val folder = TemporaryFolder()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // One account for the whole test: the dock is rebuilt for another one.
+    private val account: AccountViewModel = mockk(relaxed = true)
 
     @AfterTest
     fun tearDown() {
@@ -96,8 +100,8 @@ class DockPanelStateUiTest {
     private fun show() {
         val prefs = DockLayoutPreferences(PreferenceDataStoreFactory.create(scope = scope) { folder.root.resolve("dock.preferences_pb") }, scope)
         compose.setContent {
-            val dock = rememberDockController(prefs, listOf(probe), supportsWindows = true)
-            val panelScope = remember { DockPanelScope(probe.id, PanelPlacement.DOCKED, mockk(relaxed = true), mockk(relaxed = true), dock) }
+            val dock = rememberDockController(prefs, listOf(probe), supportsWindows = true, accountViewModel = account)
+            val panelScope = remember { DockPanelScope(probe.id, PanelPlacement.DOCKED, account, mockk(relaxed = true), dock) }
             Column {
                 when (site) {
                     0 -> Box { dock.PanelContent(panelScope) }
