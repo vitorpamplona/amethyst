@@ -90,8 +90,20 @@ private class TrackParticipant(
 private fun AudioTrackEvent.participantsWithRoles(): List<TrackParticipant> =
     tags.mapNotNull { tag ->
         val key = ParticipantTag.parseKey(tag) ?: return@mapNotNull null
-        TrackParticipant(key, tag.getOrNull(3)?.trim()?.ifBlank { null })
+        TrackParticipant(key, trackParticipantRole(tag))
     }
+
+/**
+ * Zapstr writes the role in slot 2 (`["p", key, "Host"]`); the NIP-53 order puts a relay hint there
+ * and the role in slot 3. Slot 2 is the role unless it is empty or a relay URL. Quartz's
+ * `ParticipantTag.role` reads it the same way from its next release on.
+ */
+private fun trackParticipantRole(tag: Array<String>): String? {
+    val second = tag.getOrNull(2)?.trim().orEmpty()
+    val isRelay = second.startsWith("wss://", ignoreCase = true) || second.startsWith("ws://", ignoreCase = true)
+    val role = if (second.isEmpty() || isRelay) tag.getOrNull(3) else second
+    return role?.trim()?.ifBlank { null }
+}
 
 private const val MAX_TRACK_PARTICIPANTS = 6
 

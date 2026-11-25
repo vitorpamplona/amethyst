@@ -215,8 +215,8 @@ class NoteSpecCardsUiTest {
     // Kind 31337 audio track (Zapstr) without a playable file
     // ---------------------------------------------------------------------------------------------
 
-    // Zapstr's track: `subject` (title), `c` (type), `cover`, and `p` participants with a role in
-    // slot 3. Without a file to play it is still a track: its header, not the unknown-kind card.
+    // Zapstr's track: `subject` (title), `c` (type), `cover`, and `p` participants with a role
+    // (NIP-53 order here: a relay hint, then the role). Without a file to play it is still a track: its header, not the unknown-kind card.
     @Test
     fun audioTrackWithoutFileShowsItsHeader() {
         show(
@@ -237,6 +237,27 @@ class NoteSpecCardsUiTest {
         assertTrue(shown("Relay Blues"), "the track's title is missing")
         assertTrue(shown("Artist"), "the participant's role is missing")
         assertTrue(!shown("Unsupported"), "a titled track became an unknown-kind card")
+    }
+
+    // What Zapstr publishes: the role in slot 2, with no relay hint before it (["p", key, "Host"]).
+    @Test
+    fun audioTrackReadsZapstrRoleInSlotTwo() {
+        show(
+            consume(
+                event(
+                    "a8",
+                    31337,
+                    arrayOf(
+                        arrayOf("d", "relay-podcast"),
+                        arrayOf("c", "podcast"),
+                        arrayOf("subject", "Relay Talk"),
+                        arrayOf("p", bob, "Host"),
+                    ),
+                ),
+            ),
+        )
+        assertTrue(shown("Relay Talk"), "the track's title is missing")
+        assertTrue(shown("Host"), "the participant's role in slot 2 is missing")
     }
 
     // ---------------------------------------------------------------------------------------------
