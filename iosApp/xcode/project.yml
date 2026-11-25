@@ -31,6 +31,9 @@ targets:
         UILaunchScreen: {}
         # Lets Compose draw at 120 Hz on ProMotion screens.
         CADisableMinimumFrameDurationOnPhone: true
+        # Audio and video keep playing on the lock screen and in picture in picture.
+        UIBackgroundModes: [audio]
+        NSMicrophoneUsageDescription: Amethyst records the voice messages and voice notes you choose to send.
         # openLightningWallet asks whether a wallet can take a `lightning:` URL.
         LSApplicationQueriesSchemes:
           - lightning
