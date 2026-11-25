@@ -1,0 +1,179 @@
+---
+title: "Content parsing: one document model, a parser per format, chosen by kind"
+type: refactor
+status: proposed
+date: 2026-11-25
+owner: commons
+consumers: quartz, commons, commonsUI, cli, new djot-kmp, the compose-richtext fork
+---
+
+# Content parsing: one document model, a parser per format, chosen by kind
+
+## Goal
+
+Parse every event's content once, off the UI thread, with the parser its NIP names, into one
+document model that every format can extend. Render that model with one renderer registry.
+
+This also takes the last JVM-only parser out of the shared UI, so markdown, wiki pages, Git
+screens and cordn chats work on iOS ([2026-10-09-ios-app.md](2026-10-09-ios-app.md), A4) and on
+the web.
+
+## Where we are (measured 2026-11-25 on `main` @ `a9e6a9d8`)
+
+**What works:**
+- `RichTextParser` (`commons/richtext`, 18 files, 3.5k lines) parses Nostr text: mentions,
+  NIP-27 references, hashtags, custom emoji, media, invoices, Cashu tokens. It is shared Kotlin
+  with no Compose and no JVM-only code. It is well tested and benchmarked
+  (`RichTextParserBenchmark`).
+- `CachedRichTextParser` keeps 500 parses in one global LRU, and the feed prefetcher
+  (`PrefetchFeedMedia`) parses ahead off the UI thread, so the screen usually gets a cache hit.
+- `amy` reuses the same parse through `commons/rendering/BodySpans`.
+
+**What does not:**
+1. **The format is guessed from the text.**
+   - `RichTextViewer` runs `CachedRichTextParser.isMarkdown()` on every piece of content it is
+     given, whatever the kind. About 80 call sites in `commonsUI` go through it, through
+     `TranslatableRichTextViewer` and `ExpandableRichTextViewer`.
+   - NIP-23 articles are no exception: their body reaches the screen through `RenderTextEvent`
+     like a note's.
+   - The heuristic still misfires: `cat foo | grep bar` is markdown to it.
+2. **Two document models, two renderers.**
+   - Nostr text parses into `RichTextViewerState`; markdown into the compose-richtext fork's
+     `AstNode`.
+   - Hashtags and `nostr:` links are implemented twice: in `RichTextParser`, and in the fork's
+     commonmark extensions (`HashtagExtension`, `NostrUriExtension`). Bare URLs are detected in
+     `RichTextParser` and again in `BareUrlExtension`.
+3. **Markdown is parsed in composition with no shared cache.** `RenderContentAsMarkdown` calls
+   `CommonmarkAstNodeParser(...).parse(content)` inside `remember(content)`. A long article
+   re-parses whenever it leaves and re-enters composition.
+4. **The cache is keyed by content and UI context, not by event.** The key includes
+   `callbackUri`, which depends on where the note is shown. One 500-entry cache serves every
+   feed, and markdown is not in it.
+5. **The markdown parser is JVM-only.** It is the fork's `richtext-commonmark` (commonmark-java)
+   plus our `BareUrlExtension` (commonmark-java and the JVM autolink library). This is the iOS
+   blocker.
+
+**Formats the NIPs name** (checked in `nostr-protocol/nips` on 2026-11-25):
+
+| Format | Kinds | Spec says | Amethyst today |
+|---|---|---|---|
+| Plain Nostr text | 1 (NIP-10), 1111 (NIP-22) | NIP-10: "Markup languages such as markdown and HTML SHOULD NOT be used." NIP-22: plain text, "no HTML, Markdown, or other formatting" | Heuristic: markdown when it looks like markdown |
+| Markdown | 30023 (NIP-23), 1618 and 1621 (NIP-34 pull requests and issues), 30402/30403 (NIP-99), 30063 release notes (NIP-51), 54 (NIP-F4) | Markdown; NIP-23: "MUST NOT support adding HTML" | Heuristic |
+| Djot | 30818 (NIP-54) | Djot, plus `nostr:` link targets, plus wikilinks: an undefined reference link points to the article with that normalized `d` tag | **Not supported.** No Djot code anywhere; bodies go through the heuristic |
+| AsciiDoc | 30040/30041 (NKBIP-01 publications) | AsciiDoc | `CachedAsciiDocToMarkdown` converts it to markdown, then the markdown path |
+
+**The compose-richtext fork** (`vitorpamplona/compose-richtext` @ `4d3b3dd`, from JitPack) is
+upstream `halilozercan/compose-richtext` `main` (2026-06-07) plus 45 of our commits (about 700
+lines in 23 files). Upstream: 8 commits in the last 12 months, at `1.0.0-alpha05`, Android and
+JVM targets only, even for its pure-Compose modules.
+
+| Fork module | Lines | Role | In this plan |
+|---|---|---|---|
+| `richtext-ui` | 2,320 | Layout primitives: `Heading`, `FormattedList`, `Table`, `BlockQuote`, `CodeBlock`, `HorizontalRule`, `InfoPanel`, `RichTextString` with inline content, `RichTextStyle` | **Kept** as the renderer's building blocks |
+| `richtext-ui-material3` | 80 | Material 3 theming of the above | Kept |
+| `richtext-markdown` | 1,118 | Its markdown AST and composer (`AstNode`, `BasicMarkdown`) | Dropped: our model replaces it |
+| `richtext-commonmark` | 658 | commonmark-java parser, hashtag and `nostr:` extensions | Dropped: our parsers replace it |
+
+## Decisions
+
+1. **The NIP names the format, not a guess.** Each kind maps to a content format. The mapping
+   lives in quartz, next to the event classes, because every client needs it.
+2. **One document model, open to extension.**
+   - `Block` and `Inline` are open interfaces with a shared core: paragraph, heading, list,
+     quote, code block, table, thematic break, media; text, emphasis, strong, strikethrough, code,
+     link, line break, image.
+   - The Nostr inlines are core too, shared by every format: mention, event and address
+     references, hashtag, custom emoji, invoice, Cashu token, URL, math.
+   - Each format adds nodes for what only it has: Djot's definition lists, footnotes,
+     super/subscript and `Div`/`Span` with attributes; AsciiDoc's admonitions and callouts;
+     GitHub markdown's task items.
+   - A rule of one NIP is a parser option or post-pass, not a new output type: NIP-54
+     wikilinks, NIP-23's "no HTML".
+   - Content that is not prose (a spreadsheet NIP, chess games, polls, calendars) is not part of
+     this model. Each stays its own kind, with its own parser and its own composable, as today.
+3. **Parse once, off the UI thread, cached by event.**
+   - Parse on first request in the background; the prefetcher keeps doing it ahead of the feed.
+   - Cache by event id (and the edit's id for an edited note), in a bounded LRU.
+   - Parse only from the event's content and tags.
+   - Do not parse at ingest: most cached notes are never shown.
+   - Translations stay keyed by text, since a translated body is not an event.
+4. **One renderer registry in `commonsUI`.**
+   - A renderer per node type, keyed by class. Core renderers draw on the fork's `richtext-ui`
+     primitives for headings, lists, tables, quotes and code blocks.
+   - Each format registers renderers for its own nodes.
+   - An unregistered node renders its children, or its source text. A parser can add a node
+     before any UI draws it.
+   - Djot attributes are the in-document extension point: a `{.spreadsheet}` block arrives as a
+     `Div` with that class, and a renderer registered for the class can draw it.
+5. **Where each piece lives:**
+
+   | Piece | Home | Why |
+   |---|---|---|
+   | Format per kind; NIP-54 wikilink target normalization | quartz | NIP interpretation every client needs; no new dependency |
+   | General Djot parser, no Nostr | new repo `djot-kmp`, via Magpie | No Kotlin or JVM Djot parser exists (the Djot README lists JavaScript, Lua, Prolog, PHP, Rust, Go and Haskell; Maven Central has none). Spec-driven, with its own conformance suite, like crypto-kmp and kiko-kmp |
+   | Markdown parser | JetBrains `org.jetbrains:markdown` 0.7.18, used directly | Apache-2.0 (checked in its POM); publishes iOS, JVM, wasm, JS and native targets |
+   | Document model, format mappings, Nostr inline pass, parser registry, event-keyed cache | `commons/content/` | Amethyst's own model; `amy` already depends on `commons` |
+   | Renderer registry and renderers | `commonsUI` | UI |
+
+   `commons/content/` depends on no `Account`, `LocalCache` or UI, so it can move to its own
+   repo by moving files if another Kotlin client ever wants it.
+6. **The fork shrinks to `richtext-ui` and heads upstream.** Once `richtext-markdown` and
+   `richtext-commonmark` are unused, the fork's diff is the media and link hooks, the
+   `RichTextString` additions and the iOS targets: about 100 lines. Offer those upstream. If
+   they land, depend on `com.halilibo.compose-richtext` from Maven Central and drop the fork and
+   JitPack.
+7. **Kind-1 text keeps its own fast layout for now.** Plain Nostr text renders through
+   `RichTextViewer`'s word layout, which is tuned for feed scrolling. In the model it is a
+   paragraph-only document. Whether it moves onto `richtext-ui`'s `RichTextString` is decided by
+   the scroll benchmarks, not up front.
+
+## Steps
+
+| # | Step | Where | Weeks |
+|---|---|---|---|
+| 1 | `ContentFormat` per kind for the kinds in the table above; NIP-54 wikilink target normalization. Release. | quartz | 0.5 |
+| 2 | Registry and event-keyed, off-thread cache, still with today's two renderers. `RichTextViewer` stops guessing for kinds with a declared format; kind 1 follows decision 1 under "Open". Check what `RichTextParser` uses `callbackUri` for and move it to render time if it can. | commons, commonsUI | 1–1.5 |
+| 3 | Document model; markdown into it through JetBrains markdown; the Nostr inline pass. Parity harness (below). | commons | 2 |
+| 4 | Renderer registry on `richtext-ui`. Delete `RenderContentAsMarkdown`'s commonmark path, `BareUrlExtension`, and the `richtext-markdown`, `richtext-commonmark`, commonmark and autolink dependencies. Move the markdown files from `commonsUI/jvmAndroid` to `commonMain`. Markdown works on iOS from here. | commonsUI | 2 |
+| 5 | Fork: drop the two modules, add `iosArm64`/`iosSimulatorArm64` to `richtext-ui` and `-material3` with an iOS `CodeBlock`, publish through Magpie instead of JitPack. Open the upstream PR. | fork | 0.5 |
+| 6 | `djot-kmp`: port the reference parser (djot.js) with the Djot conformance tests. Then the Djot mapping and NIP-54's `nostr:` links and wikilinks in `commons/content/`. Wiki pages render to spec on every platform. | new repo, commons | 2–3 |
+| 7 | AsciiDoc into the model, replacing the markdown round trip. | commons | 1 |
+
+Steps 1–5 (about 6–7 weeks) are what iOS needs. They replace the markdown part of the iOS plan's
+A4. The iOS slice (B3) does not wait for them: ordinary notes already use the shared parser.
+Steps 6 and 7 can follow in either order.
+
+## Verification
+
+- **Parity harness (step 3):** fetch a few hundred real kind-30023 articles with `amy`, render
+  each through the old and the new path, and report structural differences. Each difference is
+  either a bug or a documented behavior change.
+- **Model tests** in `commonTest`, so CI runs them on the JVM and on the iOS simulator.
+- **Djot:** the official conformance suite in `djot-kmp`.
+- **Benchmarks, before and after:** `RichTextParserBenchmark`; the desktop scroll benchmark
+  (`-Damethyst.scrollBench`); parse time of long articles on an Android device; memory of the
+  event-keyed cache at its chosen size.
+- **Run it:** articles, wiki pages, Git issues and a kind-1 feed in the headless desktop app at
+  each step that changes what users see (`tools/desktop-run`).
+
+## Risks
+
+- **JetBrains markdown parses some edge cases differently** from commonmark-java (HTML blocks,
+  nested emphasis). The parity harness measures this before step 4 ships.
+- **Parse speed and memory.** Measured in the benchmarks above; the cache size is a number, not a
+  guess.
+- **The Djot port** is a new parser. The conformance suite bounds it.
+- **Upstream may not take the iOS targets.** Then the fork stays, at about 100 lines with nothing
+  Nostr-specific in it.
+- **Users may see articles change** where the old path rendered differently. The parity report
+  lists every such case for review before the switch.
+
+## Open
+
+1. **Markdown in kind 1.** NIP-10 says markup SHOULD NOT be used in kind 1, but notes do contain
+   markdown today, and Amethyst renders it. Either keep the heuristic as a documented kind-1 rule,
+   or render kind 1 as Nostr text only. Users will see the difference either way.
+2. **`djot-kmp`'s name and owner** (proposed: `vitorpamplona/djot-kmp`, published through Magpie
+   like the other libraries).
+3. **Cache size**, from the memory measurement.
+4. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 7).
