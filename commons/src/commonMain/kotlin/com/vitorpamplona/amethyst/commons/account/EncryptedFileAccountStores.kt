@@ -27,14 +27,14 @@ import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotDeviceGroupSwitch
 import com.vitorpamplona.amethyst.commons.marmot.MarmotDevicePlatform
-import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
-import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
+import com.vitorpamplona.amethyst.commons.model.marmot.FileIngestDedupStore
+import com.vitorpamplona.amethyst.commons.model.marmot.FilePushStateStore
 import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.quartz.utils.Log
 import okio.Path
 
 /**
- * The JVM and Android [AccountStoreFactory]: every store encrypted in files in the account's
+ * The [AccountStoreFactory] of every app (Android, desktop, iOS): every store encrypted in files in the account's
  * directory. A store that cannot open falls back to memory (or to none), and says so in the log.
  */
 object EncryptedFileAccountStores : AccountStoreFactory {
@@ -44,12 +44,10 @@ object EncryptedFileAccountStores : AccountStoreFactory {
         accountDir: Path,
         newAccount: Boolean,
     ): AccountStores {
-        val dir = accountDir.toFile()
-
         val mlsStore =
             try {
-                Log.d(TAG) { "Initializing EncryptedMlsGroupStateStore at ${dir.absolutePath}" }
-                EncryptedMlsGroupStateStore(dir)
+                Log.d(TAG) { "Initializing EncryptedMlsGroupStateStore at $accountDir" }
+                EncryptedMlsGroupStateStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     TAG,
@@ -62,7 +60,7 @@ object EncryptedFileAccountStores : AccountStoreFactory {
 
         val marmotMessageStore =
             try {
-                EncryptedMarmotMessageStore(dir)
+                EncryptedMarmotMessageStore(accountDir)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize EncryptedMarmotMessageStore (Marmot messages will NOT persist across restarts)", e)
                 null
@@ -70,7 +68,7 @@ object EncryptedFileAccountStores : AccountStoreFactory {
 
         val marmotKeyPackageStore =
             try {
-                EncryptedKeyPackageBundleStore(dir)
+                EncryptedKeyPackageBundleStore(accountDir)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize EncryptedKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)", e)
                 null
@@ -78,7 +76,7 @@ object EncryptedFileAccountStores : AccountStoreFactory {
 
         val marmotPublishObligationStore =
             try {
-                EncryptedPublishObligationStore(dir)
+                EncryptedPublishObligationStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     TAG,
@@ -91,19 +89,19 @@ object EncryptedFileAccountStores : AccountStoreFactory {
 
         val marmotIngestDedupStore =
             try {
-                AndroidIngestDedupStore(dir)
+                FileIngestDedupStore(accountDir)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize AndroidIngestDedupStore (every backdated gift wrap will be re-decided on each sync)", e)
+                Log.e(TAG, "Failed to initialize FileIngestDedupStore (every backdated gift wrap will be re-decided on each sync)", e)
                 null
             }
 
         val marmotPushStateStore =
             try {
-                AndroidPushStateStore(dir)
+                FilePushStateStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     TAG,
-                    "Failed to initialize AndroidPushStateStore " +
+                    "Failed to initialize FilePushStateStore " +
                         "(a revoked push token could be resurrected by a relayed token list after a restart)",
                     e,
                 )
@@ -119,8 +117,8 @@ object EncryptedFileAccountStores : AccountStoreFactory {
             marmotPushStateStore = marmotPushStateStore,
             // Marmot device groups stay off unless this account's switch file exists; their records
             // hold the device tag's signing seed and private KeyPackages, so they are encrypted at rest.
-            marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(dir, newAccount),
-            marmotLocalBlobs = EncryptedDeviceGroupBlobs(dir),
+            marmotDeviceGroupSwitch = MarmotDeviceGroupSwitch(accountDir, newAccount),
+            marmotLocalBlobs = EncryptedDeviceGroupBlobs(accountDir),
             marmotDevicePlatform = MarmotDevicePlatform.name(),
         )
     }

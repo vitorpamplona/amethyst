@@ -21,14 +21,20 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.renameQuietly
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.FileSystem
+import okio.Path
 
 /**
  * File-backed [MarmotPublishObligationStore], encrypted at rest
@@ -50,14 +56,15 @@ import java.io.File
  * rewrite another's.
  */
 class EncryptedPublishObligationStore(
-    private val rootDir: File,
+    private val rootDir: Path,
     private val encryption: SecretEncryption = SecretEncryption(),
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : MarmotPublishObligationStore {
     private val mutex = Mutex()
 
-    private fun dir(): File = File(rootDir, "marmot_obligations")
+    private fun dir(): Path = rootDir / "marmot_obligations"
 
-    private fun file(obligationId: String) = File(dir(), "$obligationId.obligation")
+    private fun file(obligationId: String) = dir() / "$obligationId.obligation"
 
     override suspend fun save(
         obligationId: HexKey,
@@ -66,13 +73,13 @@ class EncryptedPublishObligationStore(
         mutex.withLock {
             val target = file(obligationId)
             try {
-                target.parentFile?.mkdirs()
+                target.parent?.let { fileSystem.createDirectories(it) }
                 val encrypted = encryption.encrypt(bytes)
-                val tmp = File(target.parentFile, "${target.name}.tmp")
-                tmp.writeBytes(encrypted)
-                if (!tmp.renameTo(target)) {
-                    tmp.copyTo(target, overwrite = true)
-                    if (!tmp.delete()) Log.w(TAG) { "could not delete temp file ${tmp.absolutePath}" }
+                val tmp = target.sibling("${target.name}.tmp")
+                fileSystem.write(tmp) { write(encrypted) }
+                if (!fileSystem.renameQuietly(tmp, target)) {
+                    fileSystem.copy(tmp, target)
+                    if (!fileSystem.deleteQuietly(tmp)) Log.w(TAG) { "could not delete temp file $tmp" }
                 }
             } catch (e: Exception) {
                 // Failing to record is worse than failing to publish: an
@@ -88,16 +95,16 @@ class EncryptedPublishObligationStore(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val target = file(obligationId)
-                if (target.exists() && !target.delete()) {
-                    Log.w(TAG) { "could not delete resolved obligation ${target.absolutePath}" }
+                if (fileSystem.exists(target) && !fileSystem.deleteQuietly(target)) {
+                    Log.w(TAG) { "could not delete resolved obligation $target" }
                 }
                 Unit
             }
         }
 
-    private fun gateDir(): File = File(rootDir, "marmot_gates")
+    private fun gateDir(): Path = rootDir / "marmot_gates"
 
-    private fun gateFile(groupId: String) = File(gateDir(), "$groupId.gate")
+    private fun gateFile(groupId: String) = gateDir() / "$groupId.gate"
 
     /**
      * Outbound gates are durable for the same reason obligations are, and the
@@ -118,12 +125,12 @@ class EncryptedPublishObligationStore(
         mutex.withLock {
             val target = gateFile(groupId)
             try {
-                target.parentFile?.mkdirs()
-                val tmp = File(target.parentFile, "${target.name}.tmp")
-                tmp.writeBytes(gate.encodeToByteArray())
-                if (!tmp.renameTo(target)) {
-                    tmp.copyTo(target, overwrite = true)
-                    if (!tmp.delete()) Log.w(TAG) { "could not delete temp file ${tmp.absolutePath}" }
+                target.parent?.let { fileSystem.createDirectories(it) }
+                val tmp = target.sibling("${target.name}.tmp")
+                fileSystem.write(tmp) { write(gate.encodeToByteArray()) }
+                if (!fileSystem.renameQuietly(tmp, target)) {
+                    fileSystem.copy(tmp, target)
+                    if (!fileSystem.deleteQuietly(tmp)) Log.w(TAG) { "could not delete temp file $tmp" }
                 }
             } catch (e: Exception) {
                 // Same rule as an obligation: failing to record the gate is
@@ -139,8 +146,8 @@ class EncryptedPublishObligationStore(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val target = gateFile(groupId)
-                if (target.exists() && !target.delete()) {
-                    Log.w(TAG) { "could not delete cleared gate ${target.absolutePath}" }
+                if (fileSystem.exists(target) && !fileSystem.deleteQuietly(target)) {
+                    Log.w(TAG) { "could not delete cleared gate $target" }
                 }
                 Unit
             }
@@ -149,13 +156,12 @@ class EncryptedPublishObligationStore(
     override suspend fun loadGates(): Map<HexKey, String> =
         withContext(Dispatchers.IO) {
             mutex.withLock {
-                gateDir()
-                    .listFiles { f -> f.isFile && f.name.endsWith(".gate") }
+                listFiles(gateDir(), ".gate")
                     ?.mapNotNull { file ->
                         try {
-                            file.name.removeSuffix(".gate") to file.readText().trim()
+                            file.name.removeSuffix(".gate") to fileSystem.read(file) { readUtf8() }.trim()
                         } catch (e: Exception) {
-                            Log.w(TAG, "could not read gate ${file.absolutePath}", e)
+                            Log.w(TAG, "could not read gate $file", e)
                             null
                         }
                     }?.toMap()
@@ -166,12 +172,11 @@ class EncryptedPublishObligationStore(
     override suspend fun loadAll(): List<ByteArray> =
         withContext(Dispatchers.IO) {
             mutex.withLock {
-                dir()
-                    .listFiles { f -> f.isFile && f.name.endsWith(".obligation") }
+                listFiles(dir(), ".obligation")
                     ?.sortedBy { it.name }
                     ?.mapNotNull { file ->
                         try {
-                            encryption.decrypt(file.readBytes())
+                            encryption.decrypt(fileSystem.read(file) { readByteArray() })
                         } catch (e: Exception) {
                             // One unreadable record must not cost us the
                             // others; the gate treats a missing obligation as
@@ -182,6 +187,12 @@ class EncryptedPublishObligationStore(
                     }.orEmpty()
             }
         }
+
+    /** `File.listFiles` with a filter: the regular files in [dir] named `*[suffix]`, or null when [dir] cannot be listed. */
+    private fun listFiles(
+        dir: Path,
+        suffix: String,
+    ): List<Path>? = fileSystem.listOrNull(dir)?.filter { it.name.endsWith(suffix) && fileSystem.metadataOrNull(it)?.isRegularFile == true }
 
     companion object {
         private const val TAG = "EncryptedPublishObligationStore"

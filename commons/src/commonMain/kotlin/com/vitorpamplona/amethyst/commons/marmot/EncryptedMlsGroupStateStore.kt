@@ -21,12 +21,19 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.renameQuietly
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import okio.FileSystem
+import okio.Path
+import okio.use
 
 /**
  * File-backed [MlsGroupStateStore], encrypted at rest.
@@ -42,22 +49,23 @@ import java.io.FileOutputStream
  * ```
  */
 class EncryptedMlsGroupStateStore(
-    private val rootDir: File,
+    private val rootDir: Path,
     private val encryption: SecretEncryption = SecretEncryption(),
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : MlsGroupStateStore {
     init {
         Log.d(TAG) {
-            "Initialized EncryptedMlsGroupStateStore: rootDir=${rootDir.absolutePath}, " +
-                "mls_groups exists=${File(rootDir, "mls_groups").exists()}"
+            "Initialized EncryptedMlsGroupStateStore: rootDir=$rootDir, " +
+                "mls_groups exists=${fileSystem.exists(rootDir / "mls_groups")}"
         }
     }
 
-    private fun groupDir(nostrGroupId: String): File {
+    private fun groupDir(nostrGroupId: String): Path {
         // Validate nostrGroupId is a hex string to prevent path traversal
         require(nostrGroupId.matches(HEX_PATTERN)) {
             "Invalid nostrGroupId: must be a hex string"
         }
-        return File(rootDir, "mls_groups/$nostrGroupId")
+        return rootDir / "mls_groups" / nostrGroupId
     }
 
     companion object {
@@ -65,27 +73,27 @@ class EncryptedMlsGroupStateStore(
         private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
     }
 
-    private fun stateFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "state")
+    private fun stateFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "state"
 
-    private fun retainedFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "retained")
+    private fun retainedFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "retained"
 
-    private fun ratchetFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "ratchet")
+    private fun ratchetFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "ratchet"
 
-    private fun convergenceFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "convergence")
+    private fun convergenceFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "convergence"
 
     override suspend fun save(
         nostrGroupId: String,
         state: ByteArray,
     ) = withContext(Dispatchers.IO) {
         val file = stateFile(nostrGroupId)
-        Log.d(TAG) { "save($nostrGroupId): ${state.size} bytes → ${file.absolutePath}" }
+        Log.d(TAG) { "save($nostrGroupId): ${state.size} bytes → $file" }
         try {
-            file.parentFile?.mkdirs()
+            file.parent?.let { fileSystem.createDirectories(it) }
             val encrypted = encryption.encrypt(state)
             atomicWrite(file, encrypted)
             Log.d(TAG) {
                 "save($nostrGroupId): wrote ${encrypted.size} encrypted bytes, " +
-                    "file exists=${file.exists()}, file size=${if (file.exists()) file.length() else -1}"
+                    "file exists=${fileSystem.exists(file)}, file size=${fileSystem.metadataOrNull(file)?.size ?: -1}"
             }
         } catch (e: Exception) {
             Log.e(TAG, "save($nostrGroupId) FAILED: ${e.message}", e)
@@ -96,13 +104,13 @@ class EncryptedMlsGroupStateStore(
     override suspend fun load(nostrGroupId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = stateFile(nostrGroupId)
-            if (!file.exists()) {
-                Log.d(TAG) { "load($nostrGroupId): file does not exist at ${file.absolutePath}" }
+            if (!fileSystem.exists(file)) {
+                Log.d(TAG) { "load($nostrGroupId): file does not exist at $file" }
                 return@withContext null
             }
             try {
-                val bytes = file.readBytes()
-                Log.d(TAG) { "load($nostrGroupId): read ${bytes.size} encrypted bytes from ${file.absolutePath}" }
+                val bytes = readBytes(file)
+                Log.d(TAG) { "load($nostrGroupId): read ${bytes.size} encrypted bytes from $file" }
                 val decrypted = encryption.decrypt(bytes)
                 Log.d(TAG) { "load($nostrGroupId): decrypted to ${decrypted?.size ?: -1} bytes" }
                 decrypted
@@ -115,25 +123,25 @@ class EncryptedMlsGroupStateStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             val dir = groupDir(nostrGroupId)
-            Log.w(TAG) { "delete($nostrGroupId): deleting ${dir.absolutePath}" }
-            dir.deleteRecursively()
+            Log.w(TAG) { "delete($nostrGroupId): deleting $dir" }
+            fileSystem.deleteRecursivelyQuietly(dir)
         }
     }
 
     override suspend fun listGroups(): List<String> =
         withContext(Dispatchers.IO) {
-            val baseDir = File(rootDir, "mls_groups")
-            if (!baseDir.exists()) {
-                Log.d(TAG) { "listGroups(): base dir does not exist at ${baseDir.absolutePath}" }
+            val baseDir = rootDir / "mls_groups"
+            if (!fileSystem.exists(baseDir)) {
+                Log.d(TAG) { "listGroups(): base dir does not exist at $baseDir" }
                 return@withContext emptyList()
             }
-            val allEntries = baseDir.listFiles()?.toList() ?: emptyList()
+            val allEntries = fileSystem.listOrNull(baseDir) ?: emptyList()
             val result =
                 allEntries
-                    .filter { it.isDirectory && File(it, "state").exists() }
+                    .filter { fileSystem.metadataOrNull(it)?.isDirectory == true && fileSystem.exists(it / "state") }
                     .map { it.name }
             Log.d(TAG) {
-                "listGroups(): ${baseDir.absolutePath} has ${allEntries.size} entries, " +
+                "listGroups(): $baseDir has ${allEntries.size} entries, " +
                     "${result.size} valid groups: $result"
             }
             result
@@ -144,7 +152,7 @@ class EncryptedMlsGroupStateStore(
         retainedSecrets: List<ByteArray>,
     ) = withContext(Dispatchers.IO) {
         val file = retainedFile(nostrGroupId)
-        file.parentFile?.mkdirs()
+        file.parent?.let { fileSystem.createDirectories(it) }
 
         // Format: 4-byte count, then for each: 4-byte length + data
         val totalSize = 4 + retainedSecrets.sumOf { 4 + it.size }
@@ -193,17 +201,22 @@ class EncryptedMlsGroupStateStore(
         withContext(Dispatchers.IO) {
             val file = ratchetFile(nostrGroupId)
             try {
-                file.parentFile?.mkdirs()
+                file.parent?.let { fileSystem.createDirectories(it) }
                 val encrypted = encryption.encrypt(state)
-                val tempFile = File(file.parentFile, "${file.name}.tmp")
-                FileOutputStream(tempFile).use { out ->
-                    out.write(encrypted)
-                    out.fd.sync()
+                val tempFile = file.sibling("${file.name}.tmp")
+                fileSystem.openReadWrite(tempFile).use { handle ->
+                    // Truncated first, as opening a FileOutputStream did: a stale temp
+                    // longer than this record must not leave its tail behind.
+                    handle.resize(0L)
+                    handle.write(0L, encrypted, 0, encrypted.size)
+                    // An fsync on the JVM and Android; on iOS okio only flushes to the
+                    // kernel, which outlives the process but not a power loss.
+                    handle.flush()
                 }
-                if (!tempFile.renameTo(file)) {
-                    tempFile.copyTo(file, overwrite = true)
-                    if (!tempFile.delete()) {
-                        Log.w(TAG) { "Failed to delete the temp ratchet file: ${tempFile.absolutePath}" }
+                if (!fileSystem.renameQuietly(tempFile, file)) {
+                    fileSystem.copy(tempFile, file)
+                    if (!fileSystem.deleteQuietly(tempFile)) {
+                        Log.w(TAG) { "Failed to delete the temp ratchet file: $tempFile" }
                     }
                 }
                 true
@@ -219,9 +232,9 @@ class EncryptedMlsGroupStateStore(
     override suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = ratchetFile(nostrGroupId)
-            if (!file.exists()) return@withContext null
+            if (!fileSystem.exists(file)) return@withContext null
             try {
-                encryption.decrypt(file.readBytes())
+                encryption.decrypt(readBytes(file))
             } catch (e: Exception) {
                 // Serious: the fallback is the full state's position, which is
                 // BEHIND, and a behind position re-emits used generations. The
@@ -244,7 +257,7 @@ class EncryptedMlsGroupStateStore(
         withContext(Dispatchers.IO) {
             try {
                 val file = convergenceFile(nostrGroupId)
-                file.parentFile?.mkdirs()
+                file.parent?.let { fileSystem.createDirectories(it) }
                 atomicWrite(file, encryption.encrypt(window))
                 true
             } catch (e: Exception) {
@@ -256,9 +269,9 @@ class EncryptedMlsGroupStateStore(
     override suspend fun loadConvergenceWindow(nostrGroupId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = convergenceFile(nostrGroupId)
-            if (!file.exists()) return@withContext null
+            if (!fileSystem.exists(file)) return@withContext null
             try {
-                encryption.decrypt(file.readBytes())
+                encryption.decrypt(readBytes(file))
             } catch (e: Exception) {
                 // Losing it costs only a fork's recovery across this restart.
                 Log.w(TAG, "loadConvergenceWindow($nostrGroupId) unreadable", e)
@@ -269,9 +282,9 @@ class EncryptedMlsGroupStateStore(
     override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> =
         withContext(Dispatchers.IO) {
             val file = retainedFile(nostrGroupId)
-            if (!file.exists()) return@withContext emptyList()
+            if (!fileSystem.exists(file)) return@withContext emptyList()
 
-            val buffer = encryption.decrypt(file.readBytes()) ?: return@withContext emptyList()
+            val buffer = encryption.decrypt(readBytes(file)) ?: return@withContext emptyList()
             if (buffer.size < 4) return@withContext emptyList()
 
             var offset = 0
@@ -301,17 +314,19 @@ class EncryptedMlsGroupStateStore(
      * This avoids corrupted state if the app crashes mid-write.
      */
     private fun atomicWrite(
-        target: File,
+        target: Path,
         data: ByteArray,
     ) {
-        val tempFile = File(target.parentFile, "${target.name}.tmp")
-        tempFile.writeBytes(data)
-        if (!tempFile.renameTo(target)) {
+        val tempFile = target.sibling("${target.name}.tmp")
+        fileSystem.write(tempFile) { write(data) }
+        if (!fileSystem.renameQuietly(tempFile, target)) {
             // Fallback: if rename fails (e.g., cross-filesystem), copy and delete
-            tempFile.copyTo(target, overwrite = true)
-            if (!tempFile.delete()) {
-                Log.w("EncryptedMlsGroupStateStore") { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
+            fileSystem.copy(tempFile, target)
+            if (!fileSystem.deleteQuietly(tempFile)) {
+                Log.w("EncryptedMlsGroupStateStore") { "Failed to delete temp file after copy fallback: $tempFile" }
             }
         }
     }
+
+    private fun readBytes(file: Path): ByteArray = fileSystem.read(file) { readByteArray() }
 }

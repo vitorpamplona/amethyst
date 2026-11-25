@@ -25,15 +25,6 @@ package com.vitorpamplona.amethyst.commons.marmot
  * "Labels, clients and platforms"), such as `Android` or `Linux`: what a user reads, beside the
  * client name, to tell the account's devices apart. Empty when it cannot tell.
  */
-object MarmotDevicePlatform {
-    fun name(): String {
-        if (System.getProperty("java.vm.name").orEmpty().contains("Dalvik", ignoreCase = true)) return "Android"
-        val os = System.getProperty("os.name").orEmpty()
-        return when {
-            os.startsWith("Mac", ignoreCase = true) -> "macOS"
-            os.startsWith("Windows", ignoreCase = true) -> "Windows"
-            os.startsWith("Linux", ignoreCase = true) -> "Linux"
-            else -> os.take(32)
-        }
-    }
+expect object MarmotDevicePlatform {
+    fun name(): String
 }

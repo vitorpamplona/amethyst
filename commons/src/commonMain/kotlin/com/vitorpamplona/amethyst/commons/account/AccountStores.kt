@@ -62,9 +62,9 @@ class AccountStores(
  * Opens an account's [AccountStores] in its directory ([accountDir], created before this runs).
  * [newAccount] is true when this install never held the account: device groups start on for it.
  *
- * Each platform passes its own: the JVM and Android keep them encrypted in files
- * (`EncryptedFileAccountStores`). A platform without file-backed stores yet uses [InMemory], which
- * keeps the account working while its Marmot groups last only until the app closes.
+ * Each platform passes its own: Android, the desktop and iOS keep them encrypted in files
+ * (`EncryptedFileAccountStores`). [InMemory] keeps the account working while its Marmot groups
+ * last only until the app closes.
  */
 fun interface AccountStoreFactory {
     fun open(

@@ -59,6 +59,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -169,7 +170,7 @@ class MarmotDevicesTest {
         var slowRelay: CompletableDeferred<Unit>? = null
         var publishesWaiting = 0
         val ownEvents = ArrayList<Event>()
-        val stores = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key"))))
+        val stores = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir.toOkioPath(), SecretEncryption(File(dir, "secret.key"))))
         val manager =
             MarmotManager(
                 signer,
@@ -742,7 +743,7 @@ class MarmotDevicesTest {
     fun deviceGroupRecordsAreEncryptedAtRest() =
         runBlocking<Unit> {
             val dir = folder.newFolder()
-            val blobs = EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key")))
+            val blobs = EncryptedDeviceGroupBlobs(dir.toOkioPath(), SecretEncryption(File(dir, "secret.key")))
             val trust = DeviceGroupTrust("ab".repeat(32), tagSigningSeed = "cd".repeat(32))
             DeviceGroupBlobStores(blobs).trust.save(trust)
 
@@ -751,7 +752,7 @@ class MarmotDevicesTest {
             assertFalse("the seed is not written in the clear", onDisk.toHexString().contains("cd".repeat(32)))
             assertFalse(onDisk.contentEquals(plain))
 
-            val reopened = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key")))).trust.load()
+            val reopened = DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(dir.toOkioPath(), SecretEncryption(File(dir, "secret.key")))).trust.load()
             assertEquals(trust.encode().toList(), reopened?.encode()?.toList())
         }
 
@@ -759,13 +760,13 @@ class MarmotDevicesTest {
     fun anUnreadableRecordIsAnErrorNotAMissingOne() =
         runBlocking<Unit> {
             val dir = folder.newFolder()
-            val blobs = EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "secret.key")))
+            val blobs = EncryptedDeviceGroupBlobs(dir.toOkioPath(), SecretEncryption(File(dir, "secret.key")))
             DeviceGroupBlobStores(blobs).trust.save(DeviceGroupTrust("ab".repeat(32)))
             // Another key: the record is there but cannot be read.
-            val otherKey = EncryptedDeviceGroupBlobs(dir, SecretEncryption(File(dir, "other.key")))
+            val otherKey = EncryptedDeviceGroupBlobs(dir.toOkioPath(), SecretEncryption(File(dir, "other.key")))
             val failure = runCatching { DeviceGroupBlobStores(otherKey).trust.load() }
             assertTrue("a record that does not decrypt must not read as absent", failure.isFailure)
-            assertEquals(null, DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(folder.newFolder(), SecretEncryption(File(dir, "secret.key")))).trust.load())
+            assertEquals(null, DeviceGroupBlobStores(EncryptedDeviceGroupBlobs(folder.newFolder().toOkioPath(), SecretEncryption(File(dir, "secret.key")))).trust.load())
         }
 
     private fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }

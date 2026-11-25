@@ -21,13 +21,19 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.renameQuietly
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.FileSystem
+import okio.Path
 
 /**
  * File-backed [KeyPackageBundleStore], encrypted at rest.
@@ -44,25 +50,26 @@ import java.io.File
  * keystore), the same primitive used by [EncryptedMlsGroupStateStore].
  */
 class EncryptedKeyPackageBundleStore(
-    private val rootDir: File,
+    private val rootDir: Path,
     private val encryption: SecretEncryption = SecretEncryption(),
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : KeyPackageBundleStore {
     private val mutex = Mutex()
 
     init {
         Log.d(TAG) {
-            "Initialized EncryptedKeyPackageBundleStore: rootDir=${rootDir.absolutePath}"
+            "Initialized EncryptedKeyPackageBundleStore: rootDir=$rootDir"
         }
     }
 
-    private fun stateFile(): File = File(rootDir, "marmot_keypackages/state")
+    private fun stateFile(): Path = rootDir / "marmot_keypackages" / "state"
 
     override suspend fun save(snapshot: ByteArray) =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val file = stateFile()
                 try {
-                    file.parentFile?.mkdirs()
+                    file.parent?.let { fileSystem.createDirectories(it) }
                     val encrypted = encryption.encrypt(snapshot)
                     atomicWrite(file, encrypted)
                     Log.d(TAG) {
@@ -78,12 +85,12 @@ class EncryptedKeyPackageBundleStore(
     override suspend fun load(): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = stateFile()
-            if (!file.exists()) {
-                Log.d(TAG) { "load(): no state file at ${file.absolutePath}" }
+            if (!fileSystem.exists(file)) {
+                Log.d(TAG) { "load(): no state file at $file" }
                 return@withContext null
             }
             try {
-                val encrypted = file.readBytes()
+                val encrypted = fileSystem.read(file) { readByteArray() }
                 val decrypted = encryption.decrypt(encrypted)
                 Log.d(TAG) {
                     "load(): read ${encrypted.size} encrypted bytes → ${decrypted?.size ?: -1} plain"
@@ -99,23 +106,23 @@ class EncryptedKeyPackageBundleStore(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val file = stateFile()
-                if (file.exists() && !file.delete()) {
-                    Log.w(TAG) { "delete(): failed to remove ${file.absolutePath}" }
+                if (fileSystem.exists(file) && !fileSystem.deleteQuietly(file)) {
+                    Log.w(TAG) { "delete(): failed to remove $file" }
                 }
             }
         }
     }
 
     private fun atomicWrite(
-        target: File,
+        target: Path,
         data: ByteArray,
     ) {
-        val tempFile = File(target.parentFile, "${target.name}.tmp")
-        tempFile.writeBytes(data)
-        if (!tempFile.renameTo(target)) {
-            tempFile.copyTo(target, overwrite = true)
-            if (!tempFile.delete()) {
-                Log.w(TAG) { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
+        val tempFile = target.sibling("${target.name}.tmp")
+        fileSystem.write(tempFile) { write(data) }
+        if (!fileSystem.renameQuietly(tempFile, target)) {
+            fileSystem.copy(tempFile, target)
+            if (!fileSystem.deleteQuietly(tempFile)) {
+                Log.w(TAG) { "Failed to delete temp file after copy fallback: $tempFile" }
             }
         }
     }

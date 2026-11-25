@@ -23,14 +23,16 @@ package com.vitorpamplona.amethyst.commons.marmot
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupBlobs
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.util.moveOrCopy
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okio.FileSystem
-import okio.Path.Companion.toOkioPath
-import java.io.File
+import okio.Path
 
 /**
  * The device-group records ([DeviceGroupBlobs]), encrypted at rest with [SecretEncryption] like
@@ -44,25 +46,26 @@ import java.io.File
  * losing the trust record would orphan this device's place in its device group.
  */
 class EncryptedDeviceGroupBlobs(
-    private val rootDir: File,
+    private val rootDir: Path,
     private val encryption: SecretEncryption = SecretEncryption(),
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : DeviceGroupBlobs {
     private val mutex = Mutex()
 
-    private fun file(name: String): File {
+    private fun file(name: String): Path {
         require(name.all { it.isLetterOrDigit() || it == '_' }) { "bad record name $name" }
-        return File(File(rootDir, DIR), "$name.bin")
+        return rootDir / DIR / "$name.bin"
     }
 
     override suspend fun load(name: String): ByteArray? =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val target = file(name)
-                if (!target.exists()) return@withLock null
+                if (!fileSystem.exists(target)) return@withLock null
                 // Thrown, never null: a null reads as "no record", so marmot-kmp would start a fresh
                 // one and the next save would overwrite the real record.
                 try {
-                    checkNotNull(encryption.decrypt(target.readBytes())) { "could not decrypt" }
+                    checkNotNull(encryption.decrypt(fileSystem.read(target) { readByteArray() })) { "could not decrypt" }
                 } catch (e: Exception) {
                     Log.e(TAG, "unreadable device-group record $name", e)
                     throw e
@@ -76,11 +79,18 @@ class EncryptedDeviceGroupBlobs(
     ) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val target = file(name)
-            val parent = checkNotNull(target.parentFile)
-            if (!parent.exists() && !parent.mkdirs()) throw IllegalStateException("could not create ${parent.absolutePath}")
-            val tmp = File(parent, "${target.name}.tmp")
-            tmp.writeBytes(encryption.encrypt(bytes))
-            FileSystem.SYSTEM.moveOrCopy(tmp.toOkioPath(), target.toOkioPath())
+            val parent = checkNotNull(target.parent)
+            if (!fileSystem.exists(parent)) {
+                try {
+                    fileSystem.createDirectories(parent)
+                } catch (e: Exception) {
+                    throw IllegalStateException("could not create $parent", e)
+                }
+            }
+            val tmp = target.sibling("${target.name}.tmp")
+            val encrypted = encryption.encrypt(bytes)
+            fileSystem.write(tmp) { write(encrypted) }
+            fileSystem.moveOrCopy(tmp, target)
         }
     }
 

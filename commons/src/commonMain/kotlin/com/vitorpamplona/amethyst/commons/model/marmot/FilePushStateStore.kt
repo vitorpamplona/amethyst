@@ -20,18 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot
 
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.renameQuietly
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.marmot.mip05PushNotifications.MarmotPushStateStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.FileSystem
+import okio.Path
 
 /**
- * Android implementation of [MarmotPushStateStore] — one JSON file per group
+ * File-backed [MarmotPushStateStore] — one JSON file per group
  * under `<rootDir>/marmot_push/<group id>.json`.
+ *
+ * Was `AndroidPushStateStore`; the files and their format are unchanged.
  *
  * Durability is the whole point of this class. A push tombstone is the only
  * lasting record that a token was revoked: any current member can re-emit a
@@ -46,28 +54,29 @@ import java.io.File
  * to decrypt would cost a tombstone, which is worse than the file being
  * readable by a process that has already broken out of the app sandbox.
  */
-class AndroidPushStateStore(
-    private val rootDir: File,
+class FilePushStateStore(
+    private val rootDir: Path,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : MarmotPushStateStore {
     private val mutex = Mutex()
 
-    private fun dir(): File = File(rootDir, "marmot_push")
+    private fun dir(): Path = rootDir / "marmot_push"
 
     /**
      * A group id is 32 hex characters from the protocol, but it reaches here as
      * a plain string, so anything that is not hex is refused rather than turned
      * into a path.
      */
-    private fun file(nostrGroupId: HexKey): File? {
+    private fun file(nostrGroupId: HexKey): Path? {
         if (nostrGroupId.isEmpty() || !nostrGroupId.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
-        return File(dir(), "$nostrGroupId.json")
+        return dir() / "$nostrGroupId.json"
     }
 
     override suspend fun load(nostrGroupId: HexKey): String? =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 try {
-                    file(nostrGroupId)?.takeIf { it.exists() }?.readText()
+                    file(nostrGroupId)?.takeIf { fileSystem.exists(it) }?.let { fileSystem.read(it) { readUtf8() } }
                 } catch (e: Exception) {
                     Log.w(TAG, "could not read push state for $nostrGroupId: ${e.message}", e)
                     null
@@ -82,15 +91,15 @@ class AndroidPushStateStore(
         mutex.withLock {
             val target = file(nostrGroupId) ?: return@withLock
             try {
-                target.parentFile?.mkdirs()
+                target.parent?.let { fileSystem.createDirectories(it) }
                 // Write-then-rename: a half-written state file would silently
                 // drop tombstones, and a lost tombstone is exactly the failure
                 // this store exists to prevent.
-                val temp = File(target.parentFile, "${target.name}.tmp")
-                temp.writeText(state)
-                if (!temp.renameTo(target)) {
-                    target.writeText(state)
-                    if (!temp.delete()) {
+                val temp = target.sibling("${target.name}.tmp")
+                fileSystem.write(temp) { writeUtf8(state) }
+                if (!fileSystem.renameQuietly(temp, target)) {
+                    fileSystem.write(target) { writeUtf8(state) }
+                    if (!fileSystem.deleteQuietly(temp)) {
                         Log.w(TAG) { "could not remove temp push state file ${temp.name}" }
                     }
                 }
@@ -104,8 +113,8 @@ class AndroidPushStateStore(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 try {
-                    val target = file(nostrGroupId)?.takeIf { it.exists() }
-                    if (target != null && !target.delete()) {
+                    val target = file(nostrGroupId)?.takeIf { fileSystem.exists(it) }
+                    if (target != null && !fileSystem.deleteQuietly(target)) {
                         Log.w(TAG) { "could not delete push state for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
@@ -116,6 +125,6 @@ class AndroidPushStateStore(
         }
 
     companion object {
-        private const val TAG = "AndroidPushStateStore"
+        private const val TAG = "FilePushStateStore"
     }
 }

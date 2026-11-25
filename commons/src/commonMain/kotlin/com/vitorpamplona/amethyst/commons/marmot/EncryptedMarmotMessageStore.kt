@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -30,13 +32,14 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okio.Path.Companion.toOkioPath
-import java.io.File
+import okio.FileSystem
+import okio.Path
 
 /**
  * File-backed [MarmotMessageStore], encrypted at rest.
@@ -52,25 +55,26 @@ import java.io.File
  * keeps the cost of a send flat as the history grows.
  */
 class EncryptedMarmotMessageStore(
-    private val rootDir: File,
+    private val rootDir: Path,
     private val encryption: SecretEncryption = SecretEncryption(),
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : MarmotMessageStore {
     private val logMutex = Mutex()
 
     init {
         Log.d(TAG) {
-            "Initialized EncryptedMarmotMessageStore: rootDir=${rootDir.absolutePath}"
+            "Initialized EncryptedMarmotMessageStore: rootDir=$rootDir"
         }
     }
 
-    private fun groupDir(nostrGroupId: String): File {
+    private fun groupDir(nostrGroupId: String): Path {
         require(nostrGroupId.matches(HEX_PATTERN)) {
             "Invalid nostrGroupId: must be a hex string"
         }
-        return File(rootDir, "mls_groups/$nostrGroupId")
+        return rootDir / "mls_groups" / nostrGroupId
     }
 
-    private fun messagesFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "messages")
+    private fun messagesFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "messages"
 
     override suspend fun appendMessage(
         nostrGroupId: String,
@@ -79,14 +83,14 @@ class EncryptedMarmotMessageStore(
         logMutex.withLock {
             try {
                 val file = messagesFile(nostrGroupId)
-                if (log.contains(file.toOkioPath(), innerEventJson)) {
+                if (log.contains(file, innerEventJson)) {
                     Log.d(TAG) { "appendMessage($nostrGroupId): duplicate entry skipped" }
                     return@withLock
                 }
-                log.append(file.toOkioPath(), innerEventJson)
+                log.append(file, innerEventJson)
                 Event.fromJsonOrNull(innerEventJson)?.createdAt?.let { recordNewest(nostrGroupId, it) }
                 Log.d(TAG) {
-                    "appendMessage($nostrGroupId): now ${log.readAll(file.toOkioPath()).size} message(s) persisted"
+                    "appendMessage($nostrGroupId): now ${log.readAll(file).size} message(s) persisted"
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "appendMessage($nostrGroupId) FAILED: ${e.message}", e)
@@ -127,7 +131,7 @@ class EncryptedMarmotMessageStore(
             }
         }
 
-    private fun newestFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "newest")
+    private fun newestFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "newest"
 
     // Guarded by [logMutex]: each group's newest created_at once read, null for a group with none.
     private val newest = mutableMapOf<String, Long?>()
@@ -160,16 +164,16 @@ class EncryptedMarmotMessageStore(
                 expiries.remove(nostrGroupId)
                 newest.remove(nostrGroupId)
                 for (file in listOf(newestFile(nostrGroupId), messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId), mediaSecretsFile(nostrGroupId), epochAdminsFile(nostrGroupId), verdictsFile(nostrGroupId))) {
-                    log.forget(file.toOkioPath())
-                    if (file.exists() && !file.delete()) {
-                        Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
+                    log.forget(file)
+                    if (fileSystem.exists(file) && !fileSystem.deleteQuietly(file)) {
+                        Log.w(TAG) { "delete($nostrGroupId): failed to remove $file" }
                     }
                 }
             }
         }
     }
 
-    private fun epochsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epochs")
+    private fun epochsFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "epochs"
 
     /**
      * Which MLS epoch delivered an inner event. Agent text streams bind the
@@ -217,7 +221,7 @@ class EncryptedMarmotMessageStore(
             }
         }
 
-    private fun expiriesFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "expiries")
+    private fun expiriesFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "expiries"
 
     /**
      * When a message stops being displayable, for a group that expires them.
@@ -242,7 +246,7 @@ class EncryptedMarmotMessageStore(
             try {
                 val current = expiriesFor(nostrGroupId)
                 if (current.containsKey(innerEventId)) return@withLock
-                log.append(expiriesFile(nostrGroupId).toOkioPath(), "$innerEventId $expiresAtSecs")
+                log.append(expiriesFile(nostrGroupId), "$innerEventId $expiresAtSecs")
                 expiries[nostrGroupId] = current.put(innerEventId, expiresAtSecs)
             } catch (e: Exception) {
                 Log.e(TAG, "recordExpiry($nostrGroupId) FAILED: ${e.message}", e)
@@ -297,7 +301,7 @@ class EncryptedMarmotMessageStore(
         }
     }
 
-    private fun mediaSecretsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "media_secrets")
+    private fun mediaSecretsFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "media_secrets"
 
     /**
      * Each epoch's encrypted-media key, captured while the epoch was still
@@ -317,7 +321,7 @@ class EncryptedMarmotMessageStore(
                 val existing = readAllFrom(mediaSecretsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
                 // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
-                log.append(mediaSecretsFile(nostrGroupId).toOkioPath(), "$epoch ${mediaSecret.toHexKey()}")
+                log.append(mediaSecretsFile(nostrGroupId), "$epoch ${mediaSecret.toHexKey()}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordMediaSecret($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -343,9 +347,9 @@ class EncryptedMarmotMessageStore(
             }
         }
 
-    private fun epochAdminsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_admins")
+    private fun epochAdminsFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "epoch_admins"
 
-    private fun verdictsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "moderation_verdicts")
+    private fun verdictsFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "moderation_verdicts"
 
     /**
      * The active admins of each epoch, kept because an admin deletion is
@@ -362,7 +366,7 @@ class EncryptedMarmotMessageStore(
                 val existing = readAllFrom(epochAdminsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
                 // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
-                log.append(epochAdminsFile(nostrGroupId).toOkioPath(), "$epoch ${admins.joinToString(",")}")
+                log.append(epochAdminsFile(nostrGroupId), "$epoch ${admins.joinToString(",")}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordEpochAdmins($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -402,7 +406,7 @@ class EncryptedMarmotMessageStore(
                 val existing = readAllFrom(verdictsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
                 // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
-                log.append(verdictsFile(nostrGroupId).toOkioPath(), "$innerEventId ${if (authorized) 1 else 0}")
+                log.append(verdictsFile(nostrGroupId), "$innerEventId ${if (authorized) 1 else 0}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordModerationVerdict($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -426,7 +430,7 @@ class EncryptedMarmotMessageStore(
             }
         }
 
-    private fun epochRetentionsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_retentions")
+    private fun epochRetentionsFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "epoch_retentions"
 
     /**
      * What retention this group required at each epoch.
@@ -471,7 +475,7 @@ class EncryptedMarmotMessageStore(
             }
         }
 
-    private fun snapshotFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "snapshot")
+    private fun snapshotFile(nostrGroupId: String): Path = groupDir(nostrGroupId) / "snapshot"
 
     /**
      * The group state the last kind:1210 rows were derived from.
@@ -526,6 +530,7 @@ class EncryptedMarmotMessageStore(
                     null
                 }
             },
+            fileSystem = fileSystem,
         )
 
     // Guarded by [logMutex]: each group's expiries, parsed once from its log and kept in step with
@@ -548,7 +553,7 @@ class EncryptedMarmotMessageStore(
 
     private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
 
-    private fun readAllFrom(file: File): List<String> = log.readAll(file.toOkioPath())
+    private fun readAllFrom(file: Path): List<String> = log.readAll(file)
 
     private fun writeAll(
         nostrGroupId: String,
@@ -556,9 +561,9 @@ class EncryptedMarmotMessageStore(
     ) = writeAllTo(messagesFile(nostrGroupId), messages)
 
     private fun writeAllTo(
-        file: File,
+        file: Path,
         messages: List<String>,
-    ) = log.rewrite(file.toOkioPath(), messages)
+    ) = log.rewrite(file, messages)
 
     companion object {
         private const val TAG = "EncryptedMarmotMessageStore"

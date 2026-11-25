@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,7 +60,7 @@ class MarmotDevicesViewModelTest {
     fun theSwitchIsOffByDefaultAndWritesTheMarkerFile() =
         runBlocking {
             val dir = folder.newFolder()
-            val vm = MarmotDevicesViewModel(devices = null, switch = MarmotDeviceGroupSwitch(dir), canSign = true)
+            val vm = MarmotDevicesViewModel(devices = null, switch = MarmotDeviceGroupSwitch(dir.toOkioPath()), canSign = true)
             assertTrue(vm.switchAvailable)
             assertFalse(vm.runtimeOn)
             assertFalse(vm.switchOn.value)
@@ -79,15 +80,15 @@ class MarmotDevicesViewModelTest {
     fun aNewAccountStartsWithDeviceGroupsOnAndCanTurnThemOff() =
         runBlocking {
             val dir = File(folder.root, "accounts/new")
-            assertTrue(MarmotDeviceGroupSwitch(dir, newAccount = true).isEnabled())
-            val vm = MarmotDevicesViewModel(devices = null, switch = MarmotDeviceGroupSwitch(dir), canSign = true)
+            assertTrue(MarmotDeviceGroupSwitch(dir.toOkioPath(), newAccount = true).isEnabled())
+            val vm = MarmotDevicesViewModel(devices = null, switch = MarmotDeviceGroupSwitch(dir.toOkioPath()), canSign = true)
             assertTrue(vm.switchOn.value)
             vm.setSwitch(false)
             withTimeout(5_000) { vm.switchOn.first { !it } }
             // The next launch reads the account as one it already held: the opt-out stands.
-            assertFalse(MarmotDeviceGroupSwitch(dir).isEnabled())
+            assertFalse(MarmotDeviceGroupSwitch(dir.toOkioPath()).isEnabled())
             // An account an earlier version held keeps it off.
-            assertFalse(MarmotDeviceGroupSwitch(folder.newFolder()).isEnabled())
+            assertFalse(MarmotDeviceGroupSwitch(folder.newFolder().toOkioPath()).isEnabled())
         }
 
     @Test

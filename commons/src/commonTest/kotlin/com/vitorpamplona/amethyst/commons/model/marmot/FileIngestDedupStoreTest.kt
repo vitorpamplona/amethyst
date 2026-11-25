@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot
 
+import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.platformTempDirectory
 import com.vitorpamplona.marmot.MarmotIngestDedupStore
-import kotlinx.coroutines.runBlocking
-import org.junit.Rule
-import org.junit.Test
-import org.junit.rules.TemporaryFolder
+import kotlinx.coroutines.test.runTest
+import okio.Path
+import kotlin.random.Random
+import kotlin.test.AfterTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -33,22 +37,29 @@ import kotlin.test.assertTrue
  * decrypts here), and, one per message sent, must not push the Welcome and created-locally
  * markers out of the capped marker file.
  */
-class AndroidIngestDedupStoreTest {
-    @get:Rule val tmp = TemporaryFolder()
+class FileIngestDedupStoreTest {
+    private val root: Path = platformTempDirectory / "FileIngestDedupStoreTest-${Random.nextLong().toULong()}"
+
+    @AfterTest
+    fun cleanUp() {
+        platformFileSystem.deleteRecursivelyQuietly(root)
+    }
+
+    private fun newFolder(name: String): Path = (root / name).also { platformFileSystem.createDirectories(it) }
 
     private fun id(n: Int) = n.toString(16).padStart(64, '0')
 
     @Test
     fun ownEchoesSurviveARestartBoundedAndApartFromTheMarkers() =
-        runBlocking {
-            val dir = tmp.newFolder("account")
+        runTest {
+            val dir = newFolder("account")
             val welcome = "f".repeat(64)
-            val store = AndroidIngestDedupStore(dir, maxEntries = 100)
+            val store = FileIngestDedupStore(dir, maxEntries = 100)
             store.mark(welcome)
             val sent = 3 * MarmotIngestDedupStore.OWN_ECHO_LIMIT
             for (n in 0 until sent) store.markOwnEcho(id(n))
 
-            val restarted = AndroidIngestDedupStore(dir, maxEntries = 100)
+            val restarted = FileIngestDedupStore(dir, maxEntries = 100)
             val echoes = restarted.loadOwnEchoes()
             assertEquals(MarmotIngestDedupStore.OWN_ECHO_LIMIT, echoes.size)
             assertEquals(id(sent - 1), echoes.last(), "newest last")
@@ -58,7 +69,16 @@ class AndroidIngestDedupStoreTest {
 
     @Test
     fun noEchoesReadAsEmpty() =
-        runBlocking {
-            assertTrue(AndroidIngestDedupStore(tmp.newFolder("empty")).loadOwnEchoes().isEmpty())
+        runTest {
+            assertTrue(FileIngestDedupStore(newFolder("empty")).loadOwnEchoes().isEmpty())
+        }
+
+    /** The file an earlier install wrote, one id per line, is read as it is. */
+    @Test
+    fun readsTheFileAnEarlierInstallWrote() =
+        runTest {
+            val dir = newFolder("legacy")
+            platformFileSystem.write(dir / "marmot_ingested.ids") { writeUtf8("${id(1)}\n${id(2)}\n\n") }
+            assertEquals(setOf(id(1), id(2)), FileIngestDedupStore(dir).loadAll())
         }
 }

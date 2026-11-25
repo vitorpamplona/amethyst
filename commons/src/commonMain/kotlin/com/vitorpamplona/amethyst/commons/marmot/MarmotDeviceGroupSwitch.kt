@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmot.devices.DeviceGroupSwitch
+import com.vitorpamplona.amethyst.commons.util.createNewFileQuietly
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.utils.Log
-import java.io.File
+import okio.FileSystem
+import okio.IOException
+import okio.Path
 
 /**
  * The per-account switch for Marmot device groups, on while its marker file exists:
@@ -40,28 +45,38 @@ import java.io.File
  * account an earlier version already held keeps what it had, off unless its user turned it on.
  */
 class MarmotDeviceGroupSwitch(
-    accountDir: File,
+    accountDir: Path,
     newAccount: Boolean = false,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : DeviceGroupSwitch {
-    private val marker = File(accountDir, FILE_NAME)
+    private val marker = accountDir / FILE_NAME
 
     init {
-        if (newAccount && !marker.exists()) {
-            val dir = marker.parentFile
-            if (dir != null && !dir.exists() && !dir.mkdirs()) Log.w(TAG) { "could not create ${dir.absolutePath}" }
-            if (!marker.createNewFile() && !marker.exists()) Log.w(TAG) { "could not create ${marker.absolutePath}" }
+        if (newAccount && !fileSystem.exists(marker)) {
+            val dir = marker.parent
+            if (dir != null && !fileSystem.exists(dir) && !createDirectories(dir)) Log.w(TAG) { "could not create $dir" }
+            if (!fileSystem.createNewFileQuietly(marker) && !fileSystem.exists(marker)) Log.w(TAG) { "could not create $marker" }
         }
     }
 
-    override fun isEnabled(): Boolean = marker.exists()
+    override fun isEnabled(): Boolean = fileSystem.exists(marker)
 
     override fun setEnabled(enabled: Boolean) {
         if (enabled) {
-            if (!marker.exists() && !marker.createNewFile()) Log.w(TAG) { "could not create ${marker.absolutePath}" }
-        } else if (marker.exists() && !marker.delete()) {
-            throw IllegalStateException("could not delete ${marker.absolutePath}")
+            if (!fileSystem.exists(marker) && !fileSystem.createNewFileQuietly(marker)) Log.w(TAG) { "could not create $marker" }
+        } else if (fileSystem.exists(marker) && !fileSystem.deleteQuietly(marker)) {
+            throw IllegalStateException("could not delete $marker")
         }
     }
+
+    /** `File.mkdirs()`: false, not a throw, when the directory cannot be made. */
+    private fun createDirectories(dir: Path): Boolean =
+        try {
+            fileSystem.createDirectories(dir)
+            true
+        } catch (e: IOException) {
+            false
+        }
 
     companion object {
         private const val TAG = "MarmotDeviceGroupSwitch"

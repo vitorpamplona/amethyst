@@ -81,6 +81,35 @@ fun FileSystem.deleteRecursivelyQuietly(path: Path): Boolean {
 }
 
 /**
+ * Renames [source] over [target], replacing it, and never throws: `File.renameTo()`.
+ *
+ * @return false when the filesystem refused the rename; [source] is then still there.
+ */
+fun FileSystem.renameQuietly(
+    source: Path,
+    target: Path,
+): Boolean =
+    try {
+        atomicMove(source, target)
+        true
+    } catch (e: IOException) {
+        false
+    }
+
+/**
+ * Creates an empty file at [path] if none is there, and never throws: `File.createNewFile()`.
+ *
+ * @return true when this call created it; false when it already existed or could not be created.
+ */
+fun FileSystem.createNewFileQuietly(path: Path): Boolean =
+    try {
+        write(path, mustCreate = true) {}
+        true
+    } catch (e: IOException) {
+        false
+    }
+
+/**
  * Replaces [target] with [source]: an atomic rename, or, where the filesystem
  * refuses one, a copy over [target] and a delete of [source].
  *

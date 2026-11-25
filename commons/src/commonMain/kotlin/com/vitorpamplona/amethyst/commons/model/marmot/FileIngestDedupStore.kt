@@ -20,18 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot
 
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.FileSystem
+import okio.Path
+import okio.buffer
+import okio.use
 
 /**
- * Android implementation of [MarmotIngestDedupStore] — one hex event id per
+ * File-backed [MarmotIngestDedupStore] — one hex event id per
  * line under `<rootDir>/marmot_ingested.ids`.
+ *
+ * Was `AndroidIngestDedupStore`; the file and its format are unchanged.
  *
  * Deliberately NOT encrypted: the file holds public relay event ids and no key
  * material, and a marker lost to a decryption failure would silently cost a
@@ -41,24 +48,25 @@ import java.io.File
  * one wasted NIP-59 unwrap on the next sync, so bounding growth is worth more
  * than remembering every id forever.
  */
-class AndroidIngestDedupStore(
-    private val rootDir: File,
+class FileIngestDedupStore(
+    private val rootDir: Path,
     private val maxEntries: Int = 20_000,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : MarmotIngestDedupStore {
     private val mutex = Mutex()
 
-    private fun file(): File = File(rootDir, "marmot_ingested.ids")
+    private fun file(): Path = rootDir / "marmot_ingested.ids"
 
     override suspend fun mark(eventId: HexKey) =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val target = file()
                 try {
-                    target.parentFile?.mkdirs()
-                    target.appendText(eventId + "\n")
-                    if (target.length() > maxEntries.toLong() * 65L) {
-                        val kept = target.readLines().filter { it.isNotBlank() }.takeLast(maxEntries / 2)
-                        target.writeText(kept.joinToString("\n") + "\n")
+                    target.parent?.let { fileSystem.createDirectories(it) }
+                    appendText(target, eventId + "\n")
+                    if (length(target) > maxEntries.toLong() * 65L) {
+                        val kept = readLines(target).filter { it.isNotBlank() }.takeLast(maxEntries / 2)
+                        writeText(target, kept.joinToString("\n") + "\n")
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "could not record ingest marker: ${e.message}", e)
@@ -72,8 +80,8 @@ class AndroidIngestDedupStore(
             mutex.withLock {
                 try {
                     file()
-                        .takeIf { it.exists() }
-                        ?.readLines()
+                        .takeIf { fileSystem.exists(it) }
+                        ?.let { readLines(it) }
                         ?.filter { it.isNotBlank() }
                         ?.toSet()
                         .orEmpty()
@@ -84,7 +92,7 @@ class AndroidIngestDedupStore(
             }
         }
 
-    private fun ownEchoFile(): File = File(rootDir, "marmot_own_echoes.ids")
+    private fun ownEchoFile(): Path = rootDir / "marmot_own_echoes.ids"
 
     /**
      * The kind:445 ids this device sent, in their own file so they never crowd the Welcome and
@@ -96,11 +104,11 @@ class AndroidIngestDedupStore(
             mutex.withLock {
                 val target = ownEchoFile()
                 try {
-                    target.parentFile?.mkdirs()
-                    target.appendText(eventId + "\n")
-                    if (target.length() > 2L * MarmotIngestDedupStore.OWN_ECHO_LIMIT * 65L) {
-                        val kept = target.readLines().filter { it.isNotBlank() }.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
-                        target.writeText(kept.joinToString("\n") + "\n")
+                    target.parent?.let { fileSystem.createDirectories(it) }
+                    appendText(target, eventId + "\n")
+                    if (length(target) > 2L * MarmotIngestDedupStore.OWN_ECHO_LIMIT * 65L) {
+                        val kept = readLines(target).filter { it.isNotBlank() }.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
+                        writeText(target, kept.joinToString("\n") + "\n")
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "could not record an own echo", e)
@@ -114,8 +122,8 @@ class AndroidIngestDedupStore(
             mutex.withLock {
                 try {
                     ownEchoFile()
-                        .takeIf { it.exists() }
-                        ?.readLines()
+                        .takeIf { fileSystem.exists(it) }
+                        ?.let { readLines(it) }
                         ?.filter { it.isNotBlank() }
                         ?.distinct()
                         ?.takeLast(MarmotIngestDedupStore.OWN_ECHO_LIMIT)
@@ -127,7 +135,26 @@ class AndroidIngestDedupStore(
             }
         }
 
+    private fun appendText(
+        file: Path,
+        text: String,
+    ) {
+        fileSystem.appendingSink(file).buffer().use { it.writeUtf8(text) }
+    }
+
+    private fun writeText(
+        file: Path,
+        text: String,
+    ) {
+        fileSystem.write(file) { writeUtf8(text) }
+    }
+
+    /** `File.readLines()`, but with an empty last line after a trailing break; every caller drops blank lines. */
+    private fun readLines(file: Path): List<String> = fileSystem.read(file) { readUtf8() }.lines()
+
+    private fun length(file: Path): Long = fileSystem.metadataOrNull(file)?.size ?: 0L
+
     companion object {
-        private const val TAG = "AndroidIngestDedupStore"
+        private const val TAG = "FileIngestDedupStore"
     }
 }
