@@ -38,6 +38,9 @@ kotlin {
                     implementation(libs.ktor.client.core)
                     implementation(libs.ktor.client.websockets)
                     implementation(libs.ktor.client.darwin)
+                    // Images: Coil over the same Ktor client. Apache-2.0, as the rest of Coil.
+                    implementation(libs.coil.compose)
+                    implementation(libs.coil.network.ktor3)
                 }
             }
         getByName("iosArm64Main").dependsOn(iosMain)

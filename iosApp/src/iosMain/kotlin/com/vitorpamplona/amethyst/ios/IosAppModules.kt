@@ -89,6 +89,7 @@ import kotlinx.coroutines.runBlocking
 import okio.Path
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 
@@ -149,6 +150,14 @@ class IosAppModules(
     val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }
 
     val lnurlTransport = KtorLnurlTransport { httpClient }
+
+    // Images load through the same client. The Caches folder is the one iOS may purge.
+    init {
+        IosImageLoaderSetup.setup(
+            httpClient = httpClient,
+            cacheDir = (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String).toPath() / "images",
+        )
+    }
 
     val cache: LocalCache = LocalCache
 
