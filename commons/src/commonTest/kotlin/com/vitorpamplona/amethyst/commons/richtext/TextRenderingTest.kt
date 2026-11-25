@@ -62,4 +62,13 @@ class TextRenderingTest {
         assertTrue(TextRendering.MARKDOWN.isMarkdown(prose))
         assertTrue(TextRendering.GUESS.isMarkdown("## A heading\n\nand text"))
     }
+
+    @Test
+    fun markdownTheGuessMisses() {
+        // An indented code block and a reference-style link: markdown the guess does not look for,
+        // so a note with only these renders as plain text while an article renders the markdown.
+        val md = "Run this:\n\n    ./gradlew test\n\nThen read the [guide][1].\n\n[1]: https://example.com/guide"
+        assertFalse(TextRendering.GUESS.isMarkdown(md))
+        assertTrue(TextRendering.MARKDOWN.isMarkdown(md))
+    }
 }

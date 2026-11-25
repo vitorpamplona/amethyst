@@ -38,16 +38,18 @@ class CachedMarkdownAstTest {
 
     @Test
     fun aHashCollisionIsNotServedAsAHit() {
-        // "Aa" and "BB" share a String.hashCode().
+        // "Aa" and "BB" share a String.hashCode(), so they compete for one slot: "BB" takes it, and
+        // "Aa" is parsed again rather than handed the tree of "BB".
         val a = CachedMarkdownAst.parse("Aa")
         val b = CachedMarkdownAst.parse("BB")
         assertNotSame(a, b)
-        assertSame(a, CachedMarkdownAst.parse("Aa"))
+        assertNotSame(b, CachedMarkdownAst.parse("Aa"))
     }
 
     @Test
     fun warmParsesTheProseAroundCodeBlocksAsTheCardWill() {
-        val md = "Intro to warm.\n\n```kotlin\nval x = 1\n```\n\nOutro after warm."
+        // Only JSON-like fences are split out, to be highlighted (MarkdownChunks.isHighlightable).
+        val md = "Intro to warm.\n\n```json\n{ \"a\": 1 }\n```\n\nOutro after warm."
         val prose =
             assertNotNull(MarkdownChunks.cachedSplit(md, atHeadings = false))
                 .filterIsInstance<MarkdownChunk.Prose>()
