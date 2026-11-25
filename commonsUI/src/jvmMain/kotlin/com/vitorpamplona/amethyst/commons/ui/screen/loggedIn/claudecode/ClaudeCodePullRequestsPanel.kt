@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeWorkspaceViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.WorkspaceRepoRow
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_open_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_ask_commit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_panel_create
@@ -77,6 +79,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_draft
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_view
+import com.vitorpamplona.amethyst.commons.resources.claude_code_published_section
+import com.vitorpamplona.amethyst.commons.resources.claude_code_session_panel
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -108,8 +112,13 @@ internal fun PullRequestsPanel(
     busy: Boolean,
     nav: INav,
     width: Dp,
+    /** The chat's rows: what the session put on claude.ai is listed under the repositories. */
+    items: List<ChatItem>,
+    cwd: String,
     modifier: Modifier = Modifier,
 ) {
+    val published = rememberSessionArtifacts(items, cwd)
+    val open = rememberArtifactOpener()
     val viewModel = rememberViewModel(key = "ClaudeCodePullRequestsPanel-$key") { ClaudeCodeWorkspaceViewModel(ClaudeCodeService.shared, key) }
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
@@ -122,12 +131,15 @@ internal fun PullRequestsPanel(
     }
 
     Column(modifier.width(width).fillMaxHeight().padding(top = 4.dp)) {
+        // What the session made: its repositories' changes, and what it put on claude.ai.
+        Text(
+            stringRes(Res.string.claude_code_session_panel),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 6.dp, bottom = 6.dp),
+        )
+        // The repositories' part: its refresh and its pull requests page are git's, so they head it.
         Row(Modifier.fillMaxWidth().padding(start = Gutter, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringRes(Res.string.claude_code_changes),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f),
-            )
+            PanelSectionLabel(stringRes(Res.string.claude_code_changes), Modifier.weight(1f))
             HoverTooltip(stringRes(Res.string.refresh)) {
                 IconButton(onClick = { viewModel.refresh() }, modifier = Modifier.size(32.dp)) {
                     Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.refresh), tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
@@ -153,8 +165,38 @@ internal fun PullRequestsPanel(
                     onAskToCommit = { viewModel.askToCommit(row.name) },
                 )
             }
+            // The session's other output: pages and docs on claude.ai, newest first.
+            if (published.isNotEmpty()) {
+                item(key = "published-title") {
+                    PanelSectionLabel(
+                        stringRes(Res.string.claude_code_published_section),
+                        Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 16.dp, bottom = 4.dp),
+                    )
+                }
+                items(published, key = { "published-" + it.url }) { artifact ->
+                    val url = artifact.url ?: return@items
+                    PublishedArtifactRow(artifact, Modifier.fillMaxWidth().padding(horizontal = 8.dp)) { open.link(url) }
+                }
+            }
+        }
+        open.failed?.let {
+            Text(
+                stringRes(Res.string.claude_code_artifact_open_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp),
+            )
         }
     }
+}
+
+/** A part of the panel: "Changes", "On claude.ai". */
+@Composable
+private fun PanelSectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText, modifier = modifier)
 }
 
 /**
