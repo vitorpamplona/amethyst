@@ -96,6 +96,9 @@ kikoKmp = "0.2.5"
 # The Djot parser (vitorpamplona/djot-kmp), for NIP-54 wiki pages. Only the parser: Amethyst draws the
 # AST itself, so djot-html is not needed.
 djotKmp = "0.1.0"
+# The markdown parser behind the shared document model (commons/content). Apache-2.0 (its POM),
+# multiplatform: JVM, Android (through the JVM artifact) and iOS.
+jetbrainsMarkdown = "0.7.18"
 mlsKmp = "1.5.1"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.1"
@@ -290,6 +293,7 @@ cordn = { module = "com.vitorpamplona.cordn:cordn", version.ref = "cordnKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 kiko = { module = "com.vitorpamplona.kiko:kiko", version.ref = "kikoKmp" }
 djot = { module = "com.vitorpamplona.djot:djot", version.ref = "djotKmp" }
+jetbrains-markdown = { module = "org.jetbrains:markdown", version.ref = "jetbrainsMarkdown" }
 kiko-compose = { module = "com.vitorpamplona.kiko:kiko-compose", version.ref = "kikoKmp" }
 kiko-player = { module = "com.vitorpamplona.kiko:kiko-player", version.ref = "kikoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }

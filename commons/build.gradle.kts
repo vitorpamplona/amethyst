@@ -80,6 +80,8 @@ kotlin {
                 api(libs.kiko.player)
                 // Parses NIP-54 wiki pages, which are Djot (MIT, our own library; stdlib only).
                 implementation(libs.djot)
+                // Markdown into the document model (commons/content), on every target.
+                implementation(libs.jetbrains.markdown)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)
