@@ -245,6 +245,18 @@ kotlin {
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
 
+        // Tests of the nonJvmMain transports, on Ktor's mock engine (Apache-2.0, checked in the
+        // 3.6.1 POM on 2026-11-25). They run in the iOS simulator.
+        val nonJvmTest =
+            create("nonJvmTest") {
+                dependsOn(commonTest.get())
+                dependencies {
+                    implementation(libs.ktor.client.mock)
+                }
+            }
+        getByName("iosSimulatorArm64Test").dependsOn(nonJvmTest)
+        getByName("iosArm64Test").dependsOn(nonJvmTest)
+
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)

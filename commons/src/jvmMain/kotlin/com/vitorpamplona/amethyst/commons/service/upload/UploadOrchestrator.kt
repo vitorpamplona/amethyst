@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.coroutines.cancellation.CancellationException
 
 data class UploadResult(
     val blossom: BlossomUploadResult,
@@ -300,50 +299,6 @@ class UploadOrchestrator(
                 reencodedTemp?.deleteOrWarn("UploadOrchestrator", "encrypted reencoded temp")
             }
         }
-    }
-
-    /**
-     * [serverBaseUrl] first, then each of [fallbacks] (skipping duplicates by domain) until
-     * one accepts. Servers differ in what they take -- several answer an opaque encrypted
-     * blob with 415, paid ones with 402 -- and the user can't see that in advance. The auth
-     * header is not server-scoped, so the same one serves every attempt. When all fail, the
-     * first server's error is thrown: that is the server the user chose.
-     */
-    private suspend fun uploadToFirstAccepting(
-        serverBaseUrl: String,
-        fallbacks: List<String>,
-        upload: suspend (String) -> BlossomUploadResult,
-    ): Accepted {
-        val seen = mutableSetOf<String>()
-        val order = (listOf(serverBaseUrl) + fallbacks).filter { seen.add(BlossomServerUrl.domain(it)) }
-        var firstError: Exception? = null
-        for (server in order) {
-            try {
-                return Accepted(upload(server), server, firstError)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                if (firstError == null) firstError = e
-                Log.w("UploadOrchestrator") { "Upload to $server failed (${e.message}), trying the next server" }
-            }
-        }
-        throw firstError!!
-    }
-
-    /** The server that took the upload, and the chosen server's refusal when it was not that one. */
-    private class Accepted(
-        val result: BlossomUploadResult,
-        val server: String,
-        val refusal: Exception?,
-    ) {
-        /** What to tell the user when [server] is not [chosen]: where it went, and why. */
-        fun notice(chosen: String): UploadNotice? =
-            refusal?.let {
-                UploadNotice.UploadedToAnotherServer(
-                    chosenServer = BlossomServerUrl.domain(chosen),
-                    usedServer = BlossomServerUrl.domain(server),
-                    reason = it.message,
-                )
-            }
     }
 
     /**

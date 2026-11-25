@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
-import com.vitorpamplona.amethyst.commons.service.uploads.UnavailableMediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
@@ -73,8 +72,7 @@ class IosAccountViewModelHost(
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
         get() = modules.authCoordinator.receiver.authStateFlow
 
-    // Uploads come with B5.
-    override val mediaUploader: MediaUploader get() = UnavailableMediaUploader
+    override val mediaUploader: MediaUploader get() = modules.mediaUploader
 
     override val savedAccounts: Flow<Set<HexKey>> =
         modules.sessionStore

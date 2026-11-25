@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
 import com.vitorpamplona.amethyst.commons.service.http.KtorWebSocket
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
+import com.vitorpamplona.amethyst.commons.service.upload.KtorBlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -93,6 +94,7 @@ import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSPOSIXErrorDomain
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUserDomainMask
 import platform.posix.EPROTO
 
@@ -157,6 +159,14 @@ class IosAppModules(
             scope = applicationIOScope,
             compression = KtorWebSocket.Compression(isFailure = ::isDarwinProtocolError),
         )
+
+    /** Blossom uploads over [httpClient]; re-encoded pictures wait in the temp folder until they go up. */
+    val mediaUploader by lazy {
+        IosMediaUploader(
+            blossom = KtorBlossomClient { httpClient },
+            tempDir = (NSTemporaryDirectory().toPath() / "uploads"),
+        )
+    }
 
     val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }
 

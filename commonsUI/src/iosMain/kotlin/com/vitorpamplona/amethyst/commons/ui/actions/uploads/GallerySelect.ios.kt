@@ -22,15 +22,18 @@ package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
-// No picker wired on this platform yet: report a cancel so callers close their picker state.
+// The system photo picker (PHPickerViewController). An empty result is a cancel.
 
 @Composable
 actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
-    LaunchedEffect(Unit) { onImageUri(persistentListOf()) }
+    val onPicked by rememberUpdatedState(onImageUri)
+    LaunchedEffect(Unit) { onPicked(pickFromPhotoLibrary(selectionLimit = 0, imagesOnly = false).toImmutableList()) }
 }
 
 @Composable
@@ -38,5 +41,6 @@ actual fun GallerySelectSingle(
     imagesOnly: Boolean,
     onImageUri: (SelectedMedia?) -> Unit,
 ) {
-    LaunchedEffect(Unit) { onImageUri(null) }
+    val onPicked by rememberUpdatedState(onImageUri)
+    LaunchedEffect(Unit) { onPicked(pickFromPhotoLibrary(selectionLimit = 1, imagesOnly = imagesOnly).firstOrNull()) }
 }
