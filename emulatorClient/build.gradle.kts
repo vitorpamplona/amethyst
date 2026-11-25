@@ -32,3 +32,11 @@ dependencies {
     // Apache-2.0 (its POM on Maven Central). A real HTTP/2 server for the end-to-end gRPC tests.
     testImplementation(libs.okhttp.mockwebserver3)
 }
+
+// RealEmulatorTest runs only with EMULATOR_IT=1, read from the gradlew call (the test JVM inherits
+// the daemon's environment, not the shell's).
+tasks.test {
+    listOf("EMULATOR_IT", "EMULATOR_IT_LAUNCH", "EMULATOR_IT_ARGS", "EMULATOR_IT_KEEP", "ANDROID_I_WANT_MY_TCG").forEach { name ->
+        providers.environmentVariable(name).orNull?.let { environment(name, it) }
+    }
+}

@@ -24,7 +24,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -135,11 +133,12 @@ internal fun PanelHeader(
                 )
             }
         } else {
-            // The slot's tabs take the room the buttons leave, and scroll past it.
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+            // The slot's tabs share the room the buttons leave, each shortening its name to fit. Not
+            // a scrolling row: its scroll would take the press that drags a tab out.
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 tabs.forEach { id ->
                     val tab = controller.spec(id) ?: return@forEach
-                    PanelTab(controller, tab, selected = id == active)
+                    Box(Modifier.weight(1f, fill = false)) { PanelTab(controller, tab, selected = id == active) }
                 }
             }
         }

@@ -42,28 +42,38 @@ zero compressed-flag byte, a four-byte big-endian length, the protobuf). The ans
 framing; `grpc-status` arrives in the trailers, or in the headers of a trailers-only answer, and a
 non-zero one becomes `GrpcStatusException`.
 
-## Not verified (no emulator where this was built)
+## Checked against a real emulator
 
-Check these on a machine with an emulator before building on them:
+Emulator 37.3.10 on Linux (no KVM, so software CPU), with API 21 images, through
+`RealEmulatorTest` and the desktop app's devices panel:
 
-- **Launch flags**: `-no-window`, `-grpc <port>`, `-grpc-use-token`, `-no-boot-anim`, `-no-audio`,
-  `-no-snapshot-save`, `-read-only`, `-gpu`. Compare with `emulator -help` of the installed version.
-- **Discovery directory**: Linux `$XDG_RUNTIME_DIR/avd/running`, else `/tmp/android-$USER/avd/running`;
-  macOS `~/Library/Caches/TemporaryItems/avd/running`; Windows `%LOCALAPPDATA%\Temp\avd\running`.
-  Whether `ANDROID_EMULATOR_HOME` / `ANDROID_AVD_HOME` move it is unknown, so they are not read
-  (pass your own directories to `EmulatorDiscovery`).
-- **Discovery keys**: `grpc.port`, `grpc.token`, `port.serial`, `port.adb`, `avd.name`, `avd.id`,
-  `avd.dir`, `cmdline`. The parser keeps every key and treats any of them as optional.
-- **Auth**: emulators started by Android Studio use JWT auth (`grpc.jwks...` in the discovery file),
-  which this client does not do; those answer UNAUTHENTICATED. `RunningEmulator.usesJwt` flags them.
-  Start the emulator with `-grpc-use-token` (what `EmulatorLauncher` does) to get a token.
-- **Pixel row order**: the proto says rows run bottom up; check before flipping.
-- **Rotation sign**: `rotateTo` sets the z angle the proto lists per `SkinRotation` (LANDSCAPE 90,
-  REVERSE_LANDSCAPE -90); the sign the emulator expects is not confirmed.
-- **Display size keys**: `EmulatorStatus.displayWidth/Height` read `hw.lcd.width`/`hw.lcd.height`
-  from the hardware config; the width and height of a screenshot are the sure source.
-- **Launcher pid**: `EmulatorLauncher.awaitRunning` matches the discovery file's pid against the
-  started process and its descendants, then falls back to the AVD name.
+- **Launch flags**: every flag `EmulatorLauncher` passes is in that emulator's `-help`; the panel's
+  Start launches an AVD, and `awaitRunning` finds it. `emulator` execs into QEMU, so the started
+  process's pid is the discovery file's.
+- **Discovery**: without `XDG_RUNTIME_DIR` the emulator falls back to `~/.android/avd/running`
+  (its log says so), which is searched too. Keys as listed above; `avd.name` is the display name
+  ("Test API 21"), `avd.id` the AVD's id; `cmdline` is quoted.
+- **Token auth**: `-grpc-use-token`, the token from `grpc.token`.
+- **JWT auth** (`-grpc-use-jwt`, Android Studio's way): the discovery file names `grpc.jwks` (a
+  directory the emulator watches) and `grpc.jwk_active`. `EmulatorJwtAuth` writes its ES256 key
+  there as a JWK set and signs tokens as the issuer the default allow list gives test tooling
+  (`gradle-utp-emulator-control`), naming in `aud` the methods it calls. Two traps, both seen: a
+  key file renamed into place is never read (write it in place), and a token with a `typ` header
+  is refused. That issuer may not call `injectWheel` or `setVmState` (PERMISSION_DENIED).
+- **Display size**: `hw.lcd.width`/`hw.lcd.height` are in `getStatus`'s hardware config.
+- **Frames**: PNG and RGBA8888 at the asked size, fitted with the aspect kept (asked 518 x 728:
+  436 x 728 upright, 518 x 310 turned). Raw RGBA rows run **top-down**, not bottom-up as the proto
+  says.
+- **Rotation**: `rotateTo` turns the device (LANDSCAPE is +90 on z, REVERSE_LANDSCAPE -90); a frame
+  reports it after a moment and comes turned, its width and height swapped.
+- **Touches**: mouse and touch coordinates are in the device's **upright** frame however it is
+  turned; a client mapping a turned frame must turn its point back (the devices panel does).
+- **Keys**: `GoHome`, `GoBack`, `AudioVolumeUp` act.
+- **Wheel**: `injectWheel` is answered OK but did nothing on the API 21 image; the devices panel
+  scrolls with a touch swipe instead.
+- **Status**: `booted` stays false on API 21 (the proto says it is reliable from Android 9).
+
+Not checked: macOS and Windows (discovery paths there), physical devices.
 
 ## Tests
 
@@ -71,3 +81,7 @@ Check these on a machine with an emulator before building on them:
 skipping, gRPC framing split across reads, discovery and AVD files in temp directories, the launch
 command line, and end-to-end unary, trailers-only error, server-streaming and cancellation calls
 against OkHttp's `mockwebserver3` running HTTP/2 with prior knowledge.
+
+`EMULATOR_IT=1 ./gradlew :emulatorClient:test --tests '*RealEmulatorTest*'` runs the same calls against
+an emulator that runs now; `EMULATOR_IT_LAUNCH=<avd id>` also starts one (`EMULATOR_IT_ARGS` adds
+flags such as `-accel off`, `EMULATOR_IT_KEEP=1` leaves it running).

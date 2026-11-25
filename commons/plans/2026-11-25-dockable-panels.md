@@ -1,8 +1,9 @@
 # Dockable panels: tool windows for the shared shell
 
 Status: **Built (desktop and shared UI), 2026-11-25.** Android gets the same dock from the
-shared shell, with the notification feed as its only panel and no windows. The emulator panel has
-not been run against a real emulator (none in the build container); see "Not verified" below.
+shared shell, with the notification feed as its only panel and no windows. Checked against a real
+emulator and under a real window manager; see "Checked after the first cut" below. Not run:
+macOS, Windows, an Android device.
 
 ## What was built
 
@@ -34,14 +35,29 @@ not been run against a real emulator (none in the build container); see "Not ver
   `commons/jvmMain/…/devices/`. Frames are asked for as PNG, which sidesteps the proto's
   bottom-up row order for raw pixels.
 
-## Not verified
+## Checked after the first cut (2026-11-25)
 
-- Against a real emulator: the launch flags, the discovery file paths and keys, the input
-  coordinates on a turned device, and the volume key names. Emulators started by Android Studio
-  authenticate with JWTs, which `emulatorClient` does not speak; start the device from the panel.
-- Dragging a panel out of the frame relies on the pointer being reported past the window's edge
-  while the button is held; Xvfb has no window manager to try it against.
-
+- **A panel keeps its state everywhere.** Saved UI state (rememberSaveable) is kept by the dock per
+  panel and handed from one place to the next; a panel window draws the same movable content
+  object as the dock, so the saved values are found under the same keys, after the dock has let
+  go (a lease: one place draws a panel at a time). Checked: the notification panel's open chart
+  and the assistant's half-typed message survive a pop-out and a dock-back
+  (`DockPanelStateUiTest`, and by hand). The assistant's draft also lives on its chat
+  (`ClaudeChat.unsent`), so a tab or a later visit shows it too.
+- **Window managers.** Under openbox (a real window manager, title bars and all) in the headless
+  container: dragging a panel out of the main window opens its window where it was dropped, kept
+  whole on that screen; dragging that window's header over the main window docks it again.
+  macOS and Windows were not run.
+- **A real emulator** (emulator 37.3.10, API 21 images, software CPU): discovery, token and JWT
+  access, frames, the panel's Start, touches in all four rotations (read back with Android's
+  pointer-location overlay), Home, Back, volume, typing and scrolling. What the emulator does
+  differently from its proto or from this plan's assumptions is in `emulatorClient/README.md`;
+  the ones that changed code: the discovery fallback directory, touches taken upright on a turned
+  device, the wheel ignored on old images (the panel scrolls with a swipe), and JWT keys written
+  in place without a `typ` header.
+- **Android Studio's emulators** (`-grpc-use-jwt`) are reached: the client registers its own key in
+  the emulator's key directory and signs as the issuer its allow list gives test tooling, with only
+  the methods it calls. Power is then refused, so shutting one down ends its process.
 
 ## Goal
 

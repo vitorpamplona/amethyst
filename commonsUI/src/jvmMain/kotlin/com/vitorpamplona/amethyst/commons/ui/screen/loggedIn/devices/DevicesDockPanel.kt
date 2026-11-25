@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -108,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.emulator.KeyboardEvent
 import com.vitorpamplona.emulator.RunningEmulator
+import com.vitorpamplona.emulator.SkinRotation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
@@ -278,6 +280,7 @@ private fun DeviceScreen(
         onDispose { release() }
     }
     var image by remember(session) { mutableStateOf<ImageBitmap?>(null) }
+    var rotation by remember(session) { mutableStateOf(SkinRotation.PORTRAIT) }
     LaunchedEffect(session) {
         session.frame.filterNotNull().conflate().collect { frame ->
             val decoded =
@@ -288,7 +291,10 @@ private fun DeviceScreen(
                         null
                     }
                 }
-            if (decoded != null) image = decoded
+            if (decoded != null) {
+                image = decoded
+                rotation = frame.rotation
+            }
         }
     }
     val display by session.displaySize.collectAsState()
@@ -307,6 +313,9 @@ private fun DeviceScreen(
         contentAlignment = Alignment.Center,
     ) {
         val shown = image
+        // Read by the pointer handler, which runs on: a frame of a turned device changes shape, and
+        // a size captured when the handler started put touches off by the old frame's proportions.
+        val frameSize by rememberUpdatedState(shown?.let { IntSize(it.width, it.height) } ?: IntSize.Zero)
         if (shown == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(24.dp)) {
                 val problem = error
@@ -334,7 +343,7 @@ private fun DeviceScreen(
                                 while (true) {
                                     val event = awaitPointerEvent()
                                     val change = event.changes.firstOrNull() ?: continue
-                                    val point = toDevice(change.position, box, shown.width, shown.height, display) ?: continue
+                                    val point = toDevice(change.position, box, frameSize.width, frameSize.height, display, rotation) ?: continue
                                     when (event.type) {
                                         PointerEventType.Press -> {
                                             focus.requestFocus()
@@ -348,8 +357,14 @@ private fun DeviceScreen(
                                             pressed = false
                                         }
                                         PointerEventType.Scroll -> {
+                                            // A notch draws a finger up (content moves up, as a wheel turned toward
+                                            // you) by a share of the picture, in the picture as the user sees it:
+                                            // mapped like a tap, it follows the content however the device is turned.
                                             val dy = change.scrollDelta.y
-                                            if (dy != 0f) session.wheel(0, if (dy > 0) -1 else 1)
+                                            if (dy != 0f) {
+                                                val end = swipeEnd(change.position, box, frameSize.width, frameSize.height, if (dy > 0) 1 else -1)
+                                                toDevice(end, box, frameSize.width, frameSize.height, display, rotation)?.let { session.swipe(point, it) }
+                                            }
                                             change.consume()
                                         }
                                         else -> {}
@@ -364,8 +379,12 @@ private fun DeviceScreen(
 
 /**
  * [at], a point of the panel ([box] pixels) showing a [frameWidth] x [frameHeight] frame fitted
- * inside it, as device pixels on a [display] (width to height; swapped while the frame shows the
- * device turned); null outside the picture.
+ * inside it, as the device pixel it shows; null outside the picture.
+ *
+ * The emulator takes touches in the device's own upright frame ([display], width to height as the
+ * device stands), however it is turned: a frame of a turned device shows that frame rotated, so the
+ * point is turned back by [rotation]. Checked against emulator 37 with Android's pointer-location
+ * overlay, a press per rotation.
  */
 internal fun toDevice(
     at: Offset,
@@ -373,6 +392,7 @@ internal fun toDevice(
     frameWidth: Int,
     frameHeight: Int,
     display: Pair<Int, Int>?,
+    rotation: SkinRotation = SkinRotation.PORTRAIT,
 ): Pair<Int, Int>? {
     if (box.width <= 0 || box.height <= 0 || frameWidth <= 0 || frameHeight <= 0) return null
     val scale = minOf(box.width.toFloat() / frameWidth, box.height.toFloat() / frameHeight)
@@ -383,12 +403,36 @@ internal fun toDevice(
     val u = (at.x - left) / drawnW
     val v = (at.y - top) / drawnH
     if (u < 0f || v < 0f || u > 1f || v > 1f) return null
-    val (w, h) =
-        display?.let { (dw, dh) ->
-            // The frame shows the screen as turned; the display's size is given upright.
-            if ((frameWidth > frameHeight) != (dw > dh)) dh to dw else dw to dh
-        } ?: (frameWidth to frameHeight)
-    return (u * (w - 1)).toInt() to (v * (h - 1)).toInt()
+    val turned = rotation == SkinRotation.LANDSCAPE || rotation == SkinRotation.REVERSE_LANDSCAPE
+    // The upright size: the emulator's own, or else the frame's, turned back.
+    val (w, h) = display ?: if (turned) frameHeight to frameWidth else frameWidth to frameHeight
+    val (x, y) =
+        when (rotation) {
+            SkinRotation.PORTRAIT -> u to v
+            SkinRotation.LANDSCAPE -> (1 - v) to u
+            SkinRotation.REVERSE_PORTRAIT -> (1 - u) to (1 - v)
+            SkinRotation.REVERSE_LANDSCAPE -> v to (1 - u)
+        }
+    return (x * (w - 1)).toInt() to (y * (h - 1)).toInt()
+}
+
+/**
+ * Where a one-notch swipe from [at] ends: up by a share of the picture for [notches] > 0 (down for
+ * < 0), kept on the picture of a [frameWidth] x [frameHeight] frame fitted in [box].
+ */
+internal fun swipeEnd(
+    at: Offset,
+    box: IntSize,
+    frameWidth: Int,
+    frameHeight: Int,
+    notches: Int,
+): Offset {
+    if (frameWidth <= 0 || frameHeight <= 0) return at
+    val scale = minOf(box.width.toFloat() / frameWidth, box.height.toFloat() / frameHeight)
+    val drawnH = frameHeight * scale
+    val top = (box.height - drawnH) / 2
+    val y = at.y - drawnH * SWIPE_SHARE_PER_NOTCH * notches
+    return Offset(at.x, y.coerceIn(top, top + drawnH - 1f))
 }
 
 /** Sends a key the device understands; shortcuts with Ctrl or Cmd stay with the app. */
@@ -412,6 +456,9 @@ private fun forwardKey(
 }
 
 private const val VOLUME_UP = "AudioVolumeUp"
+
+/** How far one wheel notch draws the finger, as a share of the panel's height. */
+private const val SWIPE_SHARE_PER_NOTCH = 0.12f
 private const val VOLUME_DOWN = "AudioVolumeDown"
 
 /** The W3C names the emulator takes for the keys that type no character. */

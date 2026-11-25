@@ -52,12 +52,23 @@ data class RunningEmulator(
     val adbSerial: String? get() = serialPort?.let { "emulator-$it" }
 
     /**
-     * The emulator authenticates gRPC with JWTs (Android Studio's way), which [EmulatorController]
-     * does not do. Detected by a `grpc.jwks` key; that name is from memory, not checked.
+     * The emulator wants signed JWTs (`-grpc-use-jwt`, the default when Android Studio starts it):
+     * its discovery file names the key directory (`grpc.jwks`) and the accepted keys
+     * (`grpc.jwk_active`), as emulator 37 writes them. [EmulatorController] signs them through
+     * [EmulatorJwtAuth].
      */
     val usesJwt: Boolean get() = entries.keys.any { it.startsWith("grpc.jwk") }
 
+    /** Where a JWT client drops its public key. */
+    val jwksDir: Path? get() = entries["grpc.jwks"]?.ifEmpty { null }?.let { Paths.get(it) }
+
+    /** The keys the emulator has accepted, rewritten as it takes new ones. */
+    val activeJwks: Path? get() = entries["grpc.jwk_active"]?.ifEmpty { null }?.let { Paths.get(it) }
+
     val name: String get() = avdName ?: avdId ?: "emulator ($pid)"
+
+    /** Without the token (it grants control of the emulator), so a log line never carries it. */
+    override fun toString(): String = "RunningEmulator(pid=$pid, avd=$avdId, name=$avdName, serialPort=$serialPort, grpcPort=$grpcPort, token=${if (grpcToken != null) "<set>" else "none"}, jwt=$usesJwt)"
 }
 
 /**
@@ -66,13 +77,15 @@ data class RunningEmulator(
  * `port.serial`, `port.adb`, `avd.name`, `avd.id`, `avd.dir`, `cmdline`, `grpc.port` and (with
  * `-grpc-use-token`) `grpc.token`.
  *
- * Where that directory is (from the emulator's source, not checked on every OS here):
- * - Linux: `$XDG_RUNTIME_DIR/avd/running`, else `/tmp/android-$USER/avd/running` (both scanned);
+ * Where that directory is (macOS and Windows from the emulator's source, not run there):
+ * - Linux: `$XDG_RUNTIME_DIR/avd/running`, else `/tmp/android-$USER/avd/running`;
  * - macOS: `~/Library/Caches/TemporaryItems/avd/running`;
- * - Windows: `%LOCALAPPDATA%\Temp\avd\running`.
+ * - Windows: `%LOCALAPPDATA%\Temp\avd\running`;
+ * - everywhere, the fallback the emulator uses when it has none of those (seen on Linux without
+ *   `XDG_RUNTIME_DIR`): `avd/running` under `ANDROID_USER_HOME`, `ANDROID_EMULATOR_HOME` or
+ *   `~/.android`.
  *
- * `ANDROID_EMULATOR_HOME` / `ANDROID_AVD_HOME` are not consulted: whether they move this
- * directory could not be verified. Pass extra [directories] if a setup needs them. The parser is
+ * Pass extra [directories] if a setup needs them. The parser is
  * tolerant: unknown keys are kept in [RunningEmulator.entries], missing ones are null, and files
  * it cannot read are skipped.
  *
@@ -163,21 +176,30 @@ class EmulatorDiscovery(
             userName: String = System.getProperty("user.name").orEmpty(),
         ): List<Path> {
             val os = osName.lowercase()
-            return when {
-                os.startsWith("windows") -> {
-                    val local = env["LOCALAPPDATA"]?.ifEmpty { null } ?: Paths.get(userHome, "AppData", "Local").toString()
-                    listOf(Paths.get(local, "Temp", "avd", "running"))
+            val primary =
+                when {
+                    os.startsWith("windows") -> {
+                        val local = env["LOCALAPPDATA"]?.ifEmpty { null } ?: Paths.get(userHome, "AppData", "Local").toString()
+                        listOf(Paths.get(local, "Temp", "avd", "running"))
+                    }
+                    os.startsWith("mac") || os.contains("darwin") ->
+                        listOf(Paths.get(userHome, "Library", "Caches", "TemporaryItems", "avd", "running"))
+                    else -> {
+                        val user = env["USER"]?.ifEmpty { null } ?: userName
+                        listOfNotNull(
+                            env["XDG_RUNTIME_DIR"]?.ifEmpty { null }?.let { Paths.get(it, "avd", "running") },
+                            Paths.get("/tmp", "android-$user", "avd", "running"),
+                        )
+                    }
                 }
-                os.startsWith("mac") || os.contains("darwin") ->
-                    listOf(Paths.get(userHome, "Library", "Caches", "TemporaryItems", "avd", "running"))
-                else -> {
-                    val user = env["USER"]?.ifEmpty { null } ?: userName
-                    listOfNotNull(
-                        env["XDG_RUNTIME_DIR"]?.ifEmpty { null }?.let { Paths.get(it, "avd", "running") },
-                        Paths.get("/tmp", "android-$user", "avd", "running"),
-                    )
-                }
-            }
+            // Where the emulator falls back to when it has none of those (seen with emulator 37 on
+            // Linux without XDG_RUNTIME_DIR: "Using fallback path for the emulator registration
+            // directory", then pid_<pid>.ini under ~/.android/avd/running).
+            val androidHome =
+                env["ANDROID_USER_HOME"]?.ifEmpty { null }
+                    ?: env["ANDROID_EMULATOR_HOME"]?.ifEmpty { null }
+                    ?: Paths.get(userHome, ".android").toString()
+            return (primary + listOf(Paths.get(androidHome, "avd", "running"))).distinct()
         }
     }
 }

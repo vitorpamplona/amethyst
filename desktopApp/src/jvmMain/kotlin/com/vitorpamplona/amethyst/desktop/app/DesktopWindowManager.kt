@@ -44,6 +44,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.withContext
+import java.awt.GraphicsEnvironment
 import java.awt.Point
 import java.io.File
 import javax.swing.JFrame
@@ -257,7 +258,7 @@ class DesktopWindowManager(
         val origin = spec.origin
         val position =
             if (origin != null) {
-                WindowPosition((origin.x / scale - PANEL_GRAB_X).dp, (origin.y / scale - PANEL_GRAB_Y).dp)
+                droppedAt((origin.x / scale).toInt(), (origin.y / scale).toInt(), size)
             } else {
                 placeBeside(null, size)
             }
@@ -289,6 +290,29 @@ class DesktopWindowManager(
                 .debounce(SIZE_SAVE_DEBOUNCE_MS)
                 .collect { withContext(Dispatchers.IO) { sizes.save(kind, it) } }
         }
+    }
+
+    /**
+     * Where a window dropped at ([x], [y]) on the screen goes: its header under the pointer, kept
+     * whole on the screen the pointer is on (a drop near an edge would leave it hanging off).
+     */
+    private fun droppedAt(
+        x: Int,
+        y: Int,
+        size: DpSize,
+    ): WindowPosition {
+        val screen =
+            GraphicsEnvironment
+                .getLocalGraphicsEnvironment()
+                .screenDevices
+                .map { it.defaultConfiguration.bounds }
+                .firstOrNull { it.contains(x, y) }
+                ?: return WindowPosition((x - PANEL_GRAB_X).dp, (y - PANEL_GRAB_Y).dp)
+        val width = size.width.value.toInt()
+        val height = size.height.value.toInt()
+        val left = (x - PANEL_GRAB_X).coerceIn(screen.x, (screen.x + screen.width - width).coerceAtLeast(screen.x))
+        val top = (y - PANEL_GRAB_Y).coerceIn(screen.y, (screen.y + screen.height - height).coerceAtLeast(screen.y))
+        return WindowPosition(left.dp, top.dp)
     }
 
     /** The main window's content origin on the screen, in the pixels Compose lays out in. */

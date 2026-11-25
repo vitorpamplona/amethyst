@@ -48,11 +48,15 @@ class EmulatorController(
     val token: String?,
     client: OkHttpClient,
     host: String = "127.0.0.1",
-) {
+    /** For an emulator that wants signed tokens (`-grpc-use-jwt`); [token] is then unused. */
+    private val jwt: EmulatorJwtAuth? = null,
+) : AutoCloseable {
+    /** Picks the emulator's way in: its console token, or a signed JWT when it asks for those. */
     constructor(emulator: RunningEmulator, client: OkHttpClient) : this(
         port = requireNotNull(emulator.grpcPort) { "emulator ${emulator.pid} has no gRPC port" },
         token = emulator.grpcToken,
         client = client,
+        jwt = emulator.jwksDir?.takeIf { emulator.usesJwt }?.let { EmulatorJwtAuth(it, emulator.activeJwks) },
     )
 
     private val channel =
@@ -60,8 +64,13 @@ class EmulatorController(
             client = client,
             baseUrl = "http://$host:$port",
             service = SERVICE,
-            authorization = { token?.let { "Bearer $it" } },
+            authorization = { jwt?.authorization() ?: token?.let { "Bearer $it" } },
         )
+
+    /** Takes this client's key back out of a JWT emulator's key directory. */
+    override fun close() {
+        jwt?.close()
+    }
 
     /** Version, uptime, whether the guest has booted, and the hardware configuration. */
     suspend fun getStatus(): EmulatorStatus = EmulatorProto.decodeStatus(channel.unary("getStatus", EMPTY))

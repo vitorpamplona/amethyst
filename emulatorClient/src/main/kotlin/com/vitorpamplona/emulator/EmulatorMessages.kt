@@ -70,9 +70,8 @@ enum class SkinRotation(
  * One screen frame, from `Image`. [pixels] holds [width] x [height] pixels in [encoding]
  * (or a whole PNG file for [ImageEncoding.PNG]).
  *
- * Row order: the proto says rows run "left to right and bottom up"; check against a real
- * emulator before flipping, since Android Studio's own viewer has been seen to draw them as
- * received (top-down). Not verified here.
+ * Row order: raw rows run top-down, despite the proto's "left to right and bottom up" (compared,
+ * pixel by pixel, with a PNG of the same screen from emulator 37).
  */
 class EmulatorFrame(
     val width: Int,
@@ -127,9 +126,8 @@ data class EmulatorStatus(
     val guestConfig: Map<String, String> = emptyMap(),
 ) {
     /**
-     * The display size from `hw.lcd.width` / `hw.lcd.height`, the AVD `config.ini` keys. That the
-     * emulator reports them under these names here is an assumption; when absent, read the size
-     * off a screenshot instead.
+     * The display size from `hw.lcd.width` / `hw.lcd.height`, the AVD `config.ini` keys, which
+     * emulator 37 reports under these names; when absent, read the size off a screenshot instead.
      */
     val displayWidth: Int? get() = hardwareConfig["hw.lcd.width"]?.toIntOrNull()
     val displayHeight: Int? get() = hardwareConfig["hw.lcd.height"]?.toIntOrNull()

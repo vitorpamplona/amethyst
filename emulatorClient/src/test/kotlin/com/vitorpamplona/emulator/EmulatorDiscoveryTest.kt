@@ -100,21 +100,35 @@ class EmulatorDiscoveryTest {
     @Test
     fun defaultDirectoriesPerOs() {
         assertEquals(
-            listOf(Paths.get("/run/user/1000/avd/running"), Paths.get("/tmp/android-me/avd/running")),
+            listOf(Paths.get("/run/user/1000/avd/running"), Paths.get("/tmp/android-me/avd/running"), Paths.get("/home/me/.android/avd/running")),
             EmulatorDiscovery.defaultDirectories("Linux", mapOf("XDG_RUNTIME_DIR" to "/run/user/1000", "USER" to "me"), "/home/me", "x"),
         )
         assertEquals(
-            listOf(Paths.get("/tmp/android-x/avd/running")),
+            listOf(Paths.get("/tmp/android-x/avd/running"), Paths.get("/home/me/.android/avd/running")),
             EmulatorDiscovery.defaultDirectories("Linux", emptyMap(), "/home/me", "x"),
         )
         assertEquals(
-            listOf(Paths.get("/Users/me/Library/Caches/TemporaryItems/avd/running")),
+            listOf(Paths.get("/Users/me/Library/Caches/TemporaryItems/avd/running"), Paths.get("/Users/me/.android/avd/running")),
             EmulatorDiscovery.defaultDirectories("Mac OS X", emptyMap(), "/Users/me", "me"),
         )
         assertEquals(
-            listOf(Paths.get("C:\\Users\\me\\AppData\\Local", "Temp", "avd", "running")),
+            listOf(Paths.get("C:\\Users\\me\\AppData\\Local", "Temp", "avd", "running"), Paths.get("C:\\Users\\me", ".android", "avd", "running")),
             EmulatorDiscovery.defaultDirectories("Windows 11", mapOf("LOCALAPPDATA" to "C:\\Users\\me\\AppData\\Local"), "C:\\Users\\me", "me"),
         )
+    }
+
+    @Test
+    fun androidUserHomeMovesTheFallback() {
+        assertEquals(
+            listOf(Paths.get("/tmp/android-x/avd/running"), Paths.get("/data/android/avd/running")),
+            EmulatorDiscovery.defaultDirectories("Linux", mapOf("ANDROID_USER_HOME" to "/data/android"), "/home/me", "x"),
+        )
+    }
+
+    @Test
+    fun theTokenNeverPrints() {
+        val emu = EmulatorDiscovery.parse(1, EmulatorDiscovery.parseIni("grpc.port=8554\ngrpc.token=s3cr3t\n"), Paths.get("pid_1.ini"))
+        assertFalse(emu.toString().contains("s3cr3t"))
     }
 
     @Test

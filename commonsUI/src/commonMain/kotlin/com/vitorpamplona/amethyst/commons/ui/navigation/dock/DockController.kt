@@ -29,8 +29,8 @@ import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.SaveableStateHolder
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Offset
@@ -124,6 +124,16 @@ class DockController internal constructor(
     internal lateinit var movables: Map<PanelId, @Composable (DockPanelScope) -> Unit>
 
     private val viewModelStores = mutableMapOf<PanelId, ViewModelStore>()
+
+    /** Each panel's saved UI state (scroll positions, a half-typed message) from where it was last drawn. */
+    private val savedStates = mutableMapOf<PanelId, Map<String, List<Any?>>>()
+
+    /**
+     * The places waiting to draw each panel, oldest first: the oldest draws it, the others wait. A
+     * panel window and the main window are compositions of their own, so the one taking a panel
+     * over waits until the other has let go of it and saved its state.
+     */
+    private val sites = mutableStateMapOf<PanelId, List<Any>>()
 
     fun update(transform: (DockLayout) -> DockLayout) {
         prefs.update { transform(it.ensure(ids)) }
@@ -282,6 +292,39 @@ class DockController internal constructor(
 
     internal fun storeFor(id: PanelId): ViewModelStore = viewModelStores.getOrPut(id) { ViewModelStore() }
 
+    internal fun savedState(id: PanelId): Map<String, List<Any?>>? = savedStates[id]
+
+    internal fun keepState(
+        id: PanelId,
+        state: Map<String, List<Any?>>,
+    ) {
+        savedStates[id] = state
+    }
+
+    /** Whether [site] may draw panel [id]: no other place holds it, or this one has held it longest. */
+    internal fun mayDraw(
+        id: PanelId,
+        site: Any,
+    ): Boolean {
+        val waiting = sites[id] ?: return true
+        return waiting.isEmpty() || waiting.first() === site
+    }
+
+    internal fun claim(
+        id: PanelId,
+        site: Any,
+    ) {
+        val waiting = sites[id].orEmpty()
+        if (waiting.none { it === site }) sites[id] = waiting + site
+    }
+
+    internal fun release(
+        id: PanelId,
+        site: Any,
+    ) {
+        sites[id] = sites[id].orEmpty().filterNot { it === site }
+    }
+
     internal fun clear() {
         viewModelStores.values.forEach { it.clear() }
         viewModelStores.clear()
@@ -301,13 +344,12 @@ fun rememberDockController(
     panels: List<DockPanelSpec>,
     supportsWindows: Boolean,
 ): DockController {
-    val saveable = rememberSaveableStateHolder()
     val controller =
         remember(prefs, panels) {
             DockController(prefs, panels).also { controller ->
                 controller.movables =
                     panels.associate { spec ->
-                        spec.id to movableContentOf { scope: DockPanelScope -> PanelHost(controller, saveable, spec, scope) }
+                        spec.id to movableContentOf { scope: DockPanelScope -> PanelHost(controller, spec, scope) }
                     }
             }
         }
@@ -316,11 +358,32 @@ fun rememberDockController(
     return controller
 }
 
-/** A panel's own ViewModels and saved state around its content, the way a deck column has its own. */
+/**
+ * One place that draws a panel: it draws once it holds the panel ([DockController.mayDraw]) and
+ * shows nothing for the frame or two the place before it takes to let go.
+ */
 @Composable
 private fun PanelHost(
     controller: DockController,
-    saveable: SaveableStateHolder,
+    spec: DockPanelSpec,
+    scope: DockPanelScope,
+) {
+    val site = remember { Any() }
+    DisposableEffect(site) {
+        controller.claim(spec.id, site)
+        onDispose { controller.release(spec.id, site) }
+    }
+    if (controller.mayDraw(spec.id, site)) PanelState(controller, spec, scope)
+}
+
+/**
+ * A panel's own ViewModels and saved state around its content, the way a deck column has its own.
+ * The saved state lives in the dock, not in this composition: it is restored where the panel is
+ * drawn next (another slot, over the screen, a window of its own) and saved when it leaves.
+ */
+@Composable
+private fun PanelState(
+    controller: DockController,
     spec: DockPanelSpec,
     scope: DockPanelScope,
 ) {
@@ -330,11 +393,13 @@ private fun PanelHost(
                 override val viewModelStore: ViewModelStore = controller.storeFor(spec.id)
             }
         }
-    CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-        saveable.SaveableStateProvider(spec.id.kind) {
-            spec.content(scope)
-        }
+    // Kept in memory only, so any value can be saved.
+    val registry = remember(spec.id) { SaveableStateRegistry(controller.savedState(spec.id)) { true } }
+    CompositionLocalProvider(LocalViewModelStoreOwner provides owner, LocalSaveableStateRegistry provides registry) {
+        spec.content(scope)
     }
+    // After the content, so it is let go of first: the content's saved values are still registered.
+    DisposableEffect(registry) { onDispose { controller.keepState(spec.id, registry.performSave()) } }
 }
 
 /**
@@ -349,15 +414,11 @@ fun DockController.PanelContent(scope: DockPanelScope) {
 }
 
 /**
- * Draws panel [scope]'s content in a window of its own. A window is a composition of its own, with
- * its own recomposer, which movable content cannot cross, and it starts while the main window may
- * still hold the panel for a frame: so it builds the content afresh, with saved state of its own,
- * over the panel's own ViewModels, which is where a panel keeps what matters (the assistant's chat,
- * the emulator's stream).
+ * Draws panel [scope]'s content in a window of its own. A window is a composition with its own
+ * recomposer, so the content cannot move there with its live state; but it is the same movable
+ * content object the dock draws, and saved values are keyed by their place under that object: once
+ * the main window has let go of the panel (and saved it), the window builds it afresh and finds
+ * them (a half-typed message, a scroll position), over the panel's own ViewModels.
  */
 @Composable
-fun DockController.DetachedPanelContent(scope: DockPanelScope) {
-    val spec = spec(scope.id) ?: return
-    val saveable = rememberSaveableStateHolder()
-    PanelHost(this, saveable, spec, scope)
-}
+fun DockController.DetachedPanelContent(scope: DockPanelScope) = PanelContent(scope)

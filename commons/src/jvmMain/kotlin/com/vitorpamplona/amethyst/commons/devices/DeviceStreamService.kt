@@ -30,6 +30,7 @@ import com.vitorpamplona.emulator.ImageEncoding
 import com.vitorpamplona.emulator.KeyboardEvent
 import com.vitorpamplona.emulator.RunningEmulator
 import com.vitorpamplona.emulator.SkinRotation
+import com.vitorpamplona.emulator.Touch
 import com.vitorpamplona.emulator.VmRunState
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.io.File
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.minutes
@@ -177,11 +179,14 @@ class DeviceStreamService(
         scope.launch {
             try {
                 val launcher = EmulatorLauncher(binary, sdk?.root)
-                val process = launcher.start(avd, EmulatorLaunchOptions(grpcPort = EmulatorLauncher.freeLocalPort()))
+                // Kept, so a start that fails can say why in the emulator's own words.
+                val log = File(System.getProperty("java.io.tmpdir"), "amethyst-emulator-$avd.log")
+                if (!log.delete() && log.exists()) Log.w(TAG) { "Could not clear $log" }
+                val process = launcher.start(avd, EmulatorLaunchOptions(grpcPort = EmulatorLauncher.freeLocalPort(), logFile = log))
                 val running = EmulatorLauncher.awaitRunning(process.toHandle(), avd, discovery, timeout = 5.minutes)
                 if (running == null) {
-                    val message = if (process.isAlive) "it did not come up in time" else "it exited with code ${process.exitValue()}"
-                    _startErrors.update { it + (avd to message) }
+                    val reason = lastError(log) ?: if (process.isAlive) "it did not come up in time" else "it exited with code ${process.exitValue()}"
+                    _startErrors.update { it + (avd to reason) }
                 }
                 refresh()
             } catch (e: IOException) {
@@ -192,6 +197,23 @@ class DeviceStreamService(
             }
         }
     }
+
+    /**
+     * The emulator's last error line in [log] (`ERROR | Software CPU emulation (-accel off) is not
+     * supported...`, as emulator 37 prints it on a machine without virtualization), without its tag.
+     */
+    private fun lastError(log: File): String? =
+        try {
+            log
+                .takeIf { it.exists() }
+                ?.readLines()
+                ?.lastOrNull { it.startsWith("ERROR") || it.startsWith("FATAL") }
+                ?.substringAfter('|')
+                ?.trim()
+                ?.ifEmpty { null }
+        } catch (e: IOException) {
+            null
+        }
 
     /** Shuts [emulator] down, as its power menu would, or ends its process when it doesn't answer. */
     fun stop(emulator: RunningEmulator) {
@@ -328,11 +350,29 @@ class DeviceSession internal constructor(
         pressed: Boolean,
     ) = send { controller.sendMouse(x, y, if (pressed) 1 else 0) }
 
-    /** Scrolls by [dx], [dy] wheel notches. */
-    fun wheel(
-        dx: Int,
-        dy: Int,
-    ) = send { controller.sendWheel(dx, dy) }
+    /**
+     * A finger drawn from [from] to [to] (device pixels, upright), the way the panel scrolls: the
+     * emulator's wheel is not taken everywhere (an API 21 image ignored it without an error; an
+     * emulator started with JWT access refuses it), and a touch is.
+     */
+    fun swipe(
+        from: Pair<Int, Int>,
+        to: Pair<Int, Int>,
+    ) {
+        scope.launch {
+            try {
+                controller.sendTouch(listOf(Touch(from.first, from.second, pressure = SWIPE_PRESSURE)))
+                for (step in 1..SWIPE_STEPS) {
+                    val x = from.first + (to.first - from.first) * step / SWIPE_STEPS
+                    val y = from.second + (to.second - from.second) * step / SWIPE_STEPS
+                    controller.sendTouch(listOf(Touch(x, y, pressure = SWIPE_PRESSURE)))
+                }
+                controller.sendTouch(listOf(Touch(to.first, to.second, pressure = 0)))
+            } catch (e: IOException) {
+                Log.w("DeviceSession", "Scrolling ${emulator.name} failed", e)
+            }
+        }
+    }
 
     /** Presses and releases a W3C key name (`GoBack`, `GoHome`, `AppSwitch`, `Enter`...). */
     fun key(name: String) = send { controller.pressKey(name) }
@@ -368,10 +408,14 @@ class DeviceSession internal constructor(
     internal fun close() {
         job?.cancel()
         job = null
+        // A JWT emulator's key directory gets this client's key back out.
+        controller.close()
     }
 
     private companion object {
         const val RESIZE_SETTLE_MS = 200L
         const val RETRY_MS = 2_000L
+        const val SWIPE_STEPS = 6
+        const val SWIPE_PRESSURE = 50
     }
 }

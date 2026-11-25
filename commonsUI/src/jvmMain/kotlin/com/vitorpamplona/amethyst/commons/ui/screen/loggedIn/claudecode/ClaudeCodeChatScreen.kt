@@ -81,6 +81,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -348,7 +349,11 @@ fun ClaudeCodeChatScreen(
         }
     }
 
-    val composerText = rememberTextFieldState()
+    // Starts from what was typed and not sent wherever this chat was drawn before, and keeps it there.
+    val composerText = rememberTextFieldState(viewModel.unsent)
+    LaunchedEffect(composerText) {
+        snapshotFlow { composerText.text.toString() }.collect { viewModel.unsent = it }
+    }
     val attachments = remember { ComposerAttachments() }
     var dropHover by remember { mutableStateOf(false) }
     val dropTarget = rememberImageDropTarget(attachments) { dropHover = it }

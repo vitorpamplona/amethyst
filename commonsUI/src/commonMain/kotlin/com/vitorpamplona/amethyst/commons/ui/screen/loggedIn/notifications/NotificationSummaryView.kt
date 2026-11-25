@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.chartStyle
 
 @Composable
 fun SummaryBar(state: NotificationSummaryState) {
-    var showChart by remember { mutableStateOf(false) }
+    // Saved, so the chart stays open when the panel is folded and shown again, or popped out.
+    var showChart by rememberSaveable { mutableStateOf(false) }
 
     // Opaque background: DisappearingScaffold layers feed content under the topBar
     // on scroll, and SummaryBar otherwise has no container of its own.
