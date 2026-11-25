@@ -100,6 +100,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
@@ -413,6 +414,8 @@ private fun SessionsPane(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(row)
+                    // The dock's device panel stops following the chat that is gone.
+                    DeviceChatFocus.forget(row.key)
                     deleting = null
                 }) { Text(stringRes(Res.string.claude_code_delete)) }
             },

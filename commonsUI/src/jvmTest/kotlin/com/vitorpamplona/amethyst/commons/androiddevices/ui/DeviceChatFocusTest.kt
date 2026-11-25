@@ -43,7 +43,10 @@ class DeviceChatFocusTest {
         val leaveB2 = DeviceChatFocus.publish(b)
         leaveA()
         assertSame(b, DeviceChatFocus.current)
+        // The last chat leaving (a tab switch) keeps the panel on it: its device stays connected.
         leaveB2()
+        assertSame(b, DeviceChatFocus.current)
+        DeviceChatFocus.forget("b")
         assertNull(DeviceChatFocus.current)
     }
 }

@@ -42,9 +42,11 @@ class ChatFocus(
 
 /**
  * Which coding chat the dock's device panel follows: the one a chat screen published last
- * ([publish]) among those still shown. Several can be (a deck column, a pinned chat, another
- * window): when the latest leaves, the one before it is followed again. With none, the panel is the
- * Android devices screen's (any device, AVDs started as themselves).
+ * ([publish]). Several can be shown (a deck column, a pinned chat, another window): when the latest
+ * leaves, the one before it is followed again. When the last one leaves (a tab switch to the
+ * feed), the panel keeps following it, so its device stays connected and live until another chat
+ * comes to the front or [forget] drops it. With none yet, the panel is the Android devices screen's
+ * (any device, AVDs started as themselves).
  */
 object DeviceChatFocus {
     private val shown = mutableListOf<ChatFocus>()
@@ -62,8 +64,17 @@ object DeviceChatFocus {
         return {
             synchronized(shown) {
                 shown.remove(focus)
-                current = shown.lastOrNull()
+                // The panel stays on the chat that left unless another is still shown.
+                shown.lastOrNull()?.let { current = it }
             }
+        }
+    }
+
+    /** The chat [chatKey] is gone (deleted): the panel stops following it. */
+    fun forget(chatKey: String) {
+        synchronized(shown) {
+            shown.removeAll { it.chatKey == chatKey }
+            if (current?.chatKey == chatKey) current = shown.lastOrNull()
         }
     }
 }

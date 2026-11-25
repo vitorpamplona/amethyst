@@ -97,12 +97,11 @@ import com.vitorpamplona.androiddevice.emulator.PixelFormat
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -112,6 +111,7 @@ import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import org.jetbrains.skia.Image as SkiaImage
 
@@ -146,7 +146,6 @@ private fun ScreenFrame.toBitmap(): ImageBitmap =
  * (press, drag, release; the wheel scrolls), and once clicked, typing goes to the device. Where an
  * agent touches flashes on top ([activity]), so the user sees what it does.
  */
-@OptIn(FlowPreview::class)
 @Composable
 fun LiveDeviceScreen(
     connection: DeviceConnection,
@@ -155,7 +154,9 @@ fun LiveDeviceScreen(
     modifier: Modifier = Modifier,
 ) {
     var screen by remember(connection) { mutableStateOf<DeviceScreen?>(null) }
-    var drawn by remember(connection) { mutableStateOf<DrawnFrame?>(null) }
+    // The device's last frame, drawn at once when the screen comes back (a tab switch, the panel
+    // reopened) while the stream starts again, instead of a spinner.
+    var drawn by remember(connection) { mutableStateOf(lastFrames[connection.serial]) }
     var failure by remember(connection) { mutableStateOf<String?>(null) }
     var attempt by remember(connection) { mutableStateOf(0) }
     val viewSize = remember(connection) { mutableStateOf(IntSize.Zero) }
@@ -174,10 +175,13 @@ fun LiveDeviceScreen(
     // A new stream when the view settles at a new size: the emulator scales the frames to it.
     val requested = remember(connection) { mutableStateOf(IntSize.Zero) }
     LaunchedEffect(connection) {
+        // The first size starts the stream at once; a resize waits for the view to settle.
         snapshotFlow { viewSize.value }
             .filter { it.width > 0 && it.height > 0 }
-            .debounce(RESIZE_DEBOUNCE_MS)
-            .collect { requested.value = it }
+            .collectLatest { size ->
+                if (requested.value != IntSize.Zero) delay(RESIZE_DEBOUNCE_MS)
+                requested.value = size
+            }
     }
 
     val current = screen
@@ -192,6 +196,7 @@ fun LiveDeviceScreen(
                 .flowOn(Dispatchers.Default)
                 .collect {
                     drawn = it
+                    lastFrames[connection.serial] = it
                     failure = null
                 }
         } catch (e: CancellationException) {
@@ -446,6 +451,9 @@ private fun keyOf(key: Key): DeviceKey? =
     }
 
 private const val RESIZE_DEBOUNCE_MS = 250L
+
+/** Each device's latest frame, by serial: one picture per device, shown while a new stream starts. */
+private val lastFrames = ConcurrentHashMap<String, DrawnFrame>()
 private const val TOUCH_FADE_MS = 1_400
 private const val FINGER_FADE_MS = 250
 private const val WHEEL_STEP = 0.12f
