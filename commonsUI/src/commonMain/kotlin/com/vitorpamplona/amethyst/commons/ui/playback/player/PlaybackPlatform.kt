@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntRect
@@ -233,6 +234,19 @@ interface ExternalPlayback {
 
     @Composable
     fun Content()
+
+    /**
+     * The platform draws the top-bar button itself ([NativeButton]) instead of [symbol] and
+     * [onClick]: Apple's AirPlay picker opens only from its own button. The overflow menu still
+     * calls [onClick].
+     */
+    val hasNativeButton: Boolean get() = false
+
+    @Composable
+    fun NativeButton(
+        tint: Color,
+        modifier: Modifier,
+    ) {}
 }
 
 /**

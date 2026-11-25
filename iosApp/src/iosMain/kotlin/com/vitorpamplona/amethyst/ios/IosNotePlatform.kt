@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,23 +36,39 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ImageViewerDialog
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWaveformPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewerDialog
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.ZoomableVideoContent
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as SharedEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.MusicTrackAudioPlayer as SharedMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.NoteMediaView as SharedNoteMediaView
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.PodcastEpisodeAudioPlayer as SharedPodcastEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWithWaveform as SharedRenderAudioWithWaveform
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as SharedVideoView
 
 /**
- * iOS's note media, until playback and link cards arrive (B4, B5): images draw inline through Coil
- * and open the shared [ImageViewerDialog], and every other piece (videos, PDFs, link previews) is a link the user can
- * open, never an empty slot. Everything else keeps [NotePlatform]'s empty defaults.
+ * iOS's note media: images draw inline through Coil and open the shared [ImageViewerDialog]; videos
+ * and audio run the shared player UI (`commons.ui.playback`) on AVPlayer through
+ * [IosPlaybackPlatform]. PDFs and link previews are still links the user can open (B7).
  */
 object IosNotePlatform : NotePlatform {
     override val maxInlineMediaHeight: Dp get() = MAX_INLINE_MEDIA_HEIGHT
@@ -85,10 +102,157 @@ object IosNotePlatform : NotePlatform {
             if (showViewer) {
                 ImageViewerDialog(content, images, source, cornerRadius) { showViewer = false }
             }
+        } else if (content is MediaUrlVideo) {
+            var showViewer by remember { mutableStateOf(false) }
+            ZoomableVideoContent(
+                content = content,
+                roundedCorner = roundedCorner,
+                contentScale = contentScale,
+                boundsTrackingModifier = Modifier,
+                onDialog = { showViewer = true },
+                accountViewModel = accountViewModel,
+            )
+            if (showViewer) {
+                VideoViewerDialog(content, accountViewModel) { showViewer = false }
+            }
         } else {
             ClickableUrl(url)
         }
     }
+
+    @Composable
+    override fun VideoView(
+        videoUri: String,
+        mimeType: String?,
+        title: String?,
+        artworkUri: String?,
+        authorName: String?,
+        roundedCorner: Boolean,
+        contentScale: ContentScale,
+        nostrUriCallback: String?,
+        isLiveStream: Boolean,
+        accountViewModel: AccountViewModel,
+    ) = SharedVideoView(
+        videoUri = videoUri,
+        mimeType = mimeType,
+        title = title,
+        artworkUri = artworkUri,
+        authorName = authorName,
+        roundedCorner = roundedCorner,
+        contentScale = contentScale,
+        nostrUriCallback = nostrUriCallback,
+        isLiveStream = isLiveStream,
+        accountViewModel = accountViewModel,
+    )
+
+    @Composable
+    override fun FullscreenVideoView(
+        videoUri: String,
+        mimeType: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        controllerVisible: MutableState<Boolean>,
+        accountViewModel: AccountViewModel,
+    ) = VideoViewInner(
+        videoUri = videoUri,
+        mimeType = mimeType,
+        contentScale = contentScale,
+        borderModifier = modifier,
+        automaticallyStartPlayback = true,
+        controllerVisible = controllerVisible,
+        isFullscreen = true,
+        accountViewModel = accountViewModel,
+    )
+
+    @Composable
+    override fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
+        contentScale: ContentScale,
+        note: Note,
+        accountViewModel: AccountViewModel,
+    ) = SharedNoteMediaView(
+        mediaUri = mediaUri,
+        title = title,
+        coverUri = coverUri,
+        waveform = waveform,
+        contentScale = contentScale,
+        note = note,
+        accountViewModel = accountViewModel,
+    )
+
+    @Composable
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        note: Note,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = SharedMusicTrackAudioPlayer(audioUrl, mimeType, title, note, borderModifier, accountViewModel)
+
+    @Composable
+    override fun PodcastEpisodeAudioPlayer(
+        audio: PodcastAudio,
+        note: Note,
+        title: String?,
+        image: String?,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = SharedPodcastEpisodeAudioPlayer(audio, note, title, image, borderModifier, accountViewModel)
+
+    @Composable
+    override fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
+        note: Note,
+        startAtSeconds: Long?,
+        speed: Float,
+        control: EpisodeControl,
+        onPlayhead: (EpisodePlayhead) -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = SharedEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, speed, control, onPlayhead, accountViewModel)
+
+    @Composable
+    override fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
+        accountViewModel: AccountViewModel,
+    ) = RenderAudioWaveformPlayer(
+        mediaUrl = mediaUrl,
+        title = title,
+        mimeType = mimeType,
+        waveform = waveform,
+        authorName = null,
+        callbackUri = null,
+        accountViewModel = accountViewModel,
+    )
+
+    @Composable
+    override fun RenderAudioWithWaveform(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
+        note: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderAudioWithWaveform(
+        mediaUrl = mediaUrl,
+        title = title,
+        mimeType = mimeType,
+        waveform = waveform,
+        note = note,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 
     @Composable
     override fun ZoomableImageDialog(

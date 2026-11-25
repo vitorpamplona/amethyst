@@ -44,59 +44,66 @@ import platform.darwin.NSObject
 object PictureInPicture {
     val isSupported: Boolean get() = AVPictureInPictureController.isPictureInPictureSupported()
 
+    // The view on screen for each player: picture in picture grows out of its layer.
+    private val views = mutableMapOf<AvAmethystPlayer, AvPlayerView>()
     private var controller: AVPictureInPictureController? = null
-    private var controllerView: AvPlayerView? = null
     private val delegate = Delegate()
 
     /** The player in the floating window, if any. */
     var activePlayer: AvAmethystPlayer? = null
         private set
 
-    /**
-     * Gets [view] ready, so the system can also float it on its own when the app leaves the screen
-     * while it plays with sound ([autoStart]).
-     */
-    fun attach(
+    /** Called by the surface while it shows [player]. */
+    fun register(
+        player: AvAmethystPlayer,
         view: AvPlayerView,
-        autoStart: Boolean,
     ) {
-        if (!isSupported) return
-        if (controllerView != view) {
-            controller = AVPictureInPictureController(playerLayer = view.playerLayer).also { it.delegate = delegate }
-            controllerView = view
-        }
-        controller?.canStartPictureInPictureAutomaticallyFromInline = autoStart
+        views[player] = view
     }
 
-    fun detach(view: AvPlayerView) {
-        if (controllerView == view && controller?.pictureInPictureActive != true) {
-            controller = null
-            controllerView = null
-        }
+    fun unregister(
+        player: AvAmethystPlayer,
+        view: AvPlayerView,
+    ) {
+        if (views[player] == view) views.remove(player)
     }
 
-    fun start(player: AvAmethystPlayer) {
-        val current = controller ?: return
+    /** Floats [player] if it is on screen now; false when there is no view to grow out of. */
+    fun start(player: AvAmethystPlayer): Boolean {
+        if (!isSupported) return false
+        val view = views[player] ?: return false
         // The floating window needs the playback session, even for a muted video.
         AudioSessionMode.playback()
+        val created = AVPictureInPictureController(playerLayer = view.playerLayer)
+        created.delegate = delegate
+        controller = created
         activePlayer = player
         if (!player.isPlaying) player.play()
-        current.startPictureInPicture()
+        created.startPictureInPicture()
+        return true
     }
+
+    private fun stopped() {
+        val player = activePlayer
+        activePlayer = null
+        controller = null
+        player?.let { onStopped?.invoke(it) }
+    }
+
+    /** Told which player's floating window closed (the platform drops it as the background media). */
+    var onStopped: ((AvAmethystPlayer) -> Unit)? = null
 
     private class Delegate :
         NSObject(),
         AVPictureInPictureControllerDelegateProtocol {
-        override fun pictureInPictureControllerDidStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
-            activePlayer = null
-        }
+        override fun pictureInPictureControllerDidStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) = stopped()
 
         override fun pictureInPictureController(
             pictureInPictureController: AVPictureInPictureController,
             failedToStartPictureInPictureWithError: platform.Foundation.NSError,
         ) {
             Log.w("PictureInPicture") { "Could not start: ${failedToStartPictureInPictureWithError.localizedDescription}" }
-            activePlayer = null
+            stopped()
         }
     }
 }

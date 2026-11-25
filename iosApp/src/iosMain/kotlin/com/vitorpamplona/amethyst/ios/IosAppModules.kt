@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.service.upload.KtorBlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
+import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -86,6 +88,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.engine.darwin.DarwinHttpRequestException
 import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsBytes
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +107,7 @@ import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUserDomainMask
 import platform.posix.EPROTO
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The iOS service graph: the same shared classes Android's `AppModules` and the desktop's
@@ -171,6 +177,24 @@ class IosAppModules(
             blossom = KtorBlossomClient { httpClient },
             tempDir = (NSTemporaryDirectory().toPath() / "uploads"),
         )
+    }
+
+    /** A file's bytes over [httpClient], or null when it can't be fetched: captions, saved videos, covers. */
+    suspend fun downloadBytes(url: String): ByteArray? =
+        try {
+            val response = httpClient.get(url)
+            if (response.status.isSuccess()) response.bodyAsBytes() else null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("IosAppModules", "Download of $url failed", e)
+            null
+        }
+
+    /** The shared player's iOS half. */
+    val playbackPlatform by lazy {
+        NowPlaying.artworkLoader = ::downloadBytes
+        IosPlaybackPlatform(download = ::downloadBytes)
     }
 
     val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }

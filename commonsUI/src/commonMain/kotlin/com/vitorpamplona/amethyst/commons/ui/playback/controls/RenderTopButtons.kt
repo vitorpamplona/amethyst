@@ -414,12 +414,17 @@ fun RenderTopButtons(
                 }
 
                 VideoPlayerAction.Cast -> {
-                    AnimatedTopBarIconButton(
-                        controllerVisible = controllerVisible,
-                        symbol = castIcon,
-                        contentDescription = castContentDescription,
-                        onClick = onCastButtonClick,
-                    )
+                    val native = externalPlayback?.takeIf { it.hasNativeButton }
+                    if (native != null) {
+                        AnimatedTopBarNativeButton(controllerVisible) { native.NativeButton(MaterialTheme.colorScheme.onBackground, it) }
+                    } else {
+                        AnimatedTopBarIconButton(
+                            controllerVisible = controllerVisible,
+                            symbol = castIcon,
+                            contentDescription = castContentDescription,
+                            onClick = onCastButtonClick,
+                        )
+                    }
                 }
 
                 VideoPlayerAction.Captions -> {
@@ -481,6 +486,29 @@ fun RenderTopButtons(
                     ),
                 accountViewModel = accountViewModel,
             )
+        }
+    }
+}
+
+/** A top-bar slot drawn by the platform itself (Apple's AirPlay button), on the same backdrop. */
+@Composable
+internal fun AnimatedTopBarNativeButton(
+    controllerVisible: State<Boolean>,
+    button: @Composable (Modifier) -> Unit,
+) {
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        Box(modifier = PinBottomIconSize, contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.7f)
+                    .background(MaterialTheme.colorScheme.background),
+            )
+            button(Modifier.fillMaxSize(0.6f))
         }
     }
 }

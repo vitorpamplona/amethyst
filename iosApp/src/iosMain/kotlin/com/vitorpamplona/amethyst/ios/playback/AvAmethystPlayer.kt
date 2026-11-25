@@ -132,6 +132,7 @@ class AvAmethystPlayer(
     private var lastTrackSignature = ""
     private var lastCues: List<String> = emptyList()
     private var lastPosition = 0L
+    private var lastDuration = AmethystPlayer.TIME_UNSET
 
     init {
         avPlayer.automaticallyWaitsToMinimizeStalling = true
@@ -212,7 +213,17 @@ class AvAmethystPlayer(
 
     override var repeatOne: Boolean = false
 
+    /**
+     * How many full plays [repeatOne] loops before pausing on the first frame, as Android's
+     * `AutoReplayLimiter` does for feed videos: a video left looping keeps the decoder, network and
+     * screen busy after the user stopped watching. Any resume grants a fresh allowance.
+     */
+    var maxAutoPlays: Int = 5
+    private var playsCompleted = 0
+
     override fun play() {
+        playsCompleted = 0
+        if (!wantsToPlay) listeners.toList().forEach { it.onPlayWhenReadyChanged(true) }
         wantsToPlay = true
         if (ended) {
             ended = false
@@ -223,6 +234,7 @@ class AvAmethystPlayer(
     }
 
     override fun pause() {
+        if (wantsToPlay) listeners.toList().forEach { it.onPlayWhenReadyChanged(false) }
         wantsToPlay = false
         avPlayer.pause()
         tick()
@@ -265,6 +277,16 @@ class AvAmethystPlayer(
 
     // Tracks
 
+    private fun trackTypes(): List<String> {
+        val current = item ?: return emptyList()
+        if (current.status != AVPlayerItemStatusReadyToPlay) return emptyList()
+        return current.tracks.mapNotNull { (it as? AVPlayerItemTrack)?.assetTrack?.mediaType }
+    }
+
+    override val hasVideoTrack: Boolean get() = AVMediaTypeVideo in trackTypes()
+
+    override val hasAudioTrack: Boolean get() = AVMediaTypeAudio in trackTypes()
+
     override val isAudioOnly: Boolean
         get() {
             val current = item ?: return false
@@ -276,7 +298,14 @@ class AvAmethystPlayer(
     private var pinnedVideo: VideoTrack? = null
 
     override val videoTracks: List<VideoTrack>
-        get() = HlsVariants.of(item?.asset as? AVURLAsset, pinnedVideo)
+        get() {
+            val variants = HlsVariants.of(item?.asset as? AVURLAsset, pinnedVideo)
+            if (variants.isNotEmpty()) return variants
+            // A plain file: its one picture, as media3 reports the single track of its video group.
+            val size = videoSize
+            if (size == VideoSize.UNKNOWN) return emptyList()
+            return listOf(VideoTrack(id = "main", width = size.width, height = size.height, bitrate = 0, selected = true))
+        }
 
     override val hasVideoTrackOverride: Boolean get() = pinnedVideo != null
 
@@ -343,6 +372,24 @@ class AvAmethystPlayer(
         listeners.toList().forEach { it.onTracksChanged() }
     }
 
+    private var captionsOn = true
+
+    override var captionsEnabled: Boolean
+        get() = captionsOn
+        set(value) {
+            if (captionsOn == value) return
+            captionsOn = value
+            if (!value) {
+                legibleGroup()?.let { item?.selectMediaOption(null, inMediaSelectionGroup = it) }
+            } else {
+                textSelection?.let { selectTextTrack(it) }
+            }
+            tick()
+            listeners.toList().forEach { it.onTracksChanged() }
+        }
+
+    override val cues: List<String> get() = lastCues
+
     /** Captions published beside the video (NIP-71 `text-track`), drawn by the shared UI from [AmethystPlayer.Listener.onCues]. */
     fun setSideLoadedCaptions(captions: SideLoadedCaptions?) {
         sideLoaded = captions
@@ -384,8 +431,16 @@ class AvAmethystPlayer(
         notificationTokens +=
             center.addObserverForName(AVPlayerItemDidPlayToEndTimeNotification, observed, NSOperationQueue.mainQueue) { _: NSNotification? ->
                 if (repeatOne) {
+                    playsCompleted++
                     avPlayer.seekToTime(kCMTimeZero.readValue())
-                    avPlayer.playImmediatelyAtRate(speed)
+                    if (playsCompleted >= maxAutoPlays) {
+                        // Left on the first frame with the play button showing.
+                        wantsToPlay = false
+                        avPlayer.pause()
+                        listeners.toList().forEach { it.onPlayWhenReadyChanged(false) }
+                    } else {
+                        avPlayer.playImmediatelyAtRate(speed)
+                    }
                     listeners.toList().forEach { it.onPositionDiscontinuity() }
                 } else {
                     ended = true
@@ -449,9 +504,14 @@ class AvAmethystPlayer(
                 snapshot.forEach { it.onTracksChanged() }
             }
         }
+        val knownDuration = duration
+        if (knownDuration != lastDuration) {
+            lastDuration = knownDuration
+            snapshot.forEach { it.onTimelineChanged() }
+        }
         val position = currentPosition
         sideLoaded?.let { captions ->
-            val cues = captions.cuesAt(position)
+            val cues = if (captionsOn) captions.cuesAt(position) else emptyList()
             if (cues != lastCues) {
                 lastCues = cues
                 snapshot.forEach { it.onCues(cues) }

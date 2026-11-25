@@ -106,6 +106,9 @@ object IosPlayerPool {
         trimWarm()
     }
 
+    /** The player of [url], if one is alive. */
+    fun find(url: String): AvAmethystPlayer? = entries[url]?.player
+
     fun metadataOf(player: AvAmethystPlayer?): NowPlayingMetadata? = player?.let { entries[it.url]?.metadata }
 
     /** Pauses everything except what the user is listening to (it may go on in the background). */

@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.playback.player.LocalPlaybackPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
@@ -67,9 +68,9 @@ fun MainViewController(): UIViewController {
             CompositionLocalProvider(
                 LocalViewModelStoreOwner provides viewModels,
                 LocalAppServices provides services,
-                // Platform pieces (pickers, sharing, playback) arrive with B4, B5 and B7.
                 LocalAppPlatform provides IosAppPlatform,
                 LocalNotePlatform provides IosNotePlatform,
+                LocalPlaybackPlatform provides modules.playbackPlatform,
                 LocalRichTextPlatform provides IosRichTextPlatform,
             ) {
                 AmethystApp(modules.sessionManager, root)
