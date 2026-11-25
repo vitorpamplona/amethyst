@@ -26,7 +26,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -53,7 +52,8 @@ class PageDownloadsTest {
     private var realHome: String? = null
 
     // The pages' own background work (moves, deletes): stopped before [tmp] goes.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(job + Dispatchers.IO)
 
     // The handler never looks at the browser.
     private val browser = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(CefBrowser::class.java)) { _, _, _ -> null } as CefBrowser
@@ -69,7 +69,7 @@ class PageDownloadsTest {
         System.setProperty("user.home", realHome!!)
         // A delete still walking [tmp] when this one does trips kotlin.io's assertion (tests run
         // with -ea), and the exception lands on whichever coroutine test runs next.
-        runBlocking { withTimeoutOrNull(5_000) { scope.coroutineContext.job.cancelAndJoin() } }
+        runBlocking { withTimeoutOrNull(5_000) { job.cancelAndJoin() } }
         tmp.deleteRecursively()
     }
 

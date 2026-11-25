@@ -224,7 +224,7 @@ class MediaSizeProbeTest {
                 exchange.responseBody.write(ByteArray(length))
             }
             val probe = launch(Dispatchers.IO) { clients.probeMediaTracks(url("feed.mp4"), "video/mp4") }
-            // Running, as the test means it: resolve's short start grace is not what this checks.
+            // In flight before resolve asks, so resolve waits for it rather than for its short start grace.
             withTimeout(5_000) { MediaTrackProbeCache.inFlight.first { url("feed.mp4") in it } }
             assertEquals(12_400_000L, clients.resolveMediaSize(url("feed.mp4"), "video/mp4", MediaSizeRole.VIDEO))
             probe.join()

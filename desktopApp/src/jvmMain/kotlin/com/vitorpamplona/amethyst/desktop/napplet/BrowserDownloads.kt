@@ -93,7 +93,7 @@ data class BrowserDownload(
  */
 class PageDownloads(
     holding: File,
-    // Runs the moves and deletes. A test hands in its own, to stop them before deleting its folder.
+    // Runs the moves and deletes; its owner can cancel and join them.
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) : CefDownloadHandler {
     // This page's own folder in [holding]: Chromium's download ids are per jar, not per app.

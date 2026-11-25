@@ -441,7 +441,7 @@ class TrustNetworkSchedulingTest {
             wot.syncIfStale()
             withTimeout(5_000) { while ("update" !in source.calls) delay(10) }
             // The ids come after the REQ, on the sync's own scope: wait for the whole run.
-            withTimeout(5_000) { wot.awaitIdle() }
+            wot.awaitIdle()
             assertEquals(listOf("update", "ids"), source.calls.toList())
         }
 
