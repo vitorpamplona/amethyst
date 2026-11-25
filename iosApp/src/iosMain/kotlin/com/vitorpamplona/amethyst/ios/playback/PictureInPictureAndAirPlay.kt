@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ios.playback
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.vitorpamplona.quartz.utils.Log
@@ -109,7 +111,7 @@ object PictureInPicture {
 }
 
 /** AirPlay: Apple's route picker, which lists the speakers and TVs the player can go to. */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun AirPlayButton(
     tint: Color,
@@ -133,6 +135,8 @@ fun AirPlayButton(
                     alpha = ((argb ushr 24) and 0xFF) / 255.0,
                 )
         },
-        properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true),
+        // Over Compose rather than through a hole in it: a hole shows the window behind it (white),
+        // not the video under this see-through button.
+        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true, placedAsOverlay = true),
     )
 }

@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ios.playback
 
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.ui.playback.player.AmethystPlayer
 import com.vitorpamplona.amethyst.commons.ui.playback.player.PlaybackState
+import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSize
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.AVFAudio.AVAudioSession
@@ -92,6 +94,13 @@ object IosPlayerPool {
                 override fun onPlaybackStateChanged(state: PlaybackState) = NowPlaying.update(audible, metadataOf(audible))
 
                 override fun onPositionDiscontinuity() = NowPlaying.update(audible, metadataOf(audible))
+
+                // What the player measured replaces the event's `dim` for the card's shape, as
+                // Android's AspectRatioCacher does: `dim` can ignore rotation or be the stored size
+                // of an anamorphic video. presentationSize is already the displayed shape.
+                override fun onVideoSizeChanged(size: VideoSize) {
+                    if (size.width > 0 && size.height > 0) MediaAspectRatioCache.addMeasured(url, size.width, size.height)
+                }
             }
         player.addListener(watcher)
         entries[url] = Entry(player, 1, metadata, watcher)
