@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ios
 
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.commons.account.AccountStoreFactory
+import com.vitorpamplona.amethyst.commons.account.EncryptedFileAccountStores
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
@@ -276,8 +276,7 @@ class IosAppModules(
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = { pubKey -> sessionStore.geohashIdentityStore(pubKey) },
             rootFilesDir = { filesPath },
-            // Marmot groups work but last until the app closes, until the stores move to okio (A3).
-            accountStores = AccountStoreFactory.InMemory(devicePlatform = "iOS"),
+            accountStores = EncryptedFileAccountStores,
             powQueue = { powPublishQueue },
             meterSigner = { it },
             signerPermissionStore = signerPermissionStore,
