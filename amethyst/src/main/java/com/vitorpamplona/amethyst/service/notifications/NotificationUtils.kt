@@ -526,7 +526,7 @@ object NotificationUtils {
             null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, id, it)) }
         }
 
-        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id))
+        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id, forAccount?.npub))
 
         notify(notId, builder.build())
         sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
@@ -666,12 +666,15 @@ object NotificationUtils {
         applicationContext: Context,
         notId: Int,
         eventId: String,
+        accountNpub: String?,
     ): NotificationCompat.Action {
         val markReadIntent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = MARK_READ_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
                 putExtra(KEY_EVENT_ID, eventId)
+                // So the receiver can mark the chat read in the app too, not only clear the shade.
+                accountNpub?.let { putExtra(KEY_ACCOUNT_NPUB, it) }
             }
         val markReadPendingIntent =
             PendingIntent.getBroadcast(
