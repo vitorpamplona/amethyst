@@ -28,9 +28,11 @@ import com.vitorpamplona.amethyst.commons.audio.probeMediaTracks
 import com.vitorpamplona.amethyst.commons.service.http.SingleRoleBasedHttpClientBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.util.Collections
@@ -222,6 +224,8 @@ class MediaSizeProbeTest {
                 exchange.responseBody.write(ByteArray(length))
             }
             val probe = launch(Dispatchers.IO) { clients.probeMediaTracks(url("feed.mp4"), "video/mp4") }
+            // Running, as the test means it: resolve's short start grace is not what this checks.
+            withTimeout(5_000) { MediaTrackProbeCache.inFlight.first { url("feed.mp4") in it } }
             assertEquals(12_400_000L, clients.resolveMediaSize(url("feed.mp4"), "video/mp4", MediaSizeRole.VIDEO))
             probe.join()
             assertTrue(requests.none { it.startsWith("HEAD") })
