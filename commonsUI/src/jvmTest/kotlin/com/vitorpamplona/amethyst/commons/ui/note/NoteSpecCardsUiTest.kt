@@ -216,7 +216,8 @@ class NoteSpecCardsUiTest {
     // ---------------------------------------------------------------------------------------------
 
     // Zapstr's track: `subject` (title), `c` (type), `cover`, and `p` participants with a role
-    // (NIP-53 order here: a relay hint, then the role). Without a file to play it is still a track: its header, not the unknown-kind card.
+    // (NIP-53 order here: a relay hint, then the role). Without a file to play it is still a track:
+    // its header, not the unknown-kind card.
     @Test
     fun audioTrackWithoutFileShowsItsHeader() {
         show(
