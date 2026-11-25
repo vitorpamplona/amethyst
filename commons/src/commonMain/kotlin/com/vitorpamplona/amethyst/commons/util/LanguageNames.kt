@@ -31,3 +31,9 @@ expect fun availableLanguages(): List<LanguageOption>
 
 /** The name of the language [tag] (a BCP-47 tag such as `pt` or `pt-BR`) in the user's language. */
 expect fun languageDisplayName(tag: String): String
+
+/**
+ * The name of [tag]'s language alone, without its region or script (`en-US` reads "English", not
+ * "English (United States)"), in the user's language; empty when the platform can't name it.
+ */
+expect fun languageNameOnly(tag: String): String

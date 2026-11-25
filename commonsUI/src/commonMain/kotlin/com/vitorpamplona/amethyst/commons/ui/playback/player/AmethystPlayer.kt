@@ -66,6 +66,17 @@ interface AmethystPlayer {
     /** Loops the item forever when true. */
     var repeatOne: Boolean
 
+    /**
+     * Something outside the app holds playback back although [playWhenReady] is set: media3's
+     * `playbackSuppressionReason` other than none (or scrubbing), e.g. a transient loss of audio
+     * focus to a phone call. The play/pause button then offers play, as media3's own does.
+     * Changes are announced through [Listener.onPlaybackSuppressionChanged].
+     */
+    val isPlaybackSuppressed: Boolean get() = false
+
+    /** Whether [playbackSpeed] can be changed (media3's `COMMAND_SET_SPEED_AND_PITCH`). */
+    val canSetPlaybackSpeed: Boolean get() = true
+
     fun play()
 
     fun pause()
@@ -83,7 +94,20 @@ interface AmethystPlayer {
     /** The item carries sound and no picture. */
     val isAudioOnly: Boolean
 
-    /** The renditions of the picture (HLS variants); empty when there is only one. */
+    /**
+     * The tracks list a picture. False until the player has read the tracks, so, with
+     * [hasAudioTrack], it tells "audio only" apart from "not known yet".
+     */
+    val hasVideoTrack: Boolean
+
+    /** The tracks list sound. False until the player has read the tracks. */
+    val hasAudioTrack: Boolean
+
+    /**
+     * The renditions of the picture (HLS variants): every track of the first video group, so one
+     * entry for a plain file and none for audio or before the tracks are known. Check
+     * [VideoTrack.supported] before offering one.
+     */
     val videoTracks: List<VideoTrack>
 
     /** Whether the user pinned a rendition instead of letting the player pick. */
@@ -93,7 +117,11 @@ interface AmethystPlayer {
 
     fun clearVideoTrackOverride()
 
-    /** Lets the player pick renditions no larger than the view: [width]x[height] pixels, 0 = no cap. */
+    /**
+     * Lets the player pick renditions no larger than the view: [width]x[height] pixels. A zero
+     * dimension (the view is not laid out yet) leaves the current constraint as it is, and pushing
+     * the size the player already has does nothing.
+     */
     fun constrainToViewport(
         width: Int,
         height: Int,
@@ -102,8 +130,20 @@ interface AmethystPlayer {
     /** The caption tracks the item offers. */
     val textTracks: List<TextTrack>
 
-    /** Shows [track]'s captions, or none when null. */
+    /**
+     * Shows [track]'s captions (turning [captionsEnabled] on), or none when null (turning it off).
+     */
     fun selectTextTrack(track: TextTrack?)
+
+    /**
+     * Whether caption tracks are shown at all: media3's `TRACK_TYPE_TEXT` not disabled. Separate
+     * from the pick in [selectTextTrack], which stays when this is switched off and on again, so
+     * the switch survives the player later choosing a different track.
+     */
+    var captionsEnabled: Boolean
+
+    /** The captions on screen now (the text of media3's `currentCues`); empty when none. */
+    val cues: List<String>
 
     fun addListener(listener: Listener)
 
@@ -114,6 +154,15 @@ interface AmethystPlayer {
         fun onIsPlayingChanged(isPlaying: Boolean) {}
 
         fun onPlaybackStateChanged(state: PlaybackState) {}
+
+        /** [playWhenReady] changed, whether by the app, the user or an audio-focus loss. */
+        fun onPlayWhenReadyChanged(playWhenReady: Boolean) {}
+
+        /** [isPlaybackSuppressed] changed. */
+        fun onPlaybackSuppressionChanged(suppressed: Boolean) {}
+
+        /** The item's timeline changed: [duration] may have become known or moved (media3's `onTimelineChanged`). */
+        fun onTimelineChanged() {}
 
         fun onVolumeChanged(volume: Float) {}
 
@@ -164,6 +213,10 @@ data class VideoTrack(
     val selected: Boolean,
     val supported: Boolean = true,
     val codecs: String? = null,
+    /** The sample MIME type (`video/hevc`), for diagnostics and describing the media to a cast receiver. */
+    val mimeType: String? = null,
+    /** Frames per second, or a negative number when the stream doesn't say. For diagnostics. */
+    val frameRate: Float = -1f,
 )
 
 /** One caption track. */
@@ -188,6 +241,11 @@ data class PlayerFailure(
     val isNetworkProblem: Boolean = false,
     /** A live stream fell behind its window: rejoin the live edge rather than give up. */
     val isBehindLiveWindow: Boolean = false,
+    /**
+     * The engine's full account for the logs (media3: the error code and the nested cause chain,
+     * which tells "format truly unsupported" from "decoder failed to start"). Never shown to the user.
+     */
+    val diagnostic: String? = null,
 ) {
     companion object {
         /** What the UI reports itself when frames stop arriving while the sound plays on. */
