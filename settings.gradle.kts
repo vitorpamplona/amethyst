@@ -24,7 +24,7 @@ pluginManagement {
     }
 }
 
-// Quartz, its bindings (marmot-kmp, cordn-kmp, mls-kmp), quic-kmp, kiko-kmp, crypto-kmp,
+// Quartz, its bindings (marmot-kmp, cordn-kmp, mls-kmp), quic-kmp, kiko-kmp, djot-kmp, crypto-kmp,
 // negentropy-kmp and libschnorr256k1 are released on Nostr + Blossom: the Magpie settings plugin
 // serves their groups, trusting only the release key vitorpamplona.com names as `releases`, and
 // gradle/magpie.lock pins that key and every resolved version's files: commit its changes with the
@@ -44,6 +44,7 @@ magpie {
     group("com.vitorpamplona.crypto")
     group("com.vitorpamplona.negentropy")
     group("com.vitorpamplona.schnorr256k1")
+    group("com.vitorpamplona.djot")
 }
 
 dependencyResolutionManagement {
