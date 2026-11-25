@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ios
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
@@ -40,13 +42,15 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import platform.UIKit.UIApplication
+import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
 
 /** The per-role HTTP clients arrive with A2; the iOS interface has no members yet. */
 internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder
 
 /** Built once per process: the graph outlives every view controller the system asks for. */
-private val modules by lazy { IosAppModules(appVersion = bundleVersion()) }
+private val modules by lazy { IosAppModules(appVersion = IosBuildInfo.VERSION_NAME) }
 
 /**
  * The whole app as a view controller: what the Swift `@main` in `iosApp/xcode` hosts. It renders the
@@ -89,6 +93,19 @@ private fun IosTheme(
     val theme by prefs.theme.collectAsState()
     val fontFamily by prefs.fontFamily.collectAsState()
     val fontSize by prefs.fontSize.collectAsState()
+
+    // Native pieces (status bar, share sheet, pickers, alerts, the AirPlay menu) follow the window's
+    // interface style, which follows the phone unless set: match it to the app's own choice, as
+    // Android sets its status bar to the app theme.
+    LaunchedEffect(theme) {
+        @Suppress("DEPRECATION")
+        UIApplication.sharedApplication.keyWindow?.overrideUserInterfaceStyle =
+            when (theme) {
+                ThemeType.DARK -> UIUserInterfaceStyle.UIUserInterfaceStyleDark
+                ThemeType.LIGHT -> UIUserInterfaceStyle.UIUserInterfaceStyleLight
+                else -> UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
+            }
+    }
 
     AmethystMaterialTheme(
         darkTheme = isDarkTheme(theme),

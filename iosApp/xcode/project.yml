@@ -14,10 +14,6 @@ options:
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
-settings:
-  base:
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
 targets:
   Amethyst:
     type: application
@@ -50,6 +46,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vitorpamplona.amethyst.ios
+        # Assets.xcassets/AppIcon: the Amethyst logo, rendered from docs/design/3rd Logo - Zitron.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         # Where embedAndSignAppleFrameworkForXcode puts AmethystKit.framework.
         FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
@@ -65,3 +63,14 @@ targets:
           # JDK that has since been upgraded away. Ask the system for the current JDK 21 instead.
           if JDK=$(/usr/libexec/java_home -v 21 2>/dev/null); then export JAVA_HOME="$JDK"; fi
           ./gradlew :iosApp:embedAndSignAppleFrameworkForXcode
+    postBuildScripts:
+      - name: Stamp the app version (gradle/libs.versions.toml)
+        basedOnDependencyAnalysis: false
+        script: |
+          # The same numbers as Android: `app` is CFBundleShortVersionString, `appCode` the build.
+          CATALOG="$SRCROOT/../../gradle/libs.versions.toml"
+          APP=$(sed -n 's/^app = "\(.*\)"$/\1/p' "$CATALOG")
+          CODE=$(sed -n 's/^appCode = "\(.*\)"$/\1/p' "$CATALOG")
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CODE" "$PLIST"

@@ -19,41 +19,6 @@ plugins {
 // providers.exec rather than ProcessBuilder: Gradle deprecated starting external processes at
 // configuration time outside its provider API (an error from Gradle 11), and this way the
 // configuration cache also tracks the command's output as a build input.
-fun getCurrentBranch(workingDir: java.io.File): String =
-    try {
-        val git =
-            providers.exec {
-                commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-                this.workingDir = workingDir
-                isIgnoreExitValue = true
-            }
-        if (git.result.get().exitValue != 0) "unknown" else git.standardOutput.asText.get().trim()
-    } catch (e: Exception) {
-        println("Could not determine git branch: ${e.message}")
-        "unknown"
-    }
-
-fun generateVersionName(
-    baseVersion: String,
-    workingDir: java.io.File,
-): String {
-    val currentBranch = getCurrentBranch(workingDir)
-
-    if (currentBranch == "main" || currentBranch == "master" || currentBranch == "unknown" || currentBranch == "HEAD") {
-        return baseVersion
-    }
-
-    // Clean branch name for version (replace special characters)
-    var cleanBranch = currentBranch.replace(Regex("[^a-zA-Z0-9\\-_]"), "-")
-
-    // Limit branch name to maximum 20 characters
-    if (cleanBranch.length > 20) {
-        cleanBranch = cleanBranch.substring(0, 20)
-    }
-
-    return "$baseVersion-$cleanBranch"
-}
-
 // Workaround: stability.analyzer plugin doesn't declare task dependencies properly for Gradle 9.x
 afterEvaluate {
     val stabilityNames = tasks.names.filter { it.contains("StabilityCheck") }
@@ -134,7 +99,8 @@ android {
             libs.versions.appCode
                 .get()
                 .toInt()
-        versionName = generateVersionName(libs.versions.app.get(), rootDir)
+        // Computed once in the root build, so every app shows the same name.
+        versionName = rootProject.extra["appVersionName"] as String
         buildConfigField("String", "RELEASE_NOTES_ID", "\"bcaae03cfea84ac9f8f045202a3b8ee643c9fd51c9c674a87acadd4a03e16046\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

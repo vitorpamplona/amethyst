@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import platform.Foundation.NSBundle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
@@ -33,8 +32,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar 
  * rest of the platform pieces keep the empty defaults until B4, B5 and B7.
  */
 object IosAppPlatform : AppPlatform {
-    /** The bundle's version (MARKETING_VERSION in project.yml), shown at the foot of the drawer. */
-    override val appVersionName: String get() = bundleVersion()
+    /** Android's version name (the catalog's `app`, plus the branch off main), from the build. */
+    override val appVersionName: String get() = IosBuildInfo.VERSION_NAME
 
     override val appFlavor: String get() = "ios"
 
@@ -47,6 +46,3 @@ object IosAppPlatform : AppPlatform {
         onClick: (Route) -> Unit,
     ) = SharedAppBottomBar(selectedRoute, nav, accountViewModel, onClick)
 }
-
-/** CFBundleShortVersionString of the running app, or "" when the bundle has none. */
-internal fun bundleVersion(): String = NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: ""
