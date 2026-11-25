@@ -53,4 +53,16 @@ object AudioWindow {
             out[i] = if (i < samples.size) (samples[i] / 32768f) * window[i] else 0f
         }
     }
+
+    /** Like [shortsToWindowedInto] for samples already in [-1, 1]: windows [samples] into [out], zero-padding. */
+    fun floatsToWindowedInto(
+        samples: FloatArray,
+        window: FloatArray,
+        out: FloatArray,
+    ) {
+        require(out.size == window.size) { "out buffer must match window size" }
+        for (i in window.indices) {
+            out[i] = if (i < samples.size) samples[i] * window[i] else 0f
+        }
+    }
 }

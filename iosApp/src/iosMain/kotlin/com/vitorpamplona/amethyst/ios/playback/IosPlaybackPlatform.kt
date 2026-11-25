@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
@@ -79,6 +80,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okio.Path
@@ -100,7 +102,8 @@ import kotlin.coroutines.resume
 /**
  * iOS's half of the shared player ([PlaybackPlatform]): [AvAmethystPlayer]s from [IosPlayerPool],
  * drawn by [AvPlayerSurface], picture in picture, AirPlay as the "play on another device" button,
- * saving videos to Photos, the share sheet and the screen brightness swipe. The media volume
+ * saving videos to Photos, the share sheet, the screen brightness swipe and the audio
+ * visualizer's spectrum ([IosAudioSpectrum]). The media volume
  * can't be set by an app on iOS, so the fullscreen volume swipe stays off.
  *
  * [download] fetches a file's bytes (captions, saved videos) over the app's HTTP client.
@@ -421,6 +424,11 @@ class IosPlaybackPlatform(
             onDismiss()
         }
     }
+
+    // Audio visualizer: an MTAudioProcessingTap on the player item, only while this is collected.
+
+    @Composable
+    override fun rememberAudioSpectrum(mediaId: String): Flow<Spectrum> = remember(mediaId) { IosAudioSpectrum.spectrumFor(mediaId) }
 
     // Brightness (iOS gives apps no way to set the media volume)
 
