@@ -49,13 +49,7 @@ class AndroidAppRunnerTest {
 
     private val root: File = Files.createTempDirectory("app").toFile().also { it.deleteOnExit() }
     private val sdk: File =
-        Files.createTempDirectory("sdk").toFile().also { dir ->
-            File(dir, "platform-tools").mkdirs()
-            File(dir, "platform-tools/adb").apply {
-                writeText("#!/bin/sh\n")
-                setExecutable(true)
-            }
-        }
+        Files.createTempDirectory("sdk").toFile().also { dir -> FakeSdk.tool(dir, "platform-tools/adb") }
 
     private val target = AndroidAppTarget(root, ":app", File(root, "app"), listOf("playDebug"))
 
@@ -77,7 +71,8 @@ class AndroidAppRunnerTest {
 
             fun ok(text: String = "") = CommandResult(0, text.toByteArray(), "")
             return when {
-                command.first().endsWith("gradlew") -> {
+                // gradlew.bat on Windows.
+                command.first().substringAfterLast(File.separatorChar).startsWith("gradlew") -> {
                     assertEquals(root, directory)
                     assertEquals("emulator-5554", environment["ANDROID_SERIAL"])
                     if (gradleHangs) delay(60_000)
@@ -132,7 +127,7 @@ class AndroidAppRunnerTest {
             val pkg = runner.run(target, "playDebug", "emulator-5554")
 
             assertEquals("com.example.app.debug", pkg)
-            assertTrue(fake.commands.any { it.endsWith("gradlew :app:assemblePlayDebug") }, fake.commands.toString())
+            assertTrue(fake.commands.any { GRADLE_ASSEMBLE.containsMatchIn(it) }, fake.commands.toString())
             // The device's first ABI, x86_64, not the universal APK or arm64.
             assertTrue(fake.commands.any { it.contains("install -r -t") && it.endsWith("app-play-x86_64-debug.apk") }, fake.commands.toString())
             assertTrue(fake.commands.any { it.contains("monkey -p com.example.app.debug") }, fake.commands.toString())
@@ -159,4 +154,8 @@ class AndroidAppRunnerTest {
             assertIs<AppRunState.Idle>(runner.states.value[root.path])
             Unit
         }
+
+    companion object {
+        private val GRADLE_ASSEMBLE = Regex("gradlew(\\.bat)? :app:assemblePlayDebug$")
+    }
 }

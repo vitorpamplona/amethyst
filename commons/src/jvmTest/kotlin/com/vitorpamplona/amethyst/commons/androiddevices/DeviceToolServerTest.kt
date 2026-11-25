@@ -106,11 +106,7 @@ class DeviceToolServerTest {
     private val adb = FakeAdb()
     private val sdk: File =
         Files.createTempDirectory("sdk").toFile().also { dir ->
-            File(dir, "platform-tools").mkdirs()
-            File(dir, "platform-tools/adb").apply {
-                writeText("#!/bin/sh\n")
-                setExecutable(true)
-            }
+            FakeSdk.tool(dir, "platform-tools/adb")
             dir.deleteOnExit()
         }
     private val devices =

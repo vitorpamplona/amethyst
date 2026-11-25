@@ -100,9 +100,9 @@ class DeviceCopiesTest {
                 val clash = running.values.any { it.third == avd && (!it.second || !readOnly) }
                 if (clash) {
                     log?.writeText("ERROR   | Another emulator instance is running. Please close it or run all emulators with -read-only flag.\n")
-                    return ProcessBuilder("sh", "-c", "exit 1").start().also { it.waitFor() }
+                    return FakeSdk.failed()
                 }
-                val process = ProcessBuilder("sleep", "60").start()
+                val process = FakeSdk.longLived()
                 val port = nextPort.also { nextPort += 2 }
                 File(discovery, "pid_${process.pid()}.ini").writeText("port.serial=$port\navd.name=$avd\ngrpc.port=${port + 3000}\ngrpc.token=t\n")
                 running["emulator-$port"] = Triple(process, readOnly, avd)
@@ -113,14 +113,7 @@ class DeviceCopiesTest {
     private val devices: AndroidDevices
 
     init {
-        File(sdk, "platform-tools").mkdirs()
-        File(sdk, "emulator").mkdirs()
-        listOf("platform-tools/adb", "emulator/emulator").forEach { path ->
-            File(sdk, path).apply {
-                writeText("#!/bin/sh\n")
-                setExecutable(true)
-            }
-        }
+        listOf("platform-tools/adb", "emulator/emulator").forEach { FakeSdk.tool(sdk, it) }
         val avdDir = File(avdHome, "Pixel.avd").apply { mkdirs() }
         File(avdHome, "Pixel.ini").writeText("path=${avdDir.absolutePath}\n")
         File(avdDir, "config.ini").writeText("avd.ini.displayname=Pixel\n")
