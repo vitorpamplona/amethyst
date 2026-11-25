@@ -72,9 +72,11 @@ object IosPlayerPool {
     var audible: AvAmethystPlayer? = null
         private set
 
+    /** The player of [url]; a new one reads through the disk cache when [cacheable]. */
     fun acquire(
         url: String,
         metadata: NowPlayingMetadata,
+        cacheable: Boolean = false,
     ): AvAmethystPlayer {
         entries[url]?.let { entry ->
             entry.users++
@@ -84,7 +86,7 @@ object IosPlayerPool {
             entries[url] = entry
             return entry.player
         }
-        val player = AvAmethystPlayer(url)
+        val player = AvAmethystPlayer(url, cacheable)
         val watcher =
             object : AmethystPlayer.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) = refreshAudio()

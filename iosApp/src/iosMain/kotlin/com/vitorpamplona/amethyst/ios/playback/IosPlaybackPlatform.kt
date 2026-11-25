@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSurfaceStyle
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoTrack
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.amethyst.ios.toNSData
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
@@ -153,7 +154,13 @@ class IosPlaybackPlatform(
         inner: @Composable (MediaControllerState) -> Unit,
     ) {
         val metadata = NowPlayingMetadata(mediaItem.title, mediaItem.authorName, mediaItem.artworkUri)
-        val player = remember(url) { IosPlayerPool.acquire(url, metadata) }
+        val player =
+            remember(url) {
+                IosVideoCache.declareType(url, mediaItem.mimeType)
+                // A decrypted local copy (file://) is never cacheable: only http(s) is.
+                val cacheable = IosVideoCache.isCacheable(url, mediaItem.mimeType, mediaItem.isLiveStream)
+                IosPlayerPool.acquire(url, metadata, cacheable)
+            }
         val state = remember(player) { states[player] ?: MediaControllerState(controller = player).also { states[player] = it } }
 
         DisposableEffect(player) {

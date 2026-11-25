@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
+import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -194,6 +195,7 @@ class IosAppModules(
     /** The shared player's iOS half. */
     val playbackPlatform by lazy {
         NowPlaying.artworkLoader = ::downloadBytes
+        IosVideoCache.install { httpClient }
         IosPlaybackPlatform(download = ::downloadBytes, keyCache = keyCache)
     }
 

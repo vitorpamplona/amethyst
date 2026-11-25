@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.player.PlayerFailure
 import com.vitorpamplona.amethyst.commons.ui.playback.player.TextTrack
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSize
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoTrack
+import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.readValue
@@ -106,10 +107,13 @@ import platform.darwin.dispatch_get_main_queue
  * `preferredMaximumResolution`, which is as close as AVPlayer lets an app get. Captions in the
  * stream (HLS subtitles) are the legible media-selection group; side-loaded ones are
  * [SideLoadedCaptions], fed by [setSideLoadedCaptions].
+ *
+ * A [cacheable] file reads through the disk cache ([IosVideoCache]); HLS and live streams do not.
  */
 @OptIn(ExperimentalForeignApi::class)
 class AvAmethystPlayer(
     val url: String,
+    private val cacheable: Boolean = false,
 ) : AmethystPlayer {
     val avPlayer: AVPlayer = AVPlayer()
 
@@ -253,7 +257,7 @@ class AvAmethystPlayer(
         clearNotifications()
         failure = null
         ended = false
-        val asset = AVURLAsset(uRL = nsUrl, options = null)
+        val asset = IosVideoCache.assetFor(nsUrl, cacheable)
         val newItem = AVPlayerItem(asset = asset)
         item = newItem
         assetLoaded = false

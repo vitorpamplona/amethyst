@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewerDial
 import com.vitorpamplona.amethyst.commons.ui.playback.composable.ZoomableVideoContent
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ios.playback.IosVoiceRecorder
+import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as SharedEpisodeAudioPlayer
@@ -82,6 +83,19 @@ object IosNotePlatform : NotePlatform {
 
     @Composable
     override fun rememberVoiceRecorder(): VoiceRecorder = remember { IosVoiceRecorder() }
+
+    /**
+     * As on Android: a video card's player opens its video as soon as the card is composed, so the
+     * videos further down get their first bytes cached ahead ([IosVideoCache]), unless videos load
+     * only on a tap.
+     */
+    override fun prefetchVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {
+        IosVideoCache.prefetch(owner, if (accountViewModel.settings.startVideoPlayback()) urls else emptyList())
+    }
 
     @Composable
     override fun ZoomableContentView(
