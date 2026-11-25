@@ -46,7 +46,7 @@ import platform.UIKit.UIViewController
 internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder
 
 /** Built once per process: the graph outlives every view controller the system asks for. */
-private val modules by lazy { IosAppModules(appVersion = "0.1.0-b0") }
+private val modules by lazy { IosAppModules(appVersion = bundleVersion()) }
 
 /**
  * The whole app as a view controller: what the Swift `@main` in `iosApp/xcode` hosts. It renders the
