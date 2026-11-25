@@ -1064,14 +1064,7 @@ class AndroidMediaUploader(
         val width = bounds.outWidth.takeIf { it > 0 }
         val height = bounds.outHeight.takeIf { it > 0 }
         val sideways = runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees % 180 != 0 } }.getOrNull() == true
-        val bytes =
-            runCatching {
-                if (uri.scheme == "file") {
-                    uri.path?.let { File(it).length() }
-                } else {
-                    resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
-                }
-            }.getOrNull()
+        val bytes = fileSize(uri)
         return if (sideways) ImageFileStats(height, width, bytes) else ImageFileStats(width, height, bytes)
     }
 
@@ -1107,16 +1100,7 @@ class AndroidMediaUploader(
 
     override fun mimeType(uri: MediaUri): String? = appContext.contentResolver.getType(uri)
 
-    override fun fileSize(uri: MediaUri): Long? =
-        try {
-            appContext.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use {
-                val idx = it.getColumnIndex(OpenableColumns.SIZE)
-                if (idx >= 0 && it.moveToFirst() && !it.isNull(idx)) it.getLong(idx) else null
-            }
-        } catch (e: Exception) {
-            Log.w("AndroidMediaUploader", "Failed to read the size of $uri", e)
-            null
-        }
+    override fun fileSize(uri: MediaUri): Long? = appContext.uriByteSize(uri)
 
     override suspend fun stripMetadata(
         uri: MediaUri,
