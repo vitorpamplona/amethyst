@@ -9935,10 +9935,7 @@
     <string name="claude_code_mode_short_plan">Planera</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Vad det ändrar, varför och hur du testade det</string>
-    <string name="claude_code_settings_assistant">Inställningsassistent</string>
     <string name="claude_code_context_used_little">under 1 % av kontexten</string>
-    <string name="claude_code_settings_assistant_desc">Fråga vad en inställning gör, eller vad du ska ändra för att få det du vill. Claude ser bara Amethysts inställningar, och varje ändring väntar på ditt godkännande. Nycklar, plånböcker, reläer och betalningar ligger utom räckhåll för den.</string>
-    <string name="claude_code_settings_assistant_card">Osäker på var något finns? Fråga inställningsassistenten.</string>
     <string name="claude_code_settings_assistant_ask">Fråga assistenten om ”%1$s”</string>
     <string name="claude_code_permission_setting">Claude vill ändra en inställning</string>
     <string name="claude_code_settings_starter_data">Varför använder Amethyst så mycket mobildata?</string>

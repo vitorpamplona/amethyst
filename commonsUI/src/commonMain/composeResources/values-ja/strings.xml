@@ -9291,13 +9291,10 @@
     <string name="claude_code_mode_short_plan">計画</string>
     <string name="claude_code_mode_short_auto">自動</string>
     <string name="claude_code_propose_description_hint">何を変更したか、その理由、どうテストしたか</string>
-    <string name="claude_code_settings_assistant">設定アシスタント</string>
     <string name="claude_code_context_used_little">コンテキストの 1% 未満</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="other">設定を %1$d 回参照</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">設定の働きや、望む動作にするには何を変えればよいかを質問できます。Claude が見られるのは Amethyst の設定だけで、すべての変更はあなたの承認を待ちます。鍵、ウォレット、relay、支払いには触れられません。</string>
-    <string name="claude_code_settings_assistant_card">どこにあるかわかりませんか？設定アシスタントに聞いてみましょう。</string>
     <string name="claude_code_settings_assistant_ask">「%1$s」についてアシスタントに質問</string>
     <string name="claude_code_permission_setting">Claude が設定を変更しようとしています</string>
     <string name="claude_code_settings_starter_data">Amethyst がモバイルデータを多く使うのはなぜ？</string>

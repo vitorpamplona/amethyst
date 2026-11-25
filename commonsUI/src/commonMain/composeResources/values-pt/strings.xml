@@ -9936,10 +9936,7 @@
     <string name="claude_code_mode_short_plan">Planejar</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">O que muda, por que, e como você testou</string>
-    <string name="claude_code_settings_assistant">Assistente de configurações</string>
     <string name="claude_code_context_used_little">menos de 1% do contexto</string>
-    <string name="claude_code_settings_assistant_desc">Pergunte o que uma configuração faz, ou o que mudar para conseguir o que você quer. O Claude só vê as configurações do Amethyst, e toda alteração aguarda a sua aprovação. Chaves, carteiras, relays e pagamentos ficam fora do alcance dele.</string>
-    <string name="claude_code_settings_assistant_card">Não sabe onde fica algo? Pergunte ao assistente de configurações.</string>
     <string name="claude_code_settings_assistant_ask">Perguntar ao assistente sobre “%1$s”</string>
     <string name="claude_code_permission_setting">O Claude quer alterar uma configuração</string>
     <string name="claude_code_settings_starter_data">Por que o Amethyst usa tantos dados móveis?</string>

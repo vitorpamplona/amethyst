@@ -9328,13 +9328,10 @@
     <string name="claude_code_mode_short_plan">规划</string>
     <string name="claude_code_mode_short_auto">自动</string>
     <string name="claude_code_propose_description_hint">更改了什么、为什么，以及您如何测试的</string>
-    <string name="claude_code_settings_assistant">设置助手</string>
     <string name="claude_code_context_used_little">已用不到 1% 上下文</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="other">查询了 %1$d 次设置</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">询问某项设置的作用，或要达到您的目的需要更改什么。Claude 只能看到 Amethyst 的设置，每项更改都需等待您的批准。密钥、钱包、中继和付款都不在其访问范围内。</string>
-    <string name="claude_code_settings_assistant_card">不确定某项设置在哪里？问问设置助手。</string>
     <string name="claude_code_settings_assistant_ask">向助手询问“%1$s”</string>
     <string name="claude_code_permission_setting">Claude 想要更改一项设置</string>
     <string name="claude_code_settings_starter_data">为什么 Amethyst 消耗这么多移动数据？</string>

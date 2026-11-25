@@ -10296,7 +10296,6 @@
     <string name="claude_code_mode_short_plan">Načrt</string>
     <string name="claude_code_mode_short_auto">Samodejno</string>
     <string name="claude_code_propose_description_hint">Kaj spremeni, zakaj in kako je bilo preizkušeno</string>
-    <string name="claude_code_settings_assistant">Pomočnik za nastavitve</string>
     <string name="claude_code_context_used_little">manj kot 1% konteksta</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">nastavitve pregledal %1$d-krat</item>
@@ -10304,8 +10303,6 @@
         <item quantity="few">nastavitve pregledal %1$d-krat</item>
         <item quantity="other">nastavitve pregledal %1$d-krat</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Vprašaj, kaj počne nastavitev ali kaj spremeniti, da dosežeš želeno. Claude vidi le nastavitve Amethysta in vsaka sprememba čaka na tvojo odobritev. Ključi, denarnice, releji in plačila so zunaj njegovega dosega.</string>
-    <string name="claude_code_settings_assistant_card">Ne veš, kje je kaj? Vprašaj pomočnika za nastavitve.</string>
     <string name="claude_code_settings_assistant_ask">Vprašaj pomočnika o “%1$s”</string>
     <string name="claude_code_permission_setting">Claude želi spremeniti nastavitev</string>
     <string name="claude_code_settings_starter_data">Zakaj Amethyst porabi toliko mobilnih podatkov?</string>

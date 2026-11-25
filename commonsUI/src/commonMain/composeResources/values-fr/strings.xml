@@ -9644,14 +9644,11 @@
     <string name="claude_code_mode_short_plan">Plan</string>
     <string name="claude_code_mode_short_auto">Auto</string>
     <string name="claude_code_propose_description_hint">Ce que ça change, pourquoi, et comment vous l'avez testé</string>
-    <string name="claude_code_settings_assistant">Assistant des paramètres</string>
     <string name="claude_code_context_used_little">moins de 1 % du contexte</string>
     <plurals name="claude_code_tool_group_settings">
         <item quantity="one">a consulté les paramètres %1$d fois</item>
         <item quantity="other">a consulté les paramètres %1$d fois</item>
     </plurals>
-    <string name="claude_code_settings_assistant_desc">Demandez ce que fait un paramètre, ou quoi changer pour obtenir ce que vous voulez. Claude ne voit que les paramètres d'Amethyst, et chaque modification attend votre approbation. Les clés, portefeuilles, relais et paiements restent hors de sa portée.</string>
-    <string name="claude_code_settings_assistant_card">Vous ne trouvez pas quelque chose ? Demandez à l'assistant des paramètres.</string>
     <string name="claude_code_settings_assistant_ask">Demander à l'assistant à propos de « %1$s »</string>
     <string name="claude_code_permission_setting">Claude veut modifier un paramètre</string>
     <string name="claude_code_settings_starter_data">Pourquoi Amethyst consomme-t-il autant de données mobiles ?</string>
