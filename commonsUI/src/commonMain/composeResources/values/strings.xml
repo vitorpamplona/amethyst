@@ -4791,7 +4791,7 @@
     <string name="kind_comments">Comments</string>
     <string name="kind_community_def">Community Def</string>
     <string name="kind_community_list">Community List</string>
-    <string name="kind_community_post">Community Post</string>
+    <string name="kind_community_post_approval">Community Post Approval</string>
     <string name="kind_contact_card">Contact Card</string>
     <string name="kind_day_appointment">Day Appointment</string>
     <string name="kind_deletions">Deletions</string>
