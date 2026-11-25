@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.notices.report
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -2410,6 +2411,23 @@ open class BaseAccountViewModel(
     init {
         Log.d("AccountViewModel", "Init")
         // Event bundles reach the feeds through AccountFeeds while any view model leases them.
+    }
+
+    init {
+        // The Notifications tab reads up to one timestamp: a card on screen moves it to its own
+        // time, and every older card then counts as read (no highlight, no badge). The tray has to
+        // follow, or the zaps, reactions and replies the user just went through stay in the shade.
+        // Cards that dismiss their own notification cover only plain notes, and only the newest of
+        // those once the marker has passed the rest. Each move of the marker takes down this
+        // account's tray notifications at or before it, whichever card (or none) showed them.
+        viewModelScope.launch(Dispatchers.IO) {
+            val npub = NotificationRoutes.accountNpub(account)
+            account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).collect { readUpTo ->
+                // Capped at now: the tab takes any event that tags the user, so a reply dated
+                // years ahead can carry the marker there, and the tray must not go quiet with it.
+                if (readUpTo > 0) host.dismissNotificationsReadUpTo(npub, minOf(readUpTo, TimeUtils.now()))
+            }
+        }
     }
 
     /**

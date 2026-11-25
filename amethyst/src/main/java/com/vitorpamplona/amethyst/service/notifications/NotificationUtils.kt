@@ -145,6 +145,22 @@ object NotificationUtils {
         return true
     }
 
+    // Each account's Notifications-tab last-read marker (seconds), as last handed to
+    // [dismissNotificationsReadUpTo]. The sweep alone races the post: the card for a new event
+    // can reach the screen, and move the marker past it, before the dispatcher has posted it.
+    private val notificationsTabReadUpTo = ConcurrentHashMap<String, Long>()
+
+    /** Whether the Notifications tab of [forAccount] already counts an event of [category] made at [time] as read. */
+    private fun isReadOnNotificationsTab(
+        category: NotificationCategory,
+        forAccount: NotificationAccount?,
+        time: Long,
+    ): Boolean {
+        if (forAccount == null || !category.readOnNotificationsTab) return false
+        val readUpTo = notificationsTabReadUpTo[forAccount.npub] ?: return false
+        return time <= readUpTo
+    }
+
     /**
      * Derives a stable summary notification id for a per-thread reply group.
      * Uses the thread root id hash mixed with the base id so different threads
@@ -237,6 +253,9 @@ object NotificationUtils {
     /** The Marmot chat (Nostr group id) a group-message notification belongs to. */
     const val EXTRA_MARMOT_GROUP = "com.vitorpamplona.amethyst.notification.MARMOT_GROUP"
 
+    /** The hex id of the event a notification was posted for, so a sweep that finds it can guard it ([markDismissed]). */
+    const val EXTRA_EVENT_ID = "com.vitorpamplona.amethyst.notification.EVENT_ID"
+
     fun notificationAccountFor(account: Account) =
         NotificationAccount(
             npub = NotificationRoutes.accountNpub(account),
@@ -297,8 +316,9 @@ object NotificationUtils {
         forAccount: NotificationAccount? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
-        // running — don't resurrect it (and skip the bitmap work).
-        if (wasDismissed(id)) return
+        // running — don't resurrect it (and skip the bitmap work). The same once the
+        // Notifications tab has read past it, even before this was first posted.
+        if (wasDismissed(id) || isReadOnNotificationsTab(category, forAccount, time)) return
 
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
@@ -341,6 +361,7 @@ object NotificationUtils {
 
         if (category.colorized) builder.setColorized(true)
         builder.stampAccount(forAccount)
+        builder.addExtras(Bundle().apply { putString(EXTRA_EVENT_ID, id) })
 
         if (bigPicture != null) {
             builder.setStyle(
@@ -388,8 +409,9 @@ object NotificationUtils {
         marmotGroupId: String? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
-        // running — don't resurrect it (and skip the bitmap work).
-        if (wasDismissed(id)) return
+        // running — don't resurrect it (and skip the bitmap work). The same once the
+        // Notifications tab has read past it, even before this was first posted.
+        if (wasDismissed(id) || isReadOnNotificationsTab(category, forAccount, time)) return
 
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
@@ -495,6 +517,7 @@ object NotificationUtils {
         }
         builder.addPerson(sender)
         builder.stampAccount(forAccount)
+        builder.addExtras(Bundle().apply { putString(EXTRA_EVENT_ID, id) })
         if (marmotGroupId != null) builder.addExtras(Bundle().apply { putString(EXTRA_MARMOT_GROUP, marmotGroupId) })
 
         when (replyAction) {
@@ -829,6 +852,44 @@ object NotificationUtils {
         if (activeNotifications.none { it.id == notId }) return
 
         cancelAndPrune(notId)
+    }
+
+    /**
+     * Takes down the notifications of the account [npub] that its Notifications tab now counts as
+     * read: every one on a tab channel ([NotificationCategory.readOnNotificationsTab]) whose event
+     * was made at or before [readUpTo], the tab's last-read marker in seconds. Reading the tab moves
+     * the marker to the newest card seen, and every older card then shows as read, so the tray
+     * follows the same rule, whether or not the user scrolled down to each card.
+     *
+     * Notifications are posted with their event's time as `when`, which is what is compared here.
+     * Remembers the marker so a notification posted after this sweep for an event it covers is not
+     * posted at all ([isReadOnNotificationsTab]).
+     */
+    fun NotificationManager.dismissNotificationsReadUpTo(
+        npub: String,
+        readUpTo: Long,
+    ) {
+        notificationsTabReadUpTo.merge(npub, readUpTo, ::maxOf)
+
+        val readUpToMillis = readUpTo * 1000
+        val gone =
+            activeNotifications
+                .filter { sbn ->
+                    val notification = sbn.notification
+                    val group = notification.group
+                    notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 &&
+                        notification.`when` <= readUpToMillis &&
+                        notification.extras.getString(EXTRA_ACCOUNT_NPUB) == npub &&
+                        group != null &&
+                        NotificationCategory.entries.any { it.readOnNotificationsTab && it.owns(group) }
+                }.onEach { sbn ->
+                    // An enrichment re-post would otherwise bring it back within the guard window.
+                    sbn.notification.extras
+                        .getString(EXTRA_EVENT_ID)
+                        ?.let { markDismissed(it) }
+                    cancel(sbn.tag, sbn.id)
+                }.mapTo(HashSet()) { it.id }
+        if (gone.isNotEmpty()) cancelChildlessGroupSummaries(gone)
     }
 
     /**
