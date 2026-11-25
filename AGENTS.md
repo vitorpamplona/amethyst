@@ -21,7 +21,7 @@ relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
 NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`), plus `claudeCodeClient` and `codexClient` (unofficial JVM clients for the user's Claude
 Code and Codex CLIs, behind the desktop coding-agent screens; no Amethyst/Nostr deps; see their
-READMEs) on `agentCore`. `nestsClient` runs
+READMEs) on `agentCore`; `emulatorClient` (emulator gRPC). `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
@@ -483,7 +483,7 @@ Do this before considering the task complete.
 ### Navigation Shell
 One shell, picked by window size rather than by platform: `ScreenLayoutSpec`
 chooses the bottom bar (compact), the rail, or the permanent drawer (wide,
-landscape, tall enough), and docks the notification panel on very wide windows.
+landscape, tall enough), and docks panels (`DockPanelSpec`) on very wide windows.
 It lives in `commonsUI` (`AppShellLayout`, run by `AmethystApp`), and both Android
 and the desktop window use it. The opt-in deck (Settings › App › Deck) adds columns beside the
 main screen on windows of 1,200 dp and up (`DeckArea`).

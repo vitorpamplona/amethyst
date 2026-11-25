@@ -20,13 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.shell
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,13 +32,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
@@ -55,44 +52,53 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.dock.DockLayout
+import com.vitorpamplona.amethyst.commons.model.dock.DockView
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
+import com.vitorpamplona.amethyst.commons.ui.layouts.DockStripWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.DrawerWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
-import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelCollapsedWidth
-import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidthRange
+import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
+import com.vitorpamplona.amethyst.commons.ui.layouts.PaneFit
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
-import com.vitorpamplona.amethyst.commons.ui.layouts.fitPaneWidths
+import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
+import com.vitorpamplona.amethyst.commons.ui.layouts.fitPanes
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockColumns
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockController
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockDragOverlay
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockOverlayLayer
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockStrip
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.CollapsedNotificationPanel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 import kotlin.reflect.KClass
 
 /**
@@ -174,12 +180,6 @@ fun AppShellLayout(
 
     val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
-    // The notification panel's fold is a window-size feature, not a platform one: the panel docks
-    // wherever the window has the width (ScreenLayoutSpec.hasRoomForNotificationPanel), on every
-    // front end. The state is device-wide (a window-layout choice, like pane widths), so it lives
-    // on the shared services; the shell just hands it down to both shell shapes.
-    val notificationPanelCollapsePrefs = LocalAppServices.current.notificationPanelCollapsePrefs
-
     // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
     // status editor) can behave correctly without each re-deriving the layout tier.
     LaunchedEffect(nav, docked) {
@@ -191,10 +191,26 @@ fun AppShellLayout(
         }
     }
 
-    if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, notificationPanelCollapsePrefs, topStrip, movableContent)
-    } else {
-        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, notificationPanelCollapsePrefs, movableContent)
+    val dock = LocalDockController.current
+    val density = LocalDensity.current
+    val windowInfo = LocalWindowInfo.current
+    if (dock != null) {
+        // The drag tests the pointer against the window's bounds; followed off composition, so a
+        // window being resized doesn't recompose the shell for it.
+        LaunchedEffect(dock, windowInfo, density) {
+            dock.drag.edgePx = with(density) { DockDropEdge.toPx() }
+            snapshotFlow { windowInfo.containerSize }.collect { dock.drag.window = Size(it.width.toFloat(), it.height.toFloat()) }
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        if (docked) {
+            PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, topStrip, movableContent)
+        } else {
+            ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, movableContent)
+        }
+        // Over everything while a panel is dragged: where it would land.
+        if (dock != null) DockDragOverlay(dock)
     }
 
     // Sheet content
@@ -229,7 +245,6 @@ private fun ModalDrawerShell(
     drawer: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean,
     deck: (@Composable (Modifier) -> Unit)?,
-    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     content: @Composable () -> Unit,
 ) {
     // Derived, so a window being resized (a desktop drag, a foldable mid-unfold) recomposes this shell
@@ -276,7 +291,6 @@ private fun ModalDrawerShell(
                     resizableLeading = false,
                     leading = { AppNavigationRail(nav, accountViewModel) },
                     deck = deck,
-                    notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
                     topStrip = null,
                     content = content,
                 )
@@ -289,15 +303,17 @@ private fun ModalDrawerShell(
 
 /**
  * The wide-window arrangement both shells render: a [leading] navigation pane, the centre
- * content, and the notification feed when the window has room. Shared because a wide portrait
- * window now rails rather than docks and is still wide enough for the panel — the two shells
- * differ only in which navigation pane leads.
+ * content, and the dock on the right: its columns of panels (the notification feed, the
+ * assistant, the devices: [DockController]) and, at the window's edge, the strip of their icons.
+ * Shared because a wide portrait window rails rather than docks and is still wide enough for the
+ * dock — the two shells differ only in which navigation pane leads.
  *
- * The docked drawer ([resizableLeading]) and the notification panel sit behind [PaneSplitter]s the
- * user drags to resize them; the widths are kept per device ([PaneWidthPreferences]) and fitted to
- * the window by [fitPaneWidths], so the centre pane keeps its room. The panel can also fold away
- * to its badged bell ([CollapsedNotificationPanel]), which takes a fixed strip in place of the
- * fitted width.
+ * The docked drawer ([resizableLeading]) and each dock column sit behind [PaneSplitter]s the user
+ * drags to resize them; the widths are kept per device and fitted to the window by [fitPanes], so
+ * the centre pane keeps its room: the outer column narrows first, and a column that cannot fit even
+ * at its narrowest folds to the strip until the window widens. Where panels cannot dock (a window
+ * too narrow, the deck taking the room, a screen that wants the whole width) they show over the
+ * main screen instead.
  */
 @Composable
 private fun MultiPaneShell(
@@ -306,50 +322,76 @@ private fun MultiPaneShell(
     resizableLeading: Boolean,
     leading: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
-    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     topStrip: (@Composable () -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
     val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
-    // The deck takes the panel's place, so no room is kept for it. On a screen that keeps the
-    // panel away (PanelFreeRoutes) it stays composed and slides out of the way, and back.
-    val roomForPanel = deck == null && LocalScreenLayout.current.hasRoomForNotificationPanel
-    val panelAway = roomForPanel && panelAwayHere(nav)
-    val showPanel = roomForPanel
-    // A folded panel leaves only its badged bell, wherever the panel docks.
-    val collapsePrefs = notificationPanelCollapsePrefs
-    val panelFolded by collapsePrefs.flow.collectAsStateWithLifecycle()
-    val foldedAt by collapsePrefs.collapsedAt.collectAsStateWithLifecycle()
-    val showFoldedStrip = showPanel && panelFolded
-    // 1 shown, 0 out of the way, at once: the screens that send the panel away (the paper, nSites,
-    // napplets, the browser) are pages Chromium draws off screen, and a centre pane that grew over a
-    // quarter second asked it for a new size every frame. It paints only some of them, so the page
-    // showed a stale frame stretched wider and blurrier until it caught up. A navigation swaps
-    // screens at once anyway; the panel stays composed, so it comes back as it was.
-    val panelShare = if (panelAway) 0f else 1f
+    val dock = LocalDockController.current
+    val roomForDock = LocalScreenLayout.current.hasRoomForNotificationPanel
+    val wantsWidth = fullWidthHere(nav)
+    val canDock = dock != null && deck == null && roomForDock && !wantsWidth
+
+    val saved by (dock?.layoutFlow ?: EmptyDockFlow).collectAsStateWithLifecycle()
+    val layout = remember(saved, dock) { if (dock != null) saved.ensure(dock.ids) else saved }
+    // The panels the current screen leaves in the dock: a panel steps out on the screen it duplicates.
+    val hiddenHere = panelsHiddenHere(nav, dock)
+    val available = remember(dock, hiddenHere) { dock?.ids?.filter { it !in hiddenHere }.orEmpty() }
+    val overlay = dock?.overlay
+    val maximized = dock?.maximized
+    val view =
+        remember(layout, available, canDock, overlay, maximized) {
+            if (canDock) layout.view(available.toSet() - setOfNotNull(overlay, maximized)) else DockView.Empty
+        }
+    // The strip shows wherever the dock does, and on a docked-drawer window too narrow for it (its
+    // panels then open over the screen). With only the notification feed, as on a phone build, it
+    // shows only while the feed is folded: the panel and its bell are the same thing.
+    val stripShown =
+        dock != null && available.isNotEmpty() &&
+            (roomForDock || resizableLeading) &&
+            (dock.panels.size > 1 || view.isEmpty)
+    if (dock != null) {
+        SideEffect {
+            dock.canDock = canDock
+            dock.stripShown = stripShown
+        }
+        // A phone-sized window has no dock: a panel asked for there would open nowhere.
+        DisposableEffect(dock) {
+            onDispose {
+                dock.canDock = false
+                dock.stripShown = false
+            }
+        }
+    }
+
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width
                 .toDp()
                 .value
         }
-    // A folded panel takes only its strip: the panel fits as if it were not there, but the strip's
-    // fixed width still reserves its room, so the centre pane keeps its minimum.
-    val fitted =
-        fitPaneWidths(
-            windowWidth,
-            widths.drawer,
-            widths.notifications,
-            resizableLeading,
-            showPanel && !showFoldedStrip,
-            notificationStripWidth = if (showFoldedStrip) NotificationPanelCollapsedWidth.value else 0f,
-        )
+    // The outer column gives up its room first, then the inner ones, then the drawer.
+    val columns = view.columns
+    val panes =
+        columns.reversed().map { column ->
+            val first = column.slots.first().active
+            PaneFit(column.width, dock?.spec(first)?.defaultWidth ?: NotificationPanelWidth.value, DockLayout.COLUMN_WIDTH_RANGE, droppable = true)
+        } + PaneFit(widths.drawer, PermanentDrawerWidth.value, DrawerWidthRange, droppable = false, shown = resizableLeading)
+    val fitted = fitPanes(windowWidth, panes, reserved = if (stripShown) DockStripWidth.value else 0f)
+    val fittedColumns = fitted.take(columns.size).reversed()
+    // A column the window cannot hold right now folds to the strip until it widens: out of what is
+    // drawn, and out of what the strip lights as shown.
+    val shownView = DockView(columns.filterIndexed { i, _ -> fittedColumns[i] > 0f })
+    val columnWidths = fittedColumns.filter { it > 0f }
+    val drawerWidth = fitted.last()
+    val foldedByWidth = columns.filterIndexed { i, _ -> fittedColumns[i] <= 0f }.flatMap { c -> c.slots.flatMap { it.tabs } }.toSet()
+    if (dock != null) SideEffect { dock.foldedByWidth = foldedByWidth }
+    val panelNav = remember(nav) { DockPanelNav(nav) }
 
     Row(Modifier.fillMaxSize()) {
         if (resizableLeading) {
-            Box(Modifier.width(fitted.drawer.dp).fillMaxHeight()) { leading() }
-            PaneSplitter(onDrag = { delta -> paneWidthPrefs.setDrawer((fitted.drawer + delta).coerceIn(DrawerWidthRange)) })
+            Box(Modifier.width(drawerWidth.dp).fillMaxHeight()) { leading() }
+            PaneSplitter(onDrag = { delta -> paneWidthPrefs.setDrawer((drawerWidth + delta).coerceIn(DrawerWidthRange)) })
         } else {
             leading()
             VerticalDivider(thickness = DividerThickness)
@@ -361,72 +403,43 @@ private fun MultiPaneShell(
                 Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { topStrip() }
             }
             Row(Modifier.weight(1f).fillMaxWidth()) {
+                val center: @Composable () -> Unit = {
+                    Box(Modifier.fillMaxSize().then(if (dock != null) Modifier.dockCenterZone(dock) else Modifier)) {
+                        content()
+                        if (dock != null) DockOverlayLayer(dock, layout, accountViewModel, panelNav)
+                    }
+                }
                 if (deck != null) {
-                    // The deck takes the notification panel's place. Like the panel, its columns take back
-                    // the window-controls inset that only the leading pane sits under.
+                    // The deck takes the dock's place. Like the dock, its columns take back the
+                    // window-controls inset that only the leading pane sits under.
                     DeckSplit(
                         Modifier.weight(1f).fillMaxHeight(),
-                        { CenterPane(Modifier.unfocusDeckOnPress(), content) },
+                        { CenterPane(Modifier.unfocusDeckOnPress(), center) },
                         { Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { deck(Modifier) } },
                     )
                 } else {
                     // The content takes back the window-controls inset itself (see AppShellLayout).
-                    CenterPane(Modifier.weight(1f), content)
+                    CenterPane(Modifier.weight(1f), center)
+                }
 
-                    // Only the leading pane sits under window controls drawn over the app (macOS's traffic
-                    // lights): the panel to the right takes that inset back, so its header reaches the
-                    // window's edge instead of growing a band under an empty title bar.
-                    if (showPanel) {
-                        // The panel keeps the width it fits at when open while it slides in or out, so a
-                        // fold doesn't squeeze the feed into the strip on its way out.
-                        val openPanelWidth =
-                            if (showFoldedStrip) {
-                                fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, true).notifications
-                            } else {
-                                fitted.notifications
-                            }
-                        // Folding slides the panel out to its strip and unfolding slides it back: the size
-                        // animates (clipped, the content pinned to its leading edge, so the panel reveals
-                        // from the left like a drawer) while the strip and the panel cross-fade over the
-                        // theme background, not the window's, which shows through a half-faded pane. That
-                        // background is the panel's only fill: the panel and the strip paint none of their own.
-                        AnimatedContent(
-                            targetState = panelFolded,
-                            modifier =
-                                Modifier
-                                    .fillMaxHeight()
-                                    .widthShare(panelShare)
-                                    // Out of the way, it is no part of the screen for a screen reader either.
-                                    .then(if (panelAway) Modifier.clearAndSetSemantics {} else Modifier)
-                                    .background(MaterialTheme.colorScheme.background)
-                                    .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
-                            contentAlignment = Alignment.TopStart,
-                            transitionSpec = {
-                                fadeIn(tween(PANEL_FOLD_FADE_MS)) togetherWith fadeOut(tween(PANEL_FOLD_FADE_MS)) using
-                                    SizeTransform(clip = true) { _, _ -> tween(PANEL_FOLD_MS, easing = FastOutSlowInEasing) }
-                            },
-                            label = "NotificationPanelFold",
-                        ) { folded ->
-                            if (folded) {
-                                Row(Modifier.fillMaxHeight()) {
-                                    VerticalDivider(thickness = DividerThickness)
-                                    CollapsedNotificationPanel(
-                                        accountViewModel = accountViewModel,
-                                        collapsedAt = foldedAt,
-                                        onExpand = collapsePrefs::expand,
-                                    )
-                                }
-                            } else {
-                                Row(Modifier.fillMaxHeight()) {
-                                    // Dragging the line left widens the panel.
-                                    PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
-                                    NotificationSidePanel(
-                                        accountViewModel = accountViewModel,
-                                        nav = nav,
-                                        modifier = Modifier.width(openPanelWidth.dp),
-                                        onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
-                                    )
-                                }
+                // Only the leading pane sits under window controls drawn over the app (macOS's traffic
+                // lights): the dock to the right takes that inset back, so its headers reach the
+                // window's edge instead of growing a band under an empty title bar. The theme
+                // background is the dock's only fill: its panels paint none of their own.
+                if (dock != null && (!shownView.isEmpty || stripShown)) {
+                    Row(
+                        Modifier
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.background)
+                            .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
+                    ) {
+                        // No Surface here (the Row paints the only fill): text and icons take the theme's
+                        // color from here, or they fall back to black on the dark theme.
+                        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
+                            if (!shownView.isEmpty) DockColumns(dock, shownView, columnWidths, accountViewModel, panelNav)
+                            if (stripShown) {
+                                VerticalDivider(thickness = DividerThickness)
+                                DockStrip(dock, available, shownView, accountViewModel)
                             }
                         }
                     }
@@ -436,11 +449,37 @@ private fun MultiPaneShell(
     }
 }
 
-/** How long the notification panel takes to fold to its strip or unfold back. */
-private const val PANEL_FOLD_MS = 250
+/** How close to a dock column's edge a dragged panel must be to open a new column there. */
+private val DockDropEdge = 40.dp
 
-/** The strip and the panel cross-fade over the first part of the fold. */
-private const val PANEL_FOLD_FADE_MS = 150
+/** No dock (no logged-in shell provides one): an empty layout to collect. */
+private val EmptyDockFlow = MutableStateFlow(DockLayout())
+
+/** The main screen's bounds, for a panel dragged to its right edge (a first dock column). */
+@Composable
+private fun Modifier.dockCenterZone(dock: DockController): Modifier {
+    DisposableEffect(dock) { onDispose { dock.drag.center = null } }
+    return onGloballyPositioned { dock.drag.center = it.boundsInRoot() }
+}
+
+/** The panels that step out of the dock on the current screen, the one each duplicates. */
+@Composable
+private fun panelsHiddenHere(
+    nav: Nav,
+    dock: DockController?,
+): Set<PanelId> {
+    if (dock == null) return emptySet()
+    val hidden by remember(nav, dock) {
+        derivedStateOf {
+            val here = nav.currentRoute::class
+            dock.panels
+                .filter { here in it.hidesOn }
+                .map { it.id }
+                .toSet()
+        }
+    }
+    return hidden
+}
 
 /** A press in the main screen takes the focus back from the deck's columns (see [DeckFocus]). */
 private fun Modifier.unfocusDeckOnPress() =
@@ -481,38 +520,26 @@ private fun DeckSplit(
 }
 
 /**
- * Whether the current screen keeps the docked notification feed out of the way: one of
- * [PanelFreeRoutes] (the Notifications screen, which it would duplicate, and the screens that want
- * the whole pane). Only asked where there is room for the panel.
+ * Whether the current screen wants the whole width ([FullWidthRoutes]): there the dock keeps only
+ * its strip, and its panels open over the screen. Only asked where the dock has room.
  *
  * The current route is read here, through [derivedStateOf], rather than in the shells, so a
  * navigation recomposes only when it enters or leaves one of those screens.
  */
 @Composable
-private fun panelAwayHere(nav: Nav): Boolean {
-    val panelFree by remember(nav) { derivedStateOf { nav.currentRoute::class in PanelFreeRoutes } }
-    return panelFree
+private fun fullWidthHere(nav: Nav): Boolean {
+    val wants by remember(nav) { derivedStateOf { nav.currentRoute::class in FullWidthRoutes } }
+    return wants
 }
 
 /**
- * Lays the content out at its own width and takes [share] of it, pinned to its leading edge and
- * clipped: the panel keeps its layout (and its state) while it slides out of the way.
+ * Screens that want the whole pane (the paper and the nSite/napplet browser, coding sessions): the
+ * dock folds to its strip there. A new full-width screen is one more entry here, plus
+ * `capWidth = false` where it is registered. A panel that duplicates a screen names it in its own
+ * [DockPanelSpec.hidesOn] instead.
  */
-private fun Modifier.widthShare(share: Float): Modifier =
-    clipToBounds().layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        val width = (placeable.width * share.coerceIn(0f, 1f)).roundToInt()
-        layout(width, placeable.height) { placeable.placeRelative(0, 0) }
-    }
-
-/**
- * Screens the docked notification panel stays away from: the notifications themselves, and the
- * screens that want the whole pane (the paper and the nSite/napplet browser). A new full-width
- * screen is one more entry here, plus `capWidth = false` where it is registered.
- */
-val PanelFreeRoutes: Set<KClass<out Route>> =
+val FullWidthRoutes: Set<KClass<out Route>> =
     setOf(
-        Route.Notification::class,
         Route.FrontPage::class,
         Route.NostrApp::class,
         Route.Browser::class,
@@ -534,7 +561,6 @@ private fun PermanentDrawerShell(
     nav: Nav,
     drawer: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
-    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     topStrip: (@Composable () -> Unit)?,
     content: @Composable () -> Unit,
 ) {
@@ -544,7 +570,6 @@ private fun PermanentDrawerShell(
         resizableLeading = true,
         leading = drawer,
         deck = deck,
-        notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
         topStrip = topStrip,
         content = content,
     )

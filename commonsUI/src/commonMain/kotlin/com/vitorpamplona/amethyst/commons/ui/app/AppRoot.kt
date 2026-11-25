@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.app
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntOffset
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
@@ -33,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
@@ -106,6 +110,29 @@ interface AppRoot {
     fun ScreenWindow(
         window: ScreenWindowSpec,
         content: @Composable () -> Unit,
+    ) {}
+
+    /**
+     * The dock panels only this platform has (the assistant, the devices), shown after the shared
+     * ones (the notification feed). Asked once per account.
+     */
+    fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> = emptyList()
+
+    /** Whether this front end can give a dock panel an OS window of its own ([PanelWindow]). */
+    val supportsPanelWindows: Boolean get() = false
+
+    /** The main window's content origin on the screen, in pixels, where a front end knows it. */
+    fun mainWindowScreenOrigin(): IntOffset? = null
+
+    /**
+     * One OS window holding a dock panel popped out of the dock. [content] gets the modifier the
+     * panel's header should carry so dragging it moves the window, and docks the panel when it is
+     * dropped on the main window. Only a front end with [supportsPanelWindows] draws it.
+     */
+    @Composable
+    fun PanelWindow(
+        window: PanelWindowSpec,
+        content: @Composable (headerDrag: Modifier) -> Unit,
     ) {}
 
     /** Whether the drawer's edge swipe should wait, e.g. while an embedded surface drags a selection. */

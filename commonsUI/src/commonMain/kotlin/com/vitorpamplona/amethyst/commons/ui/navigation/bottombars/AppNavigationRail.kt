@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockRailItems
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.LoggedInUserPictureDrawer
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -91,6 +92,8 @@ fun AppNavigationRail(
                 )
             }
         }
+        // The dock's panels, where the window is too narrow for the dock: each opens over the screen.
+        DockRailItems(accountViewModel)
     }
 }
 

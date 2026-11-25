@@ -61,11 +61,10 @@ class PaneWidthPreferencesTest {
 
             session {
                 setDrawer(340f)
-                setNotifications(420f)
                 setChatList(310f)
             }
 
-            assertEquals(PaneWidths(drawer = 340f, notifications = 420f, chatList = 310f), session())
+            assertEquals(PaneWidths(drawer = 340f, chatList = 310f), session())
         }
 
     @Test

@@ -29,23 +29,33 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.withContext
+import java.awt.Point
 import java.io.File
 import javax.swing.JFrame
+import kotlin.math.roundToInt
 
 private const val CASCADE_STEP = 32
 private const val WINDOW_GAP = 8
 private const val SIZE_SAVE_DEBOUNCE_MS = 500L
+
+// Where in a panel window's header the pointer holds it when a panel is dragged out of the main window.
+private const val PANEL_GRAB_X = 120
+private const val PANEL_GRAB_Y = 20
 
 /**
  * Every OS window the app has open: the main window, which hides rather than closes while screen
@@ -232,6 +242,81 @@ class DesktopWindowManager(
                 .debounce(SIZE_SAVE_DEBOUNCE_MS)
                 .collect { withContext(Dispatchers.IO) { sizes.save(kind, it) } }
         }
+    }
+
+    /** The dock panels in windows of their own, by panel. */
+    private val panelFrames = mutableStateMapOf<PanelId, JFrame>()
+
+    /**
+     * Where panel window [spec] opens: where it was dropped when dragged out of the main window
+     * (its header under the pointer), else beside the main window, at the size it was last left at.
+     */
+    fun initialState(spec: PanelWindowSpec): WindowState {
+        val size = sizes.sizeFor(spec.kind)
+        val scale = mainFrame?.graphicsConfiguration?.defaultTransform?.scaleX ?: 1.0
+        val origin = spec.origin
+        val position =
+            if (origin != null) {
+                WindowPosition((origin.x / scale - PANEL_GRAB_X).dp, (origin.y / scale - PANEL_GRAB_Y).dp)
+            } else {
+                placeBeside(null, size)
+            }
+        return WindowState(size = size, position = position)
+    }
+
+    /** Registers panel window [spec]'s [frame] while it is open, raises it when asked, and remembers its size. */
+    @OptIn(FlowPreview::class)
+    @Composable
+    fun PanelWindowEffects(
+        spec: PanelWindowSpec,
+        frame: JFrame,
+        state: WindowState,
+    ) {
+        DisposableEffect(frame) {
+            panelFrames[spec.id] = frame
+            onDispose { if (panelFrames[spec.id] === frame) panelFrames.remove(spec.id) }
+        }
+        LaunchedEffect(spec.raise) {
+            if (spec.raise != null) {
+                frame.toFront()
+                frame.requestFocus()
+            }
+        }
+        val kind = remember(spec.id) { spec.kind }
+        LaunchedEffect(state) {
+            snapshotFlow { state.size }
+                .drop(1)
+                .debounce(SIZE_SAVE_DEBOUNCE_MS)
+                .collect { withContext(Dispatchers.IO) { sizes.save(kind, it) } }
+        }
+    }
+
+    /** The main window's content origin on the screen, in the pixels Compose lays out in. */
+    fun mainContentOrigin(): IntOffset? {
+        val frame = mainFrame ?: return null
+        if (!frame.isShowing) return null
+        val content = frame.contentPane
+        val at = content.locationOnScreen
+        val scale = frame.graphicsConfiguration.defaultTransform.scaleX
+        return IntOffset((at.x * scale).roundToInt(), (at.y * scale).roundToInt())
+    }
+
+    /**
+     * [screen], a point on the screen (AWT's coordinates), in the main window's content as Compose
+     * lays it out (pixels); null when the point is not over the main window.
+     */
+    fun inMainContent(screen: Point): Offset? {
+        val frame = mainFrame ?: return null
+        if (!frame.isShowing) return null
+        val content = frame.contentPane
+        val at = content.locationOnScreen
+        val x = screen.x - at.x
+        val y = screen.y - at.y
+        if (x < 0 || y < 0 || x > content.width || y > content.height) return null
+        val scale =
+            frame.graphicsConfiguration.defaultTransform.scaleX
+                .toFloat()
+        return Offset(x * scale, y * scale)
     }
 
     /**

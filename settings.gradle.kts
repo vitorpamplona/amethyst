@@ -85,6 +85,7 @@ include(":cli")
 include(":relayBench")
 include(":agentCore")
 include(":claudeCodeClient")
+include(":emulatorClient")
 include(":codexClient")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Nostr + Blossom through Magpie

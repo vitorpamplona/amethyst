@@ -1,6 +1,47 @@
 # Dockable panels: tool windows for the shared shell
 
-Status: **Proposed.** Date: 2026-11-25. Nothing built.
+Status: **Built (desktop and shared UI), 2026-11-25.** Android gets the same dock from the
+shared shell, with the notification feed as its only panel and no windows. The emulator panel has
+not been run against a real emulator (none in the build container); see "Not verified" below.
+
+## What was built
+
+- **Model** (`commons/…/model/dock/`): `DockLayout` (columns of slots, slots of tabs; open,
+  folded or in a window; overlay mode per panel), `DropTarget`, `DockView`, and
+  `DockLayoutPreferences` (device-wide JSON in DataStore, migrating the old notification
+  panel's width and fold). The limits are **three columns of three slots**: the strip shows a
+  panel that cannot fit anyway, so a looser cap costs nothing and lets a phone-shaped device
+  panel take its own column.
+- **Fitting:** `fitPanes` in `ScreenLayout.kt`; `fitPaneWidths` now delegates to it.
+- **Shell** (`commonsUI/…/navigation/dock/`): `DockController` (session state, every panel's
+  content built once as movable content with its own ViewModels and saved state), `DockColumns`
+  with column and slot splitters, `PanelHeader` with tabs, the panel menu and the put-away
+  button, `DockStrip` with badges, `DockOverlayLayer` (Overlay and Maximize), `DockDragState` +
+  `dockHitTest` + `DockDragOverlay` (drag and drop), `PanelWindows`, and `DockRailItems` for
+  railed windows. `MultiPaneShell` draws it in place of the notification panel.
+  `PanelFreeRoutes` became `FullWidthRoutes` (the dock folds to its strip there) plus each
+  panel's own `hidesOn`.
+- **Panels:** `NotificationsDockPanel` (shared), `AssistantDockPanel` and `DevicesDockPanel`
+  (desktop, through `AppRoot.dockPanels`). Settings' "ask the assistant" goes to the panel.
+- **Windows:** `AppRoot.PanelWindow` / `supportsPanelWindows` / `mainWindowScreenOrigin`; on the
+  desktop `DesktopAppRoot.PanelWindow`, `DesktopWindowManager.initialState(PanelWindowSpec)` and
+  `panelWindowDrag` (drag a panel window's header over the main window to dock it).
+- **Keyboard and menus (desktop):** Ctrl/Cmd+Shift+1/2/3 toggle the notification, assistant and
+  devices panels, Ctrl/Cmd+Shift+\ hides or restores all, Shift+Esc folds the focused panel, Esc
+  closes an overlay; a *Panels* menu in the menu bar.
+- **Emulator:** the `emulatorClient` module (gRPC over OkHttp h2c, hand-rolled protobuf, discovery
+  files, launcher; 47 tests against a fake h2c server) and `DeviceStreamService` in
+  `commons/jvmMain/…/devices/`. Frames are asked for as PNG, which sidesteps the proto's
+  bottom-up row order for raw pixels.
+
+## Not verified
+
+- Against a real emulator: the launch flags, the discovery file paths and keys, the input
+  coordinates on a turned device, and the volume key names. Emulators started by Android Studio
+  authenticate with JWTs, which `emulatorClient` does not speak; start the device from the panel.
+- Dragging a panel out of the frame relies on the pointer being reported past the window's edge
+  while the button is held; Xvfb has no window manager to try it against.
+
 
 ## Goal
 

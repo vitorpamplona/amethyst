@@ -1234,6 +1234,9 @@ class ClaudeCodeService(
         if (access != null) online.access = access
     }
 
+    /** The open assistant chat's key, once [settingsAssistant] has opened it. */
+    val assistantKey: String? get() = settingsAssistantKey
+
     /** Whether the chat [key] names is the assistant: open as one, or saved in its folder. */
     fun isAssistantChat(key: String): Boolean {
         chats.value[key]?.let { return it.state.value.kind == ChatKind.SETTINGS }

@@ -120,11 +120,11 @@ class ScreenLayoutTest {
                 notifications = null,
                 showDrawer = true,
                 showNotifications = false,
-                notificationStripWidth = NotificationPanelCollapsedWidth.value,
+                notificationStripWidth = DockStripWidth.value,
             )
         assertEquals(472f, fitted.drawer)
         // 1000 - 472 (drawer) - 48 (strip) = 480: the center pane keeps exactly its minimum.
-        assertEquals(MIN_CENTER_PANE_DP, 1_000f - fitted.drawer - NotificationPanelCollapsedWidth.value)
+        assertEquals(MIN_CENTER_PANE_DP, 1_000f - fitted.drawer - DockStripWidth.value)
     }
 
     @Test

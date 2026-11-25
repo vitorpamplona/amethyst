@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,16 +51,14 @@ import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.collapse
-import com.vitorpamplona.amethyst.commons.resources.notification_panel_folded_new
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelCollapsedWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp
@@ -92,18 +88,11 @@ fun NotificationSidePanel(
     nav: INav,
     modifier: Modifier = Modifier,
     onCollapse: (() -> Unit)? = null,
+    showHeader: Boolean = true,
 ) {
-    val split by accountViewModel.account.settings.splitNotificationsEnabled
-        .collectAsStateWithLifecycle()
-
-    val notifFeedContentState =
-        if (split) {
-            accountViewModel.feedStates.notificationsFollowing
-        } else {
-            accountViewModel.feedStates.notifications
-        }
+    val notifFeedContentState = panelFeed(accountViewModel)
     val scrollStateKey =
-        if (split) {
+        if (notifFeedContentState === accountViewModel.feedStates.notificationsFollowing) {
             ScrollStateKeys.NOTIFICATION_SIDE_PANEL_FOLLOWING
         } else {
             ScrollStateKeys.NOTIFICATION_SIDE_PANEL
@@ -128,54 +117,8 @@ fun NotificationSidePanel(
                 ),
             ),
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { nav.nav(Route.Notification()) }
-                        .padding(horizontal = Size16dp, vertical = Size12dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Notifications,
-                    contentDescription = null,
-                    modifier = Size22Modifier,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Spacer(modifier = StdHorzSpacer)
-                Text(
-                    text = stringRes(Res.string.route_notifications),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                // What tapping Notifications in the bottom bar does on a phone that is already
-                // there: reload and regroup the cards, back at the top.
-                IconButton(
-                    onClick = { notifFeedContentState.invalidateDataAndSendToTop(true) },
-                    modifier = Size24Modifier,
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Refresh,
-                        contentDescription = stringRes(Res.string.refresh),
-                        modifier = Size20Modifier,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                // The panel docks wherever the window has the width, so the fold button is
-                // always there beside the refresh one.
-                if (onCollapse != null) {
-                    IconButton(
-                        onClick = onCollapse,
-                        modifier = Size24Modifier,
-                    ) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
-                            contentDescription = stringRes(Res.string.collapse),
-                            modifier = Size20Modifier,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+            if (showHeader) {
+                NotificationPanelHeader(nav, notifFeedContentState, onCollapse)
             }
 
             // Today's counts; tapping them expands the 7-day chart, as on the full screen.
@@ -197,79 +140,106 @@ fun NotificationSidePanel(
     }
 }
 
-/**
- * The folded form of [NotificationSidePanel]: just the bell, badged with how many notification
- * cards landed since the panel was folded ([collapsedAt]; null — expanded, or the saved fold not
- * loaded yet — reads as zero). Tapping the bell unfolds the panel, which resets the count. The
- * feed the panel would show is watched here too, so the badge ticks as cards arrive while folded.
- */
+/** The feed the panel shows: Following when the user splits notifications, as the screen's first tab. */
 @Composable
-fun CollapsedNotificationPanel(
-    accountViewModel: AccountViewModel,
-    collapsedAt: Long?,
-    onExpand: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun panelFeed(accountViewModel: AccountViewModel): CardFeedContentState {
     val split by accountViewModel.account.settings.splitNotificationsEnabled
         .collectAsStateWithLifecycle()
+    return if (split) accountViewModel.feedStates.notificationsFollowing else accountViewModel.feedStates.notifications
+}
 
-    val notifFeedContentState =
-        if (split) {
-            accountViewModel.feedStates.notificationsFollowing
-        } else {
-            accountViewModel.feedStates.notifications
-        }
-
-    WatchAccountForNotifications(notifFeedContentState, accountViewModel)
-
-    val feedState by notifFeedContentState.feedContent.collectAsStateWithLifecycle()
-    val loadedFeed = (feedState as? CardFeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
-    val missed = countNewerThan(loadedFeed?.list, collapsedAt)
-
-    // The bell is the strip's only control: name what it opens, plus the missed count when there
-    // is one, rather than the bare action ("Expand"), which reads as nonsense out of context.
-    val bellDescription =
-        if (missed > 0) {
-            pluralStringRes(Res.plurals.notification_panel_folded_new, missed, missed)
-        } else {
-            stringRes(Res.string.route_notifications)
-        }
-
-    // The Surface provides the Material container color + onBackground as LocalContentColor, as
-    // in the expanded panel above.
-    // The shell paints the theme background under the panel (AppShellLayout), so a fill here
-    // would paint the same pixels twice a frame; the Surface stays for its content color.
-    Surface(
-        modifier = modifier.width(NotificationPanelCollapsedWidth).fillMaxHeight(),
-        color = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onBackground,
+/**
+ * Reloads and regroups the panel's cards, back at the top: what tapping Notifications in the bottom
+ * bar does on a phone that is already there. The dock puts it in the panel's header.
+ */
+@Composable
+fun NotificationPanelRefreshButton(accountViewModel: AccountViewModel) {
+    val feed = panelFeed(accountViewModel)
+    IconButton(
+        onClick = { feed.invalidateDataAndSendToTop(true) },
+        modifier = Size24Modifier,
     ) {
-        Column(
-            Modifier.windowInsetsPadding(
-                WindowInsets.systemBars.only(
-                    WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
-                ),
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Icon(
+            symbol = MaterialSymbols.Refresh,
+            contentDescription = stringRes(Res.string.refresh),
+            modifier = Size20Modifier,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun NotificationPanelHeader(
+    nav: INav,
+    notifFeedContentState: CardFeedContentState,
+    onCollapse: (() -> Unit)?,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { nav.nav(Route.Notification()) }
+                .padding(horizontal = Size16dp, vertical = Size12dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Notifications,
+            contentDescription = null,
+            modifier = Size22Modifier,
+            tint = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(modifier = StdHorzSpacer)
+        Text(
+            text = stringRes(Res.string.route_notifications),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        // What tapping Notifications in the bottom bar does on a phone that is already
+        // there: reload and regroup the cards, back at the top.
+        IconButton(
+            onClick = { notifFeedContentState.invalidateDataAndSendToTop(true) },
+            modifier = Size24Modifier,
         ) {
-            // A 48 dp button with no top padding centres the bell 24 dp down, on the same line as
-            // the expanded header (12 dp padding around a 24 dp row) and the centre pane's top bar.
-            IconButton(onClick = onExpand) {
-                BadgedBox(
-                    badge = {
-                        if (missed > 0) Badge { Text(missedBadgeLabel(missed)) }
-                    },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Notifications,
-                        contentDescription = bellDescription,
-                        modifier = Size22Modifier,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+            Icon(
+                symbol = MaterialSymbols.Refresh,
+                contentDescription = stringRes(Res.string.refresh),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // The panel docks wherever the window has the width, so the fold button is
+        // always there beside the refresh one.
+        if (onCollapse != null) {
+            IconButton(
+                onClick = onCollapse,
+                modifier = Size24Modifier,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
+                    contentDescription = stringRes(Res.string.collapse),
+                    modifier = Size20Modifier,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
+}
+
+/**
+ * How many notification cards landed since [sinceSeconds] (the panel's fold; null reads as zero):
+ * the dock strip's badge on the folded panel's bell. The feed the panel would show is watched here
+ * too, so the count ticks as cards arrive while it is folded.
+ */
+@Composable
+fun rememberMissedNotifications(
+    accountViewModel: AccountViewModel,
+    sinceSeconds: Long?,
+): Int {
+    val notifFeedContentState = panelFeed(accountViewModel)
+    WatchAccountForNotifications(notifFeedContentState, accountViewModel)
+    val feedState by notifFeedContentState.feedContent.collectAsStateWithLifecycle()
+    val loadedFeed = (feedState as? CardFeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
+    return countNewerThan(loadedFeed?.list, sinceSeconds)
 }
 
 /** The cards newer than [sinceSeconds]; null — no fold yet or no feed yet — reads as nothing missed. */
