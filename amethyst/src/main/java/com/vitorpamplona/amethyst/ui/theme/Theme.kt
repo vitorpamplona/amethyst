@@ -35,8 +35,6 @@ import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
-import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
-import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
@@ -110,11 +108,10 @@ fun AmethystTheme(
         colors = colors,
     ) {
         // The platform halves of the shared note and rich-text renderers: media, LaTeX, payments,
-        // link previews, the quoted-note card, the note types built on platform engines and the
+        // link previews, the note types built on platform engines and the
         // flavour's translator. Every Activity root goes through this theme.
         CompositionLocalProvider(
             LocalRichTextPlatform provides AndroidRichTextPlatform,
-            LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
             LocalTranslationPlatform provides FlavorTranslationPlatform,
             LocalNotePlatform provides AndroidNotePlatform,
             LocalAppPlatform provides AndroidAppPlatform,

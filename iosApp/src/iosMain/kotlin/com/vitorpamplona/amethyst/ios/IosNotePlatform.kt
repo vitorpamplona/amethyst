@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ios
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -34,14 +39,18 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.commons.ui.components.ImageViewerDialog
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 
 /**
- * iOS's note media, until playback, the zoom viewer and link cards arrive (B4, B5): images draw
- * inline through Coil, and every other piece (videos, PDFs, link previews) is a link the user can
+ * iOS's note media, until playback and link cards arrive (B4, B5): images draw inline through Coil
+ * and open the shared [ImageViewerDialog], and every other piece (videos, PDFs, link previews) is a link the user can
  * open, never an empty slot. Everything else keeps [NotePlatform]'s empty defaults.
  */
 object IosNotePlatform : NotePlatform {
@@ -57,6 +66,10 @@ object IosNotePlatform : NotePlatform {
     ) {
         val url = (content as? MediaUrlContent)?.url ?: return
         if (content is MediaUrlImage) {
+            var showViewer by remember { mutableStateOf(false) }
+            // Keyed by the image, so a viewer paged to a sibling can close into that one's thumbnail.
+            val source = rememberZoomSourceAnchor(content)
+            val cornerRadius = if (roundedCorner) 12.dp else 0.dp
             AsyncImage(
                 model = url,
                 contentDescription = content.description,
@@ -65,12 +78,26 @@ object IosNotePlatform : NotePlatform {
                     Modifier
                         .fillMaxWidth()
                         .heightIn(max = MAX_INLINE_MEDIA_HEIGHT)
-                        .clip(RoundedCornerShape(if (roundedCorner) 12.dp else 0.dp)),
+                        .zoomSourceAnchor(source)
+                        .clip(RoundedCornerShape(cornerRadius))
+                        .clickable { showViewer = true },
             )
+            if (showViewer) {
+                ImageViewerDialog(content, images, source, cornerRadius) { showViewer = false }
+            }
         } else {
             ClickableUrl(url)
         }
     }
+
+    @Composable
+    override fun ZoomableImageDialog(
+        imageUrl: BaseMediaContent,
+        allImages: ImmutableList<BaseMediaContent>,
+        source: ZoomSourceAnchor?,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = ImageViewerDialog(imageUrl, allImages, source, 0.dp, onDismiss)
 
     @Composable
     override fun UrlPreview(
