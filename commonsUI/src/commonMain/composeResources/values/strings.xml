@@ -2932,6 +2932,11 @@
     <string name="git_timeline_pushed">pushed new commits</string>
     <string name="git_timeline_pushed_rebased">rebased and pushed new commits</string>
     <string name="git_timeline_set_status">set status to</string>
+    <string name="git_status_merge_commit">Merge commit</string>
+    <plurals name="git_status_applied_as_commits">
+        <item quantity="one">Applied as %1$d commit</item>
+        <item quantity="other">Applied as %1$d commits</item>
+    </plurals>
     <string name="git_inline_removed_lines">(removed lines)</string>
     <string name="git_timeline_patch_added">added a patch</string>
     <string name="git_timeline_patch_revision">posted a new revision</string>
