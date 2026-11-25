@@ -217,10 +217,28 @@ kotlin {
             }
         }
 
+        // Every target without the JVM stack (OkHttp, JCA, JNI): iOS today, web next. Code that needs
+        // no Apple API goes here, not in iosMain, so the web app reuses it
+        // (plans/2026-10-09-ios-app.md, "Target source-set layout").
+        val nonJvmMain =
+            create("nonJvmMain") {
+                dependsOn(commonMain.get())
+                dependencies {
+                    // Relay sockets and HTTP off the JVM (Apache-2.0, checked in the 3.6.1 POMs on
+                    // 2026-11-25). JVM and Android keep OkHttp.
+                    implementation(libs.ktor.client.core)
+                    implementation(libs.ktor.client.websockets)
+                }
+            }
+
         // iOS intermediate so iosArm64Main and iosSimulatorArm64Main share code.
         val iosMain =
             create("iosMain") {
-                dependsOn(commonMain.get())
+                dependsOn(nonJvmMain)
+                dependencies {
+                    // NSURLSession under Ktor (Apache-2.0, checked in the 3.6.1 POM on 2026-11-25).
+                    implementation(libs.ktor.client.darwin)
+                }
             }
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
