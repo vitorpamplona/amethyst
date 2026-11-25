@@ -92,6 +92,8 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSURLErrorDomain
 import platform.Foundation.NSValue
 import platform.darwin.NSObjectProtocol
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 /**
  * [AmethystPlayer] over an [AVPlayer]. AVFoundation announces its changes through key-value
@@ -117,6 +119,12 @@ class AvAmethystPlayer(
     private val notificationTokens = mutableListOf<NSObjectProtocol>()
 
     private var item: AVPlayerItem? = null
+
+    // Filled once AVFoundation has loaded these keys of the item's asset in the background. Read
+    // before that, the asset properties block the calling thread until the playlist arrives, and
+    // the caller here is the main thread: the UI froze while a video loaded.
+    private var assetLoaded = false
+    private var cachedLegibleGroup: AVMediaSelectionGroup? = null
     private var ended = false
     private var failure: PlayerFailure? = null
     private var wantsToPlay = false
@@ -245,8 +253,12 @@ class AvAmethystPlayer(
         clearNotifications()
         failure = null
         ended = false
-        val newItem = AVPlayerItem(asset = AVURLAsset(uRL = nsUrl, options = null))
+        val asset = AVURLAsset(uRL = nsUrl, options = null)
+        val newItem = AVPlayerItem(asset = asset)
         item = newItem
+        assetLoaded = false
+        cachedLegibleGroup = null
+        loadAssetKeys(asset, newItem)
         avPlayer.replaceCurrentItemWithPlayerItem(newItem)
         observe(newItem)
         if (wantsToPlay) avPlayer.playImmediatelyAtRate(speed)
@@ -299,7 +311,7 @@ class AvAmethystPlayer(
 
     override val videoTracks: List<VideoTrack>
         get() {
-            val variants = HlsVariants.of(item?.asset as? AVURLAsset, pinnedVideo)
+            val variants = if (assetLoaded) HlsVariants.of(item?.asset as? AVURLAsset, pinnedVideo) else emptyList()
             if (variants.isNotEmpty()) return variants
             // A plain file: its one picture, as media3 reports the single track of its video group.
             val size = videoSize
@@ -338,7 +350,26 @@ class AvAmethystPlayer(
         item?.preferredMaximumResolution = platform.CoreGraphics.CGSizeMake(w.toDouble(), h.toDouble())
     }
 
-    private fun legibleGroup(): AVMediaSelectionGroup? = item?.asset?.mediaSelectionGroupForMediaCharacteristic(AVMediaCharacteristicLegible)
+    /** The stream's caption group, once loaded; null before, never a blocking read. */
+    private fun legibleGroup(): AVMediaSelectionGroup? = cachedLegibleGroup
+
+    /**
+     * Loads what [textTracks] and [videoTracks] read from the asset off the main thread, then
+     * caches it and announces the tracks. A load for an item that was replaced meanwhile is dropped.
+     */
+    private fun loadAssetKeys(
+        asset: AVURLAsset,
+        forItem: AVPlayerItem,
+    ) {
+        asset.loadValuesAsynchronouslyForKeys(ASSET_KEYS) {
+            dispatch_async(dispatch_get_main_queue()) {
+                if (item !== forItem) return@dispatch_async
+                cachedLegibleGroup = asset.mediaSelectionGroupForMediaCharacteristic(AVMediaCharacteristicLegible)
+                assetLoaded = true
+                listeners.toList().forEach { it.onTracksChanged() }
+            }
+        }
+    }
 
     override val textTracks: List<TextTrack>
         get() {
@@ -525,6 +556,9 @@ class AvAmethystPlayer(
     companion object {
         private const val TAG = "AvAmethystPlayer"
         const val TICK_MS = 200L
+
+        // The asset properties this reads: caption groups and HLS renditions.
+        private val ASSET_KEYS = listOf("availableMediaCharacteristicsWithMediaSelectionOptions", "variants")
 
         // AVFoundation's errors for media it cannot read or decode.
         private val DECODER_CODES = setOf(-11828L, -11829L, -11833L, -11821L, -11832L, -11834L, -11849L)
