@@ -11,7 +11,9 @@ shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktop
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
 shim that renders the same UI (`desktopApp/…/desktop/app/`, see
-`commons/plans/2026-09-27-one-ui-android-desktop.md`). The legacy desktop app (its own screens,
+`commons/plans/2026-09-27-one-ui-android-desktop.md`). `iosApp` is the third shim, for iPhone and iPad: the same
+`AmethystApp`, hosted by a Swift `@main` (`iosApp/README.md`, plan
+`commons/plans/2026-10-09-ios-app.md`). Its Kotlin compiles on Linux; linking and running need a Mac. The legacy desktop app (its own screens,
 deck and navigation) is gone: its desktop-only features were rebuilt in the shared UI or dropped
 (`commons/plans/2026-10-09-legacy-desktop-retirement.md`). `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by

@@ -1,0 +1,60 @@
+# XcodeGen spec for the iOS app shell (https://github.com/yonaskolb/XcodeGen, MIT, a build tool
+# only: nothing of it ships in the app). Generate the project on a Mac with:
+#
+#   brew install xcodegen
+#   cd iosApp/xcode && xcodegen
+#   open Amethyst.xcodeproj
+#
+# The project is generated, not committed: the spec is the source of truth and reads in review.
+# The Swift here only hosts the shared app; everything else is Kotlin in :iosApp, :commonsUI and
+# :commons (plans/2026-10-09-ios-app.md, B0/B1).
+name: Amethyst
+options:
+  bundleIdPrefix: com.vitorpamplona
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Amethyst:
+    type: application
+    platform: iOS
+    sources:
+      - Amethyst
+    info:
+      path: Amethyst/Info.plist
+      properties:
+        CFBundleDisplayName: Amethyst
+        UILaunchScreen: {}
+        # Lets Compose draw at 120 Hz on ProMotion screens.
+        CADisableMinimumFrameDurationOnPhone: true
+        # openLightningWallet asks whether a wallet can take a `lightning:` URL.
+        LSApplicationQueriesSchemes:
+          - lightning
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vitorpamplona.amethyst.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Where embedAndSignAppleFrameworkForXcode puts AmethystKit.framework.
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LDFLAGS: "$(inherited) -framework AmethystKit"
+        # The Gradle build below writes outside the sandbox Xcode gives build scripts.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    preBuildScripts:
+      - name: Build AmethystKit (Kotlin)
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/../.."
+          ./gradlew :iosApp:embedAndSignAppleFrameworkForXcode

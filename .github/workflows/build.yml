@@ -61,7 +61,7 @@ jobs:
         # when PREPUSH_KMP_METADATA=1 (a plain push skips the compiles).
         run: |
           ./gradlew spotlessCheck \
-            :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
+            :commons:verifyKmpPurity :commonsUI:verifyKmpPurity :iosApp:verifyKmpPurity \
             :commons:compileCommonMainKotlinMetadata \
             :commonsUI:compileCommonMainKotlinMetadata \
             :commonsUI:compileSkikoMainKotlinMetadata
@@ -393,6 +393,57 @@ jobs:
         with:
           name: CommonsUI iOS Test Reports
           path: commonsUI/build/reports
+
+  build-ios-app:
+    # The iOS app shell (:iosApp, plans/2026-10-09-ios-app.md B0): links the AmethystKit framework
+    # for the simulator, the step no Linux host can run, then generates the Xcode project from
+    # iosApp/xcode/project.yml and builds it unsigned. It compiles :commons and :commonsUI for iOS
+    # again on its own runner, so it gets more time than the test jobs.
+    runs-on: macos-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: 25
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-iosapp-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-iosapp-
+            konan-${{ runner.os }}-
+
+      - name: Link AmethystKit for the simulator
+        run: |
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :iosApp:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Build the Xcode project (unsigned, simulator)
+        run: |
+          brew install xcodegen
+          cd iosApp/xcode
+          xcodegen
+          xcodebuild \
+            -project Amethyst.xcodeproj \
+            -scheme Amethyst \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
   # Android Lint, split out of test-and-build-android.
   #

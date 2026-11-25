@@ -1,0 +1,49 @@
+// `:iosApp` is the iOS shim over the shared app (plans/2026-10-09-ios-app.md, B0/B1): it builds the
+// AmethystKit framework that the Xcode project in `xcode/` links, and holds only what iOS alone has.
+// Screens, navigation and the service classes come from :commons and :commonsUI.
+//
+// Kotlin/Native compiles this module's Kotlin on any host (`compileKotlinIosSimulatorArm64`), but
+// linking the framework needs Xcode, so `link*FrameworkIos*` runs only on a Mac.
+
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.jetbrainsComposeCompiler)
+    alias(libs.plugins.composeMultiplatform)
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework {
+            baseName = "AmethystKit"
+            isStatic = true
+        }
+    }
+
+    sourceSets {
+        val iosMain =
+            create("iosMain") {
+                dependsOn(commonMain.get())
+                dependencies {
+                    implementation(project(":commons"))
+                    implementation(project(":commonsUI"))
+                    implementation(libs.quartz)
+                    implementation(libs.jetbrains.compose.runtime)
+                    implementation(libs.jetbrains.compose.ui)
+                    implementation(libs.androidx.lifecycle.viewmodel)
+                    // The relay sockets and HTTP clients on NSURLSession (Apache-2.0, see :commons).
+                    implementation(libs.ktor.client.core)
+                    implementation(libs.ktor.client.websockets)
+                    implementation(libs.ktor.client.darwin)
+                }
+            }
+        getByName("iosArm64Main").dependsOn(iosMain)
+        getByName("iosSimulatorArm64Main").dependsOn(iosMain)
+    }
+}
+
+// iOS purity gate — shared task, see gradle/kmp-purity.gradle.kts.
+apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))
