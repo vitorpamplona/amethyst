@@ -43,6 +43,9 @@ import kotlin.reflect.KClass
  * - [badge]: what its strip icon carries: a count of what arrived while it was folded, or a dot
  *   when it waits for the user.
  * - [actions]: buttons of its own in the header, before the dock's.
+ * - [besideFullWidth]: stays docked on the screens that want the whole width (`FullWidthRoutes`),
+ *   where other panels open over the screen: a panel that works beside them (the device panel
+ *   beside a coding chat).
  * - [content]: the panel itself, below the header. It keeps its state wherever the dock draws it.
  */
 @Immutable
@@ -57,6 +60,7 @@ class DockPanelSpec(
     val onTitleClick: ((INav) -> Unit)? = null,
     val badge: @Composable (PanelBadgeScope) -> PanelBadge = { PanelBadge.None },
     val actions: @Composable RowScope.(DockPanelScope) -> Unit = {},
+    val besideFullWidth: Boolean = false,
     val content: @Composable (DockPanelScope) -> Unit,
 )
 

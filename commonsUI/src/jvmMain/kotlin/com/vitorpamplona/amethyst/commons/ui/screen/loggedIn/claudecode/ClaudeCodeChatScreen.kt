@@ -112,9 +112,14 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
+import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.ChatFocus
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
+import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
@@ -146,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
@@ -154,6 +160,8 @@ import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
+import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle
+import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -272,6 +280,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -303,6 +312,12 @@ import java.util.concurrent.ConcurrentHashMap
 internal val ChatColumnMaxWidth = 760.dp
 
 private const val LIVE_REFRESH_MS = 5_000L
+
+/** How long the agent must leave the device alone before its next action brings the panel up again. */
+private const val DEVICE_RUN_GAP_MS = 60_000L
+
+/** How fresh the device list behind the top bar's green dot is kept. */
+private const val DEVICE_DOT_REFRESH_MS = 10_000L
 
 /** The agent a chat talks to, as its sentences name it. */
 internal val LocalAgentName = staticCompositionLocalOf { "Claude" }
@@ -456,6 +471,47 @@ fun ClaudeCodeChatScreen(
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
     // From the service's own list, not the disk; a new workstream is in it once its clones are.
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
+    // The dock's Android device panel follows the coding chat in front: its workstream's device, its
+    // folder for Run, and its composer for a screenshot. Where an Android SDK is installed.
+    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
+    val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
+    val dock = LocalDockController.current
+    val chatScope = rememberCoroutineScope()
+    if (canDevice) {
+        DisposableEffect(key, deviceOwner, workspace, state.cwd) {
+            val release =
+                DeviceChatFocus.publish(
+                    ChatFocus(
+                        chatKey = key,
+                        owner = deviceOwner,
+                        ownerLabel = workspace?.title ?: state.title,
+                        folder = File(state.cwd),
+                        agentName = chat.backend.shortName,
+                        attach = { file -> chatScope.launch { attachments.add(listOf(file)) } },
+                    ),
+                )
+            onDispose(release)
+        }
+        // When the agent starts using this chat's device, the panel comes up to show what it does:
+        // once per run of work, so a user who folds it while the agent goes on keeps it folded.
+        LaunchedEffect(key, deviceOwner, dock) {
+            var lastAt = 0L
+            AndroidDevices.shared.activity.collect { a ->
+                if (AndroidDevices.shared.selection.value[deviceOwner] != a.serial) return@collect
+                val now = System.currentTimeMillis()
+                if (now - lastAt > DEVICE_RUN_GAP_MS) dock?.show(PanelId.DEVICES)
+                lastAt = now
+            }
+        }
+        // The top bar's green dot reads the device list: kept fresh while the chat is shown, even
+        // with the panel (which polls it closely) folded.
+        LaunchedEffect(Unit) {
+            while (true) {
+                AndroidDevices.shared.refreshIfStale(DEVICE_DOT_REFRESH_MS)
+                delay(DEVICE_DOT_REFRESH_MS)
+            }
+        }
+    }
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         BoxWithConstraints {
@@ -497,6 +553,26 @@ fun ClaudeCodeChatScreen(
                                 if (!ended) {
                                     FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
                                         Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
+                                    }
+                                }
+                            }
+                        }
+                        if (canDevice) {
+                            HoverTooltip(stringRes(Res.string.android_device_panel_toggle_desc)) {
+                                // The dock's device panel; a window without a dock opens the devices screen.
+                                IconButton(onClick = { dock?.toggle(PanelId.DEVICES) ?: nav.nav(Route.AndroidDevices(key)) }) {
+                                    // A green dot while this chat's device is up, panel open or not.
+                                    val devices by AndroidDevices.shared.state.collectAsStateWithLifecycle()
+                                    val picks by AndroidDevices.shared.selection.collectAsStateWithLifecycle()
+                                    val up = remember(devices, picks, deviceOwner) { AndroidDevices.shared.selected(deviceOwner)?.isOnline == true }
+                                    Box {
+                                        Icon(
+                                            MaterialSymbols.PhoneAndroid,
+                                            contentDescription = stringRes(Res.string.android_device_panel_toggle),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        if (up) DeviceUpBadge(Modifier.align(Alignment.TopEnd))
                                     }
                                 }
                             }

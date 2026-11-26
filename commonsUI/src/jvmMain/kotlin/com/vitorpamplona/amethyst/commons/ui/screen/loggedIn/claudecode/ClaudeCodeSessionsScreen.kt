@@ -100,8 +100,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
+import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
@@ -119,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
+import com.vitorpamplona.amethyst.commons.resources.android_devices_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_advanced
 import com.vitorpamplona.amethyst.commons.resources.claude_code_agent
@@ -324,6 +327,12 @@ private fun SessionsPane(
                         if (!searching) viewModel.search("")
                     }) { Icon(MaterialSymbols.Search, contentDescription = stringRes(Res.string.claude_code_search_hint)) }
                 }
+                // The emulators and phones the chats test on, where an Android SDK is installed.
+                if (remember { AndroidSdk.home() != null }) {
+                    HoverTooltip(stringRes(Res.string.android_devices_title)) {
+                        IconButton(onClick = { nav.nav(Route.AndroidDevices()) }) { Icon(MaterialSymbols.PhoneAndroid, contentDescription = stringRes(Res.string.android_devices_title)) }
+                    }
+                }
                 HoverTooltip(stringRes(Res.string.claude_code_storage)) {
                     IconButton(onClick = { showStorage = true }) { Icon(MaterialSymbols.Storage, contentDescription = stringRes(Res.string.claude_code_storage)) }
                 }
@@ -405,6 +414,8 @@ private fun SessionsPane(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(row)
+                    // The dock's device panel stops following the chat that is gone.
+                    DeviceChatFocus.forget(row.key)
                     deleting = null
                 }) { Text(stringRes(Res.string.claude_code_delete)) }
             },

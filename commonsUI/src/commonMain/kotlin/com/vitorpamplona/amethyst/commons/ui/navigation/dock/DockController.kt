@@ -98,6 +98,13 @@ class DockController internal constructor(
     var canDock by mutableStateOf(false)
         internal set
 
+    /** The only panels the shell docks right now, where it limits them (a full-width screen); null for all. Set by the shell. */
+    var dockOnly by mutableStateOf<Set<PanelId>?>(null)
+        internal set
+
+    /** Whether [id] docks right now rather than opening over the screen. */
+    fun canDock(id: PanelId): Boolean = canDock && dockOnly?.contains(id) != false
+
     /** Whether the shell draws the strip; where it doesn't, the rail carries the panels' icons. Set by the shell. */
     var stripShown by mutableStateOf(false)
         internal set
@@ -179,7 +186,7 @@ class DockController internal constructor(
     fun isShowing(
         id: PanelId,
         layout: DockLayout = layout(),
-    ): Boolean = overlay == id || maximized == id || layout.isInWindow(id) || (canDock && layout.isOpen(id) && !layout.isOverlay(id) && id !in foldedByWidth)
+    ): Boolean = overlay == id || maximized == id || layout.isInWindow(id) || (canDock(id) && layout.isOpen(id) && !layout.isOverlay(id) && id !in foldedByWidth)
 
     /** Shows [id]: docked where it was when the dock has the room, else over the screen; a window comes to the front. */
     fun show(id: PanelId) {
@@ -187,7 +194,7 @@ class DockController internal constructor(
         val layout = layout()
         when {
             layout.isInWindow(id) -> raise(id)
-            canDock && !layout.isOverlay(id) && id !in foldedByWidth -> {
+            canDock(id) && !layout.isOverlay(id) && id !in foldedByWidth -> {
                 if (overlay == id) overlay = null
                 update { it.open(id) }
             }
@@ -202,7 +209,7 @@ class DockController internal constructor(
             maximized == id -> maximized = null
             overlay == id -> overlay = null
             layout.isInWindow(id) -> raise(id)
-            canDock && layout.isOpen(id) && !layout.isOverlay(id) && id !in foldedByWidth -> fold(id)
+            canDock(id) && layout.isOpen(id) && !layout.isOverlay(id) && id !in foldedByWidth -> fold(id)
             else -> show(id)
         }
     }
@@ -234,7 +241,7 @@ class DockController internal constructor(
     /** Takes [id] out of its window, back to its place in the dock (over the screen where the dock has no room). */
     fun dockBack(id: PanelId) {
         update { it.dockBack(id) }
-        if (!canDock) overlay = id
+        if (!canDock(id)) overlay = id
     }
 
     /** What closing a panel's window does: it folds, and shows in its window again the next time. */
