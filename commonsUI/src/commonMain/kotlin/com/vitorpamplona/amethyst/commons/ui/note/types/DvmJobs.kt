@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -141,8 +142,8 @@ import org.jetbrains.compose.resources.StringResource
  * one line, shows the bid as a pill and the DVMs asked as chips. A result leads with its output,
  * shows the price as a pill and quotes the request it answers once, compactly.
  *
- * Job feedback (7000, DvmStatusEvent) and content-discovery results (6300) keep their own
- * renderers, which NoteCompose dispatches before the base-class branches that land here.
+ * Job feedback (7000, DvmStatusEvent) keeps its own card (NIP90Status.kt), which NoteCompose
+ * dispatches before the base-class branches that land here.
  */
 
 /** How many found events a search result quotes at most, so one result cannot flood the feed. */
@@ -191,7 +192,7 @@ private fun dvmJob(requestKind: Int): DvmJob? =
     }
 
 /** NIP-90: a bare `["encrypted"]` tag means the inputs/params (or the result) are NIP-04 ciphertext. */
-private fun TagArray.isDvmEncrypted(): Boolean = any { it.isNotEmpty() && it[0] == "encrypted" }
+internal fun TagArray.isDvmEncrypted(): Boolean = any { it.isNotEmpty() && it[0] == "encrypted" }
 
 /** NIP-90 `["bid", <msats>]`: the most the customer will pay, in sats. */
 private fun TagArray.dvmBidSats(): Long? = firstOrNull { it.size > 1 && it[0] == "bid" }?.get(1)?.toLongOrNull()?.div(1000)
@@ -446,7 +447,7 @@ fun RenderDvmResult(
  * or the customer's chip when the result does not point at its request.
  */
 @Composable
-private fun DvmRequestOrCustomer(
+internal fun DvmRequestOrCustomer(
     requestId: HexKey?,
     customer: List<HexKey>,
     quotesLeft: Int,
@@ -466,6 +467,11 @@ private fun DvmRequestOrCustomer(
 private fun dvmResultSubtitle(event: DvmResponseEvent): String? =
     when (event) {
         is DvmContentSearchResponseEvent -> {
+            val count = remember(event) { event.resultTags().size }
+            pluralStringRes(Res.plurals.kc_dvm_results_count, count, count)
+        }
+
+        is DvmContentDiscoveryResponseEvent -> {
             val count = remember(event) { event.resultTags().size }
             pluralStringRes(Res.plurals.kc_dvm_results_count, count, count)
         }
@@ -517,18 +523,12 @@ private fun DvmResultPayload(
 ) {
     when (event) {
         is DvmContentSearchResponseEvent -> {
-            val found = remember(event) { event.resultTags() }
-            found.take(MAX_QUOTED).forEach { tag ->
-                ETag.parseId(tag)?.let {
-                    KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
-                } ?: ATag.parseAddress(tag)?.let {
-                    KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
-                }
-            }
-            if (found.size > MAX_QUOTED) {
-                val more = found.size - MAX_QUOTED
-                KindCardMore(more)
-            }
+            DvmQuotedResults(remember(event) { event.resultTags() }, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        // Kind 5300's output is a JSON-stringified list of `e` and `a` tags: the notes it found.
+        is DvmContentDiscoveryResponseEvent -> {
+            DvmQuotedResults(remember(event) { event.resultTags() }, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is DvmPeopleSearchResponseEvent -> {
@@ -575,6 +575,27 @@ private fun DvmResultPayload(
         else -> {
             KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         }
+    }
+}
+
+/** The first results of a list of `e` / `a` result tags, quoted, and how many more there are. */
+@Composable
+private fun DvmQuotedResults(
+    found: TagArray,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    found.take(MAX_QUOTED).forEach { tag ->
+        ETag.parseId(tag)?.let {
+            KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        } ?: ATag.parseAddress(tag)?.let {
+            KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+    }
+    if (found.size > MAX_QUOTED) {
+        KindCardMore(found.size - MAX_QUOTED)
     }
 }
 

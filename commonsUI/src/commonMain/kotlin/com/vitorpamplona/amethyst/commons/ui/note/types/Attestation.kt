@@ -118,6 +118,7 @@ fun RenderAttestationPreview() {
         toPreview = {
             RenderAttestation(
                 baseNote = note,
+                canPreview = true,
                 quotesLeft = 3,
                 backgroundColor = remember { mutableStateOf(Color.Transparent) },
                 accountViewModel = mockAccountViewModel(),
@@ -130,6 +131,7 @@ fun RenderAttestationPreview() {
 @Composable
 fun RenderAttestation(
     baseNote: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -144,6 +146,7 @@ fun RenderAttestation(
     RenderAttestation(
         baseNote,
         noteEvent,
+        canPreview,
         quotesLeft,
         backgroundColor,
         accountViewModel,
@@ -155,6 +158,7 @@ fun RenderAttestation(
 fun RenderAttestation(
     note: Note,
     noteEvent: AttestationEvent,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -261,7 +265,7 @@ fun RenderAttestation(
             Spacer(modifier = DoubleVertSpacer)
             TranslatableRichTextViewer(
                 content = it,
-                canPreview = true,
+                canPreview = canPreview,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
                 tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
@@ -278,6 +282,7 @@ fun RenderAttestation(
 @Composable
 fun RenderAttestationRequest(
     note: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -329,7 +334,7 @@ fun RenderAttestationRequest(
             Spacer(modifier = DoubleVertSpacer)
             TranslatableRichTextViewer(
                 content = it,
-                canPreview = true,
+                canPreview = canPreview,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
                 tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
@@ -413,6 +418,7 @@ fun RenderAttestationRequest(
 @Composable
 fun RenderAttestorRecommendation(
     note: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -488,7 +494,7 @@ fun RenderAttestorRecommendation(
             Spacer(modifier = DoubleVertSpacer)
             TranslatableRichTextViewer(
                 content = it,
-                canPreview = true,
+                canPreview = canPreview,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
                 tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
@@ -506,6 +512,7 @@ fun RenderAttestorRecommendation(
 @Composable
 fun RenderAttestorProficiency(
     note: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -572,7 +579,7 @@ fun RenderAttestorProficiency(
             Spacer(modifier = Modifier.height(8.dp))
             TranslatableRichTextViewer(
                 content = it,
-                canPreview = true,
+                canPreview = canPreview,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
                 tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
