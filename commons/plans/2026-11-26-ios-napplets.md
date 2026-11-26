@@ -1,7 +1,8 @@
 # iOS napplets and nSites (NIP-5D, NIP-5A) on WKWebView, with Tor
 
-Status: N0–N4 and N4.5 (the shared session core, Desktop moved onto it) done, 2026-11-26 (what
-changed from §5 while doing them: §5.7; the core: §7b). Branch `feat/ios-napplets`.
+Status: N0–N5 done, 2026-11-26: N4.5 is the shared session core with Desktop moved onto it, and
+N5 runs NIP-5D napplets on iOS (what changed from §5 while doing them: §5.7; the core: §7b; N5 as
+built: §7c). Branch `feat/ios-napplets`.
 Builds on `commons/plans/2026-10-09-ios-app.md` §B9 and `commons/plans/2026-11-25-ios-tor.md`.
 Security baseline: `commons/plans/2026-10-31-embed-security-review.md`,
 `amethyst/plans/archive/2026-06-22-napplet-nsite-security.md`.
@@ -600,6 +601,110 @@ In `commons/commonMain`, package `commons.napplet.session` (no Compose needed):
 Desktop's `CefNappletSession` is now the CEF adapter (1,062 → 798 lines). Android is unchanged.
 Deviations from the review's §3, and why, are in `2026-11-26-napplet-host-core.md` §5.
 
+### 7c. As built: N5, napplets on iOS (2026-11-26)
+
+`iosApp/.../napplet/`. iOS is a WebKit adapter of `NappletSessionCore`; everything else is shared.
+
+- **`IosNappletWebEngine`** (the `NappletWebEngine`):
+  - **Serving.** A `WKURLSchemeHandler` on `napplet` streams `core.serve(...)` in 64 KB chunks,
+    calling the task on the main thread and never after `stopURLSchemeTask`. Every request goes
+    through `core.classifyRequest`. Each response adds `X-Content-Type-Options: nosniff` and
+    `X-DNS-Prefetch-Control: off`.
+  - **The shell.** It is served only to the top-frame navigation the engine allowed
+    (`shellNavigationPending`, set in `decidePolicyForNavigationAction`). Any other request for it
+    gets a 404. §4.2's `mainDocumentURL == URL` test alone would not work: a sub-resource of the
+    shell page has the same `mainDocumentURL`.
+  - **The bridge.** The handler is a `WKScriptMessageHandlerWithReply` in the
+    `amethyst-napplet` content world. A main-frame-only user script in that world relays the
+    `amethyst-napplet-out` DOM event that the page-world `bridgeHead()` object fires. The core
+    gate is `onShellMessageFromOrigin`. Native-to-page delivery is `evaluateJavaScript` in the
+    page world.
+  - **Guards.** These are page-world document-start user scripts with `forMainFrameOnly = false`.
+    `installGuard` refuses once the web view exists. After the shell loads, `typeof
+    RTCPeerConnection` is checked in the shell, and if WebRTC is there the launch fails through
+    `onConsoleMessage(WEBRTC_PRESENT)`. WebKit has no console callback to report it otherwise.
+  - **Request filter.** The rule list is `NappletRequestPolicy.contentRuleListJson`, compiled into
+    a `WKContentRuleList` (named by the JSON's hash, in the default store) before the web view
+    exists. If it doesn't compile, `loadShell` throws and the launch shows `Failed(ENGINE)`.
+  - **Navigation and popups.** Navigation uses `frameByOrigin`, with `linkActivated` as the user
+    gesture. The top frame may hold only the shell URL, not another internal host. `shouldPerformDownload`
+    is cancelled, and so is any response that can't be shown inline. Popups call `onPopup` and the
+    delegate returns nil.
+  - **UI delegate.** Camera, microphone and motion sensor requests are denied. JS
+    `alert`/`confirm`/`prompt` show as system alerts titled with the app's name, but only while
+    the screen is attended. Otherwise they are answered as cancelled.
+  - **Crashes and view settings.** `webViewWebContentProcessDidTerminate` calls `onRendererGone`.
+    Link previews, data detectors and swipe navigation are off. `inspectable` is on only in debug
+    builds (`Platform.isDebugBinary`). Fraud warnings are on.
+  - **Teardown.** `close()` drops the app frame first. It then removes the handlers, scripts and
+    rule lists, blanks the view, and detaches the delegates so that no ObjC cycle holds the engine.
+- **`IosNappletSession`**:
+  - It builds the plan with `sharedStorageJar = false` on `NAPPLET_SCHEME`. Blobs come from
+    `NappletBlobStore` through `iosNappletHttp`, with `viaTor = plan.blobsUseTor`.
+  - The route port only waits for Tor, up to 30 s (a port, or the session bypass). `claim` fails
+    closed until N6. `NappletProxyClaims` is not used (§7a).
+  - Links: http(s) opens in Safari through the core's gesture rule. A `nostr:` link (PAPER only)
+    goes through `uriToRoute` into the screen's nav.
+- **`IosNappletHost`**:
+  - It holds attendance, live subscriptions and the INC bus (`NappletSessionServices`). Intents
+    are null for now, so they answer `intent unavailable`.
+  - It keeps the screens, closes those of an account that logged out, and ends session grants
+    when the last screen closes. It also trims the blob cache.
+  - **Storage per account.** The data store is
+    `WKWebsiteDataStore(forIdentifier: NappletStorageProfile.uuidFor(pubKey))`. That is Android's
+    `NappletWebViewProfiles` derivation, moved to commons and pinned by a test vector. This settles
+    §4.5: storage is per account, not per network, as on Android.
+- **Screen.** `IosNostrAppScreen` mirrors Desktop's `NostrAppScreen` (a ViewModel per back-stack
+  entry, the event fetched if missing).
+  - Panes: it shows the shared top bar, the WKWebView in a `UIKitView`, and the new shared panes
+    `NappletFetchingPane`/`NappletWaitingPane`/`NappletMessagePane` (Desktop's panes now delegate
+    to them).
+  - Consent: `NappletConsentDialogs` is a `Dialog` with the shared cards (capability,
+    connect, signer, batched) behind `ConsentInputGuard`.
+  - Attendance is true while the screen is composed and the lifecycle is RESUMED
+    (`attendedWhenShown = false`).
+  - Back goes through page history (`canGoBack`/`goBack`), then pops.
+  - The shared screen with an engine slot (review §3.5) was not done. Desktop's screen is tied to
+    CEF in its toolbar, find, zoom, consent windows and engine panes, and sharing it would have
+    changed Desktop. The panes and the consent dialog are what is shared.
+- **Launcher.** `IosAppPlatform` is now a class over `IosAppModules`. Its launcher has
+  `opensNapplets = true` and opens `Route.NostrApp`.
+  - New `AppLauncher.opensSites`/`opensWebxdc` default to `opensNapplets`, so Android and
+    Desktop are unchanged. iOS sets both false, so site and webxdc cards and the front page offer
+    no Open, and a favorite site says it can't open.
+- **Tests.** `IosNappletWebEngineTest` (3) runs on a booted simulator with the real
+  `shell.html`, read from the checkout through a generated path:
+  - the shell loads over `napplet://`;
+  - `identity.getPublicKey` round-trips through the core;
+  - `RTCPeerConnection` is undefined in the napplet, in a frame it makes, and in the shell;
+  - no page world sees the handler;
+  - fetch, image and WebSocket requests to a local listener are blocked and the listener accepts
+    0 connections;
+  - the shell can't be read again;
+  - a reloaded document loses the channel and the frame is dropped;
+  - the rule list alone keeps a CSP-less page off the network, with a control page that does
+    reach the listener;
+  - after a napplet loads, `canGoBack` is false.
+- **By hand** (fresh "Napplet Test" iPhone 16 Pro, iOS 27.0, throwaway read-only npub):
+  - Fokus opened and ran.
+  - Emoji Pack Creator asked connect, then identity, storage and relays. The answers were
+    Connect with "paranoid", Allow once, Never allow and Not now. Nothing was signed.
+  - Logs show `bridge <- identity.getPublicKey`, then the reply and the next requests. Only
+    `napplet://` was served.
+  - Backgrounding the app flips attendance false, then true on return. The back arrow closes the
+    session.
+  - The left-edge swipe opens the app's drawer, not back. That is the shared shell's own gesture
+    on iOS, so in-page history back is reachable only where that gesture reaches
+    `PlatformBackHandler`.
+  - No `publishMarmotKeyPackage`/30443 lines appeared.
+- **Still open for iOS**, from the checklist:
+  - Main-frame-only shell serving and `nosniff` are in the iOS adapter, not yet in the shared
+    `NappletSiteServer` (row 29).
+  - File picker and `NSCameraUsageDescription` (N7, row 11).
+  - Process isolation is WebKit's (row 1).
+  - Rows 19–20 (LAN from direct stores, DNS prefetch in proxied stores) wait for N6, when pages
+    get a network.
+
 ## 8. Phases
 
 Each phase is testable on its own and lands as its own PR.
@@ -625,7 +730,7 @@ Each phase is testable on its own and lands as its own PR.
   becomes its CEF adapter; the shared shell checks a site's hello origin. Test: commonTest with a
   fake engine on JVM and `iosSimulatorArm64Test`, and a Desktop napplet and nSite opened by hand.
   Android moves later, on its own branch, after a device test.
-- **N5. iOS session + scheme handler + bridge, NIP-5D only, no network.** `IosNappletSession`,
+- **N5 (done 2026-11-26, §7c). iOS session + scheme handler + bridge, NIP-5D only, no network.** `IosNappletSession`,
   `NappletSchemeHandler`, the content-world bridge, the guards, the navigation policy and
   `Route.NostrApp` with `AppLauncher.openNapplet`. Test: open a known napplet on the simulator.
   Check its hello/round trip, that `RTCPeerConnection` is undefined in its frame, a consent

@@ -187,3 +187,43 @@ Android is untouched and moves on its own branch. Where the code differs from §
   nSite open; Armada's NIP-07 `getPublicKey` reached the consent window and its answer reached the
   page. The first hand run caught a bug the fake engine can't: CEF's `CefRequest` is valid only
   during the callback, so the adapter now reads method and URL before going async.
+
+## 6. iOS (N5, 2026-11-26)
+
+The iOS host is the WebKit adapter of the core; `2026-11-26-ios-napplets.md` §7c has the detail.
+
+**Rows implemented on iOS:**
+
+| Row | Protection | How iOS implements it |
+|---|---|---|
+| 2 | Session bound to its account | Sessions are bound to the launching account and closed when that account logs out |
+| 3 | Bridge origin restriction | Named content world, plus `onShellMessageFromOrigin` (main frame and shell origin) |
+| 4 | One document per frame | The shared shell; covered by a simulator test |
+| 5 | CSPs | Sent as scheme-handler headers |
+| 6 | Off-origin requests | `WKContentRuleList`, failing closed; covered by a simulator test |
+| 7 | WebRTC guard | User scripts in all frames, `WEBRTC_CHECK` in the shell, and a runtime check after load |
+| 8 | Cookie guard | A user script |
+| 9 | Navigation policy | `frameByOrigin`, the gesture rule, and a top frame that may hold only the shell |
+| 10 | Popups | `onPopup`, then nil |
+| 12 | Downloads | Cancelled |
+| 13 | Camera, microphone, motion | Denied |
+| 15 | JS dialogs | System alerts while attended; cancelled otherwise |
+| 16 | Fraud warnings | On |
+| 17 | Storage | Per account, with Android's profile name |
+| 18 | Tor fail-closed | Blobs wait for Tor; no `NappletProxyClaims` |
+| 21 | Blob fetches | `iosNappletHttp` |
+| 22–23 | Hashes, consent | Shared |
+| 24 | Attendance | From screen and lifecycle |
+| 25 | Session grants | End with the last screen |
+| 27 | Back | Through page history, then pop |
+| 28 | Renderer crash | Handled |
+| 29 | Shell serving, `nosniff` | In the iOS adapter |
+| 30 | Inspector | Debug only |
+
+**Rows still open on iOS:**
+
+- Row 11, the file picker: N7.
+- Rows 14, 19 and 20 (mixed content, LAN reach, DNS prefetch): these matter once pages have a
+  network, in N6.
+- Row 29 in the shared server.
+
