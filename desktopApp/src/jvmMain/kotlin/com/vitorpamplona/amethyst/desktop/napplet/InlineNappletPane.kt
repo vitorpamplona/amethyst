@@ -36,8 +36,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
-import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
-import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
+import com.vitorpamplona.amethyst.commons.napplet.ui.inlineStatusOf
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -157,19 +156,7 @@ private fun SessionPane(
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
 
-    LaunchedEffect(state, painted) {
-        val now = state
-        status(
-            when {
-                // Tor said apart from other failures, so a caller can say why nothing is showing.
-                now is NappletSessionState.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
-                now is NappletSessionState.Failed && now.reason == NappletFailure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
-                now is NappletSessionState.Failed -> InlineNappletStatus.FAILED
-                now is NappletSessionState.Showing && painted -> InlineNappletStatus.SHOWING
-                else -> InlineNappletStatus.LOADING
-            },
-        )
-    }
+    LaunchedEffect(state, painted) { status(inlineStatusOf(state, painted)) }
 
     OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus)
 }

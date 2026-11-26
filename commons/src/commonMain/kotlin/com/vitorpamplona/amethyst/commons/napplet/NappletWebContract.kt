@@ -343,6 +343,25 @@ object NappletWebContract {
             "try{if(window.CookieStore){Object.defineProperty(window,'CookieStore',{value:undefined,writable:false,configurable:false});}}catch(e){}})();"
 
     /**
+     * Keeps `<input type=file>` from opening the system's picker in the frame it runs in, before any
+     * page script, for a host whose browser has no file-chooser callback to refuse (WebKit on iOS): an
+     * app running inside a note picks nothing, as Android refuses its inline runs' chooser.
+     *
+     * Every way a pick starts is a click on the input (a tap, a label, a key, `input.click()`), and a
+     * click the window's first capture listener cancels never opens the picker: the page's listeners
+     * come later, and none can undo `preventDefault`. The input is found through `composedPath()`, and
+     * shadow roots are made open so none can hide one; `showPicker()` refuses file inputs.
+     */
+    const val FILE_PICKER_REFUSAL_JS: String =
+        "(function(){function f(n){return n&&n.tagName==='INPUT'&&String(n.type).toLowerCase()==='file';}" +
+            "window.addEventListener('click',function(e){var p=e.composedPath?e.composedPath():[e.target];" +
+            "for(var i=0;i<p.length;i++){if(f(p[i])){e.preventDefault();return;}}},true);" +
+            "try{var a=Element.prototype.attachShadow;if(a)Object.defineProperty(Element.prototype,'attachShadow',{value:function(o){" +
+            "var c={};for(var k in o)c[k]=o[k];c.mode='open';return a.call(this,c);},writable:false,configurable:false});}catch(e){}" +
+            "try{var s=HTMLInputElement.prototype.showPicker;if(s)Object.defineProperty(HTMLInputElement.prototype,'showPicker',{value:function(){" +
+            "if(f(this))throw new DOMException('The file picker is off here','NotAllowedError');return s.apply(this,arguments);},writable:false,configurable:false});}catch(e){}})();"
+
+    /**
      * What a paper gets before its page: markup only, no script. It names the charset the server's
      * header already promises, because JCEF drops the header's charset and a page that names none
      * was read as Latin-1. A repeated doctype and head in the page are ignored by the parser.
