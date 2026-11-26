@@ -159,9 +159,7 @@ private fun SingleAlgoFeedBanner(
                 status?.code == "error" -> {
                     BannerMessageRow(
                         message =
-                            status.description.ifBlank {
-                                stringRes(Res.string.dvm_home_status_error)
-                            },
+                            snapshot.latestStatus?.feedbackMessage() ?: stringRes(Res.string.dvm_home_status_error),
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
@@ -171,9 +169,7 @@ private fun SingleAlgoFeedBanner(
                 status?.code == "processing" -> {
                     BannerMessageRow(
                         message =
-                            status.description.ifBlank {
-                                stringRes(Res.string.dvm_home_status_processing)
-                            },
+                            snapshot.latestStatus?.feedbackMessage() ?: stringRes(Res.string.dvm_home_status_processing),
                         showSpinner = true,
                     )
                 }
