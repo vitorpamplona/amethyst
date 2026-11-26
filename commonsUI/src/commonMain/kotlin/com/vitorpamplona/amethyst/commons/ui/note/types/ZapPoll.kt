@@ -113,6 +113,7 @@ fun RenderZapPoll(
             ZapPollNote(
                 note,
                 canPreview = canPreview && !makeItShort,
+                quotesLeft = quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,

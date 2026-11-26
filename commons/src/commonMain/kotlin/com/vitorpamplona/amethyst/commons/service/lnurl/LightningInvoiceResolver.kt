@@ -167,6 +167,8 @@ class LightningInvoiceResolver(
             throw LightningAddressError(InvoiceNotice.CallbackNotFound(lnAddress))
         }
 
+        lnurlp.sendableRangeNotice(lnAddress, milliSats)?.let { throw LightningAddressError(it) }
+
         val allowsNostr = lnurlp["allowsNostr"]?.asBoolean() ?: false
         val nostrPubkey = lnurlp["nostrPubkey"]?.asText()?.ifBlank { null }
 

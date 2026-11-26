@@ -161,6 +161,9 @@ kotlin {
                 implementation(libs.mockk)
                 // DockControllerTest backs the dock's preferences with an in-memory store (commons' own dependency).
                 implementation(libs.androidx.datastore.preferences)
+                // Semantics assertions on rendered cards (createComposeRule, onNodeWithText): the
+                // JetBrains Compose test artifact desktopApp's tests already use (Apache-2.0).
+                implementation(libs.jetbrains.compose.ui.test.junit4)
             }
         }
 

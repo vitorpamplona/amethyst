@@ -216,7 +216,8 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
-import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OkHttpEsploraTransport
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -739,9 +740,11 @@ class AppModules(
     // selection, via BitcoinExplorerEndpoint — onchain zaps must not silently
     // bypass the user's Tor preference.
     init {
+        // The money-tier client for the default explorer, picked once at startup.
+        val moneyClient = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL)
         cache.onchainBackend =
             CachingOnchainBackend(
-                EsploraBackend(
+                EsploraClient(
                     baseUrl = {
                         BitcoinExplorerEndpoint.resolveNormalized(
                             customExplorerUrl = otsPrefs.current.normalizedUrl(),
@@ -751,7 +754,7 @@ class AppModules(
                                 ),
                         )
                     },
-                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
+                    transport = OkHttpEsploraTransport { moneyClient },
                 ),
             )
 
