@@ -208,6 +208,10 @@ Finishing touches found by running the app (2026-11-26):
   code fences), with their indented and lazy continuation lines. Each note is then parsed once,
   numbered in the order it is first called, and drawn in the same `Footnotes` block as Djot's
   and AsciiDoc's. A call with no note stays text, and a note nobody calls is not drawn.
+- **One code block for documents and the coding-agent chat** (`CodeBlockBody`): the chat's header
+  (the language and a copy button) and the documents' highlighting. Articles, wikis and long-form
+  notes gained the copy button; the chat's code gained highlighting. The chat wraps long lines in
+  its narrow column, documents scroll them sideways.
 
 ## Verification
 
