@@ -47,12 +47,16 @@ import kotlinx.coroutines.flow.stateIn
  * @param proxyPort the Tor SOCKS port, or null while Tor cannot take a connection (off,
  *   connecting, bypassed). On the apps this is `TorManager.activePortOrNull`.
  * @param sessionBypass the user chose to go without Tor for now (`TorManager.sessionBypass`).
+ * @param listenerGeneration bumped when the SOCKS listener was bound again on the same port
+ *   (`TorManager.listenerRestarts`): the Tor client is rebuilt then too, since its pooled
+ *   connections died with the old listener, and [torRoute] changes so the relays re-dial.
  */
 class DualKtorClients(
     private val proxyPort: StateFlow<Int?>,
     private val sessionBypass: StateFlow<Boolean>,
     scope: CoroutineScope,
     private val build: (socksPort: Int?) -> HttpClient,
+    private val listenerGeneration: StateFlow<Int> = MutableStateFlow(0),
 ) {
     /** Every request that is not routed through Tor. Built on first use. */
     val direct: HttpClient by lazy { build(null) }
@@ -60,16 +64,17 @@ class DualKtorClients(
     /** What a Tor-routed request gets while Tor has no port: every request fails, offline. */
     val unavailable: HttpClient by lazy { torUnavailableClient() }
 
-    // The current Tor client and the port it was built for. Guarded by [lock].
+    // The current Tor client and the port and listener generation it was built for. Guarded by [lock].
     private val lock = KmpLock()
     private var torClient: HttpClient? = null
     private var torClientPort: Int? = null
+    private var torClientGeneration: Int = 0
 
     /** The client a request takes: [tor] when it must go through Tor, else [direct]. */
     fun get(useTor: Boolean): HttpClient = if (useTor) tor() else direct
 
     /** The Tor route as it stands: the proxied client, or [unavailable] (or [direct] when bypassed). */
-    fun tor(): HttpClient = torFor(proxyPort.value, sessionBypass.value)
+    fun tor(): HttpClient = torFor(proxyPort.value, sessionBypass.value, listenerGeneration.value)
 
     /** The SOCKS port Tor-routed requests go to right now, or null when there is none. */
     fun currentProxyPort(): Int? = proxyPort.value
@@ -77,19 +82,21 @@ class DualKtorClients(
     private fun torFor(
         port: Int?,
         bypass: Boolean,
+        generation: Int,
     ): HttpClient {
         if (port == null) return if (bypass) direct else unavailable
         var replaced: HttpClient? = null
         val client =
             lock.withLock {
                 val current = torClient
-                if (current != null && torClientPort == port) {
+                if (current != null && torClientPort == port && torClientGeneration == generation) {
                     current
                 } else {
                     replaced = current
                     build(port).also {
                         torClient = it
                         torClientPort = port
+                        torClientGeneration = generation
                     }
                 }
             }
@@ -104,8 +111,8 @@ class DualKtorClients(
      * collected it also keeps `TorManager.status` running, which is what starts Tor.
      */
     val torRoute: StateFlow<Any> =
-        combine(proxyPort, sessionBypass) { port, bypass -> torFor(port, bypass) }
-            .stateIn(scope, SharingStarted.WhileSubscribed(1000), torFor(proxyPort.value, sessionBypass.value))
+        combine(proxyPort, sessionBypass, listenerGeneration) { port, bypass, generation -> torFor(port, bypass, generation) }
+            .stateIn(scope, SharingStarted.WhileSubscribed(1000), tor())
 
     /** The direct route's token. It never changes: the direct client is built once. */
     val directRoute: StateFlow<Any> by lazy { MutableStateFlow<Any>(direct) }

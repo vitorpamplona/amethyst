@@ -37,6 +37,7 @@ import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,24 +54,54 @@ data class SocksConnect(
 )
 
 /**
+ * How a [FakeSocks5] treats a client: [Succeed] is a working proxy; the others are the ways a proxy
+ * can fail, which a client must never answer by going direct (the B12f leak tests).
+ */
+sealed interface SocksBehavior {
+    /** Greeting, CONNECT success, then the tunnel. */
+    data object Succeed : SocksBehavior
+
+    /** Accepts the TCP connection and closes it before answering anything. */
+    data object HangUp : SocksBehavior
+
+    /** Answers the greeting with "no acceptable methods" (0xFF) and closes. */
+    data object RefuseMethods : SocksBehavior
+
+    /** Accepts the greeting, records the CONNECT, then answers it with [reply] (RFC 1928 §6) and closes. */
+    data class FailConnect(
+        val reply: Int,
+    ) : SocksBehavior
+
+    /** Accepts the TCP connection and never says a word. */
+    data object Silent : SocksBehavior
+}
+
+/**
  * A SOCKS5 proxy (RFC 1928) that records every CONNECT and answers success. Then, on the tunnel,
  * it either plays a tiny HTTP server (every request gets `200 ok` and the connection closes) or,
- * given [upstreamPort], pipes the tunnel to a server on 127.0.0.1 there, whatever host the CONNECT
+ * given [upstreamPort], pipes the tunnel to a server there (on 127.0.0.1 unless told), whatever host the CONNECT
  * named: so `.invalid` hosts, which nothing but the proxy can reach, still get real answers.
  */
 class FakeSocks5 private constructor(
     private val selector: SelectorManager,
     private val server: ServerSocket,
     private val upstreamPort: Int?,
+    private val upstreamHost: String,
+    private val behavior: SocksBehavior,
     scope: CoroutineScope,
 ) {
     val port = (server.localAddress as InetSocketAddress).port
     private val seen = MutableStateFlow<List<SocksConnect>>(emptyList())
+    private val accepted = MutableStateFlow(0)
+
+    /** TCP connections the proxy accepted, whatever it then did with them. */
+    fun acceptedCount(): Int = accepted.value
 
     private val acceptor =
         scope.launch {
             while (true) {
                 val socket = server.accept()
+                accepted.update { it + 1 }
                 launch { serve(socket) }
             }
         }
@@ -91,9 +122,18 @@ class FakeSocks5 private constructor(
         try {
             val input = socket.openReadChannel()
             val output = socket.openWriteChannel(autoFlush = true)
+            when (behavior) {
+                SocksBehavior.HangUp -> return
+                SocksBehavior.Silent -> awaitCancellation()
+                else -> {}
+            }
             // Greeting: VER, NMETHODS, METHODS. Answer "no authentication".
             check(input.readByte().toInt() == 5) { "not SOCKS5" }
             input.skip(input.readByte().toInt() and 0xFF)
+            if (behavior == SocksBehavior.RefuseMethods) {
+                output.writeFully(byteArrayOf(5, 0xFF.toByte()))
+                return
+            }
             output.writeFully(byteArrayOf(5, 0))
             // Request: VER, CMD, RSV, ATYP, address, port.
             check(input.readByte().toInt() == 5) { "not SOCKS5" }
@@ -111,9 +151,13 @@ class FakeSocks5 private constructor(
             val port = ((portBytes[0].toInt() and 0xFF) shl 8) or (portBytes[1].toInt() and 0xFF)
             check(command == 1) { "not a CONNECT: $command" }
             seen.update { it + SocksConnect(addressType, host, port) }
+            if (behavior is SocksBehavior.FailConnect) {
+                output.writeFully(byteArrayOf(5, behavior.reply.toByte(), 0, 1, 0, 0, 0, 0, 0, 0))
+                return
+            }
             output.writeFully(byteArrayOf(5, 0, 0, 1, 0, 0, 0, 0, 0, 0))
 
-            if (upstreamPort != null) tunnel(input, output, upstreamPort) else answerOk(input, output)
+            if (upstreamPort != null) tunnel(input, output, upstreamHost, upstreamPort) else answerOk(input, output)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -139,13 +183,14 @@ class FakeSocks5 private constructor(
         output.flushAndClose()
     }
 
-    /** The tunnel: bytes both ways between the client and 127.0.0.1:[port], until the server is done. */
+    /** The tunnel: bytes both ways between the client and [host]:[port], until the server is done. */
     private suspend fun tunnel(
         input: ByteReadChannel,
         output: ByteWriteChannel,
+        host: String,
         port: Int,
     ) {
-        val upstream = aSocket(selector).tcp().connect("127.0.0.1", port)
+        val upstream = aSocket(selector).tcp().connect(host, port)
         try {
             val upstreamInput = upstream.openReadChannel()
             val upstreamOutput = upstream.openWriteChannel(autoFlush = true)
@@ -189,10 +234,13 @@ class FakeSocks5 private constructor(
         suspend fun start(
             scope: CoroutineScope,
             upstreamPort: Int? = null,
+            behavior: SocksBehavior = SocksBehavior.Succeed,
+            port: Int = 0,
+            upstreamHost: String = "127.0.0.1",
         ): FakeSocks5 {
             val selector = SelectorManager(Dispatchers.IO)
-            val server = aSocket(selector).tcp().bind("127.0.0.1", 0)
-            return FakeSocks5(selector, server, upstreamPort, scope)
+            val server = aSocket(selector).tcp().bind("127.0.0.1", port) { reuseAddress = true }
+            return FakeSocks5(selector, server, upstreamPort, upstreamHost, behavior, scope)
         }
     }
 }

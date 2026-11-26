@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.video.hls
 
+import com.vitorpamplona.amethyst.commons.service.http.LoopbackProbe
 import com.vitorpamplona.amethyst.commons.service.http.TorUnavailableException
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.util.KmpLock
@@ -82,8 +83,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  * a `Host` check (a web page that rebinds a DNS name to 127.0.0.1 sends its own name). Each
  * response closes its connection, so a body needs no framing beyond its end.
  *
- * The listener is opened on first use and opened again (on a new port) if it died, as it may when
- * iOS suspends the app; a stream opened before that fails and the player's retry gets a new one.
+ * The listener is opened on first use and opened again if it died, as it may when iOS suspends the
+ * app and reclaims the socket: on the same port when that is free, so a player still on a relay
+ * address carries on, else on a new one, where a stream opened before fails and the player's retry
+ * gets a new address. [recheck] runs that check when the app returns to the foreground, before a
+ * player finds out.
  */
 class LoopbackMediaRelay(
     /** The client for a request of the stream: Tor for a stream that must go through Tor. */
@@ -100,6 +104,9 @@ class LoopbackMediaRelay(
 
     private val startLock = Mutex()
     private var listener: Listener? = null
+
+    // The port the last listener had, which a new one takes again when it can. Guarded by [startLock].
+    private var lastPort = 0
 
     // The last failure of each stream, the oldest dropped first. Guarded by [lock].
     private val lock = KmpLock()
@@ -137,14 +144,45 @@ class LoopbackMediaRelay(
         startLock.withLock {
             listener?.let { if (it.acceptor.isActive) return@withLock it.port else it.close() }
             listener = null
-            try {
-                listen().also { listener = it }.port
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not open the loopback media relay", e)
-                null
+            listenLocked()
+        }
+
+    /**
+     * Makes sure the listener still accepts, and listens again (on the same port when it can) if it
+     * does not. For the app's return to the foreground: iOS may reclaim a suspended app's listening
+     * socket, and the accept loop may not have noticed yet. Does nothing before the first [open].
+     */
+    suspend fun recheck() {
+        startLock.withLock {
+            val current = listener ?: return@withLock
+            if (current.acceptor.isActive && LoopbackProbe.isTcpListening(current.port)) {
+                Log.d(TAG) { "Loopback media relay on $LOOPBACK:${current.port} still accepts" }
+                return@withLock
             }
+            Log.w(TAG) { "Loopback media relay on $LOOPBACK:${current.port} stopped accepting; listening again" }
+            current.close()
+            listener = null
+            listenLocked()
+        }
+    }
+
+    /** Test hook: closes the listening socket under the accept loop, as a reclaim does. */
+    internal fun closeListeningSocketForTest() {
+        listener?.server?.close()
+    }
+
+    private suspend fun listenLocked(): Int? =
+        try {
+            listen(lastPort)
+                .also {
+                    listener = it
+                    lastPort = it.port
+                }.port
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not open the loopback media relay", e)
+            null
         }
 
     fun close() {
@@ -153,11 +191,12 @@ class LoopbackMediaRelay(
         scope.cancel()
     }
 
-    private suspend fun listen(): Listener {
+    /** Listens on [preferredPort] when it is set and free, else on any port. */
+    private suspend fun listen(preferredPort: Int): Listener {
         val selector = SelectorManager(Dispatchers.IO)
         val server =
             try {
-                aSocket(selector).tcp().bind(LOOPBACK, 0)
+                bindPreferring(selector, preferredPort)
             } catch (e: Exception) {
                 selector.close()
                 throw e
@@ -179,6 +218,22 @@ class LoopbackMediaRelay(
             }
         Log.d(TAG) { "Loopback media relay on $LOOPBACK:$port" }
         return Listener(selector, server, port, acceptor)
+    }
+
+    private suspend fun bindPreferring(
+        selector: SelectorManager,
+        preferredPort: Int,
+    ): ServerSocket {
+        if (preferredPort > 0) {
+            try {
+                return aSocket(selector).tcp().bind(LOOPBACK, preferredPort) { reuseAddress = true }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.d(TAG) { "Loopback media relay port $preferredPort is taken (${e.message}); taking another" }
+            }
+        }
+        return aSocket(selector).tcp().bind(LOOPBACK, 0)
     }
 
     private fun addressOf(

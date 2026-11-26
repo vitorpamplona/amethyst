@@ -32,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
@@ -555,6 +556,53 @@ class TorManager(
             torPrefs.saveLastBypassApprovalMs(0L)
             service.reset()
             resetEpoch.update { it + 1 }
+        }
+    }
+
+    private val _listenerRestarts = MutableStateFlow(0)
+
+    /**
+     * How many times [onReturnToForeground] found the SOCKS listener gone and bound it again. A
+     * platform keys its Tor clients on this as well as on the port: a client pooled on the old
+     * listener holds connections that died with it, and a new value is the cue to drop them and to
+     * re-dial the relays that failed against the dead port.
+     */
+    val listenerRestarts: StateFlow<Int> = _listenerRestarts.asStateFlow()
+
+    /**
+     * The app is back in the foreground after the system may have suspended its process (iOS).
+     *
+     * Android's process keeps running in the background, so its Tor needs nothing here: a network
+     * that changed meanwhile arrives as [onNetworkChange], and the relay pool redials what dropped.
+     * A suspended iOS app can come back with its SOCKS listener reclaimed, which neither of those
+     * sees: the status still reports the port, and every Tor-routed connection is refused. So this
+     * asks the backend to check the listener ([TorBackend.recoverListener]) and rebind it if needed,
+     * which brings Tor back to the state Android's would be in. Only a backend that cannot recover
+     * (the rebind failed, or no client is left) gets the warm [TorBackend.reset] the self-heal paths
+     * use. That reset is not held back by the self-heal cooldown, since a return to the foreground is
+     * the user's and nothing else would notice the dead listener, but it primes the cooldown so the
+     * watchdogs do not reset again on top of it.
+     *
+     * Nothing to do while Tor is off, external, or bypassed by the user: no listener of ours is up.
+     */
+    fun onReturnToForeground() {
+        if (sessionBypass.value) return
+        if (torPrefs.torType.value != TorType.INTERNAL) return
+        scope.launch(ioDispatcher) {
+            when (service.recoverListener()) {
+                ListenerRecovery.RESTARTED -> {
+                    _listenerRestarts.update { it + 1 }
+                }
+
+                ListenerRecovery.FAILED -> {
+                    lastSelfHealAtMs = nowMs()
+                    Log.w("TorManager") { "Tor listener could not be recovered after the app came back — self-healing (drop client, keep state)" }
+                    service.reset()
+                    resetEpoch.update { it + 1 }
+                }
+
+                ListenerRecovery.NOT_CHECKED, ListenerRecovery.NOT_RUNNING, ListenerRecovery.HEALTHY -> {}
+            }
         }
     }
 

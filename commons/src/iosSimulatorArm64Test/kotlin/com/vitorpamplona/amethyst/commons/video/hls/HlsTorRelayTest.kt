@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.video.hls
 
 import com.vitorpamplona.amethyst.commons.service.http.DualKtorClients
 import com.vitorpamplona.amethyst.commons.service.http.FakeSocks5
+import com.vitorpamplona.amethyst.commons.service.http.LoopbackProbe
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedKtorClients
 import com.vitorpamplona.amethyst.commons.service.http.SocksConnect
 import com.vitorpamplona.amethyst.commons.service.http.darwinHttpClient
@@ -64,6 +65,7 @@ import platform.Foundation.dateWithTimeIntervalSinceNow
 import platform.Foundation.runUntilDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -321,6 +323,28 @@ class HlsTorRelayTest {
             assertEquals(null, relay.open("file:///etc/hosts"), "only http(s) is relayed")
         }
 
+    @Test
+    fun aReclaimedListenerComesBackOnTheSamePortAndOldAddressesKeepWorking() =
+        withServers { hls, socks, scope ->
+            val relay = torRelay(MutableStateFlow(socks.port), scope)
+            val stream = assertNotNull(relay.open("http://$cdn/live/master.m3u8"))
+            val port = assertNotNull(relay.port())
+            val path = stream.url.removePrefix("http://127.0.0.1:$port")
+            assertEquals(200, rawStatus(port, path, host = "127.0.0.1:$port"))
+
+            relay.recheck()
+            assertEquals(port, relay.port(), "a listener that still accepts is left alone")
+
+            // As iOS reclaims a suspended app's listening socket.
+            relay.closeListeningSocketForTest()
+            assertFalse(LoopbackProbe.isTcpListening(port), "nothing accepts on the port")
+
+            relay.recheck()
+            assertEquals(port, relay.port(), "listening again on the same port")
+            assertEquals(200, rawStatus(port, path, host = "127.0.0.1:$port"), "an address handed out before still plays")
+            assertEquals(2, hls.hits().size)
+        }
+
     private fun torRelay(
         port: MutableStateFlow<Int?>,
         scope: CoroutineScope,
@@ -369,7 +393,7 @@ class HlsTorRelayTest {
     private fun withServers(block: suspend (FakeHlsServer, FakeSocks5, CoroutineScope) -> Unit) =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            val hls = FakeHlsServer.start(scope, ::origin)
+            val hls = FakeHlsServer.start(scope, routes = ::origin)
             val socks = FakeSocks5.start(scope, upstreamPort = hls.port)
             try {
                 withTimeout(TEST_TIMEOUT_MS) { block(hls, socks, scope) }

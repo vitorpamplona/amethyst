@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSw
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.tor.torEngineChoices
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
@@ -241,7 +242,7 @@ private fun TorEngineTile(
         icon = MaterialSymbols.Security,
         title = Res.string.use_internal_tor,
         description = Res.string.use_internal_tor_explainer,
-        options = TorType.entries,
+        options = torEngineChoices(LocalAppPlatform.current.supportsExternalTor),
         labelRes = { it.resourceId },
         selected = torType,
         onSelect = { torSettings.torType.tryEmit(it) },

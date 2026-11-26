@@ -55,11 +55,14 @@ import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClien
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.RelayRouteLogger
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.connectivity.IosConnectivity
+import com.vitorpamplona.amethyst.commons.service.connectivity.networkIdentityChanges
 import com.vitorpamplona.amethyst.commons.service.http.DualKtorClients
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.KtorEsploraTransport
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.service.http.KtorLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorMintTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
 import com.vitorpamplona.amethyst.commons.service.http.KtorWebSocket
+import com.vitorpamplona.amethyst.commons.service.http.LoopbackProbe
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedKtorClients
 import com.vitorpamplona.amethyst.commons.service.http.darwinHttpClient
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
@@ -79,7 +83,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorService
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.supportedOn
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
@@ -111,6 +115,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okio.FileSystem
 import okio.Path
@@ -160,12 +165,13 @@ class IosAppModules(
     // Tor settings, read before anything connects (as Android's blocking load does), so nothing
     // dials before the routing is known. A fresh install gets TorSettings()'s defaults: the built-in
     // Tor, with onion, DM and new relays through it. A build without Arti (Kotlin compiled off a
-    // Mac, never an app) keeps Tor off: there is no engine to route through.
+    // Mac, never an app) keeps Tor off: there is no engine to route through. "External" (Orbot's
+    // SOCKS port) does not exist here, since Orbot on iOS is a VPN, so a stored one runs the built-in
+    // Tor instead of nothing (TorType.supportedOn says why not OFF); IosAppPlatform hides the choice.
     val torPrefs: TorSettingsStore =
         TorSettingsStore(
-            (runBlocking { TorSettingsStore.torPreferences(sharedSettingsStore) } ?: TorSettings()).let {
-                if (IosArti.AVAILABLE) it else it.copy(torType = TorType.OFF)
-            },
+            (runBlocking { TorSettingsStore.torPreferences(sharedSettingsStore) } ?: TorSettings())
+                .supportedOn(hasInternalTor = IosArti.AVAILABLE, hasExternalTor = false),
             sharedSettingsStore,
             applicationIOScope,
         )
@@ -173,9 +179,34 @@ class IosAppModules(
     // The built-in Tor: the shared lifecycle (TorService, TorManager) over Arti's C ABI, the same
     // engine and watchdogs Android runs (plans/2026-11-25-ios-tor.md, B12d). Arti keeps its state in
     // Application Support/amethyst/arti. TorManager starts it while its status is collected: the
-    // relay pool's Tor route and the drawer's Tor icon do (IosAppRoot.AppEffects).
-    private val torService = TorService(IosArti.bridge, filesPath / "arti", FileSystem.SYSTEM, applicationIOScope)
+    // relay pool's Tor route and the drawer's Tor icon do (IosAppRoot.AppEffects). The listener probe
+    // is what lets a return from suspension find a reclaimed SOCKS listener (appLifecycle below).
+    // Arti's directory is kept out of backups (ArtiCinteropBridge.initialize).
+    private val torService =
+        TorService(
+            engine = IosArti.bridge,
+            dataDir = filesPath / "arti",
+            fileSystem = FileSystem.SYSTEM,
+            scope = applicationIOScope,
+            listenerProbe = { port -> LoopbackProbe.isSocks5Listening(port) },
+        )
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
+
+    // The default network, from NWPathMonitor: what Android reads from ConnectivityManager. Its
+    // metered flag drives the "on mobile data" media choices, and a move to another network
+    // re-initializes Tor, as on Android (the old network's guards and circuits are dead).
+    val connectivity = IosConnectivity(applicationIOScope)
+
+    init {
+        applicationIOScope.launch {
+            connectivity.status
+                .networkIdentityChanges()
+                .collect {
+                    Log.i("IosAppModules") { "Network changed (id $it): re-initializing Tor" }
+                    torManager.onNetworkChange()
+                }
+        }
+    }
 
     // Which relays go through Tor: the user's settings plus each account's relay lists
     // (accountsTorStateConnector below), as on Android.
@@ -187,7 +218,7 @@ class IosAppModules(
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
     val dockLayoutPrefs = DockLayoutPreferences(sharedSettingsStore, applicationIOScope)
 
-    val uiState = UiSettingsState(uiPrefs, MutableStateFlow(false), applicationIOScope)
+    val uiState = UiSettingsState(uiPrefs, connectivity.isMobileOrFalse, applicationIOScope)
 
     val keyCache = EncryptionKeyCache()
 
@@ -197,7 +228,14 @@ class IosAppModules(
      * while Tor has no port fails instead of going direct (DualKtorClients). Nothing gets a client
      * except through a role below or the relay builder, so no path can skip the Tor decision.
      */
-    val httpClients = DualKtorClients(torManager.activePortOrNull, torManager.sessionBypass, applicationIOScope, ::darwinHttpClient)
+    val httpClients =
+        DualKtorClients(
+            proxyPort = torManager.activePortOrNull,
+            sessionBypass = torManager.sessionBypass,
+            scope = applicationIOScope,
+            build = ::darwinHttpClient,
+            listenerGeneration = torManager.listenerRestarts,
+        )
 
     /** Each role's client (images, video, previews, money, NIP-05, uploads), by the shared Tor table. */
     val roleBasedHttpClientBuilder = RoleBasedKtorClients(httpClients, torPrefs.value)
@@ -312,10 +350,6 @@ class IosAppModules(
     // Feeds every event the relays send into the cache, as on Android and the desktop.
     val cacheClientConnector = CacheClientConnector(client, cache)
 
-    // No connectivity monitor on iOS yet (NWPathMonitor is B12f): the network counts as up, so only
-    // Tor and routing changes re-dial relays.
-    private val connectivity = MutableStateFlow<ConnectivityStatus>(ConnectivityStatus.Active(networkId = 0L, isMobile = false))
-
     // Self-heals the "Tor up but every circuit dead" state the lifecycle watchdogs can't see, as
     // on Android: enough Tor-routed relay failures with no success restart Arti.
     val torCircuitHealthTracker =
@@ -323,7 +357,7 @@ class IosAppModules(
             client = client,
             isTorRouted = { torRelayState.shouldUseTorForRelay(it) },
             isTorActive = { torManager.isTorReady() },
-            isConnectivityActive = { true },
+            isConnectivityActive = { connectivity.status.value is ConnectivityStatus.Active },
             onCircuitsDead = { torManager.onTorCircuitsDead() },
         ).also { it.register() }
 
@@ -335,11 +369,37 @@ class IosAppModules(
             torEvaluator = torRelayState.flow,
             torConnection = httpClients.torRoute,
             clearConnection = httpClients.directRoute,
-            connectivityStatus = connectivity,
+            connectivityStatus = connectivity.status,
             torBootstrapped = torManager.status.map { it.isFullyBootstrapped },
             client = client,
             scope = applicationIOScope,
         )
+
+    // One DEBUG line per relay dial with its route (tor:<port>, direct, bypass) and its outcome, to
+    // compare against Android's from the logs.
+    val relayRouteLogger =
+        RelayRouteLogger(client) { url ->
+            when {
+                !torRelayState.shouldUseTorForRelay(url) -> "direct"
+                torManager.sessionBypass.value -> "bypass"
+                else -> httpClients.currentProxyPort()?.let { "tor:$it" } ?: "tor (no port: refused)"
+            }
+        }.also { it.register() }
+
+    /**
+     * UIApplication's background and foreground, bridged into the shared Tor lifecycle. iOS
+     * suspends a backgrounded app and may reclaim its listening sockets meanwhile, so on the way back
+     * Tor's SOCKS listener and the media relay are checked and bound again if they died
+     * (TorManager.onReturnToForeground). The relay pool redials what dropped on its own
+     * (RedialRelaysOnReturn), and a network that changed meanwhile arrives through [connectivity].
+     */
+    val appLifecycle =
+        IosAppLifecycle(
+            onReturnToForeground = {
+                torManager.onReturnToForeground()
+                applicationIOScope.launch { IosVideoCache.recheckRelay() }
+            },
+        ).also { it.start() }
 
     val relayStats by lazy { RelayStats(client) }
 
@@ -427,7 +487,7 @@ class IosAppModules(
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             marmotHistoryBlobs = null,
-            canDownloadLargeFiles = { true },
+            canDownloadLargeFiles = { !connectivity.isMeteredOrMobileNow() },
             accountSettingsStore = sharedSettingsStore,
         )
 

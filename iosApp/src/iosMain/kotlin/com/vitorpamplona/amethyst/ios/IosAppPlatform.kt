@@ -42,6 +42,10 @@ object IosAppPlatform : AppPlatform {
     // engine (Kotlin compiled off a Mac, never an app) says Tor is unavailable.
     override val supportsTor: Boolean get() = IosArti.AVAILABLE
 
+    // Orbot on iOS is a VPN, not a SOCKS port another app could route through, so "external Tor"
+    // has nothing to point at. IosAppModules runs the built-in Tor for a stored one.
+    override val supportsExternalTor: Boolean get() = false
+
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable
     override fun AppBottomBar(

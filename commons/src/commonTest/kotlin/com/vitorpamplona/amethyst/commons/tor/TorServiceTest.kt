@@ -56,7 +56,10 @@ class TorServiceTest {
         fs.deleteRecursivelyQuietly(dir)
     }
 
-    private fun TestScope.service(engine: FakeArti): TorService =
+    private fun TestScope.service(
+        engine: FakeArti,
+        listenerProbe: (suspend (Int) -> Boolean)? = null,
+    ): TorService =
         TorService(
             engine = engine,
             dataDir = dir,
@@ -64,7 +67,33 @@ class TorServiceTest {
             scope = backgroundScope,
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             nowMs = { testScheduler.currentTime },
+            listenerProbe = listenerProbe,
         )
+
+    /** A listener probe that answers [alive] and records the ports it was asked about. */
+    private class Probe(
+        var alive: Boolean,
+    ) {
+        val asked = mutableListOf<Int>()
+
+        suspend fun check(port: Int): Boolean {
+            asked += port
+            return alive
+        }
+    }
+
+    private suspend fun TestScope.activeService(
+        engine: FakeArti,
+        probe: Probe,
+    ): TorService {
+        val service = service(engine, probe::check)
+        service.start()
+        engine.bootstrapped = 1
+        advanceTimeBy(600)
+        runCurrent()
+        assertEquals(TorServiceStatus.Active(17392), service.status.value)
+        return service
+    }
 
     private fun writeGuards(json: String) {
         val file = dir / "state" / "state" / "guards.json"
@@ -289,6 +318,110 @@ class TorServiceTest {
             assertEquals(TorServiceStatus.Bootstrapping(17392), service.status.value)
         }
 
+    // ------------------------------------------------------------------
+    // recoverListener: the SOCKS listener after the app comes back from suspension (iOS)
+    // ------------------------------------------------------------------
+
+    @Test
+    fun withoutAProbeTheListenerIsNotChecked() =
+        runTest {
+            val engine = FakeArti()
+            val service = service(engine)
+            service.start()
+
+            assertEquals(ListenerRecovery.NOT_CHECKED, service.recoverListener())
+            assertEquals(listOf(17392), engine.socksStarts)
+        }
+
+    @Test
+    fun beforeAnyStartThereIsNoListenerToRecover() =
+        runTest {
+            val probe = Probe(alive = false)
+            val service = service(FakeArti(), probe::check)
+
+            assertEquals(ListenerRecovery.NOT_RUNNING, service.recoverListener())
+            assertEquals(emptyList(), probe.asked)
+        }
+
+    @Test
+    fun aListenerThatStillAcceptsIsLeftAlone() =
+        runTest {
+            val engine = FakeArti()
+            val probe = Probe(alive = true)
+            val service = activeService(engine, probe)
+
+            assertEquals(ListenerRecovery.HEALTHY, service.recoverListener())
+            assertEquals(listOf(17392), probe.asked)
+            assertEquals(listOf(17392), engine.socksStarts)
+            assertEquals(TorServiceStatus.Active(17392), service.status.value)
+        }
+
+    @Test
+    fun aDeadListenerIsBoundAgainOnTheSamePortAndTheClientKept() =
+        runTest {
+            val engine = FakeArti()
+            val probe = Probe(alive = false)
+            val service = activeService(engine, probe)
+
+            assertEquals(ListenerRecovery.RESTARTED, service.recoverListener())
+            assertEquals(listOf(17392, 17392), engine.socksStarts)
+            assertEquals(1, engine.initializedWith.size, "the client is not re-created")
+            assertEquals(0, engine.destroys)
+            assertEquals(TorServiceStatus.Active(17392), service.status.value)
+        }
+
+    @Test
+    fun aDeadListenerWhosePortWasTakenMovesAndTheStatusFollows() =
+        runTest {
+            val engine = FakeArti()
+            val service = activeService(engine, Probe(alive = false))
+            engine.busyPorts = setOf(17392)
+
+            assertEquals(ListenerRecovery.RESTARTED, service.recoverListener())
+            assertEquals(listOf(17392, 17392, 17393), engine.socksStarts)
+            assertEquals(TorServiceStatus.Active(17393), service.status.value)
+        }
+
+    @Test
+    fun aListenerRecoveredMidDownloadStillPromotesOnTheNewPort() =
+        runTest {
+            val engine = FakeArti()
+            val service = service(engine, Probe(alive = false)::check)
+            service.start()
+            assertEquals(TorServiceStatus.Bootstrapping(17392), service.status.value)
+            engine.busyPorts = setOf(17392)
+
+            assertEquals(ListenerRecovery.RESTARTED, service.recoverListener())
+            assertEquals(TorServiceStatus.Bootstrapping(17393), service.status.value)
+
+            engine.bootstrapped = 1
+            advanceTimeBy(600)
+            runCurrent()
+            assertEquals(TorServiceStatus.Active(17393), service.status.value)
+        }
+
+    @Test
+    fun noClientBehindTheListenerNeedsAReset() =
+        runTest {
+            val engine = FakeArti()
+            val probe = Probe(alive = true)
+            val service = activeService(engine, probe)
+            engine.bootstrapped = -1
+
+            assertEquals(ListenerRecovery.FAILED, service.recoverListener())
+            assertEquals(emptyList(), probe.asked)
+        }
+
+    @Test
+    fun aListenerThatCannotBeBoundAgainNeedsAReset() =
+        runTest {
+            val engine = FakeArti()
+            val service = activeService(engine, Probe(alive = false))
+            engine.busyPorts = (17392 until 17392 + 10).toSet()
+
+            assertEquals(ListenerRecovery.FAILED, service.recoverListener())
+        }
+
     companion object {
         private val CONFIRMED_GUARDS =
             """
@@ -311,7 +444,7 @@ class TorServiceTest {
 /** In-memory [ArtiBridge]: records every call and answers what the test sets. */
 private class FakeArti(
     var initResult: Int = 0,
-    private val busyPorts: Set<Int> = emptySet(),
+    var busyPorts: Set<Int> = emptySet(),
 ) : ArtiBridge {
     var log: ((String) -> Unit)? = null
     val initializedWith = mutableListOf<String>()

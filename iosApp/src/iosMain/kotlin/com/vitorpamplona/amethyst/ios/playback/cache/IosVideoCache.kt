@@ -161,6 +161,14 @@ object IosVideoCache {
      */
     suspend fun torStreamFor(url: String): LoopbackMediaRelay.Stream? = lock.withLock { relay }?.open(url)
 
+    /**
+     * After the app returns to the foreground: listens again if iOS reclaimed the relay's socket while
+     * the app was suspended, on the same port when it can, so a player on a relay address carries on.
+     */
+    suspend fun recheckRelay() {
+        lock.withLock { relay }?.recheck()
+    }
+
     /** What last failed in a relayed [stream], for the player's error. */
     fun relayFailure(stream: String): RelayFailure? = lock.withLock { relay }?.failureOf(stream)
 

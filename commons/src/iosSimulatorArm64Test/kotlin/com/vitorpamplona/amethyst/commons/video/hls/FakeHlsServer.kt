@@ -44,6 +44,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * `Range` with 206, closes each connection after its response.
  */
 class FakeHlsServer private constructor(
+    /** The address it listens on. */
+    val host: String,
     private val selector: SelectorManager,
     private val server: ServerSocket,
     private val routes: (Hit) -> Answer?,
@@ -135,11 +137,12 @@ class FakeHlsServer private constructor(
     companion object {
         suspend fun start(
             scope: CoroutineScope,
+            host: String = "127.0.0.1",
             routes: (Hit) -> Answer?,
         ): FakeHlsServer {
             val selector = SelectorManager(Dispatchers.IO)
-            val server = aSocket(selector).tcp().bind("127.0.0.1", 0)
-            return FakeHlsServer(selector, server, routes, scope)
+            val server = aSocket(selector).tcp().bind(host, 0)
+            return FakeHlsServer(host, selector, server, routes, scope)
         }
     }
 }

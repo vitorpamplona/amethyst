@@ -79,6 +79,9 @@ private const val MAX_PORT_RETRIES = 10
  * @param fileSystem where [dataDir] lives; the platform's real filesystem in production.
  * @param ioDispatcher where the blocking native calls and the file IO run.
  * @param nowMs wall clock for the diagnostic timings and the [guardsDownSignal] window.
+ * @param listenerProbe whether something still accepts SOCKS5 on 127.0.0.1 at a port, for
+ *   [recoverListener]. Null (Android) leaves the listener unchecked: only a platform that suspends
+ *   the process and may reclaim its listening sockets (iOS) needs it.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class TorService(
@@ -88,6 +91,7 @@ class TorService(
     private val scope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val nowMs: () -> Long = TimeUtils::nowMillis,
+    private val listenerProbe: (suspend (port: Int) -> Boolean)? = null,
 ) : TorBackend {
     private var socksPort = DEFAULT_SOCKS_PORT
     private val initialized = AtomicBoolean(false)
@@ -486,6 +490,74 @@ class TorService(
                     }
                 }
             }
+    }
+
+    /**
+     * Probes the SOCKS listener and binds it again when it no longer accepts. See
+     * [TorBackend.recoverListener].
+     *
+     * Arti's accept loop ends on the first accept error, and nothing restarts it: on iOS that error
+     * is what a listening socket the system reclaimed while the app was suspended produces. The
+     * client behind it is unaffected (its circuits rebuild themselves), so this rebinds only the
+     * listener, on the same port when it is free so the clients built for it keep working, else on
+     * the next ones as [start] does. Under [lifecycleMutex], so it never races a start or a reset.
+     */
+    override suspend fun recoverListener(): ListenerRecovery {
+        val probe = listenerProbe ?: return ListenerRecovery.NOT_CHECKED
+        return lifecycleMutex.withLock {
+            if (!proxyRunning.load()) {
+                ListenerRecovery.NOT_RUNNING
+            } else {
+                withContext(ioDispatcher) { recoverListenerLocked(probe) }
+            }
+        }
+    }
+
+    private suspend fun recoverListenerLocked(probe: suspend (port: Int) -> Boolean): ListenerRecovery {
+        val port = socksPort
+        if (engine.isBootstrapped() == -1) {
+            Log.w("TorService") { "No Arti client behind the SOCKS listener on port $port — needs a reset" }
+            return ListenerRecovery.FAILED
+        }
+        if (probe(port)) {
+            Log.d("TorService") { "SOCKS listener on port $port still accepts" }
+            return ListenerRecovery.HEALTHY
+        }
+
+        Log.w("TorService") { "SOCKS listener on port $port no longer accepts (reclaimed while suspended?) — binding it again" }
+        var candidate = port
+        var bound: Int? = null
+        for (attempt in 0 until MAX_PORT_RETRIES) {
+            if (engine.startSocksProxy(candidate) == 0) {
+                bound = candidate
+                break
+            }
+            Log.w("TorService") { "Port $candidate in use, trying ${candidate + 1}" }
+            candidate++
+        }
+        if (bound == null) {
+            Log.w("TorService") { "Could not bind the SOCKS listener again after $MAX_PORT_RETRIES attempts — needs a reset" }
+            return ListenerRecovery.FAILED
+        }
+
+        socksPort = bound
+        if (bound != port) {
+            // The port moved: say so, so every client built for the old one is rebuilt.
+            when (_status.value) {
+                is TorServiceStatus.Active -> {
+                    setStatus(TorServiceStatus.Active(bound))
+                }
+
+                is TorServiceStatus.Bootstrapping -> {
+                    setStatus(TorServiceStatus.Bootstrapping(bound))
+                    watchBootstrap(bound)
+                }
+
+                else -> {}
+            }
+        }
+        Log.i("TorService") { "SOCKS listener bound again on port $bound" }
+        return ListenerRecovery.RESTARTED
     }
 
     /**

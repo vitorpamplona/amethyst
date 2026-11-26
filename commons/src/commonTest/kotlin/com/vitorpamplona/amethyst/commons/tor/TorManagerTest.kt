@@ -169,6 +169,99 @@ class TorManagerTest {
         }
 
     // ------------------------------------------------------------------
+    // onReturnToForeground — the SOCKS listener after an iOS suspension
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `onReturnToForeground counts a rebound listener and resets nothing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend)
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+            backend.listenerRecovery = ListenerRecovery.RESTARTED
+
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+
+            assertEquals(1, backend.recoverCount)
+            assertEquals(1, manager.listenerRestarts.value, "clients built for the dead listener are rebuilt")
+            assertEquals(0, backend.resetCount)
+            assertEquals(0, backend.resetWithCleanStateCount)
+        }
+
+    @Test
+    fun `onReturnToForeground leaves a healthy listener alone`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend)
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+            backend.listenerRecovery = ListenerRecovery.HEALTHY
+
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+
+            assertEquals(1, backend.recoverCount)
+            assertEquals(0, manager.listenerRestarts.value)
+            assertEquals(0, backend.resetCount)
+        }
+
+    @Test
+    fun `onReturnToForeground resets warm when the listener cannot be recovered`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+            val startsBefore = backend.startCount
+            backend.listenerRecovery = ListenerRecovery.FAILED
+
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+
+            assertEquals(1, backend.resetCount, "a warm reset, keeping the guards and the cache")
+            assertEquals(0, backend.resetWithCleanStateCount)
+            assertTrue(backend.startCount > startsBefore, "the reset re-enters INTERNAL and starts Tor again")
+
+            // The reset primed the self-heal cooldown: the watchdog does not reset again on top.
+            advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
+            runCurrent()
+            assertEquals(1, backend.resetCount)
+        }
+
+    @Test
+    fun `onReturnToForeground does nothing while bypassed or off or external`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val prefs = FakeTorPreferences()
+            val backend = FakeTorBackend()
+            val manager = buildManager(prefs = prefs, backend = backend)
+            advanceUntilIdle()
+            backend.listenerRecovery = ListenerRecovery.FAILED
+
+            manager.sessionBypass.value = true
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+            manager.sessionBypass.value = false
+
+            prefs.setTorType(TorType.OFF)
+            advanceUntilIdle()
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+
+            prefs.setTorType(TorType.EXTERNAL)
+            advanceUntilIdle()
+            manager.onReturnToForeground()
+            advanceUntilIdle()
+
+            assertEquals(0, backend.recoverCount)
+            assertEquals(0, backend.resetCount)
+        }
+
+    // ------------------------------------------------------------------
     // onTorCircuitsDead — Active-but-failing self-heal
     // ------------------------------------------------------------------
 
@@ -1129,6 +1222,17 @@ private class FakeTorBackend : TorBackend {
         resetCount++
         _bootstrapInFlight.value = false
         _status.value = TorServiceStatus.Off
+    }
+
+    /** What [recoverListener] answers. */
+    var listenerRecovery = ListenerRecovery.NOT_CHECKED
+
+    var recoverCount = 0
+        private set
+
+    override suspend fun recoverListener(): ListenerRecovery {
+        recoverCount++
+        return listenerRecovery
     }
 
     override suspend fun resetWithCleanState() {

@@ -81,4 +81,33 @@ interface TorBackend {
      * Arti itself says every guard was rejected, so believe it.
      */
     val guardsDownSignal: Flow<Unit>
+
+    /**
+     * Makes sure the SOCKS listener the status reports is still accepting, and binds it again if it
+     * is not. For a platform that suspends the app's process: iOS may reclaim a suspended app's
+     * listening socket, and Arti's accept loop then ends with nothing to restart it, so the status
+     * keeps reporting a port that refuses every connection (`TorManager.onReturnToForeground`).
+     *
+     * Defaults to [ListenerRecovery.NOT_CHECKED]: a backend that cannot probe its listener (Android,
+     * whose process is never suspended with the listener reclaimed) has nothing to recover.
+     */
+    suspend fun recoverListener(): ListenerRecovery = ListenerRecovery.NOT_CHECKED
+}
+
+/** What [TorBackend.recoverListener] found. */
+enum class ListenerRecovery {
+    /** The backend cannot tell (no probe), so nothing was done. */
+    NOT_CHECKED,
+
+    /** No listener is supposed to be up (Tor off, or not started yet): `start()` will bind one. */
+    NOT_RUNNING,
+
+    /** The listener answered: nothing to do. */
+    HEALTHY,
+
+    /** The listener was gone and is bound again. Clients pooled on the old one should be rebuilt. */
+    RESTARTED,
+
+    /** The listener was gone and could not be bound again, or no client is left behind it. Reset Tor. */
+    FAILED,
 }

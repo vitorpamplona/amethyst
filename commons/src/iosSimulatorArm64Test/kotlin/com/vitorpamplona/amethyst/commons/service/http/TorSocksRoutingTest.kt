@@ -39,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -200,6 +201,24 @@ class TorSocksRoutingTest {
             } finally {
                 second.close()
             }
+        }
+
+    @Test
+    fun aListenerReboundOnTheSamePortGetsAFreshClientAndRoute() =
+        withSocks { socks, scope ->
+            val generation = MutableStateFlow(0)
+            val clients = DualKtorClients(MutableStateFlow(socks.port), MutableStateFlow(false), scope, ::darwinHttpClient, generation)
+            // Collected, as the relay pool's connector collects it in the app.
+            clients.torRoute.launchIn(scope)
+            val before = clients.tor()
+            assertSame(before, clients.torRoute.value)
+            generation.value = 1
+            val after = clients.tor()
+            assertTrue(before !== after, "connections pooled on the dead listener are dropped with its client")
+            assertEquals("ok", after.get("http://rebound.tor-test.invalid/").bodyAsText())
+            assertEquals(SocksConnect(DOMAIN_NAME, "rebound.tor-test.invalid", 80), socks.awaitConnect("rebound.tor-test.invalid"))
+            // The relay pool keys its re-dials on this token.
+            withTimeout(5_000) { while (clients.torRoute.value !== after) delay(20) }
         }
 
     private class EndListener(

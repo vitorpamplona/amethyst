@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ios.tor
 
 import com.vitorpamplona.amethyst.commons.tor.ArtiBridge
+import com.vitorpamplona.amethyst.commons.util.excludeDirectoryFromBackup
 
 /**
  * iOS's [ArtiBridge]: the C ABI of the Arti wrapper through the cinterop [ArtiNative], so the
@@ -37,7 +38,16 @@ internal object ArtiCinteropBridge : ArtiBridge {
         ArtiNative.setLogCallback(callback)
     }
 
-    override fun initialize(dataDir: String): Int = ArtiNative.initialize(dataDir)
+    /**
+     * Arti's directory holds its consensus cache and guard sample: rebuilt by any bootstrap, specific
+     * to this device, and megabytes in size, so it stays out of iCloud and computer backups. Set here,
+     * before every initialize, because a clean-state reset deletes the whole directory (and the flag
+     * with it) and this is the first call after one.
+     */
+    override fun initialize(dataDir: String): Int {
+        excludeDirectoryFromBackup(dataDir)
+        return ArtiNative.initialize(dataDir)
+    }
 
     override fun isBootstrapped(): Int = ArtiNative.isBootstrapped()
 

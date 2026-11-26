@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.connectivity.networkIdentityChanges
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
 import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
@@ -414,10 +415,7 @@ class AppModules(
     init {
         applicationIOScope.launch {
             connManager.status
-                .map { (it as? ConnectivityStatus.Active)?.networkId }
-                .filterNotNull()
-                .distinctUntilChanged()
-                .drop(1)
+                .networkIdentityChanges()
                 .collect { torManager.onNetworkChange() }
         }
     }
@@ -469,10 +467,7 @@ class AppModules(
     init {
         applicationIOScope.launch {
             connManager.status
-                .map { (it as? ConnectivityStatus.Active)?.networkId }
-                .filterNotNull()
-                .distinctUntilChanged()
-                .drop(1)
+                .networkIdentityChanges()
                 .collect { surgeDns.staleAll() }
         }
     }

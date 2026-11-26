@@ -232,6 +232,14 @@ interface AppPlatform {
     val supportsTor: Boolean get() = true
 
     /**
+     * Whether another app can lend this one a SOCKS port to route through (Orbot on Android and the
+     * desktop). Where it can't (iOS, where Orbot is a VPN rather than a proxy), the Tor engine choice
+     * leaves "external" out and a stored one runs the built-in Tor
+     * ([com.vitorpamplona.amethyst.commons.tor.supportedOn]).
+     */
+    val supportsExternalTor: Boolean get() = supportsTor
+
+    /**
      * Whether this platform can show a notification with Tor's startup progress
      * ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification]). Only Android has the
      * notifier, so the Tor settings show the switch only where this is true.
