@@ -23,6 +23,7 @@ package com.vitorpamplona.claudecode
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import org.junit.Assume.assumeTrue
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -239,5 +240,23 @@ class ClaudeSessionStoreTest {
         val live = store.liveSessions()
         assertEquals(setOf(Fixtures.SESSION_WRITE), live.keys)
         assertEquals("busy", live.getValue(Fixtures.SESSION_WRITE).status)
+    }
+
+    @Test
+    fun aTranscriptThatCannotBeReadIsAnEmptyHistory() {
+        // A session's file can be deleted between the lookup and the open. That open fails the
+        // way an unreadable file does, and must read as "nothing written" instead of escaping to
+        // the caller: a chat resumes by loading its history in a background coroutine.
+        val session = Fixtures.SESSION_WRITE
+        val dir = File(config, "projects/-work/$session/subagents").apply { mkdirs() }
+        File(dir, "agent-a1.meta.json").writeText("""{"agentType":"general-purpose","description":"Read a.txt","toolUseId":"toolu_parent","finished":true}""")
+        File(dir, "agent-a1.jsonl").writeText("")
+        val transcript = store.sessionFile(session) ?: error("fixture missing")
+        val log = File(dir, "agent-a1.jsonl")
+        assertTrue(transcript.setReadable(false, false) && log.setReadable(false, false))
+        assumeTrue("needs a file that cannot be read, which Windows and root do not allow", !transcript.canRead() && !log.canRead())
+
+        assertEquals(emptyList(), store.transcript(session))
+        assertEquals(mapOf("toolu_parent" to emptyList<TranscriptEntry>()), store.subagentTranscripts(session))
     }
 }
