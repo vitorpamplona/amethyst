@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
@@ -40,6 +41,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -48,6 +50,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -66,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.content.BlockContainer
 import com.vitorpamplona.amethyst.commons.content.CachedDocuments
 import com.vitorpamplona.amethyst.commons.content.Callout
 import com.vitorpamplona.amethyst.commons.content.CodeBlock
+import com.vitorpamplona.amethyst.commons.content.ColumnAlignment
 import com.vitorpamplona.amethyst.commons.content.DefinitionList
 import com.vitorpamplona.amethyst.commons.content.Div
 import com.vitorpamplona.amethyst.commons.content.Document
@@ -397,15 +401,38 @@ private fun RichTextScope.RenderTable(
                 null
             } else {
                 {
-                    table.header.forEach { cell -> cell { RenderInlines(cell.inlines, context, bold = true) } }
+                    table.header.forEachIndexed { column, cell ->
+                        cell { AlignedCell(table.alignments.getOrNull(column)) { RenderInlines(cell.inlines, context, bold = true) } }
+                    }
                 }
             },
     ) {
         table.rows.forEach { row ->
-            row { row.forEach { cell -> cell { RenderInlines(cell.inlines, context) } } }
+            row {
+                row.forEachIndexed { column, cell ->
+                    cell { AlignedCell(table.alignments.getOrNull(column)) { RenderInlines(cell.inlines, context) } }
+                }
+            }
         }
     }
     table.caption?.let { caption -> RenderInlines(caption, context, italic = true) }
+}
+
+/** A table cell's text, centered or right-aligned as its column asks (`:-:`, `--:`). */
+@Composable
+private fun AlignedCell(
+    alignment: ColumnAlignment?,
+    content: @Composable () -> Unit,
+) {
+    val (textAlign, boxAlign) =
+        when (alignment) {
+            ColumnAlignment.CENTER -> TextAlign.Center to Alignment.TopCenter
+            ColumnAlignment.RIGHT -> TextAlign.End to Alignment.TopEnd
+            else -> return content()
+        }
+    ProvideTextStyle(LocalTextStyle.current.copy(textAlign = textAlign)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = boxAlign) { content() }
+    }
 }
 
 @Composable

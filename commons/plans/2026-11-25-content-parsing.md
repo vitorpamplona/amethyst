@@ -181,6 +181,13 @@ Finishing touches found by running the app (2026-11-26):
   `= Title` line is the usual case), NIP-23 articles through `MarkdownTitle.withoutLeadingTitle` on
   a first `#`/`##` line.
 - **A note's tab title reads its words**, not its markup (`**bold**` reads "bold").
+- **Code blocks highlight 20-odd programming languages** (`ProgramHighlighter`: Kotlin, Java,
+  Swift, Rust, Go, C/C++, C#, JS/TS, Python, Ruby, shells, SQL, Lua, TOML, PHP, Dart, Scala):
+  keywords, types, calls, strings, numbers and comments. JSON and YAML keep `CodeHighlighter`.
+  `MarkdownChunks.split`, which existed only to pull code out for the old renderer, is gone.
+- **A custom emoji whose image fails** leaves a faint tile instead of a gap.
+- **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
+  dropped.
 
 ## Verification
 
@@ -201,6 +208,10 @@ Finishing touches found by running the app (2026-11-26):
   15 KB Djot article 2.6 ms, 15 KB of AsciiDoc 2.2 ms, a 70-character note 24 µs. The feed
   prefetcher parses on a background thread, so a card's first frame finds the document cached; a
   long article opened from a link parses once in composition.
+- **Cache memory, 2026-11-26:** 60 real kind-30023 articles parsed five times over and kept: 15 KB
+  per document, about 3 bytes per character of source. `CachedDocuments` keeps 100, so about 1.5 MB
+  for typical articles and 4 to 5 MB if every one is long. It stays at 100; `trimToSize(4)` still
+  runs on memory pressure.
 - **Run 2026-11-26** in the headless desktop app against a local `amy serve` relay: a markdown
   article (emphasis, code chips, hashtag, task list, ordered list, callout, quote, aligned table,
   highlighted code, a broken image's error card), a Djot wiki (highlight, insert, sub/superscript,
@@ -227,5 +238,4 @@ Finishing touches found by running the app (2026-11-26):
 
 ## Open
 
-1. **Cache size**, from the memory measurement (it stays at 100 documents until measured).
-2. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).
+1. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).
