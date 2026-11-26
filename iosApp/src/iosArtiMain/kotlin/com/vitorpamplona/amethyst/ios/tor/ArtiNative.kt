@@ -45,10 +45,10 @@ import kotlin.concurrent.AtomicReference
  * [initialize] (opens the state files, ~100 ms), [stopSocksProxy] (~100 ms) and [destroy]
  * (~0.5-1.5 s), which block the calling thread; keep them off the main thread.
  *
- * Linking: nothing here links `libarti.a` by itself. The test executables do
- * (`iosApp/build.gradle.kts`); the app gets it in B12d. `internal` until then: a public object
- * would be exported through AmethystKit's Objective-C header, which keeps it (and its undefined
- * `_arti_*` references) in the static framework, and Xcode's link of the app would fail.
+ * Linking: nothing here links `libarti.a` by itself. AmethystKit is a static framework, so its
+ * `_arti_*` references stay undefined until the final link: Xcode's app link and the test
+ * executables (`iosApp/build.gradle.kts`, `iosApp/xcode/project.yml`) pass `-larti -liconv`.
+ * `internal`, so it stays out of AmethystKit's Objective-C header.
  */
 @OptIn(ExperimentalForeignApi::class)
 internal object ArtiNative {

@@ -18,20 +18,39 @@ plugins {
 // Arti for iOS: tools/arti-build/build-arti-ios.sh builds the Rust wrapper as two static
 // archives (device, simulator) into tools/arti-build/out/ios, which git ignores: ~18 MB each,
 // rebuilt from the pinned sources like Android's .so but not committed. Needs macOS, Xcode and
-// rustup; Gradle runs it only for an executable that links Arti, and skips it while its inputs
+// rustup; Gradle runs it for whatever links Arti (the app, through Xcode's call of
+// embedAndSignAppleFrameworkForXcode, and the test executables), and skips it while its inputs
 // are unchanged. See tools/arti-build/README.md -> "iOS".
 //
 // The cinterop needs the Apple SDK, so the Arti bindings (the cinterop and src/iosArtiMain) are
-// set up on a Mac only, and compiling :iosApp elsewhere keeps working without them.
+// set up on a Mac only, and compiling :iosApp elsewhere keeps working without them
+// (src/iosNoArtiMain stands in, with Tor unavailable).
 val withArti = HostManager.hostIsMac
 val artiBuildDir = rootProject.layout.projectDirectory.dir("tools/arti-build")
 val artiIosOut = artiBuildDir.dir("out/ios")
+val artiDeviceTarget = "aarch64-apple-ios"
+val artiSimulatorTarget = "aarch64-apple-ios-sim"
+
+// Xcode names the SDK it builds for in PLATFORM_NAME; then only that slice is built (each one
+// is a ~70 s cold Rust build). Anywhere else (a terminal, the test tasks) both are.
+val artiTargets: Provider<List<String>> =
+    providers
+        .environmentVariable("PLATFORM_NAME")
+        .map {
+            when (it) {
+                "iphonesimulator" -> listOf(artiSimulatorTarget)
+                "iphoneos" -> listOf(artiDeviceTarget)
+                else -> listOf(artiDeviceTarget, artiSimulatorTarget)
+            }
+        }.orElse(listOf(artiDeviceTarget, artiSimulatorTarget))
 val buildArtiIos =
     tasks.register<Exec>("buildArtiIos") {
         group = "build"
         description = "Builds Arti's iOS static libraries (tools/arti-build/build-arti-ios.sh)."
         workingDir(artiBuildDir)
-        commandLine("./build-arti-ios.sh")
+        val targets = artiTargets.get()
+        commandLine(listOf("./build-arti-ios.sh") + targets.map { "--target=$it" })
+        inputs.property("targets", targets)
         inputs.dir(artiBuildDir.dir("src"))
         inputs.dir(artiBuildDir.dir("include"))
         inputs.files(
@@ -45,8 +64,18 @@ val buildArtiIos =
                 "build-arti-ios.sh",
             ),
         )
-        outputs.dir(artiIosOut)
+        targets.forEach { outputs.file(artiIosOut.file("$it/libarti.a")) }
     }
+
+// The app: AmethystKit is a static framework, so Kotlin/Native leaves its `_arti_*` references
+// for Xcode's link of the app, which takes the archive from tools/arti-build/out/ios/<triple>
+// (LIBRARY_SEARCH_PATHS and -larti -liconv in xcode/project.yml). Xcode's pre-build step runs
+// embedAndSignAppleFrameworkForXcode, so building the app builds Arti first.
+if (withArti) {
+    tasks.matching { it.name == "embedAndSignAppleFrameworkForXcode" }.configureEach {
+        dependsOn(buildArtiIos)
+    }
+}
 
 kotlin {
     compilerOptions {
@@ -67,9 +96,9 @@ kotlin {
             includeDirs(artiBuildDir.dir("include"))
             packageName = "com.vitorpamplona.amethyst.ios.tor.cinterop"
         }
-        // Executables that run Arti link the archive build-arti-ios.sh writes. Only the test
-        // executables for now; the app (a static framework, which Xcode links) gets it in B12d.
-        val rustTarget = if (target.name == "iosArm64") "aarch64-apple-ios" else "aarch64-apple-ios-sim"
+        // The test executables link the archive build-arti-ios.sh writes themselves; the app's
+        // link is Xcode's (see embedAndSignAppleFrameworkForXcode above).
+        val rustTarget = if (target.name == "iosArm64") artiDeviceTarget else artiSimulatorTarget
         target.binaries.withType<TestExecutable>().configureEach {
             // -liconv: the one system library in build-arti-ios.sh's native-static-libs
             // (-liconv -lSystem -lc -lm) that a Kotlin/Native link does not already pass.
@@ -109,7 +138,7 @@ kotlin {
             }
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
-        if (withArti) iosMain.kotlin.srcDir("src/iosArtiMain/kotlin")
+        iosMain.kotlin.srcDir(if (withArti) "src/iosArtiMain/kotlin" else "src/iosNoArtiMain/kotlin")
 
         // Simulator-only: the Arti spike tests (B12a) run on the simulator, never on a device.
         getByName("iosSimulatorArm64Test") {

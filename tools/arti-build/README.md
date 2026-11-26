@@ -363,11 +363,12 @@ cd tools/arti-build
 ./build-arti-ios.sh --target=aarch64-apple-ios-sim
 ```
 
-You rarely run it by hand: `:iosApp:buildArtiIos` runs it before any executable that links Arti
-(today the simulator tests) and is up to date while its inputs (`src/`, `include/`, `Cargo.*`,
-`ARTI_VERSION`, the toolchain and the script) are unchanged. It needs macOS, Xcode and rustup;
-the two iOS targets are added on first use. The first build takes about 2.5 minutes for both
-targets, then about 35 seconds per target after a change to `src/`.
+You rarely run it by hand: `:iosApp:buildArtiIos` runs it before anything that links Arti (the
+app, from Xcode's pre-build step, and the simulator tests) and is up to date while its inputs
+(`src/`, `include/`, `Cargo.*`, `ARTI_VERSION`, the toolchain and the script) are unchanged. From
+Xcode it builds only the slice of the SDK being built (`PLATFORM_NAME`); elsewhere both. It needs
+macOS, Xcode and rustup; the two iOS targets are added on first use. The first build takes about
+2.5 minutes for both targets, then about 35 seconds per target after a change to `src/`.
 
 Output goes to `out/ios/`, which git ignores:
 
@@ -375,7 +376,7 @@ Output goes to `out/ios/`, which git ignores:
 out/ios/
 ├── aarch64-apple-ios/libarti.a       # device, ~18 MB unlinked
 ├── aarch64-apple-ios-sim/libarti.a   # simulator, ~18 MB unlinked
-├── Arti.xcframework                  # both slices + header, for an Xcode target (B12d)
+├── Arti.xcframework                  # both slices + header (only when both are built; unused by the app)
 ├── include/arti_ffi.h
 └── BUILD_INFO                        # rustc, Xcode, sha256 per slice, native-static-libs
 ```
@@ -393,10 +394,11 @@ How the iOS build finds them:
 - **Test executables** link `out/ios/<triple>/libarti.a` with `-larti -liconv`
   (`iosApp/build.gradle.kts`); the link task depends on `buildArtiIos` and takes the archive as
   an input, so a rebuilt archive relinks.
-- **The app** (B12d): `AmethystKit` is a static framework, so Kotlin/Native does not link it;
-  Xcode does. The Xcode target will need `out/ios/Arti.xcframework` (or `LIBRARY_SEARCH_PATHS` +
-  `-larti -liconv`) and a pre-build step that runs `buildArtiIos`. Not wired yet: nothing in the
-  app calls Arti, and Kotlin/Native drops the unreferenced wrapper from the framework.
+- **The app** (B12d): `AmethystKit` is a static framework, so Kotlin/Native leaves its `_arti_*`
+  references undefined and Xcode resolves them when it links the app:
+  `iosApp/xcode/project.yml` sets `LIBRARY_SEARCH_PATHS` to `out/ios/<triple>` per SDK and adds
+  `-larti -liconv`. Its pre-build step runs `:iosApp:embedAndSignAppleFrameworkForXcode`, which
+  depends on `buildArtiIos`, so building the app in Xcode (or with `xcodebuild`) builds Arti first.
 
 Differences from the Android build:
 

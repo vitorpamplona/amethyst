@@ -397,8 +397,9 @@ jobs:
   build-ios-app:
     # The iOS app shell (:iosApp, plans/2026-10-09-ios-app.md B0): links the AmethystKit framework
     # for the simulator, the step no Linux host can run, then generates the Xcode project from
-    # iosApp/xcode/project.yml and builds it unsigned. It compiles :commons and :commonsUI for iOS
-    # again on its own runner, so it gets more time than the test jobs.
+    # iosApp/xcode/project.yml and builds it unsigned, Arti (built from Rust source) linked in. It
+    # compiles :commons and :commonsUI for iOS again on its own runner, so it gets more time than
+    # the test jobs.
     runs-on: macos-latest
     timeout-minutes: 75
     steps:
@@ -425,12 +426,42 @@ jobs:
             konan-${{ runner.os }}-iosapp-
             konan-${{ runner.os }}-
 
+      # The app links Arti (Tor in Rust, tools/arti-build), built from source by
+      # :iosApp:buildArtiIos during the Xcode build below: the archives are not committed. The
+      # runner image ships rustup; this installs the toolchain tools/arti-build/rust-toolchain.toml
+      # pins and the simulator target, so the build step itself never downloads a toolchain.
+      - name: Set up Rust for Arti
+        working-directory: tools/arti-build
+        run: |
+          command -v rustup >/dev/null || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.cargo/bin:$PATH"
+          CHANNEL=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)
+          rustup toolchain install "$CHANNEL" --profile minimal
+          rustup target add --toolchain "$CHANNEL" aarch64-apple-ios-sim
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      # Arti's clone, the crates and cargo's target dir at the build script's fixed path. A hit
+      # skips the ~1.5-minute Rust build of the simulator slice; keyed on everything it builds from.
+      - name: Cache the Arti build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            /tmp/amethyst-arti-build
+          key: arti-ios-${{ runner.os }}-${{ hashFiles('tools/arti-build/**') }}
+          restore-keys: |
+            arti-ios-${{ runner.os }}-
+
       - name: Link AmethystKit for the simulator
         run: |
           ./gradlew \
             -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
             :iosApp:linkDebugFrameworkIosSimulatorArm64
 
+      # The pre-build step's embedAndSignAppleFrameworkForXcode runs :iosApp:buildArtiIos for the
+      # simulator slice first, and the link takes -larti from tools/arti-build/out/ios.
       - name: Build the Xcode project (unsigned, simulator)
         run: |
           brew install xcodegen

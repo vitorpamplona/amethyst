@@ -26,10 +26,8 @@ import com.vitorpamplona.amethyst.commons.tor.ArtiBridge
  * iOS's [ArtiBridge]: the C ABI of the Arti wrapper through the cinterop [ArtiNative], so the
  * shared `TorService` / `TorManager` lifecycle runs over the same engine Android ships.
  *
- * `internal` and unreferenced on purpose until B12d (plans/2026-11-25-ios-tor.md): nothing in
- * the app builds a `TorService` yet, so Kotlin/Native drops this along with [ArtiNative] and the
- * static AmethystKit framework keeps no undefined `_arti_*` symbols. B12d links `libarti.a`
- * into the app and wires this into `IosAppModules`.
+ * `IosAppModules` runs the shared `TorService` over it (plans/2026-11-25-ios-tor.md, B12d), and
+ * Xcode links `libarti.a` into the app for it.
  *
  * Unlike Android's JNI shim, [startSocksProxy] and [stopSocksProxy] here wait for the aborted
  * listener to drop, so a restart on the same port binds instead of failing with "address in use".
