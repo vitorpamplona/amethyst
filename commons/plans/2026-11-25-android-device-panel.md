@@ -1,6 +1,9 @@
 # Android device panel and agent device tools
 
-Status: built (desktop). Date: 2026-11-25.
+Status: built (desktop). Date: 2026-11-25. Since 2026-11-26 the panel serves iOS simulators too, and the code
+named here was reorganised by platform (`androiddevices/AndroidDevices` is now `devices/Devices` over
+`devices/android/AndroidBackend`, `DeviceConnection` is `AndroidConnection`): see
+`2026-11-26-ios-simulator-panel.md`.
 
 ## Goal
 

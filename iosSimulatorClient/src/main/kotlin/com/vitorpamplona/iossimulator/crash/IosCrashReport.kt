@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.iossimulator.crash
 
-import com.vitorpamplona.androiddevice.adb.DeviceCrash
+import com.vitorpamplona.devicecore.crash.DeviceCrash
 import com.vitorpamplona.iossimulator.idb.IdbCrash
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

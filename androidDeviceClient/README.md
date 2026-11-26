@@ -5,7 +5,8 @@ them. It starts the SDK tools the user installed (`adb`, `emulator`) and bundles
 No Amethyst or Nostr types: `amy` or another tool can use it, and it can move to its own repository.
 
 The desktop app uses it for the device panel beside a coding chat and for the agents' device tools
-(`commons/…/androiddevices/`, see `commons/plans/2026-11-25-android-device-panel.md`).
+(`commons/…/devices/android/`, see `commons/plans/2026-11-25-android-device-panel.md`). The vocabulary
+it shares with `iosSimulatorClient` (gRPC, `DeviceScreen`, `UiTree`, `DeviceKey`) is `deviceClientCore`.
 
 ## What it does
 
@@ -13,16 +14,16 @@ The desktop app uses it for the device panel beside a coding chat and for the ag
 |---|---|
 | Find `adb` and `emulator` in an SDK folder, or on the PATH | `AndroidSdkTools` |
 | List devices, shell, install, launch, input, screenshots, logcat, rotation, `emu kill` | `adb/Adb` |
-| The window hierarchy as numbered nodes, as text for an agent, find a node by text | `ui/UiTree` (uiautomator's XML) |
+| The window hierarchy as numbered nodes, as text for an agent, find a node by text | `UiTree.parse` (uiautomator's XML; `UiTree` is `deviceClientCore`'s) |
 | The AVDs that can be started, read from their `.ini` files | `avd/Avds` |
 | Every running emulator, whoever started it (Studio, a terminal, this app) | `emulator/EmulatorDiscovery` |
 | Start an AVD hidden, with its own token-guarded gRPC port | `emulator/EmulatorLauncher` |
-| The emulator's screen stream, touches, keys, typing, clipboard, rotation | `emulator/EmulatorController` over `grpc/GrpcChannel` |
+| The emulator's screen stream, touches, keys, typing, clipboard, rotation | `emulator/EmulatorController` over `deviceClientCore`'s `GrpcChannel` |
 | A signed token for an emulator Android Studio started (`-grpc-use-jwt`) | `emulator/EmulatorJwtAuth` |
-| One live-view interface over both (frames + pointer + keys) | `device/DeviceScreen`: `EmulatorScreen`, `AdbScreen` |
+| The live view (`deviceClientCore`'s `DeviceScreen`) over either | `device/EmulatorScreen`, `device/AdbScreen` |
+| A `DeviceKey` as Android takes it: `KeyEvent` codes (adb), W3C names (the emulator) | `adb/AndroidKeys` |
 | Crashes and ANRs in the device log (`crash` buffer, `ActivityManager` ANRs) | `adb/CrashLog`, `Adb.crashes` |
 | Back to the AVD's saved state (`default_boot`) | `EmulatorController.loadSnapshot` (`SnapshotService`) |
-| gRPC over a Unix socket; a client stream sent whole; a stream held open while answers come (idb's companion, for `iosSimulatorClient`) | `grpc/UnixSocketFactory`, `GrpcChannel.clientStream`, `GrpcChannel.openStream` |
 
 ## The emulator's gRPC endpoint, as observed
 
@@ -77,7 +78,7 @@ tool; with `EMULATOR_IT_COPIES=<avd id>`, two read-only copies and a reset).
   drag's moves at the pace they were sent, with the screen streaming meanwhile.
 - RGBA rows run top-down. Touches land where clicked in portrait and landscape.
 - Two `-read-only` copies of one AVD boot side by side from its snapshot; `LoadSnapshot` puts one
-  back, after which adb sees it offline for a moment (`AndroidDevices.reset` waits).
+  back, after which adb sees it offline for a moment (`AndroidBackend.reset` waits).
 - `-qt-hide-window` with no X display aborts the emulator (code 134): the launcher passes
   `-no-window` there.
 - API 21 has no `pidof` (`ps` lists every process there) and `booted` stays false in `getStatus`

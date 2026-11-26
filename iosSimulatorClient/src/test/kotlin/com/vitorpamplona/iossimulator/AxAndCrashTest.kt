@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.iossimulator
 
-import com.vitorpamplona.androiddevice.adb.DeviceCrash
-import com.vitorpamplona.androiddevice.ui.Bounds
+import com.vitorpamplona.devicecore.crash.DeviceCrash
+import com.vitorpamplona.devicecore.ui.Bounds
 import com.vitorpamplona.iossimulator.ax.AxTree
 import com.vitorpamplona.iossimulator.crash.IosCrashReport
 import com.vitorpamplona.iossimulator.idb.IdbCrash

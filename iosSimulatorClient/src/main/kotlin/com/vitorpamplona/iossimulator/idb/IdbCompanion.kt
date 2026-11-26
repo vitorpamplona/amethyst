@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.iossimulator.idb
 
-import com.vitorpamplona.androiddevice.grpc.GrpcChannel
-import com.vitorpamplona.androiddevice.grpc.UnixSocketFactory
+import com.vitorpamplona.devicecore.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.grpc.UnixSocketFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runInterruptible

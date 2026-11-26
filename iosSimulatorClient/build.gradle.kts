@@ -5,8 +5,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // (`idb_companion`, Meta's, MIT) over gRPC for what simctl has no command for: the live screen,
 // touches, keys, typing, rotation, the accessibility tree and crash reports. It starts the tools the
 // user installed and bundles nothing from them. Kept free of Amethyst and Nostr types, like
-// androidDeviceClient, whose device vocabulary (DeviceScreen, UiTree, the gRPC channel) it shares
-// so the device panel drives an iPhone simulator and an Android emulator the same way.
+// androidDeviceClient; both build on deviceClientCore's device vocabulary (DeviceScreen, UiTree,
+// the gRPC channel), so the device panel drives an iPhone simulator and an emulator the same way.
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
 }
@@ -27,8 +27,8 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     api(libs.kotlinx.coroutines.core)
     // DeviceScreen, ScreenFrame, DeviceKey, UiTree and the hand-rolled gRPC channel: one vocabulary
-    // for every device the panel shows.
-    api(project(":androidDeviceClient"))
+    // for every device the panel shows, Android's or iOS's.
+    api(project(":deviceClientCore"))
     implementation(libs.okhttp)
     // simctl and idb answer in JSON: parsed as trees, no generated serializers.
     implementation(libs.kotlinx.serialization.json)

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.androiddevice.emulator
 
-import com.vitorpamplona.androiddevice.CommandRunner
-import com.vitorpamplona.androiddevice.ProcessCommandRunner
+import com.vitorpamplona.devicecore.CommandRunner
+import com.vitorpamplona.devicecore.ProcessCommandRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

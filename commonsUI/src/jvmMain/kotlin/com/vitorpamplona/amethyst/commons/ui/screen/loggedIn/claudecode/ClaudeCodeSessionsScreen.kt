@@ -100,8 +100,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
-import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
@@ -115,13 +113,14 @@ import com.vitorpamplona.amethyst.commons.claudecode.RepoCandidate
 import com.vitorpamplona.amethyst.commons.claudecode.RepoGroup
 import com.vitorpamplona.amethyst.commons.claudecode.expandHome
 import com.vitorpamplona.amethyst.commons.claudecode.workstreamModeOf
+import com.vitorpamplona.amethyst.commons.devices.Devices
+import com.vitorpamplona.amethyst.commons.devices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
-import com.vitorpamplona.amethyst.commons.resources.android_devices_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_advanced
 import com.vitorpamplona.amethyst.commons.resources.claude_code_agent
@@ -192,6 +191,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_name_
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_name_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
+import com.vitorpamplona.amethyst.commons.resources.devices_title
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.resources.save
@@ -328,9 +328,9 @@ private fun SessionsPane(
                     }) { Icon(MaterialSymbols.Search, contentDescription = stringRes(Res.string.claude_code_search_hint)) }
                 }
                 // The emulators, phones and simulators the chats test on, where an Android SDK or Xcode is installed.
-                if (remember { AndroidDevices.supported }) {
-                    HoverTooltip(stringRes(Res.string.android_devices_title)) {
-                        IconButton(onClick = { nav.nav(Route.AndroidDevices()) }) { Icon(MaterialSymbols.PhoneAndroid, contentDescription = stringRes(Res.string.android_devices_title)) }
+                if (remember { Devices.supported }) {
+                    HoverTooltip(stringRes(Res.string.devices_title)) {
+                        IconButton(onClick = { nav.nav(Route.Devices()) }) { Icon(MaterialSymbols.PhoneAndroid, contentDescription = stringRes(Res.string.devices_title)) }
                     }
                 }
                 HoverTooltip(stringRes(Res.string.claude_code_storage)) {

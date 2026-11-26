@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.iossimulator.xcode
 
-import com.vitorpamplona.androiddevice.CommandRunner
+import com.vitorpamplona.devicecore.CommandRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

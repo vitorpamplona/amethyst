@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.iossimulator.simctl
 
-import com.vitorpamplona.androiddevice.CommandResult
-import com.vitorpamplona.androiddevice.CommandRunner
+import com.vitorpamplona.devicecore.CommandResult
+import com.vitorpamplona.devicecore.CommandRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

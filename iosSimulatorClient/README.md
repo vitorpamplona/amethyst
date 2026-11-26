@@ -4,9 +4,9 @@ A Kotlin/JVM client for the iOS Simulator, the way Xcode and idb drive it. It st
 user installed (`xcrun simctl`, idb's `idb_companion`) and bundles nothing from them. No Amethyst or
 Nostr types: `amy` or another tool can use it, and it can move to its own repository.
 
-It shares `androidDeviceClient`'s device vocabulary (`DeviceScreen`, `ScreenFrame`, `DeviceKey`,
-`UiTree`, the hand-written gRPC channel), so the desktop app's device panel and the agents' device
-tools drive a simulator the way they drive an emulator (`commons/…/androiddevices/`, see
+It builds on `deviceClientCore`'s device vocabulary (`DeviceScreen`, `ScreenFrame`, `DeviceKey`,
+`UiTree`, the hand-written gRPC channel), as `androidDeviceClient` does, so the desktop app's device
+panel and the agents' device tools drive a simulator the way they drive an emulator (`commons/…/devices/ios/`, see
 `commons/plans/2026-11-26-ios-simulator-panel.md`).
 
 ## What it does
@@ -88,7 +88,7 @@ From `proto/idb.proto` in facebook/idb (service `idb.CompanionService`):
 
 - Unit tests (`./gradlew :iosSimulatorClient:test`): simctl's JSON and arguments, minicap framing,
   JPEG sizes, HID encoding, `describe` over h2c, the accessibility tree, crash reports, Xcode
-  project discovery. `androidDeviceClient`'s `UnixSocketGrpcTest` runs gRPC over a real Unix
+  project discovery. `deviceClientCore`'s `UnixSocketGrpcTest` runs gRPC over a real Unix
   socket, a client stream, and a held-open stream that sends its stop when collected no more.
 - End to end against `tools/fake-ios-simulator` (a stand-in `xcrun` and an h2c companion on its
   Unix socket): `commons`'s `FakeSimulatorToolsTest`, and the desktop app's device panel.

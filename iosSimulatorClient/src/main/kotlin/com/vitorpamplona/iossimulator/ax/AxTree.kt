@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.iossimulator.ax
 
-import com.vitorpamplona.androiddevice.ui.Bounds
-import com.vitorpamplona.androiddevice.ui.UiNode
-import com.vitorpamplona.androiddevice.ui.UiTree
+import com.vitorpamplona.devicecore.ui.Bounds
+import com.vitorpamplona.devicecore.ui.UiNode
+import com.vitorpamplona.devicecore.ui.UiTree
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

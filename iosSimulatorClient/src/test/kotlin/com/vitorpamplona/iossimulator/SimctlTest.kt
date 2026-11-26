@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.iossimulator
 
-import com.vitorpamplona.androiddevice.CommandResult
-import com.vitorpamplona.androiddevice.CommandRunner
+import com.vitorpamplona.devicecore.CommandResult
+import com.vitorpamplona.devicecore.CommandRunner
 import com.vitorpamplona.iossimulator.simctl.Simctl
 import kotlinx.coroutines.runBlocking
 import java.io.File

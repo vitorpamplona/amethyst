@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.iossimulator.device
 
-import com.vitorpamplona.androiddevice.adb.DeviceKey
+import com.vitorpamplona.devicecore.input.DeviceKey
 import com.vitorpamplona.iossimulator.idb.HidStep
 import com.vitorpamplona.iossimulator.idb.IdbButton
 

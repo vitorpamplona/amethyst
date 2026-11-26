@@ -86,6 +86,7 @@ include(":relayBench")
 include(":agentCore")
 include(":claudeCodeClient")
 include(":codexClient")
+include(":deviceClientCore")
 include(":androidDeviceClient")
 include(":iosSimulatorClient")
 

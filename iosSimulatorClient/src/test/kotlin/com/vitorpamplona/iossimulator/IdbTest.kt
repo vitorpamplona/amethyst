@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.iossimulator
 
-import com.vitorpamplona.androiddevice.adb.DeviceKey
-import com.vitorpamplona.androiddevice.grpc.GrpcChannel
-import com.vitorpamplona.androiddevice.grpc.ProtoReader
-import com.vitorpamplona.androiddevice.grpc.ProtoWriter
-import com.vitorpamplona.androiddevice.grpc.double
-import com.vitorpamplona.androiddevice.grpc.message
-import com.vitorpamplona.androiddevice.grpc.string
-import com.vitorpamplona.androiddevice.grpc.varint
+import com.vitorpamplona.devicecore.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.grpc.ProtoReader
+import com.vitorpamplona.devicecore.grpc.ProtoWriter
+import com.vitorpamplona.devicecore.grpc.double
+import com.vitorpamplona.devicecore.grpc.message
+import com.vitorpamplona.devicecore.grpc.string
+import com.vitorpamplona.devicecore.grpc.varint
+import com.vitorpamplona.devicecore.input.DeviceKey
+import com.vitorpamplona.devicecore.screen.JpegSize
 import com.vitorpamplona.iossimulator.device.HidKeys
-import com.vitorpamplona.iossimulator.device.JpegSize
 import com.vitorpamplona.iossimulator.device.SimulatorScreen
 import com.vitorpamplona.iossimulator.idb.HidStep
 import com.vitorpamplona.iossimulator.idb.IdbButton

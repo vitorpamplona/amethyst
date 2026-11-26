@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.iossimulator.device
 
-import com.vitorpamplona.androiddevice.adb.DeviceKey
-import com.vitorpamplona.androiddevice.adb.ScreenSize
-import com.vitorpamplona.androiddevice.device.DeviceScreen
-import com.vitorpamplona.androiddevice.device.PngSize
-import com.vitorpamplona.androiddevice.device.PointerAction
-import com.vitorpamplona.androiddevice.device.ScreenFrame
-import com.vitorpamplona.androiddevice.emulator.PixelFormat
-import com.vitorpamplona.androiddevice.grpc.GrpcException
+import com.vitorpamplona.devicecore.grpc.GrpcException
+import com.vitorpamplona.devicecore.input.DeviceKey
+import com.vitorpamplona.devicecore.screen.DeviceScreen
+import com.vitorpamplona.devicecore.screen.JpegSize
+import com.vitorpamplona.devicecore.screen.PixelFormat
+import com.vitorpamplona.devicecore.screen.PngSize
+import com.vitorpamplona.devicecore.screen.PointerAction
+import com.vitorpamplona.devicecore.screen.ScreenFrame
+import com.vitorpamplona.devicecore.screen.ScreenSize
 import com.vitorpamplona.iossimulator.idb.HidStep
 import com.vitorpamplona.iossimulator.idb.IdbClient
 import com.vitorpamplona.iossimulator.idb.IdbScreen
@@ -51,6 +52,8 @@ class SimulatorScreen(
     private val typesText: Boolean,
     private val fps: Int = 30,
     private val quality: Double = 0.75,
+    /** Quarter turns from portrait the simulator is held in now: where the back swipe starts. */
+    private val rotation: suspend () -> Int = { 0 },
 ) : DeviceScreen {
     override val streams = true
 
@@ -124,7 +127,7 @@ class SimulatorScreen(
     }
 
     override suspend fun key(key: DeviceKey) {
-        val steps = HidKeys.steps(key) ?: return backSwipe()
+        val steps = HidKeys.steps(key) ?: return backSwipe(rotation())
         idb.hid(steps)
     }
 
@@ -157,32 +160,5 @@ class SimulatorScreen(
     companion object {
         private const val POLL_MS = 250L
         private const val MIN_SCALE = 0.1
-    }
-}
-
-/** A JPEG's size, from its first start-of-frame marker. */
-object JpegSize {
-    fun of(jpeg: ByteArray): ScreenSize? {
-        if (jpeg.size < 4 || jpeg[0] != 0xFF.toByte() || jpeg[1] != 0xD8.toByte()) return null
-        var at = 2
-        while (at + 4 <= jpeg.size) {
-            if (jpeg[at] != 0xFF.toByte()) return null
-            val marker = jpeg[at + 1].toInt() and 0xff
-            if (marker == 0xFF) {
-                at++
-                continue
-            }
-            val length = ((jpeg[at + 2].toInt() and 0xff) shl 8) or (jpeg[at + 3].toInt() and 0xff)
-            // SOF0..SOF15, but not DHT (C4), JPG (C8) or DAC (CC).
-            if (marker in 0xC0..0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC) {
-                if (at + 9 > jpeg.size) return null
-                val height = ((jpeg[at + 5].toInt() and 0xff) shl 8) or (jpeg[at + 6].toInt() and 0xff)
-                val width = ((jpeg[at + 7].toInt() and 0xff) shl 8) or (jpeg[at + 8].toInt() and 0xff)
-                return ScreenSize(width, height)
-            }
-            if (marker == 0xDA || length < 2) return null
-            at += 2 + length
-        }
-        return null
     }
 }
