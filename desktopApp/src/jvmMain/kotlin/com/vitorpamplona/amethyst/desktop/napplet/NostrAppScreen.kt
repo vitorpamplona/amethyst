@@ -42,6 +42,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_fetch
@@ -165,17 +167,17 @@ private fun NostrApp(
         HorizontalDivider()
         Box(Modifier.fillMaxWidth().weight(1f)) {
             when (val current = state) {
-                is CefNappletSession.State.Showing -> OffscreenPage(view, Modifier.fillMaxSize(), wheelNeedsFocus = false)
-                is CefNappletSession.State.Loading -> {
+                is NappletSessionState.Showing -> OffscreenPage(view, Modifier.fillMaxSize(), wheelNeedsFocus = false)
+                is NappletSessionState.Loading -> {
                     val download by session.download.collectAsState()
                     LoadingPane(host, download, title)
                 }
-                is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
-                is CefNappletSession.State.Failed ->
+                is NappletSessionState.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
+                is NappletSessionState.Failed ->
                     when (current.reason) {
-                        CefNappletSession.Failure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, title), onRetry = viewModel::retry)
-                        CefNappletSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = viewModel::retry)
-                        CefNappletSession.Failure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, title), onRetry = viewModel::retry)
+                        NappletFailure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, title), onRetry = viewModel::retry)
+                        NappletFailure.ENGINE, NappletFailure.RENDERER_GONE -> EngineFailurePane(host.engine, onRetry = viewModel::retry)
+                        NappletFailure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, title), onRetry = viewModel::retry)
                     }
             }
         }

@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
@@ -200,17 +202,17 @@ private fun NappletWindow(
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
-                        is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
-                        is CefNappletSession.State.Loading -> {
+                        is NappletSessionState.Showing -> session.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
+                        is NappletSessionState.Loading -> {
                             val download by session.download.collectAsState()
                             LoadingPane(host, download, session.launch.title)
                         }
-                        is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
-                        is CefNappletSession.State.Failed ->
+                        is NappletSessionState.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
+                        is NappletSessionState.Failed ->
                             when (current.reason) {
-                                CefNappletSession.Failure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title), onRetry = { host.reopen(session) })
-                                CefNappletSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = { host.reopen(session) })
-                                CefNappletSession.Failure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, session.launch.title), onRetry = { host.reopen(session) })
+                                NappletFailure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title), onRetry = { host.reopen(session) })
+                                NappletFailure.ENGINE, NappletFailure.RENDERER_GONE -> EngineFailurePane(host.engine, onRetry = { host.reopen(session) })
+                                NappletFailure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, session.launch.title), onRetry = { host.reopen(session) })
                             }
                     }
                 }
@@ -270,7 +272,7 @@ internal fun SandboxToolbar(
             }
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
             val state by session.state.collectAsState()
-            val showing = state is CefNappletSession.State.Showing
+            val showing = state is NappletSessionState.Showing
             if (page.isLoading) {
                 ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_stop), enabled = showing) { session.stop() }
             } else {

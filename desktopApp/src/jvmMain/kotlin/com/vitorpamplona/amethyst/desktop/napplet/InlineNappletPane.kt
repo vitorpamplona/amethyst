@@ -36,6 +36,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -160,10 +162,10 @@ private fun SessionPane(
         status(
             when {
                 // Tor said apart from other failures, so a caller can say why nothing is showing.
-                now is CefNappletSession.State.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
-                now is CefNappletSession.State.Failed && now.reason == CefNappletSession.Failure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
-                now is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
-                now is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
+                now is NappletSessionState.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
+                now is NappletSessionState.Failed && now.reason == NappletFailure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
+                now is NappletSessionState.Failed -> InlineNappletStatus.FAILED
+                now is NappletSessionState.Showing && painted -> InlineNappletStatus.SHOWING
                 else -> InlineNappletStatus.LOADING
             },
         )
