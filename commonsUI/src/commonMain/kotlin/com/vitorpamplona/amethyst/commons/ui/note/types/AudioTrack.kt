@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
 
@@ -77,33 +76,6 @@ import com.vitorpamplona.quartz.nip14Subject.subject
  * the unknown-kind card.
  */
 fun AudioTrackEvent.isTitledTrack(): Boolean = displayTitle()?.isNotBlank() == true && (content.isBlank() || !looksLikeOpaquePayload(content))
-
-/**
- * A participant of a Zapstr track: `["p", <pubkey>, <relay>, <role>]`, the role ("Artist", "Host",
- * "Guest") in slot 3, which Quartz's ParticipantTag does not read.
- */
-private class TrackParticipant(
-    val pubKey: HexKey,
-    val role: String?,
-)
-
-private fun AudioTrackEvent.participantsWithRoles(): List<TrackParticipant> =
-    tags.mapNotNull { tag ->
-        val key = ParticipantTag.parseKey(tag) ?: return@mapNotNull null
-        TrackParticipant(key, trackParticipantRole(tag))
-    }
-
-/**
- * Zapstr writes the role in slot 2 (`["p", key, "Host"]`); the NIP-53 order puts a relay hint there
- * and the role in slot 3. Slot 2 is the role unless it is empty or a relay URL. Quartz's
- * `ParticipantTag.role` reads it the same way from its next release on.
- */
-private fun trackParticipantRole(tag: Array<String>): String? {
-    val second = tag.getOrNull(2)?.trim().orEmpty()
-    val isRelay = second.startsWith("wss://", ignoreCase = true) || second.startsWith("ws://", ignoreCase = true)
-    val role = if (second.isEmpty() || isRelay) tag.getOrNull(3) else second
-    return role?.trim()?.ifBlank { null }
-}
 
 private const val MAX_TRACK_PARTICIPANTS = 6
 
@@ -122,7 +94,7 @@ fun RenderAudioTrackHeader(
     val title = remember(event) { event.displayTitle()?.trim() } ?: return
     val type = remember(event) { event.type()?.let { readableToken(it) } }
     val cover = remember(event) { event.coverUrl()?.takeIf { it.startsWith("https://") || it.startsWith("http://") } }
-    val participants = remember(event) { event.participantsWithRoles() }
+    val participants = remember(event) { event.participants() }
     val price = remember(event) { event.price()?.trim()?.ifBlank { null } }
 
     KindCard(
@@ -141,8 +113,8 @@ fun RenderAudioTrackHeader(
         participants.take(MAX_TRACK_PARTICIPANTS).forEach { participant ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 KindCardPerson(participant.pubKey, accountViewModel, nav)
-                participant.role?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                participant.roles().ifEmpty { null }?.let {
+                    Text(text = it.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
         }

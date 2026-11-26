@@ -151,7 +151,6 @@ import com.vitorpamplona.quartz.experimental.profileTheme.tags.ThemeColors
 import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -278,9 +277,9 @@ fun RenderEmojiList(
     nav: INav,
 ) {
     val event = baseNote.event as? EmojiListEvent ?: return
-    val emojis = remember(event) { event.tags.listEmojis() }
-    // NIP-51 points the list at kind-30030 sets only; Quartz's emojiPacks() takes any `a`.
-    val packs = remember(event) { event.emojiPacks().filter { it.kind == EmojiPackEvent.KIND } }
+    // A shortcode listed twice is drawn once.
+    val emojis = remember(event) { event.emojis().distinctBy { it.code } }
+    val packs = remember(event) { event.emojiPacks() }
     val subtitle =
         listOfNotNull(
             countLine(Res.plurals.emoji_pack_emoji_count, emojis.size),
@@ -324,11 +323,6 @@ fun RenderEmojiList(
         EmojiPreviewDialog(emoji = emoji, packNote = null, accountViewModel = accountViewModel, nav = null, onDismiss = { preview = null })
     }
 }
-
-/** NIP-30 `emoji` tags a list or set may carry: a valid shortcode with an image url. */
-private fun TagArray.listEmojis(): List<EmojiUrlTag> =
-    mapNotNull { tag -> EmojiUrlTag.parse(tag)?.takeIf { EmojiUrlTag.isValidShortcode(it.code) && it.url.isNotBlank() } }
-        .distinctBy { it.code }
 
 /** An emoji pack the list points at: its title (or name) once it loads, its `d` until then. */
 @Composable

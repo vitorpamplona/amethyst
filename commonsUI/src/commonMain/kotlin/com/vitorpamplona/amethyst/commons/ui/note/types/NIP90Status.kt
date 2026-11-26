@@ -42,10 +42,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.CompactInvoic
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.firstAmount
-import com.vitorpamplona.quartz.nip90Dvms.status.tags.StatusTag
 
 /**
  * NIP-90 job feedback (kind 7000), read as the spec defines it:
@@ -54,10 +52,6 @@ import com.vitorpamplona.quartz.nip90Dvms.status.tags.StatusTag
  * - `["amount", <millisats>, <bolt11>]`: the payment the service provider asks for;
  * - `e` the job request and `p` the customer;
  * - `content`: empty, a sample of the results so far, or ciphertext when the request was encrypted.
- *
- * Quartz's `StatusTag.parse` reads the content as the description whenever the content is not
- * empty, which drops the extra info a provider wrote and shows a partial result as the status
- * line; this reads the tag itself.
  */
 @Immutable
 class DvmFeedback(
@@ -82,18 +76,16 @@ class DvmFeedback(
 }
 
 fun DvmStatusEvent.feedback(): DvmFeedback {
-    val statusTag = tags.dvmStatusTag()
+    val status = status()
     val amount = firstAmount()
     return DvmFeedback(
-        status = statusTag?.get(1),
-        extraInfo = statusTag?.getOrNull(2)?.ifBlank { null },
+        status = status?.code,
+        extraInfo = status?.extraInfo?.ifBlank { null },
         amountMsats = amount?.amount?.takeIf { it > 0 },
         bolt11 = amount?.lnInvoice?.trim()?.ifBlank { null },
         encrypted = tags.isDvmEncrypted(),
     )
 }
-
-private fun TagArray.dvmStatusTag(): Array<String>? = firstOrNull { it.size > 1 && it[0] == StatusTag.TAG_NAME && it[1].isNotBlank() }
 
 /**
  * What the feedback says in words, for the DVM feed screen: the status tag's extra info, else the

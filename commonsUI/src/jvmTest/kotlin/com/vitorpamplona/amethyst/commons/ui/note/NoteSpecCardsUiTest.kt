@@ -192,8 +192,7 @@ class NoteSpecCardsUiTest {
         assertTrue(shown("Write a haiku about relays"), "the job request is not quoted")
     }
 
-    // A partial result carries a sample in `content` AND the extra info in the tag: both are shown
-    // (Quartz's StatusTag.parse drops the extra info whenever the content is not empty).
+    // A partial result carries a sample in `content` AND the extra info in the tag: both are shown.
     @Test
     fun dvmPartialFeedbackShowsExtraInfoAndSample() {
         val request = jobRequest("a3")
