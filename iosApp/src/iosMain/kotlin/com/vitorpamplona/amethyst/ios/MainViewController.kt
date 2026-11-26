@@ -50,6 +50,8 @@ import platform.UIKit.UIViewController
 /** The per-role HTTP clients arrive with A2; until then every role shares the app's one client. */
 internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder {
     override fun ktorClientForPreview(url: String): HttpClient = modules.httpClient
+
+    override fun ktorClientForImage(url: String): HttpClient = modules.httpClient
 }
 
 /** Built once per process: the graph outlives every view controller the system asks for. */

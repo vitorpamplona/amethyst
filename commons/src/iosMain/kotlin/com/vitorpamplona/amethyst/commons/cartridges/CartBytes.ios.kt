@@ -21,13 +21,68 @@
 package com.vitorpamplona.amethyst.commons.cartridges
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.utils.Log
+import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CancellationException
+
+private const val TAG = "CartBytes"
 
 actual suspend fun IRoleBasedHttpClientBuilder.fetchMediaPrefix(
     url: String,
     count: Int,
-): ByteArray? = null
+): ByteArray? =
+    get(url, mapOf("Range" to "bytes=0-${count - 1}")) { code, body ->
+        // A server that ignores Range sends the whole file; the first bytes still answer.
+        if (code == 206 || code == 200) body.readAtMost(count) else null
+    }
 
 actual suspend fun IRoleBasedHttpClientBuilder.fetchMedia(
     url: String,
     maxBytes: Int,
-): ByteArray? = null
+): ByteArray? =
+    get(url, emptyMap()) { code, body ->
+        if (code != 200) {
+            Log.w(TAG) { "The cart at $url answered HTTP $code" }
+            return@get null
+        }
+        val bytes = body.readAtMost(maxBytes + 1)
+        if (bytes.size > maxBytes) {
+            Log.w(TAG) { "The cart at $url is over $maxBytes bytes" }
+            null
+        } else {
+            bytes
+        }
+    }
+
+private suspend fun IRoleBasedHttpClientBuilder.get(
+    url: String,
+    headers: Map<String, String>,
+    read: suspend (code: Int, body: ByteReadChannel) -> ByteArray?,
+): ByteArray? {
+    if (!url.startsWith("https://") && !url.startsWith("http://")) return null
+    return try {
+        ktorClientForImage(url)
+            .prepareGet(url) { headers.forEach { (k, v) -> header(k, v) } }
+            .execute { response -> read(response.status.value, response.bodyAsChannel()) }
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.w(TAG, "Could not download the cart at $url", e)
+        null
+    }
+}
+
+/** At most [length] bytes from the start of the body; the rest is never read. */
+private suspend fun ByteReadChannel.readAtMost(length: Int): ByteArray {
+    val out = ByteArray(length)
+    var filled = 0
+    while (filled < length) {
+        val read = readAvailable(out, filled, length - filled)
+        if (read <= 0) break
+        filled += read
+    }
+    return if (filled == length) out else out.copyOf(filled)
+}
