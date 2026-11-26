@@ -45,6 +45,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
@@ -100,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.WatchNipSubs
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.fork
 import com.vitorpamplona.amethyst.commons.resources.hi_seller_is_this_still_available
 import com.vitorpamplona.amethyst.commons.resources.hi_there_is_this_still_available
 import com.vitorpamplona.amethyst.commons.resources.ic_dm
@@ -109,6 +112,8 @@ import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
 import com.vitorpamplona.amethyst.commons.resources.thread_reply_outside_network
+import com.vitorpamplona.amethyst.commons.resources.wiki_action_edit
+import com.vitorpamplona.amethyst.commons.resources.wiki_all_versions
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -231,6 +236,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -1501,6 +1507,29 @@ private fun RenderWikiHeaderForThread(
                         color = Color.Gray,
                     )
                 }
+
+            WikiArticleActions(noteEvent, accountViewModel, nav)
+        }
+    }
+}
+
+/** The topic's other versions, and this one to edit (the account's own) or to fork (anyone else's). */
+@Composable
+private fun WikiArticleActions(
+    noteEvent: WikiArticleEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val slug = remember(noteEvent) { WikiRedirectEvent.normalizeSlug(noteEvent.dTag()) }
+    val mine = noteEvent.pubKey == accountViewModel.account.signer.pubKey
+    Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (slug.isNotEmpty()) {
+            TextButton(onClick = { nav.nav(Route.WikiTopic(slug, noteEvent.pubKey)) }) { Text(stringRes(Res.string.wiki_all_versions)) }
+        }
+        if (accountViewModel.isWriteable()) {
+            TextButton(onClick = { nav.nav(Route.WikiPost(topic = slug, base = noteEvent.address().toValue())) }) {
+                Text(stringRes(if (mine) Res.string.wiki_action_edit else Res.string.fork))
+            }
         }
     }
 }

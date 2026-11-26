@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.wiki.WikiTopics
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 
@@ -175,9 +176,9 @@ fun wikiArticleDocument(
     callbackUri: String?,
 ): Document =
     if (isLegacyAsciiDocWiki(body)) {
-        CachedDocuments.asciidoc(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+        CachedDocuments.asciidoc(body, tags, callbackUri, event.pubKey, wikilinkResolver(event.pubKey))
     } else {
-        CachedDocuments.djot(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+        CachedDocuments.djot(body, tags, callbackUri, event.pubKey, wikilinkResolver(event.pubKey))
     }.withoutLeadingTitle(event.title())
 
 /**
@@ -211,12 +212,12 @@ fun RenderWikiArticleBody(
  * names, normalized. Which version to read is the reader's choice, so the link opens the topic's
  * screen, every author's version of it, with this author's first.
  */
-private fun wikilinkResolver(event: WikiArticleEvent): (String) -> String? =
+fun wikilinkResolver(author: HexKey): (String) -> String? =
     { label ->
         WikiRedirectEvent
             .normalizeSlug(label)
             .ifEmpty { null }
-            ?.let { slug -> WikiTopics.uri(slug, event.pubKey) }
+            ?.let { slug -> WikiTopics.uri(slug, author) }
     }
 
 // The body's first words as plain text, for a card without a summary tag. Only the start is parsed:

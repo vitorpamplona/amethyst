@@ -204,6 +204,12 @@ Finishing touches found by running the app (2026-11-26):
   author's version of the slug, the linking author's first, then follows, trust rank and newest,
   with the topic's redirects below. `WikiTopics`, `WikiTopicFeedFilter` and `WikiFilterAssembler`
   (kinds 30818 and 30819, `#d`, on the discovery relays and the known authors' outboxes).
+- **A wiki editor** (`Route.WikiPost`, `WikiPostScreen`): title, slug, summary and a Djot body
+  with a Preview tab that draws it through `RenderDocument`, wikilinks included. Opened from a
+  topic ("Write your version" / "Edit your version") and from an article ("Edit" for the
+  account's own, "Fork" for anyone else's: NIP-54's `a` and `e` tags marked `fork`).
+- **The long-form preview** draws the title and summary above the body, and passes the draft's
+  custom emoji and attached files' `imeta`, so the body renders as it will be published.
 - **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
   dropped.
 
