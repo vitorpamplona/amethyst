@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.blobs
 
+import okio.Buffer
 import okio.IOException
+import okio.Sink
 
 /**
  * The one HTTP call the napplet code makes, a bounded GET, whatever the platform's HTTP stack:
@@ -36,6 +38,30 @@ interface NappletHttp {
      * refused the address, and another IO exception for any other transport failure.
      */
     suspend fun get(request: NappletHttpRequest): NappletHttpResponse
+
+    /**
+     * [get], with a 2xx body written into [sink] as it arrives instead of held in memory: for a large
+     * download (a webxdc archive). The response's [NappletHttpResponse.body] is null; `received` says
+     * how much came, and `tooLarge` that it stopped at the cap (what reached [sink] is then incomplete).
+     * [onProgress] follows the bytes written and the declared length. [sink] is flushed, not closed.
+     *
+     * By default the body is read whole by [get] and then written: an HTTP stack that can stream does.
+     */
+    suspend fun download(
+        request: NappletHttpRequest,
+        sink: Sink,
+        onProgress: (bytes: Long, total: Long?) -> Unit = { _, _ -> },
+    ): NappletHttpResponse {
+        val response = get(request)
+        val body = response.body?.takeIf { response.isSuccessful }
+        if (body != null) {
+            val buffer = Buffer().write(body)
+            sink.write(buffer, buffer.size)
+            sink.flush()
+            onProgress(body.size.toLong(), body.size.toLong())
+        }
+        return NappletHttpResponse(response.status, response.location, null, response.tooLarge, response.received)
+    }
 }
 
 class NappletHttpRequest(

@@ -37,6 +37,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okio.FileSystem
+import okio.HashingSink
 import okio.IOException
 import okio.Path
 import okio.Path.Companion.toPath
@@ -52,8 +53,9 @@ import kotlin.random.Random
  * `WebxdcBundles`: `<sha256>/` (or `u<sha256 of the URL>/`), unpacked beside it and moved into place
  * with its [WebxdcArchiveRules.COMPLETE] marker, so a partial one is never served.
  *
- * - The archive comes in whole, in memory, up to [WebxdcArchiveRules.MAX_ARCHIVE_BYTES]: the port
- *   returns bodies whole. Its progress is reported once, when it is in.
+ * - The archive streams to disk as it comes ([NappletHttp.download]), hashed on the way, up to
+ *   [WebxdcArchiveRules.MAX_ARCHIVE_BYTES], and its progress follows it (an HTTP stack that can't
+ *   stream reads it whole first, and reports once).
  * - Nothing here trims: [root] belongs in a cache directory the system purges (iOS's Caches).
  * - okio's zip reader names every entry inside the archive's own root, so an entry that climbs out
  *   (`../../x`) is written as `x` inside the app, where the JVM's reader skips it. Neither lets one
@@ -85,8 +87,7 @@ class OkioWebxdcBundles(
                 try {
                     fileSystem.createDirectories(root)
                     val candidates = listOf(url) + (hash?.let { StaticSiteResolver.candidateUrls(servers, it) } ?: emptyList())
-                    val bytes = download(candidates, hash, cancelled, onProgress) ?: return@withLock null
-                    fileSystem.write(archive) { write(bytes) }
+                    val size = download(candidates, hash, archive, cancelled, onProgress) ?: return@withLock null
                     fileSystem.createDirectories(staging)
                     if (!unpack(archive, staging, cancelled)) return@withLock null
                     if (fileSystem.metadataOrNull(staging / WebxdcArchiveRules.INDEX)?.isRegularFile != true) {
@@ -96,7 +97,7 @@ class OkioWebxdcBundles(
                     // An archive may ship a file by the marker's name; the marker is ours alone.
                     val marker = staging / WebxdcArchiveRules.COMPLETE
                     if (fileSystem.exists(marker)) fileSystem.deleteRecursively(marker)
-                    fileSystem.write(marker) { writeUtf8(bytes.size.toString()) }
+                    fileSystem.write(marker) { writeUtf8(size.toString()) }
                     // Only an unfinished copy can be here: a finished one returned above.
                     if (fileSystem.exists(dir)) fileSystem.deleteRecursively(dir)
                     fileSystem.atomicMove(staging, dir)
@@ -114,27 +115,29 @@ class OkioWebxdcBundles(
     // Nothing trims these: the system purges the cache directory they're in.
     override fun release(dir: Path) = Unit
 
-    // The first of [urls] that answers with the archive, verified against [expectedHash] when there is one.
+    // The first of [urls] that answers with the archive, streamed into [archive] as it comes (never
+    // whole in memory) and verified against [expectedHash] when there is one. Its size, or null.
     private suspend fun download(
         urls: List<String>,
         expectedHash: HexKey?,
+        archive: Path,
         cancelled: () -> Boolean,
         onProgress: (bytes: Long, total: Long?) -> Unit,
-    ): ByteArray? {
+    ): Long? {
         for (url in urls.distinct()) {
             if (cancelled()) break
+            val hashing = HashingSink.sha256(fileSystem.sink(archive))
             val response =
                 try {
-                    http.get(NappletHttpRequest(url, viaTor, WebxdcArchiveRules.MAX_ARCHIVE_BYTES, DOWNLOAD_TIMEOUT_MS))
+                    hashing.use { http.download(NappletHttpRequest(url, viaTor, WebxdcArchiveRules.MAX_ARCHIVE_BYTES, DOWNLOAD_TIMEOUT_MS), it, onProgress) }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.w(TAG, "Downloading $url failed", e)
                     continue
                 }
-            val body = response.body?.takeIf { response.isSuccessful && !response.tooLarge } ?: continue
-            onProgress(body.size.toLong(), body.size.toLong())
-            val hash = sha256(body).toHexKey()
-            if (expectedHash == null || hash == expectedHash.lowercase()) return body
+            if (!response.isSuccessful || response.tooLarge) continue
+            val hash = hashing.hash.hex()
+            if (expectedHash == null || hash == expectedHash.lowercase()) return response.received
             Log.w(TAG) { "$url is not the archive the post names ($hash)" }
         }
         return null

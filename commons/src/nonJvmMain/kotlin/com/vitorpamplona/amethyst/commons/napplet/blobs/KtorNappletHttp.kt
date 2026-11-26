@@ -34,9 +34,12 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.contentLength
 import io.ktor.http.takeFrom
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.readByteArray
+import okio.Buffer
+import okio.Sink
 
 /**
  * [NappletHttp] on Ktor, for the platforms without OkHttp (iOS). [clientFor] gives the client of a
@@ -65,10 +68,22 @@ class KtorNappletHttp(
     /** Whether every address [host] resolves to is public ([NappletPublicAddress]); false when it doesn't resolve. */
     private val resolvesPublic: suspend (host: String) -> Boolean,
 ) : NappletHttp {
-    override suspend fun get(request: NappletHttpRequest): NappletHttpResponse {
+    override suspend fun get(request: NappletHttpRequest): NappletHttpResponse = call(request) { read(it, request.maxBytes) }
+
+    // The body goes to [sink] chunk by chunk: a 256 MB archive never sits in memory.
+    override suspend fun download(
+        request: NappletHttpRequest,
+        sink: Sink,
+        onProgress: (bytes: Long, total: Long?) -> Unit,
+    ): NappletHttpResponse = call(request) { stream(it, request.maxBytes, sink, onProgress) }
+
+    private suspend fun call(
+        request: NappletHttpRequest,
+        reader: suspend (HttpResponse) -> NappletHttpResponse,
+    ): NappletHttpResponse {
         val client = noRedirects(clientFor(request.viaTor))
         return try {
-            withTimeoutOrNull(request.timeoutMs) { follow(client, request) }
+            withTimeoutOrNull(request.timeoutMs) { follow(client, request, reader) }
                 ?: throw NappletHttpTimeoutException("${request.url} timed out")
         } catch (e: HttpRequestTimeoutException) {
             throw NappletHttpTimeoutException("${request.url} timed out", e)
@@ -82,12 +97,13 @@ class KtorNappletHttp(
     private suspend fun follow(
         client: HttpClient,
         request: NappletHttpRequest,
+        reader: suspend (HttpResponse) -> NappletHttpResponse,
     ): NappletHttpResponse {
         var url = Url(request.url)
         var hop = 0
         while (true) {
             if (request.publicOnly) checkPublic(url, request.viaTor)
-            val response = client.prepareGet(url).execute { read(it, request.maxBytes) }
+            val response = client.prepareGet(url).execute { reader(it) }
             val location = response.location
             if (!request.followRedirects || !response.isRedirect || location == null || hop >= MAX_FOLLOWED_REDIRECTS) return response
             val next = URLBuilder(url).takeFrom(location).build()
@@ -113,6 +129,36 @@ class KtorNappletHttp(
                 else -> resolvesPublic(host)
             }
         if (!public) throw NappletHttpBlockedException("$host does not resolve to a public address.")
+    }
+
+    private suspend fun stream(
+        response: HttpResponse,
+        maxBytes: Long,
+        sink: Sink,
+        onProgress: (bytes: Long, total: Long?) -> Unit,
+    ): NappletHttpResponse {
+        val status = response.status.value
+        val location = response.headers[HttpHeaders.Location]
+        if (status !in 200..299) return NappletHttpResponse(status, location, null, tooLarge = false, received = 0)
+        val declared = response.contentLength()
+        if ((declared ?: -1L) > maxBytes) return NappletHttpResponse(status, location, null, tooLarge = true, received = 0)
+        val channel = response.bodyAsChannel()
+        val chunk = ByteArray(STREAM_CHUNK)
+        val buffer = Buffer()
+        var received = 0L
+        while (true) {
+            val read = channel.readAvailable(chunk, 0, chunk.size)
+            if (read < 0) break
+            if (read == 0) continue
+            received += read
+            // Held to the cap as it comes, declared length or not.
+            if (received > maxBytes) return NappletHttpResponse(status, location, null, tooLarge = true, received = received)
+            buffer.write(chunk, 0, read)
+            sink.write(buffer, buffer.size)
+            onProgress(received, declared)
+        }
+        sink.flush()
+        return NappletHttpResponse(status, location, null, tooLarge = false, received = received)
     }
 
     private suspend fun read(
@@ -147,6 +193,8 @@ class KtorNappletHttp(
 
     companion object {
         const val MAX_FOLLOWED_REDIRECTS = 20
+
+        private const val STREAM_CHUNK = 64 * 1024
         private const val MAX_DERIVED_CLIENTS = 4
 
         /** [host]'s bytes when it is an IPv4 or IPv6 literal, else null. */
