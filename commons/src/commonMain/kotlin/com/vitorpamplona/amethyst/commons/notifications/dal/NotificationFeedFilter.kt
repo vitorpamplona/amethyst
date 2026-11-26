@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
+import com.vitorpamplona.amethyst.commons.wot.notificationFeedAppliesTrust
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -465,9 +466,12 @@ class NotificationFeedFilter(
         }
     }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value + "-" + appliesTrust()
 
     fun followList(): TopFilter = modeOverride ?: account.settings.defaultNotificationFollowList.value
+
+    /** Curated, or the split screen's Everyone tab with its Web of Trust filter on. */
+    fun appliesTrust(): Boolean = account.notificationFeedAppliesTrust(followList(), isEveryoneTab = modeOverride is TopFilter.Global)
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 
@@ -788,9 +792,10 @@ class NotificationFeedFilter(
             // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
             // otherwise need my target message already loaded to resolve replyTo.
             (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex)) &&
-            // Curated also applies the Web of Trust, with the same exemptions as push. Last, so
-            // only notes that are notifications at all pay for the lookup.
-            !(followList() is TopFilter.Selected && noteEvent != null && notifAuthor != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord))
+            // Curated (and the Everyone tab, unless the user turned it off) also applies the Web of
+            // Trust, with the same exemptions as push. Last, so only notes that are notifications at
+            // all pay for the lookup.
+            !(appliesTrust() && noteEvent != null && notifAuthor != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

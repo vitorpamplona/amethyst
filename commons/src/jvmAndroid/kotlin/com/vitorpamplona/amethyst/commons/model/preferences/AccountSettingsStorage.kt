@@ -205,6 +205,7 @@ class AccountSettingsStores(
                 alwaysOnService = settings.alwaysOnNotificationService.value,
                 showMessagesInNotifications = settings.showMessagesInNotifications.value,
                 splitNotificationsEnabled = settings.splitNotificationsEnabled.value,
+                everyoneNotificationsUseTrust = settings.everyoneNotificationsUseTrust.value,
             ),
         )
         nwcBackupPrefs(npub).save(
@@ -353,6 +354,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
         // these heavy string/enum decodes out of it preserves headroom.
         val inboxPrefs = readInboxPrefs(stores.relayAuth, stores.feedVisibility)
         val splitNotificationsEnabled = stores.notificationPrefs.splitNotificationsEnabled
+        val everyoneNotificationsUseTrust = stores.notificationPrefs.everyoneNotificationsUseTrust
         val showMessagesInNotifications = stores.notificationPrefs.showMessagesInNotifications
         val hasDonatedInVersion = stores.dialogDismissal.hasDonatedInVersion
         val webOfTrustNudgeHiddenUntil = stores.dialogDismissal.webOfTrustNudgeHiddenUntil
@@ -605,6 +607,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             relayAuthTrustMessageFollows = MutableStateFlow(inboxPrefs.relayAuthTrustMessageFollows),
             relayAuthTrustMessageStrangers = MutableStateFlow(inboxPrefs.relayAuthTrustMessageStrangers),
             splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
+            everyoneNotificationsUseTrust = MutableStateFlow(everyoneNotificationsUseTrust),
             showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
             backupUserMetadata = latestUserMetadataResolved,
             backupContactList = latestContactListResolved,

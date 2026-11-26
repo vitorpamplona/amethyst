@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.commons.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.notification_tab_everyone
 import com.vitorpamplona.amethyst.commons.resources.notification_tab_following
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
@@ -205,10 +204,11 @@ private fun SplitNotificationsScaffold(
                         text = { Text(stringRes(Res.string.notification_tab_following)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     )
-                    Tab(
+                    NotificationEveryoneTab(
                         selected = pagerState.currentPage == 1,
-                        text = { Text(stringRes(Res.string.notification_tab_everyone)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                        onSelect = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }

@@ -218,6 +218,9 @@ class AccountSettings(
     var hideNIP17WarningDialog: Boolean = false,
     val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val splitNotificationsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    // The split screen's Everyone tab hides people outside the Web of Trust network. A no-op while
+    // no network is active, so it is on by default.
+    val everyoneNotificationsUseTrust: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
@@ -430,6 +433,12 @@ class AccountSettings(
         splitNotificationsEnabled.tryEmit(newValue)
         saveAccountSettings()
         return newValue
+    }
+
+    fun changeEveryoneNotificationsUseTrust(value: Boolean) {
+        if (everyoneNotificationsUseTrust.value == value) return
+        everyoneNotificationsUseTrust.tryEmit(value)
+        saveAccountSettings()
     }
 
     fun toggleShowMessagesInNotifications(): Boolean {

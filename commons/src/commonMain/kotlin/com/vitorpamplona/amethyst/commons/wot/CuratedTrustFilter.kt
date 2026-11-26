@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.wot
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -60,3 +61,31 @@ fun Account.curatedHidesByTrust(
         else -> verdicts.isOutside(author)
     }
 }
+
+/**
+ * Whether a notifications feed applies the Web of Trust ([curatedHidesByTrust]): the Curated
+ * mode always does, and the split screen's Everyone tab ([isEveryoneTab], pinned to
+ * [TopFilter.Global]) does while the user keeps its filter on. A Global the user picks in the
+ * spinner is raw and never does. The Following tab needs none: its authors are follows.
+ */
+fun Account.notificationFeedAppliesTrust(
+    mode: TopFilter,
+    isEveryoneTab: Boolean,
+): Boolean =
+    when {
+        mode is TopFilter.Selected -> true
+        isEveryoneTab -> settings.everyoneNotificationsUseTrust.value
+        else -> false
+    }
+
+/**
+ * Whether push notifications apply the Web of Trust, matching what the in-app screen shows: with
+ * split notifications, push carries both tabs, so it follows the Everyone tab's filter; otherwise
+ * the single feed's mode.
+ */
+fun Account.pushNotificationsApplyTrust(): Boolean =
+    if (settings.splitNotificationsEnabled.value) {
+        settings.everyoneNotificationsUseTrust.value
+    } else {
+        settings.defaultNotificationFollowList.value is TopFilter.Selected
+    }

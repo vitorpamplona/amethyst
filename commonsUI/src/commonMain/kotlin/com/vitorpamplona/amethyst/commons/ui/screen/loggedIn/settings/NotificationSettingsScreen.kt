@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.everyone_notifications_trust_setting_description
+import com.vitorpamplona.amethyst.commons.resources.everyone_notifications_trust_setting_title
 import com.vitorpamplona.amethyst.commons.resources.notification_settings
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_display
 import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_description
@@ -83,6 +85,8 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
     val showMessages by accountViewModel.account.settings.showMessagesInNotifications
         .collectAsStateWithLifecycle()
+    val everyoneUsesTrust by accountViewModel.account.settings.everyoneNotificationsUseTrust
+        .collectAsStateWithLifecycle()
 
     SettingsSection(Res.string.notification_settings_section_display) {
         SettingsSwitchTile(
@@ -91,6 +95,14 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
             description = Res.string.split_notifications_setting_description,
             checked = splitByFollows,
             onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
+        )
+        SettingsDivider()
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Shield,
+            title = Res.string.everyone_notifications_trust_setting_title,
+            description = Res.string.everyone_notifications_trust_setting_description,
+            checked = everyoneUsesTrust,
+            onCheckedChange = { accountViewModel.account.settings.changeEveryoneNotificationsUseTrust(it) },
         )
         SettingsDivider()
         SettingsSwitchTile(
