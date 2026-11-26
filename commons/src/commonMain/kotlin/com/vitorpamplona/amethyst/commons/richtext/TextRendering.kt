@@ -34,8 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
  * - The plain-text kinds keep the guess: notes (1), DMs (14), public messages (24) and comments
  *   (1111). Their NIPs ask for plain text, but people write markdown in them and Amethyst has
  *   always drawn it (maintainer, 2026-11-25).
- * - Djot and AsciiDoc bodies are converted to markdown before they reach a viewer (`Wiki.kt`, the
- *   publication screens). A raw one that reaches the viewer anyway keeps the guess.
+ * - Djot and AsciiDoc bodies never reach a viewer that guesses: wiki articles and publications
+ *   parse them into a document of their own and draw it with `RenderDocument` (`Wiki.kt`,
+ *   `PublicationSection.kt`). A raw one that reaches a viewer anyway keeps the guess.
  * - A kind whose NIP names no format keeps the guess.
  *
  * The plan for replacing the guess with a parser per format is

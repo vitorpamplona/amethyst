@@ -32,6 +32,12 @@ enum class CodeTokenType {
 
     /** A `<placeholder>` the text stands in for, as NIPs write `<32-bytes lowercase hex>`. */
     PLACEHOLDER,
+
+    /** A type's name in a programming language (`String`, `Note`). */
+    TYPE,
+
+    /** A function's name where it is called or declared. */
+    FUNCTION,
 }
 
 /** A run of [code] from [start] (inclusive) to [end] (exclusive) drawn as [type]. Text between tokens is plain. */
@@ -45,7 +51,8 @@ data class CodeToken(
 /**
  * A forgiving highlighter for the JSON-like code in specs and notes: JSON, JSON with `//`
  * comments and `<placeholders>` (how NIPs write events), JavaScript object literals and YAML.
- * It never fails: whatever it does not recognize stays plain text.
+ * It never fails: whatever it does not recognize stays plain text. Programming languages go to
+ * [ProgramHighlighter], by [ProgramGrammar].
  */
 object CodeHighlighter {
     private val KEYWORDS = setOf("true", "false", "null", "undefined", "const", "let", "var", "function", "return", "new", "await", "async")
@@ -54,6 +61,7 @@ object CodeHighlighter {
         code: String,
         language: String?,
     ): List<CodeToken> {
+        ProgramGrammar.of(language)?.let { return ProgramHighlighter.tokenize(code, it) }
         val lang = language?.lowercase()
         val hashComments = lang == "yaml" || lang == "yml"
         val singleQuotes = lang == "js" || lang == "javascript" || lang == "ts" || lang == "typescript" || hashComments
