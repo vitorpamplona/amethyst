@@ -7,6 +7,7 @@ computer without Xcode (Linux, CI-like containers). They are test tools: nothing
   `shutdown`, `clone`, `delete`, `erase`, `install`, `uninstall`, `launch`, `terminate`, `openurl`,
   `get_app_container`, `spawn … launchctl list`, `spawn … log show`, `io … screenshot`), keeping its
   simulators in `$FAKE_IOS_STATE` (default `/tmp/fake-ios-simulators.json`; delete it to start over).
+  `FAKE_SIMCTL_LIST_MS` makes `list` take that long, as a real one does on a Mac with several runtimes.
 - `idb_companion` serves gRPC over HTTP/2 on its `--grpc-domain-sock`, as the real one does, for
   `describe`, `screenshot`, `video_stream` (minicap JPEGs), `hid` (touches, keys, text,
   orientation), `accessibility_info`, `get_orientation`/`set_orientation`, `crash_list`,

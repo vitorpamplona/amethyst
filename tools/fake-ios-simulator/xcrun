@@ -44,6 +44,8 @@ def simctl(args):
     state = load()
     cmd = args[0] if args else "help"
     if cmd == "list":
+        # A real `simctl list` on a Mac with several runtimes takes a few hundred milliseconds.
+        time.sleep(int(os.environ.get("FAKE_SIMCTL_LIST_MS", "0")) / 1000)
         out = {
             "runtimes": [{"identifier": RUNTIME, "name": "iOS 26.0", "version": "26.0", "isAvailable": True, "platform": "iOS"}],
             "devices": {RUNTIME: [dict(d, isAvailable=True) for d in state["devices"]]},
