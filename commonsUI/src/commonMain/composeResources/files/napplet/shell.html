@@ -24,6 +24,8 @@
       (function () {
         var iframe = document.getElementById('app');
         var bridge = window.__nappletBridge;
+        // The app's own origin, filled in by the host (unused by a napplet, whose srcdoc is opaque).
+        var appOrigin = '__APP_ORIGIN__';
 
         // applet -> native. The injected NAP binding posts structured-clone JSON objects. The
         // native bridge carries only strings, so serialize objects here. (Requests carry no Blobs.)
@@ -106,8 +108,10 @@
             if (hello && !helloSeen) { helloSeen = true; bind(e.ports[0]); } else { replaced(); }
             return;
           }
-          // A NIP-5A site keeps its own origin and moves between its own pages: each page's hello
-          // replaces the previous page's port.
+          // A NIP-5A site (or a webxdc app) keeps its own origin and moves between its own pages:
+          // each page's hello replaces the previous page's port. Only a page at that origin may say
+          // hello: if the frame was ever navigated off it, the foreign page gets no channel.
+          if (e.origin !== appOrigin) return;
           if (hello) { helloSeen = true; unbind(); bind(e.ports[0]); }
         });
 
