@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.content
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -40,7 +38,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
@@ -88,7 +85,6 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
-import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.NipMentionSegment
@@ -108,8 +104,6 @@ import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
-import com.vitorpamplona.amethyst.commons.ui.markdown.codeColors
-import com.vitorpamplona.amethyst.commons.ui.markdown.highlightCode
 import com.vitorpamplona.amethyst.commons.ui.note.WebxdcPostCard
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalTimestampText
@@ -117,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.RenderCustomEmoji
 import com.vitorpamplona.amethyst.commons.ui.richtext.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.commons.ui.theme.MarkdownTextStyle
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.markdownStyle
 import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import androidx.compose.material3.Text as MaterialText
@@ -128,12 +123,28 @@ fun RichTextScope.RenderParagraph(
     paragraph: Paragraph,
     context: DocumentContext,
 ) {
+    RenderInlines(paragraph.inlines, context)
+}
+
+/**
+ * Inline text (a paragraph, a heading, a table cell, a term), with inline code drawn as rounded
+ * chips: a translucent tint with a little room on each side, the same in an article and in the
+ * coding-agent chat. [LocalDocumentChipColor] overrides the tint; a transparent one means no chips.
+ */
+@Composable
+fun RichTextScope.RenderInlines(
+    inlines: List<Inline>,
+    context: DocumentContext,
+    bold: Boolean = false,
+    italic: Boolean = false,
+) {
     val density = LocalDensity.current
-    val chip = LocalDocumentChipColor.current ?: MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+    val colors = MaterialTheme.colorScheme
+    val chip = LocalDocumentChipColor.current ?: colors.onSurface.copy(alpha = if (colors.isLight) 0.06f else 0.12f)
+    val highlight = colors.primary.copy(alpha = 0.22f)
     // A transparent chip color (the chat's `chips = false`) means no chips, and so no room for them.
     val pad = if (chip.alpha > 0f) with(density) { ChipSide.toSp() } else null
-    val built = remember(paragraph, context, pad, highlight) { buildText(paragraph.inlines, context, pad, highlight) }
+    val built = remember(inlines, context, pad, highlight, bold, italic) { buildText(inlines, context, pad, highlight, bold, italic) }
     if (built.codeRuns.isEmpty()) {
         Text(text = built.text)
         return
@@ -154,49 +165,17 @@ fun RichTextScope.RenderParagraph(
     Text(text = built.text, modifier = drawChips, onTextLayout = onLayout)
 }
 
-/** Text that is not a paragraph (a heading, a table cell, a term): code is monospace, no chip. */
-@Composable
-fun RichTextScope.RenderInlines(
-    inlines: List<Inline>,
-    context: DocumentContext,
-    bold: Boolean = false,
-    italic: Boolean = false,
-) {
-    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-    val built =
-        remember(inlines, context, bold, italic, highlight) {
-            val builder = RichTextString.Builder()
-            val bolded = if (bold) builder.pushFormat(RichTextString.Format.Bold) else null
-            val italicized = if (italic) builder.pushFormat(RichTextString.Format.Italic) else null
-            TextBuilder(builder, context, null, highlight).inlines(inlines)
-            italicized?.let { builder.pop(it) }
-            bolded?.let { builder.pop(it) }
-            builder.toRichTextString()
-        }
-    Text(text = built)
-}
-
 /** A code block. JSON-like code gets the highlighter's colors; all code keeps its lines and scrolls sideways. */
 @Composable
 fun RenderCodeBlock(block: CodeBlock) {
     val style = MaterialTheme.colorScheme.markdownStyle.codeBlockStyle
-    val colors = MaterialTheme.colorScheme.codeColors
-    val text =
-        remember(block, colors) {
-            if (MarkdownChunks.isHighlightable(block.language, block.code)) {
-                highlightCode(block.code, block.language, colors)
-            } else {
-                AnnotatedString(block.code)
-            }
-        }
-    Box(modifier = style?.modifier ?: Modifier) {
-        MaterialText(
-            text = text,
-            style = style?.textStyle ?: MarkdownTextStyle,
-            softWrap = false,
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-        )
-    }
+    CodeBlockBody(
+        code = block.code,
+        language = block.language,
+        textStyle = style?.textStyle ?: MarkdownTextStyle,
+        wrap = false,
+        modifier = style?.modifier ?: Modifier,
+    )
 }
 
 /** The box in front of a task list's item. */
@@ -231,10 +210,16 @@ private fun buildText(
     context: DocumentContext,
     chipPadding: TextUnit?,
     highlight: Color,
+    bold: Boolean = false,
+    italic: Boolean = false,
 ): BuiltText {
     val builder = RichTextString.Builder()
+    val bolded = if (bold) builder.pushFormat(RichTextString.Format.Bold) else null
+    val italicized = if (italic) builder.pushFormat(RichTextString.Format.Italic) else null
     val text = TextBuilder(builder, context, chipPadding, highlight)
     text.inlines(inlines)
+    italicized?.let { builder.pop(it) }
+    bolded?.let { builder.pop(it) }
     return BuiltText(builder.toRichTextString(), text.codeRuns)
 }
 
