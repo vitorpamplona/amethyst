@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -271,6 +272,7 @@ class IosNappletHost(
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open apps"))
         return launchOf(event).map { launch ->
             val useTor = NappletLaunchPlan.useTorFor(launch.profile, torEnabled()) { networkChoices.useTor(launch.identity.coordinate) }
+            Log.d(TAG) { "opening ${launch.identity.coordinate.take(40)} (${launch.profile}): useTor=$useTor, Tor on=${torEnabled()}, site on Tor=${networkChoices.useTor(launch.identity.coordinate)}" }
             startScreen(launch, account, routeId, useTor)
         }
     }
@@ -385,6 +387,7 @@ class IosNappletHost(
     private companion object {
         /** How long a launch whose files go through Tor waits for it before failing closed (the desktop's). */
         const val TOR_WAIT_MS = 30_000L
+        const val TAG = "IosNappletHost"
 
         /** A webxdc screen's [Route.NostrApp] id: its stage key, behind a prefix no coordinate has. */
         const val WEBXDC_ROUTE_PREFIX = "webxdc:"

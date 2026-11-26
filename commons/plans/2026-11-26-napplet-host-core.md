@@ -227,3 +227,23 @@ The iOS host is the WebKit adapter of the core; `2026-11-26-ios-napplets.md` §7
   network, in N6.
 - Row 29 in the shared server.
 
+## 7. N6 (2026-11-26): nSites and webxdc on iOS
+
+Detail and measurements: `2026-11-26-ios-napplets.md` §7d.
+
+| Row | Now | How |
+|---|---|---|
+| 6 | Sites too | The site's rule list also blocks the internal names, mixed content and the LAN |
+| 7 | Sites on Tor | `guardsFor(WEBSITE, useTor)`; measured `RTCPeerConnection` undefined on Tor, present direct |
+| 14 | Covered | WebKit doesn't treat `napplet://` as mixed (measured), so the rule list blocks `http`/`ws`, except `.onion` |
+| 17 | Per account | One store per account; its sites share one route (Tor always wins, `NappletRouteArbiter`) |
+| 18 | Sites too | Store proxy to Arti; no port = `WaitingForTor`, no web view, then `ROUTE_BLOCKED`; Tor gone = a dead proxy, loads fail |
+| 19 | Partly | IP literals and LAN-only names refused on every route; a public name resolving to a private address is not (direct stores only; on Tor the exit resolves) |
+| 20 | Covered | Preconnects follow the store's proxy (measured); WebKit prefetches DNS only for `http:` documents; `X-DNS-Prefetch-Control: off` |
+| 29 | Shared | `NappletSiteServer.serve(…, mainFrameNavigation)` and `nosniff` on every response, all three hosts |
+
+Shared now (commons/commonsUI): `NappletRouteArbiter` (Desktop's routes run on it), the request
+filter's mixed-content and LAN rules, `WebxdcFiles` and `OkioWebxdcBundles`, `NappletOnionSwitch`
+(Desktop's toolbar draws it), `LocalAppNav`. Still open on iOS: row 11 (N7), row 19's
+name-resolves-to-LAN gap, row 1 (WebKit's isolation).
+

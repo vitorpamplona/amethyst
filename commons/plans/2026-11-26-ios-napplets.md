@@ -1,8 +1,9 @@
 # iOS napplets and nSites (NIP-5D, NIP-5A) on WKWebView, with Tor
 
-Status: N0–N5 done, 2026-11-26: N4.5 is the shared session core with Desktop moved onto it, and
-N5 runs NIP-5D napplets on iOS (what changed from §5 while doing them: §5.7; the core: §7b; N5 as
-built: §7c). Branch `feat/ios-napplets`.
+Status: N0–N6 done, 2026-11-26: N4.5 is the shared session core with Desktop moved onto it, N5
+runs NIP-5D napplets on iOS, and N6 runs NIP-5A nSites (on Tor or the open web) and webxdc apps
+(what changed from §5 while doing them: §5.7; the core: §7b; N5 as built: §7c; N6 as built: §7d).
+Branch `feat/ios-napplets`.
 Builds on `commons/plans/2026-10-09-ios-app.md` §B9 and `commons/plans/2026-11-25-ios-tor.md`.
 Security baseline: `commons/plans/2026-10-31-embed-security-review.md`,
 `amethyst/plans/archive/2026-06-22-napplet-nsite-security.md`.
@@ -517,6 +518,12 @@ Fail closed:
 Proxy claims: `NappletProxyClaims` (what the shell tells the applet about its network) is fed
 the same `useTor` decision as on Android.
 
+**As built (N6), two corrections to this section:** the session bypass does *not* make a Tor site
+direct (Android's launcher and Desktop's router ignore it too: a Tor site without a port fails
+closed), and because one account's store is shared by all its sites, the store's route is
+arbitrated like Android's process-wide proxy (`NappletRouteArbiter` over `NappletProxyClaims`, Tor
+always wins). See §7d.
+
 Media: `<video>`/`<audio>` in a proxied store go through the proxy (Q4). Video that the
 **native** player plays (a NAP media request handed to AVPlayer) keeps using the app's
 `IosVideoCache`/loopback relay rules from the Tor plan.
@@ -705,6 +712,101 @@ Deviations from the review's §3, and why, are in `2026-11-26-napplet-host-core.
   - Rows 19–20 (LAN from direct stores, DNS prefetch in proxied stores) wait for N6, when pages
     get a network.
 
+### 7d. As built: N6, nSites and webxdc on iOS (2026-11-26)
+
+- **Launch.** `IosNappletHost.launchOf` takes napplets and nSites (`RootSiteEvent`/`NamedSiteEvent`).
+  An nSite's Tor is `NappletLaunchPlan.useTorFor(profile, torEnabled, siteViaTor)` over the per-site
+  `NsiteNetworkChoices`, which is Android's `NappletLauncher` rule (Desktop's hosts use the same call
+  now). `opensSites`/`opensWebxdc` are on. Webxdc apps have no event, so the launcher readies the launch
+  in the host (`prepareWebxdc`) and pushes `Route.NostrApp("webxdc:<stage key>")` on the window's nav
+  (`LocalAppNav`, new in commonsUI: the card sits deep in a note with no nav of its own). A restored
+  webxdc screen has nothing to start from and says it can't open.
+- **One store per account, one route per store.** WebKit proxies per data store, and every app of an
+  account shares the account's store (storage per account, as Android). So the store's route is
+  arbitrated like Android's process-wide WebView proxy and Desktop's router:
+  `NappletRouteArbiter` (new, commons; Desktop's `DesktopNappletRoutes` now runs on it) over
+  `NappletProxyClaims`, Tor always wins. `IosNappletStores` applies it:
+  `proxyConfigurations = [nw_proxy_config_create_socksv5(127.0.0.1:<Arti port>)]` for Tor, `null`
+  for direct, and a SOCKS proxy on port 1 (nothing listens) for **Blocked** (a Tor site while Tor has
+  no port), so loads fail and never go direct. Napplets and webxdc apps claim nothing. A store follows
+  Tor's port (collected only while an app is open, since watching Tor keeps it running): a restart
+  elsewhere re-points it, Tor going away blocks it. The session bypass does not make a Tor site direct.
+- **Fail closed.** `IosNappletStoreRoute.claim(useTor)`: on Tor with no port the core shows
+  `WaitingForTor`, no web view exists, and after 30 s it fails `ROUTE_BLOCKED`.
+- **Onion switch.** The shared `NappletOnionSwitch` (Desktop's toolbar control, moved to commonsUI)
+  sits in the screen's top bar for an nSite while Tor is on, without its detail line (it is the
+  screen reader's description). Switching restarts the site on the other route, as Android and Desktop
+  do. "Routed over Tor anyway" shows when another open site of the account wants Tor.
+- **Webxdc.** `WebxdcFiles` is commonMain now and serves a `WebxdcBundleSource`: the JVM's
+  `WebxdcBundles` (unchanged) or `OkioWebxdcBundles` (iOS: `NappletHttp` on the launch's route, hash
+  checked, unpacked with okio's zip reader under the shared `WebxdcArchiveRules` limits, into Caches).
+  Differences from the JVM: the archive comes in whole (in memory, up to 256 MB), progress shows once,
+  nothing trims (Caches is purgeable), and an entry climbing out (`../x`) lands inside the app as `x`
+  instead of being skipped. PAPER's files are supported by the session; nothing launches a paper on
+  iOS yet (inline surfaces are N7).
+- **Logout.** `AccountSessionHooks.onAccountRemoved` (iOS had none) closes the account's screens and
+  removes its store. Measured: WebKit keeps refusing ("Data store is in use") for as long as a closed
+  web view lingers, which in the test executable was every time, even after a full Kotlin GC. So
+  after six tries the store's data is wiped in place (`removeDataOfTypes(allWebsiteDataTypes)`, which
+  works while in use), and the empty store is removed at the next start (`removePendingStores`, a
+  list in `NSUserDefaults`). The test checks the site's localStorage is gone.
+- **Compiled request filters** are reference-counted per open launch and removed from WebKit's rule
+  store by the last one; a sweep at host start removes what a crash left. (Every napplet's list names
+  its own origin, so they accumulated.)
+- **Shared serving.** Main-frame-only shell serving and `nosniff` moved into `NappletSiteServer`
+  (`serve(…, mainFrameNavigation)`): Android passes `isForMainFrame`, Desktop `RT_MAIN_FRAME`, iOS its
+  pending top-frame navigation. `X-DNS-Prefetch-Control: off` stays an iOS response header.
+
+**Checklist rows (host-core review §1).**
+
+- **14, mixed content.** Measured: WebKit doesn't treat `napplet://` as a secure page for mixed
+  content: `fetch`, `<img>` and `<script>` over `http` went out as plain http. The request filter now
+  blocks `http`/`ws` (Android's `MIXED_CONTENT_NEVER_ALLOW`) except to `.onion` names. After it, a Tor
+  site's probes showed CONNECTs only for `check.torproject.org:443` and the two `.onion` names on `:80`.
+- **19, local network.** The request filter refuses IP literals of loopback, `0/8`, RFC 1918,
+  link-local, CGNAT and IPv6 loopback/ULA/link-local/mapped, and `localhost`, `.local`, `.lan`,
+  `.internal`, `.home.arpa`, for any route (measured: `fetch('http://127.0.0.1:<port>/lan')` never
+  reached the listener). Not covered: a public name that resolves to a private address
+  (`localtest.me` → 127.0.0.1 reached the loopback listener from a direct store before mixed content
+  was blocked; over https it still would). On Tor the name goes to the exit by name (the CONNECT
+  carried the host name), which can't reach the user's LAN. Closing that gap on direct stores needs
+  Desktop's approach: a small in-process SOCKS router for direct stores too.
+- **20, DNS prefetch.** A Tor store's `<link rel=preconnect>` went to the SOCKS listener (a CONNECT
+  for `preconnect-probe.torproject.org:443`), so speculative connections follow the store's proxy.
+  `<link rel=dns-prefetch>` produced nothing observable; WebKit's DNS prefetching is on only for
+  `http:` documents (`Document::initDNSPrefetch`, read in WebKit's source, not measured), and every
+  response says `X-DNS-Prefetch-Control: off` besides. DNS lookups themselves were not captured.
+
+**Tests.** `IosNappletSiteTest` (8, booted simulator, a fake SOCKS5 listener that records each
+CONNECT and refuses it):
+- Tor: CONNECTs `check.torproject.org:443`, `amethystprobeonionfetch.onion:80`,
+  `amethystprobeonionimage.onion:80`, `preconnect-probe.torproject.org:443`; the loopback listener
+  saw 0; `RTCPeerConnection` undefined.
+- Direct: 0 CONNECTs; `https` fetch `ok`; `RTCPeerConnection` is a function (Android's matrix).
+- Tor wanted, no port: `WaitingForTor`, no web view, store `Blocked`, then `Failed(ROUTE_BLOCKED)`.
+- Re-point: Tor moved to a second listener, the next fetch reached it; Tor gone, the next fetch
+  reached neither listener nor went direct.
+- Webxdc: 0 connections anywhere (fetch, image, WebSocket, another internal host).
+- A site frame navigated to a `data:` document that says hello: no channel.
+- The site request filter compiles; a removed account's site storage is gone.
+- O4: `navigator.serviceWorker` is `undefined` on `napplet://`.
+
+**By hand** ("Napplet Test", iOS 27.0, the N5 throwaway read-only npub, Tor internal; Armada preview
+`35128:821c52af…:sw-d256c5`). The simulator's taps could not be driven here, so a temporary,
+uncommitted launch-argument driver set the Tor choices and pushed the route, and a temporary probe
+loaded `https://check.torproject.org/api/ip` in a hidden web view on the site's own store once it
+showed:
+- Site on Tor: `useTor=true`, store `Tor(port=17393)`, probe `{"IsTor":true,"IP":"80.67.167.81"}`;
+  the top bar shows the onion switch on.
+- The same site moved to the open web: store `Direct`, probe `IsTor:false` (the Mac's address); the
+  switch shows off.
+- Tor off for the app (site still set to Tor): `useTor=false`, `IsTor:false`, no onion switch.
+- Waiting for Tor could not be caught in the app: Arti binds its SOCKS port 6–15 ms after it starts,
+  before bootstrapping, and the route waits for the port (as relays and Desktop's router do). The
+  simulator test covers it.
+- Webxdc "Dino" (kind 1063, `3df305c8…`) downloaded, unpacked and ran offline; no onion switch.
+- No `publishMarmotKeyPackage`/`30443` line in any run's log; nothing was signed.
+
 ## 8. Phases
 
 Each phase is testable on its own and lands as its own PR.
@@ -744,6 +846,8 @@ Each phase is testable on its own and lands as its own PR.
   check.torproject.org (open it as a top-level frame in the site's store), and with Tor off
   `IsTor=false`. Tor on but not bootstrapped shows the wait state and creates no web view.
   Two accounts' sites don't share localStorage.
+- **N6 (done 2026-11-26, §7d).** As planned, except: storage stays per account (no per-network
+  store), and the store's route is shared by its sites (Tor always wins).
 - **N7. Polish.** PAPER profile, inline surfaces (`InlineNappletSurface`), the report/block
   action (4.7), link handoff to the in-app browser, the file picker for uploads (`<input
   type=file>` works in WKWebView; make sure it is limited to the picker), and logout cleanup
@@ -776,9 +880,12 @@ Each phase is testable on its own and lands as its own PR.
   the `iosSimulatorArm64Test` executable if the test pumps the main run loop. N5's session
   tests can run headless. They still have to confirm that a `WKURLSchemeHandler` and the
   message bridge work there too.
-- O3. `http://*.onion` sub-resources from a secure (`napplet://`) page: are they upgraded or
-  blocked? This affects nSites that call onion APIs. Android has the same mixed-content
-  question.
-- O4. Service workers: WebKit does not register them on custom schemes (expected; not
-  measured), so an nSite that needs one degrades. Measure it in N6 and add it to the site
-  compatibility notes.
+- O3. **Answered (N6, measured):** neither. WebKit does not treat a `napplet://` page as a secure
+  page for mixed content, so `fetch`, `<img>` and `<script>` over plain `http` all went out as
+  plain http (SOCKS CONNECTs to `:80` for `.onion` and clearnet names alike). The host now does what
+  Android's `MIXED_CONTENT_NEVER_ALLOW` does, in the request filter: plain `http`/`ws` is blocked,
+  except to `.onion` names (end-to-end encrypted and authenticated), so an nSite can call an onion
+  API over Tor. That one exception is more permissive than Android, deliberately.
+- O4. **Answered (N6, measured):** `navigator.serviceWorker` is `undefined` in an nSite's frame on
+  `napplet://`, so a site that needs a service worker degrades (no offline mode, no push). The same
+  site on Android/Desktop (`https://…napplet.local`) gets one.
