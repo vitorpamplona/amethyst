@@ -287,3 +287,69 @@ broker stays in the app, as on Desktop). Nothing open.
 6. Consent: `NappletConsentCoordinator` onto `NappletPromptQueues` (review §3.5), optional.
 7. Prefetch and uploads are already on the shared `NappletBlobPrefetch` and
    `AccountNappletBlossomGateway`; nothing to change.
+
+### 8a. As built on Android (branch `feat/android-napplet-core`, 2026-11-26)
+
+Merge only after a device test. What each step of §8 became:
+
+1. **`WebViewNappletEngine`** (`NH/WebViewNappletEngine.kt`) is the one WebView adapter both hosts
+   use: the storage profile (first touch), the hardening block (once), the guards (`installGuard`
+   records them, `loadShell` installs them on the main thread right before the load, so a WebView
+   without `DOCUMENT_START_SCRIPT` refuses with `Failed(ENGINE)`), the bridge listener, gated on main
+   frame AND the shell's origin (`NappletBridgeGate.acceptsOrigin`; before, main frame only), and
+   final `shouldInterceptRequest` / `shouldOverrideUrlLoading` / `onRenderProcessGone` /
+   `onConsoleMessage` that ask the core. The WebView names no parent frame, so every frame below
+   the shell is `APP` (same rule as before: a site's embeds can't leave either). The hosts subclass
+   `NappletWebViewClient` / `NappletWebChromeClient` only for their screens.
+2. **The split.** `NappletSessionCore` takes its trusted half as a `NappletTrustedBridge`
+   (`NappletSessionCore.inProcess` builds the routing for Desktop and iOS). In `:napplet`,
+   `NappletSandboxSession` puts `NappletIpcBridge` there: the request, attendance and release
+   messages of the old hosts, under the launch token, with `fire-N` ids for id-less messages. Each
+   session has its own reply Messenger, so a retry is a new launch at the broker. Replies are posted
+   to the shell document's own reply proxy (`toPage`), never evaluated in whatever the top frame
+   holds. In the main process, `NappletBrokerService` keeps one `NappletSessionRouting` per (reply
+   Messenger, token); the routing gained the broker's rules as options: replies to the IPC's request
+   id, a broker and account read per request (a gone account fails closed), NAP-INTENT keyed by the
+   token, the `identity.changed` stream, NAP-FS picks per launch, cancellable `resource.*`, and
+   decrypting reads that wait for attendance. A browser tab's attendance (one Messenger, a token per
+   origin) applies to every origin it runs.
+3. **Route.** `WebViewNappletRoute` is the `NappletRoutePort` over `WebViewProxyPolicy` +
+   `NappletProxyClaims`: `claim` files the claim and resumes on `onReady` / `onFailed`, Tor wanted
+   with no port fails closed at once. **Row 19 stays open on Android:** a loopback
+   `NappletSocksPolicy` router would sit behind `ProxyController`'s one process-wide override, so it
+   would carry the in-app browser's traffic too, and needs a JVM transport for `NappletSocks5`.
+   Worth doing together with moving `DesktopSocksRouter` onto the shared codec; not done here.
+4. **Launch plan.** `NappletLauncher` computes the route with `NappletLaunchPlan.of(…,
+   sharedStorageJar = false)` and hands the sandbox `plan.blobsUseTor` (same values as before); the
+   sandbox's `NappletSandboxLaunch.plan()` rebuilds the same plan from that flag.
+5. **Inline.** Inline runs go through the embedded service, so they run on the core; the service
+   sends the core's state (`MSG_SESSION_STATE`) and `InlineNappletView` words it with
+   `inlineStatusOf` (waiting for Tor and no Tor now show apart from other failures). The file
+   picker refusal stays `onShowFileChooser` → the controller's `refusesFileChooser`.
+6. **Consent** stays on `NappletConsentCoordinator`: moving it onto `NappletPromptQueues` would not
+   remove code without changing the consent screens.
+
+Gone from Android: `NappletContentServer` (now `AndroidNappletFiles` for the core's site server),
+`PaperLinkIntents` (the core's `openLink` + the session's link opener), the napplet `failRequest`
+(`NappletPageBridge` answers held requests), `NappletWebRtcGuard.isNeeded`
+(`NappletLaunchPlan.webRtcGuardNeeded`), the duplicated hardening, navigation, envelope,
+held-request and reply code of the two hosts, and the broker's own routing block.
+
+**Shared behaviour that now applies on Android:** the shell's in-head `WEBRTC_CHECK`; unknown
+`*.napplet.local` hosts answer 404 instead of going to the network; the embedded host probes the
+entry point before every load (a missing nSite shows the retry instead of an empty frame); the
+bridge also checks the shell's origin. On Desktop and iOS the one change is that `resource.cancel`
+now cancels.
+
+**Rows enforced by shared code on Android now:** 3 (gate), 4 (shell), 5, 6 (request policy), 7
+(guard matrix + shell check), 9 (navigation policy), 10 (popups through the policy), 18 (route
+fail-closed through the core), 21–23, 24 (held requests in `NappletPageBridge`, reads wait in the
+shared routing), 25 (routing teardown), 28 (`onRendererGone`), 29. Still Android's own: 1, 2 (token
+in the broker), 8 (cookie guard install), 11–17, 20, 26, 27, 30. Open: 19 (above).
+
+Checked on an API 36 emulator (fresh AVD, read-only npub): Fokus inline and full screen; Reading
+Queue full screen reached the consent prompt through the bridge, and a denial reached the page;
+Armada on the open web and on Tor (pill "The site can't see your IP address"), its NIP-07 login
+reached consent and the denial showed "Connection not authorized." in the page; no crash in either
+process, no KeyPackage publish. Not exercised there: a webxdc app (none found from a fresh
+account), a renderer crash, the Tor-wanted-without-port path.
