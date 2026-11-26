@@ -24,6 +24,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -35,12 +39,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import java.util.Collections
-import java.util.WeakHashMap
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.incrementAndFetch
 
 /**
  * The registry of live relay subscriptions applets have open, keyed by the requesting surface's owner
@@ -58,6 +61,7 @@ import java.util.concurrent.atomic.AtomicLong
  * signatures still came from the old one. [open] is reached only after the broker authorized the
  * subscription (RELAY consent).
  */
+@OptIn(ExperimentalAtomicApi::class)
 class NappletLiveSubscriptions<K : Any>(
     private val scope: CoroutineScope,
     private val attendance: NappletAttendance<K>,
@@ -67,21 +71,31 @@ class NappletLiveSubscriptions<K : Any>(
         val subId: String,
     )
 
-    private val liveSubs = ConcurrentHashMap<Key<K>, LiveSub>()
-    private val liveSeq = AtomicInteger(0)
+    // Guarded by [lock], like everything else here: read and written from the request threads and
+    // from each subscription's delivery coroutine.
+    private val liveSubs = HashMap<Key<K>, LiveSub>()
+    private val liveSeq = AtomicInt(0)
 
     // Requests are handled concurrently, and a subscribe waits on consent while a close is answered at
     // once: a page's `subscribe s1` then `close s1` could open s1 after its close, streaming to a page
     // that thinks it closed. Each request is stamped as it arrives ([arrival]); a close remembers its
     // stamp, and a subscribe that arrived before it never opens. Guarded by [lock], with [gone]: owners
     // whose surface went away, so nothing opens for them after [closeAllFor] (held weakly).
-    private val lock = Any()
+    private val lock = KmpLock()
     private val arrivals = AtomicLong(0)
     private val closedAt = LinkedHashMap<Key<K>, Long>()
-    private val gone: MutableSet<K> = Collections.newSetFromMap(WeakHashMap())
+    private val gone = ArrayList<WeakReference<K>>()
 
     /** Stamps a request as it arrives, before anything about it suspends; pass it to [open] and [close]. */
-    fun arrival(): Long = arrivals.incrementAndGet()
+    fun arrival(): Long = arrivals.incrementAndFetch()
+
+    // Under [lock]. Equality, as the weak set this was on the JVM compared its keys.
+    private fun isGone(owner: K): Boolean = gone.any { it.get() == owner }
+
+    private fun markGone(owner: K) {
+        gone.removeAll { it.get().let { held -> held == null || held == owner } }
+        gone += WeakReference(owner)
+    }
 
     private class LiveSub(
         val clientSubId: String,
@@ -132,9 +146,9 @@ class NappletLiveSubscriptions<K : Any>(
         mayDecrypt: suspend (peer: HexKey) -> Boolean = { false },
         push: (String) -> Unit,
     ): Unit =
-        synchronized(lock) {
+        lock.withLock {
             // Closed after this request arrived, or its surface is gone: the page doesn't want it.
-            if (owner in gone || (closedAt[Key(owner, nappletSubId)] ?: Long.MIN_VALUE) > arrivedAt) return
+            if (isGone(owner) || (closedAt[Key(owner, nappletSubId)] ?: Long.MIN_VALUE) > arrivedAt) return
             openLocked(owner, nappletSubId, filters, account, relays, outbox, mayDecrypt, push)
         }
 
@@ -177,7 +191,7 @@ class NappletLiveSubscriptions<K : Any>(
         // can't collide with the subscription it's replacing.
         val sub =
             LiveSub(
-                "napplet-$nappletSubId-${liveSeq.incrementAndGet()}",
+                "napplet-$nappletSubId-${liveSeq.incrementAndFetch()}",
                 // The napplet writes its own filters, so they arrive untagged.
                 account.client.taggedAs(SubPurpose.ADD_ONS, "Napplet"),
             )
@@ -187,7 +201,7 @@ class NappletLiveSubscriptions<K : Any>(
                 // Outbox events seen already: each relay sends its own copy, and only the first is news.
                 val seen = if (outbox) LinkedHashSet<String>() else null
                 for (delivery in sub.deliveries) {
-                    if (liveSubs[key] !== sub) break
+                    if (lock.withLock { liveSubs[key] } !== sub) break
                     when (delivery) {
                         is Delivery.RelayEvent -> {
                             val event = delivery.event
@@ -221,7 +235,7 @@ class NappletLiveSubscriptions<K : Any>(
                             if (outbox) {
                                 // Every relay refused it: the napplet hears it ended, and it ends here too.
                                 push(NappletProtocolJson.encodeOutboxClosed(nappletSubId, delivery.reason))
-                                synchronized(lock) { liveSubs.remove(key, sub) }
+                                lock.withLock { if (liveSubs[key] === sub) liveSubs.remove(key) }
                                 sub.deliveries.close()
                                 runCatching { sub.client.unsubscribe(sub.clientSubId) }
                                 break
@@ -233,7 +247,7 @@ class NappletLiveSubscriptions<K : Any>(
             }
 
         // The relays that closed this subscription: an outbox one ends only when all of them have.
-        val closedBy = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+        val closedBy = ConcurrentSet<NormalizedRelayUrl>()
 
         val listener =
             object : SubscriptionListener {
@@ -252,7 +266,7 @@ class NappletLiveSubscriptions<K : Any>(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (sub.eoseSent.compareAndSet(false, true)) sub.deliveries.trySend(Delivery.Eose)
+                    if (sub.eoseSent.compareAndSet(expectedValue = false, newValue = true)) sub.deliveries.trySend(Delivery.Eose)
                 }
 
                 override fun onClosed(
@@ -269,7 +283,8 @@ class NappletLiveSubscriptions<K : Any>(
 
     /** [owner] is being looked at again: its subscriptions deliver the encrypted events they held. */
     fun onAttended(owner: K) {
-        liveSubs.forEach { (key, sub) -> if (key.owner == owner) sub.deliveries.trySend(Delivery.Attended) }
+        val subs = lock.withLock { liveSubs.filterKeys { it.owner == owner }.values.toList() }
+        subs.forEach { it.deliveries.trySend(Delivery.Attended) }
     }
 
     /**
@@ -281,7 +296,7 @@ class NappletLiveSubscriptions<K : Any>(
         nappletSubId: String,
         arrivedAt: Long,
     ): Unit =
-        synchronized(lock) {
+        lock.withLock {
             val key = Key(owner, nappletSubId)
             closedAt[key] = maxOf(closedAt.remove(key) ?: Long.MIN_VALUE, arrivedAt)
             // Remembered only to beat a subscribe still waiting on consent: past the cap the oldest go,
@@ -300,8 +315,8 @@ class NappletLiveSubscriptions<K : Any>(
      * and any it requested that hasn't opened yet.
      */
     fun closeAllFor(owner: K): Unit =
-        synchronized(lock) {
-            gone += owner
+        lock.withLock {
+            markGone(owner)
             closedAt.keys.removeAll { it.owner == owner }
             liveSubs.keys
                 .filter { it.owner == owner }
@@ -310,8 +325,10 @@ class NappletLiveSubscriptions<K : Any>(
 
     /** Tears down every open subscription (service teardown). */
     fun closeAll() {
-        liveSubs.values.forEach(::stop)
-        liveSubs.clear()
+        lock.withLock {
+            liveSubs.values.forEach(::stop)
+            liveSubs.clear()
+        }
     }
 
     private fun stop(sub: LiveSub) {

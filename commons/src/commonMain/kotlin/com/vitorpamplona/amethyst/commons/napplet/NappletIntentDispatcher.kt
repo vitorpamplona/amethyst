@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIntentRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -50,7 +52,7 @@ class NappletIntentDispatcher<K : Any>(
         val at: Long,
     )
 
-    private val lock = Any()
+    private val lock = KmpLock()
     private val pending = HashMap<K, MutableList<Pending>>()
     private val ready = HashMap<K, (String) -> Unit>()
 
@@ -67,7 +69,7 @@ class NappletIntentDispatcher<K : Any>(
         when (request) {
             is NappletIntentRequest.Ready -> {
                 val due =
-                    synchronized(lock) {
+                    lock.withLock {
                         ready[key] = deliver
                         pending.remove(key).orEmpty().filter { fresh(it) }
                     }
@@ -100,7 +102,7 @@ class NappletIntentDispatcher<K : Any>(
         val envelope = NappletProtocolJson.encodeIntentDeliver(NappletIntentCatalog.catalogId(source), request.archetype, request.action, request.convention, request.payload)
         // A target that is already up (its binding said so) gets it now; a new one when it is ready.
         val now =
-            synchronized(lock) {
+            lock.withLock {
                 val live = ready[target]
                 if (live == null) pending.getOrPut(target) { mutableListOf() }.add(Pending(envelope, now()))
                 live
@@ -111,7 +113,7 @@ class NappletIntentDispatcher<K : Any>(
 
     /** The surface [key] went away: nothing more is delivered to it. */
     fun remove(key: K) {
-        synchronized(lock) {
+        lock.withLock {
             ready.remove(key)
             pending.remove(key)
         }
@@ -119,7 +121,7 @@ class NappletIntentDispatcher<K : Any>(
 
     /** [remove] for every surface [matches] picks. */
     fun removeAll(matches: (K) -> Boolean) {
-        synchronized(lock) {
+        lock.withLock {
             ready.keys.removeAll(matches)
             pending.keys.removeAll(matches)
         }

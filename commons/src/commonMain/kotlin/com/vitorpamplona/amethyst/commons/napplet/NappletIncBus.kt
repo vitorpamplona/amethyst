@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
@@ -74,7 +76,7 @@ class NappletIncBus<K : Any>(
         val payload: String,
     )
 
-    private val lock = Any()
+    private val lock = KmpLock()
     private val endpoints = HashMap<K, Endpoint<K>>()
     private val endpointsById = HashMap<String, Endpoint<K>>()
     private val subscribers = HashMap<String, LinkedHashSet<Endpoint<K>>>()
@@ -85,7 +87,7 @@ class NappletIncBus<K : Any>(
         key: K,
         partition: String,
         deliver: (String) -> Unit,
-    ): String = synchronized(lock) { endpointOf(key, partition, deliver).id }
+    ): String = lock.withLock { endpointOf(key, partition, deliver).id }
 
     /**
      * Acts on [request] from the surface [key], launched as the account [partition] and whose pushes
@@ -99,7 +101,7 @@ class NappletIncBus<K : Any>(
         request: NappletIncRequest,
     ): String? {
         val out = ArrayList<Delivery>()
-        val reply = synchronized(lock) { decide(endpointOf(key, partition, deliver), request, out) }
+        val reply = lock.withLock { decide(endpointOf(key, partition, deliver), request, out) }
         out.forEach { it.to(it.payload) }
         return reply
     }
@@ -110,7 +112,7 @@ class NappletIncBus<K : Any>(
     /** [remove] for every surface [matches] picks. */
     fun removeAll(matches: (K) -> Boolean) {
         val out = ArrayList<Delivery>()
-        synchronized(lock) {
+        lock.withLock {
             endpoints.values.filter { matches(it.key) }.forEach { endpoint ->
                 endpoint.channels.toList().forEach { channelId ->
                     val channel = channels.remove(channelId) ?: return@forEach
