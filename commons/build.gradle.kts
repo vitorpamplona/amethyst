@@ -184,6 +184,8 @@ kotlin {
                 // The Android devices beside a coding chat (androiddevices/): adb, the emulator's
                 // gRPC screen and input. Desktop only, like the agents that use them.
                 api(project(":androidDeviceClient"))
+                // The iOS simulators beside it, on a Mac: simctl, and idb's companion over gRPC.
+                api(project(":iosSimulatorClient"))
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

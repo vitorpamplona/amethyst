@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.content.CodeBlock
 import com.vitorpamplona.amethyst.commons.content.ColumnAlignment
 import com.vitorpamplona.amethyst.commons.content.Document
 import com.vitorpamplona.amethyst.commons.content.Emphasis
+import com.vitorpamplona.amethyst.commons.content.Footnote
+import com.vitorpamplona.amethyst.commons.content.FootnoteReference
+import com.vitorpamplona.amethyst.commons.content.Footnotes
 import com.vitorpamplona.amethyst.commons.content.HardBreak
 import com.vitorpamplona.amethyst.commons.content.Heading
 import com.vitorpamplona.amethyst.commons.content.Highlight
@@ -73,15 +76,51 @@ class MarkdownToDocument(
     fun parse(markdown: String): Document {
         // CommonMark ends a line at \r\n and \r too; this parser only at \n, so a document written
         // with Windows line endings would be one paragraph.
-        val src = capQuoteDepth(if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown)
+        val normalized = if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown
+        val extracted = MarkdownFootnotes.extract(normalized)
+        val src = capQuoteDepth(extracted.source)
         val root = parser.buildMarkdownTreeFromString(src)
-        val context = Context(src, linkDefinitions(src, root))
-        return Document(context.blocks(root.children))
+        val definitions = linkDefinitions(src, root)
+        val calls = FootnoteCalls(extracted.notes)
+        val blocks = Context(src, definitions, calls).blocks(root.children).toMutableList()
+
+        // Notes may call others, which then join the list: each is parsed once, in call order.
+        val notes = ArrayList<Footnote>()
+        var i = 0
+        while (i < calls.order.size) {
+            val key = calls.order[i]
+            val noteSrc = capQuoteDepth(extracted.notes[key] ?: "")
+            val noteRoot = parser.buildMarkdownTreeFromString(noteSrc)
+            notes.add(Footnote(calls.labels[i], i + 1, Context(noteSrc, definitions, calls).blocks(noteRoot.children)))
+            i++
+        }
+        if (notes.isNotEmpty()) blocks.add(Footnotes(notes))
+        return Document(blocks)
+    }
+
+    /** The notes a document defines, numbered in the order they are first called. */
+    private class FootnoteCalls(
+        val defined: Map<String, String>,
+    ) {
+        val order = ArrayList<String>()
+        val labels = ArrayList<String>()
+        private val numbers = HashMap<String, Int>()
+
+        /** The number of the note [label] calls, or null when no note has that label. */
+        fun number(label: String): Int? {
+            val key = MarkdownFootnotes.normalize(label)
+            numbers[key]?.let { return it }
+            if (key !in defined) return null
+            order.add(key)
+            labels.add(label)
+            return order.size.also { numbers[key] = it }
+        }
     }
 
     private inner class Context(
         val src: String,
         val definitions: Map<String, LinkDefinition>,
+        val footnotes: FootnoteCalls,
     ) {
         fun text(node: ASTNode) = src.substring(node.startOffset, node.endOffset)
 
@@ -383,8 +422,12 @@ class MarkdownToDocument(
                         out.add(inlineLink(node))
                     }
                     MarkdownElementTypes.FULL_REFERENCE_LINK, MarkdownElementTypes.SHORT_REFERENCE_LINK -> {
-                        val link = referenceLink(node)
-                        if (link != null) {
+                        val calls = footnoteCalls(node)
+                        val link = if (calls == null) referenceLink(node) else null
+                        if (calls != null) {
+                            flush()
+                            out.addAll(calls)
+                        } else if (link != null) {
                             flush()
                             out.add(link)
                         } else {
@@ -463,6 +506,19 @@ class MarkdownToDocument(
             val title = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_TITLE }?.let { title(text(it)) }
             val label = linkText(node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_TEXT })
             return Link(destination, label, title)
+        }
+
+        /**
+         * `[^1]` parses as a reference link, and `[^1][^2]` as one with a text and a label: the
+         * calls to notes the document defines, or null when any part is not one.
+         */
+        private fun footnoteCalls(node: ASTNode): List<Inline>? {
+            if (footnotes.defined.isEmpty()) return null
+            val parts = node.children.filter { it.type == MarkdownElementTypes.LINK_TEXT || it.type == MarkdownElementTypes.LINK_LABEL }
+            if (parts.isEmpty()) return null
+            val labels = parts.map { MarkdownFootnotes.referenceLabel(text(it)) ?: return null }
+            if (labels.any { MarkdownFootnotes.normalize(it) !in footnotes.defined }) return null
+            return labels.map { FootnoteReference(it, footnotes.number(it)!!) }
         }
 
         private fun referenceLink(node: ASTNode): Inline? {

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -787,10 +788,13 @@ sealed class Route {
     ) : Route()
 
     /**
-     * The Android emulators and phones on this computer, full size: the screen of the one [chatKey]'s
-     * coding chat works on, or of the one picked here.
+     * The devices on this computer (Android emulators and phones, iOS simulators), full size: the
+     * screen of the one [chatKey]'s coding chat works on, or of the one picked here. Its serial name
+     * is the one it had as `AndroidDevices`, so saved dock layouts still open it.
      */
-    @Serializable data class AndroidDevices(
+    @Serializable
+    @SerialName("com.vitorpamplona.amethyst.commons.model.navigation.Route.AndroidDevices")
+    data class Devices(
         val chatKey: String? = null,
     ) : Route()
 

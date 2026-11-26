@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.androiddevice.adb
 
-import com.vitorpamplona.androiddevice.CommandResult
-import com.vitorpamplona.androiddevice.CommandRunner
-import com.vitorpamplona.androiddevice.ProcessCommandRunner
+import com.vitorpamplona.devicecore.CommandResult
+import com.vitorpamplona.devicecore.CommandRunner
+import com.vitorpamplona.devicecore.ProcessCommandRunner
+import com.vitorpamplona.devicecore.crash.DeviceCrash
+import com.vitorpamplona.devicecore.input.DeviceKey
+import com.vitorpamplona.devicecore.screen.ScreenSize
 import java.io.File
 import java.io.IOException
 
@@ -38,64 +41,6 @@ data class AdbDevice(
 
     /** The console port of an emulator (`emulator-5554` → 5554). */
     val consolePort: Int? get() = if (isEmulator) serial.removePrefix("emulator-").toIntOrNull() else null
-}
-
-/** A key every Android device has, by its `KeyEvent` code (adb) and its W3C name (the emulator's gRPC). */
-enum class DeviceKey(
-    val keyCode: Int,
-    val w3c: String,
-) {
-    BACK(4, "GoBack"),
-    HOME(3, "GoHome"),
-    RECENTS(187, "AppSwitch"),
-    POWER(26, "Power"),
-    VOLUME_UP(24, "AudioVolumeUp"),
-    VOLUME_DOWN(25, "AudioVolumeDown"),
-    ENTER(66, "Enter"),
-    BACKSPACE(67, "Backspace"),
-    DELETE(112, "Delete"),
-    TAB(61, "Tab"),
-    ESCAPE(111, "Escape"),
-    UP(19, "ArrowUp"),
-    DOWN(20, "ArrowDown"),
-    LEFT(21, "ArrowLeft"),
-    RIGHT(22, "ArrowRight"),
-    MOVE_HOME(122, "Home"),
-    MOVE_END(123, "End"),
-    PAGE_UP(92, "PageUp"),
-    PAGE_DOWN(93, "PageDown"),
-    PASTE(279, "Paste"),
-    WAKE(224, "WakeUp"),
-    ;
-
-    companion object {
-        /** By its name, case- and separator-insensitive ("volume_up", "Volume Up", "back"). */
-        fun named(name: String): DeviceKey? {
-            val n =
-                name
-                    .trim()
-                    .uppercase()
-                    .replace(' ', '_')
-                    .replace('-', '_')
-            return entries.firstOrNull { it.name == n }
-                ?: when (n) {
-                    "APP_SWITCH", "OVERVIEW" -> RECENTS
-                    "DEL" -> BACKSPACE
-                    "RETURN" -> ENTER
-                    "ESC" -> ESCAPE
-                    "WAKEUP" -> WAKE
-                    else -> null
-                }
-        }
-    }
-}
-
-/** A size in pixels. */
-data class ScreenSize(
-    val width: Int,
-    val height: Int,
-) {
-    fun swapped() = ScreenSize(height, width)
 }
 
 /** A screenshot as RGBA pixels, row by row from the top. */

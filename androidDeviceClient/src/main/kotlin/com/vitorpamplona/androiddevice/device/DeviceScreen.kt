@@ -21,11 +21,16 @@
 package com.vitorpamplona.androiddevice.device
 
 import com.vitorpamplona.androiddevice.adb.Adb
-import com.vitorpamplona.androiddevice.adb.DeviceKey
-import com.vitorpamplona.androiddevice.adb.ScreenSize
+import com.vitorpamplona.androiddevice.adb.w3c
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
 import com.vitorpamplona.androiddevice.emulator.EmulatorImage
-import com.vitorpamplona.androiddevice.emulator.PixelFormat
+import com.vitorpamplona.devicecore.input.DeviceKey
+import com.vitorpamplona.devicecore.screen.DeviceScreen
+import com.vitorpamplona.devicecore.screen.PixelFormat
+import com.vitorpamplona.devicecore.screen.PngSize
+import com.vitorpamplona.devicecore.screen.PointerAction
+import com.vitorpamplona.devicecore.screen.ScreenFrame
+import com.vitorpamplona.devicecore.screen.ScreenSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -34,44 +39,6 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import kotlin.math.hypot
 import kotlin.math.roundToInt
-
-/** A picture of the screen for the live view, in the orientation it is shown in. */
-class ScreenFrame(
-    val width: Int,
-    val height: Int,
-    val format: PixelFormat,
-    val pixels: ByteArray,
-    /** Quarter turns from the panel's natural orientation; the picture is already turned. */
-    val rotation: Int,
-)
-
-enum class PointerAction { DOWN, MOVE, UP }
-
-/**
- * A device's screen as a live view drives it: frames to draw, a pointer (mouse) to touch with, keys
- * and text. Where the pointer lands is given as a fraction of the frame shown ([fx], [fy] in
- * `0..1`), so the view needn't know the device's pixels.
- */
-interface DeviceScreen {
-    /** Whether frames are pushed as the screen changes (the emulator) rather than polled (adb). */
-    val streams: Boolean
-
-    fun frames(
-        maxWidth: Int,
-        maxHeight: Int,
-    ): Flow<ScreenFrame>
-
-    suspend fun pointer(
-        action: PointerAction,
-        fx: Float,
-        fy: Float,
-        frame: ScreenFrame,
-    )
-
-    suspend fun key(key: DeviceKey)
-
-    suspend fun type(text: String)
-}
 
 /**
  * The emulator's screen through its gRPC endpoint: frames pushed as they change (RGBA, scaled by
@@ -280,15 +247,5 @@ class AdbScreen(
         private const val LONG_PRESS_MS = 500L
         private const val MIN_SWIPE_MS = 80
         private const val MAX_SWIPE_MS = 3_000
-    }
-}
-
-/** A PNG's size, from its IHDR chunk. */
-object PngSize {
-    fun of(png: ByteArray): ScreenSize? {
-        if (png.size < 24 || png[12] != 'I'.code.toByte() || png[13] != 'H'.code.toByte()) return null
-
-        fun int(at: Int) = ((png[at].toInt() and 0xff) shl 24) or ((png[at + 1].toInt() and 0xff) shl 16) or ((png[at + 2].toInt() and 0xff) shl 8) or (png[at + 3].toInt() and 0xff)
-        return ScreenSize(int(16), int(20))
     }
 }

@@ -24,6 +24,8 @@ kotlin {
 dependencies {
     implementation(libs.kotlin.stdlib)
     api(libs.kotlinx.coroutines.core)
+    // The device vocabulary and gRPC channel every device client shares.
+    api(project(":deviceClientCore"))
     // The emulator's gRPC endpoint is plain HTTP/2 on localhost: OkHttp speaks it with prior
     // knowledge, so no grpc-java or protobuf runtime (the few messages are encoded by hand).
     implementation(libs.okhttp)
